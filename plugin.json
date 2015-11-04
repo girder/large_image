@@ -1,0 +1,6 @@
+{
+    "name": "Multiresolution image",
+    "description": "Create and serve multiresolution tiled images.",
+    "version": "1.0.0",
+    "dependencies": []
+}
