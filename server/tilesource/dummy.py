@@ -22,7 +22,7 @@ from .base import TileSource
 
 class DummyTileSource(TileSource):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super(DummyTileSource, self).__init__()
         self.tileSize = 0
         self.levels = 0
