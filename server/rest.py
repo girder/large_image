@@ -52,7 +52,11 @@ class TilesItemResource(Item):
         return tileSource.getMetadata()
 
     getTilesInfo.description = (
-        Description(''))
+        Description('Get multiresolution tiles metadata.')
+        .param('itemId', 'The ID of the item, or "test".', paramType='path')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
 
 
     @access.user
@@ -60,7 +64,7 @@ class TilesItemResource(Item):
     def createTiles(self, item, params):
         return
     createTiles.description = (
-        Description(''))
+        Description('Create a multiresolution image for this item (Not yet implemented).'))
 
 
     @access.public
@@ -80,4 +84,11 @@ class TilesItemResource(Item):
         return lambda: tileData
 
     getTile.description = (
-        Description(''))
+        Description('Get an image tile.')
+        .param('itemId', 'The ID of the item, or "test".', paramType='path')
+        .param('z', 'The layer number of the tile (0 is the most zoomed-out layer).', paramType='path')
+        .param('x', 'The X coordinate of the tile (0 is the left side).', paramType='path')
+        .param('y', 'The Y coordinate of the tile (0 is the top).', paramType='path')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
