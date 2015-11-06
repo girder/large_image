@@ -29,8 +29,9 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
             node: this.el
         });
         this.viewer.createLayer('osm', {
-            // TODO: this doesn't work properly
-            tileUrl: this._getTileUrl('{z}', '{x}', '{y}')
+            // TODO: syntax has changed in the latest GeoJS version
+            //tileUrl: this._getTileUrl('{z}', '{x}', '{y}')
+            tileUrl: this._getTileUrl('<zoom>', '<x>', '<y>')
         });
 
         return this;
