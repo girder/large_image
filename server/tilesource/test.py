@@ -58,7 +58,7 @@ class TestTileSource(TileSource):
         yFraction = float(y) / (widthCount - 1) if z != 0 else 0
 
         backgroundColor = colorsys.hsv_to_rgb(
-            h=xFraction,
+            h=(0.9 * xFraction),
             s=(0.3 + (0.7 * yFraction)),
             v=(0.3 + (0.7 * yFraction)),
         )
