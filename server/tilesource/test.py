@@ -25,6 +25,8 @@ try:
     if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
         raise ImportError('Pillow v3.0 or later is required')
 except ImportError:
+    # TODO: change print to use logger
+    print 'Error: Could not import PIL'
     # re-raise it for now, but maybe do something else in the future
     raise
 from six import StringIO
@@ -38,12 +40,9 @@ class TestTileSource(TileSource):
         super(TestTileSource, self).__init__()
         self.tileSize = tileSize
         self.levels = levels
+        self.sizeX = (2 ** (self.levels - 1)) * self.tileSize
+        self.sizeY = (2 ** (self.levels - 1)) * self.tileSize
 
-    def getMetadata(self):
-        return {
-            'size': self.tileSize,
-            'levels': self.levels
-        }
 
     def getTile(self, x, y, z):
         widthCount = 2 ** z

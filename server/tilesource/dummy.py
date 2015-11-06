@@ -26,6 +26,8 @@ class DummyTileSource(TileSource):
         super(DummyTileSource, self).__init__()
         self.tileSize = 0
         self.levels = 0
+        self.sizeX = 0
+        self.sizeY = 0
 
     def getTile(self, x, y, z):
         return ''

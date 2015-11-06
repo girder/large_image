@@ -26,11 +26,15 @@ class TileSource(object):
     def __init__(self):
         self.tileSize = None
         self.levels = None
+        self.sizeX = None
+        self.sizeY = None
 
     def getMetadata(self):
         return {
-            'size': self.tileSize,
-            'levels': self.levels
+            'tileSize': self.tileSize,
+            'levels': self.levels,
+            'sizeX': self.sizeX,
+            'sizeY': self.sizeY
         }
 
     def getTile(self, x, y, z):
