@@ -17,21 +17,49 @@
 #  limitations under the License.
 ###############################################################################
 
-from .base import TileSource
+import itertools
+
+from .base import GirderTileSource, TileSourceException
+from .tiff_reader import TiledTiffDirectory, TiffException, \
+    InvalidOperationTiffException, IOTiffException
 
 
-class TiffTileSource(TileSource):
+class TiffGirderTileSource(GirderTileSource):
     """
-    Abstract class for loading TIFF files from disk.
+    Provides tile access to Girder items with TIFF file.
     """
-    pass
-
-
-class GirderTiffTileSource(TiffTileSource):
-
     def __init__(self, item):
-        super(GirderTiffTileSource, self).__init__()
-        self.item = item
+        super(TiffGirderTileSource, self).__init__(item)
+
+        largeImagePath = self._getLargeImagePath()
+
+        self._tiffDirectories = list()
+        for directoryNum in itertools.count():
+            try:
+                tiffDirectory = TiledTiffDirectory(largeImagePath, directoryNum)
+            except TiffException:
+                break
+            else:
+                self._tiffDirectories.append(tiffDirectory)
+
+        if not self._tiffDirectories:
+            raise TileSourceException('File must have at least 1 level')
+
+        # Multiresolution TIFFs are stored with full-resolution layer in directory 0
+        self._tiffDirectories.reverse()
+
+        self.tileSize = self._tiffDirectories[-1].tileSize
+        self.levels = len(self._tiffDirectories)
+        self.sizeX = self._tiffDirectories[-1].imageWidth
+        self.sizeY = self._tiffDirectories[-1].imageHeight
+
 
     def getTile(self, x, y, z):
-        return ''
+        try:
+            return self._tiffDirectories[z].getTile(x, y)
+        except KeyError:
+            raise TileSourceException('z layer does not exist')
+        except InvalidOperationTiffException as e:
+            raise TileSourceException(e.message)
+        except IOTiffException as e:
+            raise TileSourceException('Internal I/O failure: %s' % e.message)

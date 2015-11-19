@@ -17,6 +17,10 @@
 #  limitations under the License.
 ###############################################################################
 
+from girder.models.model_base import ValidationException
+from girder.utility import assetstore_utilities
+from girder.utility.model_importer import ModelImporter
+
 
 class TileSourceException(Exception):
     pass
@@ -39,3 +43,29 @@ class TileSource(object):
 
     def getTile(self, x, y, z):
         raise NotImplementedError()
+
+
+class GirderTileSource(TileSource):
+    def __init__(self, item):
+        super(GirderTileSource, self).__init__()
+        self.item = item
+
+    def _getLargeImagePath(self):
+        try:
+            largeImageFileId = self.item['largeImage']
+            # Access control checking should already have been done on item, so
+            # don't repeat.
+            largeImageFile = ModelImporter.model('file').load(largeImageFileId, force=True)
+
+            # TODO: can we move some of this logic into Girder core?
+            assetstore = ModelImporter.model('assetstore').load(largeImageFile['assetstoreId'])
+            adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
+
+            if not isinstance(adapter, assetstore_utilities.FilesystemAssetstoreAdapter):
+                raise TileSourceException('Non-filesystem assetstores are not supported')
+
+            largeImagePath = adapter.fullPath(largeImageFile)
+            return largeImagePath
+
+        except (KeyError, ValidationException, TileSourceException) as e:
+            raise TileSourceException('No large image file in this item: ' % e.message)

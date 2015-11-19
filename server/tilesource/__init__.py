@@ -22,4 +22,7 @@ try:
     from .test import TestTileSource
 except ImportError:
     from .dummy import DummyTileSource as TestTileSource
-from .tiff import GirderTiffTileSource
+try:
+    from .tiff import TiffGirderTileSource
+except ImportError:
+    from .dummy import DummyTileSource as TiffGirderTileSource

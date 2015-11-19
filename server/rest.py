@@ -25,7 +25,7 @@ from girder.api.describe import Description
 from girder.api.rest import loadmodel, RestException
 from girder.models.model_base import AccessType
 
-from .tilesource import TestTileSource, GirderTiffTileSource, TileSourceException
+from .tilesource import TestTileSource, TiffGirderTileSource, TileSourceException
 
 
 class TilesItemResource(Item):
@@ -38,13 +38,17 @@ class TilesItemResource(Item):
                            self.getTile)
 
     def _loadTileSource(self, itemId):
-        if itemId == 'test':
-            tileSource = TestTileSource(256)
-        else:
-            item = self.model('item').load(id=itemId, level=AccessType.READ,
-                                           user=self.getCurrentUser(), exc=True)
-            tileSource = GirderTiffTileSource(item)
-        return tileSource
+        try:
+            if itemId == 'test':
+                tileSource = TestTileSource(256)
+            else:
+                item = self.model('item').load(id=itemId, level=AccessType.READ,
+                                               user=self.getCurrentUser(), exc=True)
+                tileSource = TiffGirderTileSource(item)
+            return tileSource
+        except TileSourceException as e:
+            # TODO: sometimes this could be 400
+            raise RestException(e.message, code=500)
 
     @access.public
     def getTilesInfo(self, itemId, params):

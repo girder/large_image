@@ -17,11 +17,14 @@
 #  limitations under the License.
 ###############################################################################
 
+from girder.constants import AccessType
+from girder.utility.model_importer import ModelImporter
+
 from .rest import TilesItemResource
 
 
 def load(info):
     TilesItemResource(info['apiRoot'])
 
-    # ModelImporter.model('item').exposeFields(
-    #     level=AccessType.READ, fields='gravatar_baseUrl')
+    ModelImporter.model('item').exposeFields(
+        level=AccessType.READ, fields='largeImage')

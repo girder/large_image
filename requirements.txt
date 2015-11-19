@@ -1,0 +1,4 @@
+libtiff
+numpy
+
+PIL

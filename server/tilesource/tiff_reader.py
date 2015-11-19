@@ -1,96 +1,383 @@
-__author__ = 'dhanannjay.deo'
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-"""
-Code to use pylibtiff, a wraper for libtiff 4.03 to extract tiles without
-uncompressing them.
-
-On windows requires C:\Python27\Lib\site-packages\libtiff in PATH, on might
-require that in LD_LIBRARY_PATH
-"""
+###############################################################################
+#  Copyright Kitware Inc.
+#
+#  Licensed under the Apache License, Version 2.0 ( the "License" );
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+###############################################################################
 
 import base64
+import ctypes
 import os
 
-from xml.etree import cElementTree as ET
-
-from libtiff import TIFF
-
-from libtiff.libtiff_ctypes import libtiff
-from libtiff.libtiff_ctypes import c_ttag_t
-
-import ctypes
-
-from ctypes import create_string_buffer
-
-import logging
-logger = logging.getLogger('slideatlas')
+import six
+try:
+    from libtiff import libtiff_ctypes
+except ImportError:
+    # TODO: change print to use logger
+    print 'Error: Could not import libtiff'
+    # re-raise it for now, but maybe do something else in the future
+    raise
 
 
-class TileReader():
+class TiffException(Exception):
+    pass
 
-    def __init__(self):
-        self.jpegtable_size = ctypes.c_uint16()
-        self.buf = ctypes.c_voidp()
-        self.jpegtables = None
-        self.dir = 0
+
+class InvalidOperationTiffException(TiffException):
+    """
+    An exception caused by the user making an invalid request of a TIFF file.
+    """
+    pass
+
+
+class IOTiffException(TiffException):
+    """
+    An exception caused by an internal failure, due to an invalid file or other
+    error.
+    """
+    pass
+
+
+class ValidationTiffException(TiffException):
+    """
+    An exception caused by the TIFF reader not being able to support a given
+    file.
+    """
+    pass
+
+
+class TiledTiffDirectory(object):
+
+    def __init__(self, filePath, directoryNum):
+        """
+        Create a new reader for a tiled image file directory in a TIFF file.
+
+        :param filePath: A path to a TIFF file on disk.
+        :type filePath: str
+        :param directoryNum: The number of the TIFF image file directory to open.
+        :type directoryNum: int
+        :raises: InvalidOperationTiffException or IOTiffException or ValidationTiffException
+        """
+        self._tiffFile = None
+
+        self._open(filePath, directoryNum)
+        try:
+            self._validate()
+        except ValidationTiffException:
+            self._close()
+            raise
+        self._loadMetadata()
+
+    def __del__(self):
+        self._close()
+
+    def _open(self, filePath, directoryNum):
+        """
+        Open a TIFF file to a given file and IFD number.
+
+        :param filePath: A path to a TIFF file on disk.
+        :type filePath: str
+        :param directoryNum: The number of the TIFF IFD to be used.
+        :type directoryNum: int
+        :raises: InvalidOperationTiffException or IOTiffException
+        """
+        self._close()
+        if not os.path.isfile(filePath):
+            raise InvalidOperationTiffException('TIFF file does not exist: ' % filePath)
+        try:
+            self._tiffFile = libtiff_ctypes.TIFF.open(filePath)
+        except TypeError:
+            raise IOTiffException('Could not open TIFF file: %s' % filePath)
+
+        self._directoryNum = directoryNum
+        if self._tiffFile.SetDirectory(self._directoryNum) != 1:
+            self._tiffFile.close()
+            raise IOTiffException('Could not set TIFF directory to %d' % directoryNum)
+
+    def _close(self):
+        if self._tiffFile:
+            self._tiffFile.close()
+            self._tiffFile = None
+
+    def _validate(self):
+        """
+        Validate that this TIFF file and directory are suitable for reading.
+
+        :raises: ValidationTiffException
+        """
+        if self._tiffFile.GetField('SamplesPerPixel') != 3:
+            raise ValidationTiffException('Only RGB TIFF files are supported')
+
+        if self._tiffFile.GetField('BitsPerSample') != 8:
+            raise ValidationTiffException('Only single-byte sampled TIFF files are supported')
+
+        if self._tiffFile.GetField('SampleFormat') not in (
+                None,  # default is still SAMPLEFORMAT_UINT
+                libtiff_ctypes.SAMPLEFORMAT_UINT):
+            raise ValidationTiffException('Only unsigned int sampled TIFF files are supported')
+
+        if self._tiffFile.GetField('PlanarConfig') != libtiff_ctypes.PLANARCONFIG_CONTIG:
+            raise ValidationTiffException('Only contiguous planar configuration TIFF files are supported')
+
+        if self._tiffFile.GetField('Photometric') not in (
+                libtiff_ctypes.PHOTOMETRIC_RGB,
+                libtiff_ctypes.PHOTOMETRIC_YCBCR):
+            raise ValidationTiffException('Only RGB and YCbCr photometric interpretation TIFF files are supported')
+
+        if self._tiffFile.GetField('Orientation') != libtiff_ctypes.ORIENTATION_TOPLEFT:
+            raise ValidationTiffException('Only top-left orientation TIFF files are supported')
+
+        if self._tiffFile.GetField('Compression') != libtiff_ctypes.COMPRESSION_JPEG:
+            raise ValidationTiffException('Only JPEG compression TIFF files are supported')
+
+        if not self._tiffFile.IsTiled():
+            raise ValidationTiffException('Only tiled TIFF files are supported')
+
+        if self._tiffFile.GetField('TileWidth') != self._tiffFile.GetField('TileLength'):
+            raise ValidationTiffException('Non-square TIFF tiles are not supported')
+
+        if self._tiffFile.GetField('JpegTablesMode') != \
+                libtiff_ctypes.JPEGTABLESMODE_QUANT | libtiff_ctypes.JPEGTABLESMODE_HUFF:
+            raise ValidationTiffException('Only TIFF files with separate Huffman and quantization tables are supported')
+
+
+    def _loadMetadata(self):
+        self._tileSize = self._tiffFile.GetField('TileWidth')
+        self._imageWidth = self._tiffFile.GetField('ImageWidth')
+        self._imageHeight = self._tiffFile.GetField('ImageLength')
+
+
+    def _getJpegTables(self):
+        """
+        Get the common JPEG Huffman-coding and quantization tables.
+
+        See http://www.awaresystems.be/imaging/tiff/tifftags/jpegtables.html
+        for more information.
+
+        :return: All Huffman and quantization tables, with JPEG table start markers.
+        :rtype: bytes
+        :raises: Exception
+        """
+        # TODO: definitely memoize this
+        # TODO: does this vary with Z?
+
+        # TIFFTAG_JPEGTABLES uses (uint32*, void**) output arguments
+        # http://www.remotesensing.org/libtiff/man/TIFFGetField.3tiff.html
+
+        tableSize = ctypes.c_uint32()
+        tableBuffer = ctypes.c_voidp()
+
+        libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
+            libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
+            [ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_void_p)]
+        if libtiff_ctypes.libtiff.TIFFGetField(
+                self._tiffFile,
+                libtiff_ctypes.TIFFTAG_JPEGTABLES,
+                ctypes.byref(tableSize),
+                ctypes.byref(tableBuffer)) != 1:
+            raise IOTiffException('Could not get JPEG Huffman / quantization tables')
+
+        tableSize = tableSize.value
+        tableBuffer = ctypes.cast(tableBuffer, ctypes.POINTER(ctypes.c_char))
+
+        if tableBuffer[:2] != b'\xff\xd8':
+            raise IOTiffException('Missing JPEG Start Of Image marker in tables')
+        if tableBuffer[tableSize - 2:tableSize] != b'\xff\xd9':
+            raise IOTiffException('Missing JPEG End Of Image marker in tables')
+        if tableBuffer[2:4] not in (b'\xff\xc4', b'\xff\xdb'):
+            raise IOTiffException('Missing JPEG Huffman or Quantization Table marker')
+
+        # Strip the Start / End Of Image markers
+        tableData = tableBuffer[2:tableSize - 2]
+        return tableData
+
+
+    def _toTileNum(self, x, y):
+        """
+        Get the internal tile number of a tile, from its row and column index.
+
+        :param x: The column index of the desired tile.
+        :type x: int
+        :param y: The row index of the desired tile.
+        :type y: int
+        :return: The internal tile number of the desired tile.
+        :rtype int
+        :raises: InvalidOperationTiffException
+        """
+        # TODO: is it worth it to memoize this?
+
+        # TIFFCheckTile and TIFFComputeTile require pixel coordinates
+        pixelX = x * self._tileSize
+        pixelY = y * self._tileSize
+
+        if libtiff_ctypes.libtiff.TIFFCheckTile(
+                self._tiffFile, pixelX, pixelY, 0, 0) == 0:
+            raise InvalidOperationTiffException('Tile x=%d, y=%d does not exist' % (x, y))
+
+        tileNum = libtiff_ctypes.libtiff.TIFFComputeTile(
+            self._tiffFile, pixelX, pixelY, 0, 0).value
+        return tileNum
+
+
+    def _getJpegFrameSize(self, tileNum):
+        """
+        Get the file size in bytes of the raw encoded JPEG frame for a tile.
+
+        :param tileNum: The internal tile number of the desired tile.
+        :type tileNum: int
+        :return: The size in bytes of the raw tile data for the desired tile.
+        :rtype: int
+        :raises: InvalidOperationTiffException or IOTiffException
+        """
+        # TODO: is it worth it to memoize this?
+
+        # TODO: remove this check, for additional speed
+        totalTileCount = libtiff_ctypes.libtiff.TIFFNumberOfTiles(self._tiffFile).value
+        if tileNum >= totalTileCount:
+            raise InvalidOperationTiffException('Tile number out of range')
+
+        # pylibtiff treats the output of TIFFTAG_TILEBYTECOUNTS as a scalar
+        # uint32; libtiff's documentation specifies that the output will be an
+        # array of uint32; in reality and per the TIFF spec, the output is an
+        # array of either uint64 or unit16, so we need to call the ctypes
+        # interface directly to get this tag
+        # http://www.awaresystems.be/imaging/tiff/tifftags/tilebytecounts.html
+
+        # TODO: the TIFF spec also allows this to be a uint16; is there a way in
+        # libtiff to inspect the type of a given tag instance?
+        rawTileSizes = ctypes.POINTER(ctypes.c_uint64)()
+
+        libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
+            libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
+            [ctypes.POINTER(ctypes.POINTER(ctypes.c_uint64))]
+        if libtiff_ctypes.libtiff.TIFFGetField(
+                self._tiffFile,
+                libtiff_ctypes.TIFFTAG_TILEBYTECOUNTS,
+                ctypes.byref(rawTileSizes)) != 1:
+            raise IOTiffException('Could not get raw tile size')
+
+        # In practice, this will never overflow, and it's simpler to convert the
+        # long to an int
+        return int(rawTileSizes[tileNum])
+
+
+    def _getJpegFrame(self, tileNum):
+        """
+        Get the raw encoded JPEG image frame from a tile.
+
+        :param tileNum: The internal tile number of the desired tile.
+        :type tileNum: int
+        :return: The JPEG image frame, including a JPEG Start Of Frame marker.
+        :rtype: bytes
+        :raises: InvalidOperationTiffException or IOTiffException
+        """
+        # This raises an InvalidOperationTiffException if the tile doesn't exist
+        rawTileSize = self._getJpegFrameSize(tileNum)
+
+        frameBuffer = ctypes.create_string_buffer(rawTileSize)
+
+        bytesRead = libtiff_ctypes.libtiff.TIFFReadRawTile(
+            self._tiffFile, tileNum,
+            frameBuffer, rawTileSize).value
+        if bytesRead == -1:
+            raise IOTiffException('Failed to read raw tile')
+        elif bytesRead < rawTileSize:
+            raise IOTiffException('Buffer underflow when reading tile')
+        elif bytesRead > rawTileSize:
+            # It's unlikely that this will ever occur, but incomplete reads will
+            # be checked for by looking for the JPEG end marker
+            raise IOTiffException('Buffer overflow when reading tile')
+
+        if frameBuffer.raw[:2] != b'\xff\xd8':
+            raise IOTiffException('Missing JPEG Start Of Image marker in frame')
+        if frameBuffer.raw[-2:] != b'\xff\xd9':
+            raise IOTiffException('Missing JPEG End Of Image marker in frame')
+        if frameBuffer.raw[2:4] not in (b'\xff\xc0', b'\xff\xc2'):
+            raise IOTiffException('Missing JPEG Start Of Frame marker')
+
+        # Strip the Start / End Of Image markers
+        tileData = frameBuffer.raw[2:-2]
+        return tileData
+
+
+    @property
+    def tileSize(self):
+        """
+        Get the pixel size of tiles.
+
+        :return: The tile size (length and height) in pixels.
+        :rtype: int
+        """
+        # TODO: fetch lazily and memoize
+        return self._tileSize
+
+
+    @property
+    def imageWidth(self):
+        # TODO: fetch lazily and memoize
+        return self._imageWidth
+
+
+    @property
+    def imageHeight(self):
+        # TODO: fetch lazily and memoize
+        return self._imageHeight
+
+
+    def getTile(self, x, y):
+        """
+        Get the complete JPEG image from a tile.
+
+        :param x: The column index of the desired tile.
+        :type x: int
+        :param y: The row index of the desired tile.
+        :type y: int
+        :rtype: bytes
+        :raises: InvalidOperationTiffException or IOTiffException
+        """
+        # This raises an InvalidOperationTiffException if the tile doesn't exist
+        tileNum = self._toTileNum(x, y)
+
+        imageBuffer = six.BytesIO()
+
+        # Write JPEG Start Of Image marker
+        imageBuffer.write(b'\xff\xd8')
+
+        imageBuffer.write(self._getJpegTables())
+
+        # TODO: why write padding?
+        imageBuffer.write(b'\xff\xff\xff\xff')
+
+        imageBuffer.write(self._getJpegFrame(tileNum))
+
+        # Write JPEG End Of Image marker
+        imageBuffer.write(b'\xff\xd9')
+
+        return imageBuffer.getvalue()
+
+
+    # TODO: refactor and remove this
+    def parse_image_description(self):
+        from xml.etree import cElementTree as ET
+        import logging
+        logger = logging.getLogger('slideatlas')
+
         self.levels = {}
         self.isBigTIFF = False
         self.barcode = ""
         self.tif = None
-
-    def close(self):
-        if self.tif:
-            self.tif.close()
-            self.tif = None
-
-    def __del__(self):
-        pass
-
-    def select_dir(self, dir):
-        """
-        :param dir: Number of Directory to select
-        """
-        libtiff.TIFFSetDirectory(self.tif, dir)
-        self.dir = libtiff.TIFFCurrentDirectory(self.tif).value
-
-        # Check if the operation was successful
-        if self.dir != dir:
-            raise Exception("Level not stored in file")
-
-        self.update_dir_info()
-
-    def _read_JPEG_tables(self):
-        """
-        """
-        libtiff.TIFFGetField.argtypes = libtiff.TIFFGetField.argtypes[
-            :2] + [ctypes.POINTER(ctypes.c_uint16), ctypes.POINTER(ctypes.c_void_p)]
-        r = libtiff.TIFFGetField(
-            self.tif, 347, self.jpegtable_size, ctypes.byref(self.buf))
-        assert(r == 1)
-        self.jpegtables = ctypes.cast(self.buf, ctypes.POINTER(ctypes.c_ubyte))
-        #logger.debug('Size of jpegtables: %d', self.jpegtable_size.value)
-        libtiff.TIFFGetField.argtypes = [TIFF, c_ttag_t, ctypes.c_void_p]
-
-    def extract_all_tiles(self):
-        """
-        Assumes that tile metadata as been read for the current directory
-        """
-
-        logger.debug('Extracting all tiles .. in directory: %d', self.dir)
-        cols = self.width / self.tile_width + 1
-        rows = self.height / self.tile_height + 1
-
-        for tiley in range(rows):
-            for tilex in range(cols):
-                tilename = "tile_%d_%d_%d.jpg" % (tiley*cols + tilex,
-                                                  tilex, tiley)
-                fout = open(tilename, "wb")
-                self.dump_tile(tilex * self.tile_width,
-                               tiley * self.tile_height, fout)
-                fout.close()
-                logger.debug('Writing %s', tilename)
-
-    def parse_image_description(self):
 
         self.meta = self.tif.GetField("ImageDescription")
 
@@ -161,153 +448,3 @@ class TileReader():
 
         except Exception as E:
             logger.warning('Image Description failed for valid Philips XML because %s', E.message)
-
-    def get_embedded_image(self, imagetype):
-        """
-
-        """
-        return self.embedded_images[imagetype]
-
-    def set_input_params(self, params):
-        """
-        The source specific input parameters
-        right now just a pointer to the file
-        """
-
-        self.tif = TIFF.open(params["fname"], "r")
-        self.params = params
-        self.name = os.path.basename(self.params["fname"])
-
-        self.tile_width = self.tif.GetField("TileWidth")
-        self.tile_height = self.tif.GetField("TileLength")
-
-        self._read_JPEG_tables()
-
-        # Get started with first image in the dir
-        if "dir" in params:
-            self.select_dir(params["dir"])
-        else:
-            self.select_dir(self.dir)  # By default zero
-
-    def get_tile_from_number(self, tileno, fp):
-        """
-        This function does something.
-
-        :param tileno: number of tile to fetch
-        :param fp: file pointer to which tile data is written
-        :returns:  int -- the return code.
-        :raises: AttributeError, KeyError
-        """
-        # Getting a single tile
-        tile_size = libtiff.TIFFTileSize(self.tif, tileno)
-
-        # logger.debug('TileSize: %s', tile_size.value)
-        if not isinstance(tile_size, (int, long)):
-            tile_size = tile_size.value
-
-        tmp_tile = create_string_buffer(tile_size)
-
-        r2 = libtiff.TIFFReadRawTile(self.tif, tileno, tmp_tile, tile_size)
-        # logger.debug('Valid size in tile: %s', r2.value)
-        # Experiment with the file output
-
-        fp.write(
-            ctypes.string_at(self.jpegtables, self.jpegtable_size.value)[:-2])
-        # Write padding
-        padding = "%c" % (255) * 4
-        fp.write(padding)
-        fp.write(ctypes.string_at(tmp_tile, r2)[2:])
-        if isinstance(r2, (int, long)):
-            return r2
-        return r2.value
-
-    def _get_raw_tile_from_number(self, tilenum):
-        """
-        Gets the jpeg bitstream
-        """
-        tile_size = libtiff.TIFFTileSize(self.tif, tileno)
-
-        # logger.debug('TileSize: %s', tile_size.value)
-        if not isinstance(tile_size, (int, long)):
-            tile_size = tile_size.value
-
-        tmp_tile = create_string_buffer(tile_size)
-
-        r2 = libtiff.TIFFReadRawTile(self.tif, tileno, tmp_tile, tile_size)
-        # logger.debug('Valid size in tile: %s', r2.value)
-        # Experiment with the file output
-
-        fp.write(
-            ctypes.string_at(self.jpegtables, self.jpegtable_size.value)[:-2])
-        # Write padding
-        padding = "%c" % (255) * 4
-        fp.write(padding)
-        fp.write(ctypes.string_at(tmp_tile, r2)[2:])
-
-
-    def tile_number(self, x, y):
-        """
-        Returns tile number from current directory
-
-        :param x: x coordinates of an example pixel in the tile
-        :type y: y coordinates of an example pixel in the tile
-        :returns:  int -- the return code.
-        """
-
-        if libtiff.TIFFCheckTile(self.tif, x, y, 0, 0) == 0:
-            return -1
-        else:
-            tileno = libtiff.TIFFComputeTile(self.tif, x, y, 0, 0)
-            if isinstance(tileno, (int, long)):
-                return tileno
-
-            return tileno.value
-
-    def dump_tile(self, x, y, fp):
-        """
-        Returns compressed image tile data (jpeg)containing specified x and y
-        coordinates
-
-        :param x: x coordinates of an example pixel in the tile
-        :type y: y coordinates of an example pixel in the tile
-        :param fp: file pointer to which tile data is written
-        :returns:  int -- the return code.
-        :raises: AttributeError, KeyError
-        """
-        # Getting a single tile
-        tileno = self.tile_number(x, y)
-        if tileno < 0:
-            return 0
-        else:
-            return self.get_tile_from_number(tileno, fp)
-
-    def update_dir_info(self):
-        """
-        Reads width / height etc
-        Must be called after the set_input_params is called
-        """
-        self.width = self.tif.GetField("ImageWidth")
-        self.height = self.tif.GetField("ImageLength")
-
-        # Grab the image dimensions through the metadata
-
-        self.num_tiles = libtiff.TIFFNumberOfTiles(self.tif)
-        if not isinstance(self.num_tiles, (int, long)):
-            self.num_tiles = self.num_tiles.value
-
-        self._read_JPEG_tables()
-        #xml = ET.fromstring(tif.GetField("ImageDescription"))
-        #self.image_width = int(xml.find(".//*[@Name='PIM_DP_IMAGE_COLUMNS']").text)
-        #self.image_height = int(xml.find(".//*[@Name='PIM_DP_IMAGE_ROWS']").text)
-
-        #self.image_width = tif.GetField("ImageWidth")
-        #self.image_length = tif.GetField("ImageLength")
-        # logger.debug('%s', tif.GetField('ImageDescription'))
-
-if __name__ == "__main__":
-    # for i in ["d:\\data\\phillips\\20140313T180859-805105.ptif","d:\\data\\phillips\\20140313T130524-183511.ptif"]:
-    #    list_tiles(0,fname=i)
-    # test_embedded_images(fname="/home/dhan/data/phillips/20140313T180859-805105.ptif")
-    # write_svg(toextract=True, fname="/home/dhan/data/phillips/20140313T180859-805105.ptif")
-    # write_svg(toextract=True, fname="d:\\data\\phillips\\20140313T180859-805105.ptif")
-    test_barcode()
