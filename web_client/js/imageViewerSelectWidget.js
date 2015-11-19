@@ -2,12 +2,14 @@ girder.wrap(girder.views.ItemView, 'render', function (render) {
     // ItemView is a special case in which rendering is done asynchronously,
     // so we must listen for a render event.
     this.once('g:rendered', function () {
-        new girder.views.ImageViewerSelectWidget({
-            el: $('<div>', {class: 'g-item-image-viewer-select'})
-                .insertAfter(this.$('.g-item-info')),
-            parentView: this,
-            imageModel: this.model
-        });
+        if (this.model.get('largeImage')) {
+            new girder.views.ImageViewerSelectWidget({
+                el: $('<div>', {class: 'g-item-image-viewer-select'})
+                    .insertAfter(this.$('.g-item-info')),
+                parentView: this,
+                imageModel: this.model
+            });
+        }
     }, this);
     render.call(this);
 });
@@ -21,7 +23,9 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
     },
 
     initialize: function (settings) {
-        this.imageModel = settings.imageModel;
+        this.itemId = settings.imageModel.get('largeImage') === 'test' ?
+            'test' :
+            settings.imageModel.id;
         this.currentViewer = null;
         this.viewers = [
             {
@@ -78,8 +82,7 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
         this.currentViewer = new viewerType({
             el: viewerEl,
             parentView: this,
-            //itemId: this.imageModel.id,
-            itemId: 'test'
+            itemId: this.itemId
         });
     }
 
