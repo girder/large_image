@@ -30,6 +30,8 @@ except ImportError:
     # re-raise it for now, but maybe do something else in the future
     raise
 
+from .cache import LruCacheMetaclass, instanceLruCache
+
 
 def patchLibtiff():
     libtiff_ctypes.libtiff.TIFFFieldWithTag.restype = ctypes.POINTER(libtiff_ctypes.TIFFFieldInfo)
@@ -68,7 +70,9 @@ class ValidationTiffException(TiffException):
     pass
 
 
+@six.add_metaclass(LruCacheMetaclass)
 class TiledTiffDirectory(object):
+    cacheMaxSize = 20
 
     def __init__(self, filePath, directoryNum):
         """
@@ -90,8 +94,10 @@ class TiledTiffDirectory(object):
             raise
         self._loadMetadata()
 
+
     def __del__(self):
         self._close()
+
 
     def _open(self, filePath, directoryNum):
         """
@@ -116,10 +122,12 @@ class TiledTiffDirectory(object):
             self._tiffFile.close()
             raise IOTiffException('Could not set TIFF directory to %d' % directoryNum)
 
+
     def _close(self):
         if self._tiffFile:
             self._tiffFile.close()
             self._tiffFile = None
+
 
     def _validate(self):
         """
@@ -169,6 +177,7 @@ class TiledTiffDirectory(object):
         self._imageHeight = self._tiffFile.GetField('ImageLength')
 
 
+    @instanceLruCache(1)
     def _getJpegTables(self):
         """
         Get the common JPEG Huffman-coding and quantization tables.
@@ -180,7 +189,6 @@ class TiledTiffDirectory(object):
         :rtype: bytes
         :raises: Exception
         """
-        # TODO: definitely memoize this
         # TODO: does this vary with Z?
 
         # TIFFTAG_JPEGTABLES uses (uint32*, void**) output arguments
@@ -240,6 +248,8 @@ class TiledTiffDirectory(object):
             self._tiffFile, pixelX, pixelY, 0, 0).value
         return tileNum
 
+
+    @instanceLruCache(1)
     def _getTileByteCountsType(self):
         """
         Get data type of the elements in the TIFFTAG_TILEBYTECOUNTS array.
@@ -248,7 +258,6 @@ class TiledTiffDirectory(object):
         :rtype: ctypes.c_uint64 or ctypes.c_uint16
         :raises: IOTiffException
         """
-        # TODO: memoize this
         tileByteCountsFieldInfo = libtiff_ctypes.libtiff.TIFFFieldWithTag(
             self._tiffFile, libtiff_ctypes.TIFFTAG_TILEBYTECOUNTS).contents
         tileByteCountsLibtiffType = tileByteCountsFieldInfo.field_type
@@ -260,6 +269,7 @@ class TiledTiffDirectory(object):
         else:
             raise IOTiffException('Invalid type for TIFFTAG_TILEBYTECOUNTS: %s' %
                                   tileByteCountsLibtiffType)
+
 
     def _getJpegFrameSize(self, tileNum):
         """

@@ -2,3 +2,5 @@ libtiff
 numpy
 
 PIL
+
+repoze.lru
