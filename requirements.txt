@@ -1,6 +1,6 @@
 libtiff
 numpy
 
-PIL
+Pillow
 
 repoze.lru
