@@ -25,6 +25,10 @@ import repoze.lru
 from repoze.lru import _MARKER
 
 
+def defaultCacheKeyFunc(args, kwargs):
+    return (args, frozenset(six.viewitems(kwargs)))
+
+
 class LruCacheMetaclass(type):
     """
     """
@@ -35,22 +39,27 @@ class LruCacheMetaclass(type):
         # namespace (necessary for Python 2), or preferentially as metaclass
         # arguments (only in Python 3).
 
-        cacheMaxSize = namespace.pop('cacheMaxSize', None)
-        cacheMaxSize = kwargs.get('cacheMaxSize', cacheMaxSize)
-        if cacheMaxSize is None:
+        maxSize = namespace.pop('cacheMaxSize', None)
+        maxSize = kwargs.get('cacheMaxSize', maxSize)
+        if maxSize is None:
             raise TypeError('Usage of the LruCacheMetaclass requires a "cacheMaxSize" attribute on the class.')
 
-        cacheTimeout = namespace.pop('cacheTimeout', None)
-        cacheTimeout = kwargs.get('cacheTimeout', cacheTimeout)
+        timeout = namespace.pop('cacheTimeout', None)
+        timeout = kwargs.get('cacheTimeout', timeout)
+
+        keyFunc = namespace.pop('cacheKeyFunc', None)
+        keyFunc = kwargs.get('cacheKeyFunc', keyFunc)
+        if not keyFunc:
+            keyFunc = defaultCacheKeyFunc
 
         # TODO: use functools.lru_cache if's available in Python 3?
         cacheType = \
             repoze.lru.LRUCache \
-            if cacheTimeout is None else \
+            if timeout is None else \
             functools.partial(repoze.lru.ExpiringLRUCache,
-                              default_timeout=cacheTimeout)
-
-        cache = cacheType(cacheMaxSize)
+                              default_timeout=timeout)
+        cache = cacheType(maxSize)
+        cache.keyFunc = keyFunc
 
         cls = super(LruCacheMetaclass, metacls).__new__(
             metacls, name, bases, namespace)
@@ -68,7 +77,7 @@ class LruCacheMetaclass(type):
     def __call__(cls, *args, **kwargs):
         cache = LruCacheMetaclass.caches[cls]
 
-        key = (args, frozenset(six.viewitems(kwargs)))
+        key = cache.keyFunc(args, kwargs)
 
         instance = cache.get(key, _MARKER)
         if instance is _MARKER:
@@ -81,13 +90,15 @@ class LruCacheMetaclass(type):
 class instanceLruCache(object):
     """
     """
-    def __init__(self, maxSize, timeout=None):
+    def __init__(self, maxSize, timeout=None, keyFunc=None):
         self.maxSize = maxSize
         self.cacheType = \
             repoze.lru.LRUCache \
             if timeout is None else \
             functools.partial(repoze.lru.ExpiringLRUCache,
                               default_timeout=timeout)
+        self.keyFunc = keyFunc if keyFunc else defaultCacheKeyFunc
+
 
     def __call__(self, func):
         def wrapper(instance, *args, **kwargs):
@@ -107,7 +118,7 @@ class instanceLruCache(object):
             cache = instance.__dict__.setdefault(cacheName,
                 self.cacheType(self.maxSize))
 
-            key = (args, frozenset(six.viewitems(kwargs)))
+            key = self.keyFunc(args, kwargs)
 
             value = cache.get(key, _MARKER)
             if value is _MARKER:

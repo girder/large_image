@@ -19,15 +19,23 @@
 
 import itertools
 
+import six
+
 from .base import GirderTileSource, TileSourceException
+from .cache import LruCacheMetaclass
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException
 
 
+@six.add_metaclass(LruCacheMetaclass)
 class TiffGirderTileSource(GirderTileSource):
     """
     Provides tile access to Girder items with TIFF file.
     """
+    cacheMaxSize = 2
+    cacheTimeout = 60
+    cacheKeyFunc = lambda args, kwargs: args[0].get('largeImage')
+
     def __init__(self, item):
         super(TiffGirderTileSource, self).__init__(item)
 

@@ -30,7 +30,7 @@ except ImportError:
     # re-raise it for now, but maybe do something else in the future
     raise
 
-from .cache import LruCacheMetaclass, instanceLruCache
+from .cache import instanceLruCache
 
 
 def patchLibtiff():
@@ -70,9 +70,7 @@ class ValidationTiffException(TiffException):
     pass
 
 
-@six.add_metaclass(LruCacheMetaclass)
 class TiledTiffDirectory(object):
-    cacheMaxSize = 20
 
     def __init__(self, filePath, directoryNum):
         """
