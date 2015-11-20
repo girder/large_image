@@ -31,6 +31,16 @@ except ImportError:
     raise
 
 
+def patchLibtiff():
+    libtiff_ctypes.libtiff.TIFFFieldWithTag.restype = ctypes.POINTER(libtiff_ctypes.TIFFFieldInfo)
+    libtiff_ctypes.libtiff.TIFFFieldWithTag.argtypes = (libtiff_ctypes.TIFF, libtiff_ctypes.c_ttag_t)
+
+    libtiff_ctypes.TIFFDataType.TIFF_LONG8 = 16  # BigTIFF 64-bit unsigned integer
+    libtiff_ctypes.TIFFDataType.TIFF_SLONG8 = 17  # BigTIFF 64-bit signed integer
+    libtiff_ctypes.TIFFDataType.TIFF_IFD8 = 18  # BigTIFF 64-bit unsigned integer (offset)
+patchLibtiff()
+
+
 class TiffException(Exception):
     pass
 
@@ -230,6 +240,26 @@ class TiledTiffDirectory(object):
             self._tiffFile, pixelX, pixelY, 0, 0).value
         return tileNum
 
+    def _getTileByteCountsType(self):
+        """
+        Get data type of the elements in the TIFFTAG_TILEBYTECOUNTS array.
+
+        :return: The element type in TIFFTAG_TILEBYTECOUNTS.
+        :rtype: ctypes.c_uint64 or ctypes.c_uint16
+        :raises: IOTiffException
+        """
+        # TODO: memoize this
+        tileByteCountsFieldInfo = libtiff_ctypes.libtiff.TIFFFieldWithTag(
+            self._tiffFile, libtiff_ctypes.TIFFTAG_TILEBYTECOUNTS).contents
+        tileByteCountsLibtiffType = tileByteCountsFieldInfo.field_type
+
+        if tileByteCountsLibtiffType == libtiff_ctypes.TIFFDataType.TIFF_LONG8:
+            return ctypes.c_uint64
+        elif tileByteCountsLibtiffType == libtiff_ctypes.TIFFDataType.TIFF_SHORT:
+            return ctypes.c_uint16
+        else:
+            raise IOTiffException('Invalid type for TIFFTAG_TILEBYTECOUNTS: %s' %
+                                  tileByteCountsLibtiffType)
 
     def _getJpegFrameSize(self, tileNum):
         """
@@ -255,13 +285,12 @@ class TiledTiffDirectory(object):
         # interface directly to get this tag
         # http://www.awaresystems.be/imaging/tiff/tifftags/tilebytecounts.html
 
-        # TODO: the TIFF spec also allows this to be a uint16; is there a way in
-        # libtiff to inspect the type of a given tag instance?
-        rawTileSizes = ctypes.POINTER(ctypes.c_uint64)()
+        rawTileSizesType = self._getTileByteCountsType()
+        rawTileSizes = ctypes.POINTER(rawTileSizesType)()
 
         libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
             libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
-            [ctypes.POINTER(ctypes.POINTER(ctypes.c_uint64))]
+            [ctypes.POINTER(ctypes.POINTER(rawTileSizesType))]
         if libtiff_ctypes.libtiff.TIFFGetField(
                 self._tiffFile,
                 libtiff_ctypes.TIFFTAG_TILEBYTECOUNTS,
