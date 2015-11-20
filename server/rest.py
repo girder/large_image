@@ -87,6 +87,7 @@ class TilesItemResource(Item):
         cherrypy.response.headers['Content-Type'] = 'image/jpeg'
         return lambda: tileData
 
+    getTile.cookieAuth = True
     getTile.description = (
         Description('Get an image tile.')
         .param('itemId', 'The ID of the item, or "test".', paramType='path')
