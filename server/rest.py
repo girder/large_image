@@ -66,9 +66,28 @@ class TilesItemResource(Item):
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def createTiles(self, item, params):
-        return
+        largeImageFileId = params.get('fileId')
+        if not largeImageFileId:
+            raise RestException('Missing "fileId" parameter.')
+
+        largeImageFile = self.model('file').load(largeImageFileId, force=True,
+                                                 exc=True)
+        if largeImageFile['itemId'] != item['_id']:
+            raise RestException('"fileId" must be a file on the same item as "itemId".')
+
+        item['largeImage'] = largeImageFile['_id']
+        self.model('item').save(item)
+
+        # TODO: a better response
+        return {
+            'created': True
+        }
+
     createTiles.description = (
-        Description('Create a multiresolution image for this item (Not yet implemented).'))
+        Description('Create a multiresolution image for this item.')
+        .param('itemId', 'The ID of the item..', paramType='path')
+        .param('fileId', 'The ID of the source file containing the image.')
+    )
 
 
     @access.public

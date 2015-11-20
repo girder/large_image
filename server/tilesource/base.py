@@ -55,6 +55,8 @@ class GirderTileSource(TileSource):
             largeImageFileId = self.item['largeImage']
             # Access control checking should already have been done on item, so
             # don't repeat.
+            # TODO: is it possible that the file is on a different item, so do
+            # we want to repeat the access check?
             largeImageFile = ModelImporter.model('file').load(largeImageFileId, force=True)
 
             # TODO: can we move some of this logic into Girder core?
