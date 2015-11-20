@@ -304,11 +304,21 @@ class TiledTiffDirectory(object):
             raise IOTiffException('Missing JPEG Start Of Image marker in frame')
         if frameBuffer.raw[-2:] != b'\xff\xd9':
             raise IOTiffException('Missing JPEG End Of Image marker in frame')
-        if frameBuffer.raw[2:4] not in (b'\xff\xc0', b'\xff\xc2'):
-            raise IOTiffException('Missing JPEG Start Of Frame marker')
+        if frameBuffer.raw[2:4] in (b'\xff\xc0', b'\xff\xc2'):
+            frameStartPos = 2
+        else:
+            # VIPS may encode TIFFs with the quantization (but not Huffman)
+            # tables also at the start of every frame, so locate them for
+            # removal
+            # VIPS seems to prefer Baseline DCT, so search for that first
+            frameStartPos = frameBuffer.raw.find(b'\xff\xc0', 2, -2)
+            if frameStartPos == -1:
+                frameStartPos = frameBuffer.raw.find(b'\xff\xc2', 2, -2)
+                if frameStartPos == -1:
+                    raise IOTiffException('Missing JPEG Start Of Frame marker')
 
         # Strip the Start / End Of Image markers
-        tileData = frameBuffer.raw[2:-2]
+        tileData = frameBuffer.raw[frameStartPos:-2]
         return tileData
 
 
