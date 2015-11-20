@@ -57,7 +57,7 @@ class TiffGirderTileSource(GirderTileSource):
     def getTile(self, x, y, z):
         try:
             return self._tiffDirectories[z].getTile(x, y)
-        except KeyError:
+        except IndexError:
             raise TileSourceException('z layer does not exist')
         except InvalidOperationTiffException as e:
             raise TileSourceException(e.message)
