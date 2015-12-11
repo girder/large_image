@@ -62,20 +62,24 @@ class TilesItemResource(Item):
         .errorResponse('Read access was denied for the item.', 403)
     )
 
-
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def createTiles(self, item, params):
         largeImageFileId = params.get('fileId')
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
+        if largeImageFileId not in ('test', 'clear'):
+            largeImageFile = self.model('file').load(largeImageFileId,
+                                                     force=True, exc=True)
+            if largeImageFile['itemId'] != item['_id']:
+                raise RestException('"fileId" must be a file on the same item as "itemId".')
 
-        largeImageFile = self.model('file').load(largeImageFileId, force=True,
-                                                 exc=True)
-        if largeImageFile['itemId'] != item['_id']:
-            raise RestException('"fileId" must be a file on the same item as "itemId".')
-
-        item['largeImage'] = largeImageFile['_id']
+            item['largeImage'] = largeImageFile['_id']
+        elif largeImageFileId == 'clear':
+            if 'largeImage' in item:
+                del item['largeImage']
+        else:
+            item['largeImage'] = largeImageFileId
         self.model('item').save(item)
 
         # TODO: a better response
@@ -88,7 +92,6 @@ class TilesItemResource(Item):
         .param('itemId', 'The ID of the item..', paramType='path')
         .param('fileId', 'The ID of the source file containing the image.')
     )
-
 
     @access.public
     def getTile(self, itemId, z, x, y, params):
@@ -109,7 +112,8 @@ class TilesItemResource(Item):
     getTile.cookieAuth = True
     getTile.description = (
         Description('Get an image tile.')
-        .param('itemId', 'The ID of the item, or "test".', paramType='path')
+        .param('itemId', 'The ID of the item, "test", or "clear".',
+               paramType='path')
         .param('z', 'The layer number of the tile (0 is the most zoomed-out layer).', paramType='path')
         .param('x', 'The X coordinate of the tile (0 is the left side).', paramType='path')
         .param('y', 'The Y coordinate of the tile (0 is the top).', paramType='path')

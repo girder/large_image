@@ -70,4 +70,5 @@ class GirderTileSource(TileSource):
             return largeImagePath
 
         except (KeyError, ValidationException, TileSourceException) as e:
-            raise TileSourceException('No large image file in this item: ' % e.message)
+            raise TileSourceException(
+                'No large image file in this item: %s' % e.message)
