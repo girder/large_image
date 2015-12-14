@@ -34,6 +34,7 @@ class TilesItemResource(Item):
         self.resourceName = 'item'
         apiRoot.item.route('GET', (':itemId', 'tiles'), self.getTilesInfo)
         apiRoot.item.route('POST', (':itemId', 'tiles'), self.createTiles)
+        apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
 
@@ -57,11 +58,10 @@ class TilesItemResource(Item):
 
     getTilesInfo.description = (
         Description('Get multiresolution tiles metadata.')
-        .param('itemId', 'The ID of the item, or "test".', paramType='path')
+        .param('itemId', 'The ID of the item or "test".', paramType='path')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-
 
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -69,13 +69,15 @@ class TilesItemResource(Item):
         largeImageFileId = params.get('fileId')
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
+        if largeImageFileId != 'test':
+            largeImageFile = self.model('file').load(largeImageFileId,
+                                                     force=True, exc=True)
+            if largeImageFile['itemId'] != item['_id']:
+                raise RestException('"fileId" must be a file on the same item as "itemId".')
 
-        largeImageFile = self.model('file').load(largeImageFileId, force=True,
-                                                 exc=True)
-        if largeImageFile['itemId'] != item['_id']:
-            raise RestException('"fileId" must be a file on the same item as "itemId".')
-
-        item['largeImage'] = largeImageFile['_id']
+            item['largeImage'] = largeImageFile['_id']
+        else:
+            item['largeImage'] = largeImageFileId
         self.model('item').save(item)
 
         # TODO: a better response
@@ -85,10 +87,28 @@ class TilesItemResource(Item):
 
     createTiles.description = (
         Description('Create a multiresolution image for this item.')
-        .param('itemId', 'The ID of the item..', paramType='path')
-        .param('fileId', 'The ID of the source file containing the image.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('fileId', 'The ID of the source file containing the image or '
+               '"test".')
     )
 
+    @access.user
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
+    def deleteTiles(self, item, params):
+        deleted = False
+        if 'largeImage' in item:
+            del item['largeImage']
+            self.model('item').save(item)
+            deleted = True
+        # TODO: a better response
+        return {
+            'deleted': deleted
+        }
+
+    deleteTiles.description = (
+        Description('Remove a multiresolution image from this item.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+    )
 
     @access.public
     def getTile(self, itemId, z, x, y, params):
@@ -109,7 +129,7 @@ class TilesItemResource(Item):
     getTile.cookieAuth = True
     getTile.description = (
         Description('Get an image tile.')
-        .param('itemId', 'The ID of the item, or "test".', paramType='path')
+        .param('itemId', 'The ID of the item or "test".', paramType='path')
         .param('z', 'The layer number of the tile (0 is the most zoomed-out layer).', paramType='path')
         .param('x', 'The X coordinate of the tile (0 is the left side).', paramType='path')
         .param('y', 'The Y coordinate of the tile (0 is the top).', paramType='path')
