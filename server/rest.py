@@ -76,9 +76,6 @@ class TilesItemResource(Item):
                 raise RestException('"fileId" must be a file on the same item as "itemId".')
 
             item['largeImage'] = largeImageFile['_id']
-        elif largeImageFileId == 'clear':
-            if 'largeImage' in item:
-                del item['largeImage']
         else:
             item['largeImage'] = largeImageFileId
         self.model('item').save(item)
