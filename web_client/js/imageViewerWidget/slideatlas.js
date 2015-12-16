@@ -20,7 +20,7 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
         }
 
         // TODO: if a viewer already exists, do we render again?
-        $(this.el).saViewer({
+        this.$el.saViewer({
             zoomWidget  : true,
             drawWidget  : true,
             prefixUrl   : 'https://beta.slide-atlas.org/webgl-viewer/static/',
@@ -41,7 +41,7 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
 
     destroy: function () {
         if (this.viewer) {
-            $(this.el).saViewer('destroy');
+            this.$el.saViewer('destroy');
             this.viewer = null;
         }
         if (window.SlideAtlas) {

@@ -53,11 +53,6 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
                 label: 'GeoJS',
                 type: girder.views.GeojsImageViewerWidget
             }
-            //{
-            //    name: 'slideatlas',
-            //    label: 'SlideAtlas',
-            //    type: girder.views.SlideatlasImageViewerWidget
-            //},
         ];
 
         this.render()
