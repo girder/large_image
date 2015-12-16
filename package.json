@@ -1,0 +1,19 @@
+{
+  "name": "girder_image_viewer",
+  "version": "1.0.0",
+  "description": "A Girder plugin to view multiresolution images, using several viewers.",
+  "homepage": "https://github.com/DigitalSlideArchive/image_viewer",
+  "bugs": {
+    "url": "https://github.com/DigitalSlideArchive/image_viewer/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DigitalSlideArchive/image_viewer.git"
+  },
+  "dependencies": {
+    "geojs": "0.5.0"
+  },
+  "devDependencies": {},
+  "scripts": {}
+}

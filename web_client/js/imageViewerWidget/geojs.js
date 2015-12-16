@@ -2,16 +2,10 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
     initialize: function (settings) {
         girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
 
-        // Can't do this in parallel, dependencies must always be loaded first
         $.getScript(
-            'https://opengeoscience.github.io/geojs/built/geo.ext.min.js',
+            girder.staticRoot + '/built/plugins/image_viewer/geo.min.js',
             _.bind(function () {
-                $.getScript(
-                    'https://opengeoscience.github.io/geojs/built/geo.min.js',
-                    _.bind(function () {
-                        this.render();
-                    }, this)
-                );
+                this.render();
             }, this)
         );
 
