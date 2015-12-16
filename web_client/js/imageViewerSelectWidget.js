@@ -34,6 +34,11 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
                 type: girder.views.OpenseadragonImageViewerWidget
             },
             {
+                name: 'slideatlas',
+                label: 'SlideAtlas',
+                type: girder.views.SlideAtlasImageViewerWidget
+            },
+            {
                 name: 'leaflet',
                 label: 'Leaflet',
                 type: girder.views.LeafletImageViewerWidget
@@ -48,11 +53,6 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
                 label: 'GeoJS',
                 type: girder.views.GeojsImageViewerWidget
             }
-            //{
-            //    name: 'slideatlas',
-            //    label: 'SlideAtlas',
-            //    type: girder.views.SlideatlasImageViewerWidget
-            //},
         ];
 
         this.render()
