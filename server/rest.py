@@ -42,11 +42,13 @@ class TilesItemResource(Item):
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
 
+
     def _loadTileSource(self, itemId):
         try:
             if itemId == 'test':
                 tileSource = TestTileSource(256)
             else:
+                # TODO: cache the user / item loading too
                 item = self.model('item').load(id=itemId, level=AccessType.READ,
                                                user=self.getCurrentUser(), exc=True)
                 tileSource = TiffGirderTileSource(item)
