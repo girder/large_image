@@ -1,6 +1,6 @@
 libtiff
 numpy
 
-Pillow
+Pillow==3.0.0
 
 repoze.lru
