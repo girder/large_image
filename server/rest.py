@@ -82,15 +82,30 @@ class TilesItemResource(Item):
         largeImageFileId = params.get('fileId')
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
-        if largeImageFileId != 'test':
+
+        if largeImageFileId == 'test':
+            item['largeImage'] = 'test'
+
+        else:
             largeImageFile = self.model('file').load(largeImageFileId,
                                                      force=True, exc=True)
             if largeImageFile['itemId'] != item['_id']:
-                raise RestException('"fileId" must be a file on the same item as "itemId".')
+                raise RestException('"fileId" must be a file on the same item'
+                                    'as "itemId".')
 
-            item['largeImage'] = largeImageFile['_id']
-        else:
-            item['largeImage'] = largeImageFileId
+            if largeImageFile['mimeType'] == 'image/tiff':
+                # TODO: we should ensure that it is a multiresolution tiled TIFF
+                item['largeImage'] = largeImageFile['_id']
+
+            else:
+                # TODO: implement a job that will create a multiresolution tiled
+                # TIFF and save it to this Girder item
+                newLargeImageFile = createLargeImageJob(
+                    item=item,
+                    originalFile=largeImageFile
+                )
+                item['largeImage'] = newLargeImageFile['_id']
+
         self.model('item').save(item)
 
         # TODO: a better response
@@ -108,6 +123,8 @@ class TilesItemResource(Item):
     def deleteTiles(self, item, params):
         deleted = False
         if 'largeImage' in item:
+            # TODO: if this file was created by the worker job, then delete it,
+            # but if it was the originally uploaded file, leave it
             del item['largeImage']
             self.model('item').save(item)
             deleted = True
