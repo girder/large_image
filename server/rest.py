@@ -31,6 +31,10 @@ from .tilesource import TestTileSource, TiffGirderTileSource, TileSourceExceptio
 class TilesItemResource(Item):
 
     def __init__(self, apiRoot):
+        # Don't call the parent (Item) constructor, to avoid redefining routes,
+        # but do call the grandparent (Resource) constructor
+        super(Item, self).__init__()
+
         self.resourceName = 'item'
         apiRoot.item.route('GET', (':itemId', 'tiles'), self.getTilesInfo)
         apiRoot.item.route('POST', (':itemId', 'tiles'), self.createTiles)
