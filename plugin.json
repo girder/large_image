@@ -2,5 +2,6 @@
     "name": "Image viewer",
     "description": "Large image viewers.",
     "version": "1.0.0",
-    "dependencies": ["multiresolution_image"]
+    "dependencies": ["multiresolution_image"],
+    "grunt": "Gruntfile.js"
 }
