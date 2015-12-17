@@ -1,6 +1,6 @@
 {
-    "name": "Image viewer",
-    "description": "Large image viewers.",
+    "name": "Large image",
+    "description": "Create, serve, and display large multiresolution images.",
     "version": "0.2.0",
     "dependencies": [],
     "grunt": "Gruntfile.js"

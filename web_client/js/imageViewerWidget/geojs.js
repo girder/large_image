@@ -3,7 +3,7 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
         girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $.getScript(
-            girder.staticRoot + '/built/plugins/image_viewer/geo.min.js',
+            girder.staticRoot + '/built/plugins/large_image/geo.min.js',
             _.bind(function () {
                 this.render();
             }, this)

@@ -21,22 +21,22 @@ module.exports = function (grunt) {
     // This gruntfile is only designed to be used with girder's build system.
     // Fail if grunt is executed here.
     if (path.resolve(__dirname) === path.resolve(process.cwd())) {
-        grunt.fail.fatal('To build image_viewer, run grunt from Girder\'s root directory');
+        grunt.fail.fatal('To build large_image, run grunt from Girder\'s root directory');
     }
 
     grunt.config.merge({
         plugin: {
-            image_viewer: {
-                root: '<%= pluginDir %>/image_viewer',
-                static: '<%= staticDir %>/built/plugins/image_viewer',
-                node_modules: '<%= plugin.image_viewer.root %>/node_modules',
-                geojs: '<%= plugin.image_viewer.node_modules %>/geojs',
-                geojs_modules: '<%= plugin.image_viewer.geojs %>/node_modules',
-                geojs_components: '<%= plugin.image_viewer.geojs %>/bower_components',
-                pnltri: '<%= plugin.image_viewer.geojs_modules %>/pnltri/pnltri.js',
-                proj4: '<%= plugin.image_viewer.geojs_components %>/proj4/dist/proj4-src.js',
-                d3: '<%= plugin.image_viewer.geojs_components %>/d3/d3.js',
-                glmatrix: '<%= plugin.image_viewer.geojs_components %>/gl-matrix/gl-matrix.js'
+            large_image: {
+                root: '<%= pluginDir %>/large_image',
+                static: '<%= staticDir %>/built/plugins/large_image',
+                node_modules: '<%= plugin.large_image.root %>/node_modules',
+                geojs: '<%= plugin.large_image.node_modules %>/geojs',
+                geojs_modules: '<%= plugin.large_image.geojs %>/node_modules',
+                geojs_components: '<%= plugin.large_image.geojs %>/bower_components',
+                pnltri: '<%= plugin.large_image.geojs_modules %>/pnltri/pnltri.js',
+                proj4: '<%= plugin.large_image.geojs_components %>/proj4/dist/proj4-src.js',
+                d3: '<%= plugin.large_image.geojs_components %>/d3/d3.js',
+                glmatrix: '<%= plugin.large_image.geojs_components %>/gl-matrix/gl-matrix.js'
             }
         },
         uglify: {
@@ -44,13 +44,13 @@ module.exports = function (grunt) {
                 files: [
                     {   // leaving out jquery because girder includes it
                         src: [
-                            '<%= plugin.image_viewer.pnltri %>',
-                            '<%= plugin.image_viewer.proj4 %>',
-                            '<%= plugin.image_viewer.d3 %>',
-                            '<%= plugin.image_viewer.glmatrix %>',
-                            '<%= plugin.image_viewer.geojs %>/geo.js'
+                            '<%= plugin.large_image.pnltri %>',
+                            '<%= plugin.large_image.proj4 %>',
+                            '<%= plugin.large_image.d3 %>',
+                            '<%= plugin.large_image.glmatrix %>',
+                            '<%= plugin.large_image.geojs %>/geo.js'
                         ],
-                        dest: '<%= plugin.image_viewer.static %>/geo.min.js'
+                        dest: '<%= plugin.large_image.static %>/geo.min.js'
                     }
                 ]
             }

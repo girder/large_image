@@ -1,2 +1,2 @@
-# image_viewer
-A Girder plugin to view multiresolution images, using several viewers.
+# large_image
+A Girder plugin to create, serve, and display large multiresolution images.

@@ -59,7 +59,7 @@ class TilesItemResource(Item):
 
 
     @describeRoute(
-        Description('Get multiresolution tiles metadata.')
+        Description('Get large image metadata.')
         .param('itemId', 'The ID of the item or "test".', paramType='path')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
@@ -71,7 +71,7 @@ class TilesItemResource(Item):
 
 
     @describeRoute(
-        Description('Create a multiresolution image for this item.')
+        Description('Create a large image for this item.')
         .param('itemId', 'The ID of the item.', paramType='path')
         .param('fileId', 'The ID of the source file containing the image or '
                '"test".')
@@ -100,7 +100,7 @@ class TilesItemResource(Item):
 
 
     @describeRoute(
-        Description('Remove a multiresolution image from this item.')
+        Description('Remove a large image from this item.')
         .param('itemId', 'The ID of the item.', paramType='path')
     )
     @access.user
@@ -118,7 +118,7 @@ class TilesItemResource(Item):
 
 
     @describeRoute(
-        Description('Get an image tile.')
+        Description('Get a large image tile.')
         .param('itemId', 'The ID of the item or "test".', paramType='path')
         .param('z', 'The layer number of the tile (0 is the most zoomed-out layer).', paramType='path')
         .param('x', 'The X coordinate of the tile (0 is the left side).', paramType='path')
