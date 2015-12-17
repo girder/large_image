@@ -18,12 +18,14 @@
 ###############################################################################
 
 import cherrypy
+import os
 
 from girder.api import access
 from girder.api.v1.item import Item
 from girder.api.describe import describeRoute, Description
-from girder.api.rest import loadmodel, RestException
+from girder.api.rest import filtermodel, loadmodel, RestException
 from girder.models.model_base import AccessType
+from girder.plugins.romanesco import utils
 
 from .tilesource import TestTileSource, TiffGirderTileSource, TileSourceException
 
@@ -57,7 +59,6 @@ class TilesItemResource(Item):
             # TODO: sometimes this could be 400
             raise RestException(e.message, code=500)
 
-
     @describeRoute(
         Description('Get large image metadata.')
         .param('itemId', 'The ID of the item or "test".', paramType='path')
@@ -69,7 +70,6 @@ class TilesItemResource(Item):
         tileSource = self._loadTileSource(itemId)
         return tileSource.getMetadata()
 
-
     @describeRoute(
         Description('Create a large image for this item.')
         .param('itemId', 'The ID of the item.', paramType='path')
@@ -78,18 +78,23 @@ class TilesItemResource(Item):
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
+    @filtermodel(model='job', plugin='jobs')
     def createTiles(self, item, params):
         largeImageFileId = params.get('fileId')
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
 
+        job = None
+
         if largeImageFileId == 'test':
             item['largeImage'] = 'test'
-
         else:
             largeImageFile = self.model('file').load(largeImageFileId,
                                                      force=True, exc=True)
             if largeImageFile['itemId'] != item['_id']:
+                # TODO once we get rid of the "test" parameter, we should be
+                # able to remove the itemId parameter altogether and just take
+                # a file ID.
                 raise RestException('"fileId" must be a file on the same item'
                                     'as "itemId".')
 
@@ -98,21 +103,73 @@ class TilesItemResource(Item):
                 item['largeImage'] = largeImageFile['_id']
 
             else:
-                # TODO: implement a job that will create a multiresolution tiled
-                # TIFF and save it to this Girder item
-                newLargeImageFile = createLargeImageJob(
-                    item=item,
-                    originalFile=largeImageFile
-                )
-                item['largeImage'] = newLargeImageFile['_id']
+                job = self._createLargeImageJob(largeImageFile, item)
+                # item['largeImage'] = newLargeImageFile['_id']
+                # TODO figure out a way to set the largeImage field...
 
         self.model('item').save(item)
 
-        # TODO: a better response
-        return {
-            'created': True
+        return job
+
+    def _createLargeImageJob(self, file, item):
+        user = self.getCurrentUser()
+        token = self.getCurrentToken()
+
+        path = os.path.join(os.path.dirname(__file__), 'create_tiff.py')
+        with open(path, 'r') as f:
+            script = f.read()
+
+        title = 'TIFF conversion: %s' % file['name']
+        jobModel = self.model('job', 'jobs')
+        job = jobModel.createJob(
+            title=title, type='large_image_tiff', handler='romanesco_handler',
+            user=user)
+        jobToken = jobModel.createJobToken(job)
+
+        task = {
+            'mode': 'python',
+            'script': script,
+            'name': title,
+            'inputs': [{
+                'id': 'in_path',
+                'target': 'filepath'
+            }, {
+                'id': 'out_filename',
+            }],
+            'outputs': [{
+                'id': 'out_path',
+                'target': 'filepath'
+            }]
         }
 
+        inputs = {
+            'in_path': utils.girderInputSpec(
+                item, resourceType='item', token=token),
+            'out_filename': {
+                'mode': 'inline',
+                'data': os.path.splitext(file['name'])[0] + '.tiff'
+            }
+        }
+
+        outputs = {
+            'out_path': utils.girderOutputSpec(
+                parent=item, token=token, parentType='item')
+        }
+
+        job['kwargs'] = {
+            'task': task,
+            'inputs': inputs,
+            'outputs': outputs,
+            'jobInfo': utils.jobInfoSpec(job, jobToken),
+            'auto_convert': False,
+            'validate': False,
+            'cleanup': False
+        }
+
+        job = jobModel.save(job)
+        jobModel.scheduleJob(job)
+
+        return job
 
     @describeRoute(
         Description('Remove a large image from this item.')
@@ -132,7 +189,6 @@ class TilesItemResource(Item):
         return {
             'deleted': deleted
         }
-
 
     @describeRoute(
         Description('Get a large image tile.')
