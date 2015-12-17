@@ -22,4 +22,5 @@ proc = subprocess.Popen(convert_command)
 proc.wait()
 
 if proc.returncode:
-    raise Exception('VIPS process failed (rc=%d).' % proc.returncode)
+    raise Exception('VIPS command failed (rc=%d): %s' % (
+        proc.returncode, ' '.join(convert_command)))
