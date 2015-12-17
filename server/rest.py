@@ -21,7 +21,7 @@ import cherrypy
 
 from girder.api import access
 from girder.api.v1.item import Item
-from girder.api.describe import Description
+from girder.api.describe import describeRoute, Description
 from girder.api.rest import loadmodel, RestException
 from girder.models.model_base import AccessType
 
@@ -55,18 +55,25 @@ class TilesItemResource(Item):
             # TODO: sometimes this could be 400
             raise RestException(e.message, code=500)
 
-    @access.public
-    def getTilesInfo(self, itemId, params):
-        tileSource = self._loadTileSource(itemId)
-        return tileSource.getMetadata()
 
-    getTilesInfo.description = (
+    @describeRoute(
         Description('Get multiresolution tiles metadata.')
         .param('itemId', 'The ID of the item or "test".', paramType='path')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
+    @access.public
+    def getTilesInfo(self, itemId, params):
+        tileSource = self._loadTileSource(itemId)
+        return tileSource.getMetadata()
 
+
+    @describeRoute(
+        Description('Create a multiresolution image for this item.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('fileId', 'The ID of the source file containing the image or '
+               '"test".')
+    )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def createTiles(self, item, params):
@@ -89,13 +96,11 @@ class TilesItemResource(Item):
             'created': True
         }
 
-    createTiles.description = (
-        Description('Create a multiresolution image for this item.')
-        .param('itemId', 'The ID of the item.', paramType='path')
-        .param('fileId', 'The ID of the source file containing the image or '
-               '"test".')
-    )
 
+    @describeRoute(
+        Description('Remove a multiresolution image from this item.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+    )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def deleteTiles(self, item, params):
@@ -109,11 +114,17 @@ class TilesItemResource(Item):
             'deleted': deleted
         }
 
-    deleteTiles.description = (
-        Description('Remove a multiresolution image from this item.')
-        .param('itemId', 'The ID of the item.', paramType='path')
-    )
 
+    @describeRoute(
+        Description('Get an image tile.')
+        .param('itemId', 'The ID of the item or "test".', paramType='path')
+        .param('z', 'The layer number of the tile (0 is the most zoomed-out layer).', paramType='path')
+        .param('x', 'The X coordinate of the tile (0 is the left side).', paramType='path')
+        .param('y', 'The Y coordinate of the tile (0 is the top).', paramType='path')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.cookie
     @access.public
     def getTile(self, itemId, z, x, y, params):
         try:
@@ -129,14 +140,3 @@ class TilesItemResource(Item):
 
         cherrypy.response.headers['Content-Type'] = 'image/jpeg'
         return lambda: tileData
-
-    getTile.cookieAuth = True
-    getTile.description = (
-        Description('Get an image tile.')
-        .param('itemId', 'The ID of the item or "test".', paramType='path')
-        .param('z', 'The layer number of the tile (0 is the most zoomed-out layer).', paramType='path')
-        .param('x', 'The X coordinate of the tile (0 is the left side).', paramType='path')
-        .param('y', 'The Y coordinate of the tile (0 is the top).', paramType='path')
-        .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
-    )
