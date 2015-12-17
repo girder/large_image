@@ -132,13 +132,19 @@ class TilesItemResource(Item):
             'name': title,
             'inputs': [{
                 'id': 'in_path',
-                'target': 'filepath'
+                'target': 'filepath',
+                'type': 'string',
+                'format': 'text'
             }, {
                 'id': 'out_filename',
+                'type': 'string',
+                'format': 'text'
             }],
             'outputs': [{
                 'id': 'out_path',
-                'target': 'filepath'
+                'target': 'filepath',
+                'type': 'string',
+                'format': 'text'
             }]
         }
 
@@ -147,6 +153,8 @@ class TilesItemResource(Item):
                 item, resourceType='item', token=token),
             'out_filename': {
                 'mode': 'inline',
+                'type': 'string',
+                'format': 'text',
                 'data': os.path.splitext(file['name'])[0] + '.tiff'
             }
         }
