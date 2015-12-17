@@ -1,0 +1,6 @@
+libtiff
+numpy
+
+Pillow
+
+repoze.lru
