@@ -190,8 +190,7 @@ class TilesItemResource(Item):
             'outputs': outputs,
             'jobInfo': utils.jobInfoSpec(job, jobToken),
             'auto_convert': False,
-            'validate': False,
-            'cleanup': False
+            'validate': False
         }
 
         job = jobModel.save(job)
