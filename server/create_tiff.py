@@ -1,7 +1,5 @@
-# A romanesco script to convert a slide to a TIFF using vips.
 import os
 import subprocess
-import sys
 
 out_path = os.path.join(_tempdir, out_filename)
 
@@ -19,9 +17,12 @@ convert_command = (
     '--bigtiff'
 )
 
-proc = subprocess.Popen(convert_command, stdout=sys.stdout, stderr=sys.stderr)
-proc.wait()
+proc = subprocess.Popen(convert_command, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+out, err = proc.communicate()
 
 if proc.returncode:
+    print('stdout: ' + out)
+    print('stderr: ' + err)
     raise Exception('VIPS command failed (rc=%d): %s' % (
         proc.returncode, ' '.join(convert_command)))
