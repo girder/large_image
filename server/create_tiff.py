@@ -7,13 +7,13 @@ out_path = os.path.join(_tempdir, out_filename)
 convert_command = (
     'vips',
     'tiffsave',
-    '"%s"' % in_path,
-    '"%s"' % out_path,
+    in_path,
+    out_path,
     '--compression', 'jpeg',
-    '--Q', '90',
+    '--Q', str(quality),
     '--tile',
-    '--tile-width', '256',
-    '--tile-height', '256',
+    '--tile-width', str(tile_size),
+    '--tile-height', str(tile_size),
     '--pyramid',
     '--bigtiff'
 )

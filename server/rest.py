@@ -139,6 +139,14 @@ class TilesItemResource(Item):
                 'id': 'out_filename',
                 'type': 'string',
                 'format': 'text'
+            }, {
+                'id': 'tile_size',
+                'type': 'number',
+                'format': 'number'
+            }, {
+                'id': 'quality',
+                'type': 'number',
+                'format': 'number'
             }],
             'outputs': [{
                 'id': 'out_path',
@@ -151,6 +159,18 @@ class TilesItemResource(Item):
         inputs = {
             'in_path': utils.girderInputSpec(
                 item, resourceType='item', token=token),
+            'quality': {
+                'mode': 'inline',
+                'type': 'number',
+                'format': 'number',
+                'data': 90
+            },
+            'tile_size': {
+                'mode': 'inline',
+                'type': 'number',
+                'format': 'number',
+                'data': 256
+            },
             'out_filename': {
                 'mode': 'inline',
                 'type': 'string',
