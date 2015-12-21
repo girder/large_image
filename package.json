@@ -12,7 +12,7 @@
     "url": "https://github.com/DigitalSlideArchive/large_image.git"
   },
   "dependencies": {
-    "geojs": "0.5.0"
+    "geojs": "0.6.0-rc.1"
   },
   "devDependencies": {},
   "scripts": {}
