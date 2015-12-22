@@ -104,8 +104,9 @@ class TilesItemResource(Item):
 
             else:
                 job = self._createLargeImageJob(largeImageFile, item)
-                # item['largeImage'] = newLargeImageFile['_id']
-                # TODO figure out a way to set the largeImage field...
+                item['expectedLargeImage'] = True
+                item['largeImageOriginalId'] = largeImageFileId
+                item['largeImageJobId'] = job['_id']
 
         self.model('item').save(item)
 
