@@ -18,16 +18,34 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
         }
 
         // TODO: if a viewer already exists, do we render again?
-
-        this.viewer = geo.map({
-            node: this.el
-        });
-        this.viewer.createLayer('osm', {
+        var w = this.sizeX, h = this.sizeY;
+        // TODO: this.levels and this.tileSize
+        var mapParams = {
+            node: this.el,
+            ingcs: '+proj=longlat +axis=esu',
+            gcs: '+proj=longlat +axis=enu',
+            maxBounds: {left: 0, top: 0, right: w, bottom: h},
+            center: {x: w / 2, y: h / 2},
+            max: Math.ceil(Math.log(Math.max(w, h) / 256) / Math.log(2)),
+            clampBoundsX: true,
+            clampBoundsY: true,
+            zoom: 0
+        };
+        mapParams.unitsPerPixel = Math.pow(2, mapParams.max);
+        this.viewer = geo.map(mapParams);
+        var layerParams = {
             useCredentials: true,
-            // TODO: syntax has changed in the latest GeoJS version
-            //tileUrl: this._getTileUrl('{z}', '{x}', '{y}')
-            tileUrl: this._getTileUrl('<zoom>', '<x>', '<y>')
-        });
+            url: this._getTileUrl('{z}', '{x}', '{y}'),
+            maxLevel: mapParams.max,
+            wrapX: false,
+            wrapY: false,
+            tileOffset: function () {
+                return {x: 0, y: 0};
+            },
+            attribution: '',
+            tileRounding: Math.ceil
+        };
+        this.viewer.createLayer('osm', layerParams);
 
         return this;
     },

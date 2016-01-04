@@ -36,7 +36,7 @@ module.exports = function (grunt) {
                 pnltri: '<%= plugin.large_image.geojs_modules %>/pnltri/pnltri.js',
                 proj4: '<%= plugin.large_image.geojs_components %>/proj4/dist/proj4-src.js',
                 d3: '<%= plugin.large_image.geojs_components %>/d3/d3.js',
-                glmatrix: '<%= plugin.large_image.geojs_components %>/gl-matrix/gl-matrix.js'
+                glmatrix: '<%= plugin.large_image.geojs_components %>/gl-matrix/dist/gl-matrix.js'
             }
         },
         uglify: {
