@@ -27,7 +27,8 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
             tileSources: {
                 height: this.sizeY,
                 width: this.sizeX,
-                tileSize: this.tileSize,
+                tileWidth: this.tileWidth || this.tileSize,
+                tileHeight: this.tileHeight || this.tileSize,
                 minLevel: 0,
                 maxLevel: this.levels - 1,
                 getTileUrl: _.bind(this._getTileUrl, this),

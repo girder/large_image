@@ -26,7 +26,8 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
             layers: [
                 new ol.layer.Tile({
                     source: new ol.source.XYZ({
-                        tileSize: this.tileSize,
+                        tileSize: [this.tileWidth || this.tileSize,
+                                   this.tileHeight || this.tileSize],
                         url: this._getTileUrl('{z}', '{x}', '{y}'),
                         crossOrigin: 'use-credentials',
                         maxZoom: this.maxZoom,

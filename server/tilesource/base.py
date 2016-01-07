@@ -38,7 +38,9 @@ class TileSource(object):
             'tileSize': self.tileSize,
             'levels': self.levels,
             'sizeX': self.sizeX,
-            'sizeY': self.sizeY
+            'sizeY': self.sizeY,
+            'tileWidth': getattr(self, 'tileWidth', self.tileSize),
+            'tileHeight': getattr(self, 'tileHeight', self.tileSize),
         }
 
     def getTile(self, x, y, z):
@@ -57,14 +59,18 @@ class GirderTileSource(TileSource):
             # don't repeat.
             # TODO: is it possible that the file is on a different item, so do
             # we want to repeat the access check?
-            largeImageFile = ModelImporter.model('file').load(largeImageFileId, force=True)
+            largeImageFile = ModelImporter.model('file').load(
+                largeImageFileId, force=True)
 
             # TODO: can we move some of this logic into Girder core?
-            assetstore = ModelImporter.model('assetstore').load(largeImageFile['assetstoreId'])
+            assetstore = ModelImporter.model('assetstore').load(
+                largeImageFile['assetstoreId'])
             adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
 
-            if not isinstance(adapter, assetstore_utilities.FilesystemAssetstoreAdapter):
-                raise TileSourceException('Non-filesystem assetstores are not supported')
+            if not isinstance(adapter,
+                              assetstore_utilities.FilesystemAssetstoreAdapter):
+                raise TileSourceException(
+                    'Non-filesystem assetstores are not supported')
 
             largeImagePath = adapter.fullPath(largeImageFile)
             return largeImagePath
