@@ -24,7 +24,8 @@ class DummyTileSource(TileSource):
 
     def __init__(self, *args, **kwargs):
         super(DummyTileSource, self).__init__()
-        self.tileSize = 0
+        self.tileWidth = 0
+        self.tileHeight = 0
         self.levels = 0
         self.sizeX = 0
         self.sizeY = 0

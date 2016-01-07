@@ -1,3 +1,4 @@
+/* globals geo */
 girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
     initialize: function (settings) {
         girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
@@ -13,7 +14,7 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.geo || !this.tileSize) {
+        if (!window.geo || !this.tileWidth || !this.tileHeight) {
             return;
         }
 
@@ -26,13 +27,14 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
             gcs: '+proj=longlat +axis=enu',
             maxBounds: {left: 0, top: 0, right: w, bottom: h},
             center: {x: w / 2, y: h / 2},
-            max: Math.ceil(Math.log(Math.max(w, h) / 256) / Math.log(2)),
+            max: Math.ceil(Math.log(Math.max(
+                w / (this.tileWidth || this.tileSize),
+                h / (this.tileHeight || this.tileSize))) / Math.log(2)),
             clampBoundsX: true,
             clampBoundsY: true,
             zoom: 0
         };
         mapParams.unitsPerPixel = Math.pow(2, mapParams.max);
-        this.viewer = geo.map(mapParams);
         var layerParams = {
             useCredentials: true,
             url: this._getTileUrl('{z}', '{x}', '{y}'),
@@ -43,8 +45,11 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
                 return {x: 0, y: 0};
             },
             attribution: '',
+            tileWidth: this.tileWidth || this.tileSize,
+            tileHeight: this.tileHeight || this.tileSize,
             tileRounding: Math.ceil
         };
+        this.viewer = geo.map(mapParams);
         this.viewer.createLayer('osm', layerParams);
 
         return this;

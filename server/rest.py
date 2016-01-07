@@ -25,7 +25,8 @@ from girder.api.describe import describeRoute, Description
 from girder.api.rest import loadmodel, RestException
 from girder.models.model_base import AccessType
 
-from .tilesource import TestTileSource, TiffGirderTileSource, TileSourceException
+from .tilesource import TestTileSource, TiffGirderTileSource, \
+    TileSourceException
 
 
 class TilesItemResource(Item):
@@ -42,21 +43,28 @@ class TilesItemResource(Item):
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
 
-
-    def _loadTileSource(self, itemId):
+    def _loadTileSource(self, itemId, params):
         try:
             if itemId == 'test':
-                tileSource = TestTileSource(256)
+                tileSource = TestTileSource(
+                    minLevel=params.get('minLevel'),
+                    maxLevel=params.get('maxLevel'),
+                    tileWidth=params.get('tileWidth'),
+                    tileHeight=params.get('tileHeight'),
+                    sizeX=params.get('sizeX'),
+                    sizeY=params.get('sizeY'),
+                    fractal=(params.get('fractal') == 'true')
+                )
             else:
                 # TODO: cache the user / item loading too
-                item = self.model('item').load(id=itemId, level=AccessType.READ,
-                                               user=self.getCurrentUser(), exc=True)
+                item = self.model('item').load(
+                    id=itemId, level=AccessType.READ,
+                    user=self.getCurrentUser(), exc=True)
                 tileSource = TiffGirderTileSource(item)
             return tileSource
         except TileSourceException as e:
             # TODO: sometimes this could be 400
             raise RestException(e.message, code=500)
-
 
     @describeRoute(
         Description('Get large image metadata.')
@@ -66,9 +74,8 @@ class TilesItemResource(Item):
     )
     @access.public
     def getTilesInfo(self, itemId, params):
-        tileSource = self._loadTileSource(itemId)
+        tileSource = self._loadTileSource(itemId, params)
         return tileSource.getMetadata()
-
 
     @describeRoute(
         Description('Create a large image for this item.')
@@ -113,7 +120,6 @@ class TilesItemResource(Item):
             'created': True
         }
 
-
     @describeRoute(
         Description('Remove a large image from this item.')
         .param('itemId', 'The ID of the item.', paramType='path')
@@ -133,13 +139,15 @@ class TilesItemResource(Item):
             'deleted': deleted
         }
 
-
     @describeRoute(
         Description('Get a large image tile.')
         .param('itemId', 'The ID of the item or "test".', paramType='path')
-        .param('z', 'The layer number of the tile (0 is the most zoomed-out layer).', paramType='path')
-        .param('x', 'The X coordinate of the tile (0 is the left side).', paramType='path')
-        .param('y', 'The Y coordinate of the tile (0 is the top).', paramType='path')
+        .param('z', 'The layer number of the tile (0 is the most zoomed-out '
+               'layer).', paramType='path')
+        .param('x', 'The X coordinate of the tile (0 is the left side).',
+               paramType='path')
+        .param('y', 'The Y coordinate of the tile (0 is the top).',
+               paramType='path')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -151,11 +159,11 @@ class TilesItemResource(Item):
         except ValueError:
             raise RestException('x, y, and z must be integers', code=400)
 
-        tileSource = self._loadTileSource(itemId)
+        tileSource = self._loadTileSource(itemId, params)
         try:
             tileData = tileSource.getTile(x, y, z)
         except TileSourceException as e:
             raise RestException(e.message, code=404)
 
-        cherrypy.response.headers['Content-Type'] = 'image/jpeg'
+        cherrypy.response.headers['Content-Type'] = tileSource.getTileMimeType()
         return lambda: tileData
