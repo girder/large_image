@@ -12,7 +12,7 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.OpenSeadragon || !this.tileSize) {
+        if (!window.OpenSeadragon || !this.tileWidth || !this.tileHeight) {
             return;
         }
 
@@ -27,8 +27,8 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
             tileSources: {
                 height: this.sizeY,
                 width: this.sizeX,
-                tileWidth: this.tileWidth || this.tileSize,
-                tileHeight: this.tileHeight || this.tileSize,
+                tileWidth: this.tileWidth,
+                tileHeight: this.tileHeight,
                 minLevel: 0,
                 maxLevel: this.levels - 1,
                 getTileUrl: _.bind(this._getTileUrl, this),

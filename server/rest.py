@@ -46,7 +46,15 @@ class TilesItemResource(Item):
     def _loadTileSource(self, itemId, params):
         try:
             if itemId == 'test':
-                tileSource = TestTileSource(256, params=params)
+                tileSource = TestTileSource(
+                    minLevel=params.get('minLevel'),
+                    maxLevel=params.get('maxLevel'),
+                    tileWidth=params.get('tileWidth'),
+                    tileHeight=params.get('tileHeight'),
+                    sizeX=params.get('sizeX'),
+                    sizeY=params.get('sizeY'),
+                    fractal=(params.get('fractal') == 'true')
+                )
             else:
                 # TODO: cache the user / item loading too
                 item = self.model('item').load(
@@ -157,8 +165,5 @@ class TilesItemResource(Item):
         except TileSourceException as e:
             raise RestException(e.message, code=404)
 
-        if tileData[:8] == '\x89PNG\r\n\x26\n':
-            cherrypy.response.headers['Content-Type'] = 'image/png'
-        else:
-            cherrypy.response.headers['Content-Type'] = 'image/jpeg'
+        cherrypy.response.headers['Content-Type'] = tileSource.getTileMimeType()
         return lambda: tileData

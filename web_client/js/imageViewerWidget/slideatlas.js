@@ -15,7 +15,12 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.SlideAtlas || !this.tileSize) {
+        if (!window.SlideAtlas || !this.tileWidth || !this.tileHeight) {
+            return;
+        }
+
+        if (this.tileWidth !== this.tileHeight) {
+            console.log('The SlideAtlas viewer only supports square tiles.');
             return;
         }
 
@@ -27,14 +32,14 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
             tileSource  : {
                 height  : this.sizeY,
                 width   : this.sizeX,
-                tileSize: this.tileSize,
+                tileSize: this.tileWidth,
                 minLevel: 0,
                 maxLevel: this.levels - 1,
                 getTileUrl: _.bind(this._getTileUrl, this),
                 ajaxWithCredentials: true
             }});
         this.viewer = this.el.saViewer;
-       
+
 
         return this;
     },

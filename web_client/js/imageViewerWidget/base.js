@@ -7,7 +7,6 @@ girder.views.ImageViewerWidget = girder.View.extend({
             path: 'item/' + this.itemId + '/tiles'
         }).done(_.bind(function (resp) {
             this.levels = resp.levels;
-            this.tileSize = resp.tileSize;
             this.tileWidth = resp.tileWidth;
             this.tileHeight = resp.tileHeight;
             this.sizeX = resp.sizeX;

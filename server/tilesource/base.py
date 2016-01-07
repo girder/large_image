@@ -28,23 +28,26 @@ class TileSourceException(Exception):
 
 class TileSource(object):
     def __init__(self):
-        self.tileSize = None
+        self.tileWidth = None
+        self.tileHeight = None
         self.levels = None
         self.sizeX = None
         self.sizeY = None
 
     def getMetadata(self):
         return {
-            'tileSize': self.tileSize,
             'levels': self.levels,
             'sizeX': self.sizeX,
             'sizeY': self.sizeY,
-            'tileWidth': getattr(self, 'tileWidth', self.tileSize),
-            'tileHeight': getattr(self, 'tileHeight', self.tileSize),
+            'tileWidth': self.tileWidth,
+            'tileHeight': self.tileHeight,
         }
 
     def getTile(self, x, y, z):
         raise NotImplementedError()
+
+    def getTileMimeType(self):
+        return 'image/jpeg'
 
 
 class GirderTileSource(TileSource):

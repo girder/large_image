@@ -14,7 +14,7 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.geo || !this.tileSize) {
+        if (!window.geo || !this.tileWidth || !this.tileHeight) {
             return;
         }
 

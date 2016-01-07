@@ -370,6 +370,27 @@ class TiledTiffDirectory(object):
         # TODO: fetch lazily and memoize
         return self._tileSize
 
+    @property
+    def tileWidth(self):
+        """
+        Get the pixel width of tiles.
+
+        :return: The tile width in pixels.
+        :rtype: int
+        """
+        # TODO: fetch lazily and memoize
+        return self._tileSize
+
+    @property
+    def tileHeight(self):
+        """
+        Get the pixel height of tiles.
+
+        :return: The tile height in pixels.
+        :rtype: int
+        """
+        # TODO: fetch lazily and memoize
+        return self._tileSize
 
     @property
     def imageWidth(self):
