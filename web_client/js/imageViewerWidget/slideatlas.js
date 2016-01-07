@@ -20,7 +20,7 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
         }
 
         if (this.tileWidth !== this.tileHeight) {
-            console.log('The SlideAtlas viewer only supports square tiles.');
+            console.error('The SlideAtlas viewer only supports square tiles.');
             return;
         }
 

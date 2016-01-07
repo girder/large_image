@@ -20,7 +20,7 @@ girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
         }
 
         if (this.tileWidth !== this.tileHeight) {
-            console.log('The Leaflet viewer only supports square tiles.');
+            console.error('The Leaflet viewer only supports square tiles.');
             return;
         }
 
