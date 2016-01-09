@@ -30,7 +30,7 @@ except ImportError:
     logger.info('Error: Could not import PIL')
     # re-raise it for now, but maybe do something else in the future
     raise
-from six import StringIO
+from six import BytesIO
 
 from .base import TileSource, TileSourceException
 
@@ -138,7 +138,7 @@ class TestTileSource(TileSource):
             font=imageDrawFont
         )
 
-        output = StringIO()
+        output = BytesIO()
         image.save(output, self.encoding, quality=95)
         return output.getvalue()
 
