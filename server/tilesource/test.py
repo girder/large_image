@@ -36,7 +36,7 @@ from .base import TileSource, TileSourceException
 
 
 class TestTileSource(TileSource):
-    def __init__(self, tileSize=256, minLevel=0, maxLevel=9,
+    def __init__(self, minLevel=0, maxLevel=9,
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
                  fractal=False, encoding='PNG'):
         """
@@ -44,7 +44,6 @@ class TestTileSource(TileSource):
 
         :param minLevel: minimum tile level
         :param maxLevel: maximum tile level
-        :param tileSize: square tile size if not overridden by w and h.
         :param tileWidth: tile width in pixels
         :param tileHeight: tile height in pixels
         :param sizeX: image width in pixels at maximum level.  Computed from
@@ -57,7 +56,6 @@ class TestTileSource(TileSource):
         """
         super(TestTileSource, self).__init__()
 
-        tileSize = 256 if not tileSize else tileSize
         self.minLevel = minLevel
         self.maxLevel = maxLevel
         self.tileWidth = tileWidth

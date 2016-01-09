@@ -56,7 +56,8 @@ class TiffGirderTileSource(GirderTileSource):
         # Multiresolution TIFFs are stored with full-resolution layer in directory 0
         self._tiffDirectories.reverse()
 
-        self.tileSize = self._tiffDirectories[-1].tileSize
+        self.tileWidth = self._tiffDirectories[-1].tileWidth
+        self.tileHeight = self._tiffDirectories[-1].tileHeight
         self.levels = len(self._tiffDirectories)
         self.sizeX = self._tiffDirectories[-1].imageWidth
         self.sizeY = self._tiffDirectories[-1].imageHeight
