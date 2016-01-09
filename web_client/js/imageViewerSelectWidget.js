@@ -19,6 +19,9 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
     events: {
         'change select': function (event) {
             this._selectViewer(event.target.value);
+        },
+        'keyup select': function (event) {
+            this._selectViewer(event.target.value);
         }
     },
 
@@ -34,9 +37,9 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
                 type: girder.views.OpenseadragonImageViewerWidget
             },
             {
-                name: 'slideatlas',
-                label: 'SlideAtlas',
-                type: girder.views.SlideAtlasImageViewerWidget
+                name: 'openlayers',
+                label: 'OpenLayers',
+                type: girder.views.OpenlayersImageViewerWidget
             },
             {
                 name: 'leaflet',
@@ -44,14 +47,14 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
                 type: girder.views.LeafletImageViewerWidget
             },
             {
-                name: 'openlayers',
-                label: 'OpenLayers',
-                type: girder.views.OpenlayersImageViewerWidget
-            },
-            {
                 name: 'geojs',
                 label: 'GeoJS',
                 type: girder.views.GeojsImageViewerWidget
+            },
+            {
+                name: 'slideatlas',
+                label: 'SlideAtlas',
+                type: girder.views.SlideAtlasImageViewerWidget
             }
         ];
 

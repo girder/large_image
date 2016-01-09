@@ -40,7 +40,6 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
             }});
         this.viewer = this.el.saViewer;
 
-
         return this;
     },
 
