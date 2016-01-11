@@ -20,7 +20,7 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
 
         // TODO: if a viewer already exists, do we render again?
         var w = this.sizeX, h = this.sizeY;
-        // TODO: this.levels and this.tileSize
+        // TODO: this.levels
         var mapParams = {
             node: this.el,
             ingcs: '+proj=longlat +axis=esu',
@@ -28,8 +28,8 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
             maxBounds: {left: 0, top: 0, right: w, bottom: h},
             center: {x: w / 2, y: h / 2},
             max: Math.ceil(Math.log(Math.max(
-                w / (this.tileWidth || this.tileSize),
-                h / (this.tileHeight || this.tileSize))) / Math.log(2)),
+                w / this.tileWidth,
+                h / this.tileHeight)) / Math.log(2)),
             clampBoundsX: true,
             clampBoundsY: true,
             zoom: 0
@@ -45,8 +45,8 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
                 return {x: 0, y: 0};
             },
             attribution: '',
-            tileWidth: this.tileWidth || this.tileSize,
-            tileHeight: this.tileHeight || this.tileSize,
+            tileWidth: this.tileWidth,
+            tileHeight: this.tileHeight,
             tileRounding: Math.ceil
         };
         this.viewer = geo.map(mapParams);

@@ -46,15 +46,24 @@ class TilesItemResource(Item):
     def _loadTileSource(self, itemId, params):
         try:
             if itemId == 'test':
-                tileSource = TestTileSource(
-                    minLevel=params.get('minLevel'),
-                    maxLevel=params.get('maxLevel'),
-                    tileWidth=params.get('tileWidth'),
-                    tileHeight=params.get('tileHeight'),
-                    sizeX=params.get('sizeX'),
-                    sizeY=params.get('sizeY'),
-                    fractal=(params.get('fractal') == 'true')
-                )
+                tileSourceArgs = {}
+                for paramName, paramType in [
+                    ('minLevel', int),
+                    ('maxLevel', int),
+                    ('tileWidth', int),
+                    ('tileHeight', int),
+                    ('sizeX', int),
+                    ('sizeY', int),
+                    ('fractal', lambda val: val == 'true'),
+                ]:
+                    try:
+                        if paramName in params:
+                            tileSourceArgs[paramName] = \
+                                paramType(params[paramName])
+                    except ValueError:
+                        raise RestException(
+                            '"%s" parameter is an incorrect type.' % paramName)
+                tileSource = TestTileSource(**tileSourceArgs)
             else:
                 # TODO: cache the user / item loading too
                 item = self.model('item').load(

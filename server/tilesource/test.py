@@ -30,23 +30,22 @@ except ImportError:
     logger.info('Error: Could not import PIL')
     # re-raise it for now, but maybe do something else in the future
     raise
-from six import StringIO
+from six import BytesIO
 
 from .base import TileSource, TileSourceException
 
 
 class TestTileSource(TileSource):
-    def __init__(self, tileSize=256, minLevel=None, maxLevel=None,
-                 tileWidth=None, tileHeight=None, sizeX=None, sizeY=None,
+    def __init__(self, minLevel=0, maxLevel=9,
+                 tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
                  fractal=False, encoding='PNG'):
         """
         Initialize the tile class.  The optional params options can include:
 
-        :param tileSize: square tile size if not overridden by w and h.
-        :param minLevel: minimum tile level (default 0)
-        :param maxLevel: maximum tile level (default 9)
-        :param tileWidth: tile width in pixels (tileSize if None)
-        :param tileHeight: tile height in pixels (tileSize if None)
+        :param minLevel: minimum tile level
+        :param maxLevel: maximum tile level
+        :param tileWidth: tile width in pixels
+        :param tileHeight: tile height in pixels
         :param sizeX: image width in pixels at maximum level.  Computed from
             maxLevel and tileWidth if None.
         :param sizeY: image height in pixels at maximum level.  Computer from
@@ -57,20 +56,21 @@ class TestTileSource(TileSource):
         """
         super(TestTileSource, self).__init__()
 
-        tileSize = 256 if not tileSize else tileSize
-        self.maxLevel = 9 if maxLevel is None else int(maxLevel)
-        self.minLevel = 0 if minLevel is None else int(minLevel)
-        self.tileWidth = int(tileSize if tileWidth is None else tileWidth)
-        self.tileHeight = int(tileSize if tileHeight is None else tileHeight)
+        self.minLevel = minLevel
+        self.maxLevel = maxLevel
+        self.tileWidth = tileWidth
+        self.tileHeight = tileHeight
         # Don't generate a fractal tile if the tile isn't square or not a power
         # of 2 in size.
         self.fractal = (fractal and self.tileWidth == self.tileHeight and
                         not (self.tileWidth & (self.tileWidth - 1)))
         self.sizeX = (((2 ** self.maxLevel) * self.tileWidth)
-                      if sizeX is None else int(sizeX))
+                      if sizeX is None else sizeX)
         self.sizeY = (((2 ** self.maxLevel) * self.tileHeight)
-                      if sizeY is None else int(sizeY))
-        self.encoding = encoding if encoding in ('PNG', 'JPEG') else 'PNG'
+                      if sizeY is None else sizeY)
+        if encoding not in ('PNG', 'JPEG'):
+            raise ValueError('Invalid encoding "%s"' % encoding)
+        self.encoding = encoding
         # Used for reporting tile information
         self.levels = self.maxLevel + 1
 
@@ -138,7 +138,7 @@ class TestTileSource(TileSource):
             font=imageDrawFont
         )
 
-        output = StringIO()
+        output = BytesIO()
         image.save(output, self.encoding, quality=95)
         return output.getvalue()
 

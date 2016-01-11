@@ -170,7 +170,8 @@ class TiledTiffDirectory(object):
 
 
     def _loadMetadata(self):
-        self._tileSize = self._tiffFile.GetField('TileWidth')
+        self._tileWidth = self._tiffFile.GetField('TileWidth')
+        self._tileHeight = self._tiffFile.GetField('TileLength')
         self._imageWidth = self._tiffFile.GetField('ImageWidth')
         self._imageHeight = self._tiffFile.GetField('ImageLength')
 
@@ -235,8 +236,8 @@ class TiledTiffDirectory(object):
         # TODO: is it worth it to memoize this?
 
         # TIFFCheckTile and TIFFComputeTile require pixel coordinates
-        pixelX = x * self._tileSize
-        pixelY = y * self._tileSize
+        pixelX = x * self._tileWidth
+        pixelY = y * self._tileHeight
 
         if libtiff_ctypes.libtiff.TIFFCheckTile(
                 self._tiffFile, pixelX, pixelY, 0, 0) == 0:
@@ -360,17 +361,6 @@ class TiledTiffDirectory(object):
 
 
     @property
-    def tileSize(self):
-        """
-        Get the pixel size of tiles.
-
-        :return: The tile size (length and height) in pixels.
-        :rtype: int
-        """
-        # TODO: fetch lazily and memoize
-        return self._tileSize
-
-    @property
     def tileWidth(self):
         """
         Get the pixel width of tiles.
@@ -379,7 +369,8 @@ class TiledTiffDirectory(object):
         :rtype: int
         """
         # TODO: fetch lazily and memoize
-        return self._tileSize
+        return self._tileWidth
+
 
     @property
     def tileHeight(self):
@@ -390,7 +381,8 @@ class TiledTiffDirectory(object):
         :rtype: int
         """
         # TODO: fetch lazily and memoize
-        return self._tileSize
+        return self._tileHeight
+
 
     @property
     def imageWidth(self):
