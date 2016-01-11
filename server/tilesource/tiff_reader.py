@@ -171,7 +171,7 @@ class TiledTiffDirectory(object):
 
     def _loadMetadata(self):
         self._tileWidth = self._tiffFile.GetField('TileWidth')
-        self._tileHight = self._tiffFile.GetField('TileLength')
+        self._tileHeight = self._tiffFile.GetField('TileLength')
         self._imageWidth = self._tiffFile.GetField('ImageWidth')
         self._imageHeight = self._tiffFile.GetField('ImageLength')
 
@@ -237,7 +237,7 @@ class TiledTiffDirectory(object):
 
         # TIFFCheckTile and TIFFComputeTile require pixel coordinates
         pixelX = x * self._tileWidth
-        pixelY = y * self._tileHight
+        pixelY = y * self._tileHeight
 
         if libtiff_ctypes.libtiff.TIFFCheckTile(
                 self._tiffFile, pixelX, pixelY, 0, 0) == 0:
@@ -381,7 +381,7 @@ class TiledTiffDirectory(object):
         :rtype: int
         """
         # TODO: fetch lazily and memoize
-        return self._tileHight
+        return self._tileHeight
 
 
     @property
