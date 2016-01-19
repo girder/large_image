@@ -20,11 +20,12 @@
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
-from .rest import TilesItemResource
+from .rest import TilesItemResource, AnnotationResource
 
 
 def load(info):
     TilesItemResource(info['apiRoot'])
+    info['apiRoot'].annotation = AnnotationResource()
 
     ModelImporter.model('item').exposeFields(
         level=AccessType.READ, fields='largeImage')
