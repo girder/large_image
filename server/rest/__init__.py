@@ -17,15 +17,10 @@
 #  limitations under the License.
 ###############################################################################
 
-from girder.constants import AccessType
-from girder.utility.model_importer import ModelImporter
-
-from .rest import TilesItemResource, AnnotationResource
+from .tiles import TilesItemResource
+from .annotation import AnnotationResource
 
 
-def load(info):
-    TilesItemResource(info['apiRoot'])
-    info['apiRoot'].annotation = AnnotationResource()
-
-    ModelImporter.model('item').exposeFields(
-        level=AccessType.READ, fields='largeImage')
+__all = (TilesItemResource, AnnotationResource)
+# This works around a bug where PEP257 crashes when parsing __all__
+__all__ = __all

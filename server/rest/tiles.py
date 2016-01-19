@@ -25,7 +25,7 @@ from girder.api.describe import describeRoute, Description
 from girder.api.rest import loadmodel, RestException
 from girder.models.model_base import AccessType
 
-from .tilesource import TestTileSource, TiffGirderTileSource, \
+from ..tilesource import TestTileSource, TiffGirderTileSource, \
     TileSourceException
 
 
