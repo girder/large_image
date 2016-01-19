@@ -22,5 +22,6 @@
 
 from .image_item import ImageItem
 from .base import TileGeneralException
+from .annotation import Annotation
 
-__all__ = (ImageItem, TileGeneralException)
+__all__ = (ImageItem, TileGeneralException, Annotation)
