@@ -25,7 +25,7 @@ from tests import base
 
 # boiler plate to start and stop the server
 def setUpModule():
-    base.enabledPlugins.append('girder_large_image')
+    base.enabledPlugins.append('large_image')
     base.startServer()
 
 

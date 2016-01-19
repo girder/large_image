@@ -26,3 +26,7 @@ try:
     from .tiff import TiffGirderTileSource
 except ImportError:
     from .dummy import DummyTileSource as TiffGirderTileSource
+
+__all = (TileSource, TileSourceException, TestTileSource, TiffGirderTileSource)
+# This works around a bug where PEP257 crashes when parsing __all__
+__all__ = __all

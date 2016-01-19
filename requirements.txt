@@ -1,6 +1,7 @@
-libtiff
-numpy
+libtiff==0.4.0
+numpy==1.10.4
 
-Pillow==3.0.0
+# Pillow is already required by another Girder plugin
+#Pillow==3.1.0
 
-repoze.lru
+repoze.lru==0.6

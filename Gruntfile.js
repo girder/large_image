@@ -40,7 +40,7 @@ module.exports = function (grunt) {
             }
         },
         uglify: {
-            'plugin-image-viewer-geojs': { // Bundle together geojs + dependencies
+            'plugin-large-image-geojs': { // Bundle together geojs + dependencies
                 files: [
                     {   // leaving out jquery because girder includes it
                         src: [
@@ -56,16 +56,16 @@ module.exports = function (grunt) {
             }
         },
         default: { // Tell girder about our custom tasks
-            'uglify:plugin-image-viewer-geojs': {}
+            'uglify:plugin-large-image-geojs': {}
         }
     });
 
     // add watch tasks
     grunt.config.merge({
         watch: {
-            'plugin-image-viewer-geojs': {
-                files: grunt.config.getRaw('uglify.plugin-image-viewer-geojs.files')[0].src,
-                tasks: ['uglify:plugin-image-viewer-geojs']
+            'plugin-large-image-geojs': {
+                files: grunt.config.getRaw('uglify.plugin-large-image-geojs.files')[0].src,
+                tasks: ['uglify:plugin-large-image-geojs']
             }
         }
     });

@@ -116,11 +116,12 @@ class TilesItemResource(Item):
             else:
                 # TODO: implement a job that will create a multiresolution tiled
                 # TIFF and save it to this Girder item
-                newLargeImageFile = createLargeImageJob(
-                    item=item,
-                    originalFile=largeImageFile
-                )
-                item['largeImage'] = newLargeImageFile['_id']
+                pass
+                # newLargeImageFile = createLargeImageJob(
+                #     item=item,
+                #     originalFile=largeImageFile
+                # )
+                # item['largeImage'] = newLargeImageFile['_id']
 
         self.model('item').save(item)
 

@@ -14,10 +14,12 @@ compiler:
 before_install:
     - main_path=$PWD
     - build_path=$PWD/build
-    - girder_path=$build_path/girder
     - mkdir -p $build_path
-    - cd $build_path && rm -fr girder && git clone https://github.com/girder/girder.git && git checkout 7c30bfa4741d00a8d7f17e1cc85ea7ef5c6d5388
+    - girder_path=$build_path/girder
+    - rm -fr $girder_path
+    - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout 710f83404ce21ca70c17b9ef593a030b33ec0141
     - ln -sf $main_path $girder_path/plugins/
+    - ls -l $girder_path/plugins
     - export MONGO_VERSION=2.6.11
     - export PY_COVG="ON"
     - CACHE=$HOME/.cache source $girder_path/scripts/install_mongo.sh
@@ -29,11 +31,13 @@ before_install:
     - npm install -g npm
     - npm --version
     - pip install -U pip virtualenv
+
 install:
     - cd $girder_path
-    - pip install numpy # needed because libtiff doesn't install correctly without it
+    - pip install numpy==1.10.4 # needed because libtiff doesn't install correctly without it
     - pip install -U -r requirements.txt -r requirements-dev.txt -r $main_path/requirements.txt -e .
     - npm install
+
 script:
     - mkdir _build
     - cd _build

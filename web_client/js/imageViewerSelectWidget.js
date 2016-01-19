@@ -3,7 +3,7 @@ girder.wrap(girder.views.ItemView, 'render', function (render) {
     // so we must listen for a render event.
     this.once('g:rendered', function () {
         if (this.model.get('largeImage')) {
-            new girder.views.ImageViewerSelectWidget({
+            this.imageViewerSelect = new girder.views.ImageViewerSelectWidget({
                 el: $('<div>', {class: 'g-item-image-viewer-select'})
                     .insertAfter(this.$('.g-item-info')),
                 parentView: this,
@@ -58,7 +58,7 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
             }
         ];
 
-        this.render()
+        this.render();
     },
 
     render: function () {
@@ -77,12 +77,12 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
         }
         this.$('.image-viewer').toggleClass('hidden', true);
 
-        var viewerType = _.findWhere(this.viewers, {name: viewerName}).type;
+        var ViewerType = _.findWhere(this.viewers, {name: viewerName}).type;
         // GeoJs isn't always fully removing itself from its element when
         // destroyed, so use dedicated elements for each viewer for now
-        var viewerEl = this.$('#' + viewerName);
+        var viewerEl = this.$('#' + ViewerType);
         viewerEl.toggleClass('hidden', false);
-        this.currentViewer = new viewerType({
+        this.currentViewer = new ViewerType({
             el: viewerEl,
             parentView: this,
             itemId: this.itemId
