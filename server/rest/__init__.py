@@ -18,8 +18,9 @@
 ###############################################################################
 
 from .tiles import TilesItemResource
+from .annotation import AnnotationResource
 
 
-__all = (TilesItemResource,)
+__all = (TilesItemResource, AnnotationResource)
 # This works around a bug where PEP257 crashes when parsing __all__
 __all__ = __all
