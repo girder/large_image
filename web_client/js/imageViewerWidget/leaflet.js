@@ -26,6 +26,8 @@ girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
 
         // TODO: if a viewer already exists, do we render again?
 
+        var L = window.L; // this makes the style checker happy
+
         this.viewer = L.map(this.el, {
             center: [0.0, 0.0],  // initial position, must be set
             zoom: 0,  // initial zoom, must be set

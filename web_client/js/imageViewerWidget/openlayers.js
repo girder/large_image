@@ -21,6 +21,8 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
 
         // TODO: if a viewer already exists, do we render again?
 
+        var ol = window.ol; // this makes the style checker happy
+
         this.viewer = new ol.Map({
             target: this.el,
             layers: [
