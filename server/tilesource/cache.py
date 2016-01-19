@@ -42,7 +42,8 @@ class LruCacheMetaclass(type):
         maxSize = namespace.pop('cacheMaxSize', None)
         maxSize = kwargs.get('cacheMaxSize', maxSize)
         if maxSize is None:
-            raise TypeError('Usage of the LruCacheMetaclass requires a "cacheMaxSize" attribute on the class.')
+            raise TypeError('Usage of the LruCacheMetaclass requires a '
+                            '"cacheMaxSize" attribute on the class.')
 
         timeout = namespace.pop('cacheTimeout', None)
         timeout = kwargs.get('cacheTimeout', timeout)
@@ -73,7 +74,6 @@ class LruCacheMetaclass(type):
 
         return cls
 
-
     def __call__(cls, *args, **kwargs):
         cache = LruCacheMetaclass.caches[cls]
 
@@ -99,7 +99,6 @@ class instanceLruCache(object):
                               default_timeout=timeout)
         self.keyFunc = keyFunc if keyFunc else defaultCacheKeyFunc
 
-
     def __call__(self, func):
         def wrapper(instance, *args, **kwargs):
             # instance methods are hashable, but we shouldn't use the instance
@@ -115,8 +114,8 @@ class instanceLruCache(object):
             # use object identity as an input
             cacheName = '__cache_%s' % func.__name__
 
-            cache = instance.__dict__.setdefault(cacheName,
-                self.cacheType(self.maxSize))
+            cache = instance.__dict__.setdefault(
+                cacheName, self.cacheType(self.maxSize))
 
             key = self.keyFunc(args, kwargs)
 
