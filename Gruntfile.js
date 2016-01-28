@@ -15,7 +15,6 @@
  */
 
 module.exports = function (grunt) {
-
     var path = require('path');
 
     // This gruntfile is only designed to be used with girder's build system.

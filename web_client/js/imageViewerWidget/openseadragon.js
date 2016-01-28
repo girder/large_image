@@ -18,6 +18,8 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
 
         // TODO: if a viewer already exists, do we render again?
 
+        var OpenSeadragon = window.OpenSeadragon; // this makes the style checker happy
+
         this.viewer = OpenSeadragon({ // jshint ignore:line
             element: this.el,
             prefixUrl: 'https://openseadragon.github.io/openseadragon/images/',

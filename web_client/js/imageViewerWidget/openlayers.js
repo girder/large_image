@@ -42,11 +42,11 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
                 maxZoom: this.maxZoom,
                 center: [0.0, 0.0],
                 zoom: 0
-                //projection: new ol.proj.Projection({
-                //    code: 'rect',
-                //    units: 'pixels',
-                //    extent: [0, 0, this.sizeX, this.sizeY],
-                //})
+                // projection: new ol.proj.Projection({
+                //     code: 'rect',
+                //     units: 'pixels',
+                //     extent: [0, 0, this.sizeX, this.sizeY],
+                // })
             }),
             logo: false
         });
