@@ -19,13 +19,12 @@ add_python_style_test(
   "${PROJECT_SOURCE_DIR}/plugins/large_image/server"
 )
 
-add_javascript_style_test(
-  jsstyle_large_image_gruntfile
+add_eslint_test(
+  js_static_analysis_large_image_gruntfile
   "${PROJECT_SOURCE_DIR}/plugins/large_image/Gruntfile.js"
-  JSHINT_EXTRA_CONFIGS "${PROJECT_SOURCE_DIR}/grunt_tasks/.jshintrc"
 )
-add_javascript_style_test(
-  jsstyle_large_image_source
+add_eslint_test(
+  js_static_analysis_large_image_source
   "${PROJECT_SOURCE_DIR}/plugins/large_image/web_client"
 )
 

@@ -14,7 +14,6 @@ girder.wrap(girder.views.ItemView, 'render', function (render) {
     render.call(this);
 });
 
-
 girder.views.ImageViewerSelectWidget = girder.View.extend({
     events: {
         'change select': function (event) {
@@ -26,9 +25,9 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
     },
 
     initialize: function (settings) {
-        this.itemId = settings.imageModel.get('largeImage') === 'test' ?
-            'test' :
-            settings.imageModel.id;
+        this.itemId = settings.imageModel.get('largeImage') === 'test'
+            ? 'test'
+            : settings.imageModel.id;
         this.currentViewer = null;
         this.viewers = [
             {

@@ -1,4 +1,3 @@
-/* globals geo */
 girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
     initialize: function (settings) {
         girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
@@ -9,7 +8,6 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
                 this.render();
             }, this)
         );
-
     },
 
     render: function () {
@@ -17,6 +15,8 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
         if (!window.geo || !this.tileWidth || !this.tileHeight) {
             return;
         }
+
+        var geo = window.geo; // this makes the style checker happy
 
         // TODO: if a viewer already exists, do we render again?
         var w = this.sizeX, h = this.sizeY;
@@ -57,12 +57,12 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
 
     destroy: function () {
         if (this.viewer) {
-            //this.viewer.destroy();
+            // this.viewer.destroy();
             this.viewer = null;
         }
-        //if (window.geo) {
-        //    delete window.geo;
-        //}
+        // if (window.geo) {
+        //     delete window.geo;
+        // }
         girder.views.ImageViewerWidget.prototype.destroy.call(this);
     }
 });

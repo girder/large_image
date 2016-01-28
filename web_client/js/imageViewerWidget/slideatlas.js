@@ -26,12 +26,12 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
 
         // TODO: if a viewer already exists, do we render again?
         this.$el.saViewer({
-            zoomWidget  : true,
-            drawWidget  : true,
-            prefixUrl   : 'https://beta.slide-atlas.org/webgl-viewer/static/',
-            tileSource  : {
-                height  : this.sizeY,
-                width   : this.sizeX,
+            zoomWidget: true,
+            drawWidget: true,
+            prefixUrl: 'https://beta.slide-atlas.org/webgl-viewer/static/',
+            tileSource: {
+                height: this.sizeY,
+                width: this.sizeX,
                 tileSize: this.tileWidth,
                 minLevel: 0,
                 maxLevel: this.levels - 1,
