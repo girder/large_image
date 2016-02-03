@@ -22,6 +22,9 @@ before_install:
     - ln -sf $main_path $girder_path/plugins/
     - ls -l $girder_path/plugins
 
+    - romanesco_path=$girder_path/plugins/romanesco
+    - git clone https://github.com/Kitware/romanesco.git $romanesco_path && git -C $romanesco_path checkout 14a38e1e918d79446e59d4eb0d9e46571e2b8458
+
     - export MONGO_VERSION=2.6.11
     - export PY_COVG="ON"
     - CACHE=$HOME/.cache source $girder_path/scripts/install_mongo.sh

@@ -17,10 +17,35 @@
 #  limitations under the License.
 ###############################################################################
 
+from girder import events
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
 from .rest import TilesItemResource
+
+
+def _postUpload(event):
+    """
+    Called when a file is uploaded. We check the parent item to see if it is
+    expecting a large image upload, and if so we register this file as the
+    result image.
+    """
+    fileObj = event.info['file']
+    if 'itemId' not in fileObj:
+        return
+
+    Item = ModelImporter.model('item')
+    item = Item.load(fileObj['itemId'], force=True, exc=True)
+
+    if item.get('expectedLargeImage') and (
+            fileObj['name'].endswith('.tiff') or
+            fileObj.get('mimeType') == 'image/tiff'):
+        if fileObj.get('mimeType') != 'image/tiff':
+            fileObj['mimeType'] = 'image/tiff'
+            ModelImporter.model('file').save(fileObj)
+        del item['expectedLargeImage']
+        item['largeImage'] = fileObj['_id']
+        Item.save(item)
 
 
 def load(info):
@@ -28,3 +53,5 @@ def load(info):
 
     ModelImporter.model('item').exposeFields(
         level=AccessType.READ, fields='largeImage')
+
+    events.bind('data.process', 'large_image', _postUpload)

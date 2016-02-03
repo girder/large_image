@@ -18,12 +18,14 @@
 ###############################################################################
 
 import cherrypy
+import os
 
 from girder.api import access
 from girder.api.v1.item import Item
 from girder.api.describe import describeRoute, Description
-from girder.api.rest import loadmodel, RestException
+from girder.api.rest import filtermodel, loadmodel, RestException
 from girder.models.model_base import AccessType
+from girder.plugins.romanesco import utils as romanescoUtils
 
 from .tilesource import TestTileSource, TiffGirderTileSource, \
     TileSourceException
@@ -94,18 +96,27 @@ class TilesItemResource(Item):
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
+    @filtermodel(model='job', plugin='jobs')
     def createTiles(self, item, params):
         largeImageFileId = params.get('fileId')
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
 
+        if 'largeImage' in item:
+            # TODO: automatically delete the existing large file
+            raise RestException('Item already has a largeFile set.')
+
+        job = None
+
         if largeImageFileId == 'test':
             item['largeImage'] = 'test'
-
         else:
             largeImageFile = self.model('file').load(largeImageFileId,
                                                      force=True, exc=True)
             if largeImageFile['itemId'] != item['_id']:
+                # TODO once we get rid of the "test" parameter, we should be
+                # able to remove the itemId parameter altogether and just take
+                # a file ID.
                 raise RestException('"fileId" must be a file on the same item'
                                     'as "itemId".')
 
@@ -114,21 +125,102 @@ class TilesItemResource(Item):
                 item['largeImage'] = largeImageFile['_id']
 
             else:
-                # TODO: implement a job that will create a multiresolution tiled
-                # TIFF and save it to this Girder item
-                pass
-                # newLargeImageFile = createLargeImageJob(
-                #     item=item,
-                #     originalFile=largeImageFile
-                # )
-                # item['largeImage'] = newLargeImageFile['_id']
+                job = self._createLargeImageJob(largeImageFile, item)
+                item['expectedLargeImage'] = True
+                item['largeImageOriginalId'] = largeImageFileId
+                item['largeImageJobId'] = job['_id']
 
         self.model('item').save(item)
 
-        # TODO: a better response
-        return {
-            'created': True
+        return job
+
+    def _createLargeImageJob(self, fileObj, item):
+        user = self.getCurrentUser()
+        token = self.getCurrentToken()
+
+        path = os.path.join(os.path.dirname(__file__), 'create_tiff.py')
+        with open(path, 'r') as f:
+            script = f.read()
+
+        title = 'TIFF conversion: %s' % fileObj['name']
+        Job = self.model('job', 'jobs')
+        job = Job.createJob(
+            title=title, type='large_image_tiff', handler='romanesco_handler',
+            user=user)
+        jobToken = Job.createJobToken(job)
+
+        task = {
+            'mode': 'python',
+            'script': script,
+            'name': title,
+            'inputs': [{
+                'id': 'in_path',
+                'target': 'filepath',
+                'type': 'string',
+                'format': 'text'
+            }, {
+                'id': 'out_filename',
+                'type': 'string',
+                'format': 'text'
+            }, {
+                'id': 'tile_size',
+                'type': 'number',
+                'format': 'number'
+            }, {
+                'id': 'quality',
+                'type': 'number',
+                'format': 'number'
+            }],
+            'outputs': [{
+                'id': 'out_path',
+                'target': 'filepath',
+                'type': 'string',
+                'format': 'text'
+            }]
         }
+
+        inputs = {
+            'in_path': romanescoUtils.girderInputSpec(
+                item, resourceType='item', token=token),
+            'quality': {
+                'mode': 'inline',
+                'type': 'number',
+                'format': 'number',
+                'data': 90
+            },
+            'tile_size': {
+                'mode': 'inline',
+                'type': 'number',
+                'format': 'number',
+                'data': 256
+            },
+            'out_filename': {
+                'mode': 'inline',
+                'type': 'string',
+                'format': 'text',
+                'data': os.path.splitext(fileObj['name'])[0] + '.tiff'
+            }
+        }
+
+        outputs = {
+            'out_path': romanescoUtils.girderOutputSpec(
+                parent=item, token=token, parentType='item')
+        }
+
+        # TODO: Give the job an owner
+        job['kwargs'] = {
+            'task': task,
+            'inputs': inputs,
+            'outputs': outputs,
+            'jobInfo': romanescoUtils.jobInfoSpec(job, jobToken),
+            'auto_convert': False,
+            'validate': False
+        }
+
+        job = Job.save(job)
+        Job.scheduleJob(job)
+
+        return job
 
     @describeRoute(
         Description('Remove a large image from this item.')
@@ -139,9 +231,34 @@ class TilesItemResource(Item):
     def deleteTiles(self, item, params):
         deleted = False
         if 'largeImage' in item:
-            # TODO: if this file was created by the worker job, then delete it,
-            # but if it was the originally uploaded file, leave it
+            if item.get('expectedLargeImage'):
+                # cannot cleanly remove the large image, since a conversion
+                # job is currently in progress
+                # TODO: cancel the job
+                # TODO: return a failure error code
+                return {
+                    'deleted': False
+                }
+
+            # If this file was created by the worker job, delete it
+            if 'largeImageJobId':
+                # The large image file should not be the original file
+                assert item['largeImageOriginalId'] != item['largeImage']
+
+                Job = self.model('job', 'jobs')
+                job = Job.load(item['largeImageJobId'], force=True, exc=True)
+                # TODO: does this eliminate all traces of the job?
+                # TODO: do we want to remove the original job?
+                Job.remove(job)
+                del item['largeImageJobId']
+
+                self.model('file').remove(item['largeImage'])
+                del item['largeImageOriginalId']
+
             del item['largeImage']
+
+            item['expectedLargeImage'] = True
+
             self.model('item').save(item)
             deleted = True
         # TODO: a better response
