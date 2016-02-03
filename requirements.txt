@@ -1,5 +1,6 @@
 libtiff==0.4.0
-numpy==1.10.4
+# Conda does not contain any numpy>1.10.2
+numpy==1.10.2
 
 # Pillow is already required by another Girder plugin
 #Pillow==3.1.0
