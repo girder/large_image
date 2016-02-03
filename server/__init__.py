@@ -40,6 +40,9 @@ def _postUpload(event):
     if item.get('expectedLargeImage') and (
             fileObj['name'].endswith('.tiff') or
             fileObj.get('mimeType') == 'image/tiff'):
+        if fileObj.get('mimeType') != 'image/tiff':
+            fileObj['mimeType'] = 'image/tiff'
+            ModelImporter.model('file').save(fileObj)
         del item['expectedLargeImage']
         item['largeImage'] = fileObj['_id']
         Item.save(item)
