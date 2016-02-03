@@ -25,7 +25,7 @@ from girder.api.v1.item import Item
 from girder.api.describe import describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, RestException
 from girder.models.model_base import AccessType
-from girder.plugins.romanesco import utils
+from girder.plugins.romanesco import utils as romanescoUtils
 
 from .tilesource import TestTileSource, TiffGirderTileSource, \
     TileSourceException
@@ -130,7 +130,7 @@ class TilesItemResource(Item):
 
         return job
 
-    def _createLargeImageJob(self, file, item):
+    def _createLargeImageJob(self, fileObj, item):
         user = self.getCurrentUser()
         token = self.getCurrentToken()
 
@@ -138,12 +138,12 @@ class TilesItemResource(Item):
         with open(path, 'r') as f:
             script = f.read()
 
-        title = 'TIFF conversion: %s' % file['name']
-        jobModel = self.model('job', 'jobs')
-        job = jobModel.createJob(
+        title = 'TIFF conversion: %s' % fileObj['name']
+        Job = self.model('job', 'jobs')
+        job = Job.createJob(
             title=title, type='large_image_tiff', handler='romanesco_handler',
             user=user)
-        jobToken = jobModel.createJobToken(job)
+        jobToken = Job.createJobToken(job)
 
         task = {
             'mode': 'python',
@@ -176,7 +176,7 @@ class TilesItemResource(Item):
         }
 
         inputs = {
-            'in_path': utils.girderInputSpec(
+            'in_path': romanescoUtils.girderInputSpec(
                 item, resourceType='item', token=token),
             'quality': {
                 'mode': 'inline',
@@ -194,12 +194,12 @@ class TilesItemResource(Item):
                 'mode': 'inline',
                 'type': 'string',
                 'format': 'text',
-                'data': os.path.splitext(file['name'])[0] + '.tiff'
+                'data': os.path.splitext(fileObj['name'])[0] + '.tiff'
             }
         }
 
         outputs = {
-            'out_path': utils.girderOutputSpec(
+            'out_path': romanescoUtils.girderOutputSpec(
                 parent=item, token=token, parentType='item')
         }
 
@@ -207,16 +207,15 @@ class TilesItemResource(Item):
             'task': task,
             'inputs': inputs,
             'outputs': outputs,
-            'jobInfo': utils.jobInfoSpec(job, jobToken),
+            'jobInfo': romanescoUtils.jobInfoSpec(job, jobToken),
             'auto_convert': False,
             'validate': False
         }
 
-        job = jobModel.save(job)
-        jobModel.scheduleJob(job)
+        job = Job.save(job)
+        Job.scheduleJob(job)
 
         return job
-
 
     @describeRoute(
         Description('Remove a large image from this item.')

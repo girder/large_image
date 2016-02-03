@@ -30,18 +30,19 @@ def _postUpload(event):
     expecting a large image upload, and if so we register this file as the
     result image.
     """
-    file = event.info['file']
-    if 'itemId' not in file:
+    fileObj = event.info['file']
+    if 'itemId' not in fileObj:
         return
 
-    itemModel = ModelImporter.model('item')
-    item = itemModel.load(file['itemId'], force=True, exc=True)
+    Item = ModelImporter.model('item')
+    item = Item.load(fileObj['itemId'], force=True, exc=True)
 
-    if item.get('expectedLargeImage') and (file['name'].endswith('.tiff') or
-            file.get('mimeType') == 'image/tiff'):
+    if item.get('expectedLargeImage') and (
+            fileObj['name'].endswith('.tiff') or
+            fileObj.get('mimeType') == 'image/tiff'):
         del item['expectedLargeImage']
-        item['largeImage'] = file['_id']
-        itemModel.save(item)
+        item['largeImage'] = fileObj['_id']
+        Item.save(item)
 
 
 def load(info):

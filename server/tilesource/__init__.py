@@ -17,6 +17,9 @@
 #  limitations under the License.
 ###############################################################################
 
+# Deal with a bug where PEP257 crashes when parsing __all__
+# flake8: noqa
+
 from .base import TileSource, TileSourceException
 try:
     from .test import TestTileSource
@@ -27,6 +30,5 @@ try:
 except ImportError:
     from .dummy import DummyTileSource as TiffGirderTileSource
 
-__all = (TileSource, TileSourceException, TestTileSource, TiffGirderTileSource)
-# This works around a bug where PEP257 crashes when parsing __all__
-__all__ = __all
+__all__ = (TileSource, TileSourceException,
+           TestTileSource, TiffGirderTileSource)
