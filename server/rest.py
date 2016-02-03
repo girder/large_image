@@ -102,6 +102,10 @@ class TilesItemResource(Item):
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
 
+        if 'largeImage' in item:
+            # TODO: automatically delete the existing large file
+            raise RestException('Item already has a largeFile set.')
+
         job = None
 
         if largeImageFileId == 'test':
@@ -203,6 +207,7 @@ class TilesItemResource(Item):
                 parent=item, token=token, parentType='item')
         }
 
+        # TODO: Give the job an owner
         job['kwargs'] = {
             'task': task,
             'inputs': inputs,
@@ -226,9 +231,34 @@ class TilesItemResource(Item):
     def deleteTiles(self, item, params):
         deleted = False
         if 'largeImage' in item:
-            # TODO: if this file was created by the worker job, then delete it,
-            # but if it was the originally uploaded file, leave it
+            if item.get('expectedLargeImage'):
+                # cannot cleanly remove the large image, since a conversion
+                # job is currently in progress
+                # TODO: cancel the job
+                # TODO: return a failure error code
+                return {
+                    'deleted': False
+                }
+
+            # If this file was created by the worker job, delete it
+            if 'largeImageJobId':
+                # The large image file should not be the original file
+                assert item['largeImageOriginalId'] != item['largeImage']
+
+                Job = self.model('job', 'jobs')
+                job = Job.load(item['largeImageJobId'], force=True, exc=True)
+                # TODO: does this eliminate all traces of the job?
+                # TODO: do we want to remove the original job?
+                Job.remove(job)
+                del item['largeImageJobId']
+
+                self.model('file').remove(item['largeImage'])
+                del item['largeImageOriginalId']
+
             del item['largeImage']
+
+            item['expectedLargeImage'] = True
+
             self.model('item').save(item)
             deleted = True
         # TODO: a better response
