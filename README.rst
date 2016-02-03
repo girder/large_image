@@ -11,7 +11,7 @@ A Girder plugin to create, serve, and display large multiresolution images.
     :target: https://travis-ci.org/DigitalSlideArchive/large_image
     :alt: Build Status
 
-.. |license-badge| image:: https://img.shields.io/pypi/l/girder.svg
+.. |license-badge| image:: https://raw.githubusercontent.com/girder/girder/master/docs/license.png
     :target: https://pypi.python.org/pypi/girder
     :alt: License
 
