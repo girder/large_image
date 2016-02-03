@@ -19,30 +19,79 @@
 
 import colorsys
 
+from girder import logger
+
 try:
     import PIL
     from PIL import Image, ImageDraw, ImageFont
     if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
         raise ImportError('Pillow v3.0 or later is required')
 except ImportError:
-    # TODO: change print to use logger
-    print 'Error: Could not import PIL'
+    logger.info('Error: Could not import PIL')
     # re-raise it for now, but maybe do something else in the future
     raise
-from six import StringIO
+from six import BytesIO
 
 from .base import TileSource, TileSourceException
 
 
 class TestTileSource(TileSource):
-    # TODO: move this class to its own file, and only import if PIL v3+ is available
-    def __init__(self, tileSize=256, levels=10):
-        super(TestTileSource, self).__init__()
-        self.tileSize = tileSize
-        self.levels = levels
-        self.sizeX = (2 ** (self.levels - 1)) * self.tileSize
-        self.sizeY = (2 ** (self.levels - 1)) * self.tileSize
+    def __init__(self, minLevel=0, maxLevel=9,
+                 tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
+                 fractal=False, encoding='PNG'):
+        """
+        Initialize the tile class.  The optional params options can include:
 
+        :param minLevel: minimum tile level
+        :param maxLevel: maximum tile level
+        :param tileWidth: tile width in pixels
+        :param tileHeight: tile height in pixels
+        :param sizeX: image width in pixels at maximum level.  Computed from
+            maxLevel and tileWidth if None.
+        :param sizeY: image height in pixels at maximum level.  Computer from
+            maxLevel and tileHeight if None.
+        :param fractal: if True, and the tile size is square and a power of
+            two, draw a simple fractal on the tiles.
+        :param encoding: 'PNG' or 'JPEG'.
+        """
+        super(TestTileSource, self).__init__()
+
+        self.minLevel = minLevel
+        self.maxLevel = maxLevel
+        self.tileWidth = tileWidth
+        self.tileHeight = tileHeight
+        # Don't generate a fractal tile if the tile isn't square or not a power
+        # of 2 in size.
+        self.fractal = (fractal and self.tileWidth == self.tileHeight and
+                        not (self.tileWidth & (self.tileWidth - 1)))
+        self.sizeX = (((2 ** self.maxLevel) * self.tileWidth)
+                      if sizeX is None else sizeX)
+        self.sizeY = (((2 ** self.maxLevel) * self.tileHeight)
+                      if sizeY is None else sizeY)
+        if encoding not in ('PNG', 'JPEG'):
+            raise ValueError('Invalid encoding "%s"' % encoding)
+        self.encoding = encoding
+        # Used for reporting tile information
+        self.levels = self.maxLevel + 1
+
+    def fractalTile(self, image, x, y, widthCount, color=(0, 0, 0)):
+        imageDraw = ImageDraw.Draw(image)
+        x *= self.tileWidth
+        y *= self.tileHeight
+        sq = widthCount * self.tileWidth
+        while sq >= 4:
+            sq1 = sq / 4
+            sq2 = sq1 + sq / 2
+            for t in range(-(y % sq), self.tileWidth, sq):
+                if t + sq1 < self.tileWidth and t + sq2 >= 0:
+                    for l in range(-(x % sq), self.tileWidth, sq):
+                        if l + sq1 < self.tileWidth and l + sq2 >= 0:
+                            imageDraw.rectangle([
+                                max(-1, l + sq1), max(-1, t + sq1),
+                                min(self.tileWidth, l + sq2 - 1),
+                                min(self.tileWidth, t + sq2 - 1),
+                            ], color, None)
+            sq /= 2
 
     def getTile(self, x, y, z):
         widthCount = 2 ** z
@@ -51,7 +100,7 @@ class TestTileSource(TileSource):
             raise TileSourceException('x is outside layer')
         if not (0 <= y < widthCount):
             raise TileSourceException('y is outside layer')
-        if not (0 <= z < self.levels):
+        if not (self.minLevel <= z <= self.maxLevel):
             raise TileSourceException('z layer does not exist')
 
         xFraction = float(x) / (widthCount - 1) if z != 0 else 0
@@ -62,17 +111,23 @@ class TestTileSource(TileSource):
             s=(0.3 + (0.7 * yFraction)),
             v=(0.3 + (0.7 * yFraction)),
         )
+        rgbColor = tuple(int(val * 255) for val in backgroundColor)
 
         image = Image.new(
             mode='RGB',
-            size=(self.tileSize, self.tileSize),
-            color=tuple(int(val * 255) for val in backgroundColor)
+            size=(self.tileWidth, self.tileHeight),
+            color=(rgbColor if not self.fractal else (255, 255, 255))
         )
         imageDraw = ImageDraw.Draw(image)
+
+        if self.fractal:
+            self.fractalTile(image, x, y, widthCount, rgbColor)
+
         try:
+            # the font size should fill the whole tile
             imageDrawFont = ImageFont.truetype(
                 font='/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
-                size=int(0.24 * self.tileSize)  # this size fills the whole tile
+                size=int(0.15 * min(self.tileWidth, self.tileHeight))
             )
         except IOError:
             imageDrawFont = ImageFont.load_default()
@@ -83,6 +138,11 @@ class TestTileSource(TileSource):
             font=imageDrawFont
         )
 
-        output = StringIO()
-        image.save(output, 'JPEG')
+        output = BytesIO()
+        image.save(output, self.encoding, quality=95)
         return output.getvalue()
+
+    def getTileMimeType(self):
+        if self.encoding == 'JPEG':
+            return 'image/jpeg'
+        return 'image/png'

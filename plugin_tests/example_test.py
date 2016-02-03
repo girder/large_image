@@ -17,16 +17,24 @@
 #  limitations under the License.
 ###############################################################################
 
-from .base import TileSource, TileSourceException
-try:
-    from .test import TestTileSource
-except ImportError:
-    from .dummy import DummyTileSource as TestTileSource
-try:
-    from .tiff import TiffGirderTileSource
-except ImportError:
-    from .dummy import DummyTileSource as TiffGirderTileSource
+# This is to serve as an example for how to create a server-side test in a
+# girder plugin, it is not meant to be useful.
 
-__all = (TileSource, TileSourceException, TestTileSource, TiffGirderTileSource)
-# This works around a bug where PEP257 crashes when parsing __all__
-__all__ = __all
+from tests import base
+
+
+# boiler plate to start and stop the server
+def setUpModule():
+    base.enabledPlugins.append('large_image')
+    base.startServer()
+
+
+def tearDownModule():
+    base.stopServer()
+
+
+class LargeImageExampleTest(base.TestCase):
+
+    def testExample(self):
+        resp = self.request(path='/user/me')
+        self.assertStatus(resp, 200)

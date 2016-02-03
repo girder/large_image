@@ -1,0 +1,50 @@
+language: python
+python:
+    - "2.7"
+
+cache:
+    directories:
+        - $HOME/.cache
+
+sudo: false
+
+compiler:
+    - gcc
+
+before_install:
+    - main_path=$PWD
+    - build_path=$PWD/build
+    - mkdir -p $build_path
+
+    - girder_path=$build_path/girder
+    - rm -fr $girder_path
+    - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout 114b5dda576bc0611617a92f88942f3a55dabe7d
+    - ln -sf $main_path $girder_path/plugins/
+    - ls -l $girder_path/plugins
+
+    - export MONGO_VERSION=2.6.11
+    - export PY_COVG="ON"
+    - CACHE=$HOME/.cache source $girder_path/scripts/install_mongo.sh
+    - mkdir /tmp/db
+    - mongod --dbpath=/tmp/db >/dev/null 2>/dev/null &
+    - mongod --version
+
+    - CACHE=$HOME/.cache CMAKE_VERSION=3.1.0 CMAKE_SHORT_VERSION=3.1 source $girder_path/scripts/install_cmake.sh
+    - cmake --version
+
+    - npm install -g npm
+    - npm --version
+
+    - pip install -U pip virtualenv
+
+install:
+    - cd $girder_path
+    - pip install numpy==1.10.2 # needed because libtiff doesn't install correctly without it
+    - pip install -U -r requirements.txt -r requirements-dev.txt -r $main_path/requirements.txt -e .
+    - npm install
+
+script:
+    - mkdir -p $build_path/girder_testing_build
+    - cd $build_path/girder_testing_build
+    - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} $girder_path
+    - JASMINE_TIMEOUT=15000 ctest -VV -R large_image

@@ -15,7 +15,6 @@
  */
 
 module.exports = function (grunt) {
-
     var path = require('path');
 
     // This gruntfile is only designed to be used with girder's build system.
@@ -36,11 +35,11 @@ module.exports = function (grunt) {
                 pnltri: '<%= plugin.large_image.geojs_modules %>/pnltri/pnltri.js',
                 proj4: '<%= plugin.large_image.geojs_components %>/proj4/dist/proj4-src.js',
                 d3: '<%= plugin.large_image.geojs_components %>/d3/d3.js',
-                glmatrix: '<%= plugin.large_image.geojs_components %>/gl-matrix/gl-matrix.js'
+                glmatrix: '<%= plugin.large_image.geojs_components %>/gl-matrix/dist/gl-matrix.js'
             }
         },
         uglify: {
-            'plugin-image-viewer-geojs': { // Bundle together geojs + dependencies
+            'plugin-large-image-geojs': { // Bundle together geojs + dependencies
                 files: [
                     {   // leaving out jquery because girder includes it
                         src: [
@@ -56,16 +55,16 @@ module.exports = function (grunt) {
             }
         },
         default: { // Tell girder about our custom tasks
-            'uglify:plugin-image-viewer-geojs': {}
+            'uglify:plugin-large-image-geojs': {}
         }
     });
 
     // add watch tasks
     grunt.config.merge({
         watch: {
-            'plugin-image-viewer-geojs': {
-                files: grunt.config.getRaw('uglify.plugin-image-viewer-geojs.files')[0].src,
-                tasks: ['uglify:plugin-image-viewer-geojs']
+            'plugin-large-image-geojs': {
+                files: grunt.config.getRaw('uglify.plugin-large-image-geojs.files')[0].src,
+                tasks: ['uglify:plugin-large-image-geojs']
             }
         }
     });

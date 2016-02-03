@@ -15,11 +15,18 @@ girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.L || !this.tileSize) {
+        if (!window.L || !this.tileWidth || !this.tileHeight) {
+            return;
+        }
+
+        if (this.tileWidth !== this.tileHeight) {
+            console.error('The Leaflet viewer only supports square tiles.');
             return;
         }
 
         // TODO: if a viewer already exists, do we render again?
+
+        var L = window.L; // this makes the style checker happy
 
         this.viewer = L.map(this.el, {
             center: [0.0, 0.0],  // initial position, must be set
@@ -32,7 +39,10 @@ girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
             ],
             layers: [
                 L.tileLayer(this._getTileUrl('{z}', '{x}', '{y}'), {
-                    tileSize: this.tileSize,
+                    // in theory, tileSize: new L.Point(this.tileWidth,
+                    // this.tileHeight) is supposed to support non-square
+                    // tiles, but it doesn't work
+                    tileSize: this.tileWidth,
                     continuousWorld: true
                 })
             ],

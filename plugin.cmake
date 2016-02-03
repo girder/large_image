@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 ###############################################################################
 #  Copyright Kitware Inc.
 #
@@ -17,16 +14,19 @@
 #  limitations under the License.
 ###############################################################################
 
-from .base import TileSource, TileSourceException
-try:
-    from .test import TestTileSource
-except ImportError:
-    from .dummy import DummyTileSource as TestTileSource
-try:
-    from .tiff import TiffGirderTileSource
-except ImportError:
-    from .dummy import DummyTileSource as TiffGirderTileSource
+add_python_style_test(
+  python_static_analysis_large_image
+  "${PROJECT_SOURCE_DIR}/plugins/large_image/server"
+)
 
-__all = (TileSource, TileSourceException, TestTileSource, TiffGirderTileSource)
-# This works around a bug where PEP257 crashes when parsing __all__
-__all__ = __all
+add_eslint_test(
+  js_static_analysis_large_image_gruntfile
+  "${PROJECT_SOURCE_DIR}/plugins/large_image/Gruntfile.js"
+)
+add_eslint_test(
+  js_static_analysis_large_image_source
+  "${PROJECT_SOURCE_DIR}/plugins/large_image/web_client"
+)
+
+add_python_test(example PLUGIN large_image)
+add_web_client_test(example "${PROJECT_SOURCE_DIR}/plugins/large_image/plugin_tests/exampleSpec.js" PLUGIN large_image)

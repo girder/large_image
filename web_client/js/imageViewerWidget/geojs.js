@@ -8,38 +8,61 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
                 this.render();
             }, this)
         );
-
     },
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.geo || !this.tileSize) {
+        if (!window.geo || !this.tileWidth || !this.tileHeight) {
             return;
         }
 
-        // TODO: if a viewer already exists, do we render again?
+        var geo = window.geo; // this makes the style checker happy
 
-        this.viewer = geo.map({
-            node: this.el
-        });
-        this.viewer.createLayer('osm', {
+        // TODO: if a viewer already exists, do we render again?
+        var w = this.sizeX, h = this.sizeY;
+        // TODO: this.levels
+        var mapParams = {
+            node: this.el,
+            ingcs: '+proj=longlat +axis=esu',
+            gcs: '+proj=longlat +axis=enu',
+            maxBounds: {left: 0, top: 0, right: w, bottom: h},
+            center: {x: w / 2, y: h / 2},
+            max: Math.ceil(Math.log(Math.max(
+                w / this.tileWidth,
+                h / this.tileHeight)) / Math.log(2)),
+            clampBoundsX: true,
+            clampBoundsY: true,
+            zoom: 0
+        };
+        mapParams.unitsPerPixel = Math.pow(2, mapParams.max);
+        var layerParams = {
             useCredentials: true,
-            // TODO: syntax has changed in the latest GeoJS version
-            //tileUrl: this._getTileUrl('{z}', '{x}', '{y}')
-            tileUrl: this._getTileUrl('<zoom>', '<x>', '<y>')
-        });
+            url: this._getTileUrl('{z}', '{x}', '{y}'),
+            maxLevel: mapParams.max,
+            wrapX: false,
+            wrapY: false,
+            tileOffset: function () {
+                return {x: 0, y: 0};
+            },
+            attribution: '',
+            tileWidth: this.tileWidth,
+            tileHeight: this.tileHeight,
+            tileRounding: Math.ceil
+        };
+        this.viewer = geo.map(mapParams);
+        this.viewer.createLayer('osm', layerParams);
 
         return this;
     },
 
     destroy: function () {
         if (this.viewer) {
-            //this.viewer.destroy();
+            // this.viewer.destroy();
             this.viewer = null;
         }
-        //if (window.geo) {
-        //    delete window.geo;
-        //}
+        // if (window.geo) {
+        //     delete window.geo;
+        // }
         girder.views.ImageViewerWidget.prototype.destroy.call(this);
     }
 });

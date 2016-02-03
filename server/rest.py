@@ -27,7 +27,8 @@ from girder.api.rest import filtermodel, loadmodel, RestException
 from girder.models.model_base import AccessType
 from girder.plugins.romanesco import utils
 
-from .tilesource import TestTileSource, TiffGirderTileSource, TileSourceException
+from .tilesource import TestTileSource, TiffGirderTileSource, \
+    TileSourceException
 
 
 class TilesItemResource(Item):
@@ -44,15 +45,32 @@ class TilesItemResource(Item):
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
 
-
-    def _loadTileSource(self, itemId):
+    def _loadTileSource(self, itemId, params):
         try:
             if itemId == 'test':
-                tileSource = TestTileSource(256)
+                tileSourceArgs = {}
+                for paramName, paramType in [
+                    ('minLevel', int),
+                    ('maxLevel', int),
+                    ('tileWidth', int),
+                    ('tileHeight', int),
+                    ('sizeX', int),
+                    ('sizeY', int),
+                    ('fractal', lambda val: val == 'true'),
+                ]:
+                    try:
+                        if paramName in params:
+                            tileSourceArgs[paramName] = \
+                                paramType(params[paramName])
+                    except ValueError:
+                        raise RestException(
+                            '"%s" parameter is an incorrect type.' % paramName)
+                tileSource = TestTileSource(**tileSourceArgs)
             else:
                 # TODO: cache the user / item loading too
-                item = self.model('item').load(id=itemId, level=AccessType.READ,
-                                               user=self.getCurrentUser(), exc=True)
+                item = self.model('item').load(
+                    id=itemId, level=AccessType.READ,
+                    user=self.getCurrentUser(), exc=True)
                 tileSource = TiffGirderTileSource(item)
             return tileSource
         except TileSourceException as e:
@@ -67,7 +85,7 @@ class TilesItemResource(Item):
     )
     @access.public
     def getTilesInfo(self, itemId, params):
-        tileSource = self._loadTileSource(itemId)
+        tileSource = self._loadTileSource(itemId, params)
         return tileSource.getMetadata()
 
     @describeRoute(
@@ -199,6 +217,7 @@ class TilesItemResource(Item):
 
         return job
 
+
     @describeRoute(
         Description('Remove a large image from this item.')
         .param('itemId', 'The ID of the item.', paramType='path')
@@ -221,9 +240,12 @@ class TilesItemResource(Item):
     @describeRoute(
         Description('Get a large image tile.')
         .param('itemId', 'The ID of the item or "test".', paramType='path')
-        .param('z', 'The layer number of the tile (0 is the most zoomed-out layer).', paramType='path')
-        .param('x', 'The X coordinate of the tile (0 is the left side).', paramType='path')
-        .param('y', 'The Y coordinate of the tile (0 is the top).', paramType='path')
+        .param('z', 'The layer number of the tile (0 is the most zoomed-out '
+               'layer).', paramType='path')
+        .param('x', 'The X coordinate of the tile (0 is the left side).',
+               paramType='path')
+        .param('y', 'The Y coordinate of the tile (0 is the top).',
+               paramType='path')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -235,11 +257,11 @@ class TilesItemResource(Item):
         except ValueError:
             raise RestException('x, y, and z must be integers', code=400)
 
-        tileSource = self._loadTileSource(itemId)
+        tileSource = self._loadTileSource(itemId, params)
         try:
             tileData = tileSource.getTile(x, y, z)
         except TileSourceException as e:
             raise RestException(e.message, code=404)
 
-        cherrypy.response.headers['Content-Type'] = 'image/jpeg'
+        cherrypy.response.headers['Content-Type'] = tileSource.getTileMimeType()
         return lambda: tileData

@@ -1,5 +1,5 @@
 {
-  "name": "girder_large_image",
+  "name": "large_image",
   "version": "0.2.0",
   "description": "A Girder plugin to create, serve, and display large multiresolution images.",
   "homepage": "https://github.com/DigitalSlideArchive/large_image",
@@ -12,7 +12,7 @@
     "url": "https://github.com/DigitalSlideArchive/large_image.git"
   },
   "dependencies": {
-    "geojs": "0.5.0"
+    "geojs": "0.6.0-rc.1"
   },
   "devDependencies": {},
   "scripts": {}

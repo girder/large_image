@@ -28,21 +28,26 @@ class TileSourceException(Exception):
 
 class TileSource(object):
     def __init__(self):
-        self.tileSize = None
+        self.tileWidth = None
+        self.tileHeight = None
         self.levels = None
         self.sizeX = None
         self.sizeY = None
 
     def getMetadata(self):
         return {
-            'tileSize': self.tileSize,
             'levels': self.levels,
             'sizeX': self.sizeX,
-            'sizeY': self.sizeY
+            'sizeY': self.sizeY,
+            'tileWidth': self.tileWidth,
+            'tileHeight': self.tileHeight,
         }
 
     def getTile(self, x, y, z):
         raise NotImplementedError()
+
+    def getTileMimeType(self):
+        return 'image/jpeg'
 
 
 class GirderTileSource(TileSource):
@@ -57,14 +62,18 @@ class GirderTileSource(TileSource):
             # don't repeat.
             # TODO: is it possible that the file is on a different item, so do
             # we want to repeat the access check?
-            largeImageFile = ModelImporter.model('file').load(largeImageFileId, force=True)
+            largeImageFile = ModelImporter.model('file').load(
+                largeImageFileId, force=True)
 
             # TODO: can we move some of this logic into Girder core?
-            assetstore = ModelImporter.model('assetstore').load(largeImageFile['assetstoreId'])
+            assetstore = ModelImporter.model('assetstore').load(
+                largeImageFile['assetstoreId'])
             adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
 
-            if not isinstance(adapter, assetstore_utilities.FilesystemAssetstoreAdapter):
-                raise TileSourceException('Non-filesystem assetstores are not supported')
+            if not isinstance(adapter,
+                              assetstore_utilities.FilesystemAssetstoreAdapter):
+                raise TileSourceException(
+                    'Non-filesystem assetstores are not supported')
 
             largeImagePath = adapter.fullPath(largeImageFile)
             return largeImagePath

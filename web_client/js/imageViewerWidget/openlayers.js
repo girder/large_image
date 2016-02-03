@@ -15,18 +15,20 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.ol || !this.tileSize) {
+        if (!window.ol || !this.tileWidth || !this.tileHeight) {
             return;
         }
 
         // TODO: if a viewer already exists, do we render again?
+
+        var ol = window.ol; // this makes the style checker happy
 
         this.viewer = new ol.Map({
             target: this.el,
             layers: [
                 new ol.layer.Tile({
                     source: new ol.source.XYZ({
-                        tileSize: this.tileSize,
+                        tileSize: [this.tileWidth, this.tileHeight],
                         url: this._getTileUrl('{z}', '{x}', '{y}'),
                         crossOrigin: 'use-credentials',
                         maxZoom: this.maxZoom,
@@ -40,11 +42,11 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
                 maxZoom: this.maxZoom,
                 center: [0.0, 0.0],
                 zoom: 0
-                //projection: new ol.proj.Projection({
-                //    code: 'rect',
-                //    units: 'pixels',
-                //    extent: [0, 0, this.sizeX, this.sizeY],
-                //})
+                // projection: new ol.proj.Projection({
+                //     code: 'rect',
+                //     units: 'pixels',
+                //     extent: [0, 0, this.sizeX, this.sizeY],
+                // })
             }),
             logo: false
         });

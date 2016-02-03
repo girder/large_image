@@ -12,13 +12,15 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.OpenSeadragon || !this.tileSize) {
+        if (!window.OpenSeadragon || !this.tileWidth || !this.tileHeight) {
             return;
         }
 
         // TODO: if a viewer already exists, do we render again?
 
-        this.viewer = OpenSeadragon({
+        var OpenSeadragon = window.OpenSeadragon; // this makes the style checker happy
+
+        this.viewer = OpenSeadragon({ // jshint ignore:line
             element: this.el,
             prefixUrl: 'https://openseadragon.github.io/openseadragon/images/',
             minZoomImageRatio: 0.2,
@@ -27,7 +29,8 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
             tileSources: {
                 height: this.sizeY,
                 width: this.sizeX,
-                tileSize: this.tileSize,
+                tileWidth: this.tileWidth,
+                tileHeight: this.tileHeight,
                 minLevel: 0,
                 maxLevel: this.levels - 1,
                 getTileUrl: _.bind(this._getTileUrl, this),

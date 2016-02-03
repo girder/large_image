@@ -15,26 +15,30 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.SlideAtlas || !this.tileSize) {
+        if (!window.SlideAtlas || !this.tileWidth || !this.tileHeight) {
+            return;
+        }
+
+        if (this.tileWidth !== this.tileHeight) {
+            console.error('The SlideAtlas viewer only supports square tiles.');
             return;
         }
 
         // TODO: if a viewer already exists, do we render again?
         this.$el.saViewer({
-            zoomWidget  : true,
-            drawWidget  : true,
-            prefixUrl   : 'https://beta.slide-atlas.org/webgl-viewer/static/',
-            tileSource  : {
-                height  : this.sizeY,
-                width   : this.sizeX,
-                tileSize: this.tileSize,
+            zoomWidget: true,
+            drawWidget: true,
+            prefixUrl: 'https://beta.slide-atlas.org/webgl-viewer/static/',
+            tileSource: {
+                height: this.sizeY,
+                width: this.sizeX,
+                tileSize: this.tileWidth,
                 minLevel: 0,
                 maxLevel: this.levels - 1,
                 getTileUrl: _.bind(this._getTileUrl, this),
                 ajaxWithCredentials: true
             }});
         this.viewer = this.el.saViewer;
-       
 
         return this;
     },

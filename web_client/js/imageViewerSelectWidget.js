@@ -3,7 +3,7 @@ girder.wrap(girder.views.ItemView, 'render', function (render) {
     // so we must listen for a render event.
     this.once('g:rendered', function () {
         if (this.model.get('largeImage')) {
-            new girder.views.ImageViewerSelectWidget({
+            this.imageViewerSelect = new girder.views.ImageViewerSelectWidget({
                 el: $('<div>', {class: 'g-item-image-viewer-select'})
                     .insertAfter(this.$('.g-item-info')),
                 parentView: this,
@@ -14,18 +14,20 @@ girder.wrap(girder.views.ItemView, 'render', function (render) {
     render.call(this);
 });
 
-
 girder.views.ImageViewerSelectWidget = girder.View.extend({
     events: {
         'change select': function (event) {
+            this._selectViewer(event.target.value);
+        },
+        'keyup select': function (event) {
             this._selectViewer(event.target.value);
         }
     },
 
     initialize: function (settings) {
-        this.itemId = settings.imageModel.get('largeImage') === 'test' ?
-            'test' :
-            settings.imageModel.id;
+        this.itemId = settings.imageModel.get('largeImage') === 'test'
+            ? 'test'
+            : settings.imageModel.id;
         this.currentViewer = null;
         this.viewers = [
             {
@@ -34,9 +36,9 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
                 type: girder.views.OpenseadragonImageViewerWidget
             },
             {
-                name: 'slideatlas',
-                label: 'SlideAtlas',
-                type: girder.views.SlideAtlasImageViewerWidget
+                name: 'openlayers',
+                label: 'OpenLayers',
+                type: girder.views.OpenlayersImageViewerWidget
             },
             {
                 name: 'leaflet',
@@ -44,18 +46,18 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
                 type: girder.views.LeafletImageViewerWidget
             },
             {
-                name: 'openlayers',
-                label: 'OpenLayers',
-                type: girder.views.OpenlayersImageViewerWidget
-            },
-            {
                 name: 'geojs',
                 label: 'GeoJS',
                 type: girder.views.GeojsImageViewerWidget
+            },
+            {
+                name: 'slideatlas',
+                label: 'SlideAtlas',
+                type: girder.views.SlideAtlasImageViewerWidget
             }
         ];
 
-        this.render()
+        this.render();
     },
 
     render: function () {
@@ -74,12 +76,12 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
         }
         this.$('.image-viewer').toggleClass('hidden', true);
 
-        var viewerType = _.findWhere(this.viewers, {name: viewerName}).type;
+        var ViewerType = _.findWhere(this.viewers, {name: viewerName}).type;
         // GeoJs isn't always fully removing itself from its element when
         // destroyed, so use dedicated elements for each viewer for now
-        var viewerEl = this.$('#' + viewerName);
+        var viewerEl = this.$('#' + ViewerType);
         viewerEl.toggleClass('hidden', false);
-        this.currentViewer = new viewerType({
+        this.currentViewer = new ViewerType({
             el: viewerEl,
             parentView: this,
             itemId: this.itemId

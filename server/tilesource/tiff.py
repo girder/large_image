@@ -34,7 +34,11 @@ class TiffGirderTileSource(GirderTileSource):
     """
     cacheMaxSize = 2
     cacheTimeout = 60
-    cacheKeyFunc = lambda args, kwargs: args[0].get('largeImage')
+
+    @staticmethod
+    def cacheKeyFunc(args, kwargs):
+        item = args[0]
+        return item.get('largeImage')
 
     def __init__(self, item):
         super(TiffGirderTileSource, self).__init__(item)
@@ -53,14 +57,15 @@ class TiffGirderTileSource(GirderTileSource):
         if not self._tiffDirectories:
             raise TileSourceException('File must have at least 1 level')
 
-        # Multiresolution TIFFs are stored with full-resolution layer in directory 0
+        # Multiresolution TIFFs are stored with full-resolution layer in
+        #   directory 0
         self._tiffDirectories.reverse()
 
-        self.tileSize = self._tiffDirectories[-1].tileSize
+        self.tileWidth = self._tiffDirectories[-1].tileWidth
+        self.tileHeight = self._tiffDirectories[-1].tileHeight
         self.levels = len(self._tiffDirectories)
         self.sizeX = self._tiffDirectories[-1].imageWidth
         self.sizeY = self._tiffDirectories[-1].imageHeight
-
 
     def getTile(self, x, y, z):
         try:
