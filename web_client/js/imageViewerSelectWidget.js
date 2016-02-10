@@ -79,7 +79,7 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
         var ViewerType = _.findWhere(this.viewers, {name: viewerName}).type;
         // GeoJs isn't always fully removing itself from its element when
         // destroyed, so use dedicated elements for each viewer for now
-        var viewerEl = this.$('#' + ViewerType);
+        var viewerEl = this.$('#' + viewerName);
         viewerEl.toggleClass('hidden', false);
         this.currentViewer = new ViewerType({
             el: viewerEl,
