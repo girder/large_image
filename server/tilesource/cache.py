@@ -50,6 +50,11 @@ class LruCacheMetaclass(type):
 
         keyFunc = namespace.pop('cacheKeyFunc', None)
         keyFunc = kwargs.get('cacheKeyFunc', keyFunc)
+        # The @staticmethod wrapper stored the original function in __func__,
+        # and we need to use that as our keyFunc
+        if (hasattr(keyFunc, '__func__') and
+                hasattr(keyFunc.__func__, '__call__')):
+            keyFunc = keyFunc.__func__
         if not keyFunc:
             keyFunc = defaultCacheKeyFunc
 
