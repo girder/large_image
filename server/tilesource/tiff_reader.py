@@ -139,7 +139,7 @@ class TiledTiffDirectory(object):
 
         :raises: ValidationTiffException
         """
-        if self._tiffFile.GetField('SamplesPerPixel') != 3:
+        if self._tiffFile.GetField('SamplesPerPixel') < 3:
             raise ValidationTiffException('Only RGB TIFF files are supported')
 
         if self._tiffFile.GetField('BitsPerSample') != 8:

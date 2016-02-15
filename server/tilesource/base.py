@@ -51,13 +51,17 @@ class TileSource(object):
 
 
 class GirderTileSource(TileSource):
-    def __init__(self, item):
+    def __init__(self, item, fileIdOverride=None):
         super(GirderTileSource, self).__init__()
         self.item = item
+        self.fileIdOverride = fileIdOverride
 
     def _getLargeImagePath(self):
         try:
-            largeImageFileId = self.item['largeImage']
+            if self.fileIdOverride is not None:
+                largeImageFileId = self.fileIdOverride
+            else:
+                largeImageFileId = self.item['largeImage']
             # Access control checking should already have been done on item, so
             # don't repeat.
             # TODO: is it possible that the file is on a different item, so do
