@@ -1,4 +1,5 @@
 language: python
+
 python:
     - "2.7"
 
@@ -6,10 +7,30 @@ cache:
     directories:
         - $HOME/.cache
 
-sudo: false
+# sudo: false
+sudo: required
+
+dist: trusty
 
 compiler:
     - gcc
+
+addons:
+    apt:
+        packages:
+            # Pillow dependencies (see
+            # https://pillow.readthedocs.org/en/latest/installation.html)
+            - libtiff5-dev
+            - libjpeg8-dev
+            - zlib1g-dev
+            - libfreetype6-dev
+            - liblcms2-dev
+            - libwebp-dev
+            - tcl8.6-dev
+            - tk8.6-dev
+            - python-tk
+            # vips
+            - libvips-tools
 
 before_install:
     - main_path=$PWD
@@ -24,6 +45,8 @@ before_install:
 
     - romanesco_path=$girder_path/plugins/romanesco
     - git clone https://github.com/Kitware/romanesco.git $romanesco_path && git -C $romanesco_path checkout 14a38e1e918d79446e59d4eb0d9e46571e2b8458
+    - cp $PWD/plugin_tests/data/romanesco.cfg $romanesco_path/romanesco/worker.local.cfg
+    - pip install -U -r $romanesco_path/requirements.txt -r $romanesco_path/romanesco/plugins/girder_io/requirements.txt
 
     - export MONGO_VERSION=2.6.11
     - export PY_COVG="ON"
@@ -42,12 +65,14 @@ before_install:
 
 install:
     - cd $girder_path
-    - pip install numpy==1.10.2 # needed because libtiff doesn't install correctly without it
     - pip install -U -r requirements.txt -r requirements-dev.txt -r $main_path/requirements.txt -e .
     - npm install
 
 script:
+    - cd $romanesco_path
+    - python -m romanesco &
     - mkdir -p $build_path/girder_testing_build
     - cd $build_path/girder_testing_build
     - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} $girder_path
+    - make
     - JASMINE_TIMEOUT=15000 ctest -VV -R large_image

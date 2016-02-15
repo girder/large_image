@@ -96,9 +96,11 @@ class TestTileSource(TileSource):
     def getTile(self, x, y, z):
         widthCount = 2 ** z
 
-        if not (0 <= x < widthCount):
+        if not (0 <= x < float(self.sizeX) / self.tileWidth * 2 ** (
+                z - self.maxLevel)):
             raise TileSourceException('x is outside layer')
-        if not (0 <= y < widthCount):
+        if not (0 <= y < float(self.sizeY) / self.tileHeight * 2 ** (
+                z - self.maxLevel)):
             raise TileSourceException('y is outside layer')
         if not (self.minLevel <= z <= self.maxLevel):
             raise TileSourceException('z layer does not exist')
