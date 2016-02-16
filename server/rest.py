@@ -241,7 +241,7 @@ class TilesItemResource(Item):
                 }
 
             # If this file was created by the worker job, delete it
-            if 'largeImageJobId':
+            if 'largeImageJobId' in item:
                 # The large image file should not be the original file
                 assert item['largeImageOriginalId'] != item['largeImage']
 
@@ -292,6 +292,9 @@ class TilesItemResource(Item):
             x, y, z = int(x), int(y), int(z)
         except ValueError:
             raise RestException('x, y, and z must be integers', code=400)
+        if x < 0 or y < 0 or z < 0:
+            raise RestException('x, y, and z must be positive integers',
+                                code=400)
 
         tileSource = self._loadTileSource(itemId, params)
         try:
