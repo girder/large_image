@@ -87,8 +87,7 @@ class LruCacheMetaclass(type):
         instance = cache.get(key, _MARKER)
         if instance is _MARKER:
             instance = super(LruCacheMetaclass, cls).__call__(*args, **kwargs)
-            if key is not None:
-                cache.put(key, instance)
+            cache.put(key, instance)
 
         return instance
 
@@ -128,8 +127,7 @@ class instanceLruCache(object):
             value = cache.get(key, _MARKER)
             if value is _MARKER:
                 value = func(instance, *args, **kwargs)
-                if key is not None:
-                    cache.put(key, value)
+                cache.put(key, value)
 
             return value
 

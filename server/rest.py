@@ -122,9 +122,10 @@ class TilesItemResource(Item):
                 raise RestException('"fileId" must be a file on the same item'
                                     'as "itemId".')
             try:
-                TiffGirderTileSource(None, largeImageFile['_id'])
                 item['largeImage'] = largeImageFile['_id']
+                TiffGirderTileSource(item)
             except TileSourceException:
+                del item['largeImage']
                 job = self._createLargeImageJob(largeImageFile, item)
                 item['expectedLargeImage'] = True
                 item['largeImageOriginalId'] = largeImageFileId

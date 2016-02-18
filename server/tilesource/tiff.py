@@ -40,8 +40,8 @@ class TiffGirderTileSource(GirderTileSource):
         item = args[0]
         return item.get('largeImage') if item else None
 
-    def __init__(self, item, fileIdOverride=None):
-        super(TiffGirderTileSource, self).__init__(item, fileIdOverride)
+    def __init__(self, item):
+        super(TiffGirderTileSource, self).__init__(item)
 
         largeImagePath = self._getLargeImagePath()
         lastException = None
