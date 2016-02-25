@@ -38,7 +38,7 @@ class TiffGirderTileSource(GirderTileSource):
     @staticmethod
     def cacheKeyFunc(args, kwargs):
         item = args[0]
-        return item.get('largeImage') if item else None
+        return item.get('largeImage')
 
     def __init__(self, item):
         super(TiffGirderTileSource, self).__init__(item)
