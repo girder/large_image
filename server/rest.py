@@ -24,7 +24,7 @@ from girder.api import access
 from girder.api.v1.item import Item
 from girder.api.describe import describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, RestException
-from girder.models.model_base import AccessType
+from girder.models.model_base import AccessType, ValidationException
 from girder.plugins.romanesco import utils as romanescoUtils
 
 from .tilesource import TestTileSource, TiffGirderTileSource, \
@@ -108,6 +108,8 @@ class TilesItemResource(Item):
 
         job = None
 
+        if item.get('expectedLargeImage'):
+            del item['expectedLargeImage']
         if largeImageFileId == 'test':
             item['largeImage'] = 'test'
         else:
@@ -119,12 +121,11 @@ class TilesItemResource(Item):
                 # a file ID.
                 raise RestException('"fileId" must be a file on the same item'
                                     'as "itemId".')
-
-            if largeImageFile['mimeType'] == 'image/tiff':
-                # TODO: we should ensure that it is a multiresolution tiled TIFF
+            try:
                 item['largeImage'] = largeImageFile['_id']
-
-            else:
+                TiffGirderTileSource(item)
+            except TileSourceException:
+                del item['largeImage']
                 job = self._createLargeImageJob(largeImageFile, item)
                 item['expectedLargeImage'] = True
                 item['largeImageOriginalId'] = largeImageFileId
@@ -241,18 +242,25 @@ class TilesItemResource(Item):
                 }
 
             # If this file was created by the worker job, delete it
-            if 'largeImageJobId':
+            if 'largeImageJobId' in item:
                 # The large image file should not be the original file
                 assert item['largeImageOriginalId'] != item['largeImage']
 
                 Job = self.model('job', 'jobs')
-                job = Job.load(item['largeImageJobId'], force=True, exc=True)
-                # TODO: does this eliminate all traces of the job?
-                # TODO: do we want to remove the original job?
-                Job.remove(job)
+                try:
+                    job = Job.load(item['largeImageJobId'], force=True,
+                                   exc=True)
+                    # TODO: does this eliminate all traces of the job?
+                    # TODO: do we want to remove the original job?
+                    Job.remove(job)
+                except ValidationException:
+                    # The job has been deleted, but we still need to clean up
+                    # the rest of the tile information
+                    pass
                 del item['largeImageJobId']
 
-                self.model('file').remove(item['largeImage'])
+                self.model('file').remove(self.model('file').load(
+                    id=item['largeImage'], force=True))
                 del item['largeImageOriginalId']
 
             del item['largeImage']
@@ -285,6 +293,9 @@ class TilesItemResource(Item):
             x, y, z = int(x), int(y), int(z)
         except ValueError:
             raise RestException('x, y, and z must be integers', code=400)
+        if x < 0 or y < 0 or z < 0:
+            raise RestException('x, y, and z must be positive integers',
+                                code=400)
 
         tileSource = self._loadTileSource(itemId, params)
         try:

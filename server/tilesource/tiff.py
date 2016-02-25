@@ -44,17 +44,22 @@ class TiffGirderTileSource(GirderTileSource):
         super(TiffGirderTileSource, self).__init__(item)
 
         largeImagePath = self._getLargeImagePath()
+        lastException = None
 
         self._tiffDirectories = list()
         for directoryNum in itertools.count():
             try:
                 tiffDirectory = TiledTiffDirectory(largeImagePath, directoryNum)
-            except TiffException:
+            except TiffException as lastException:
                 break
             else:
                 self._tiffDirectories.append(tiffDirectory)
 
         if not self._tiffDirectories:
+            import logging
+            logger = logging.getLogger('girder')
+            logger.info('File %s didn\'t meet requirements for tile source: '
+                        '%s' % (largeImagePath, lastException))
             raise TileSourceException('File must have at least 1 level')
 
         # Multiresolution TIFFs are stored with full-resolution layer in
