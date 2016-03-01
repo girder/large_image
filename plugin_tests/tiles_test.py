@@ -61,22 +61,17 @@ class LargeImageTilesTest(base.TestCase):
         for folder in folders:
             if folder['name'] == 'Public':
                 self.publicFolder = folder
-        # Authorize our user for Romanesco
-        self.request(
+        # Authorize our user for Girder Worker
+        resp = self.request(
             '/system/setting', method='PUT', user=self.admin, params={
-                list: json.dumps([{
-                    'key': 'romanesco.broker',
-                    'value': 'mongodb://127.0.0.1/romanesco'
+                'list': json.dumps([{
+                    'key': 'worker.broker',
+                    'value': 'mongodb://127.0.0.1/girder_worker'
                     }, {
-                    'key': 'romanesco.backend',
-                    'value': 'mongodb://127.0.0.1/romanesco'
-                    }, {
-                    'key': 'romanesco.full_access_users',
-                    'value': '["adminlogin"]'
-                    }, {
-                    'key': 'romanesco.require_auth',
-                    'value': False
+                    'key': 'worker.backend',
+                    'value': 'mongodb://127.0.0.1/girder_worker'
                     }])})
+        self.assertStatusOk(resp)
 
     def _uploadFile(self, path):
         """
@@ -215,7 +210,7 @@ class LargeImageTilesTest(base.TestCase):
         When we know we need to process a job, we have to use an actual http
         request rather than the normal simulated request to cherrypy.  This is
         required because cherrypy needs to know how it was reached so that
-        romanesco can reach it when done.
+        girder_worker can reach it when done.
 
         :param itemId: the id of the item with the file to process.
         :param fileId: the id of the file that should be processed.
@@ -231,6 +226,7 @@ class LargeImageTilesTest(base.TestCase):
             data={'fileId': fileId})
         self.assertEqual(req.status_code, 200)
         starttime = time.time()
+        resp = None
         while time.time() - starttime < 30:
             try:
                 resp = self.request(path='/item/%s/tiles' % itemId,

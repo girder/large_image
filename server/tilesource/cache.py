@@ -34,7 +34,7 @@ class LruCacheMetaclass(type):
     """
     caches = dict()
 
-    def __new__(metacls, name, bases, namespace, **kwargs):
+    def __new__(metacls, name, bases, namespace, **kwargs):  # noqa - N804
         # Get metaclass parameters by finding and removing them from the class
         # namespace (necessary for Python 2), or preferentially as metaclass
         # arguments (only in Python 3).
@@ -79,7 +79,7 @@ class LruCacheMetaclass(type):
 
         return cls
 
-    def __call__(cls, *args, **kwargs):
+    def __call__(cls, *args, **kwargs):  # noqa - N805
         cache = LruCacheMetaclass.caches[cls]
 
         key = cache.keyFunc(args, kwargs)
@@ -92,7 +92,7 @@ class LruCacheMetaclass(type):
         return instance
 
 
-class instanceLruCache(object):
+class instanceLruCache(object):  # noqa - N801
     """
     """
     def __init__(self, maxSize, timeout=None, keyFunc=None):

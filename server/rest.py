@@ -25,7 +25,7 @@ from girder.api.v1.item import Item
 from girder.api.describe import describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, RestException
 from girder.models.model_base import AccessType, ValidationException
-from girder.plugins.romanesco import utils as romanescoUtils
+from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 
 from .tilesource import TestTileSource, TiffGirderTileSource, \
@@ -148,7 +148,7 @@ class TilesItemResource(Item):
         title = 'TIFF conversion: %s' % fileObj['name']
         Job = self.model('job', 'jobs')
         job = Job.createJob(
-            title=title, type='large_image_tiff', handler='romanesco_handler',
+            title=title, type='large_image_tiff', handler='worker_handler',
             user=user)
         jobToken = Job.createJobToken(job)
 
@@ -183,7 +183,7 @@ class TilesItemResource(Item):
         }
 
         inputs = {
-            'in_path': romanescoUtils.girderInputSpec(
+            'in_path': workerUtils.girderInputSpec(
                 item, resourceType='item', token=token),
             'quality': {
                 'mode': 'inline',
@@ -206,7 +206,7 @@ class TilesItemResource(Item):
         }
 
         outputs = {
-            'out_path': romanescoUtils.girderOutputSpec(
+            'out_path': workerUtils.girderOutputSpec(
                 parent=item, token=token, parentType='item')
         }
 
@@ -215,7 +215,7 @@ class TilesItemResource(Item):
             'task': task,
             'inputs': inputs,
             'outputs': outputs,
-            'jobInfo': romanescoUtils.jobInfoSpec(job, jobToken),
+            'jobInfo': workerUtils.jobInfoSpec(job, jobToken),
             'auto_convert': False,
             'validate': False
         }
