@@ -150,7 +150,8 @@ class LargeImageTilesTest(base.TestCase):
 
         :param itemId: the item ID to get tiles from.
         :param metadata: tile information used to determine the expected
-                             valid queries.
+                         valid queries.  If 'sparse' is added to it, tiles
+                         are allowed to not exist above that level.
         :param tileParams: optional parameters to send to the tile query.
         :param imgHeader: if something other than a JPEG is expected, this is
                           the first few bytes of the expected image.
@@ -167,6 +168,10 @@ class LargeImageTilesTest(base.TestCase):
                 resp = self.request(path='/item/%s/tiles/zxy/%d/%d/%d' % (
                     itemId, z, x, y), user=self.admin, params=tileParams,
                     isJson=False)
+                if (resp.output_status[:3] != '200' and
+                        metadata.get('sparse') and z > metadata['sparse']):
+                    self.assertStatus(resp, 404)
+                    continue
                 self.assertStatusOk(resp)
                 image = self.getBody(resp, text=False)
                 self.assertEqual(image[:len(imgHeader)], imgHeader)
@@ -290,9 +295,10 @@ class LargeImageTilesTest(base.TestCase):
         tileMetadata = resp.json
         self.assertEqual(tileMetadata['tileWidth'], 256)
         self.assertEqual(tileMetadata['tileHeight'], 256)
-        self.assertEqual(tileMetadata['sizeX'], 9216)
-        self.assertEqual(tileMetadata['sizeY'], 11264)
-        self.assertEqual(tileMetadata['levels'], 7)
+        self.assertEqual(tileMetadata['sizeX'], 58368)
+        self.assertEqual(tileMetadata['sizeY'], 12288)
+        self.assertEqual(tileMetadata['levels'], 9)
+        tileMetadata['sparse'] = 5
         self._testTilesZXY(itemId, tileMetadata)
 
         # Ask to make this a tile-based item again
