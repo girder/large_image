@@ -446,7 +446,7 @@ class TiledTiffDirectory(object):
 
     # TODO: refactor and remove this
     def parse_image_description(self):
-        from xml.etree import cElementTree as ET
+        from xml.etree import cElementTree as ET  # noqa - N814
         import logging
         logger = logging.getLogger('slideatlas')
 

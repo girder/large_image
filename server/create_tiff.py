@@ -20,7 +20,7 @@
 import os
 import subprocess
 
-# Define Romanesco globals for the style checker
+# Define Girder Worker globals for the style checker
 _tempdir = _tempdir   # noqa
 in_path = in_path   # noqa
 quality = quality   # noqa
