@@ -26,6 +26,7 @@ from girder.api.describe import describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, RestException
 from girder.models.model_base import AccessType, ValidationException
 from girder.plugins.romanesco import utils as romanescoUtils
+from girder.plugins.jobs.constants import JobStatus
 
 from .tilesource import TestTileSource, TiffGirderTileSource, \
     TileSourceException
@@ -57,6 +58,7 @@ class TilesItemResource(Item):
                     ('sizeX', int),
                     ('sizeY', int),
                     ('fractal', lambda val: val == 'true'),
+                    ('encoding', str),
                 ]:
                     try:
                         if paramName in params:
@@ -119,7 +121,7 @@ class TilesItemResource(Item):
                 # TODO once we get rid of the "test" parameter, we should be
                 # able to remove the itemId parameter altogether and just take
                 # a file ID.
-                raise RestException('"fileId" must be a file on the same item'
+                raise RestException('"fileId" must be a file on the same item '
                                     'as "itemId".')
             try:
                 item['largeImage'] = largeImageFile['_id']
@@ -231,8 +233,20 @@ class TilesItemResource(Item):
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def deleteTiles(self, item, params):
         deleted = False
-        if 'largeImage' in item:
-            if item.get('expectedLargeImage'):
+        if 'largeImage' in item or 'largeImageJobId' in item:
+            job = None
+            if 'largeImageJobId' in item:
+                Job = self.model('job', 'jobs')
+                try:
+                    job = Job.load(item['largeImageJobId'], force=True,
+                                   exc=True)
+                except ValidationException:
+                    # The job has been deleted, but we still need to clean up
+                    # the rest of the tile information
+                    pass
+            if (item.get('expectedLargeImage') and job and
+                    job.get('status') in (
+                    JobStatus.QUEUED, JobStatus.RUNNING)):
                 # cannot cleanly remove the large image, since a conversion
                 # job is currently in progress
                 # TODO: cancel the job
@@ -243,27 +257,23 @@ class TilesItemResource(Item):
 
             # If this file was created by the worker job, delete it
             if 'largeImageJobId' in item:
-                # The large image file should not be the original file
-                assert item['largeImageOriginalId'] != item['largeImage']
-
-                Job = self.model('job', 'jobs')
-                try:
-                    job = Job.load(item['largeImageJobId'], force=True,
-                                   exc=True)
+                if job:
                     # TODO: does this eliminate all traces of the job?
                     # TODO: do we want to remove the original job?
                     Job.remove(job)
-                except ValidationException:
-                    # The job has been deleted, but we still need to clean up
-                    # the rest of the tile information
-                    pass
                 del item['largeImageJobId']
 
-                self.model('file').remove(self.model('file').load(
-                    id=item['largeImage'], force=True))
+            if 'largeImageOriginalId' in item:
+                # The large image file should not be the original file
+                assert item['largeImageOriginalId'] != item.get('largeImage')
+
+                if 'largeImage' in item:
+                    self.model('file').remove(self.model('file').load(
+                        id=item['largeImage'], force=True))
                 del item['largeImageOriginalId']
 
-            del item['largeImage']
+            if 'largeImage' in item:
+                del item['largeImage']
 
             item['expectedLargeImage'] = True
 
