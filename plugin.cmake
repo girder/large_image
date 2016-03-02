@@ -19,7 +19,7 @@ set(MIDAS_BASE_URL "https://midas3.kitware.com/midas")
 set(MIDAS_REST_URL "${MIDAS_BASE_URL}/api/json")
 set(MIDAS_KEY_DIR "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/test_keys")
 set(MIDAS_DATA_DIR "${PROJECT_BINARY_DIR}/data/large_image_plugin")
-set(MIDAS_DOWNLOAD_TIMEOUT 30)
+set(MIDAS_DOWNLOAD_TIMEOUT 300)
 
 add_download_target()
 add_custom_target(download_data_files ALL DEPENDS ${MIDAS_DOWNLOAD_FILES})

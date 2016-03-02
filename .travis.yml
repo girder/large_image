@@ -46,6 +46,7 @@ before_install:
     - girder_worker_path=$girder_path/plugins/girder_worker
     - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout 4429c6e98b2b11d47edb43390571551ab2d36749
     - cp $PWD/plugin_tests/data/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
+    - pip install numpy==1.10.4  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
     - pip install -U -r $girder_worker_path/requirements.txt -r $girder_worker_path/girder_worker/plugins/girder_io/requirements.txt
 
     - export MONGO_VERSION=2.6.11
