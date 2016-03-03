@@ -26,6 +26,10 @@ class TileSourceException(Exception):
     pass
 
 
+class TileSourceAssetstoreException(TileSourceException):
+    pass
+
+
 class TileSource(object):
     def __init__(self):
         self.tileWidth = None
@@ -72,12 +76,14 @@ class GirderTileSource(TileSource):
 
             if not isinstance(adapter,
                               assetstore_utilities.FilesystemAssetstoreAdapter):
-                raise TileSourceException(
+                raise TileSourceAssetstoreException(
                     'Non-filesystem assetstores are not supported')
 
             largeImagePath = adapter.fullPath(largeImageFile)
             return largeImagePath
 
+        except TileSourceAssetstoreException:
+            raise
         except (KeyError, ValidationException, TileSourceException) as e:
             raise TileSourceException(
                 'No large image file in this item: %s' % e.message)

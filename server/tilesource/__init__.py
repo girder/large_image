@@ -20,7 +20,9 @@
 # Deal with a bug where PEP257 crashes when parsing __all__
 # flake8: noqa
 
-from .base import TileSource, TileSourceException
+from .base import TileSource, TileSourceException, \
+    TileSourceAssetstoreException
+
 try:
     from .test import TestTileSource
 except ImportError:
@@ -30,5 +32,5 @@ try:
 except ImportError:
     from .dummy import DummyTileSource as TiffGirderTileSource
 
-__all__ = (TileSource, TileSourceException,
+__all__ = (TileSource, TileSourceException, TileSourceAssetstoreException,
            TestTileSource, TiffGirderTileSource)
