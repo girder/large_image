@@ -12,11 +12,7 @@
     "url": "https://github.com/DigitalSlideArchive/large_image.git"
   },
   "dependencies": {
-    "bower": "^1.7.7",
-    "geojs": "0.8.0"
+    "angular": "^1.5.0"
   },
-  "devDependencies": {},
-  "scripts": {
-    "postinstall": "bower --quiet --allow-root install"
-  }
+  "devDependencies": {}
 }
