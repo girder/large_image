@@ -29,7 +29,7 @@ from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 
 from .tilesource import TestTileSource, TiffGirderTileSource, \
-    TileSourceException
+    TileSourceException, TileSourceAssetstoreException
 
 
 class TilesItemResource(Item):
@@ -126,6 +126,8 @@ class TilesItemResource(Item):
             try:
                 item['largeImage'] = largeImageFile['_id']
                 TiffGirderTileSource(item)
+            except TileSourceAssetstoreException:
+                raise
             except TileSourceException:
                 del item['largeImage']
                 job = self._createLargeImageJob(largeImageFile, item)
