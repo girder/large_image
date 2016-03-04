@@ -473,7 +473,8 @@ class LargeImageTilesTest(base.TestCase):
 
     def testTilesFromSVS(self):
         file = self._uploadFile(os.path.join(
-            os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.svs'))
+            os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.TCGA-DU-6399-'
+            '01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
         # Ask to make this a tile-based item

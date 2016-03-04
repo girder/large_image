@@ -31,22 +31,26 @@ addons:
             - python-tk
             # vips
             - libvips-tools
+            # openjpeg
+            - libglib2.0-dev
+            - libjpeg-dev
+            - libxml2-dev
+            - libpng12-dev
             # openslide
-            - openslide-tools
+            - autoconf
+            - automake
+            - libtool
+            - pkg-config
+            - libcairo2-dev
+            - libgdk-pixbuf2.0-dev
+            - libxml2-dev 
+            - libsqlite3-dev
 
 before_install:
+    - dpkg-query -l | cat  # show what packages travis is using
     - main_path=$PWD
     - build_path=$PWD/build
     - mkdir -p $build_path
-
-    # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
-    # so install it from source.
-    - wget http://downloads.sourceforge.net/project/openjpeg.mirror/2.0.1/openjpeg-2.0.1.tar.gz
-    - tar zxf openjpeg-2.0.1.tar.gz
-    - cd openjpeg-2.0.1
-    - cmake .
-    - sudo make install
-    - cd $main_path
 
     - girder_path=$build_path/girder
     - rm -fr $girder_path
@@ -54,30 +58,74 @@ before_install:
     - ln -sf $main_path $girder_path/plugins/
     - ls -l $girder_path/plugins
 
+    - CACHE=$HOME/.cache CMAKE_VERSION=3.1.0 CMAKE_SHORT_VERSION=3.1 source $girder_path/scripts/install_cmake.sh
+    - cmake --version
+
+    # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
+    # so install it from source.
+    - cd $build_path
+    # - wget -O openjpeg-2.1.tar.gz https://github.com/uclouvain/openjpeg/archive/version.2.1.tar.gz
+    # - tar -zxf openjpeg-2.1.tar.gz
+    # - cd openjpeg-version.2.1
+    - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
+    - tar -zxf openjpeg-1.5.2.tar.gz
+    - cd openjpeg-version.1.5.2
+    - cmake .
+    - make
+    - sudo make install
+    - sudo ldconfig
+    - cd $main_path
+
+    # Build libtiff so it will use our openjpeg
+    - cd $build_path
+    - wget http://download.osgeo.org/libtiff/tiff-4.0.3.tar.gz
+    - tar -zxf tiff-4.0.3.tar.gz
+    - cd tiff-4.0.3
+    - ./configure
+    - make
+    - sudo make install
+    - sudo ldconfig
+    - cd $main_path
+
+    # Build OpenSlide ourselves so that it will use our libtiff
+    - cd $build_path
+    - wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz
+    - tar -zxf openslide-3.4.1.tar.gz
+    - cd openslide-3.4.1
+    - autoreconf -i
+    - ./configure
+    - cat Makefile  # check why this wants a different version of libtiff
+    - ls /usr/local/lib/  # 
+    - make
+    - sudo make install
+    - sudo ldconfig
+    - cd $main_path
+
     - girder_worker_path=$girder_path/plugins/girder_worker
     - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout 4429c6e98b2b11d47edb43390571551ab2d36749
     - cp $PWD/plugin_tests/data/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
-    - pip install numpy==1.10.4  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
     - pip install -U -r $girder_worker_path/requirements.txt -r $girder_worker_path/girder_worker/plugins/girder_io/requirements.txt
 
-    - export MONGO_VERSION=2.6.11
+    - export MONGO_VERSION=3.0.7
     - export PY_COVG="ON"
     - CACHE=$HOME/.cache source $girder_path/scripts/install_mongo.sh
     - mkdir /tmp/db
     - mongod --dbpath=/tmp/db >/dev/null 2>/dev/null &
     - mongod --version
 
-    - CACHE=$HOME/.cache CMAKE_VERSION=3.1.0 CMAKE_SHORT_VERSION=3.1 source $girder_path/scripts/install_cmake.sh
-    - cmake --version
-
     - npm install -g npm
     - npm --version
 
     - pip install -U pip virtualenv
 
+    - pip install numpy==1.10.4  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
+
 install:
     - cd $girder_path
     - pip install -U -r requirements.txt -r requirements-dev.txt -r $main_path/requirements.txt -e .
+    - python -c "import openslide;print openslide.__version__"
+    # The grunt-fontello task often fails the first run, so run the intall twice to try to work around it
+    - npm install || true
     - npm install
 
 script:
