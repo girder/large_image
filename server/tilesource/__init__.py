@@ -31,6 +31,10 @@ try:
     from .tiff import TiffGirderTileSource
 except ImportError:
     from .dummy import DummyTileSource as TiffGirderTileSource
+try:
+    from .svs import SVSGirderTileSource
+except ImportError:
+    from .dummy import DummyTileSource as SVSGirderTileSource
 
 __all__ = (TileSource, TileSourceException, TileSourceAssetstoreException,
-           TestTileSource, TiffGirderTileSource)
+           TestTileSource, TiffGirderTileSource, SVSGirderTileSource)

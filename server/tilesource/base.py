@@ -55,7 +55,7 @@ class TileSource(object):
 
 
 class GirderTileSource(TileSource):
-    def __init__(self, item):
+    def __init__(self, item, **kwargs):
         super(GirderTileSource, self).__init__()
         self.item = item
 

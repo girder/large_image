@@ -31,11 +31,22 @@ addons:
             - python-tk
             # vips
             - libvips-tools
+            # openslide
+            - openslide-tools
 
 before_install:
     - main_path=$PWD
     - build_path=$PWD/build
     - mkdir -p $build_path
+
+    # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
+    # so install it from source.
+    - wget http://downloads.sourceforge.net/project/openjpeg.mirror/2.0.1/openjpeg-2.0.1.tar.gz
+    - tar zxf openjpeg-2.0.1.tar.gz
+    - cd openjpeg-2.0.1
+    - cmake .
+    - sudo make install
+    - cd $main_path
 
     - girder_path=$build_path/girder
     - rm -fr $girder_path

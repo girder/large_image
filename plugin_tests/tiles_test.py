@@ -163,6 +163,8 @@ class LargeImageTilesTest(base.TestCase):
                 z - metadata['levels'] + 1) / metadata['tileWidth']) - 1
             maxY = math.ceil(float(metadata['sizeY']) * 2 ** (
                 z - metadata['levels'] + 1) / metadata['tileHeight']) - 1
+            import sys  # ##DWM::
+            sys.stderr.write('%d %d %d\n' % (z, maxX, maxY))  # ##DWM::
             # Check the four corners on each level
             for (x, y) in ((0, 0), (maxX, 0), (0, maxY), (maxX, maxY)):
                 resp = self.request(path='/item/%s/tiles/zxy/%d/%d/%d' % (
@@ -468,3 +470,68 @@ class LargeImageTilesTest(base.TestCase):
                             user=self.admin)
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], True)
+
+    def testTilesFromSVS(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.svs'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        # Ask to make this a tile-based item
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatusOk(resp)
+        # Now the tile request should tell us about the file.  These are
+        # specific to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 240)
+        self.assertEqual(tileMetadata['tileHeight'], 240)
+        self.assertEqual(tileMetadata['sizeX'], 31872)
+        self.assertEqual(tileMetadata['sizeY'], 13835)
+        self.assertEqual(tileMetadata['levels'], 9)
+        self._testTilesZXY(itemId, tileMetadata)
+
+        # Ask to make this a tile-based item again
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatus(resp, 400)
+        self.assertTrue('Item already has' in resp.json['message'])
+
+        # Ask for PNGs
+        params = {'encoding': 'PNG'}
+        self._testTilesZXY(itemId, tileMetadata, params, '\x89PNG')
+
+        # Check that invalid encodings are rejected
+        try:
+            resp = self.request(path='/item/%s/tiles' % itemId,
+                                user=self.admin,
+                                params={'encoding': 'invalid'})
+            self.assertTrue(False)
+        except AssertionError as exc:
+            self.assertTrue('Invalid encoding' in exc.args[0])
+
+        # Check that JPEG options are honored.
+        imgHeader = '\xff\xd8\xff'
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(imgHeader)], imgHeader)
+        defaultLength = len(image)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'jpegQuality': 10})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(imgHeader)], imgHeader)
+        self.assertTrue(len(image) < defaultLength)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'jpegSubsampling': 2})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(imgHeader)], imgHeader)
+        self.assertTrue(len(image) < defaultLength)

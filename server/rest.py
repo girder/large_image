@@ -18,6 +18,7 @@
 ###############################################################################
 
 import cherrypy
+import collections
 import os
 
 from girder.api import access
@@ -29,7 +30,15 @@ from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 
 from .tilesource import TestTileSource, TiffGirderTileSource, \
-    TileSourceException, TileSourceAssetstoreException
+    SVSGirderTileSource, TileSourceException, TileSourceAssetstoreException
+
+
+# We try these sources in this order.  The first entry is the fallback for
+# items that antedate there being multiple options.
+AvailableSources = collections.OrderedDict([
+    ('tiff', TiffGirderTileSource),
+    ('svs', SVSGirderTileSource),
+])
 
 
 class TilesItemResource(Item):
@@ -73,7 +82,10 @@ class TilesItemResource(Item):
                 item = self.model('item').load(
                     id=itemId, level=AccessType.READ,
                     user=self.getCurrentUser(), exc=True)
-                tileSource = TiffGirderTileSource(item)
+                tileSource = None
+                sourceName = item.get('largeImageSourceName',
+                                      next(iter(AvailableSources.items()))[0])
+                tileSource = AvailableSources[sourceName](item, **params)
             return tileSource
         except TileSourceException as e:
             # TODO: sometimes this could be 400
@@ -112,6 +124,8 @@ class TilesItemResource(Item):
 
         if item.get('expectedLargeImage'):
             del item['expectedLargeImage']
+        if item.get('largeImageSourceName'):
+            del item['largeImageSourceName']
         if largeImageFileId == 'test':
             item['largeImage'] = 'test'
         else:
@@ -123,12 +137,17 @@ class TilesItemResource(Item):
                 # a file ID.
                 raise RestException('"fileId" must be a file on the same item '
                                     'as "itemId".')
-            try:
-                item['largeImage'] = largeImageFile['_id']
-                TiffGirderTileSource(item)
-            except TileSourceAssetstoreException:
-                raise
-            except TileSourceException:
+            item['largeImage'] = largeImageFile['_id']
+            for sourceName in AvailableSources:
+                try:
+                    AvailableSources[sourceName](item)
+                    item['largeImageSourceName'] = sourceName
+                    break
+                except TileSourceAssetstoreException:
+                    raise
+                except TileSourceException:
+                    pass  # We want to try the next source
+            if 'largeImageSourceName' not in item:
                 del item['largeImage']
                 job = self._createLargeImageJob(largeImageFile, item)
                 item['expectedLargeImage'] = True
@@ -274,6 +293,8 @@ class TilesItemResource(Item):
                         id=item['largeImage'], force=True))
                 del item['largeImageOriginalId']
 
+            if item.get('largeImageSourceName'):
+                del item['largeImageSourceName']
             if 'largeImage' in item:
                 del item['largeImage']
 
