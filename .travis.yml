@@ -53,7 +53,7 @@ before_install:
 
     - girder_path=$build_path/girder
     - rm -fr $girder_path
-    - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout 18796e2353b6f41da73d235c391ac8f36fdc2cd6
+    - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout b4fc81cb2d6b4eba26c1a3b9e6b62d97513dbcf6
     - ln -sf $main_path $girder_path/plugins/
     - ls -l $girder_path/plugins
 
@@ -100,7 +100,7 @@ before_install:
 
     - girder_worker_path=$girder_path/plugins/girder_worker
     - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout 4429c6e98b2b11d47edb43390571551ab2d36749
-    - cp $PWD/plugin_tests/data/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
+    - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
     - pip install --no-cache-dir -U -r $girder_worker_path/requirements.txt -r $girder_worker_path/girder_worker/plugins/girder_io/requirements.txt
 
     - export MONGO_VERSION=3.0.7
@@ -122,7 +122,6 @@ install:
     - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -r $main_path/requirements.txt -e .
     - python -c "import openslide;print openslide.__version__"
     # The grunt-fontello task often fails the first run, so run the intall twice to try to work around it
-    - npm install || true
     - npm install
 
 script:

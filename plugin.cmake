@@ -14,16 +14,6 @@
 #  limitations under the License.
 ###############################################################################
 
-include(${CMAKE_CURRENT_LIST_DIR}/cmake/MIDAS3.cmake)
-set(MIDAS_BASE_URL "https://midas3.kitware.com/midas")
-set(MIDAS_REST_URL "${MIDAS_BASE_URL}/api/json")
-set(MIDAS_KEY_DIR "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/test_keys")
-set(MIDAS_DATA_DIR "${PROJECT_BINARY_DIR}/data/large_image_plugin")
-set(MIDAS_DOWNLOAD_TIMEOUT 300)
-
-add_download_target()
-add_custom_target(download_data_files ALL DEPENDS ${MIDAS_DOWNLOAD_FILES})
-
 add_python_style_test(
   python_static_analysis_large_image
   "${CMAKE_CURRENT_LIST_DIR}/server"
@@ -38,7 +28,10 @@ add_eslint_test(
   "${CMAKE_CURRENT_LIST_DIR}/web_client"
 )
 
-add_python_test(tiles PLUGIN large_image BIND_SERVER)
+add_python_test(tiles PLUGIN large_image BIND_SERVER EXTERNAL_DATA
+  "sample_image.ptif" "plugins/large_image/sample_image.ptif"
+  "sample_svs_image.svs" "plugins/large_image/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs"
+  )
 set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
-  "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/large_image_plugin")
+  "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 add_web_client_test(example "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/exampleSpec.js" PLUGIN large_image)

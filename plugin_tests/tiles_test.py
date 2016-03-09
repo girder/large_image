@@ -399,8 +399,8 @@ class LargeImageTilesTest(base.TestCase):
             self._createTestTiles(itemId, {key: badParams[key]}, error=err)
 
     def testTilesFromPNG(self):
-        file = self._uploadFile(os.path.join(os.path.dirname(__file__), 'data',
-                                             'yb10kx5k.png'))
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
         tileMetadata = self._postTileViaHttp(itemId, fileId)
@@ -423,8 +423,8 @@ class LargeImageTilesTest(base.TestCase):
             self.assertTrue('No large image file' in exc.args[0])
 
         # This should work with a PNG with transparency, too.
-        file = self._uploadFile(os.path.join(os.path.dirname(__file__), 'data',
-                                             'yb10kx5ktrans.png'))
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5ktrans.png'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
         tileMetadata = self._postTileViaHttp(itemId, fileId)
@@ -448,8 +448,8 @@ class LargeImageTilesTest(base.TestCase):
 
     def testTilesFromBadFiles(self):
         # Uploading a monochrome file should result in no useful tiles.
-        file = self._uploadFile(os.path.join(os.path.dirname(__file__), 'data',
-                                             'small.jpg'))
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'small.jpg'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
         tileMetadata = self._postTileViaHttp(itemId, fileId)
@@ -460,8 +460,8 @@ class LargeImageTilesTest(base.TestCase):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], True)
         # Uploading a non-image file should run a job, too.
-        file = self._uploadFile(os.path.join(os.path.dirname(__file__), 'data',
-                                             'notanimage.txt'))
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'notanimage.txt'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
         tileMetadata = self._postTileViaHttp(itemId, fileId)
