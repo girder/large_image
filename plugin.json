@@ -3,5 +3,7 @@
     "description": "Create, serve, and display large multiresolution images.",
     "version": "0.2.0",
     "dependencies": ["worker"],
-    "grunt": "Gruntfile.js"
+    "grunt": {
+        "file": "Gruntfile.js"
+    }
 }

@@ -115,7 +115,7 @@ before_install:
 
     - pip install --no-cache-dir -U pip virtualenv
 
-    - pip install --no-cache-dir numpy==1.10.4  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
+    - pip install --no-cache-dir numpy==1.10.2  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
 install:
     - cd $girder_path
