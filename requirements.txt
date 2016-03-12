@@ -5,3 +5,5 @@ numpy==1.10.4
 #Pillow==3.1.0
 
 repoze.lru==0.6
+
+openslide-python>=1.1.0
