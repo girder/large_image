@@ -31,7 +31,7 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
                         tileSize: [this.tileWidth, this.tileHeight],
                         url: this._getTileUrl('{z}', '{x}', '{y}'),
                         crossOrigin: 'use-credentials',
-                        maxZoom: this.maxZoom,
+                        maxZoom: this.levels,
                         wrapX: false
                     }),
                     preload: 1
@@ -39,7 +39,7 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
             ],
             view: new ol.View({
                 minZoom: 0,
-                maxZoom: this.maxZoom,
+                maxZoom: this.levels,
                 center: [0.0, 0.0],
                 zoom: 0
                 // projection: new ol.proj.Projection({

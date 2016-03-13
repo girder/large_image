@@ -345,7 +345,8 @@ class LargeImageTilesTest(base.TestCase):
                             user=self.admin,
                             params={'fileId': items[0]['fileId']})
         self.assertStatus(resp, 400)
-        self.assertTrue('file on the same item' in resp.json['message'])
+        self.assertIn('The provided file must be in the provided item',
+                      resp.json['message'])
         # Now create a test tile with the default options
         params = {'encoding': 'JPEG'}
         meta = self._createTestTiles(itemId, params, {
