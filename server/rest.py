@@ -103,7 +103,7 @@ class TilesItemResource(Item):
             item = self.model('item').load(
                 id=itemId, level=AccessType.READ,
                 user=self.getCurrentUser(), exc=True)
-            imageArgs = dict()
+            imageArgs = params
 
         return self.model('image_item', 'large_image').getMetadata(
             item, **imageArgs)
@@ -139,7 +139,7 @@ class TilesItemResource(Item):
             item = self.model('item').load(
                 id=itemId, level=AccessType.READ,
                 user=self.getCurrentUser(), exc=True)
-            imageArgs = dict()
+            imageArgs = params
 
         tileData, tileMime = self.model('image_item', 'large_image').getTile(
             item, x, y, z, **imageArgs)

@@ -78,7 +78,7 @@ class ImageItem(Item):
         return job
 
     def _createLargeImageJob(self, item, fileObj, user, token):
-        path = os.path.join(os.path.dirname(__file__), 'create_tiff.py')
+        path = os.path.join(os.path.dirname(__file__), '..', 'create_tiff.py')
         with open(path, 'r') as f:
             script = f.read()
 
