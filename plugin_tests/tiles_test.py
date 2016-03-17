@@ -128,11 +128,11 @@ class LargeImageTilesTest(base.TestCase):
                                 params=params)
             if error:
                 self.assertStatus(resp, 400)
-                self.assertTrue(error in resp.json['message'])
+                self.assertIn(error, resp.json['message'])
                 return None
         except AssertionError as exc:
             if error:
-                self.assertTrue(error in exc.args[0])
+                self.assertIn(error, exc.args[0])
                 return
             else:
                 raise
@@ -163,8 +163,6 @@ class LargeImageTilesTest(base.TestCase):
                 z - metadata['levels'] + 1) / metadata['tileWidth']) - 1
             maxY = math.ceil(float(metadata['sizeY']) * 2 ** (
                 z - metadata['levels'] + 1) / metadata['tileHeight']) - 1
-            import sys  # ##DWM::
-            sys.stderr.write('%d %d %d\n' % (z, maxX, maxY))  # ##DWM::
             # Check the four corners on each level
             for (x, y) in ((0, 0), (maxX, 0), (0, maxY), (maxX, maxY)):
                 resp = self.request(path='/item/%s/tiles/zxy/%d/%d/%d' % (
@@ -193,24 +191,24 @@ class LargeImageTilesTest(base.TestCase):
         resp = self.request(path='/item/%s/tiles/zxy/-1/0/0' % itemId,
                             user=self.admin, params=tileParams)
         self.assertStatus(resp, 400)
-        self.assertTrue('must be positive integers' in resp.json['message'])
+        self.assertIn('must be positive integers', resp.json['message'])
         # Check non-integer z level
         resp = self.request(path='/item/%s/tiles/zxy/abc/0/0' % itemId,
                             user=self.admin, params=tileParams)
         self.assertStatus(resp, 400)
-        self.assertTrue('must be integers' in resp.json['message'])
+        self.assertIn('must be integers', resp.json['message'])
         # If we set the minLevel, test one lower than it
         if 'minLevel' in metadata:
             resp = self.request(path='/item/%s/tiles/zxy/%d/0/0' % (
                 itemId, metadata['minLevel'] - 1), user=self.admin,
                 params=tileParams)
             self.assertStatus(resp, 404)
-            self.assertTrue('layer does not exist' in resp.json['message'])
+            self.assertIn('layer does not exist', resp.json['message'])
         # Check too large z level
         resp = self.request(path='/item/%s/tiles/zxy/%d/0/0' % (
             itemId, metadata['levels']), user=self.admin, params=tileParams)
         self.assertStatus(resp, 404)
-        self.assertTrue('layer does not exist' in resp.json['message'])
+        self.assertIn('layer does not exist', resp.json['message'])
 
     def _postTileViaHttp(self, itemId, fileId):
         """
@@ -243,7 +241,7 @@ class LargeImageTilesTest(base.TestCase):
             except AssertionError as exc:
                 if 'File must have at least 1 level' in exc.args[0]:
                     return False
-                self.assertTrue('No large image file' in exc.args[0])
+                self.assertIn('No large image file', exc.args[0])
             item = self.model('item').load(itemId, user=self.admin)
             job = self.model('job', 'jobs').load(item['largeImageJobId'],
                                                  user=self.admin)
@@ -259,17 +257,13 @@ class LargeImageTilesTest(base.TestCase):
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
         # We shouldn't have tile information yet
-        try:
-            resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
-            self.assertTrue(False)
-        except AssertionError as exc:
-            self.assertTrue('No large image file' in exc.args[0])
-        try:
-            resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
-                                user=self.admin)
-            self.assertTrue(False)
-        except AssertionError as exc:
-            self.assertTrue('No large image file' in exc.args[0])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin)
+        self.assertStatus(resp, 404)
+        self.assertIn('No large image file', resp.json['message'])
         # Asking to delete the tile information succeeds but does nothing
         resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
                             user=self.admin)
@@ -279,12 +273,12 @@ class LargeImageTilesTest(base.TestCase):
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin)
         self.assertStatus(resp, 400)
-        self.assertTrue('Missing "fileId"' in resp.json['message'])
+        self.assertIn('Missing "fileId"', resp.json['message'])
         # Ask to make this a tile-based item with an invalid file ID
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': itemId})
         self.assertStatus(resp, 400)
-        self.assertTrue('No such file' in resp.json['message'])
+        self.assertIn('No such file', resp.json['message'])
 
         # Ask to make this a tile-based item properly
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
@@ -307,7 +301,7 @@ class LargeImageTilesTest(base.TestCase):
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': fileId})
         self.assertStatus(resp, 400)
-        self.assertTrue('Item already has' in resp.json['message'])
+        self.assertIn('Item already has', resp.json['message'])
 
         # We should be able to delete the large image information
         resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
@@ -316,11 +310,9 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(resp.json['deleted'], True)
 
         # We should no longer have tile informaton
-        try:
-            resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
-            self.assertTrue(False)
-        except AssertionError as exc:
-            self.assertTrue('No large image file' in exc.args[0])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
 
         # We should be able to re-add it
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
@@ -345,7 +337,8 @@ class LargeImageTilesTest(base.TestCase):
                             user=self.admin,
                             params={'fileId': items[0]['fileId']})
         self.assertStatus(resp, 400)
-        self.assertTrue('file on the same item' in resp.json['message'])
+        self.assertIn('The provided file must be in the provided item',
+                      resp.json['message'])
         # Now create a test tile with the default options
         params = {'encoding': 'JPEG'}
         meta = self._createTestTiles(itemId, params, {
@@ -416,12 +409,9 @@ class LargeImageTilesTest(base.TestCase):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], True)
         # We should no longer have tile informaton
-        try:
-            resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
-            self.assertTrue(False)
-        except AssertionError as exc:
-            self.assertTrue('No large image file' in exc.args[0])
-
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
         # This should work with a PNG with transparency, too.
         file = self._uploadFile(os.path.join(
             os.path.dirname(__file__), 'test_files', 'yb10kx5ktrans.png'))
@@ -440,11 +430,9 @@ class LargeImageTilesTest(base.TestCase):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], True)
         # We should no longer have tile informaton
-        try:
-            resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
-            self.assertTrue(False)
-        except AssertionError as exc:
-            self.assertTrue('No large image file' in exc.args[0])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
 
     def testTilesFromBadFiles(self):
         # Uploading a monochrome file should result in no useful tiles.
@@ -497,7 +485,7 @@ class LargeImageTilesTest(base.TestCase):
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': fileId})
         self.assertStatus(resp, 400)
-        self.assertTrue('Item already has' in resp.json['message'])
+        self.assertIn('Item already has', resp.json['message'])
 
         # Ask for PNGs
         params = {'encoding': 'PNG'}
@@ -510,7 +498,7 @@ class LargeImageTilesTest(base.TestCase):
                                 params={'encoding': 'invalid'})
             self.assertTrue(False)
         except AssertionError as exc:
-            self.assertTrue('Invalid encoding' in exc.args[0])
+            self.assertIn('Invalid encoding', exc.args[0])
 
         # Check that JPEG options are honored.
         imgHeader = '\xff\xd8\xff'

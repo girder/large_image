@@ -21,8 +21,10 @@ from girder.models.model_base import ValidationException
 from girder.utility import assetstore_utilities
 from girder.utility.model_importer import ModelImporter
 
+from ..models.base import TileGeneralException
 
-class TileSourceException(Exception):
+
+class TileSourceException(TileGeneralException):
     pass
 
 
