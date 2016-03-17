@@ -25,6 +25,8 @@ from girder.api.describe import describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, RestException
 from girder.models.model_base import AccessType
 
+from .models import TileGeneralException
+
 
 class TilesItemResource(Item):
 
@@ -36,7 +38,6 @@ class TilesItemResource(Item):
         self.resourceName = 'item'
         apiRoot.item.route('POST', (':itemId', 'tiles'), self.createTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles'), self.getTilesInfo)
-
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
@@ -56,15 +57,18 @@ class TilesItemResource(Item):
             raise RestException('Missing "fileId" parameter.')
 
         if largeImageFileId == 'test':
-            item['largeImage'] = 'test'
             return None
         else:
             largeImageFile = self.model('file').load(
                 largeImageFileId, force=True, exc=True)
             user = self.getCurrentUser()
             token = self.getCurrentToken()
-            return self.model('image_item', 'large_image').createImageItem(
-                item, largeImageFile, user, token)
+            try:
+                return self.model(
+                    'image_item', 'large_image').createImageItem(
+                        item, largeImageFile, user, token)
+            except TileGeneralException as e:
+                raise RestException(e.message)
 
     @staticmethod
     def _parseTestParams(params):
@@ -81,8 +85,7 @@ class TilesItemResource(Item):
         ]:
             try:
                 if paramName in params:
-                    tileSourceArgs[paramName] = \
-                        paramType(params[paramName])
+                    tileSourceArgs[paramName] = paramType(params[paramName])
             except ValueError:
                 raise RestException(
                     '"%s" parameter is an incorrect type.' % paramName)
@@ -104,9 +107,11 @@ class TilesItemResource(Item):
                 id=itemId, level=AccessType.READ,
                 user=self.getCurrentUser(), exc=True)
             imageArgs = params
-
-        return self.model('image_item', 'large_image').getMetadata(
-            item, **imageArgs)
+        try:
+            return self.model('image_item', 'large_image').getMetadata(
+                item, **imageArgs)
+        except TileGeneralException as e:
+            raise RestException(e.message, code=400)
 
     @describeRoute(
         Description('Get a large image tile.')
@@ -141,8 +146,12 @@ class TilesItemResource(Item):
                 user=self.getCurrentUser(), exc=True)
             imageArgs = params
 
-        tileData, tileMime = self.model('image_item', 'large_image').getTile(
-            item, x, y, z, **imageArgs)
+        try:
+            tileData, tileMime = self.model(
+                'image_item', 'large_image').getTile(
+                    item, x, y, z, **imageArgs)
+        except TileGeneralException as e:
+            raise RestException(e.message, code=404)
         cherrypy.response.headers['Content-Type'] = tileMime
         return lambda: tileData
 

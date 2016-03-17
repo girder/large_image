@@ -20,12 +20,12 @@
 import collections
 import os
 
-from girder.api.rest import RestException
 from girder.models.model_base import ValidationException
 from girder.models.item import Item
 from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 
+from .base import TileGeneralException
 from ..tilesource import TestTileSource, TiffGirderTileSource, \
     SVSGirderTileSource, TileSourceException, TileSourceAssetstoreException
 
@@ -45,10 +45,10 @@ class ImageItem(Item):
         if 'largeImage' in item:
             # TODO: automatically delete the existing large file
             # TODO: this should raise a GirderException, but still return 400
-            raise RestException('Item already has a largeImage set.')
+            raise TileGeneralException('Item already has a largeImage set.')
         if fileObj['itemId'] != item['_id']:
-            raise RestException('The provided file must be in the provided '
-                                'item.')
+            raise TileGeneralException('The provided file must be in the '
+                                       'provided item.')
 
         if item.get('expectedLargeImage'):
             del item['expectedLargeImage']
@@ -164,18 +164,13 @@ class ImageItem(Item):
 
     @classmethod
     def _loadTileSource(cls, item, **kwargs):
-        try:
-            if item == 'test':
-                tileSource = TestTileSource(**kwargs)
-            else:
-                sourceName = item.get(
-                    'largeImageSourceName',
-                    next(iter(cls.AvailableSources.items()))[0])
-                tileSource = cls.AvailableSources[sourceName](item, **kwargs)
-            return tileSource
-        except TileSourceException as e:
-            # TODO: sometimes this could be 400
-            raise RestException(e.message, code=500)
+        if item == 'test':
+            tileSource = TestTileSource(**kwargs)
+        else:
+            sourceName = item.get('largeImageSourceName',
+                                  next(iter(cls.AvailableSources.items()))[0])
+            tileSource = cls.AvailableSources[sourceName](item, **kwargs)
+        return tileSource
 
     def getMetadata(self, item, **kwargs):
         tileSource = self._loadTileSource(item, **kwargs)
@@ -183,10 +178,7 @@ class ImageItem(Item):
 
     def getTile(self, item, x, y, z, **kwargs):
         tileSource = self._loadTileSource(item, **kwargs)
-        try:
-            tileData = tileSource.getTile(x, y, z)
-        except TileSourceException as e:
-            raise RestException(e.message, code=404)
+        tileData = tileSource.getTile(x, y, z)
         tileMimeType = tileSource.getTileMimeType()
         return tileData, tileMimeType
 
