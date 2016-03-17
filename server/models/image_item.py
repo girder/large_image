@@ -232,3 +232,23 @@ class ImageItem(Item):
             deleted = True
 
         return deleted
+
+    def getThumbnail(self, item, width=None, height=None, **kwargs):
+        """
+        Using a tile source, get a basic thumbnail.  Aspect ratio is
+        preserved.  If neither width nor height is given, a default value is
+        used.  If both are given, the thumbnail will be no larger than either
+        size.
+
+        :param item: the item with the tile source.
+        :param width: maximum width in pixels.
+        :param height: maximum height in pixels.
+        :param **kwargs: optional arguments.  Some options are encoding,
+            jpegQuality, and jpegSubsampling.  This is also passed to the
+            tile source.
+        :returns: thumbData, thumbMime: the image data and the mime type.
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        thumbData, thumbMime = tileSource.getThumbnail(
+            width, height, **kwargs)
+        return thumbData, thumbMime

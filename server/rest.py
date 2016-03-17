@@ -39,6 +39,8 @@ class TilesItemResource(Item):
         apiRoot.item.route('POST', (':itemId', 'tiles'), self.createTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles'), self.getTilesInfo)
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'),
+                           self.getTilesThumbnail)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
 
@@ -70,10 +72,9 @@ class TilesItemResource(Item):
             except TileGeneralException as e:
                 raise RestException(e.message)
 
-    @staticmethod
-    def _parseTestParams(params):
-        tileSourceArgs = {}
-        for paramName, paramType in [
+    @classmethod
+    def _parseTestParams(cls, params):
+        return cls._parseParams(params, False, [
             ('minLevel', int),
             ('maxLevel', int),
             ('tileWidth', int),
@@ -82,14 +83,21 @@ class TilesItemResource(Item):
             ('sizeY', int),
             ('fractal', lambda val: val == 'true'),
             ('encoding', str),
-        ]:
+        ])
+
+    @classmethod
+    def _parseParams(cls, params, keepUnknownParams, typeList):
+        results = {}
+        if keepUnknownParams:
+            results = dict(params)
+        for paramName, paramType in typeList:
             try:
                 if paramName in params:
-                    tileSourceArgs[paramName] = paramType(params[paramName])
+                    results[paramName] = paramType(params[paramName])
             except ValueError:
                 raise RestException(
                     '"%s" parameter is an incorrect type.' % paramName)
-        return tileSourceArgs
+        return results
 
     @describeRoute(
         Description('Get large image metadata.')
@@ -97,6 +105,7 @@ class TilesItemResource(Item):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
+    @access.cookie
     @access.public
     def getTilesInfo(self, itemId, params):
         if itemId == 'test':
@@ -167,3 +176,42 @@ class TilesItemResource(Item):
         return {
             'deleted': deleted
         }
+
+    @describeRoute(
+        Description('Get a thumbnail of a large image item.')
+        .notes('Aspect ratio is always preserved.  If both width and height '
+               'are specified, the resulting thumbnail may be smaller in one '
+               'of the two dimensions.  If neither width nor height is given, '
+               'a default size will be returned.  '
+               'This creates a thumbnail from the lowest level of the source '
+               'image, which means that asking for a large thumbnail will not '
+               'be a high-quality image.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('width', 'The maximum width of the thumbnail in pixels.',
+               required=False, dataType='int')
+        .param('height', 'The maximum height of the thumbnail in pixels.',
+               required=False, dataType='int')
+        .param('encoding', 'Thumbnail output encoding', required=False,
+               enum=['PNG', 'JPEG'], default='PNG')
+        .param('jpegQuality', 'Quality used for generating JPEG images',
+               required=False, dataType='int', default=95)
+        .param('jpegSubsampling', 'Chroma subsampling used for generating '
+               'JPEG images.  0, 1, and 2 are full, half, and quarter '
+               'resolution chroma respectively.', required=False,
+               enum=['0', '1', '2'], dataType='int', default='0')
+    )
+    @access.cookie
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getTilesThumbnail(self, item, params):
+        params = self._parseParams(params, True, [
+            ('width', int),
+            ('height', int),
+            ('jpegQuality', int),
+            ('jpegSubsampling', int),
+            ('encoding', str),
+        ])
+        thumbData, thumbMime = self.model(
+            'image_item', 'large_image').getThumbnail(item, **params)
+        cherrypy.response.headers['Content-Type'] = thumbMime
+        return lambda: thumbData
