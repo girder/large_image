@@ -44,7 +44,6 @@ class ImageItem(Item):
     def createImageItem(self, item, fileObj, user=None, token=None):
         if 'largeImage' in item:
             # TODO: automatically delete the existing large file
-            # TODO: this should raise a GirderException, but still return 400
             raise TileGeneralException('Item already has a largeImage set.')
         if fileObj['itemId'] != item['_id']:
             raise TileGeneralException('The provided file must be in the '
@@ -232,3 +231,23 @@ class ImageItem(Item):
             deleted = True
 
         return deleted
+
+    def getThumbnail(self, item, width=None, height=None, **kwargs):
+        """
+        Using a tile source, get a basic thumbnail.  Aspect ratio is
+        preserved.  If neither width nor height is given, a default value is
+        used.  If both are given, the thumbnail will be no larger than either
+        size.
+
+        :param item: the item with the tile source.
+        :param width: maximum width in pixels.
+        :param height: maximum height in pixels.
+        :param **kwargs: optional arguments.  Some options are encoding,
+            jpegQuality, and jpegSubsampling.  This is also passed to the
+            tile source.
+        :returns: thumbData, thumbMime: the image data and the mime type.
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        thumbData, thumbMime = tileSource.getThumbnail(
+            width, height, **kwargs)
+        return thumbData, thumbMime
