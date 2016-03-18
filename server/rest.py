@@ -105,7 +105,6 @@ class TilesItemResource(Item):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-    @access.cookie
     @access.public
     def getTilesInfo(self, itemId, params):
         if itemId == 'test':
@@ -194,6 +193,7 @@ class TilesItemResource(Item):
         .param('encoding', 'Thumbnail output encoding', required=False,
                enum=['JPEG', 'PNG'], default='JPEG')
     )
+    @access.cookie
     @access.public
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesThumbnail(self, item, params):
