@@ -70,6 +70,18 @@ class TileSource(object):
         return 'image/jpeg'
 
     def getThumbnail(self, width=None, height=None, **kwargs):
+        """
+        Get a basic thumbnail from the current tile source.  Aspect ratio is
+        preserved.  If neither width nor height is given, a default value is
+        used.  If both are given, the thumbnail will be no larger than either
+        size.
+
+        :param width: maximum width in pixels.
+        :param height: maximum height in pixels.
+        :param **kwargs: optional arguments.  Some options are encoding,
+            jpegQuality, and jpegSubsampling.
+        :returns: thumbData, thumbMime: the image data and the mime type.
+        """
         mimeTypes = {
             'JPEG': 'image/jpeg',
             'PNG': 'image/png'

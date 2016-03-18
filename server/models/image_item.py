@@ -44,7 +44,6 @@ class ImageItem(Item):
     def createImageItem(self, item, fileObj, user=None, token=None):
         if 'largeImage' in item:
             # TODO: automatically delete the existing large file
-            # TODO: this should raise a GirderException, but still return 400
             raise TileGeneralException('Item already has a largeImage set.')
         if fileObj['itemId'] != item['_id']:
             raise TileGeneralException('The provided file must be in the '

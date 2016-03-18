@@ -192,15 +192,8 @@ class TilesItemResource(Item):
         .param('height', 'The maximum height of the thumbnail in pixels.',
                required=False, dataType='int')
         .param('encoding', 'Thumbnail output encoding', required=False,
-               enum=['PNG', 'JPEG'], default='PNG')
-        .param('jpegQuality', 'Quality used for generating JPEG images',
-               required=False, dataType='int', default=95)
-        .param('jpegSubsampling', 'Chroma subsampling used for generating '
-               'JPEG images.  0, 1, and 2 are full, half, and quarter '
-               'resolution chroma respectively.', required=False,
-               enum=['0', '1', '2'], dataType='int', default='0')
+               enum=['JPEG', 'PNG'], default='JPEG')
     )
-    @access.cookie
     @access.public
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesThumbnail(self, item, params):
@@ -211,7 +204,12 @@ class TilesItemResource(Item):
             ('jpegSubsampling', int),
             ('encoding', str),
         ])
-        thumbData, thumbMime = self.model(
-            'image_item', 'large_image').getThumbnail(item, **params)
+        try:
+            thumbData, thumbMime = self.model(
+                'image_item', 'large_image').getThumbnail(item, **params)
+        except TileGeneralException as e:
+            raise RestException(e.message)
+        except ValueError as e:
+            raise RestException('Value Error: %s' % e.message)
         cherrypy.response.headers['Content-Type'] = thumbMime
         return lambda: thumbData

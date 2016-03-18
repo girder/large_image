@@ -21,6 +21,7 @@ import json
 import math
 import os
 import requests
+import struct
 import time
 from six.moves import range
 
@@ -33,6 +34,9 @@ from tests import base
 
 os.environ['GIRDER_PORT'] = os.environ.get('GIRDER_TEST_PORT', '20200')
 config.loadConfig()  # Must reload config to pickup correct port
+
+JPEGHeader = '\xff\xd8\xff'
+PNGHeader = '\x89PNG'
 
 
 def setUpModule():
@@ -144,7 +148,7 @@ class LargeImageTilesTest(base.TestCase):
         return infoDict
 
     def _testTilesZXY(self, itemId, metadata, tileParams={},
-                      imgHeader='\xff\xd8\xff'):
+                      imgHeader=JPEGHeader):
         """
         Test that the tile server is serving images.
 
@@ -368,7 +372,7 @@ class LargeImageTilesTest(base.TestCase):
             'tileWidth': 256, 'tileHeight': 256,
             'sizeX': 256 * 2 ** 9, 'sizeY': 256 * 2 ** 9, 'levels': 10
         })
-        self._testTilesZXY('test', meta, params, '\x89PNG')
+        self._testTilesZXY('test', meta, params, PNGHeader)
         # Test that the fractal isn't the same as the non-fractal
         resp = self.request(path='/item/test/tiles/zxy/0/0/0', user=self.admin,
                             params=params, isJson=False)
@@ -489,7 +493,7 @@ class LargeImageTilesTest(base.TestCase):
 
         # Ask for PNGs
         params = {'encoding': 'PNG'}
-        self._testTilesZXY(itemId, tileMetadata, params, '\x89PNG')
+        self._testTilesZXY(itemId, tileMetadata, params, PNGHeader)
 
         # Check that invalid encodings are rejected
         try:
@@ -501,12 +505,11 @@ class LargeImageTilesTest(base.TestCase):
             self.assertIn('Invalid encoding', exc.args[0])
 
         # Check that JPEG options are honored.
-        imgHeader = '\xff\xd8\xff'
         resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
                             user=self.admin, isJson=False)
         self.assertStatusOk(resp)
         image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(imgHeader)], imgHeader)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
         defaultLength = len(image)
 
         resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
@@ -514,7 +517,7 @@ class LargeImageTilesTest(base.TestCase):
                             params={'jpegQuality': 10})
         self.assertStatusOk(resp)
         image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(imgHeader)], imgHeader)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
         self.assertTrue(len(image) < defaultLength)
 
         resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
@@ -522,5 +525,126 @@ class LargeImageTilesTest(base.TestCase):
                             params={'jpegSubsampling': 2})
         self.assertStatusOk(resp)
         image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(imgHeader)], imgHeader)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
         self.assertTrue(len(image) < defaultLength)
+
+    def testDummyTileSource(self):
+        # We can't actually load the dummy source via the endpoints if we have
+        # all of the requirements installed, so just check that it exists and
+        # will return appropriate values.
+        import girder.plugins.large_image.tilesource.dummy
+        dummy = girder.plugins.large_image.tilesource.dummy.DummyTileSource()
+        self.assertEqual(dummy.getTile(0, 0, 0), '')
+        tileMetadata = dummy.getMetadata()
+        self.assertEqual(tileMetadata['tileWidth'], 0)
+        self.assertEqual(tileMetadata['tileHeight'], 0)
+        self.assertEqual(tileMetadata['sizeX'], 0)
+        self.assertEqual(tileMetadata['sizeY'], 0)
+        self.assertEqual(tileMetadata['levels'], 0)
+
+    def testThumbnails(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        # We shouldn't be able to get a thumbnail yet
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
+        # Ask to make this a tile-based item properly
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatusOk(resp)
+        # Get metadata to use in our thumbnail tests
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        # Now we should be able to get a thumbnail
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
+        defaultLength = len(image)
+
+        # Test that JPEG options are honored
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'jpegQuality': 10})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'jpegSubsampling': 2})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+
+        # Test width and height using PNGs
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(PNGHeader)], PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(max(width, height), 256)
+        # We know that we are using an example where the width is greater than
+        # the height
+        origWidth = int(tileMetadata['sizeX'] *
+                        2 ** -(tileMetadata['levels'] - 1))
+        origHeight = int(tileMetadata['sizeY'] *
+                         2 ** -(tileMetadata['levels'] - 1))
+        self.assertEqual(height, int(width * origHeight / origWidth))
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG', 'width': 200})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(PNGHeader)], PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 200)
+        self.assertEqual(height, int(width * origHeight / origWidth))
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG', 'height': 200})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(PNGHeader)], PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(height, 200)
+        self.assertEqual(width, int(height * origWidth / origHeight))
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG',
+                                    'width': 180, 'height': 180})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(PNGHeader)], PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 180)
+        self.assertEqual(height, int(width * origHeight / origWidth))
+
+        # Test bad parameters
+        badParams = [
+            ({'encoding': 'invalid'}, 400, 'Invalid encoding'),
+            ({'width': 'invalid'}, 400, 'incorrect type'),
+            ({'width': 0}, 400, 'Invalid width or height'),
+            ({'width': -5}, 400, 'Invalid width or height'),
+            ({'height': 'invalid'}, 400, 'incorrect type'),
+            ({'height': 0}, 400, 'Invalid width or height'),
+            ({'height': -5}, 400, 'Invalid width or height'),
+            ({'jpegQuality': 'invalid'}, 400, 'incorrect type'),
+            ({'jpegSubsampling': 'invalid'}, 400, 'incorrect type'),
+        ]
+        for entry in badParams:
+            resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                                user=self.admin,
+                                params=entry[0])
+            self.assertStatus(resp, entry[1])
+            self.assertIn(entry[2], resp.json['message'])
