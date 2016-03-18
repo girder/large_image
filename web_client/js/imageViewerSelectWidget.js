@@ -64,7 +64,12 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
             viewers: this.viewers
         }));
         // TODO: choose an actual default, and update the option element to match
-        this._selectViewer(this.viewers[0].name);
+        var name = girder.views.ImageViewerSelectWidget.preferredViewer;
+        if (name === undefined) {
+            name = this.viewers[0].name;
+        }
+        $('select.form-control', this.$el).val(name);
+        this._selectViewer(name);
         return this;
     },
 
@@ -75,6 +80,7 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
         }
         this.$('.image-viewer').toggleClass('hidden', true);
 
+        girder.views.ImageViewerSelectWidget.preferredViewer = viewerName;
         var ViewerType = _.findWhere(this.viewers, {name: viewerName}).type;
         // GeoJs isn't always fully removing itself from its element when
         // destroyed, so use dedicated elements for each viewer for now

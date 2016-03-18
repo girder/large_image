@@ -57,12 +57,12 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
 
     destroy: function () {
         if (this.viewer) {
-            // this.viewer.destroy();
+            this.viewer.exit();
             this.viewer = null;
         }
-        // if (window.geo) {
-        //     delete window.geo;
-        // }
+        if (window.geo) {
+            delete window.geo;
+        }
         girder.views.ImageViewerWidget.prototype.destroy.call(this);
     }
 });
