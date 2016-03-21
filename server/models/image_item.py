@@ -220,10 +220,7 @@ class ImageItem(Item):
                         id=item['largeImage']['fileId'], force=True))
                 del item['largeImage']['originalId']
 
-            item['largeImage'].pop('sourceName', None)
-            item['largeImage'].pop('fileId', None)
-
-            item['largeImage']['expected'] = True
+            del item['largeImage']
 
             self.save(item)
             deleted = True
