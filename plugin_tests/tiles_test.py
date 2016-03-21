@@ -234,6 +234,16 @@ class LargeImageTilesTest(base.TestCase):
             int(os.environ['GIRDER_PORT']), itemId), headers=headers,
             data={'fileId': fileId})
         self.assertEqual(req.status_code, 200)
+        # If we ask to create the item again right away, we should be told that
+        # either there is already a job running or the item has already been
+        # added
+        req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles' % (
+            int(os.environ['GIRDER_PORT']), itemId), headers=headers,
+            data={'fileId': fileId})
+        self.assertEqual(req.status_code, 400)
+        self.assertTrue('Item already has' in req.json()['message'] or
+                        'Item is scheduled' in req.json()['message'])
+
         starttime = time.time()
         resp = None
         while time.time() - starttime < 30:
@@ -273,11 +283,6 @@ class LargeImageTilesTest(base.TestCase):
                             user=self.admin)
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], False)
-        # Ask to make this a tile-based item with an missing file ID
-        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            user=self.admin)
-        self.assertStatus(resp, 400)
-        self.assertIn('Missing "fileId"', resp.json['message'])
         # Ask to make this a tile-based item with an invalid file ID
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': itemId})
@@ -318,9 +323,10 @@ class LargeImageTilesTest(base.TestCase):
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
 
-        # We should be able to re-add it
+        # We should be able to re-add it (we are also testing that fileId is
+        # optional if there is only one file).
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            user=self.admin, params={'fileId': fileId})
+                            user=self.admin)
         self.assertStatusOk(resp)
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatusOk(resp)
@@ -407,6 +413,12 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(tileMetadata['sizeY'], 5000)
         self.assertEqual(tileMetadata['levels'], 7)
         self._testTilesZXY(itemId, tileMetadata)
+        # Ask to make this a tile-based item with an missing file ID (there are
+        # now two files, so this will now fail).
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('Missing "fileId"', resp.json['message'])
         # We should be able to delete the tiles
         resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
                             user=self.admin)
