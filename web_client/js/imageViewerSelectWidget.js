@@ -2,7 +2,8 @@ girder.wrap(girder.views.ItemView, 'render', function (render) {
     // ItemView is a special case in which rendering is done asynchronously,
     // so we must listen for a render event.
     this.once('g:rendered', function () {
-        if (this.model.get('largeImage')) {
+        if (this.model.get('largeImage') &&
+            this.model.get('largeImage').fileId) {
             this.imageViewerSelect = new girder.views.ImageViewerSelectWidget({
                 el: $('<div>', {class: 'g-item-image-viewer-select'})
                     .insertAfter(this.$('.g-item-info')),
@@ -25,7 +26,7 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
     },
 
     initialize: function (settings) {
-        this.itemId = settings.imageModel.get('largeImage') === 'test'
+        this.itemId = settings.imageModel.get('largeImage').fileId === 'test'
             ? 'test'
             : settings.imageModel.id;
         this.currentViewer = null;

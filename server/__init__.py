@@ -37,14 +37,14 @@ def _postUpload(event):
     Item = ModelImporter.model('item')
     item = Item.load(fileObj['itemId'], force=True, exc=True)
 
-    if item.get('expectedLargeImage') and (
+    if item.get('largeImage', {}).get('expected') and (
             fileObj['name'].endswith('.tiff') or
             fileObj.get('mimeType') == 'image/tiff'):
         if fileObj.get('mimeType') != 'image/tiff':
             fileObj['mimeType'] = 'image/tiff'
             ModelImporter.model('file').save(fileObj)
-        del item['expectedLargeImage']
-        item['largeImage'] = fileObj['_id']
+        del item['largeImage']['expected']
+        item['largeImage']['fileId'] = fileObj['_id']
         Item.save(item)
 
 

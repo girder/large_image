@@ -247,7 +247,7 @@ class LargeImageTilesTest(base.TestCase):
                     return False
                 self.assertIn('No large image file', exc.args[0])
             item = self.model('item').load(itemId, user=self.admin)
-            job = self.model('job', 'jobs').load(item['largeImageJobId'],
+            job = self.model('job', 'jobs').load(item['largeImage']['jobId'],
                                                  user=self.admin)
             if job['status'] == girder.plugins.jobs.constants.JobStatus.ERROR:
                 return None

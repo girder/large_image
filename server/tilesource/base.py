@@ -138,7 +138,7 @@ class GirderTileSource(TileSource):
 
     def _getLargeImagePath(self):
         try:
-            largeImageFileId = self.item['largeImage']
+            largeImageFileId = self.item['largeImage']['fileId']
             # Access control checking should already have been done on item, so
             # don't repeat.
             # TODO: is it possible that the file is on a different item, so do
