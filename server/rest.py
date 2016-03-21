@@ -128,11 +128,7 @@ class TilesItemResource(Item):
     def getTestTilesInfo(self, params):
         item = {'largeImage': {'sourceName': 'test'}}
         imageArgs = self._parseTestParams(params)
-        try:
-            return self.model('image_item', 'large_image').getMetadata(
-                item, **imageArgs)
-        except TileGeneralException as e:
-            raise RestException(e.message, code=400)
+        return self.getTilesInfo.__wrapped__(self, item, imageArgs)
 
     @describeRoute(
         Description('Get a large image tile.')
@@ -182,24 +178,9 @@ class TilesItemResource(Item):
     @access.cookie
     @access.public
     def getTestTile(self, z, x, y, params):
-        try:
-            x, y, z = int(x), int(y), int(z)
-        except ValueError:
-            raise RestException('x, y, and z must be integers', code=400)
-        if x < 0 or y < 0 or z < 0:
-            raise RestException('x, y, and z must be positive integers',
-                                code=400)
-
         item = {'largeImage': {'sourceName': 'test'}}
         imageArgs = self._parseTestParams(params)
-        try:
-            tileData, tileMime = self.model(
-                'image_item', 'large_image').getTile(
-                    item, x, y, z, **imageArgs)
-        except TileGeneralException as e:
-            raise RestException(e.message, code=404)
-        cherrypy.response.headers['Content-Type'] = tileMime
-        return lambda: tileData
+        return self.getTile.__wrapped__(self, item, z, x, y, imageArgs)
 
     @describeRoute(
         Description('Remove a large image from this item.')
