@@ -48,13 +48,19 @@ class TilesItemResource(Item):
         Description('Create a large image for this item.')
         .param('itemId', 'The ID of the item.', paramType='path')
         .param('fileId', 'The ID of the source file containing the image or '
-               '"test".')
+               '"test".  Required if more than one file in the item or using '
+               '"test"', required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     @filtermodel(model='job', plugin='jobs')
     def createTiles(self, item, params):
         largeImageFileId = params.get('fileId')
+        if largeImageFileId is None:
+            files = list(self.model('item').childFiles(
+                item=item, limit=2))
+            if len(files) == 1:
+                largeImageFileId = str(files[0]['_id'])
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
 

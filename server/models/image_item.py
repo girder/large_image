@@ -49,6 +49,10 @@ class ImageItem(Item):
         if fileObj['itemId'] != item['_id']:
             raise TileGeneralException('The provided file must be in the '
                                        'provided item.')
+        if (item['largeImage'].get('expected') is True and
+                'jobId' in item['largeImage']):
+            raise TileGeneralException('Item is scheduled to generate a '
+                                       'largeImage.')
 
         item['largeImage'].pop('expected', None)
         item['largeImage'].pop('sourceName', None)
