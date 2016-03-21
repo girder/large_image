@@ -120,12 +120,6 @@ class LargeImageTilesTest(base.TestCase):
                       message.
         :returns: the tile information dictionary.
         """
-        resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
-                            user=self.admin)
-        self.assertStatusOk(resp)
-        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            user=self.admin, params={'fileId': 'test'})
-        self.assertStatusOk(resp)
         # We don't actually use the itemId to fetch test tiles
         try:
             resp = self.request(path='/item/test/tiles', user=self.admin,

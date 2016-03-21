@@ -166,11 +166,14 @@ class ImageItem(Item):
 
     @classmethod
     def _loadTileSource(cls, item, **kwargs):
-        if item == 'test':
+        if 'largeImage' not in item:
+            raise TileSourceException('No large image file in this item')
+
+        sourceName = item['largeImage']['sourceName']
+
+        if sourceName == 'test':
             tileSource = TestTileSource(**kwargs)
         else:
-            sourceName = item.get('largeImage', {}).get(
-                'sourceName', next(iter(cls.AvailableSources.items()))[0])
             tileSource = cls.AvailableSources[sourceName](item, **kwargs)
         return tileSource
 
