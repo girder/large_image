@@ -46,8 +46,10 @@ class SVSGirderTileSource(GirderTileSource):
     @staticmethod
     def cacheKeyFunc(args, kwargs):
         item = args[0]
-        return (item.get('largeImage'), kwargs.get('jpegQuality'),
-                kwargs.get('jpegSubsampling'), kwargs.get('encoding'))
+        return (item.get('largeImage', {}).get('fileId'),
+                kwargs.get('jpegQuality'),
+                kwargs.get('jpegSubsampling'),
+                kwargs.get('encoding'))
 
     def __init__(self, item, jpegQuality=95, jpegSubsampling=0,
                  encoding='JPEG', **kwargs):

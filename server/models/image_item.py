@@ -42,24 +42,23 @@ class ImageItem(Item):
         super(ImageItem, self).initialize()
 
     def createImageItem(self, item, fileObj, user=None, token=None):
-        if 'largeImage' in item:
+        # Using setdefault ensures that 'largeImage' is in the item
+        if 'fileId' in item.setdefault('largeImage', {}):
             # TODO: automatically delete the existing large file
             raise TileGeneralException('Item already has a largeImage set.')
         if fileObj['itemId'] != item['_id']:
             raise TileGeneralException('The provided file must be in the '
                                        'provided item.')
 
-        if item.get('expectedLargeImage'):
-            del item['expectedLargeImage']
-        if item.get('largeImageSourceName'):
-            del item['largeImageSourceName']
+        item['largeImage'].pop('expected', None)
+        item['largeImage'].pop('sourceName', None)
 
-        item['largeImage'] = fileObj['_id']
+        item['largeImage']['fileId'] = fileObj['_id']
         job = None
         for sourceName in self.AvailableSources:
             try:
                 self.AvailableSources[sourceName](item)
-                item['largeImageSourceName'] = sourceName
+                item['largeImage']['sourceName'] = sourceName
                 break
             except TileSourceAssetstoreException:
                 raise
@@ -67,11 +66,11 @@ class ImageItem(Item):
                 continue  # We want to try the next source
         else:
             # No source was successful
-            del item['largeImage']
+            del item['largeImage']['fileId']
             job = self._createLargeImageJob(item, fileObj, user, token)
-            item['expectedLargeImage'] = True
-            item['largeImageOriginalId'] = fileObj['_id']
-            item['largeImageJobId'] = job['_id']
+            item['largeImage']['expected'] = True
+            item['largeImage']['originalId'] = fileObj['_id']
+            item['largeImage']['jobId'] = job['_id']
 
         self.save(item)
         return job
@@ -166,8 +165,8 @@ class ImageItem(Item):
         if item == 'test':
             tileSource = TestTileSource(**kwargs)
         else:
-            sourceName = item.get('largeImageSourceName',
-                                  next(iter(cls.AvailableSources.items()))[0])
+            sourceName = item.get('largeImage', {}).get(
+                'sourceName', next(iter(cls.AvailableSources.items()))[0])
             tileSource = cls.AvailableSources[sourceName](item, **kwargs)
         return tileSource
 
@@ -184,17 +183,17 @@ class ImageItem(Item):
     def delete(self, item):
         Job = self.model('job', 'jobs')
         deleted = False
-        if 'largeImage' in item or 'largeImageJobId' in item:
+        if 'largeImage' in item:
             job = None
-            if 'largeImageJobId' in item:
+            if 'jobId' in item['largeImage']:
                 try:
-                    job = Job.load(item['largeImageJobId'], force=True,
+                    job = Job.load(item['largeImage']['jobId'], force=True,
                                    exc=True)
                 except ValidationException:
                     # The job has been deleted, but we still need to clean up
                     # the rest of the tile information
                     pass
-            if (item.get('expectedLargeImage') and job and
+            if (item['largeImage'].get('expected') and job and
                     job.get('status') in (
                     JobStatus.QUEUED, JobStatus.RUNNING)):
                 # cannot cleanly remove the large image, since a conversion
@@ -204,28 +203,24 @@ class ImageItem(Item):
                 return False
 
             # If this file was created by the worker job, delete it
-            if 'largeImageJobId' in item:
+            if 'jobId' in item['largeImage']:
                 if job:
                     # TODO: does this eliminate all traces of the job?
                     # TODO: do we want to remove the original job?
                     Job.remove(job)
-                del item['largeImageJobId']
+                del item['largeImage']['jobId']
 
-            if 'largeImageOriginalId' in item:
+            if 'originalId' in item['largeImage']:
                 # The large image file should not be the original file
-                assert item['largeImageOriginalId'] != item.get('largeImage')
+                assert item['largeImage']['originalId'] != \
+                    item['largeImage'].get('fileId')
 
-                if 'largeImage' in item:
+                if 'fileId' in item['largeImage']:
                     self.model('file').remove(self.model('file').load(
-                        id=item['largeImage'], force=True))
-                del item['largeImageOriginalId']
+                        id=item['largeImage']['fileId'], force=True))
+                del item['largeImage']['originalId']
 
-            if item.get('largeImageSourceName'):
-                del item['largeImageSourceName']
-            if 'largeImage' in item:
-                del item['largeImage']
-
-            item['expectedLargeImage'] = True
+            del item['largeImage']
 
             self.save(item)
             deleted = True
