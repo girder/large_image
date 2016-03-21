@@ -167,7 +167,10 @@ class ImageItem(Item):
     @classmethod
     def _loadTileSource(cls, item, **kwargs):
         if 'largeImage' not in item:
-            raise TileSourceException('No large image file in this item')
+            raise TileSourceException('No large image file in this item.')
+        if item['largeImage'].get('expected'):
+            raise TileSourceException('The large image file for this item is '
+                                      'still pending creation.')
 
         sourceName = item['largeImage']['sourceName']
 

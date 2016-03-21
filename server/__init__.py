@@ -45,6 +45,7 @@ def _postUpload(event):
             ModelImporter.model('file').save(fileObj)
         del item['largeImage']['expected']
         item['largeImage']['fileId'] = fileObj['_id']
+        item['largeImage']['sourceName'] = 'tiff'
         Item.save(item)
 
 
