@@ -104,6 +104,20 @@ class TilesItemResource(Item):
                     '"%s" parameter is an incorrect type.' % paramName)
         return results
 
+    def _getTilesInfo(self, item, imageArgs):
+        """
+        Get metadata for an item's large image.
+
+        :param item: the item to query.
+        :param imageArgs: additional arguments to use when fetching image data.
+        :return: the tile metadata.
+        """
+        try:
+            return self.model('image_item', 'large_image').getMetadata(
+                item, **imageArgs)
+        except TileGeneralException as e:
+            raise RestException(e.message, code=400)
+
     @describeRoute(
         Description('Get large image metadata.')
         .param('itemId', 'The ID of the item.', paramType='path')
@@ -113,13 +127,8 @@ class TilesItemResource(Item):
     @access.public
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesInfo(self, item, params):
-        # TODO: parse imageArgs?
-        imageArgs = params
-        try:
-            return self.model('image_item', 'large_image').getMetadata(
-                item, **imageArgs)
-        except TileGeneralException as e:
-            raise RestException(e.message, code=400)
+        # TODO: parse params?
+        return self._getTilesInfo(item, params)
 
     @describeRoute(
         Description('Get test large image metadata.')
@@ -128,7 +137,34 @@ class TilesItemResource(Item):
     def getTestTilesInfo(self, params):
         item = {'largeImage': {'sourceName': 'test'}}
         imageArgs = self._parseTestParams(params)
-        return self.getTilesInfo.__wrapped__(self, item, imageArgs)
+        return self._getTilesInfo(item, imageArgs)
+
+    def _getTile(self, item, z, x, y, imageArgs):
+        """
+        Get an large image tile.
+
+        :param item: the item to get a tile from.
+        :param z: tile layer number (0 is the most zoomed-out).
+        .param x: the X coordinate of the tile (0 is the left side).
+        .param y: the Y coordinate of the tile (0 is the top).
+        :param imageArgs: additional arguments to use when fetching image data.
+        :return: a function that returns the raw image data.
+        """
+        try:
+            x, y, z = int(x), int(y), int(z)
+        except ValueError:
+            raise RestException('x, y, and z must be integers', code=400)
+        if x < 0 or y < 0 or z < 0:
+            raise RestException('x, y, and z must be positive integers',
+                                code=400)
+        try:
+            tileData, tileMime = self.model(
+                'image_item', 'large_image').getTile(
+                    item, x, y, z, **imageArgs)
+        except TileGeneralException as e:
+            raise RestException(e.message, code=404)
+        cherrypy.response.headers['Content-Type'] = tileMime
+        return lambda: tileData
 
     @describeRoute(
         Description('Get a large image tile.')
@@ -147,24 +183,8 @@ class TilesItemResource(Item):
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTile(self, item, z, x, y, params):
         # TODO: cache the user / item loading in the 'loadmodel' decorator
-        try:
-            x, y, z = int(x), int(y), int(z)
-        except ValueError:
-            raise RestException('x, y, and z must be integers', code=400)
-        if x < 0 or y < 0 or z < 0:
-            raise RestException('x, y, and z must be positive integers',
-                                code=400)
-
-        # TODO: parse imageArgs?
-        imageArgs = params
-        try:
-            tileData, tileMime = self.model(
-                'image_item', 'large_image').getTile(
-                    item, x, y, z, **imageArgs)
-        except TileGeneralException as e:
-            raise RestException(e.message, code=404)
-        cherrypy.response.headers['Content-Type'] = tileMime
-        return lambda: tileData
+        # TODO: parse params?
+        return self._getTile(item, z, x, y, params)
 
     @describeRoute(
         Description('Get a test large image tile.')
@@ -180,7 +200,7 @@ class TilesItemResource(Item):
     def getTestTile(self, z, x, y, params):
         item = {'largeImage': {'sourceName': 'test'}}
         imageArgs = self._parseTestParams(params)
-        return self.getTile.__wrapped__(self, item, z, x, y, imageArgs)
+        return self._getTile(item, z, x, y, imageArgs)
 
     @describeRoute(
         Description('Remove a large image from this item.')
