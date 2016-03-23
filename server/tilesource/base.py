@@ -47,12 +47,115 @@ class TileSourceAssetstoreException(TileSourceException):
 
 
 class TileSource(object):
+    outputMimeTypes = {
+        'JPEG': 'image/jpeg',
+        'PNG': 'image/png'
+    }
+
     def __init__(self):
         self.tileWidth = None
         self.tileHeight = None
         self.levels = None
         self.sizeX = None
         self.sizeY = None
+
+    def _calculateWidthHeight(self, width, height, sourceWidth, sourceHeight):
+        """
+        Given a source width and height and a maximum destination width and/or
+        height, calculate a destination width and height that preserves the
+        aspect ratio of the source.
+
+        :param width: the destination width.  None to only use height.
+        :param height: the destination height.  None to only use width.
+        :param sourceWidth: the width of the source data.
+        :param sourceHeight: the height of the source data.
+        :returns: the width and height that is no larger than that specified
+                  and preserves aspect ratio.
+        """
+        if sourceWidth == 0 or sourceHeight == 0:
+            return 0, 0
+        # Constrain the maximum size if both width and height weren't
+        # specified, in case the image is very short or very narrow.
+        if height and not width:
+            width = height * 16
+        if width and not height:
+            height = width * 16
+        if width * sourceHeight > height * sourceWidth:
+            width = max(1, int(sourceWidth * height / sourceHeight))
+        else:
+            height = max(1, int(sourceHeight * width / sourceWidth))
+        return width, height
+
+    def _encodeImage(self, image, encoding='JPEG', jpegQuality=95,
+                     jpegSubsampling=0, **kwargs):
+        """
+        Convert a PIL image into the raw output bytes and a mime type.
+
+        :param image: a PIL image.
+        :param encoding: a valid PIL encoding (typically 'PNG' or 'JPEG').
+                         Must also be in the outputMimeTypes map.
+        :param jpegQuality: the quality to use when encoding a JPEG.
+        :param jpegSubsampling: the subsampling level to use when encoding a
+                                JPEG.
+        """
+        if encoding not in self.outputMimeTypes:
+            raise ValueError('Invalid encoding "%s"' % encoding)
+        if image.width == 0 or image.height == 0:
+            tileData = b''
+        else:
+            output = BytesIO()
+            image.save(output, encoding, quality=jpegQuality,
+                       subsampling=jpegSubsampling)
+            tileData = output.getvalue()
+        return tileData, self.outputMimeTypes[encoding]
+
+    def _getRegionBounds(self, metadata, **kwargs):
+        """
+        Given a set of arguments that can include left, right, top, bottom,
+        sourceWidth, sourceHeight, and units, generate actual pixel values for
+        left, top, right, and bottom.
+
+        :param metadata: the metadata associated with this source.
+        :param **kwargs: optional parameters.  See above.
+        :returns: left, top, right, bottom bounds in pixels.
+        """
+        if kwargs.get('units') not in (None, 'pixel', 'pixels', 'fraction'):
+            raise ValueError('Invalid units "%s"' % kwargs['units'])
+        # Copy kwargs so we don't alter an input dictionary
+        kwargs = kwargs.copy()
+        # Convert fraction units to pixels
+        if kwargs.get('units') == 'fraction':
+            for key in ('left', 'right', 'regionWidth'):
+                if key in kwargs:
+                    kwargs[key] = kwargs[key] * metadata['sizeX']
+            for key in ('top', 'bottom', 'regionHeight'):
+                if key in kwargs:
+                    kwargs[key] = kwargs[key] * metadata['sizeY']
+        # convert negative references to right or bottom offsets
+        for key in ('left', 'right', 'top', 'bottom'):
+            if key in kwargs and kwargs.get(key) < 0:
+                kwargs[key] += metadata[
+                    'sizeX' if key in ('left', 'right') else 'sizeY']
+        # Calculate the region we need to fetch
+        left = kwargs.get(
+            'left', kwargs.get('right') - kwargs.get('regionWidth')
+            if 'right' in kwargs and 'regionWidth' in kwargs else 0)
+        right = kwargs.get(
+            'right', left + kwargs.get('regionWidth')
+            if 'regionWidth' in kwargs else metadata['sizeX'])
+        top = kwargs.get(
+            'top', kwargs.get('bottom') - kwargs.get('regionHeight')
+            if 'bottom' in kwargs and 'regionHeight' in kwargs else 0)
+        bottom = kwargs.get(
+            'bottom', top + kwargs.get('regionHeight')
+            if 'regionHeight' in kwargs else metadata['sizeY'])
+        # Crop the bounds to integer pixels within the actual source data
+        left = min(metadata['sizeX'], max(0, int(round(left))))
+        right = min(metadata['sizeX'], max(left, int(round(right))))
+        top = min(metadata['sizeY'], max(0, int(round(top))))
+        bottom = min(metadata['sizeY'], max(top, int(round(bottom))))
+
+        return left, top, right, bottom
 
     def getMetadata(self):
         return {
@@ -63,7 +166,7 @@ class TileSource(object):
             'tileHeight': self.tileHeight,
         }
 
-    def getTile(self, x, y, z):
+    def getTile(self, x, y, z, pilImageAllowed=False):
         raise NotImplementedError()
 
     def getTileMimeType(self):
@@ -82,13 +185,6 @@ class TileSource(object):
             jpegQuality, and jpegSubsampling.
         :returns: thumbData, thumbMime: the image data and the mime type.
         """
-        mimeTypes = {
-            'JPEG': 'image/jpeg',
-            'PNG': 'image/png'
-        }
-        encoding = kwargs.get('encoding', 'JPEG')
-        if encoding not in mimeTypes:
-            raise ValueError('Invalid encoding "%s"' % encoding)
         if ((width is not None and width < 2) or
                 (height is not None and height < 2)):
             raise ValueError('Invalid width or height.  Minimum value is 2.')
@@ -107,28 +203,123 @@ class TileSource(object):
         if width is None and height is None:
             width = height = 256
 
-        # Constrain the maximum size if both width and height weren't
-        # specified, in case the image is very short or very narrow.
-        if height and not width:
-            width = height * 16
-        if width and not height:
-            height = width * 16
-
-        if width and height:
-            if width * imageHeight > height * imageWidth:
-                width = max(1, int(imageWidth * height / imageHeight))
-            else:
-                height = max(1, int(imageHeight * width / imageWidth))
+        if width or height:
+            width, height = self._calculateWidthHeight(
+                width, height, imageWidth, imageHeight)
 
             image = image.resize(
                 (width, height),
                 PIL.Image.BICUBIC if width > imageWidth else PIL.Image.LANCZOS)
+        return self._encodeImage(image, **kwargs)
 
-        output = BytesIO()
-        image.save(output, encoding, quality=kwargs.get('jpegQuality', 95),
-                   subsampling=kwargs.get('jpegSubsampling', 0))
-        tileData = output.getvalue()
-        return tileData, mimeTypes[encoding]
+    def getPreferredLevel(self, level):
+        """
+        Given a desired level (0 is minimum resolution, self.levels - 1 is max
+        resolution), return the level that contains actual data that is no
+        lower resolution.
+
+        :param level: desired level
+        :returns level: a level with actual data that is no lower resolution.
+        """
+        metadata = self.getMetadata()
+        if metadata['levels'] is None:
+            return level
+        return max(0, min(level, metadata['levels'] - 1))
+
+    def getRegion(self, width=None, height=None, **kwargs):
+        """
+        Get a basic thumbnail from the current tile source.  Aspect ratio is
+        preserved.  If neither width nor height is given, a default value is
+        used.  If both are given, the thumbnail will be no larger than either
+        size.
+
+        :param width: maximum width in pixels.
+        :param height: maximum height in pixels.
+        :param **kwargs: optional arguments.  Some options are encoding,
+            jpegQuality, and jpegSubsampling.
+        :returns: thumbData, thumbMime: the image data and the mime type.
+        """
+        if ((width is not None and width < 0) or
+                (height is not None and height < 0)):
+            raise ValueError('Invalid width or height.  Minimum value is 0.')
+        metadata = self.getMetadata()
+        left, top, right, bottom = self._getRegionBounds(metadata, **kwargs)
+
+        # If we are asked for a specific output size, determine the scaling
+        sourceWidth = right - left
+        sourceHeight = bottom - top
+        if sourceWidth == 0 or sourceHeight == 0:
+            image = PIL.Image.new('RGB', (0, 0))
+            return self._encodeImage(image, **kwargs)
+
+        if width is None and height is None:
+            width, height = sourceWidth, sourceHeight
+        width, height = self._calculateWidthHeight(
+            width, height, sourceWidth, sourceHeight)
+
+        preferredLevel = metadata['levels'] - 1
+        # If we are scaling the result, pick the tile level that is at least
+        # the resolution we need and is preferred by the tile source.
+        if width != sourceWidth or height != sourceHeight:
+            newLevel = self.getPreferredLevel(preferredLevel + int(
+                math.ceil(math.log(max(float(width) / sourceWidth,
+                                       float(height) / sourceHeight)) /
+                          math.log(2))))
+            if newLevel < preferredLevel:
+                # scale the bounds to the level we will use
+                factor = 2 ** (preferredLevel - newLevel)
+                left = int(left / factor)
+                right = int(right / factor)
+                sourceWidth = right - left
+                top = int(top / factor)
+                bottom = int(bottom / factor)
+                sourceHeight = bottom - top
+                preferredLevel = newLevel
+
+        xmin = int(left / metadata['tileWidth'])
+        xmax = int(math.ceil(float(right) / metadata['tileWidth']))
+        ymin = int(top / metadata['tileHeight'])
+        ymax = int(math.ceil(float(bottom) / metadata['tileHeight']))
+        logger.info(
+            'Fetching region of an image with a source size of %d x %d; '
+            'getting %d tiles',
+            sourceWidth, sourceHeight, (xmax - xmin) * (ymax - ymin))
+        # Use RGB mode.  If we need to support alpha on some encodings, this
+        # can changed to RGBA.
+        mode = 'RGBA' if kwargs.get('encoding') in ('PNG', ) else 'RGB'
+
+        # We can construct an image using PIL.Image.new:
+        #   image = PIL.Image.new('RGB', (sourceWidth, sourceHeight))
+        # but, for large images (larger than 4 Megapixels), PIL allocates one
+        # memory region per line.  Although it frees this, the memory manager
+        # often fails to reuse these smallish pieces.  By allocating the data
+        # memory ourselves in one block, the memory manager does a better job.
+        # Furthermode, if the source buffer isn't in RGBA format, the memory is
+        # still often inaccessible.
+        image = PIL.Image.frombuffer(
+            mode, (sourceWidth, sourceHeight),
+            '\x00' * (sourceWidth * sourceHeight * 4), 'raw', 'RGBA', 0, 1)
+        for x in range(xmin, xmax):
+            for y in range(ymin, ymax):
+                tileData = self.getTile(x, y, preferredLevel,
+                                        pilImageAllowed=True)
+                if not isinstance(tileData, PIL.Image.Image):
+                    tileData = PIL.Image.open(BytesIO(tileData))
+                posX = x * metadata['tileWidth'] - left
+                posY = y * metadata['tileHeight'] - top
+                # Add each tile to the image.  PIL crops these if they are off
+                # the edge.
+                image.paste(tileData, (posX, posY),
+                            tileData if mode == 'RGBA' and
+                            tileData.mode == 'RGBA' else None)
+
+        # Scale if we need to
+        if width != sourceWidth or height != sourceHeight:
+            image = image.resize(
+                (width, height),
+                PIL.Image.BICUBIC if width > sourceWidth else
+                PIL.Image.LANCZOS)
+        return self._encodeImage(image, **kwargs)
 
 
 class GirderTileSource(TileSource):

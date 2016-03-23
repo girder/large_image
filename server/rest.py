@@ -41,6 +41,8 @@ class TilesItemResource(Item):
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'),
                            self.getTilesThumbnail)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'region'),
+                           self.getTilesRegion)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
 
@@ -198,6 +200,8 @@ class TilesItemResource(Item):
                required=False, dataType='int')
         .param('encoding', 'Thumbnail output encoding', required=False,
                enum=['JPEG', 'PNG'], default='JPEG')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
     )
     @access.cookie
     @access.public
@@ -219,3 +223,79 @@ class TilesItemResource(Item):
             raise RestException('Value Error: %s' % e.message)
         cherrypy.response.headers['Content-Type'] = thumbMime
         return lambda: thumbData
+
+    @describeRoute(
+        Description('Get any region of a large image item, optionally scaling '
+                    'it.')
+        .notes('If neither width nor height is specified, the full resolution '
+               'region is returned.  If a width or height is specified, '
+               'aspect ratio is always preserved (if both are given, the '
+               'resulting image may be smaller in one of the two '
+               'dimensions).  When scaling must be applied, the image is '
+               'downsampled from a higher resolution layer, never upsampled.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('left', 'The left column (0-based) of the region to return.  '
+               'Negative values are offsets from the right edge.',
+               required=False, dataType='float')
+        .param('top', 'The top row (0-based) of the region to return.  '
+               'Negative values are offsets from the bottom edge.',
+               required=False, dataType='float')
+        .param('right', 'The right column (0-based from the left) of the '
+               'region to return.  The region will not include this column.  '
+               'Negative values are offsets from the right edge.',
+               required=False, dataType='float')
+        .param('bottom', 'The bottom row (0-based from the top) of the region '
+               'to return.  The region will not include this row.  Negative '
+               'values are offsets from the bottom edge.',
+               required=False, dataType='float')
+        .param('regionWidth', 'The width of the region to return.',
+               required=False, dataType='float')
+        .param('regionHeight', 'The height of the region to return.',
+               required=False, dataType='float')
+        .param('units', 'Units used for left, top, right, bottom, '
+               'sourceWidth, and sourceHeight.  Note that output width and '
+               'height are always in pixels.', required=False,
+               enum=['pixels', 'fraction'], default='pixels')
+        .param('width', 'The maximum width of the output image in pixels.',
+               required=False, dataType='int')
+        .param('height', 'The maximum height of the output image in pixels.',
+               required=False, dataType='int')
+        .param('encoding', 'Output image encoding', required=False,
+               enum=['JPEG', 'PNG'], default='JPEG')
+        .param('jpegQuality', 'Quality used for generating JPEG images',
+               required=False, dataType='int', default=95)
+        .param('jpegSubsampling', 'Chroma subsampling used for generating '
+               'JPEG images.  0, 1, and 2 are full, half, and quarter '
+               'resolution chroma respectively.', required=False,
+               enum=['0', '1', '2'], dataType='int', default='0')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Insufficient memory.')
+    )
+    @access.cookie
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getTilesRegion(self, item, params):
+        params = self._parseParams(params, True, [
+            ('left', float),
+            ('top', float),
+            ('right', float),
+            ('bottom', float),
+            ('regionWidth', float),
+            ('regionHeight', float),
+            ('units', str),
+            ('width', int),
+            ('height', int),
+            ('jpegQuality', int),
+            ('jpegSubsampling', int),
+            ('encoding', str),
+        ])
+        try:
+            regionData, regionMime = self.model(
+                'image_item', 'large_image').getRegion(item, **params)
+        except TileGeneralException as e:
+            raise RestException(e.message)
+        except ValueError as e:
+            raise RestException('Value Error: %s' % e.message)
+        cherrypy.response.headers['Content-Type'] = regionMime
+        return lambda: regionData

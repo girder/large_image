@@ -131,7 +131,7 @@ class SVSGirderTileSource(GirderTileSource):
                 'scale': scale
             })
 
-    def getTile(self, x, y, z):
+    def getTile(self, x, y, z, pilImageAllowed=False):
         try:
             svslevel = self._svslevels[z]
         except IndexError:
@@ -158,6 +158,8 @@ class SVSGirderTileSource(GirderTileSource):
         if svslevel['scale'] != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight),
                                PIL.Image.LANCZOS)
+        if pilImageAllowed:
+            return tile
         output = BytesIO()
         tile.save(output, self.encoding, quality=self.jpegQuality,
                   subsampling=self.jpegSubsampling)
@@ -167,3 +169,19 @@ class SVSGirderTileSource(GirderTileSource):
         if self.encoding == 'JPEG':
             return 'image/jpeg'
         return 'image/png'
+
+    def getPreferredLevel(self, level):
+        """
+        Given a desired level (0 is minimum resolution, self.levels - 1 is max
+        resolution), return the level that contains actual data that is no
+        lower resolution.
+
+        :param level: desired level
+        :returns level: a level with actual data that is no lower resolution.
+        """
+        level = max(0, min(level, self.levels - 1))
+        scale = self._svslevels[level]['scale']
+        while scale > 1:
+            level += 1
+            scale /= 2
+        return level

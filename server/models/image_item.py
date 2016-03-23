@@ -250,3 +250,19 @@ class ImageItem(Item):
         thumbData, thumbMime = tileSource.getThumbnail(
             width, height, **kwargs)
         return thumbData, thumbMime
+
+    def getRegion(self, item, **kwargs):
+        """
+        Using a tile source, get an arbitrary region of the image, optionally
+        scaling the results.  Aspect ratio is preserved.
+
+        :param item: the item with the tile source.
+        :param **kwargs: optional arguments.  Some options are left, top,
+            right, bottom, regionWidth, regionHeight, units, width, height,
+            encoding, jpegQuality, and jpegSubsampling.  This is also passed to
+            the tile source.
+        :returns: regionData, regionMime: the image data and the mime type.
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        thumbData, thumbMime = tileSource.getRegion(**kwargs)
+        return thumbData, thumbMime

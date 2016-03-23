@@ -72,7 +72,7 @@ class TiffGirderTileSource(GirderTileSource):
         self.sizeX = self._tiffDirectories[-1].imageWidth
         self.sizeY = self._tiffDirectories[-1].imageHeight
 
-    def getTile(self, x, y, z):
+    def getTile(self, x, y, z, pilImageAllowed=False):
         try:
             return self._tiffDirectories[z].getTile(x, y)
         except IndexError:
