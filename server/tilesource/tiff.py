@@ -20,11 +20,17 @@
 import itertools
 
 import six
+from six import BytesIO
 
 from .base import GirderTileSource, TileSourceException
 from .cache import LruCacheMetaclass
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException
+
+try:
+    import PIL
+except ImportError:
+    PIL = None
 
 
 @six.add_metaclass(LruCacheMetaclass)
@@ -72,7 +78,8 @@ class TiffGirderTileSource(GirderTileSource):
         self.sizeX = self._tiffDirectories[-1].imageWidth
         self.sizeY = self._tiffDirectories[-1].imageHeight
 
-    def getTile(self, x, y, z, pilImageAllowed=False):
+    def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
+                **kwargs):
         try:
             return self._tiffDirectories[z].getTile(x, y)
         except IndexError:
@@ -80,4 +87,16 @@ class TiffGirderTileSource(GirderTileSource):
         except InvalidOperationTiffException as e:
             raise TileSourceException(e.message)
         except IOTiffException as e:
+            if sparseFallback and pilImageAllowed and z and PIL:
+                image = self.getTile(x / 2, y / 2, z - 1, pilImageAllowed,
+                                     sparseFallback)
+                if not isinstance(image, PIL.Image.Image):
+                    image = PIL.Image.open(BytesIO(image))
+                image = image.crop((
+                    self.tileWidth / 2 if x % 2 else 0,
+                    self.tileHeight / 2 if y % 2 else 0,
+                    self.tileWidth if x % 2 else self.tileWidth / 2,
+                    self.tileHeight if y % 2 else self.tileHeight / 2))
+                image = image.resize((self.tileWidth, self.tileHeight))
+                return image
             raise TileSourceException('Internal I/O failure: %s' % e.message)

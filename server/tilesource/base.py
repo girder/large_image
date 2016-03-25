@@ -166,7 +166,7 @@ class TileSource(object):
             'tileHeight': self.tileHeight,
         }
 
-    def getTile(self, x, y, z, pilImageAllowed=False):
+    def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False):
         raise NotImplementedError()
 
     def getTileMimeType(self):
@@ -248,14 +248,14 @@ class TileSource(object):
         # If we are asked for a specific output size, determine the scaling
         sourceWidth = right - left
         sourceHeight = bottom - top
-        if sourceWidth == 0 or sourceHeight == 0:
-            image = PIL.Image.new('RGB', (0, 0))
-            return self._encodeImage(image, **kwargs)
 
         if width is None and height is None:
             width, height = sourceWidth, sourceHeight
         width, height = self._calculateWidthHeight(
             width, height, sourceWidth, sourceHeight)
+        if sourceWidth == 0 or sourceHeight == 0 or width == 0 or height == 0:
+            image = PIL.Image.new('RGB', (0, 0))
+            return self._encodeImage(image, **kwargs)
 
         preferredLevel = metadata['levels'] - 1
         # If we are scaling the result, pick the tile level that is at least
@@ -301,8 +301,9 @@ class TileSource(object):
             '\x00' * (sourceWidth * sourceHeight * 4), 'raw', 'RGBA', 0, 1)
         for x in range(xmin, xmax):
             for y in range(ymin, ymax):
-                tileData = self.getTile(x, y, preferredLevel,
-                                        pilImageAllowed=True)
+                tileData = self.getTile(
+                    x, y, preferredLevel, pilImageAllowed=True,
+                    sparseFallback=True)
                 if not isinstance(tileData, PIL.Image.Image):
                     tileData = PIL.Image.open(BytesIO(tileData))
                 posX = x * metadata['tileWidth'] - left

@@ -131,7 +131,7 @@ class SVSGirderTileSource(GirderTileSource):
                 'scale': scale
             })
 
-    def getTile(self, x, y, z, pilImageAllowed=False):
+    def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         try:
             svslevel = self._svslevels[z]
         except IndexError:

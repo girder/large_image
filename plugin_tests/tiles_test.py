@@ -564,7 +564,7 @@ class LargeImageTilesTest(base.TestCase):
                             user=self.admin)
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
-        # Ask to make this a tile-based item properly
+        # Ask to make this a tile-based item
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': fileId})
         self.assertStatusOk(resp)
@@ -660,3 +660,156 @@ class LargeImageTilesTest(base.TestCase):
                                 params=entry[0])
             self.assertStatus(resp, entry[1])
             self.assertIn(entry[2], resp.json['message'])
+
+    def testRegions(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        # We shouldn't be able to get a region yet
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
+        # Ask to make this a tile-based item
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        # Get metadata to use in our tests
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+
+        # Test bad parameters
+        badParams = [
+            ({'encoding': 'invalid', 'width': 10}, 400, 'Invalid encoding'),
+            ({'width': 'invalid'}, 400, 'incorrect type'),
+            ({'width': -5}, 400, 'Invalid width or height'),
+            ({'height': 'invalid'}, 400, 'incorrect type'),
+            ({'height': -5}, 400, 'Invalid width or height'),
+            ({'jpegQuality': 'invalid', 'width': 10}, 400, 'incorrect type'),
+            ({'jpegSubsampling': 'invalid', 'width': 10}, 400,
+             'incorrect type'),
+            ({'left': 'invalid'}, 400, 'incorrect type'),
+            ({'right': 'invalid'}, 400, 'incorrect type'),
+            ({'top': 'invalid'}, 400, 'incorrect type'),
+            ({'bottom': 'invalid'}, 400, 'incorrect type'),
+            ({'regionWidth': 'invalid'}, 400, 'incorrect type'),
+            ({'regionHeight': 'invalid'}, 400, 'incorrect type'),
+            ({'units': 'invalid'}, 400, 'Invalid units'),
+        ]
+        for entry in badParams:
+            resp = self.request(path='/item/%s/tiles/region' % itemId,
+                                user=self.admin,
+                                params=entry[0])
+            self.assertStatus(resp, entry[1])
+            self.assertIn(entry[2], resp.json['message'])
+
+        # Get a small region for testing.  Our test file is sparse, so
+        # initially get a region where there is full information.
+        params = {'regionWidth': 1000, 'regionHeight': 1000,
+                  'left': 48000, 'top': 3000}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = origImage = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
+        defaultLength = len(image)
+
+        # Test that JPEG options are honored
+        params['jpegQuality'] = 10
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+        del params['jpegQuality']
+
+        params['jpegSubsampling'] = 2
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+        del params['jpegSubsampling']
+
+        # Test using negative offsets
+        params['left'] -= tileMetadata['sizeX']
+        params['top'] -= tileMetadata['sizeY']
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, origImage)
+        # We should get the same image using right and bottom
+        params = {
+            'left': params['left'], 'top': params['top'],
+            'right': params['left'] + 1000, 'bottom': params['top'] + 1000}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, origImage)
+        params = {
+            'regionWidth': 1000, 'regionHeight': 1000,
+            'right': params['right'], 'bottom': params['bottom']}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, origImage)
+
+        # Fractions should get us the same results
+        params = {
+            'regionWidth': 1000.0 / tileMetadata['sizeX'],
+            'regionHeight': 1000.0 / tileMetadata['sizeY'],
+            'left': 48000.0 / tileMetadata['sizeX'],
+            'top': 3000.0 / tileMetadata['sizeY'],
+            'units': 'fraction'}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, origImage)
+
+        # 0-sized results are allowed
+        params = {'regionWidth': 1000, 'regionHeight': 0,
+                  'left': 48000, 'top': 3000, 'width': 1000, 'height': 1000}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(len(image), 0)
+
+        # Test scaling (and a sparse region from our file)
+        params = {'regionWidth': 2000, 'regionHeight': 1500,
+                  'width': 500, 'height': 500, 'encoding': 'PNG'}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(PNGHeader)], PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 500)
+        self.assertEqual(height, 375)
+
+        # test svs image
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.TCGA-DU-6399-'
+            '01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs'))
+        itemId = str(file['itemId'])
+        # Ask to make this a tile-based item
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        params = {'regionWidth': 2000, 'regionHeight': 1500,
+                  'width': 1000, 'height': 1000, 'encoding': 'PNG'}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(PNGHeader)], PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 1000)
+        self.assertEqual(height, 750)

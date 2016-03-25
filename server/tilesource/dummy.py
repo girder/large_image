@@ -30,5 +30,5 @@ class DummyTileSource(TileSource):
         self.sizeX = 0
         self.sizeY = 0
 
-    def getTile(self, x, y, z):
+    def getTile(self, x, y, z, **kwargs):
         return ''
