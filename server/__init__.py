@@ -22,6 +22,7 @@ from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
 from .rest import TilesItemResource
+from . import constants
 
 
 def _postUpload(event):
@@ -49,6 +50,20 @@ def _postUpload(event):
         Item.save(item)
 
 
+def validateSettings(event):
+    key, val = event.info['key'], event.info['value']
+
+    if key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+               constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER):
+        val = (str(val).lower() != 'false')
+    elif key == constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER:
+        val = str(val).strip()
+    else:
+        return
+    event.info['value'] = val
+    event.preventDefault().stopPropagation()
+
+
 def load(info):
     TilesItemResource(info['apiRoot'])
 
@@ -56,3 +71,4 @@ def load(info):
         level=AccessType.READ, fields='largeImage')
 
     events.bind('data.process', 'large_image', _postUpload)
+    events.bind('model.setting.validate', 'large_image', validateSettings)

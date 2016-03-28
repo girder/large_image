@@ -28,45 +28,20 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
     initialize: function (settings) {
         this.itemId = settings.imageModel.id;
         this.currentViewer = null;
-        this.viewers = [
-            {
-                name: 'openseadragon',
-                label: 'OpenSeaDragon',
-                type: girder.views.OpenseadragonImageViewerWidget
-            },
-            {
-                name: 'openlayers',
-                label: 'OpenLayers',
-                type: girder.views.OpenlayersImageViewerWidget
-            },
-            {
-                name: 'leaflet',
-                label: 'Leaflet',
-                type: girder.views.LeafletImageViewerWidget
-            },
-            {
-                name: 'geojs',
-                label: 'GeoJS',
-                type: girder.views.GeojsImageViewerWidget
-            },
-            {
-                name: 'slideatlas',
-                label: 'SlideAtlas',
-                type: girder.views.SlideAtlasImageViewerWidget
-            }
-        ];
-
-        this.render();
+        girder.views.largeImageConfig.getSettings(
+            _.bind(this.render, this));
     },
 
     render: function () {
+        if (girder.views.largeImageConfig.settings['large_image.show_viewer'] === false) {
+            return this;
+        }
         this.$el.html(girder.templates.imageViewerSelectWidget({
-            viewers: this.viewers
+            viewers: girder.views.largeImageConfig.viewers
         }));
-        // TODO: choose an actual default, and update the option element to match
-        var name = girder.views.ImageViewerSelectWidget.preferredViewer;
-        if (name === undefined) {
-            name = this.viewers[0].name;
+        var name = girder.views.largeImageConfig.settings['large_image.default_viewer'];
+        if (_.findWhere(girder.views.largeImageConfig.viewers, {name: name}) === undefined) {
+            name = girder.views.largeImageConfig.viewers[0].name;
         }
         $('select.form-control', this.$el).val(name);
         this._selectViewer(name);
@@ -80,8 +55,9 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
         }
         this.$('.image-viewer').toggleClass('hidden', true);
 
-        girder.views.ImageViewerSelectWidget.preferredViewer = viewerName;
-        var ViewerType = _.findWhere(this.viewers, {name: viewerName}).type;
+        var viewer = _.findWhere(girder.views.largeImageConfig.viewers,
+                                 {name: viewerName});
+        var ViewerType = girder.views[viewer.type];
         // GeoJs isn't always fully removing itself from its element when
         // destroyed, so use dedicated elements for each viewer for now
         var viewerEl = this.$('#' + viewerName);
@@ -92,5 +68,4 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
             itemId: this.itemId
         });
     }
-
 });
