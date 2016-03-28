@@ -1,7 +1,8 @@
 girder.wrap(girder.views.ItemListWidget, 'render', function (render) {
     render.call(this);
     girder.views.largeImageConfig.getSettings(_.bind(function (settings) {
-        if (settings['large_image.show_thumbnails'] === false) {
+        if (settings['large_image.show_thumbnails'] === false ||
+                $('.large_image_thumbnail', this.$el).length > 0) {
             return this;
         }
         var items = this.collection.toArray();
