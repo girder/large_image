@@ -1,5 +1,3 @@
-/* globals girder, _ */
-
 girder.wrap(girder.views.ItemListWidget, 'render', function (render) {
     render.call(this);
     girder.views.largeImageConfig.getSettings(_.bind(function (settings) {
@@ -9,12 +7,12 @@ girder.wrap(girder.views.ItemListWidget, 'render', function (render) {
         var items = this.collection.toArray();
         var parent = this.$el;
         var hasAnyLargeImage = _.some(items, function (item) {
-            return item.attributes.largeImage;
+            return item.has('largeImage');
         });
         if (hasAnyLargeImage) {
             $.each(items, function (idx, item) {
                 var elem = $('<div class="large_image_thumbnail"/>');
-                if (item.attributes.largeImage) {
+                if (item.get('largeImage')) {
                     elem.append($('<img/>').attr(
                             'src', girder.apiRoot + '/item/' + item.id +
                             '/tiles/thumbnail?width=160&height=100'));

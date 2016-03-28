@@ -1,0 +1,11 @@
+if largeImage && file.id === largeImage.fileId && largeImage.expected !== true
+  a.g-large-image-remove(title="Remove large image")
+    span.fa-stack
+      i.icon-picture
+      i.icon-cancel.fa-cancel-cover
+else if largeImage && largeImage.expected === true
+  a.g-large-image-expected(title="A large image file is being generated")
+    i.icon-picture
+else if !largeImage || !largeImage.fileId
+  a.g-large-image-create(title="Use this file for a large image")
+    i.icon-picture
