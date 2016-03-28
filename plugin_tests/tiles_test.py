@@ -120,12 +120,6 @@ class LargeImageTilesTest(base.TestCase):
                       message.
         :returns: the tile information dictionary.
         """
-        resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
-                            user=self.admin)
-        self.assertStatusOk(resp)
-        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            user=self.admin, params={'fileId': 'test'})
-        self.assertStatusOk(resp)
         # We don't actually use the itemId to fetch test tiles
         try:
             resp = self.request(path='/item/test/tiles', user=self.admin,
@@ -255,7 +249,7 @@ class LargeImageTilesTest(base.TestCase):
             except AssertionError as exc:
                 if 'File must have at least 1 level' in exc.args[0]:
                     return False
-                self.assertIn('No large image file', exc.args[0])
+                self.assertIn('is still pending creation', exc.args[0])
             item = self.model('item').load(itemId, user=self.admin)
             job = self.model('job', 'jobs').load(item['largeImage']['jobId'],
                                                  user=self.admin)

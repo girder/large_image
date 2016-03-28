@@ -43,13 +43,16 @@ class TilesItemResource(Item):
                            self.getTilesThumbnail)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
+        apiRoot.item.route('GET', ('test', 'tiles'), self.getTestTilesInfo)
+        apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'),
+                           self.getTestTile)
 
     @describeRoute(
         Description('Create a large image for this item.')
         .param('itemId', 'The ID of the item.', paramType='path')
-        .param('fileId', 'The ID of the source file containing the image or '
-               '"test".  Required if more than one file in the item or using '
-               '"test"', required=False)
+        .param('fileId', 'The ID of the source file containing the image. '
+                         'Required if there is more than one file in the item.',
+               required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -63,20 +66,16 @@ class TilesItemResource(Item):
                 largeImageFileId = str(files[0]['_id'])
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
-
-        if largeImageFileId == 'test':
-            return None
-        else:
-            largeImageFile = self.model('file').load(
-                largeImageFileId, force=True, exc=True)
-            user = self.getCurrentUser()
-            token = self.getCurrentToken()
-            try:
-                return self.model(
-                    'image_item', 'large_image').createImageItem(
-                        item, largeImageFile, user, token)
-            except TileGeneralException as e:
-                raise RestException(e.message)
+        largeImageFile = self.model('file').load(
+            largeImageFileId, force=True, exc=True)
+        user = self.getCurrentUser()
+        token = self.getCurrentToken()
+        try:
+            return self.model(
+                'image_item', 'large_image').createImageItem(
+                    item, largeImageFile, user, token)
+        except TileGeneralException as e:
+            raise RestException(e.message)
 
     @classmethod
     def _parseTestParams(cls, params):
@@ -105,22 +104,14 @@ class TilesItemResource(Item):
                     '"%s" parameter is an incorrect type.' % paramName)
         return results
 
-    @describeRoute(
-        Description('Get large image metadata.')
-        .param('itemId', 'The ID of the item or "test".', paramType='path')
-        .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
-    )
-    @access.public
-    def getTilesInfo(self, itemId, params):
-        if itemId == 'test':
-            item = 'test'
-            imageArgs = self._parseTestParams(params)
-        else:
-            item = self.model('item').load(
-                id=itemId, level=AccessType.READ,
-                user=self.getCurrentUser(), exc=True)
-            imageArgs = params
+    def _getTilesInfo(self, item, imageArgs):
+        """
+        Get metadata for an item's large image.
+
+        :param item: the item to query.
+        :param imageArgs: additional arguments to use when fetching image data.
+        :return: the tile metadata.
+        """
         try:
             return self.model('image_item', 'large_image').getMetadata(
                 item, **imageArgs)
@@ -128,8 +119,56 @@ class TilesItemResource(Item):
             raise RestException(e.message, code=400)
 
     @describeRoute(
+        Description('Get large image metadata.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getTilesInfo(self, item, params):
+        # TODO: parse params?
+        return self._getTilesInfo(item, params)
+
+    @describeRoute(
+        Description('Get test large image metadata.')
+    )
+    @access.public
+    def getTestTilesInfo(self, params):
+        item = {'largeImage': {'sourceName': 'test'}}
+        imageArgs = self._parseTestParams(params)
+        return self._getTilesInfo(item, imageArgs)
+
+    def _getTile(self, item, z, x, y, imageArgs):
+        """
+        Get an large image tile.
+
+        :param item: the item to get a tile from.
+        :param z: tile layer number (0 is the most zoomed-out).
+        .param x: the X coordinate of the tile (0 is the left side).
+        .param y: the Y coordinate of the tile (0 is the top).
+        :param imageArgs: additional arguments to use when fetching image data.
+        :return: a function that returns the raw image data.
+        """
+        try:
+            x, y, z = int(x), int(y), int(z)
+        except ValueError:
+            raise RestException('x, y, and z must be integers', code=400)
+        if x < 0 or y < 0 or z < 0:
+            raise RestException('x, y, and z must be positive integers',
+                                code=400)
+        try:
+            tileData, tileMime = self.model(
+                'image_item', 'large_image').getTile(
+                    item, x, y, z, **imageArgs)
+        except TileGeneralException as e:
+            raise RestException(e.message, code=404)
+        cherrypy.response.headers['Content-Type'] = tileMime
+        return lambda: tileData
+
+    @describeRoute(
         Description('Get a large image tile.')
-        .param('itemId', 'The ID of the item or "test".', paramType='path')
+        .param('itemId', 'The ID of the item.', paramType='path')
         .param('z', 'The layer number of the tile (0 is the most zoomed-out '
                'layer).', paramType='path')
         .param('x', 'The X coordinate of the tile (0 is the left side).',
@@ -141,33 +180,27 @@ class TilesItemResource(Item):
     )
     @access.cookie
     @access.public
-    def getTile(self, itemId, z, x, y, params):
-        try:
-            x, y, z = int(x), int(y), int(z)
-        except ValueError:
-            raise RestException('x, y, and z must be integers', code=400)
-        if x < 0 or y < 0 or z < 0:
-            raise RestException('x, y, and z must be positive integers',
-                                code=400)
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getTile(self, item, z, x, y, params):
+        # TODO: cache the user / item loading in the 'loadmodel' decorator
+        # TODO: parse params?
+        return self._getTile(item, z, x, y, params)
 
-        if itemId == 'test':
-            item = 'test'
-            imageArgs = self._parseTestParams(params)
-        else:
-            # TODO: cache the user / item loading too
-            item = self.model('item').load(
-                id=itemId, level=AccessType.READ,
-                user=self.getCurrentUser(), exc=True)
-            imageArgs = params
-
-        try:
-            tileData, tileMime = self.model(
-                'image_item', 'large_image').getTile(
-                    item, x, y, z, **imageArgs)
-        except TileGeneralException as e:
-            raise RestException(e.message, code=404)
-        cherrypy.response.headers['Content-Type'] = tileMime
-        return lambda: tileData
+    @describeRoute(
+        Description('Get a test large image tile.')
+        .param('z', 'The layer number of the tile (0 is the most zoomed-out '
+               'layer).', paramType='path')
+        .param('x', 'The X coordinate of the tile (0 is the left side).',
+               paramType='path')
+        .param('y', 'The Y coordinate of the tile (0 is the top).',
+               paramType='path')
+    )
+    @access.cookie
+    @access.public
+    def getTestTile(self, z, x, y, params):
+        item = {'largeImage': {'sourceName': 'test'}}
+        imageArgs = self._parseTestParams(params)
+        return self._getTile(item, z, x, y, imageArgs)
 
     @describeRoute(
         Description('Remove a large image from this item.')

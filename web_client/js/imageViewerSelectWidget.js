@@ -26,9 +26,7 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
     },
 
     initialize: function (settings) {
-        this.itemId = settings.imageModel.get('largeImage').fileId === 'test'
-            ? 'test'
-            : settings.imageModel.id;
+        this.itemId = settings.imageModel.id;
         this.currentViewer = null;
         this.viewers = [
             {
