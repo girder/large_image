@@ -807,3 +807,17 @@ class LargeImageTilesTest(base.TestCase):
         (width, height) = struct.unpack('!LL', image[16:24])
         self.assertEqual(width, 1000)
         self.assertEqual(height, 750)
+
+    def testSettings(self):
+        from girder.plugins.large_image import constants
+
+        for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+                    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER):
+            self.model('setting').set(key, 'false')
+            self.assertFalse(self.model('setting').get(key))
+            self.model('setting').set(key, 'not a false value')
+            self.assertTrue(self.model('setting').get(key))
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
+        self.assertEqual(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER), 'geojs')
