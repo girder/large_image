@@ -286,7 +286,7 @@ class TilesItemResource(Item):
         .param('regionHeight', 'The height of the region to return.',
                required=False, dataType='float')
         .param('units', 'Units used for left, top, right, bottom, '
-               'sourceWidth, and sourceHeight.  Note that output width and '
+               'regionWidth, and regionHeight.  Note that output width and '
                'height are always in pixels.', required=False,
                enum=['pixels', 'fraction'], default='pixels')
         .param('width', 'The maximum width of the output image in pixels.',
