@@ -55,6 +55,8 @@ def validateSettings(event):
 
     if key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
                constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER):
+        if str(val).lower() not in ('false', 'true', ''):
+            return
         val = (str(val).lower() != 'false')
     elif key == constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER:
         val = str(val).strip()
