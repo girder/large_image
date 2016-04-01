@@ -807,3 +807,23 @@ class LargeImageTilesTest(base.TestCase):
         (width, height) = struct.unpack('!LL', image[16:24])
         self.assertEqual(width, 1000)
         self.assertEqual(height, 750)
+
+    def testSettings(self):
+        from girder.plugins.large_image import constants
+        from girder.models.model_base import ValidationException
+
+        for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+                    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER):
+            self.model('setting').set(key, 'false')
+            self.assertFalse(self.model('setting').get(key))
+            self.model('setting').set(key, 'true')
+            self.assertTrue(self.model('setting').get(key))
+            try:
+                self.model('setting').set(key, 'not valid')
+                self.assertTrue(False)
+            except ValidationException as exc:
+                self.assertIn('Invalid setting', exc.args[0])
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
+        self.assertEqual(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER), 'geojs')
