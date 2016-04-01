@@ -300,7 +300,9 @@ class TileSource(object):
         # still often inaccessible.
         image = PIL.Image.frombuffer(
             mode, (regionWidth, regionHeight),
-            '\x00' * (regionWidth * regionHeight * 4), 'raw', 'RGBA', 0, 1)
+            # PIL will reallocate buffers that aren't in 'raw', RGBA, 0, 1.
+            # See PIL documentation and code for more details.
+            b'\x00' * (regionWidth * regionHeight * 4), 'raw', 'RGBA', 0, 1)
         for x in range(xmin, xmax):
             for y in range(ymin, ymax):
                 tileData = self.getTile(
