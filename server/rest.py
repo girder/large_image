@@ -27,6 +27,8 @@ from girder.models.model_base import AccessType
 
 from .models import TileGeneralException
 
+from . import constants
+
 
 class TilesItemResource(Item):
 
@@ -48,6 +50,9 @@ class TilesItemResource(Item):
         apiRoot.item.route('GET', ('test', 'tiles'), self.getTestTilesInfo)
         apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTestTile)
+        # This is added to the system route
+        apiRoot.system.route('GET', ('setting', 'large_image'),
+                             self.getPublicSettings)
 
     @describeRoute(
         Description('Create a large image for this item.')
@@ -332,3 +337,15 @@ class TilesItemResource(Item):
             raise RestException('Value Error: %s' % e.message)
         cherrypy.response.headers['Content-Type'] = regionMime
         return lambda: regionData
+
+    @describeRoute(
+        Description('Get public settings for large image display.')
+    )
+    @access.public
+    def getPublicSettings(self, params):
+        keys = [
+            constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+            constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER,
+        ]
+        return {k: self.model('setting').get(k) for k in keys}

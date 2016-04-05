@@ -111,14 +111,7 @@ girder.views.largeImageConfig = girder.View.extend({
         if (!girder.views.largeImageConfig.settings) {
             girder.restRequest({
                 type: 'GET',
-                path: 'system/setting',
-                data: {
-                    list: JSON.stringify([
-                        'large_image.show_thumbnails',
-                        'large_image.show_viewer',
-                        'large_image.default_viewer'
-                    ])
-                }
+                path: 'system/setting/large_image'
             }).done(function (resp) {
                 girder.views.largeImageConfig.settings = resp;
                 if (callback) {

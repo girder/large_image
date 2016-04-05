@@ -827,3 +827,14 @@ class LargeImageTilesTest(base.TestCase):
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
         self.assertEqual(self.model('setting').get(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER), 'geojs')
+        # Test the system/setting/large_image end point
+        resp = self.request(path='/system/setting/large_image', user=None)
+        self.assertStatusOk(resp)
+        settings = resp.json
+        # The values were set earlier
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER], 'geojs')
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER], True)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS], True)
