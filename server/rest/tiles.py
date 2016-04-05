@@ -25,9 +25,9 @@ from girder.api.describe import describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, RestException
 from girder.models.model_base import AccessType
 
-from .models import TileGeneralException
+from ..models import TileGeneralException
 
-from . import constants
+from .. import constants
 
 
 class TilesItemResource(Item):
