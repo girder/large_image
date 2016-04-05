@@ -20,14 +20,16 @@
 import base64
 import ctypes
 import os
-
 import six
+
+
 try:
     from libtiff import libtiff_ctypes
 except ImportError:
-    # TODO: change print to use logger
-    print 'Error: Could not import libtiff'
-    # re-raise it for now, but maybe do something else in the future
+    import girder
+    from girder.constants import TerminalColor
+    print(TerminalColor.error('Error: Could not import libtiff'))
+    girder.logger.exception('Error: Could not import libtiff')
     raise
 
 from .cache import instanceLruCache

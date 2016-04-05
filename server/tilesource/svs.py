@@ -19,7 +19,6 @@
 
 import math
 import six
-import PIL
 
 from girder import logger
 from six import BytesIO
@@ -27,8 +26,11 @@ from six.moves import range
 
 try:
     import openslide
+    import PIL
 except ImportError:
-    logger.warning('Could not import openslide')
+    from girder.constants import TerminalColor
+    print(TerminalColor.error('Error: Could not import openslide'))
+    logger.exception('Error: Could not import openslide')
     raise
 
 from .base import GirderTileSource, TileSourceException

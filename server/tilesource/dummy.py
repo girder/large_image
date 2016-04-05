@@ -17,7 +17,7 @@
 #  limitations under the License.
 ###############################################################################
 
-from .base import TileSource
+from .base import TileSource, TileSourceException
 
 
 class DummyTileSource(TileSource):
@@ -29,6 +29,9 @@ class DummyTileSource(TileSource):
         self.levels = 0
         self.sizeX = 0
         self.sizeY = 0
+        if not kwargs.get('allowDummy'):
+            raise TileSourceException(
+                'DummyTileSource is not a real tile source')
 
     def getTile(self, x, y, z, **kwargs):
         return ''
