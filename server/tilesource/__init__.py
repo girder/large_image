@@ -20,21 +20,42 @@
 # Deal with a bug where PEP257 crashes when parsing __all__
 # flake8: noqa
 
+import collections
+from girder.constants import TerminalColor
+from girder import logger
+
 from .base import TileSource, TileSourceException, \
     TileSourceAssetstoreException
 
-try:
-    from .test import TestTileSource
-except ImportError:
-    from .dummy import DummyTileSource as TestTileSource
-try:
-    from .tiff import TiffGirderTileSource
-except ImportError:
-    from .dummy import DummyTileSource as TiffGirderTileSource
-try:
-    from .svs import SVSGirderTileSource
-except ImportError:
-    from .dummy import DummyTileSource as SVSGirderTileSource
+AvailableTileSources = collections.OrderedDict()
+all = [TileSource, TileSourceException, TileSourceAssetstoreException,
+       AvailableTileSources]
 
-__all__ = (TileSource, TileSourceException, TileSourceAssetstoreException,
-           TestTileSource, TiffGirderTileSource, SVSGirderTileSource)
+sourceList = [
+    {'moduleName': '.tiff', 'className': 'TiffGirderTileSource'},
+    {'moduleName': '.svs', 'className': 'SVSGirderTileSource'},
+    {'moduleName': '.test', 'className': 'TestTileSource'},
+    {'moduleName': '.dummy', 'className': 'DummyTileSource'},
+]
+for source in sourceList:
+    try:
+        # For each of our sources, try to import the named class from the
+        # source module
+        className = source['className']
+        sourceModule = __import__(
+            source['moduleName'].lstrip('.'), globals(), locals(), [className],
+            len(source['moduleName']) - len(source['moduleName'].lstrip('.')))
+        sourceClass = getattr(sourceModule, className)
+        # Add the source class to the locals name so that it can be reached by
+        # importing the tilesource module
+        locals().update({className: sourceClass})
+        # add it to our list of exports
+        all.append(sourceClass)
+        # add it to our dictionary of available sources if it has a name
+        if getattr(sourceClass, 'name', None):
+            AvailableTileSources[sourceClass.name] = sourceClass
+    except ImportError:
+        print(TerminalColor.error('Error: Could not import %s' % className))
+        logger.exception('Error: Could not import %s' % className)
+
+__all__ = all

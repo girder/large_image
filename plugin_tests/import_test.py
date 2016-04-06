@@ -60,4 +60,5 @@ class LargeImageTilesTest(base.TestCase):
             self.assertTrue(False)
         except ImportError as exc:
             self.assertIn('No module named openslide', exc.args[0])
+        sys.modules['girder.plugins.large_image.tilesource.test'] = None
         reload_module(girder.plugins.large_image.tilesource)

@@ -17,7 +17,6 @@
 #  limitations under the License.
 ###############################################################################
 
-import collections
 import os
 
 from girder.models.model_base import ValidationException
@@ -26,18 +25,13 @@ from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 
 from .base import TileGeneralException
-from ..tilesource import TestTileSource, TiffGirderTileSource, \
-    SVSGirderTileSource, TileSourceException, TileSourceAssetstoreException
+from ..tilesource import AvailableTileSources, TestTileSource, \
+    TileSourceException
 
 
 class ImageItem(Item):
     # We try these sources in this order.  The first entry is the fallback for
     # items that antedate there being multiple options.
-    AvailableSources = collections.OrderedDict([
-        ('tiff', TiffGirderTileSource),
-        ('svs', SVSGirderTileSource),
-    ])
-
     def initialize(self):
         super(ImageItem, self).initialize()
 
@@ -59,16 +53,11 @@ class ImageItem(Item):
 
         item['largeImage']['fileId'] = fileObj['_id']
         job = None
-        for sourceName in self.AvailableSources:
-            try:
-                self.AvailableSources[sourceName](item)
+        for sourceName in AvailableTileSources:
+            if AvailableTileSources[sourceName].canRead(item):
                 item['largeImage']['sourceName'] = sourceName
                 break
-            except TileSourceAssetstoreException:
-                raise
-            except TileSourceException:
-                continue  # We want to try the next source
-        else:
+        if 'sourceName' not in item['largeImage']:
             # No source was successful
             del item['largeImage']['fileId']
             job = self._createLargeImageJob(item, fileObj, user, token)
@@ -177,7 +166,7 @@ class ImageItem(Item):
         if sourceName == 'test':
             tileSource = TestTileSource(**kwargs)
         else:
-            tileSource = cls.AvailableSources[sourceName](item, **kwargs)
+            tileSource = AvailableTileSources[sourceName](item, **kwargs)
         return tileSource
 
     def getMetadata(self, item, **kwargs):

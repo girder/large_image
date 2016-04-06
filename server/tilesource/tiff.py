@@ -40,6 +40,7 @@ class TiffGirderTileSource(GirderTileSource):
     """
     cacheMaxSize = 2
     cacheTimeout = 60
+    name = 'tiff'
 
     @staticmethod
     def cacheKeyFunc(args, kwargs):

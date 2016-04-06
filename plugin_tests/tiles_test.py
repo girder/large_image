@@ -539,13 +539,7 @@ class LargeImageTilesTest(base.TestCase):
         # all of the requirements installed, so just check that it exists and
         # will return appropriate values.
         from girder.plugins.large_image.tilesource.dummy import DummyTileSource
-        from girder.plugins.large_image.tilesource import TileSourceException
-        try:
-            dummy = DummyTileSource()
-            self.assertTrue(False)
-        except TileSourceException as exc:
-            self.assertIn('not a real tile source', exc.args[0])
-        dummy = DummyTileSource(allowDummy=True)
+        dummy = DummyTileSource()
         self.assertEqual(dummy.getTile(0, 0, 0), '')
         tileMetadata = dummy.getMetadata()
         self.assertEqual(tileMetadata['tileWidth'], 0)

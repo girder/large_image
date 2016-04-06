@@ -22,15 +22,7 @@ import ctypes
 import os
 import six
 
-
-try:
-    from libtiff import libtiff_ctypes
-except ImportError:
-    import girder
-    from girder.constants import TerminalColor
-    print(TerminalColor.error('Error: Could not import libtiff'))
-    girder.logger.exception('Error: Could not import libtiff')
-    raise
+from libtiff import libtiff_ctypes
 
 from .cache import instanceLruCache
 
