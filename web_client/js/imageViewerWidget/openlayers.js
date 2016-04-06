@@ -3,10 +3,10 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
         girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $('head').prepend(
-            $('<link rel="stylesheet" href="http://openlayers.org/en/v3.10.1/css/ol.css">'));
+            $('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.css">'));
 
         $.getScript(
-            'http://openlayers.org/en/v3.10.1/build/ol.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.js',
             _.bind(function () {
                 this.render();
             }, this)
