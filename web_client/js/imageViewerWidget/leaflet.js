@@ -3,10 +3,10 @@ girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
         girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $('head').prepend(
-            $('<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css">'));
+            $('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css">'));
 
         $.getScript(
-            'http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
             _.bind(function () {
                 this.render();
             }, this)

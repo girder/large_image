@@ -3,7 +3,7 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
         girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $('head').prepend(
-            $('<link rel="stylesheet" href="http://beta.slide-atlas.org/webgl-viewer/static/css/sa.css">'));
+            $('<link rel="stylesheet" href="https://beta.slide-atlas.org/webgl-viewer/static/css/sa.css">'));
 
         $.getScript(
             'https://beta.slide-atlas.org/webgl-viewer/static/sa.max.js',
