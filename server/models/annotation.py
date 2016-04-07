@@ -19,12 +19,303 @@
 
 import datetime
 import enum
+import jsonschema
 import six
-
-from bson import ObjectId
 
 from girder.constants import AccessType
 from girder.models.model_base import Model, ValidationException
+
+
+class AnnotationSchema:
+    coordSchema = {
+        'type': 'array',
+        # TODO: validate that z==0 for now
+        'items': {
+            'type': 'number'
+        },
+        'minItems': 3,
+        'maxItems': 3,
+        'name': 'Coordinate',
+        # TODO: define origin for 3D images
+        'description': 'An X, Y, Z coordinate tuple, in base layer pixel'
+                       ' coordinates, where the origin is the upper-left.'
+    }
+
+    colorSchema = {
+        'type': 'string',
+        # We accept colors of the form
+        #   #aabbcc                 six digit RRGGBB hex
+        #   #abc                    three digit RGB hex
+        #   rgb(255, 255, 255)      rgb decimal triplet
+        #   rgba(255, 255, 255, 1)  rgba quad with RGB in the range [0-255] and
+        #                           alpha [0-1]
+        # TODO: make rgb and rgba spec validate that rgb is [0-255] and a is
+        # [0-1], rather than just checking if they are digits and such.
+        'pattern': '^(#[0-9a-fA-F]{3,6}|rgb\(\d+,\s*\d+,\s*\d+\)|'
+                   'rgba\(\d+,\s*\d+,\s*\d+,\s*(\d?\.|)\d+\))$'
+    }
+
+    baseShapeSchema = {
+        '$schema': 'http://json-schema.org/schema#',
+        'id': '/girder/plugins/large_image/models/base_shape',
+        'type': 'object',
+        'properties': {
+            'type': {'type': 'string'},
+            'label': {
+                'type': 'object',
+                'properties': {
+                    'value': {'type': 'string'},
+                    'visability': {
+                        'type': 'string',
+                        # TODO: change to True, False, None?
+                        'enum': ['hidden', 'always', 'onhover']
+                    },
+                    'fontSize': {
+                        'type': 'number',
+                        'minimum': 0,
+                        'exclusiveMinimum': True,
+                    },
+                    'color': colorSchema,
+                },
+                'required': ['value'],
+                'additionalProperties': False
+            },
+            'lineColor': colorSchema,
+            'lineWidth': {
+                'type': 'number',
+                'minimum': 0
+            }
+        },
+        'required': ['type'],
+        'additionalProperties': True
+    }
+    baseShapePatternProperties = {
+        '^%s$' % properyName: {}
+        for properyName in six.viewkeys(baseShapeSchema['properties'])
+        if properyName != 'type'
+    }
+
+    pointShapeSchema = {
+        'allOf': [
+            baseShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['point']
+                    },
+                    'center': coordSchema
+                },
+                'required': ['type', 'center'],
+                'patternProperties': baseShapePatternProperties,
+                'additionalProperties': False
+            }
+        ]
+    }
+
+    arrowShapeSchema = {
+        'allOf': [
+            baseShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['arrow']
+                    },
+                    'points': {
+                        'type': 'array',
+                        'items': coordSchema,
+                        'minItems': 2,
+                        'maxItems': 2,
+                    },
+                    'fillColor': colorSchema
+                },
+                'description': 'The first point is the head of the arrow',
+                'required': ['type', 'points'],
+                'patternProperties': baseShapePatternProperties,
+                'additionalProperties': False
+            }
+        ]
+    }
+
+    circleShapeSchema = {
+        'allOf': [
+            baseShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['circle']
+                    },
+                    'center': coordSchema,
+                    'radius': {
+                        'type': 'number',
+                        'minimum': 0
+                    },
+                    'fillColor': colorSchema
+                },
+                'required': ['type', 'center', 'radius'],
+                'patternProperties': baseShapePatternProperties,
+                'additionalProperties': False
+            }
+        ]
+    }
+
+    polylineShapeSchema = {
+        'allOf': [
+            baseShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['polyline']
+                    },
+                    'points': {
+                        'type': 'array',
+                        'items': coordSchema,
+                        'minItems': 2,
+                    },
+                    'fillColor': colorSchema,
+                    'closed': {
+                        'type': 'boolean',
+                        'description': 'polyline is open if closed flag is '
+                                       'not specified'
+                    },
+                },
+                'required': ['type', 'points'],
+                'patternProperties': baseShapePatternProperties,
+                'additionalProperties': False
+            }
+        ]
+    }
+
+    baseRectangleShapeSchema = {
+        'allOf': [
+            baseShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {'type': 'string'},
+                    'center': coordSchema,
+                    'width': {
+                        'type': 'number',
+                        'minimum': 0
+                    },
+                    'height': {
+                        'type': 'number',
+                        'minimum': 0
+                    },
+                    'rotation': {
+                        'type': 'number',
+                        'description': 'radians counterclockwise around normal',
+                    },
+                    'normal': coordSchema,
+                    'fillColor': colorSchema
+                },
+                'decription': 'normal is the positive z-axis unless otherwise '
+                              'specified',
+                'required': ['type', 'center', 'width', 'height', 'rotation'],
+                # 'patternProperties': baseShapePatternProperties,
+                'additionalProperties': True,
+            }
+        ]
+    }
+    baseRectangleShapePatternProperties = {
+        '^%s$' % properyName: {} for properyName in six.viewkeys(
+            baseRectangleShapeSchema['allOf'][1]['properties'])
+        if properyName != 'type'
+    }
+    baseRectangleShapePatternProperties.update(baseShapePatternProperties)
+    rectangleShapeSchema = {
+        'allOf': [
+            baseRectangleShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['rectangle']
+                    },
+                },
+                'required': ['type'],
+                'patternProperties': baseRectangleShapePatternProperties,
+                'additionalProperties': False
+            }
+        ]
+    }
+    rectangleGridShapeSchema = {
+        'allOf': [
+            baseRectangleShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['rectanglegrid']
+                    },
+                    'widthSubdivisions': {
+                        'type': 'integer',
+                        'minimum': 1
+                    },
+                    'heightSubdivisions': {
+                        'type': 'integer',
+                        'minimum': 1
+                    },
+                },
+                'required': ['type', 'widthSubdivisions', 'heightSubdivisions'],
+                'patternProperties': baseRectangleShapePatternProperties,
+                'additionalProperties': False,
+            }
+        ]
+    }
+
+    annotationSchema = {
+        '$schema': 'http://json-schema.org/schema#',
+        'id': '/girder/plugins/large_image/models/annotation',
+        'type': 'object',
+        'properties': {
+            'name': {
+                'type': 'string',
+                # TODO: Disallow empty?
+                'minLength': 1,
+            },
+            'description': {'type': 'string'},
+            'attributes': {
+                'type': 'object',
+                'additionalProperties': True,
+                'title': 'Image Attributes',
+                'description': 'Subjective things that apply to the entire '
+                               'image.'
+            },
+            'elements': {
+                'type': 'array',
+                'items': {
+                    # Shape subtypes are mutually exclusive, so for
+                    #  efficiency. don't use 'oneOf'
+                    'anyOf': [
+                        # If we include the baseShapeSchema, then shapes that
+                        # are as-yet invented can be included.
+                        # baseShapeSchema,
+                        arrowShapeSchema,
+                        circleShapeSchema,
+                        pointShapeSchema,
+                        polylineShapeSchema,
+                        rectangleShapeSchema,
+                        rectangleGridShapeSchema,
+                    ]
+                },
+                'uniqueItems': True,
+                'title': 'Image Markup',
+                'description': 'Subjective things that apply to a '
+                               'spatial region.'
+            }
+        },
+        'additionalProperties': False
+    }
 
 
 class Annotation(Model):
@@ -42,265 +333,39 @@ class Annotation(Model):
 
     def initialize(self):
         self.name = 'annotation'
-        # self.ensureIndices(['imageId', 'created'])
+        # self.ensureIndices(['itemId', 'created'])
 
         self.exposeFields(AccessType.READ, (
-            'imageId',
-            'skill',
+            'itemId',
             'creatorId',
-            'startTime'
-            'stopTime'
-            'created'
+            'created',
+            'updated',
+            'updatedId',
+            'annotation'
+            # 'skill',
+            # 'startTime'
+            # 'stopTime'
         ))
         # events.bind('model.item.remove_with_kwargs',
         #             'isic_archive.gc_segmentation',
         #             self._onDeleteItem)
 
-    def createAnnotation(self, image, creator):
-
-        annotation = self.save({
-            'imageId': image['_id'],
+    def createAnnotation(self, item, creator, annotation):
+        now = datetime.datetime.utcnow()
+        doc = {
+            'itemId': item['_id'],
             'creatorId': creator['_id'],
-            'created': datetime.datetime.utcnow()
-        })
-
-        return annotation
+            'created': now,
+            'updatedId': creator['_id'],
+            'updated': now,
+            'annotation': annotation,
+        }
+        return self.save(doc)
 
     def validate(self, doc):
-
-        coordSchema = {
-            'type': 'array',
-            # TODO: validate that z==0 for now
-            'items': {
-                'type': 'integer',
-                'minimum': 0,
-            },
-            'minItems': 3,
-            'maxItems': 3,
-            'name': 'Coordinate',
-            # TODO: define origin for 3D images
-            'description': 'An X, Y, Z coordinate tuple, in base layer pixel'
-                           ' coordinates, where the origin is the upper-left.'
-        }
-
-        colorSchema = {
-            'type': 'string',
-            'pattern': '^#[0-9a-fA-F]{6}$'
-        }
-
-        baseShapeSchema = {
-            '$schema': 'http://json-schema.org/schema#',
-            'id': '/girder/plugins/large_image/models/base_shape',
-            'type': 'object',
-            'properties': {
-                '_id': {'type': ObjectId},
-                'type': {'type': 'string'},
-                'label': {
-                    'type': 'object',
-                    'properties': {
-                        'value': {'type': 'string'},
-                        'visability': {
-                            'type': 'string',
-                            # TODO: change to True, False, None?
-                            'enum': ['hidden', 'always', 'onhover']
-                        },
-                        'fontSize': {
-                            'type': 'integer',
-                            'minimum': 0
-                        },
-                    },
-                    'required': ['value'],
-                    'additionalProperties': False
-                },
-                'lineColor': colorSchema,
-                'lineWidth': {
-                    'type': 'integer',
-                    'minimum': 0
-                },
-                'opacity': {
-                    'type': 'number',
-                    'minimum': 0.0,
-                    'maximum': 1.0
-                }
-            },
-            'required': ['_id', 'type'],
-            'additionalProperties': True
-        }
-        baseShapePatternProperties = {
-            '^%s$' % properyName: {}
-            for properyName in six.viewkeys(baseShapeSchema['properties'])
-            if properyName != 'type'
-        }
-
-        pointShapeSchema = {
-            'allOf': [
-                baseShapeSchema,
-                {
-                    'type': 'object',
-                    'properties': {
-                        'type': {
-                            'type': 'string',
-                            'enum': ['Point']
-                        },
-                        'center': coordSchema
-                    },
-                    'required': ['type', 'center'],
-                    'patternProperties': baseShapePatternProperties,
-                    'additionalProperties': False
-                }
-            ]
-        }
-
-        arrowShapeSchema = {
-            'allOf': [
-                baseShapeSchema,
-                {
-                    'type': 'object',
-                    'properties': {
-                        'type': {
-                            'type': 'string',
-                            'enum': ['Arrow']
-                        },
-                        'points': {
-                            'type': 'array',
-                            'items': coordSchema,
-                            'minItems': 2,
-                            'maxItems': 2,
-                        },
-                        'fillColor': colorSchema
-                    },
-                    'required': ['type', 'points'],
-                    'patternProperties': baseShapePatternProperties,
-                    'additionalProperties': False
-                }
-            ]
-        }
-
-        circleShapeSchema = {
-            'allOf': [
-                baseShapeSchema,
-                {
-                    'type': 'object',
-                    'properties': {
-                        'type': {
-                            'type': 'string',
-                            'enum': ['Circle']
-                        },
-                        'center': coordSchema,
-                        'radius': {
-                            'type': 'integer',
-                            'minimum': 0
-                        },
-                        'fillColor': colorSchema
-                    },
-                    'required': ['type', 'center', 'radius'],
-                    'patternProperties': baseShapePatternProperties,
-                    'additionalProperties': False
-                }
-            ]
-        }
-
-        polylineShapeSchema = {
-            'allOf': [
-                baseShapeSchema,
-                {
-                    'type': 'object',
-                    'properties': {
-                        'type': {
-                            'type': 'string',
-                            'enum': ['Polyline']
-                        },
-                        'points': {
-                            'type': 'array',
-                            'items': coordSchema,
-                            'minItems': 2,
-                        },
-                        'fillColor': colorSchema
-                    },
-                    'required': ['type', 'points'],
-                    'patternProperties': baseShapePatternProperties,
-                    'additionalProperties': False
-                }
-            ]
-        }
-
-        rectangleShapeSchema = {
-            'allOf': [
-                baseShapeSchema,
-                {
-                    'type': 'object',
-                    'properties': {
-                        'type': {
-                            'type': 'string',
-                            'enum': ['Rectangle']
-                        },
-                        'points': {
-                            'type': 'array',
-                            'items': coordSchema,
-                            # TODO: 4 vs 5?
-                            # TODO: validate first == last
-                            'minItems': 5,
-                            'maxItems': 5
-                        },
-                        'fillColor': colorSchema
-                    },
-                    'required': ['type', 'points'],
-                    'patternProperties': baseShapePatternProperties,
-                    'additionalProperties': False
-                }
-            ]
-        }
-
-        annotationSchema = {
-            '$schema': 'http://json-schema.org/schema#',
-            'id': '/girder/plugins/large_image/models/annotation',
-            'type': 'object',
-            'properties': {
-                '_id': {'type': ObjectId},
-                'name': {
-                    'type': 'string',
-                    # TODO: Disallow empty?
-                    'minLength': 1,
-                },
-                'description': {'type': 'string'},
-                'imageId': {'type': ObjectId},
-                'creatorId': {'type': ObjectId},
-                'created': {'type': datetime.datetime},
-                # 'modifiedTime': {'type': datetime.datetime},
-                'attributes': {
-                    'type': 'object',
-                    'additionalProperties': True,
-                    'title': 'Image Attributes',
-                    'description': 'Subjective things that apply to the ' +
-                                   'entire image.'
-                },
-                'markup': {
-                    'type': 'array',
-                    'items': {
-                        # Shape subtypes are mutually exclusive, so for
-                        #  efficiency. don't use 'oneOf'
-                        'anyOf': [
-                            baseShapeSchema,
-                        ]
-                    },
-                    'uniqueItems': True,
-                    'title': 'Image Markup',
-                    'description': 'Subjective things that apply to a ' +
-                                   'spatial region.'
-                }
-            },
-            'required': ['_id', 'name', 'description', 'imageId', 'creatorId',
-                         'created'],
-            'additionalProperties': False
-        }
-        # remove warnings for now
-        _ = circleShapeSchema
-        _ = pointShapeSchema
-        _ = arrowShapeSchema
-        _ = polylineShapeSchema
-        _ = rectangleShapeSchema
-        _ = annotationSchema
-        _ = _
-
-        raise ValidationException('')
+        try:
+            jsonschema.validate(doc.get('annotation'),
+                                AnnotationSchema.annotationSchema)
+        except jsonschema.ValidationError as exp:
+            raise ValidationException(exp)
         return doc
