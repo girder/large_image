@@ -18,24 +18,18 @@
 ###############################################################################
 
 import colorsys
-
-from girder import logger
-
-try:
-    import PIL
-    from PIL import Image, ImageDraw, ImageFont
-    if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
-        raise ImportError('Pillow v3.0 or later is required')
-except ImportError:
-    logger.info('Error: Could not import PIL')
-    # re-raise it for now, but maybe do something else in the future
-    raise
 from six import BytesIO
-
 from .base import TileSource, TileSourceException
+
+import PIL
+from PIL import Image, ImageDraw, ImageFont
+if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
+    raise ImportError('Pillow v3.0 or later is required')
 
 
 class TestTileSource(TileSource):
+    name = 'test'
+
     def __init__(self, minLevel=0, maxLevel=9,
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
                  fractal=False, encoding='PNG'):

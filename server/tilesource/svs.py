@@ -19,17 +19,12 @@
 
 import math
 import six
-import PIL
 
-from girder import logger
 from six import BytesIO
 from six.moves import range
 
-try:
-    import openslide
-except ImportError:
-    logger.warning('Could not import openslide')
-    raise
+import openslide
+import PIL
 
 from .base import GirderTileSource, TileSourceException
 from .cache import LruCacheMetaclass
@@ -42,6 +37,7 @@ class SVSGirderTileSource(GirderTileSource):
     """
     cacheMaxSize = 2
     cacheTimeout = 60
+    name = 'svs'
 
     @staticmethod
     def cacheKeyFunc(args, kwargs):

@@ -20,15 +20,9 @@
 import base64
 import ctypes
 import os
-
 import six
-try:
-    from libtiff import libtiff_ctypes
-except ImportError:
-    # TODO: change print to use logger
-    print 'Error: Could not import libtiff'
-    # re-raise it for now, but maybe do something else in the future
-    raise
+
+from libtiff import libtiff_ctypes
 
 from .cache import instanceLruCache
 

@@ -538,8 +538,8 @@ class LargeImageTilesTest(base.TestCase):
         # We can't actually load the dummy source via the endpoints if we have
         # all of the requirements installed, so just check that it exists and
         # will return appropriate values.
-        import girder.plugins.large_image.tilesource.dummy
-        dummy = girder.plugins.large_image.tilesource.dummy.DummyTileSource()
+        from girder.plugins.large_image.tilesource.dummy import DummyTileSource
+        dummy = DummyTileSource()
         self.assertEqual(dummy.getTile(0, 0, 0), '')
         tileMetadata = dummy.getMetadata()
         self.assertEqual(tileMetadata['tileWidth'], 0)

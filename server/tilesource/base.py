@@ -51,6 +51,7 @@ class TileSource(object):
         'JPEG': 'image/jpeg',
         'PNG': 'image/png'
     }
+    name = None
 
     def __init__(self):
         self.tileWidth = None
@@ -158,6 +159,16 @@ class TileSource(object):
         bottom = min(metadata['sizeY'], max(top, int(round(bottom))))
 
         return left, top, right, bottom
+
+    @classmethod
+    def canRead(cls, *args, **kwargs):
+        """
+        Check if we can read the input.  This takes the same parameters as
+        __init__.
+
+        :returns: True if this class can read the input.  False if it cannot.
+        """
+        return False
 
     def getMetadata(self):
         return {
@@ -360,3 +371,17 @@ class GirderTileSource(TileSource):
         except (KeyError, ValidationException, TileSourceException) as e:
             raise TileSourceException(
                 'No large image file in this item: %s' % e.message)
+
+    @classmethod
+    def canRead(cls, item, *args, **kwargs):
+        """
+        Check if we can read the input.  This takes the same parameters as
+        __init__.
+
+        :returns: True if this class can read the input.  False if it cannot.
+        """
+        try:
+            cls(item, *args, **kwargs)
+            return True
+        except TileSourceException:
+            return False
