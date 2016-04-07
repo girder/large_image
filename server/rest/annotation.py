@@ -46,15 +46,20 @@ class AnnotationResource(Resource):
         return []
 
     @describeRoute(
-        Description('Get an annotation.')
-        .param('itemId', 'The ID of the annotation.', paramType='path')
+        Description('Get an annotationi by id.')
+        .param('id', 'The ID of the annotation.', paramType='path')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the annotation.', 403)
     )
     @access.public
-    def getAnnotation(self, id, params):
-        # ##DWM::
-        return {}
+    @loadmodel(model='annotation', plugin='large_image')
+    @filtermodel(model='annotation', plugin='large_image')
+    def getAnnotation(self, annotation, params):
+        # Ensure that we have read access to the parent item
+        item = self.model('item').load(annotation.get('itemId'), force=True)
+        self.model('item').requireAccess(
+            item, user=self.getCurrentUser(), level=AccessType.READ)
+        return annotation
 
     @describeRoute(
         Description('Create an annotation.')

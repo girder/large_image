@@ -336,6 +336,7 @@ class Annotation(Model):
         # self.ensureIndices(['itemId', 'created'])
 
         self.exposeFields(AccessType.READ, (
+            '_id',
             'itemId',
             'creatorId',
             'created',
