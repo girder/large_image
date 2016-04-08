@@ -72,6 +72,8 @@ def load(info):
 
     ModelImporter.model('item').exposeFields(
         level=AccessType.READ, fields='largeImage')
+    # Ask for the annotation model to make sure it is initialized.
+    ModelImporter.model('annotation', plugin='large_image')
 
     events.bind('data.process', 'large_image', _postUpload)
     events.bind('model.setting.validate', 'large_image', validateSettings)

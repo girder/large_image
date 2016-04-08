@@ -22,6 +22,7 @@ import enum
 import jsonschema
 import six
 
+from girder import events
 from girder.constants import AccessType
 from girder.models.model_base import Model, ValidationException
 
@@ -308,6 +309,9 @@ class AnnotationSchema:
                         rectangleGridShapeSchema,
                     ]
                 },
+                # I don't think we want to enforce this.  I could see it being
+                # valid to have two of the exact same element within an
+                # annotation.
                 'uniqueItems': True,
                 'title': 'Image Markup',
                 'description': 'Subjective things that apply to a '
@@ -321,35 +325,56 @@ class AnnotationSchema:
 class Annotation(Model):
     """
     This model is used to represent an annotation that is associated with an
-    item.  The annotation can contain any number of annotationshapes, which are
-    included because they reference this annoation as a parent.  The annotation
-    acts like these are a native part of it, though they are each stored as
-    independent models to (eventually) permit faster spatial searching.
+    item.  The annotation can contain any number of annotationelements, which
+    are included because they reference this annoation as a parent.  The
+    annotation acts like these are a native part of it, though they are each
+    stored as independent models to (eventually) permit faster spatial
+    searching.
     """
 
     class Skill(enum.Enum):
         NOVICE = 'novice'
         EXPERT = 'expert'
 
+    # This is everything except the annotation field, and is used, in part, to
+    # determine what gets returned in a general find.
+    baseFields = (
+        '_id',
+        'itemId',
+        'creatorId',
+        'created',
+        'updated',
+        'updatedId',
+        # 'skill',
+        # 'startTime'
+        # 'stopTime'
+    )
+
     def initialize(self):
         self.name = 'annotation'
-        # self.ensureIndices(['itemId', 'created'])
+        self.ensureIndices(['itemId', 'created'])
+        self.ensureTextIndex({
+            'annotation.name': 10,
+            'annotation.description': 1,
+        })
 
         self.exposeFields(AccessType.READ, (
-            '_id',
-            'itemId',
-            'creatorId',
-            'created',
-            'updated',
-            'updatedId',
-            'annotation'
-            # 'skill',
-            # 'startTime'
-            # 'stopTime'
-        ))
-        # events.bind('model.item.remove_with_kwargs',
-        #             'isic_archive.gc_segmentation',
-        #             self._onDeleteItem)
+            'annotation',
+        ) + self.baseFields)
+        events.bind('model.item.remove', 'large_image', self._onItemRemove)
+
+    def _onItemRemove(self, event):
+        """
+        When an item is removed, also delete associated annotations.
+
+        :param event: the event with the item information.
+        """
+        item = event.info
+        annotations = self.model('annotation', 'large_image').find({
+            'itemId': item['_id']
+        })
+        for annotation in annotations:
+            self.model('annotation', 'large_image').remove(annotation)
 
     def createAnnotation(self, item, creator, annotation):
         now = datetime.datetime.utcnow()
@@ -362,6 +387,92 @@ class Annotation(Model):
             'annotation': annotation,
         }
         return self.save(doc)
+
+    def load(self, *args, **kwargs):
+        """
+        Load an annotation, adding all of the elements to it.
+
+        :returns: the matching annotation or none.
+        """
+        annotation = super(Annotation, self).load(*args, **kwargs)
+        if annotation is not None:
+            self.model('annotationelement', 'large_image').getElements(
+                annotation)
+        return annotation
+
+    def remove(self, annotation, *args, **kwargs):
+        """
+        When removing an annotation, remove all element associated with it.
+        This overrides the collection delete_one method so that all of the
+        triggers are fired as expectd and cancelling from an event will work
+        as needed.
+
+        :param annotation: the annotation document to remove.
+        """
+        delete_one = self.collection.delete_one
+
+        def deleteElements(query, *args, **kwargs):
+            ret = delete_one(query, *args, **kwargs)
+            self.model('annotationelement', 'large_image').removeElements(
+                annotation)
+            return ret
+
+        self.collection.delete_one = deleteElements
+        result = super(Annotation, self).remove(annotation, *args, **kwargs)
+        self.collection.delete_one = delete_one
+        return result
+
+    def save(self, annotation, *args, **kwargs):
+        """
+        When saving an annotation, override the collection insert_one and
+        replace_one methods so that we don't save the elements with the main
+        annotation.  Still use the super class's save method, os that all of
+        the triggers are fired as expected and cancelling and modifications can
+        be done as needed.
+
+        :param annotation: the annotation document to save.
+        :returns: the saved document.  If it is a new document, the _id has
+                  been added.
+        """
+        replace_one = self.collection.replace_one
+        insert_one = self.collection.insert_one
+
+        def replaceElements(query, doc, *args, **kwargs):
+            elements = doc['annotation'].pop('elements', None)
+            ret = replace_one(query, doc, *args, **kwargs)
+            if elements is not None:
+                doc['annotation']['elements'] = elements
+                self.model('annotationelement', 'large_image').updateElements(
+                    annotation)
+            return ret
+
+        def insertElements(doc, *args, **kwargs):
+            elements = doc['annotation'].pop('elements', None)
+            ret = insert_one(doc, *args, **kwargs)
+            if elements is not None:
+                doc['annotation']['elements'] = elements
+                self.model('annotationelement', 'large_image').updateElements(
+                    annotation)
+            return ret
+
+        self.collection.replace_one = replaceElements
+        self.collection.insert_one = insertElements
+        result = super(Annotation, self).save(annotation, *args, **kwargs)
+        self.collection.replace_one = replace_one
+        self.collection.insert_one = insert_one
+        return result
+
+    def updateAnnotation(self, annotation, updateUser=None):
+        """
+        Update an annotation.
+
+        :param annotation: the annotation document to update.
+        :param updateUser: the user who is creating the update.
+        :returns: the annotation document that was updated.
+        """
+        annotation['updated'] = datetime.datetime.utcnow()
+        annotation['updatedId'] = updateUser['_id']
+        return self.save(annotation)
 
     def validate(self, doc):
         try:
