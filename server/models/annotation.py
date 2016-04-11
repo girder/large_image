@@ -21,6 +21,7 @@ import datetime
 import enum
 import jsonschema
 import six
+from six.moves import range
 
 from girder import events
 from girder.constants import AccessType
@@ -61,6 +62,10 @@ class AnnotationSchema:
         'id': '/girder/plugins/large_image/models/base_shape',
         'type': 'object',
         'properties': {
+            'id': {
+                'type': 'string',
+                'pattern': '^[0-9a-f]{24}$',
+            },
             'type': {'type': 'string'},
             'label': {
                 'type': 'object',
@@ -359,7 +364,7 @@ class Annotation(Model):
         })
 
         self.exposeFields(AccessType.READ, (
-            'annotation',
+            'annotation', '_version',
         ) + self.baseFields)
         events.bind('model.item.remove', 'large_image', self._onItemRemove)
 
@@ -396,8 +401,27 @@ class Annotation(Model):
         """
         annotation = super(Annotation, self).load(*args, **kwargs)
         if annotation is not None:
-            self.model('annotationelement', 'large_image').getElements(
-                annotation)
+            # It is possible that we are trying to read the elements of an
+            # annotation as another thread is updating them.  In this case,
+            # there is a chance, that between when we get the annotation and
+            # ask for the elements, the version will have been updated and the
+            # elements will have gone away.  To work around the lack of
+            # transactions in Mongo, if we don't get any elements, we check if
+            # the version has shifted under us, and, if so, requery.  I've put
+            # an arbitrary retry limit on this to prevent an infinite loop.
+            maxRetries = 3
+            for retry in range(maxRetries):
+                self.model('annotationelement', 'large_image').getElements(
+                    annotation)
+                if (len(annotation.get('annotation', {}).get('elements')) or
+                        retry + 1 == maxRetries):
+                    break
+                recheck = super(Annotation, self).load(*args, **kwargs)
+                if (recheck is None or
+                        annotation.get('_version') == recheck.get('_version')):
+                    break
+                annotation = recheck
+
         return annotation
 
     def remove(self, annotation, *args, **kwargs):
@@ -426,9 +450,15 @@ class Annotation(Model):
         """
         When saving an annotation, override the collection insert_one and
         replace_one methods so that we don't save the elements with the main
-        annotation.  Still use the super class's save method, os that all of
+        annotation.  Still use the super class's save method, so that all of
         the triggers are fired as expected and cancelling and modifications can
         be done as needed.
+
+        Because Mongo doesn't support transactions, a version number is stored
+        with the annotation and with the associated elements.  This is used to
+        add the new elements first, then update the annotation, and delete the
+        old elements.  The allows version integrity if another thread queries
+        the annotation at the same time.
 
         :param annotation: the annotation document to save.
         :returns: the saved document.  If it is a new document, the _id has
@@ -436,23 +466,42 @@ class Annotation(Model):
         """
         replace_one = self.collection.replace_one
         insert_one = self.collection.insert_one
+        version = self.model(
+            'annotationelement', 'large_image').getNextVersionValue()
+        if '_id' not in annotation:
+            oldversion = None
+        else:
+            # We read the old version from the existing record, because we
+            # don't want to trust that the input _version has not been altered
+            # or is present.
+            oldversion = self.collection.find_one(
+                {'_id': annotation['_id']}).get('_version')
+        annotation['_version'] = version
 
         def replaceElements(query, doc, *args, **kwargs):
+            self.model('annotationelement', 'large_image').updateElements(
+                doc)
             elements = doc['annotation'].pop('elements', None)
             ret = replace_one(query, doc, *args, **kwargs)
-            if elements is not None:
+            if elements:
                 doc['annotation']['elements'] = elements
-                self.model('annotationelement', 'large_image').updateElements(
-                    annotation)
+            self.model('annotationelement', 'large_image').removeOldElements(
+                doc, oldversion)
             return ret
 
         def insertElements(doc, *args, **kwargs):
             elements = doc['annotation'].pop('elements', None)
+            # When creating an annotation, there is a window of time where the
+            # elements aren't set (this is unavoidable without database
+            # transactions, as we need the annotation's id to set the
+            # elements).
             ret = insert_one(doc, *args, **kwargs)
             if elements is not None:
                 doc['annotation']['elements'] = elements
                 self.model('annotationelement', 'large_image').updateElements(
-                    annotation)
+                    doc)
+            # If we are inserting, we shouldn't have any old elements, so don't
+            # bother removing them.
             return ret
 
         self.collection.replace_one = replaceElements

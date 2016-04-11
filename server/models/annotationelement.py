@@ -18,6 +18,7 @@
 ##############################################################################
 
 import datetime
+from six.moves import range
 
 from girder.constants import AccessType, SortDir
 from girder.models.model_base import Model  # ##DWM::, ValidationException
@@ -26,10 +27,32 @@ from girder.models.model_base import Model  # ##DWM::, ValidationException
 class Annotationelement(Model):
     def initialize(self):
         self.name = 'annotationelement'
-        self.ensureIndices(['annotationId', 'created'])
+        self.ensureIndices(['annotationId', '_version'])
 
         self.exposeFields(AccessType.READ, (
-            '_id', 'annotationId', 'created', 'element'))
+            '_id', '_version', 'annotationId', 'created', 'element'))
+        self.versionId = None
+
+    def getNextVersionValue(self):
+        """
+        Maintain a version number.  This is a single sequence that can be used
+        to ensure we have the correct set of elements for an annotation.
+
+        :returns: an integer version number that is strictly increasing.
+        """
+        if self.versionId is None:
+            versionObject = self.collection.find_one(
+                {'annotationId': 'version_sequence'})
+            if versionObject is None:
+                self.versionId = self.collection.insert_one(
+                    {'annotationId': 'version_sequence', '_version': 0}
+                ).inserted_id
+            else:
+                self.versionId = versionObject['_id']
+        version = self.collection.find_one_and_update(
+            {'_id': self.versionId},
+            {'$inc': {'_version': 1}})
+        return version['_version']
 
     def getElements(self, annotation):
         """
@@ -38,18 +61,39 @@ class Annotationelement(Model):
 
         :param annotation: the annotation to get elements for.  Modified.
         """
-        elements = self.find({'annotationId': annotation['_id']},
-                             sort=[('_id', SortDir.ASCENDING)])
-        annotation['annotation']['elements'] = [
-            entry['element'] for entry in elements]
+        elementCursor = self.find({'annotationId': annotation['_id'],
+                                   '_version': annotation['_version']},
+                                  sort=[('_id', SortDir.ASCENDING)])
+        annotation['annotation']['elements'] = elements = []
+        for entry in elementCursor:
+            entry['element'].setdefault('id', entry['_id'])
+            elements.append(entry['element'])
 
     def removeElements(self, annotation):
         """
         Remove all elements related to the specified annoation.
+
+        :param annotation: the annotation to remove elements from.
         """
         self.model('annotationelement', 'large_image').removeWithQuery({
             'annotationId': annotation['_id']
         })
+
+    def removeOldElements(self, annotation, oldversion=None):
+        """
+        Remove all elements related to the specified annoation.
+
+        :param annotation: the annotation to remove elements from.
+        :param oldversion: if present, remove versions up to this number.  If
+                           none, remove versions earlier than the version in
+                           the annotation record.
+        """
+        query = {'annotationId': annotation['_id']}
+        if oldversion is None or oldversion >= annotation['_version']:
+            query['_version'] = {'$lt': annotation['_version']}
+        else:
+            query['_version'] = {'$lte': oldversion}
+        self.model('annotationelement', 'large_image').removeWithQuery(query)
 
     def updateElements(self, annotation):
         """
@@ -58,14 +102,15 @@ class Annotationelement(Model):
 
         :param annotation: the annotation to save elements for.  Modified.
         """
-        # TODO: modify or maintain existing elements to reduce database churn
-        self.model('annotationelement', 'large_image').removeWithQuery({
-            'annotationId': annotation['_id']
-        })
         elements = annotation['annotation'].get('elements', [])
-        now = datetime.datetime.utcnow()
-        self.collection.insert_many([{
-            'annotationId': annotation['_id'],
-            'created': now,
-            'element': element
-        } for element in elements])
+        if len(elements):
+            now = datetime.datetime.utcnow()
+            res = self.collection.insert_many([{
+                'annotationId': annotation['_id'],
+                '_version': annotation['_version'],
+                'created': now,
+                'element': element
+            } for element in elements])
+            for pos in range(len(elements)):
+                if 'id' not in elements[pos]:
+                    elements[pos]['id'] = str(res.inserted_ids[pos])
