@@ -104,10 +104,11 @@ class AnnotationResource(Resource):
         try:
             return self.model('annotation', 'large_image').createAnnotation(
                 item, self.getCurrentUser(), self.getBodyJson())
-        except ValidationException:
+        except ValidationException as exc:
             logger.exception('Failed to validate annotation')
             raise RestException(
-                'Validation Error: JSON doesn\'t follow schema.')
+                'Validation Error: JSON doesn\'t follow schema (%s).' % (
+                    exc.message, ))
 
     @describeRoute(
         Description('Update an annotation or move it to a different item.')
@@ -140,10 +141,11 @@ class AnnotationResource(Resource):
         try:
             self.model('annotation', 'large_image').updateAnnotation(
                 annotation, updateUser=user)
-        except ValidationException:
+        except ValidationException as exc:
             logger.exception('Failed to validate annotation')
             raise RestException(
-                'Validation Error: JSON doesn\'t follow schema.')
+                'Validation Error: JSON doesn\'t follow schema (%s).' % (
+                    exc.message, ))
         return annotation
 
     @describeRoute(

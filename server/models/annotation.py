@@ -314,10 +314,8 @@ class AnnotationSchema:
                         rectangleGridShapeSchema,
                     ]
                 },
-                # I don't think we want to enforce this.  I could see it being
-                # valid to have two of the exact same element within an
-                # annotation.
-                'uniqueItems': True,
+                # We want to ensure unique element IDs, if they are set.  If
+                # they are not set, we assign them from Mongo.
                 'title': 'Image Markup',
                 'description': 'Subjective things that apply to a '
                                'spatial region.'
@@ -529,4 +527,8 @@ class Annotation(Model):
                                 AnnotationSchema.annotationSchema)
         except jsonschema.ValidationError as exp:
             raise ValidationException(exp)
+        elementIds = [entry['id'] for entry in
+                      doc['annotation'].get('elements', []) if 'id' in entry]
+        if len(set(elementIds)) != len(elementIds):
+            raise ValidationException('Annotation Element IDs are not unique')
         return doc
