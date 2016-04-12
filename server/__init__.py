@@ -21,7 +21,7 @@ from girder import events
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
-from .rest import TilesItemResource
+from .rest import TilesItemResource, AnnotationResource
 from . import constants
 
 
@@ -68,9 +68,12 @@ def validateSettings(event):
 
 def load(info):
     TilesItemResource(info['apiRoot'])
+    info['apiRoot'].annotation = AnnotationResource()
 
     ModelImporter.model('item').exposeFields(
         level=AccessType.READ, fields='largeImage')
+    # Ask for the annotation model to make sure it is initialized.
+    ModelImporter.model('annotation', plugin='large_image')
 
     events.bind('data.process', 'large_image', _postUpload)
     events.bind('model.setting.validate', 'large_image', validateSettings)

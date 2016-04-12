@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-###############################################################################
+##############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,13 +15,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-###############################################################################
+##############################################################################
 
 # Deal with a bug where PEP257 crashes when parsing __all__
 # flake8: noqa
 
-from .image_item import ImageItem
-from .base import TileGeneralException
-from .annotation import Annotation
+from .tiles import TilesItemResource
+from .annotation import AnnotationResource
 
-__all__ = (ImageItem, TileGeneralException, Annotation)
+
+__all__ = (TilesItemResource, AnnotationResource)
