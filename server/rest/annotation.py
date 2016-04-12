@@ -43,6 +43,8 @@ class AnnotationResource(Resource):
         Description('Search for annotations.')
         .responseClass('Annotation')
         .param('itemId', 'List all annotations in this item.', required=False)
+        .param('userId', 'List all annotations created by this user.',
+               required=False)
         .param('text', 'Pass this to perform a full text search for '
                'annotation names and descriptions.', required=False)
         .param('name', 'Pass to lookup an annotation by exact name match.',
@@ -61,6 +63,11 @@ class AnnotationResource(Resource):
             self.model('item').requireAccess(
                 item, user=self.getCurrentUser(), level=AccessType.READ)
             query['itemId'] = item['_id']
+        if 'userId' in params:
+            user = self.model('user').load(
+                params.get('userId'), user=self.getCurrentUser(),
+                level=AccessType.READ)
+            query['creatorId'] = user['_id']
         if params.get('text'):
             query['$text'] = {'$search': params['text']}
         if params.get('name'):
