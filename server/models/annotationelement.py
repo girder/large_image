@@ -64,10 +64,10 @@ class Annotationelement(Model):
         elementCursor = self.find({'annotationId': annotation['_id'],
                                    '_version': annotation['_version']},
                                   sort=[('_id', SortDir.ASCENDING)])
-        annotation['annotation']['elements'] = elements = []
+        annotation['annotation']['elements'] = []
         for entry in elementCursor:
             entry['element'].setdefault('id', entry['_id'])
-            elements.append(entry['element'])
+            annotation['annotation']['elements'].append(entry['element'])
 
     def removeElements(self, annotation):
         """

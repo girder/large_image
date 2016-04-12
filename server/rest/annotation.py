@@ -45,7 +45,7 @@ class AnnotationResource(Resource):
         .param('itemId', 'List all annotations in this item.', required=False)
         .param('text', 'Pass this to perform a full text search for '
                'annotation names and descriptions.', required=False)
-        .param('name', 'Pass to llokup an annotation by exact name match.',
+        .param('name', 'Pass to lookup an annotation by exact name match.',
                required=False)
         .pagingParams(defaultSort='lowerName')
         .errorResponse()

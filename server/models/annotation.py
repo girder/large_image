@@ -96,9 +96,9 @@ class AnnotationSchema:
         'additionalProperties': True
     }
     baseShapePatternProperties = {
-        '^%s$' % properyName: {}
-        for properyName in six.viewkeys(baseShapeSchema['properties'])
-        if properyName != 'type'
+        '^%s$' % propertyName: {}
+        for propertyName in six.viewkeys(baseShapeSchema['properties'])
+        if propertyName != 'type'
     }
 
     pointShapeSchema = {
@@ -231,9 +231,9 @@ class AnnotationSchema:
         ]
     }
     baseRectangleShapePatternProperties = {
-        '^%s$' % properyName: {} for properyName in six.viewkeys(
+        '^%s$' % propertyName: {} for propertyName in six.viewkeys(
             baseRectangleShapeSchema['allOf'][1]['properties'])
-        if properyName != 'type'
+        if propertyName != 'type'
     }
     baseRectangleShapePatternProperties.update(baseShapePatternProperties)
     rectangleShapeSchema = {
@@ -278,6 +278,23 @@ class AnnotationSchema:
             }
         ]
     }
+    ellipseShapeSchema = {
+        'allOf': [
+            baseRectangleShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['ellipse']
+                    },
+                },
+                'required': ['type'],
+                'patternProperties': baseRectangleShapePatternProperties,
+                'additionalProperties': False
+            }
+        ]
+    }
 
     annotationSchema = {
         '$schema': 'http://json-schema.org/schema#',
@@ -308,6 +325,7 @@ class AnnotationSchema:
                         # baseShapeSchema,
                         arrowShapeSchema,
                         circleShapeSchema,
+                        ellipseShapeSchema,
                         pointShapeSchema,
                         polylineShapeSchema,
                         rectangleShapeSchema,
