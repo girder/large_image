@@ -373,7 +373,7 @@ class Annotation(Model):
 
     def initialize(self):
         self.name = 'annotation'
-        self.ensureIndices(['itemId', 'created'])
+        self.ensureIndices(['itemId', 'created', 'creatorId'])
         self.ensureTextIndex({
             'annotation.name': 10,
             'annotation.description': 1,
