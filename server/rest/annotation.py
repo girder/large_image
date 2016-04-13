@@ -25,6 +25,7 @@ from girder.api.describe import describeRoute, Description
 from girder.api.rest import Resource, loadmodel, filtermodel, RestException
 from girder.constants import AccessType
 from girder.models.model_base import ValidationException
+from ..models.annotation import AnnotationSchema
 
 
 class AnnotationResource(Resource):
@@ -34,6 +35,7 @@ class AnnotationResource(Resource):
 
         self.resourceName = 'annotation'
         self.route('GET', (), self.find)
+        self.route('GET', ('schema',), self.getAnnotationSchema)
         self.route('GET', (':id',), self.getAnnotation)
         self.route('POST', (), self.createAnnotation)
         self.route('PUT', (':id',), self.updateAnnotation)
@@ -76,6 +78,16 @@ class AnnotationResource(Resource):
                       self.model('annotation', 'large_image').baseFields)
         return list(self.model('annotation', 'large_image').find(
             query, limit=limit, offset=offset, sort=sort, fields=fields))
+
+    @describeRoute(
+        Description('Get the official Annotation schema')
+        .notes('In addition to the schema, if IDs are specified on elements, '
+               'all IDs must be unique.')
+        .errorResponse()
+    )
+    @access.public
+    def getAnnotationSchema(self, params):
+        return AnnotationSchema.annotationSchema
 
     @describeRoute(
         Description('Get an annotation by id.')
