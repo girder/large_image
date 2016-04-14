@@ -22,10 +22,18 @@ import itertools
 import six
 from six import BytesIO
 
-from .base import GirderTileSource, TileSourceException
+from .base import FileTileSource, TileSourceException
 from .cache import LruCacheMetaclass
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException
+
+try:
+    import girder
+    from girder import logger
+    from .base import GirderTileSource
+except ImportError:
+    girder = None
+    import logging as logger
 
 try:
     import PIL
@@ -34,21 +42,21 @@ except ImportError:
 
 
 @six.add_metaclass(LruCacheMetaclass)
-class TiffGirderTileSource(GirderTileSource):
+class TiffFileTileSource(FileTileSource):
     """
-    Provides tile access to Girder items with TIFF file.
+    Provides tile access to TIFF files.
     """
     cacheMaxSize = 2
     cacheTimeout = 60
-    name = 'tiff'
+    name = 'tifffile'
 
     @staticmethod
     def cacheKeyFunc(args, kwargs):
-        item = args[0]
-        return item.get('largeImage', {}).get('fileId')
+        path = args[0]
+        return path
 
     def __init__(self, item, **kwargs):
-        super(TiffGirderTileSource, self).__init__(item, **kwargs)
+        super(TiffFileTileSource, self).__init__(item, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
         lastException = None
@@ -63,8 +71,6 @@ class TiffGirderTileSource(GirderTileSource):
                 self._tiffDirectories.append(tiffDirectory)
 
         if not self._tiffDirectories:
-            import logging
-            logger = logging.getLogger('girder')
             logger.info('File %s didn\'t meet requirements for tile source: '
                         '%s' % (largeImagePath, lastException))
             raise TileSourceException('File must have at least 1 level')
@@ -101,3 +107,18 @@ class TiffGirderTileSource(GirderTileSource):
                 image = image.resize((self.tileWidth, self.tileHeight))
                 return image
             raise TileSourceException('Internal I/O failure: %s' % e.message)
+
+
+if girder:
+    class TiffGirderTileSource(TiffFileTileSource, GirderTileSource):
+        """
+        Provides tile access to Girder items with a TIFF file.
+        """
+        cacheMaxSize = 2
+        cacheTimeout = 60
+        name = 'tiff'
+
+        @staticmethod
+        def cacheKeyFunc(args, kwargs):
+            item = args[0]
+            return item.get('largeImage', {}).get('fileId')

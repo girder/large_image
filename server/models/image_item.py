@@ -54,9 +54,11 @@ class ImageItem(Item):
         item['largeImage']['fileId'] = fileObj['_id']
         job = None
         for sourceName in AvailableTileSources:
-            if AvailableTileSources[sourceName].canRead(item):
-                item['largeImage']['sourceName'] = sourceName
-                break
+            if getattr(AvailableTileSources[sourceName], 'girderSource',
+                       False):
+                if AvailableTileSources[sourceName].canRead(item):
+                    item['largeImage']['sourceName'] = sourceName
+                    break
         if 'sourceName' not in item['largeImage']:
             # No source was successful
             del item['largeImage']['fileId']

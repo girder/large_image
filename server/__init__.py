@@ -17,63 +17,16 @@
 #  limitations under the License.
 ###############################################################################
 
-from girder import events
-from girder.constants import AccessType
-from girder.utility.model_importer import ModelImporter
-
-from .rest import TilesItemResource, AnnotationResource
-from . import constants
-
-
-def _postUpload(event):
-    """
-    Called when a file is uploaded. We check the parent item to see if it is
-    expecting a large image upload, and if so we register this file as the
-    result image.
-    """
-    fileObj = event.info['file']
-    if 'itemId' not in fileObj:
-        return
-
-    Item = ModelImporter.model('item')
-    item = Item.load(fileObj['itemId'], force=True, exc=True)
-
-    if item.get('largeImage', {}).get('expected') and (
-            fileObj['name'].endswith('.tiff') or
-            fileObj.get('mimeType') == 'image/tiff'):
-        if fileObj.get('mimeType') != 'image/tiff':
-            fileObj['mimeType'] = 'image/tiff'
-            ModelImporter.model('file').save(fileObj)
-        del item['largeImage']['expected']
-        item['largeImage']['fileId'] = fileObj['_id']
-        item['largeImage']['sourceName'] = 'tiff'
-        Item.save(item)
-
-
-def validateSettings(event):
-    key, val = event.info['key'], event.info['value']
-
-    if key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
-               constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER):
-        if str(val).lower() not in ('false', 'true', ''):
-            return
-        val = (str(val).lower() != 'false')
-    elif key == constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER:
-        val = str(val).strip()
-    else:
-        return
-    event.info['value'] = val
-    event.preventDefault().stopPropagation()
-
-
-def load(info):
-    TilesItemResource(info['apiRoot'])
-    info['apiRoot'].annotation = AnnotationResource()
-
-    ModelImporter.model('item').exposeFields(
-        level=AccessType.READ, fields='largeImage')
-    # Ask for the annotation model to make sure it is initialized.
-    ModelImporter.model('annotation', plugin='large_image')
-
-    events.bind('data.process', 'large_image', _postUpload)
-    events.bind('model.setting.validate', 'large_image', validateSettings)
+try:
+    from .base import *  # noqa
+except ImportError as exc:
+    # If our import failed because either girder or a girder plugin is
+    # unavailable, log it and start anyway (we may be running in a girder-less
+    # environment).  Otherwise, reraise the exception -- something else went
+    # wrong.
+    if 'plugins' not in exc.message and 'girder' not in exc.message:
+        raise
+    import logging as logger
+    logger.info('Girder is unavailable.  Run as a girder plugin for girder '
+                'access.')
+    girder = None

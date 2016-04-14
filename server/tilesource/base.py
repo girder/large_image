@@ -18,14 +18,21 @@
 #############################################################################
 
 import math
-
-from girder import logger
-from girder.models.model_base import ValidationException
-from girder.utility import assetstore_utilities
-from girder.utility.model_importer import ModelImporter
 from six import BytesIO
 
-from ..models.base import TileGeneralException
+try:
+    import girder
+    from girder import logger
+    from girder.models.model_base import ValidationException
+    from girder.utility import assetstore_utilities
+    from girder.utility.model_importer import ModelImporter
+    from ..models.base import TileGeneralException
+except ImportError:
+    import logging as logger
+    girder = None
+
+    class TileGeneralException(Exception):
+        pass
 
 # Not having PIL disables thumbnail creation, but isn't fatal
 try:
@@ -53,7 +60,7 @@ class TileSource(object):
     }
     name = None
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.tileWidth = None
         self.tileHeight = None
         self.levels = None
@@ -338,50 +345,67 @@ class TileSource(object):
         return self._encodeImage(image, **kwargs)
 
 
-class GirderTileSource(TileSource):
-    def __init__(self, item, **kwargs):
-        super(GirderTileSource, self).__init__()
-        self.item = item
+class FileTileSource(TileSource):
+    def __init__(self, path, *args, **kwargs):
+        super(FileTileSource, self).__init__(path, *args, **kwargs)
+        self.largeImagePath = path
 
     def _getLargeImagePath(self):
-        try:
-            largeImageFileId = self.item['largeImage']['fileId']
-            # Access control checking should already have been done on item, so
-            # don't repeat.
-            # TODO: is it possible that the file is on a different item, so do
-            # we want to repeat the access check?
-            largeImageFile = ModelImporter.model('file').load(
-                largeImageFileId, force=True)
-
-            # TODO: can we move some of this logic into Girder core?
-            assetstore = ModelImporter.model('assetstore').load(
-                largeImageFile['assetstoreId'])
-            adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
-
-            if not isinstance(adapter,
-                              assetstore_utilities.FilesystemAssetstoreAdapter):
-                raise TileSourceAssetstoreException(
-                    'Non-filesystem assetstores are not supported')
-
-            largeImagePath = adapter.fullPath(largeImageFile)
-            return largeImagePath
-
-        except TileSourceAssetstoreException:
-            raise
-        except (KeyError, ValidationException, TileSourceException) as e:
-            raise TileSourceException(
-                'No large image file in this item: %s' % e.message)
+        return self.largeImagePath
 
     @classmethod
-    def canRead(cls, item, *args, **kwargs):
+    def canRead(cls, path, *args, **kwargs):
         """
         Check if we can read the input.  This takes the same parameters as
         __init__.
 
-        :returns: True if this class can read the input.  False if it cannot.
+        :returns: True if this class can read the input.  False if it
+                  cannot.
         """
         try:
-            cls(item, *args, **kwargs)
+            cls(path, *args, **kwargs)
             return True
         except TileSourceException:
             return False
+
+
+# Girder specific classes
+
+if girder:
+
+    class GirderTileSource(FileTileSource):
+        girderSource = True
+
+        def __init__(self, item, *args, **kwargs):
+            super(GirderTileSource, self).__init__(item, *args, **kwargs)
+            self.item = item
+
+        def _getLargeImagePath(self):
+            try:
+                largeImageFileId = self.item['largeImage']['fileId']
+                # Access control checking should already have been done on
+                # item, so don't repeat.
+                # TODO: is it possible that the file is on a different item, so
+                # do we want to repeat the access check?
+                largeImageFile = ModelImporter.model('file').load(
+                    largeImageFileId, force=True)
+
+                # TODO: can we move some of this logic into Girder core?
+                assetstore = ModelImporter.model('assetstore').load(
+                    largeImageFile['assetstoreId'])
+                adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
+
+                if not isinstance(
+                        adapter,
+                        assetstore_utilities.FilesystemAssetstoreAdapter):
+                    raise TileSourceAssetstoreException(
+                        'Non-filesystem assetstores are not supported')
+
+                largeImagePath = adapter.fullPath(largeImageFile)
+                return largeImagePath
+
+            except TileSourceAssetstoreException:
+                raise
+            except (KeyError, ValidationException, TileSourceException) as e:
+                raise TileSourceException(
+                    'No large image file in this item: %s' % e.message)
