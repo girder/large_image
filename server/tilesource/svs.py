@@ -134,6 +134,8 @@ class SVSFileTileSource(FileTileSource):
             })
 
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
+        if z < 0:
+            raise TileSourceException('z layer does not exist')
         try:
             svslevel = self._svslevels[z]
         except IndexError:
