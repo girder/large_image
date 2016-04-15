@@ -21,7 +21,7 @@ import datetime
 from six.moves import range
 
 from girder.constants import AccessType, SortDir
-from girder.models.model_base import Model  # ##DWM::, ValidationException
+from girder.models.model_base import Model
 
 
 class Annotationelement(Model):
