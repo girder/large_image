@@ -409,3 +409,40 @@ if girder:
             except (KeyError, ValidationException, TileSourceException) as e:
                 raise TileSourceException(
                     'No large image file in this item: %s' % e.message)
+
+
+def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,
+                          **kwargs):
+    """
+    Get a tile source based on an ordered dictionary of known sources and a
+    path name or URI.  Additional parameters are passed to the tile source
+    and can be used for properties such as encoding.
+
+    :param availableSources: an ordered dictionary of sources to try.
+    :param pathOrUri: either a file path, a girder item in the form
+        girder_item://(item id), large_image://test, or large_image://dummy.
+    :param user: user used for access for girder items.  Ignored otherwise.
+    :returns: a tile source instance or and error.
+    """
+    sourceObj = pathOrUri
+    uriWithoutProtocol = pathOrUri.split('://', 1)[-1]
+    isGirder = pathOrUri.startswith('girder_item://')
+    if isGirder:
+        sourceObj = ModelImporter.model('item').load(uriWithoutProtocol,
+                                                     user=user)
+    isLargeImageUri = pathOrUri.startswith('large_image://')
+    for sourceName in availableSources:
+        useSource = False
+        girderSource = getattr(availableSources[sourceName], 'girderSource',
+                               False)
+        if isGirder:
+            if girderSource:
+                useSource = availableSources[sourceName].canRead(sourceObj)
+        elif isLargeImageUri:
+            if sourceName == uriWithoutProtocol:
+                useSource = True
+        elif not girderSource:
+            useSource = availableSources[sourceName].canRead(sourceObj)
+        if useSource:
+            return availableSources[sourceName](sourceObj, *args, **kwargs)
+    raise TileSourceException('No available tilesource for %s' % pathOrUri)

@@ -21,8 +21,9 @@
 # flake8: noqa
 
 import collections
+import functools
 import sys
-from .base import TileSource, TileSourceException, \
+from .base import TileSource, getTileSourceFromDict, TileSourceException, \
     TileSourceAssetstoreException
 try:
     import girder
@@ -76,5 +77,11 @@ for source in sourceList:
             logger.exception('Error: Could not import %s' % className)
         else:
             logger.warning('Error: Could not import %s' % className)
+
+# Create a partial function that will work through the known functions to get a
+# tile source.
+getTileSource = functools.partial(getTileSourceFromDict,
+                                  AvailableTileSources)
+all.append(getTileSource)
 
 __all__ = all

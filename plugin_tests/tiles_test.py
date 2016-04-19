@@ -838,3 +838,27 @@ class LargeImageTilesTest(base.TestCase):
             constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER], True)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS], True)
+
+    def testGetTileSource(self):
+        from girder.plugins.large_image.tilesource import getTileSource
+
+        # Upload a PTIF and make it a large_image
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatusOk(resp)
+        # We should have access via getTileSource
+        source = getTileSource('girder_item://' + itemId, user=self.admin)
+        image, mime = source.getThumbnail(encoding='PNG', height=200)
+        self.assertEqual(image[:len(PNGHeader)], PNGHeader)
+
+        # We can also use a file with getTileSource.  The user is ignored.
+        source = getTileSource(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.TCGA-DU-6399-'
+            '01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs'),
+            user=self.admin, encoding='PNG')
+        image, mime = source.getThumbnail(encoding='JPEG', width=200)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)

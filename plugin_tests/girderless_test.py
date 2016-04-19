@@ -40,7 +40,7 @@ class LargeImageGirderlessTest(base.TestCase):
         :param imgHeader: if something other than a JPEG is expected, this is
                           the first few bytes of the expected image.
         """
-        from server import tilesource
+        from large_image import tilesource
         # We should get images for all valid levels, but only within the
         # expected range of tiles.
         for z in range(metadata.get('minLevel', 0), metadata['levels']):
@@ -89,12 +89,12 @@ class LargeImageGirderlessTest(base.TestCase):
         pass
 
     def testWithoutGirder(self):
-        from server import tilesource
+        from large_image import tilesource
         # Make sure we are running in a girderless environment
         self.assertIsNone(tilesource.girder)
 
     def testTilesFromPTIF(self):
-        from server import tilesource
+        from large_image import tilesource
 
         canread = tilesource.AvailableTileSources['tifffile'].canRead(
             os.path.join(os.path.dirname(__file__), 'test_files',
@@ -117,7 +117,7 @@ class LargeImageGirderlessTest(base.TestCase):
         self._testTilesZXY(source, tileMetadata)
 
     def testTilesFromSVS(self):
-        from server import tilesource
+        from large_image import tilesource
 
         canread = tilesource.AvailableTileSources['svsfile'].canRead(
             os.path.join(os.path.dirname(__file__), 'test_files',
@@ -144,4 +144,54 @@ class LargeImageGirderlessTest(base.TestCase):
         source = tilesource.SVSFileTileSource(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.TCGA-DU-6399-'
             '01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs'), **params)
+        self._testTilesZXY(source, tileMetadata, params, PNGHeader)
+
+    def testGetTileSource(self):
+        from large_image import getTileSource, tilesource
+
+        try:
+            source = getTileSource(os.path.join(
+                os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
+            self.assertTrue(False)
+        except tilesource.TileSourceException:
+            source = None
+        self.assertIsNone(source)
+
+        source = getTileSource(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.TCGA-DU-6399-'
+            '01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs'),
+            encoding='PNG')
+        tileMetadata = source.getMetadata()
+        params = {'encoding': 'PNG'}
+        self._testTilesZXY(source, tileMetadata, params, PNGHeader)
+
+        source = getTileSource(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        tileMetadata = source.getMetadata()
+        tileMetadata['sparse'] = 5
+        self._testTilesZXY(source, tileMetadata)
+
+        source = getTileSource('large_image://dummy')
+        self.assertEqual(source.getTile(0, 0, 0), '')
+        tileMetadata = source.getMetadata()
+        self.assertEqual(tileMetadata['tileWidth'], 0)
+        self.assertEqual(tileMetadata['tileHeight'], 0)
+        self.assertEqual(tileMetadata['sizeX'], 0)
+        self.assertEqual(tileMetadata['sizeY'], 0)
+        self.assertEqual(tileMetadata['levels'], 0)
+
+        params = {
+            'maxLevel': 6,
+            'tileWidth': 240,
+            'tileHeight': 170,
+            'fractal': False,
+            'encoding': 'PNG'
+        }
+        source = getTileSource('large_image://test', **params)
+        tileMetadata = source.getMetadata()
+        self.assertEqual(tileMetadata['tileWidth'], 240)
+        self.assertEqual(tileMetadata['tileHeight'], 170)
+        self.assertEqual(tileMetadata['sizeX'], 15360)
+        self.assertEqual(tileMetadata['sizeY'], 10880)
+        self.assertEqual(tileMetadata['levels'], 7)
         self._testTilesZXY(source, tileMetadata, params, PNGHeader)

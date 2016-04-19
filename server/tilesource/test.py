@@ -30,12 +30,13 @@ if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
 class TestTileSource(TileSource):
     name = 'test'
 
-    def __init__(self, minLevel=0, maxLevel=9,
+    def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
                  fractal=False, encoding='PNG'):
         """
         Initialize the tile class.  The optional params options can include:
 
+        :param ignored_path: for compatibility with other sources.
         :param minLevel: minimum tile level
         :param maxLevel: maximum tile level
         :param tileWidth: tile width in pixels
@@ -87,7 +88,7 @@ class TestTileSource(TileSource):
                             ], color, None)
             sq /= 2
 
-    def getTile(self, x, y, z):
+    def getTile(self, x, y, z, *args, **kwargs):
         widthCount = 2 ** z
 
         if not (0 <= x < float(self.sizeX) / self.tileWidth * 2 ** (
