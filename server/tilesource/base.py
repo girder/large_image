@@ -248,16 +248,17 @@ class TileSource(object):
 
     def getRegion(self, width=None, height=None, **kwargs):
         """
-        Get a basic thumbnail from the current tile source.  Aspect ratio is
-        preserved.  If neither width nor height is given, a default value is
-        used.  If both are given, the thumbnail will be no larger than either
-        size.
+        Get a rectangular region from the current tile source.  Aspect ratio is
+        preserved.  If neither width nor height is given, the original size of
+        the highest resolution level is used.  If both are given, the returned
+        image will be no larger than either size.
 
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
         :param **kwargs: optional arguments.  Some options are encoding,
-            jpegQuality, and jpegSubsampling.
-        :returns: thumbData, thumbMime: the image data and the mime type.
+            jpegQuality, jpegSubsampling, top, left, right, bottom,
+            regionWidth, regionHeight, units ('pixels' or 'fraction').
+        :returns: regionData, regionMime: the image data and the mime type.
         """
         if ((width is not None and width < 0) or
                 (height is not None and height < 0)):
