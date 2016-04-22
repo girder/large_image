@@ -27,6 +27,7 @@ try:
     from girder.utility import assetstore_utilities
     from girder.utility.model_importer import ModelImporter
     from ..models.base import TileGeneralException
+    from girder.models.model_base import AccessType
 except ImportError:
     import logging as logger
     girder = None
@@ -428,9 +429,9 @@ def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,
     sourceObj = pathOrUri
     uriWithoutProtocol = pathOrUri.split('://', 1)[-1]
     isGirder = pathOrUri.startswith('girder_item://')
-    if isGirder:
-        sourceObj = ModelImporter.model('item').load(uriWithoutProtocol,
-                                                     user=user)
+    if isGirder and girder:
+        sourceObj = ModelImporter.model('item').load(
+            uriWithoutProtocol, user=user, level=AccessType.READ)
     isLargeImageUri = pathOrUri.startswith('large_image://')
     for sourceName in availableSources:
         useSource = False

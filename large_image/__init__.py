@@ -17,5 +17,8 @@
 #  limitations under the License.
 ##############################################################################
 
+import server
 from server import tilesource
 getTileSource = tilesource.getTileSource  # noqa
+
+__all__ = [server, tilesource, getTileSource]
