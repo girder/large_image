@@ -26,39 +26,45 @@ from six.moves import range
 import openslide
 import PIL
 
-from .base import GirderTileSource, TileSourceException
+from .base import FileTileSource, TileSourceException
 from .cache import LruCacheMetaclass
+
+try:
+    import girder
+    from .base import GirderTileSource
+except ImportError:
+    girder = None
 
 
 @six.add_metaclass(LruCacheMetaclass)
-class SVSGirderTileSource(GirderTileSource):
+class SVSFileTileSource(FileTileSource):
     """
-    Provides tile access to Girder items with SVS file.
+    Provides tile access to SVS files.
     """
     cacheMaxSize = 2
     cacheTimeout = 60
-    name = 'svs'
+    name = 'svsfile'
 
     @staticmethod
     def cacheKeyFunc(args, kwargs):
-        item = args[0]
-        return (item.get('largeImage', {}).get('fileId'),
+        path = args[0]
+        return (path,
                 kwargs.get('jpegQuality'),
                 kwargs.get('jpegSubsampling'),
                 kwargs.get('encoding'))
 
-    def __init__(self, item, jpegQuality=95, jpegSubsampling=0,
+    def __init__(self, path, jpegQuality=95, jpegSubsampling=0,
                  encoding='JPEG', **kwargs):
         """
         Initialize the tile class.
 
-        :param item: the associated Girder item.
+        :param path: the associated file path.
         :param jpegQuality: when serving jpegs, use this quality.
         :param jpegSubsampling: when serving jpegs, use this subsampling (0 is
                                 full chroma, 1 is half, 2 is quarter).
         :param encoding: 'JPEG' or 'PNG'.
         """
-        super(SVSGirderTileSource, self).__init__(item, **kwargs)
+        super(SVSFileTileSource, self).__init__(path, **kwargs)
 
         if encoding not in ('PNG', 'JPEG'):
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -128,6 +134,8 @@ class SVSGirderTileSource(GirderTileSource):
             })
 
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
+        if z < 0:
+            raise TileSourceException('z layer does not exist')
         try:
             svslevel = self._svslevels[z]
         except IndexError:
@@ -181,3 +189,21 @@ class SVSGirderTileSource(GirderTileSource):
             level += 1
             scale /= 2
         return level
+
+
+if girder:
+    class SVSGirderTileSource(SVSFileTileSource, GirderTileSource):
+        """
+        Provides tile access to Girder items with an SVS file.
+        """
+        cacheMaxSize = 2
+        cacheTimeout = 60
+        name = 'svs'
+
+        @staticmethod
+        def cacheKeyFunc(args, kwargs):
+            item = args[0]
+            return (item.get('largeImage', {}).get('fileId'),
+                    kwargs.get('jpegQuality'),
+                    kwargs.get('jpegSubsampling'),
+                    kwargs.get('encoding'))

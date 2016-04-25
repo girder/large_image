@@ -18,14 +18,22 @@
 #############################################################################
 
 import math
-
-from girder import logger
-from girder.models.model_base import ValidationException
-from girder.utility import assetstore_utilities
-from girder.utility.model_importer import ModelImporter
 from six import BytesIO
 
-from ..models.base import TileGeneralException
+try:
+    import girder
+    from girder import logger
+    from girder.models.model_base import ValidationException
+    from girder.utility import assetstore_utilities
+    from girder.utility.model_importer import ModelImporter
+    from ..models.base import TileGeneralException
+    from girder.models.model_base import AccessType
+except ImportError:
+    import logging as logger
+    girder = None
+
+    class TileGeneralException(Exception):
+        pass
 
 # Not having PIL disables thumbnail creation, but isn't fatal
 try:
@@ -53,7 +61,7 @@ class TileSource(object):
     }
     name = None
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.tileWidth = None
         self.tileHeight = None
         self.levels = None
@@ -241,16 +249,17 @@ class TileSource(object):
 
     def getRegion(self, width=None, height=None, **kwargs):
         """
-        Get a basic thumbnail from the current tile source.  Aspect ratio is
-        preserved.  If neither width nor height is given, a default value is
-        used.  If both are given, the thumbnail will be no larger than either
-        size.
+        Get a rectangular region from the current tile source.  Aspect ratio is
+        preserved.  If neither width nor height is given, the original size of
+        the highest resolution level is used.  If both are given, the returned
+        image will be no larger than either size.
 
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
         :param **kwargs: optional arguments.  Some options are encoding,
-            jpegQuality, and jpegSubsampling.
-        :returns: thumbData, thumbMime: the image data and the mime type.
+            jpegQuality, jpegSubsampling, top, left, right, bottom,
+            regionWidth, regionHeight, units ('pixels' or 'fraction').
+        :returns: regionData, regionMime: the image data and the mime type.
         """
         if ((width is not None and width < 0) or
                 (height is not None and height < 0)):
@@ -338,50 +347,104 @@ class TileSource(object):
         return self._encodeImage(image, **kwargs)
 
 
-class GirderTileSource(TileSource):
-    def __init__(self, item, **kwargs):
-        super(GirderTileSource, self).__init__()
-        self.item = item
+class FileTileSource(TileSource):
+    def __init__(self, path, *args, **kwargs):
+        super(FileTileSource, self).__init__(path, *args, **kwargs)
+        self.largeImagePath = path
 
     def _getLargeImagePath(self):
-        try:
-            largeImageFileId = self.item['largeImage']['fileId']
-            # Access control checking should already have been done on item, so
-            # don't repeat.
-            # TODO: is it possible that the file is on a different item, so do
-            # we want to repeat the access check?
-            largeImageFile = ModelImporter.model('file').load(
-                largeImageFileId, force=True)
-
-            # TODO: can we move some of this logic into Girder core?
-            assetstore = ModelImporter.model('assetstore').load(
-                largeImageFile['assetstoreId'])
-            adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
-
-            if not isinstance(adapter,
-                              assetstore_utilities.FilesystemAssetstoreAdapter):
-                raise TileSourceAssetstoreException(
-                    'Non-filesystem assetstores are not supported')
-
-            largeImagePath = adapter.fullPath(largeImageFile)
-            return largeImagePath
-
-        except TileSourceAssetstoreException:
-            raise
-        except (KeyError, ValidationException, TileSourceException) as e:
-            raise TileSourceException(
-                'No large image file in this item: %s' % e.message)
+        return self.largeImagePath
 
     @classmethod
-    def canRead(cls, item, *args, **kwargs):
+    def canRead(cls, path, *args, **kwargs):
         """
         Check if we can read the input.  This takes the same parameters as
         __init__.
 
-        :returns: True if this class can read the input.  False if it cannot.
+        :returns: True if this class can read the input.  False if it
+                  cannot.
         """
         try:
-            cls(item, *args, **kwargs)
+            cls(path, *args, **kwargs)
             return True
         except TileSourceException:
             return False
+
+
+# Girder specific classes
+
+if girder:
+
+    class GirderTileSource(FileTileSource):
+        girderSource = True
+
+        def __init__(self, item, *args, **kwargs):
+            super(GirderTileSource, self).__init__(item, *args, **kwargs)
+            self.item = item
+
+        def _getLargeImagePath(self):
+            try:
+                largeImageFileId = self.item['largeImage']['fileId']
+                # Access control checking should already have been done on
+                # item, so don't repeat.
+                # TODO: is it possible that the file is on a different item, so
+                # do we want to repeat the access check?
+                largeImageFile = ModelImporter.model('file').load(
+                    largeImageFileId, force=True)
+
+                # TODO: can we move some of this logic into Girder core?
+                assetstore = ModelImporter.model('assetstore').load(
+                    largeImageFile['assetstoreId'])
+                adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
+
+                if not isinstance(
+                        adapter,
+                        assetstore_utilities.FilesystemAssetstoreAdapter):
+                    raise TileSourceAssetstoreException(
+                        'Non-filesystem assetstores are not supported')
+
+                largeImagePath = adapter.fullPath(largeImageFile)
+                return largeImagePath
+
+            except TileSourceAssetstoreException:
+                raise
+            except (KeyError, ValidationException, TileSourceException) as e:
+                raise TileSourceException(
+                    'No large image file in this item: %s' % e.message)
+
+
+def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,
+                          **kwargs):
+    """
+    Get a tile source based on an ordered dictionary of known sources and a
+    path name or URI.  Additional parameters are passed to the tile source
+    and can be used for properties such as encoding.
+
+    :param availableSources: an ordered dictionary of sources to try.
+    :param pathOrUri: either a file path, a girder item in the form
+        girder_item://(item id), large_image://test, or large_image://dummy.
+    :param user: user used for access for girder items.  Ignored otherwise.
+    :returns: a tile source instance or and error.
+    """
+    sourceObj = pathOrUri
+    uriWithoutProtocol = pathOrUri.split('://', 1)[-1]
+    isGirder = pathOrUri.startswith('girder_item://')
+    if isGirder and girder:
+        sourceObj = ModelImporter.model('item').load(
+            uriWithoutProtocol, user=user, level=AccessType.READ)
+    isLargeImageUri = pathOrUri.startswith('large_image://')
+    for sourceName in availableSources:
+        useSource = False
+        girderSource = getattr(availableSources[sourceName], 'girderSource',
+                               False)
+        if isGirder:
+            if girderSource:
+                useSource = availableSources[sourceName].canRead(sourceObj)
+        elif isLargeImageUri:
+            if sourceName == uriWithoutProtocol:
+                useSource = True
+        elif not girderSource:
+            useSource = availableSources[sourceName].canRead(sourceObj)
+        if useSource:
+            return availableSources[sourceName](sourceObj, *args, **kwargs)
+    raise TileSourceException('No available tilesource for %s' % pathOrUri)

@@ -21,24 +21,41 @@
 # flake8: noqa
 
 import collections
-from girder.constants import TerminalColor
-from girder import logger
-
-from .base import TileSource, TileSourceException, \
+import functools
+import sys
+from .base import TileSource, getTileSourceFromDict, TileSourceException, \
     TileSourceAssetstoreException
+try:
+    import girder
+    from girder.constants import TerminalColor
+    from girder import logger
+    from .base import GirderTileSource
+except ImportError:
+    import logging as logger
+    girder = None
+
 
 AvailableTileSources = collections.OrderedDict()
 all = [TileSource, TileSourceException, TileSourceAssetstoreException,
        AvailableTileSources]
 
+if girder:
+    all.append(GirderTileSource)
+
 sourceList = [
-    {'moduleName': '.tiff', 'className': 'TiffGirderTileSource'},
-    {'moduleName': '.svs', 'className': 'SVSGirderTileSource'},
+    {'moduleName': '.tiff', 'className': 'TiffFileTileSource'},
+    {'moduleName': '.tiff', 'className': 'TiffGirderTileSource',
+     'girder': True},
+    {'moduleName': '.svs', 'className': 'SVSFileTileSource'},
+    {'moduleName': '.svs', 'className': 'SVSGirderTileSource', 'girder': True},
     {'moduleName': '.test', 'className': 'TestTileSource'},
     {'moduleName': '.dummy', 'className': 'DummyTileSource'},
 ]
 for source in sourceList:
     try:
+        # Don't try to load girder sources if we couldn't import girder
+        if not girder and source.get('girder'):
+            continue
         # For each of our sources, try to import the named class from the
         # source module
         className = source['className']
@@ -55,7 +72,16 @@ for source in sourceList:
         if getattr(sourceClass, 'name', None):
             AvailableTileSources[sourceClass.name] = sourceClass
     except ImportError:
-        print(TerminalColor.error('Error: Could not import %s' % className))
-        logger.exception('Error: Could not import %s' % className)
+        if girder:
+            print(TerminalColor.error('Error: Could not import %s' % className))
+            logger.exception('Error: Could not import %s' % className)
+        else:
+            logger.warning('Error: Could not import %s' % className)
+
+# Create a partial function that will work through the known functions to get a
+# tile source.
+getTileSource = functools.partial(getTileSourceFromDict,
+                                  AvailableTileSources)
+all.append(getTileSource)
 
 __all__ = all

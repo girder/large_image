@@ -3,3 +3,7 @@ node_modules
 _build
 .*.swp
 .*.swo
+env
+dist
+build
+large_image.egg-info
