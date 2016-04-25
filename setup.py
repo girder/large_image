@@ -40,10 +40,19 @@ setup(
     packages=[
         'large_image',
         'large_image.server',
+        'large_image.server.models',
+        'large_image.server.rest',
+        'large_image.server.tilesource',
+    ],
+    data_files=[
+        ('large_image/girder', ['plugin.json']),
     ],
     package_dir={
         'large_image': 'large_image',
-        'large_image.server': 'server'
+        'large_image.server': 'server',
+    },
+    entry_points={
+        'girder.plugin': 'large_image = large_image.server:load'
     },
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -61,7 +70,7 @@ setup(
     include_package_data=True,
     install_requires=requirements,
     license=license_str,
-    # zip_safe=True,  # Let setuptools decide, though it should be zip safe
+    # zip_safe=False,  # Comment out to let setuptools decide
     keywords='large_image',
     test_suite='plugin_tests',
     tests_require=test_requirements)

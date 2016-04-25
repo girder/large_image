@@ -17,11 +17,10 @@
 #  limitations under the License.
 ###############################################################################
 
-from girder import events
+from girder import events, plugin
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
-from .rest import TilesItemResource, AnnotationResource
 from . import constants
 
 
@@ -66,7 +65,15 @@ def validateSettings(event):
     event.preventDefault().stopPropagation()
 
 
+@plugin.config(
+    name='Large image',
+    description='Create, serve, and display large multiresolution images.',
+    version='0.2.0',
+    dependencies={'worker'},
+)
 def load(info):
+    from .rest import TilesItemResource, AnnotationResource
+
     TilesItemResource(info['apiRoot'])
     info['apiRoot'].annotation = AnnotationResource()
 
