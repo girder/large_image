@@ -15,6 +15,29 @@ girder.views.ImageViewerWidget = girder.View.extend({
         }, this));
     },
 
+    /**
+     * Perform an annotation query on the item.
+     * (See the GET /annotation endpoint)
+     *
+     * @param {object} [query]
+     * @param {string} [query.userId]
+     * @param {string} [query.text]
+     * @param {string} [query.name]
+     * @param {number} [query.limit=50]
+     * @param {number} [query.offset=0]
+     * @returns {promise} A promise that resolves with an array of annotations
+     */
+    annotations: function (query) {
+        query = query || {};
+        query.itemId = this.itemId;
+
+        return girder.restRequest({
+            type: 'GET',
+            path: 'annotation',
+            data: query
+        });
+    },
+
     _getTileUrl: function (level, x, y) {
         return '/api/v1/item/' + this.itemId + '/tiles/zxy/' +
             level + '/' + x + '/' + y;

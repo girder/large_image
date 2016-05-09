@@ -30,23 +30,14 @@ module.exports = function (grunt) {
                 static: '<%= staticDir %>/built/plugins/large_image',
                 node_modules: '<%= plugin.large_image.root %>/node_modules',
                 geojs: '<%= plugin.large_image.node_modules %>/geojs',
-                geojs_modules: '<%= plugin.large_image.geojs %>/node_modules',
-                geojs_components: '<%= plugin.large_image.geojs %>/bower_components',
-                pnltri: '<%= plugin.large_image.geojs_modules %>/pnltri/pnltri.js',
-                proj4: '<%= plugin.large_image.geojs_components %>/proj4/dist/proj4-src.js',
-                d3: '<%= plugin.large_image.geojs_components %>/d3/d3.js',
-                glmatrix: '<%= plugin.large_image.geojs_components %>/gl-matrix/dist/gl-matrix.js'
+                extjs: '<%= plugin.large_image.root %>/web_client/js/ext'
             }
         },
         uglify: {
             'plugin-large_image-geojs': { // Bundle together geojs + dependencies
                 files: [
-                    {   // leaving out jquery because girder includes it
+                    {
                         src: [
-                            '<%= plugin.large_image.pnltri %>',
-                            '<%= plugin.large_image.proj4 %>',
-                            '<%= plugin.large_image.d3 %>',
-                            '<%= plugin.large_image.glmatrix %>',
                             '<%= plugin.large_image.geojs %>/geo.js'
                         ],
                         dest: '<%= plugin.large_image.static %>/geo.min.js'
@@ -54,8 +45,21 @@ module.exports = function (grunt) {
                 ]
             }
         },
+        copy: {
+            'li-tinycolor':  {
+                files: [{
+                    src: ['<%= plugin.large_image.node_modules %>/tinycolor2/tinycolor.js'],
+                    dest: '<%= plugin.large_image.extjs %>/tinycolor.js'
+                }]
+            }
+        },
         default: { // Tell girder about our custom tasks
             'uglify:plugin-large_image-geojs': {}
+        },
+        init: {
+            'copy:li-tinycolor': [
+                'shell:plugin-large_image'
+            ]
         }
     });
 
