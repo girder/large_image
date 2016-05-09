@@ -1,0 +1,20 @@
+{
+  "extends": "eslint:recommended",
+  "root": true,
+  "globals": {
+    "d3": true,
+    "geo": true,
+    "girder": true,
+    "histomicstk": true,
+    "$": true,
+    "_": true,
+    "Backbone": true,
+    "tinycolor": true
+  },
+  rules: {
+    "no-console": 0
+  },
+  "env": {
+    "browser": true
+  }
+}

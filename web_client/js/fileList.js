@@ -21,7 +21,7 @@ girder.wrap(girder.views.FileListWidget, 'render', function (render) {
             actions.prepend(fileAction);
         }
     });
-    $('.g-large-image-remove', this.$el).on('click', _.bind(function (e) {
+    $('.g-large-image-remove', this.$el).on('click', _.bind(function () {
         girder.restRequest({
             type: 'DELETE',
             path: 'item/' + this.parentItem.id + '/tiles',
@@ -38,7 +38,7 @@ girder.wrap(girder.views.FileListWidget, 'render', function (render) {
             type: 'POST',
             path: 'item/' + this.parentItem.id + '/tiles',
             data: {fileId: fileId},
-            error: function (error, status) {
+            error: function (error) {
                 if (error.status !== 0) {
                     girder.events.trigger('g:alert', {
                         text: error.responseJSON.message,

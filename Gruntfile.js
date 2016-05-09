@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+/* eslint-env node */
 module.exports = function (grunt) {
     var path = require('path');
 
@@ -46,7 +46,7 @@ module.exports = function (grunt) {
             }
         },
         copy: {
-            'li-tinycolor':  {
+            'li-tinycolor': {
                 files: [{
                     src: ['<%= plugin.large_image.node_modules %>/tinycolor2/tinycolor.js'],
                     dest: '<%= plugin.large_image.extjs %>/tinycolor.js'
