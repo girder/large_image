@@ -34,7 +34,8 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
             clampBoundsY: true,
             zoom: 0
         };
-        mapParams.unitsPerPixel = Math.pow(2, mapParams.max);
+        var maxLevel = mapParams.max;
+        mapParams.unitsPerPixel = Math.pow(2, maxLevel);
         var layerParams = {
             useCredentials: true,
             url: this._getTileUrl('{z}', '{x}', '{y}'),
@@ -47,7 +48,14 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
             attribution: '',
             tileWidth: this.tileWidth,
             tileHeight: this.tileHeight,
-            tileRounding: Math.ceil
+            tileRounding: Math.ceil,
+            tilesAtZoom: _.bind(function (level) {
+                var scale = Math.pow(2, maxLevel - level);
+                return {
+                    x: Math.ceil(this.sizeX / this.tileWidth / scale),
+                    y: Math.ceil(this.sizeY / this.tileHeight / scale)
+                };
+            }, this)
         };
         this.viewer = geo.map(mapParams);
         this.viewer.createLayer('osm', layerParams);
