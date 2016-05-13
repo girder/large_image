@@ -1,6 +1,10 @@
 girder.views.ImageViewerWidget = girder.View.extend({
     initialize: function (settings) {
         this.itemId = settings.itemId;
+        this.annotations = new girder.collections.AnnotationCollection();
+        this.listenTo(this.annotations, 'add', this.addAnnotation);
+        this.listenTo(this.annotations, 'remove', this.removeAnnotation);
+        this.viewport = new girder.annotation.Viewport();
 
         girder.restRequest({
             type: 'GET',
@@ -13,34 +17,49 @@ girder.views.ImageViewerWidget = girder.View.extend({
             this.sizeY = resp.sizeY;
             this.render();
         }, this));
-    },
-
-    /**
-     * Perform an annotation query on the item.
-     * (See the GET /annotation endpoint)
-     *
-     * @param {object} [query]
-     * @param {string} [query.userId]
-     * @param {string} [query.text]
-     * @param {string} [query.name]
-     * @param {number} [query.limit=50]
-     * @param {number} [query.offset=0]
-     * @returns {promise} A promise that resolves with an array of annotations
-     */
-    annotations: function (query) {
-        query = query || {};
-        query.itemId = this.itemId;
-
-        return girder.restRequest({
-            type: 'GET',
-            path: 'annotation',
-            data: query
-        });
+        window.viewer = this;
     },
 
     _getTileUrl: function (level, x, y) {
         return '/api/v1/item/' + this.itemId + '/tiles/zxy/' +
             level + '/' + x + '/' + y;
-    }
+    },
 
+    /**
+     * Draw an annotation and return a reference to it.  (Async)
+     */
+    addAnnotation: function (annotation) {
+        //this.listenTo(annotation, 'change', this._renderAnnotation);
+        annotation.fetch();
+    },
+
+    _renderAnnotation: function (annotation) {
+        this.layer.load(annotation);
+    },
+
+    /**
+     * Delete an annotation from the canvas.
+     */
+    removeAnnotation: function (annotation) {
+        annotation.collection.reset();
+        // this.stopListening(annotation);
+    },
+
+    /**
+     * Create a new layer on top of the image.
+     */
+    createLayer: function () {
+        var $el = $('<div class="g-li-full-screen"/>').appendTo(this.el);
+        return new girder.annotation.Layer({
+            viewport: this.viewport,
+            el: $el.get(0)
+        });
+    },
+
+    /**
+     * Clean up an existing layer.
+     */
+    removeLayer: function (layer) {
+        layer.$el.remove();
+    }
 });

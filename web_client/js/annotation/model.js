@@ -47,17 +47,20 @@ girder.models.AnnotationModel = girder.Model.extend({
         annotation.elements = this.elements.map(function (e) {
             return e.attributes;
         });
-        this.annotation(annotation);
+        this.annotation(annotation, {silent: true});
     },
 
     /**
      * Get or set the annotation attribute.  (Triggers
-     * a change:annotation event on set.)
+     * a change:annotation event on set if options.silent
+     * is not set.)
      */
-    annotation: function (attr) {
+    annotation: function (attr, options) {
         if (attr) {
             this.attributes.annotation = attr;
-            this.trigger('change:annotation', this);
+            if (!options || !options.silent) {
+                this.trigger('change:annotation', this);
+            }
             return this;
         }
         return this.get('annotation') || {};

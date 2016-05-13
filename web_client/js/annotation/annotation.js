@@ -10,7 +10,7 @@ girder.annotation.Annotation = Backbone.View.extend({
         this.id = settings.id || _.uniqueId('annotation-');
         this.description = settings.description || '';
         this.attributes = settings.attributes || {};
-        this.collection = new girder.annotation.Collection(settings.elements || []);
+        this.collection = new girder.annotation.ElementCollection(settings.elements || []);
 
         this.listenTo(this.collection, 'add', this.addOne);
         this.listenTo(this.collection, 'reset', this.render);
