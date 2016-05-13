@@ -21,6 +21,14 @@ girder.models.AnnotationModel = girder.Model.extend({
     resourceName: 'annotation',
 
     /**
+     * Get a url to download the annotation objects
+     */
+    downloadUrl: function () {
+        var url = girder.Model.prototype.downloadUrl.apply(this, arguments);
+        return url.replace(/\/download$/, '');
+    },
+
+    /**
      * Update the attached element collection according to the
      * attributes.
      */
@@ -61,21 +69,15 @@ girder.collections.AnnotationCollection = girder.Collection.extend({
     model: girder.models.AnnotationModel
 });
 
-// extend the item model to include annotation support
-girder.models.ItemModel = girder.models.ItemModel.extend({
-    /**
-     * Get annotations associated with the item.  Optionally,
-     * additional query parameters can be provided.  Returns
-     * a promise that resolves with an AnnotationCollection.
-     */
-    annotations: function (query) {
-        query = query || {};
-        query.itemId = this.id;
-        return girder.restRequest({
-            path: 'annotation',
-            data: query
-        }).then(function (data) {
-            return new girder.collections.AnnotationCollection(data);
-        });
-    }
+// wrap the initialize method to append an annotations collection
+girder.wrap(girder.models.ItemModel, 'initialize', function (initialize) {
+    initialize.call(this, _.rest(arguments, 1));
+    this.annotations = new girder.collections.AnnotationCollection();
+    
+    girder.restRequest({
+        path: 'annotation',
+        data: {itemId: this.id}
+    }).then(_.bind(function (data) {
+        this.annotations.set(data);
+    }, this));
 });
