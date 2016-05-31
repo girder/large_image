@@ -48,4 +48,7 @@ add_python_test(girderless PLUGIN large_image BIND_SERVER EXTERNAL_DATA
 set_property(TEST server_large_image.girderless APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
-add_web_client_test(example "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/exampleSpec.js" PLUGIN large_image)
+add_web_client_test(
+    large_image
+    "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/largeImageSpec.js"
+    PLUGIN large_image)
