@@ -49,7 +49,7 @@ describe('annotation rendering', function () {
 
     describe('Element', function () {
         it('abstract render method throws', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'circle',
                 center: [300, 300, 0],
                 radius: 100,
@@ -67,7 +67,7 @@ describe('annotation rendering', function () {
 
     describe('circle', function () {
         it('minimal', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'circle',
                 center: [300, 300, 0],
                 radius: 100,
@@ -90,7 +90,7 @@ describe('annotation rendering', function () {
         });
 
         it('stroked', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'circle',
                 center: [200, 300, 0],
                 radius: 50,
@@ -119,7 +119,7 @@ describe('annotation rendering', function () {
 
     describe('ellipse', function () {
         it('minimal', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'ellipse',
                 center: [300, 300, 0],
                 width: 75,
@@ -145,7 +145,7 @@ describe('annotation rendering', function () {
         });
 
         it('stroked', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'ellipse',
                 center: [200, 300, 0],
                 width: 50,
@@ -177,7 +177,7 @@ describe('annotation rendering', function () {
 
     describe('rectangle', function () {
         it('minimal', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'rectangle',
                 center: [300, 300, 0],
                 width: 100,
@@ -203,7 +203,7 @@ describe('annotation rendering', function () {
         });
 
         it('stroked', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'rectangle',
                 center: [200, 300, 0],
                 width: 50,
@@ -235,7 +235,7 @@ describe('annotation rendering', function () {
 
     describe('point', function () {
         it('minimal', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'point',
                 center: [300, 200, 0]
             });
@@ -255,7 +255,7 @@ describe('annotation rendering', function () {
 
     describe('arrow', function () {
         it('minimal', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'arrow',
                 points: [[100, 50, 0], [200, 100, 0]]
             });
@@ -277,7 +277,7 @@ describe('annotation rendering', function () {
 
     describe('polyline', function () {
         it('open', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'polyline',
                 points: [
                     [300, 300, 0],
@@ -302,7 +302,7 @@ describe('annotation rendering', function () {
         });
 
         it('closed', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'polyline',
                 points: [
                     [300, 300, 0],
@@ -328,7 +328,7 @@ describe('annotation rendering', function () {
         });
 
         it('filled', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'polyline',
                 points: [
                     [300, 300, 0],
@@ -358,7 +358,7 @@ describe('annotation rendering', function () {
 
     describe('rectanglegrid', function () {
         it('minimal', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'rectanglegrid',
                 center: [400, 300, 0],
                 width: 200,
@@ -387,7 +387,7 @@ describe('annotation rendering', function () {
         });
 
         it('rotated', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'rectanglegrid',
                 center: [400, 300, 0],
                 width: 200,
@@ -410,7 +410,7 @@ describe('annotation rendering', function () {
         });
 
         it('styled', function () {
-            var model = new girder.annotation.Model({
+            var model = new girder.annotation.ElementModel({
                 type: 'rectanglegrid',
                 center: [400, 300, 0],
                 width: 200,
@@ -484,7 +484,7 @@ describe('annotation rendering', function () {
         var Annotation, Model;
         beforeEach(function () {
             Annotation = girder.annotation.Annotation;
-            Model = girder.annotation.Model;
+            Model = girder.annotation.ElementModel;
             sinon.stub(console, 'warn');
         });
         afterEach(function () {
