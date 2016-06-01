@@ -23,7 +23,8 @@ girder.annotation.Element = Backbone.View.extend({
         // when zooming.
         this.pixelScale = this.viewport.pixelScale;
 
-        this.listenTo(this.viewport, 'change', this.render);
+        this.listenTo(this.viewport, 'translate', this.render);
+        this.listenTo(this.viewport, 'scale', this.render);
         this.listenTo(this.model, 'destroy', this.remove);
     },
     render: function () {
