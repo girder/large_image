@@ -17,7 +17,6 @@ girder.views.ImageViewerWidget = girder.View.extend({
             this.sizeY = resp.sizeY;
             this.render();
         }, this));
-        window.viewer = this;
     },
 
     _getTileUrl: function (level, x, y) {
