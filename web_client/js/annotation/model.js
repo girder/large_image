@@ -76,11 +76,16 @@ girder.collections.AnnotationCollection = girder.Collection.extend({
 girder.wrap(girder.models.ItemModel, 'initialize', function (initialize) {
     initialize.call(this, _.rest(arguments, 1));
     this.annotations = new girder.collections.AnnotationCollection();
-    
-    girder.restRequest({
-        path: 'annotation',
-        data: {itemId: this.id}
-    }).then(_.bind(function (data) {
-        this.annotations.set(data);
-    }, this));
+
+    function update() {
+        girder.restRequest({
+            path: 'annotation',
+            data: {itemId: this.id}
+        }).then(_.bind(function (data) {
+            this.annotations.set(data);
+        }, this));
+    }
+
+    this.annotations.fetch = _.bind(update, this);
+    this.listenTo(this, 'change:_id', update);
 });
