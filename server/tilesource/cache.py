@@ -18,11 +18,36 @@
 ###############################################################################
 
 import functools
-
-import six
+import math
 import repoze.lru
+import six
+
 # Import _MARKER into the global namespace for slightly faster lookup
 from repoze.lru import _MARKER
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
+
+def pickAvailableCache(sizeEach):
+    """
+    Given an estimated size of an item, return how many of those items would
+    fit in a fixed portion of the available virtual memory.
+
+    :param sizeEach: the expected size of an item that could be cached.
+    :return: the number of items that should be cached.  Always at least two.
+    """
+    # Estimate usage based on (1 / portion) of the total virtual memory.  Each
+    # class has its own cache, and many methods have their own class, so make
+    # this conservative.
+    portion = 16
+    if psutil:
+        memory = psutil.virtual_memory().total
+    else:
+        memory = 1024 ** 3
+    numItems = max(int(math.floor(memory / portion / sizeEach)), 2)
+    return numItems
 
 
 def defaultCacheKeyFunc(args, kwargs):
@@ -132,3 +157,27 @@ class instanceLruCache(object):  # noqa - N801
             return value
 
         return functools.update_wrapper(wrapper, func)
+
+
+class lru_cache(repoze.lru.lru_cache):  # noqa - N801
+    """
+    Subclass the repose.lru.lru_cache so that it uses the kwargs as part of the
+    cache key.
+    """
+    def __call__(self, f):
+        cache = self.cache
+        marker = _MARKER
+
+        def lru_cached(*arg, **kwargs):
+            # Python 3's functools lru_cache has a lower memory way of
+            # generating function keys
+            key = (arg, tuple(sorted(kwargs.items())))
+            val = cache.get(key, marker)
+            if val is marker:
+                val = f(*arg, **kwargs)
+                cache.put(key, val)
+            return val
+        lru_cached.__module__ = f.__module__
+        lru_cached.__name__ = f.__name__
+        lru_cached.__doc__ = f.__doc__
+        return lru_cached

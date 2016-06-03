@@ -19,6 +19,7 @@
 
 import math
 from six import BytesIO
+from .cache import pickAvailableCache, lru_cache
 
 try:
     import girder
@@ -67,6 +68,15 @@ class TileSource(object):
         self.levels = None
         self.sizeX = None
         self.sizeY = None
+
+        # We don't need to cache too many thumbnails, as we probably won't be
+        # asked for lots of different sizes and formats.
+        self.getThumbnail = lru_cache(maxsize=4)(self.getThumbnail)
+        # We don't know the size of tiles yet, so just pick a sensible common
+        # value.  In this case 256x256x4 up to channels.
+        self.getTile = lru_cache(
+            maxsize=pickAvailableCache(256 ** 2 * 4), timeout=300)(
+            self.getTile)
 
     def _calculateWidthHeight(self, width, height, regionWidth, regionHeight):
         """

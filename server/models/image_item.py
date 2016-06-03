@@ -25,8 +25,7 @@ from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 
 from .base import TileGeneralException
-from ..tilesource import AvailableTileSources, TestTileSource, \
-    TileSourceException
+from ..tilesource import AvailableTileSources, TileSourceException
 
 
 class ImageItem(Item):
@@ -165,10 +164,7 @@ class ImageItem(Item):
 
         sourceName = item['largeImage']['sourceName']
 
-        if sourceName == 'test':
-            tileSource = TestTileSource(**kwargs)
-        else:
-            tileSource = AvailableTileSources[sourceName](item, **kwargs)
+        tileSource = AvailableTileSources[sourceName](item, **kwargs)
         return tileSource
 
     def getMetadata(self, item, **kwargs):
