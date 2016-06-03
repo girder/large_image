@@ -27,6 +27,7 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
 
     initialize: function (settings) {
         this.itemId = settings.imageModel.id;
+        this.model = settings.imageModel;
         this.currentViewer = null;
         girder.views.largeImageConfig.getSettings(
             _.bind(this.render, this));
@@ -65,7 +66,8 @@ girder.views.ImageViewerSelectWidget = girder.View.extend({
         this.currentViewer = new ViewerType({
             el: viewerEl,
             parentView: this,
-            itemId: this.itemId
+            itemId: this.itemId,
+            model: this.model
         });
     }
 });

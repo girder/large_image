@@ -1,0 +1,23 @@
+.g-item-annotation-list-header.g-item-info-header
+  i.icon-pencil
+  | Annotations
+ul.g-annotation-list.g-file-list
+  each annotation in annotations
+    li.g-annotation-list-entry
+      a.g-annotation-list-link.g-file-list-link(cid=annotation.cid,
+                         target='_blank',
+                         href=annotation.downloadUrl())
+        i.icon-doc-inv
+        | #{annotation.get('annotation').name}
+      if annotation.get('annotation').elements
+        .g-file-size
+          | (#{girder.formatCount((annotation.get('annotation').elements).length)})
+      .g-annotation-actions-container.g-file-actions-container(annotation-cid="#{annotation.cid}")
+        if parentItem && parentItem.get('_accessLevel') >= girder.AccessType.WRITE
+          a.g-delete-annotation(title="Delete annotation")
+            i.icon-cancel
+  if (hasMore)
+    li.g-show-more
+      a.g-show-more-annotations
+        i.icon-level-down
+        | Show more annotations...
