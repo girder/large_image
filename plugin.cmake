@@ -22,6 +22,10 @@ add_python_style_test(
   python_static_analysis_large_image_tests
   "${CMAKE_CURRENT_LIST_DIR}/plugin_tests"
 )
+add_python_style_test(
+  python_static_analysis_large_image_scripts
+  "${CMAKE_CURRENT_LIST_DIR}/scripts"
+)
 
 add_eslint_test(
   js_static_analysis_large_image_gruntfile
