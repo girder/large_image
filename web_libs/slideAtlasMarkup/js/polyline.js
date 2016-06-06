@@ -243,6 +243,10 @@
     // NOTE: Line thickness is handled by style in canvas.
     // I think the GL version that uses triangles is broken.
     Polyline.prototype.UpdateBuffers = function(view) {
+        // Hack: Annotations really do not need to worry about webgl
+        // anymore. And the view is only used to get the webgl context.
+        view = view || {};
+
         var points = this.Points.slice(0);
         if (this.Closed && points.length > 2) {
             points.push(points[0]);
@@ -421,7 +425,7 @@
             ny = (ny / mag) * EDGE_OFFSET * scale;
 
             // Save an image at this sample point.
-            GetCutoutImage(cache,dimensions,[x+nx,y+ny],scale,
+            SA.GetCutoutImage(cache,dimensions,[x+nx,y+ny],scale,
                            edgeAngle,EDGE_ROOT+count+".png",
                            function() {
                                setTimeout(

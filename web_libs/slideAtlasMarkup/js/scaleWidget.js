@@ -172,6 +172,9 @@
     }
 
     ScaleWidget.prototype.Draw = function(view) {
+        if (! this.View || ! this.View.HasUnits()) {
+            return;
+        }
         // Update the scale if zoom changed.
         this.Update();
         this.Shape.Draw(view);

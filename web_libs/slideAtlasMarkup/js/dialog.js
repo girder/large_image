@@ -59,12 +59,24 @@
         var self = this;
         (function () {
             // Return true needed to hide the spectrum color picker.
-            self.CloseButton.click(function (e) {self.Hide(); return true;});
-            self.ApplyButton.click(function (e) {self.Hide(); (callback)(); return true;});
+            self.CloseButton.click(function (e) {
+                // hack
+                SA.ContentEditableHasFocus = false;
+                self.Hide();
+                return true;
+            });
+            self.ApplyButton.click(function (e) {
+                // hack
+                SA.ContentEditableHasFocus = false;
+                self.Hide(); 
+                (callback)(); return true;
+            });
         })();
     }
 
     Dialog.prototype.Show = function(modal) {
+        // hack
+        SA.ContentEditableHasFocus = true;
         var self = this;
         SAM.DialogOverlay.show();
         this.Dialog.fadeIn(300);

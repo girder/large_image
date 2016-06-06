@@ -206,17 +206,15 @@
     // The combined visibilities is confusing.
     // Global text visibility is passed in as argument.
     // Local visiblity mode is the hover state of this text. (0 text only, 1: hover, 2: both on).
-    TextWidget.prototype.Draw = function(view, visibility) {
-        if (visibility != ANNOTATION_OFF && this.VisibilityMode != 0) {
+    TextWidget.prototype.Draw = function(view) {
+        if (this.VisibilityMode != 0) {
             this.Arrow.Draw(view);
         }
-        if (visibility == ANNOTATION_ON) {
-            if (this.VisibilityMode != 1 || this.State != WAITING) {
-                this.Text.Draw(view);
-                this.Text.Visibility = true;
-            } else {
-                this.Text.Visibility = false;
-            }
+        if (this.VisibilityMode != 1 || this.State != WAITING) {
+            this.Text.Draw(view);
+            this.Text.Visibility = true;
+        } else {
+            this.Text.Visibility = false;
         }
     }
 
