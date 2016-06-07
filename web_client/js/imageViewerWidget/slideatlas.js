@@ -48,9 +48,6 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
             this.$el.saViewer('destroy');
             this.viewer = null;
         }
-        if (window.SlideAtlas) {
-            delete window.SlideAtlas;
-        }
         girder.views.ImageViewerWidget.prototype.destroy.call(this);
     }
 });
