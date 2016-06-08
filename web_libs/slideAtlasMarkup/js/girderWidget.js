@@ -161,13 +161,13 @@
                        'height': cam.GetHeight(),
                        'width' : cam.GetWidth(),
                        "rotation": cam.Roll};
-        element.center.push(0);
+        element.center[2] = 0;
         returnElements.push(element);
 
         for (var i = 0; i < this.AnnotationLayer.GetNumberOfWidgets(); ++i) {
             var widget = this.AnnotationLayer.GetWidget(i).Serialize();
             if (widget.type == "circle") {
-                widget.origin.push(0); // z coordinate
+                widget.origin[2] = 0; // z coordinate
                 var element = {"type": "circle",
                                "center":   widget.origin,
                                "radius":   widget.radius};
@@ -177,8 +177,8 @@
                 var points = [widget.position, widget.offset];
                 points[1][0] += widget.position[0];
                 points[1][1] += widget.position[1];
-                points[0].push(0);
-                points[1].push(0);
+                points[0][2] = 0;
+                points[1][2] = 0;
                 var element = {'type'     : 'arrow',
                                'lineWidth': 10,
                                'fillColor': SAM.ConvertColorToHex(widget.color),
@@ -188,7 +188,6 @@
                                  'color'   : SAM.ConvertColorToHex(widget.color)};
             }
             if (widget.type == "grid") {
-                //widget.origin.push(0); // z coordinate.
                 var element = {"type": "rectanglegrid",
                                "center": widget.origin,
                                "width":  widget.bin_width * widget.dimensions[0],
@@ -201,7 +200,7 @@
             if (widget.type == "polyline") {
                 // add the z coordinate
                 for (var j = 0; j < widget.points.length; ++j) {
-                    widget.points[j].push(0);
+                    widget.points[j][2] = 0;
                 }
                 var element = {"type": "polyline",
                                "closed":widget.closedloop,
@@ -210,7 +209,7 @@
             if (widget.type == "lasso") {
                 // add the z coordinate
                 for (var j = 0; j < widget.points.length; ++j) {
-                    widget.points[j].push(0);
+                    widget.points[j][2] = 0;
                 }
                 var element = {"type": "polyline",
                                "closed": true,
@@ -222,7 +221,7 @@
                     var points = widget.shapes[i];
                     // add the z coordinate
                     for (var j = 0; j < points.length; ++j) {
-                        points[j].push(0);
+                        points[j][2] = 0;
                     }
                     var element = {"type": "polyline",
                                    "closed":false,
