@@ -2,20 +2,28 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
     initialize: function (settings) {
         girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
 
-        $('head').prepend(
-            $('<link rel="stylesheet" href="https://beta.slide-atlas.org/webgl-viewer/static/css/sa.css">'));
+        if ( typeof(SA) == "undefined") {
+            $('head').prepend(
+                $('<link rel="stylesheet" href="https://beta.slide-atlas.org/webgl-viewer/static/css/sa.css">'));
 
-        $.getScript(
-            'https://beta.slide-atlas.org/webgl-viewer/static/sa.max.js',
-            _.bind(function () {
-                this.render();
-            }, this)
-        );
+            $.getScript(
+                'https://beta.slide-atlas.org/webgl-viewer/static/sam.max.js',
+                _.bind(function () {
+                    this.render();
+                }, this)
+            );
+            $.getScript(
+                'https://beta.slide-atlas.org/webgl-viewer/static/sa.max.js',
+                _.bind(function () {
+                    this.render();
+                }, this)
+            );
+        }
     },
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.SlideAtlas || !this.tileWidth || !this.tileHeight) {
+        if (!window.SA || !this.tileWidth || !this.tileHeight) {
             return;
         }
 
@@ -39,6 +47,7 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
                 ajaxWithCredentials: true
             }});
         this.viewer = this.el.saViewer;
+        this.girderGui = new SAM.GirderWidget(this.viewer.GetAnnotationLayer(), this.itemId);
 
         return this;
     },
