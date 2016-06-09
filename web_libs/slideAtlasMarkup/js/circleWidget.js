@@ -9,13 +9,13 @@
 
     // The circle has just been created and is following the mouse.
     // I can probably merge this state with drag. (mouse up vs down though)
-    var CIRCLE_WIDGET_NEW_HIDDEN = 0;
-    var CIRCLE_WIDGET_NEW_DRAGGING = 1;
-    var CIRCLE_WIDGET_DRAG = 2; // The whole arrow is being dragged.
-    var CIRCLE_WIDGET_DRAG_RADIUS = 3;
-    var CIRCLE_WIDGET_WAITING = 4; // The normal (resting) state.
-    var CIRCLE_WIDGET_ACTIVE = 5; // Mouse is over the widget and it is receiving events.
-    var CIRCLE_WIDGET_PROPERTIES_DIALOG = 6; // Properties dialog is up
+    var NEW_HIDDEN = 0;
+    var NEW_DRAGGING = 1;
+    var DRAG = 2; // The whole arrow is being dragged.
+    var DRAG_RADIUS = 3;
+    var WAITING = 4; // The normal (resting) state.
+    var ACTIVE = 5; // Mouse is over the widget and it is receiving events.
+    var PROPERTIES_DIALOG = 6; // Properties dialog is up
 
     function CircleWidget (layer, newFlag) {
         var self = this;
@@ -114,26 +114,19 @@
         // canvas, this will behave odd.
 
         if (newFlag) {
-            this.State = CIRCLE_WIDGET_NEW_HIDDEN;
+            this.State = NEW_HIDDEN;
             this.Layer.ActivateWidget(this);
             return;
         }
 
-        this.State = CIRCLE_WIDGET_WAITING;
+        this.State = WAITING;
     }
 
     CircleWidget.prototype.Draw = function(view) {
-        if ( this.State != CIRCLE_WIDGET_NEW_HIDDEN) {
+        if ( this.State != NEW_HIDDEN) {
             this.Shape.Draw(view);
         }
     }
-
-    // This needs to be put in the Viewer.
-    //CircleWidget.prototype.RemoveFromViewer = function() {
-    //    if (this.Viewer) {
-    //        this.Viewer.RemoveWidget(this);
-    //    }
-    //}
 
     //CircleWidget.prototype.PasteCallback = function(data, mouseWorldPt) {
     //    this.Load(data);
@@ -180,7 +173,7 @@
 
     CircleWidget.prototype.HandleKeyDown = function(keyCode) {
         // The dialog consumes all key events.
-        if (this.State == CIRCLE_WIDGET_PROPERTIES_DIALOG) {
+        if (this.State == PROPERTIES_DIALOG) {
             return false;
         }
 
@@ -207,22 +200,22 @@
             return false;
         }
         var cam = this.Layer.GetCamera();
-        if (this.State == CIRCLE_WIDGET_NEW_DRAGGING) {
+        if (this.State == NEW_DRAGGING) {
             // We need the viewer position of the circle center to drag radius.
             this.OriginViewer =
                 cam.ConvertPointWorldToViewer(this.Shape.Origin[0],
                                               this.Shape.Origin[1]);
-            this.State = CIRCLE_WIDGET_DRAG_RADIUS;
+            this.State = DRAG_RADIUS;
         }
-        if (this.State == CIRCLE_WIDGET_ACTIVE) {
+        if (this.State == ACTIVE) {
             // Determine behavior from active radius.
             if (this.NormalizedActiveDistance < 0.5) {
-                this.State = CIRCLE_WIDGET_DRAG;
+                this.State = DRAG;
             } else {
                 this.OriginViewer =
                     cam.ConvertPointWorldToViewer(this.Shape.Origin[0],
                                                   this.Shape.Origin[1]);
-                this.State = CIRCLE_WIDGET_DRAG_RADIUS;
+                this.State = DRAG_RADIUS;
             }
         }
         return false;
@@ -230,8 +223,8 @@
 
     // returns false when it is finished doing its work.
     CircleWidget.prototype.HandleMouseUp = function(event) {
-        if ( this.State == CIRCLE_WIDGET_DRAG ||
-             this.State == CIRCLE_WIDGET_DRAG_RADIUS) {
+        if ( this.State == DRAG ||
+             this.State == DRAG_RADIUS) {
             this.SetActive(false);
             if (window.SA) {SA.RecordState();}
         }
@@ -242,23 +235,23 @@
         var x = event.offsetX;
         var y = event.offsetY;
 
-        if (event.which == 0 && this.State == CIRCLE_WIDGET_ACTIVE) {
+        if (event.which == 0 && this.State == ACTIVE) {
             this.SetActive(this.CheckActive(event));
             return false;
         }
 
         var cam = this.Layer.GetCamera();
-        if (this.State == CIRCLE_WIDGET_NEW_HIDDEN) {
-            this.State = CIRCLE_WIDGET_NEW_DRAGGING;
+        if (this.State == NEW_HIDDEN) {
+            this.State = NEW_DRAGGING;
         }
-        if (this.State == CIRCLE_WIDGET_NEW_DRAGGING || this.State == CIRCLE_WIDGET_DRAG) {
+        if (this.State == NEW_DRAGGING || this.State == DRAG) {
             if (SA && SA.notesWidget) {SA.notesWidget.MarkAsModified();} // hack
             this.Shape.Origin = cam.ConvertPointViewerToWorld(x, y);
             this.PlacePopup();
             this.Layer.EventuallyDraw();
         }
 
-        if (this.State == CIRCLE_WIDGET_DRAG_RADIUS) {
+        if (this.State == DRAG_RADIUS) {
             var viewport = this.Layer.GetViewport();
             var cam = this.Layer.GetCamera();
             var dx = x-this.OriginViewer[0];
@@ -271,7 +264,7 @@
             this.Layer.EventuallyDraw();
         }
 
-        if (this.State == CIRCLE_WIDGET_WAITING) {
+        if (this.State == WAITING) {
             this.CheckActive(event);
         }
         return false;
@@ -309,8 +302,8 @@
 
 
     CircleWidget.prototype.CheckActive = function(event) {
-        if (this.State == CIRCLE_WIDGET_NEW_HIDDEN ||
-            this.State == CIRCLE_WIDGET_NEW_DRAGGING) {
+        if (this.State == NEW_HIDDEN ||
+            this.State == NEW_DRAGGING) {
             return true;
         }
 
@@ -348,7 +341,7 @@
 
     // Multiple active states. Active state is a bit confusing.
     CircleWidget.prototype.GetActive = function() {
-        if (this.State == CIRCLE_WIDGET_WAITING) {
+        if (this.State == WAITING) {
             return false;
         }
         return true;
@@ -358,13 +351,13 @@
         // If the circle button is clicked to deactivate the widget before
         // it is placed, I want to delete it. (like cancel). I think this
         // will do the trick.
-        if (this.State == CIRCLE_WIDGET_NEW_HIDDEN) {
+        if (this.State == NEW_HIDDEN) {
             this.Layer.RemoveWidget(this);
             return;
         }
 
         this.Popup.StartHideTimer();
-        this.State = CIRCLE_WIDGET_WAITING;
+        this.State = WAITING;
         this.Shape.Active = false;
         this.Layer.DeactivateWidget(this);
         if (this.DeactivateCallback) {
@@ -381,7 +374,7 @@
         }
 
         if (flag) {
-            this.State = CIRCLE_WIDGET_ACTIVE;
+            this.State = ACTIVE;
             this.Shape.Active = true;
             this.Layer.ActivateWidget(this);
             this.Layer.EventuallyDraw();
@@ -406,7 +399,7 @@
     }
 
     // Can we bind the dialog apply callback to an objects method?
-    var CIRCLE_WIDGET_DIALOG_SELF;
+    var DIALOG_SELF;
     CircleWidget.prototype.ShowPropertiesDialog = function () {
         this.Dialog.ColorInput.val(SAM.ConvertColorToHex(this.Shape.OutlineColor));
 

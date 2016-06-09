@@ -150,7 +150,7 @@
 
         // I would like to setup the ancoh in the middle of the screen,
         // And have the Anchor in the middle of the text.
-        this.Text.Position = [cam.FocalPoint[0], cam.FocalPoint[1]];
+        this.Text.Position = [cam.FocalPoint[0], cam.FocalPoint[1], 0];
 
         // The anchor shape could be put into the text widget, but I might want a thumb tack anchor.
         this.Arrow = new SAM.Arrow();
@@ -241,6 +241,7 @@
         obj.visibility = this.VisibilityMode;
         obj.backgroundFlag = this.Text.BackgroundFlag;
         obj.creation_camera = this.CreationCamera;
+
         return obj;
     }
 
@@ -306,7 +307,7 @@
 
     // When the arrow is visible, the text is offset from the position (tip of arrow).
     TextWidget.prototype.SetPosition = function(x, y) {
-        this.Text.Position = [x, y];
+        this.Text.Position = [x, y, 0];
         this.Arrow.Origin = this.Text.Position;
     }
 
