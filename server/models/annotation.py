@@ -295,6 +295,33 @@ class AnnotationSchema:
             }
         ]
     }
+    viewSchema = {
+        '$schema': 'http://json-schema.org/schema#',
+        'id': '/girder/plugins/large_image/models/base_shape',
+        'type': 'object',
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['view']
+            },
+            'center': coordSchema,
+            'width': {
+                'type': 'number',
+                'minimum': 0
+            },
+            'height': {
+                'type': 'number',
+                'minimum': 0
+            },
+            'rotation': {
+                'type': 'number',
+                'description': 'radians counterclockwise around normal',
+            },
+        },
+        'required': ['type', 'center', 'height'],
+        'additionalProperties': False
+    }
+
 
     annotationSchema = {
         '$schema': 'http://json-schema.org/schema#',
@@ -330,6 +357,7 @@ class AnnotationSchema:
                         polylineShapeSchema,
                         rectangleShapeSchema,
                         rectangleGridShapeSchema,
+                        viewSchema,
                     ]
                 },
                 # We want to ensure unique element IDs, if they are set.  If
