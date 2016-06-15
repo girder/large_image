@@ -17,13 +17,14 @@
 #  limitations under the License.
 ###############################################################################
 
-import functools
 import math
-import repoze.lru
+
 import six
 
-# Import _MARKER into the global namespace for slightly faster lookup
-from repoze.lru import _MARKER
+from cachetools import LRUCache, Cache, hashkey
+from cachetools.memcache import MemCache
+import threading
+
 try:
     import psutil
 except ImportError:
@@ -84,13 +85,7 @@ class LruCacheMetaclass(type):
             keyFunc = defaultCacheKeyFunc
 
         # TODO: use functools.lru_cache if's available in Python 3?
-        cacheType = \
-            repoze.lru.LRUCache \
-            if timeout is None else \
-            functools.partial(repoze.lru.ExpiringLRUCache,
-                              default_timeout=timeout)
-        cache = cacheType(maxSize)
-        cache.keyFunc = keyFunc
+        cache = LRUCache(Cache(maxSize))
 
         cls = super(LruCacheMetaclass, metacls).__new__(
             metacls, name, bases, namespace)
@@ -106,78 +101,24 @@ class LruCacheMetaclass(type):
 
     def __call__(cls, *args, **kwargs):  # noqa - N805
         cache = LruCacheMetaclass.caches[cls]
+        instance = None
+        key = hashkey(args[0]["_id"])
+        try:
+            instance = cache[key]
+        except KeyError:
 
-        key = cache.keyFunc(args, kwargs)
-
-        instance = cache.get(key, _MARKER)
-        if instance is _MARKER:
             instance = super(LruCacheMetaclass, cls).__call__(*args, **kwargs)
-            cache.put(key, instance)
+            cache[key] = instance
 
         return instance
 
 
-class instanceLruCache(object):  # noqa - N801
-    """
-    """
-    def __init__(self, maxSize, timeout=None, keyFunc=None):
-        self.maxSize = maxSize
-        self.cacheType = \
-            repoze.lru.LRUCache \
-            if timeout is None else \
-            functools.partial(repoze.lru.ExpiringLRUCache,
-                              default_timeout=timeout)
-        self.keyFunc = keyFunc if keyFunc else defaultCacheKeyFunc
-
-    def __call__(self, func):
-        def wrapper(instance, *args, **kwargs):
-            # instance methods are hashable, but we shouldn't use the instance
-            # method as the cache identifier / name because the Python language
-            # states:
-            #   Note that the transformation from function object to instance
-            #   method object happens each time the attribute is retrieved from
-            #   the instance. In some cases, a fruitful optimization is to
-            #   assign the attribute to a local variable and call that local
-            #   variable.
-            # so we are not be guaranteed to get the same instance method object
-            # back each time, and the instance method __hash__ function might
-            # use object identity as an input
-            cacheName = '__cache_%s' % func.__name__
-
-            cache = instance.__dict__.setdefault(
-                cacheName, self.cacheType(self.maxSize))
-
-            key = self.keyFunc(args, kwargs)
-
-            value = cache.get(key, _MARKER)
-            if value is _MARKER:
-                value = func(instance, *args, **kwargs)
-                cache.put(key, value)
-
-            return value
-
-        return functools.update_wrapper(wrapper, func)
-
-
-class lru_cache(repoze.lru.lru_cache):  # noqa - N801
-    """
-    Subclass the repose.lru.lru_cache so that it uses the kwargs as part of the
-    cache key.
-    """
-    def __call__(self, f):
-        cache = self.cache
-        marker = _MARKER
-
-        def lru_cached(*arg, **kwargs):
-            # Python 3's functools lru_cache has a lower memory way of
-            # generating function keys
-            key = (arg, tuple(sorted(kwargs.items())))
-            val = cache.get(key, marker)
-            if val is marker:
-                val = f(*arg, **kwargs)
-                cache.put(key, val)
-            return val
-        lru_cached.__module__ = f.__module__
-        lru_cached.__name__ = f.__name__
-        lru_cached.__doc__ = f.__doc__
-        return lru_cached
+UseMemCached = True
+tile_cache = None
+tile_cache_lock = None
+if UseMemCached:
+    tile_cache = MemCache()
+    # lock needed because pylibmc(memcached client) is not threadsafe
+    tile_cache_lock = threading.Lock()
+else:
+    tile_cache = Cache(pickAvailableCache(256 ** 2 * 4))

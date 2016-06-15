@@ -24,7 +24,11 @@ import six
 
 from libtiff import libtiff_ctypes
 
-from .cache import instanceLruCache
+
+
+from cachetools import LRUCache, Cache, cached, hashkey
+
+from functools import partial
 
 
 def patchLibtiff():
@@ -83,6 +87,18 @@ class TiledTiffDirectory(object):
         :raises: InvalidOperationTiffException or IOTiffException or
         ValidationTiffException
         """
+        # TODO how many to keep in the cache
+        # create local cache to store Jpeg tables and
+        # getTileByteCountsType
+
+        self.cache = Cache(2)
+        self._getJpegTables = cached(self.cache,
+                                     key=partial(hashkey, '_getJpegTables'))(
+                                    self._getJpegTables)
+        self._getTileByteCountsType = cached(
+            self.cache, key=partial(hashkey, '_getTileByteCountsType')
+                                            )(self._getTileByteCountsType)
+
         self._tiffFile = None
 
         self._open(filePath, directoryNum)
@@ -189,7 +205,6 @@ class TiledTiffDirectory(object):
         self._imageWidth = self._tiffFile.GetField('ImageWidth')
         self._imageHeight = self._tiffFile.GetField('ImageLength')
 
-    @instanceLruCache(1)
     def _getJpegTables(self):
         """
         Get the common JPEG Huffman-coding and quantization tables.
@@ -264,7 +279,6 @@ class TiledTiffDirectory(object):
             self._tiffFile, pixelX, pixelY, 0, 0).value
         return tileNum
 
-    @instanceLruCache(1)
     def _getTileByteCountsType(self):
         """
         Get data type of the elements in the TIFFTAG_TILEBYTECOUNTS array.

@@ -17,13 +17,15 @@
 #  limitations under the License.
 #############################################################################
 
+import abc
 import math
 from six import BytesIO
-from functools import partial
-from .cache import pickAvailableCache, lru_cache
-from cachetools.memcache import MemCache, strhash
-from cachetools import cached, hashkey
-import threading
+
+from .cache import tile_cache, tile_cache_lock
+from cachetools.memcache import strhash
+from cachetools import cached
+
+
 try:
     import girder
     from girder import logger
@@ -36,7 +38,6 @@ except ImportError:
     import logging as logger
 
     girder = None
-
 
     class TileGeneralException(Exception):
         pass
@@ -68,9 +69,8 @@ class TileSource(object):
     }
     name = None
 
-    cache = MemCache()
-    # lock needed because pylibmc(memcached client) is not threadsafe
-    cache_lock = threading.Lock()
+    cache = tile_cache
+    cache_lock = tile_cache_lock
 
     def __init__(self, *args, **kwargs):
         self.tileWidth = None
@@ -79,20 +79,29 @@ class TileSource(object):
         self.sizeX = None
         self.sizeY = None
 
-        print('@'*50, args[0])
+        print('@' * 50, strhash(args))
 
-        # TODO confirm if the  _id  value is enough to serve as a cache key
         # TODO confirm whether using a python threadinglock or
         # TODO pylibmc client pool is more efficient
         # only the item id (id used by the rest api) is stored along with
         # method args as a key
+
         self.getThumbnail = cached(TileSource.cache,
-                                   key=partial(strhash, str(args[0]["_id"])),
+                                   key=self.wrapKey,
                                    lock=TileSource.cache_lock)(
-                                    self.getThumbnail)
+            self.getThumbnail)
         self.getTile = cached(TileSource.cache,
-                              key=partial(strhash, str(args[0]["_id"])),
+                              key=self.wrapKey,
                               lock=TileSource.cache_lock)(self.getTile)
+
+    # TODO check if keys are reaching the 250 byte limit
+
+    def wrapKey(self, *args, **kwargs):
+        return strhash(self.get_state()) + strhash(*args, **kwargs)
+
+    @abc.abstractmethod
+    def get_state(self):
+        return None
 
     def _calculateWidthHeight(self, width, height, regionWidth, regionHeight):
         """
@@ -379,6 +388,9 @@ class FileTileSource(TileSource):
 
         self.largeImagePath = path
 
+    def get_state(self):
+        return self._getLargeImagePath()
+
     def _getLargeImagePath(self):
         return self.largeImagePath
 
@@ -408,6 +420,10 @@ if girder:
         def __init__(self, item, *args, **kwargs):
             super(GirderTileSource, self).__init__(item, *args, **kwargs)
             self.item = item
+
+        def get_state(self):
+            return str(self.item['largeImage']['fileId']) + ',' + str(
+                self.item['updated'])
 
         def _getLargeImagePath(self):
             try:
