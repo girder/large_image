@@ -45,8 +45,8 @@ add_eslint_test(
 )
 
 add_python_test(tiles PLUGIN large_image BIND_SERVER EXTERNAL_DATA
-  "sample_image.ptif" "plugins/large_image/sample_image.ptif"
-  "sample_svs_image.svs" "plugins/large_image/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs"
+  "plugins/large_image/sample_image.ptif"
+  "plugins/large_image/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs"
   )
 set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
@@ -54,8 +54,8 @@ set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
 add_python_test(import PLUGIN large_image)
 
 add_python_test(girderless PLUGIN large_image BIND_SERVER EXTERNAL_DATA
-  "sample_image.ptif" "plugins/large_image/sample_image.ptif"
-  "sample_svs_image.svs" "plugins/large_image/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs"
+  "plugins/large_image/sample_image.ptif"
+  "plugins/large_image/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs"
   )
 set_property(TEST server_large_image.girderless APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
