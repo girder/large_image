@@ -27,11 +27,15 @@ import matplotlib.patches as mpatches
 import mpl_toolkits.mplot3d.axes3d  # noqa
 
 
-def main(file_list):
+def main(file_list,units):
+
+    print file_list, units
     data = {}
     for file in file_list:
         elapsed_time = np.loadtxt(file)
         data[file] = elapsed_time
+        if units=='s':
+            data[file]=data[file]*1000
     plot_data(data)
 
 
@@ -122,8 +126,9 @@ def plot_data(data):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Plots data from each '
-                                                 'file passed in'
-                                     )
-    parser.add_argument('elapsed_time', nargs='+', help='files to plot'
-                        )
-main(parser.parse_args().elapsed_time)
+                                                 'file passed in')
+    parser.add_argument('units',nargs=1,help='choose s for files in seconds and choose m for files in miliseconds')                                 
+    parser.add_argument('elapsed_time', nargs='+', help='files to plot')
+    args=parser.parse_args()  
+  
+    main(args.elapsed_time,args.units[0])
