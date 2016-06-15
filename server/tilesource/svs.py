@@ -27,7 +27,7 @@ import openslide
 import PIL
 
 from .base import FileTileSource, TileSourceException
-from .cache import LruCacheMetaclass
+from .cache import LruCacheMetaclass, pickAvailableCache
 
 try:
     import girder
@@ -41,8 +41,10 @@ class SVSFileTileSource(FileTileSource):
     """
     Provides tile access to SVS files.
     """
-    cacheMaxSize = 2
-    cacheTimeout = 60
+    # Cache size is based on what the class needs, which does not include
+    # individual tiles
+    cacheMaxSize = pickAvailableCache(1024 ** 2)
+    cacheTimeout = 300
     name = 'svsfile'
 
     @staticmethod
@@ -196,8 +198,10 @@ if girder:
         """
         Provides tile access to Girder items with an SVS file.
         """
-        cacheMaxSize = 2
-        cacheTimeout = 60
+        # Cache size is based on what the class needs, which does not include
+        # individual tiles
+        cacheMaxSize = pickAvailableCache(1024 ** 2)
+        cacheTimeout = 300
         name = 'svs'
 
         @staticmethod

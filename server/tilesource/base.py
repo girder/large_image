@@ -19,7 +19,11 @@
 
 import math
 from six import BytesIO
-
+from functools import partial
+from .cache import pickAvailableCache, lru_cache
+from cachetools.memcache import MemCache, strhash
+from cachetools import cached, hashkey
+import threading
 try:
     import girder
     from girder import logger
@@ -30,7 +34,9 @@ try:
     from girder.models.model_base import AccessType
 except ImportError:
     import logging as logger
+
     girder = None
+
 
     class TileGeneralException(Exception):
         pass
@@ -38,6 +44,7 @@ except ImportError:
 # Not having PIL disables thumbnail creation, but isn't fatal
 try:
     import PIL
+
     if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
         logger.warning('Error: Pillow v3.0 or later is required')
         PIL = None
@@ -61,12 +68,31 @@ class TileSource(object):
     }
     name = None
 
+    cache = MemCache()
+    # lock needed because pylibmc(memcached client) is not threadsafe
+    cache_lock = threading.Lock()
+
     def __init__(self, *args, **kwargs):
         self.tileWidth = None
         self.tileHeight = None
         self.levels = None
         self.sizeX = None
         self.sizeY = None
+
+        print('@'*50, args[0])
+
+        # TODO confirm if the  _id  value is enough to serve as a cache key
+        # TODO confirm whether using a python threadinglock or
+        # TODO pylibmc client pool is more efficient
+        # only the item id (id used by the rest api) is stored along with
+        # method args as a key
+        self.getThumbnail = cached(TileSource.cache,
+                                   key=partial(strhash, str(args[0]["_id"])),
+                                   lock=TileSource.cache_lock)(
+                                    self.getThumbnail)
+        self.getTile = cached(TileSource.cache,
+                              key=partial(strhash, str(args[0]["_id"])),
+                              lock=TileSource.cache_lock)(self.getTile)
 
     def _calculateWidthHeight(self, width, height, regionWidth, regionHeight):
         """
@@ -308,7 +334,7 @@ class TileSource(object):
             regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
         # Use RGB mode.  If we need to support alpha on some encodings, this
         # can changed to RGBA.
-        mode = 'RGBA' if kwargs.get('encoding') in ('PNG', ) else 'RGB'
+        mode = 'RGBA' if kwargs.get('encoding') in ('PNG',) else 'RGB'
 
         # We can construct an image using PIL.Image.new:
         #   image = PIL.Image.new('RGB', (regionWidth, regionHeight))
@@ -336,7 +362,7 @@ class TileSource(object):
                 # the edge.
                 image.paste(tileData, (posX, posY),
                             tileData if mode == 'RGBA' and
-                            tileData.mode == 'RGBA' else None)
+                                        tileData.mode == 'RGBA' else None)
 
         # Scale if we need to
         if width != regionWidth or height != regionHeight:
@@ -350,6 +376,7 @@ class TileSource(object):
 class FileTileSource(TileSource):
     def __init__(self, path, *args, **kwargs):
         super(FileTileSource, self).__init__(path, *args, **kwargs)
+
         self.largeImagePath = path
 
     def _getLargeImagePath(self):

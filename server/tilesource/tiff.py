@@ -23,7 +23,7 @@ import six
 from six import BytesIO
 
 from .base import FileTileSource, TileSourceException
-from .cache import LruCacheMetaclass
+from .cache import LruCacheMetaclass, pickAvailableCache
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException
 
@@ -46,8 +46,10 @@ class TiffFileTileSource(FileTileSource):
     """
     Provides tile access to TIFF files.
     """
-    cacheMaxSize = 2
-    cacheTimeout = 60
+    # Cache size is based on what the class needs, which does not include
+    # individual tiles
+    cacheMaxSize = pickAvailableCache(1024 ** 2)
+    cacheTimeout = 300
     name = 'tifffile'
 
     @staticmethod
@@ -114,8 +116,10 @@ if girder:
         """
         Provides tile access to Girder items with a TIFF file.
         """
-        cacheMaxSize = 2
-        cacheTimeout = 60
+        # Cache size is based on what the class needs, which does not include
+        # individual tiles
+        cacheMaxSize = pickAvailableCache(1024 ** 2)
+        cacheTimeout = 300
         name = 'tiff'
 
         @staticmethod
