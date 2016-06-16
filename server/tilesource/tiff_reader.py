@@ -25,12 +25,6 @@ import six
 from libtiff import libtiff_ctypes
 
 
-
-from cachetools import LRUCache, Cache, cached, hashkey
-
-from functools import partial
-
-
 def patchLibtiff():
     libtiff_ctypes.libtiff.TIFFFieldWithTag.restype = \
         ctypes.POINTER(libtiff_ctypes.TIFFFieldInfo)
@@ -90,15 +84,15 @@ class TiledTiffDirectory(object):
         # TODO how many to keep in the cache
         # create local cache to store Jpeg tables and
         # getTileByteCountsType
-
+        """
         self.cache = Cache(2)
         self._getJpegTables = cached(self.cache,
                                      key=partial(hashkey, '_getJpegTables'))(
-                                    self._getJpegTables)
+                                     self._getJpegTables)
         self._getTileByteCountsType = cached(
             self.cache, key=partial(hashkey, '_getTileByteCountsType')
-                                            )(self._getTileByteCountsType)
-
+                                     )(self._getTileByteCountsType)
+        """
         self._tiffFile = None
 
         self._open(filePath, directoryNum)

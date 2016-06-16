@@ -23,7 +23,7 @@ import six
 from six import BytesIO
 
 from .base import FileTileSource, TileSourceException
-from .cache import pickAvailableCache, LruCacheMetaclass
+from ..cache_util import pickAvailableCache, LruCacheMetaclass
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException
 

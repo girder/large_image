@@ -143,3 +143,8 @@ class TestTileSource(TileSource):
         if self.encoding == 'JPEG':
             return 'image/jpeg'
         return 'image/png'
+
+    def get_state(self):
+
+        return 'test' + self.encoding+str(self.minLevel)+str(self.maxLevel) +\
+               str(self.tileHeight)+str(self.tileWidth)+str(self.fractal)

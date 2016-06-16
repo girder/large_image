@@ -21,10 +21,7 @@ import abc
 import math
 from six import BytesIO
 
-from .cache import tile_cache, tile_cache_lock
-from cachetools.memcache import strhash
-from cachetools import cached
-
+from ..cache_util import tile_cache, tile_cache_lock, strhash, cached
 
 try:
     import girder
@@ -78,8 +75,6 @@ class TileSource(object):
         self.levels = None
         self.sizeX = None
         self.sizeY = None
-
-        print('@' * 50, strhash(args))
 
         # TODO confirm whether using a python threadinglock or
         # TODO pylibmc client pool is more efficient
@@ -371,7 +366,7 @@ class TileSource(object):
                 # the edge.
                 image.paste(tileData, (posX, posY),
                             tileData if mode == 'RGBA' and
-                                        tileData.mode == 'RGBA' else None)
+                            tileData.mode == 'RGBA' else None)
 
         # Scale if we need to
         if width != regionWidth or height != regionHeight:

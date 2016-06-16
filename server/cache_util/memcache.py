@@ -19,6 +19,7 @@
 
 from cachetools import Cache, hashkey
 import pylibmc
+import hashlib
 
 
 def strhash(*args, **kwargs):
@@ -59,13 +60,18 @@ class MemCache(Cache):
         del self._Cache__data[key]
 
     def __getitem__(self, key):
+        hash_object = hashlib.sha512(str.encode(key))
+        hex = hash_object.hexdigest()
+
         try:
-            return self._Cache__data[key]
+            return self._Cache__data[hex]
         except KeyError:
             return self.__missing__(key)
 
     def __setitem__(self, key, value):
+        hash_object = hashlib.sha512(str.encode(key))
+        hex = hash_object.hexdigest()
         try:
-            self._Cache__data[key] = value
+            self._Cache__data[hex] = value
         except KeyError:
             pass

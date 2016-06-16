@@ -21,8 +21,10 @@ import math
 
 import six
 
-from cachetools import LRUCache, Cache, hashkey
-from cachetools.memcache import MemCache
+from .memcache import MemCache,strhash
+from cachetools import LRUCache, Cache
+
+
 import threading
 
 try:
@@ -100,9 +102,10 @@ class LruCacheMetaclass(type):
         return cls
 
     def __call__(cls, *args, **kwargs):  # noqa - N805
+
         cache = LruCacheMetaclass.caches[cls]
         instance = None
-        key = hashkey(args[0]["_id"])
+        key = strhash(args[0], kwargs)
         try:
             instance = cache[key]
         except KeyError:
@@ -112,7 +115,7 @@ class LruCacheMetaclass(type):
 
         return instance
 
-
+# Decide whether to use Memcached or cachetools
 UseMemCached = True
 tile_cache = None
 tile_cache_lock = None
@@ -121,4 +124,5 @@ if UseMemCached:
     # lock needed because pylibmc(memcached client) is not threadsafe
     tile_cache_lock = threading.Lock()
 else:
+    # decide how much memory to designate for the cachetools cache
     tile_cache = Cache(pickAvailableCache(256 ** 2 * 4))

@@ -27,7 +27,7 @@ import openslide
 import PIL
 
 from .base import FileTileSource, TileSourceException
-from .cache import LruCacheMetaclass, pickAvailableCache
+from ..cache_util import LruCacheMetaclass, pickAvailableCache
 
 try:
     import girder
@@ -87,12 +87,12 @@ class SVSFileTileSource(FileTileSource):
         self.tileWidth = self.tileHeight = 256
         try:
             self.tileWidth = int(self._openslide.properties[
-                                     'openslide.level[0].tile-width'])
+                'openslide.level[0].tile-width'])
         except ValueError:
             pass
         try:
             self.tileHeight = int(self._openslide.properties[
-                                      'openslide.level[0].tile-height'])
+                'openslide.level[0].tile-height'])
         except ValueError:
             pass
         if self.tileWidth <= 0 or self.tileHeight <= 0:
@@ -126,7 +126,7 @@ class SVSFileTileSource(FileTileSource):
             scale = 1
             for svslevel in range(len(svsLevelDimensions)):
                 if (svsLevelDimensions[svslevel][0] < levelW - 1 or
-                            svsLevelDimensions[svslevel][1] < levelH - 1):
+                        svsLevelDimensions[svslevel][1] < levelH - 1):
                     break
                 bestlevel = svslevel
                 scale = int(round(svsLevelDimensions[svslevel][0] / levelW))
@@ -138,7 +138,7 @@ class SVSFileTileSource(FileTileSource):
     def get_state(self):
         return super(SVSFileTileSource, self).get_state() + ',' + str(
             self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
-            self.encoding)
+            self.jpegSubsampling)
 
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z < 0:
