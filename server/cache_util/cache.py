@@ -21,7 +21,7 @@ import math
 
 import six
 
-from .memcache import MemCache,strhash
+from .memcache import MemCache, strhash
 from cachetools import LRUCache, Cache
 
 

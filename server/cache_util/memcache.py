@@ -36,9 +36,6 @@ class MemCache(Cache):
         self._Cache__data = pylibmc.Client(['127.0.0.1'], binary=True,
                                            behaviors={'tcp_nodelay': True,
                                                       'ketama': True})
-        self._Cache__data.flush_all()
-        print ('initializing memcache client')
-        print(self._Cache__data.get_stats())
 
     def __repr__(self):
         return 'Memcache doesnt list its keys'
@@ -60,18 +57,23 @@ class MemCache(Cache):
         del self._Cache__data[key]
 
     def __getitem__(self, key):
-        hash_object = hashlib.sha512(str.encode(key))
-        hex = hash_object.hexdigest()
+        assert(isinstance(key, str))
+
+        hash_object = hashlib.sha512(key.encode())
+        hex_val = hash_object.hexdigest()
 
         try:
-            return self._Cache__data[hex]
+            return self._Cache__data[hex_val]
         except KeyError:
             return self.__missing__(key)
 
     def __setitem__(self, key, value):
-        hash_object = hashlib.sha512(str.encode(key))
-        hex = hash_object.hexdigest()
+        assert (isinstance(key, str))
+
+        hash_object = hashlib.sha512(key.encode())
+        hex_val = hash_object.hexdigest()
+
         try:
-            self._Cache__data[hex] = value
+            self._Cache__data[hex_val] = value
         except KeyError:
-            pass
+            print('Failed to save value %s \nwith key %s' % (value, hex_val))
