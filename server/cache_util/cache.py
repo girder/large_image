@@ -116,7 +116,7 @@ class LruCacheMetaclass(type):
         return instance
 
 # Decide whether to use Memcached or cachetools
-UseMemCached = True
+UseMemCached = False
 tileCache = None
 tileCacheLock = None
 if UseMemCached:
