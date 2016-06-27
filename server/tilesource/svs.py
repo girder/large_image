@@ -135,8 +135,8 @@ class SVSFileTileSource(FileTileSource):
                 'scale': scale
             })
 
-    def get_state(self):
-        return super(SVSFileTileSource, self).get_state() + ',' + str(
+    def getState(self):
+        return super(SVSFileTileSource, self).getState() + ',' + str(
             self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
             self.jpegSubsampling)
 

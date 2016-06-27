@@ -59,21 +59,21 @@ class MemCache(Cache):
     def __getitem__(self, key):
         assert(isinstance(key, str))
 
-        hash_object = hashlib.sha512(key.encode())
-        hex_val = hash_object.hexdigest()
+        hashObject = hashlib.sha512(key.encode())
+        hexVal = hashObject.hexdigest()
 
         try:
-            return self._Cache__data[hex_val]
+            return self._Cache__data[hexVal]
         except KeyError:
             return self.__missing__(key)
 
     def __setitem__(self, key, value):
         assert (isinstance(key, str))
 
-        hash_object = hashlib.sha512(key.encode())
-        hex_val = hash_object.hexdigest()
+        hashObject = hashlib.sha512(key.encode())
+        hexVal = hashObject.hexdigest()
 
         try:
-            self._Cache__data[hex_val] = value
+            self._Cache__data[hexVal] = value
         except KeyError:
-            print('Failed to save value %s \nwith key %s' % (value, hex_val))
+            print('Failed to save value %s \nwith key %s' % (value, hexVal))

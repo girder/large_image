@@ -117,12 +117,12 @@ class LruCacheMetaclass(type):
 
 # Decide whether to use Memcached or cachetools
 UseMemCached = True
-tile_cache = None
-tile_cache_lock = None
+tileCache = None
+tileCacheLock = None
 if UseMemCached:
-    tile_cache = MemCache()
+    tileCache = MemCache()
     # lock needed because pylibmc(memcached client) is not threadsafe
-    tile_cache_lock = threading.Lock()
+    tileCacheLock = threading.Lock()
 else:
     # decide how much memory to designate for the cachetools cache
-    tile_cache = Cache(pickAvailableCache(256 ** 2 * 4))
+    tileCache = Cache(pickAvailableCache(256 ** 2 * 4))

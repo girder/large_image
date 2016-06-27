@@ -21,7 +21,7 @@ import abc
 import math
 from six import BytesIO
 
-from ..cache_util import tile_cache, tile_cache_lock, strhash, cached
+from ..cache_util import tileCache, tileCacheLock, strhash, cached
 
 try:
     import girder
@@ -66,8 +66,8 @@ class TileSource(object):
     }
     name = None
 
-    cache = tile_cache
-    cache_lock = tile_cache_lock
+    cache = tileCache
+    cache_lock = tileCacheLock
 
     def __init__(self, *args, **kwargs):
         self.tileWidth = None
@@ -92,10 +92,10 @@ class TileSource(object):
     # TODO check if keys are reaching the 250 byte limit
 
     def wrapKey(self, *args, **kwargs):
-        return strhash(self.get_state()) + strhash(*args, **kwargs)
+        return strhash(self.getState()) + strhash(*args, **kwargs)
 
     @abc.abstractmethod
-    def get_state(self):
+    def getState(self):
         return None
 
     def _calculateWidthHeight(self, width, height, regionWidth, regionHeight):
@@ -383,7 +383,7 @@ class FileTileSource(TileSource):
 
         self.largeImagePath = path
 
-    def get_state(self):
+    def getState(self):
         return self._getLargeImagePath()
 
     def _getLargeImagePath(self):
@@ -416,7 +416,7 @@ if girder:
             super(GirderTileSource, self).__init__(item, *args, **kwargs)
             self.item = item
 
-        def get_state(self):
+        def getState(self):
             return str(self.item['largeImage']['fileId']) + ',' + str(
                 self.item['updated'])
 
