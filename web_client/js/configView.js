@@ -12,6 +12,9 @@ girder.views.largeImageConfig = girder.View.extend({
             }, {
                 key: 'large_image.show_viewer',
                 value: this.$('.g-large-image-viewer-show').prop('checked')
+            },{
+                key: 'large_image.use_memcached',
+                value: this.$('.g-large-image-memcached').prop('checked')
             }, {
                 key: 'large_image.default_viewer',
                 value: this.$('.g-large-image-default-viewer').val()
