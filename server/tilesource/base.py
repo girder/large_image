@@ -21,7 +21,7 @@ import abc
 import math
 from six import BytesIO
 
-from ..cache_util import tileCache, tileCacheLock, strhash, cached
+from ..cache_util import tileCache, tileLock, strhash, cached
 
 try:
     import girder
@@ -67,7 +67,7 @@ class TileSource(object):
     name = None
 
     cache = tileCache
-    cache_lock = tileCacheLock
+    cache_lock = tileLock
 
     def __init__(self, *args, **kwargs):
         self.tileWidth = None
@@ -76,11 +76,6 @@ class TileSource(object):
         self.sizeX = None
         self.sizeY = None
 
-        # TODO confirm whether using a python threadinglock or
-        # TODO pylibmc client pool is more efficient
-        # only the item id (id used by the rest api) is stored along with
-        # method args as a key
-
         self.getThumbnail = cached(TileSource.cache,
                                    key=self.wrapKey,
                                    lock=TileSource.cache_lock)(
@@ -88,8 +83,6 @@ class TileSource(object):
         self.getTile = cached(TileSource.cache,
                               key=self.wrapKey,
                               lock=TileSource.cache_lock)(self.getTile)
-
-    # TODO check if keys are reaching the 250 byte limit
 
     def wrapKey(self, *args, **kwargs):
         return strhash(self.getState()) + strhash(*args, **kwargs)

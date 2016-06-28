@@ -17,11 +17,8 @@
 #  limitations under the License.
 ###############################################################################
 
-
 import os
 
-from six.moves import reload_module
-import girder
 from girder import config
 from tests import base
 
@@ -43,7 +40,6 @@ def tearDownModule():
 class Fib(object):
     def num(self, k):
         if k > 2:
-
             return self.num(k - 1) + self.num(k - 2)
         else:
             return 1
@@ -54,53 +50,40 @@ class LargeImageCacheTest(base.TestCase):
         base.TestCase.setUp(self)
 
     def testCacheImport(self):
-        try:
 
-            reload_module(girder.plugins.large_image.cache_util.memcache)
-        except ImportError:
-            self.fail('Could not import memcache module.')
         try:
             import cachetools  # noqa
         except ImportError:
-            self.fail('Could not import cachtools')
+            self.fail('Could not import cachtools.')
 
-        try:
-            reload_module(girder.plugins.large_image.cache_util.cache)
-        except ImportError:
-            self.fail("Could not import the cache module")
         try:
             import pylibmc  # noqa
         except ImportError:
-            self.fail("Could not import pylibmc")
-
-    def testCache(self):
-        self._testCacheMemcached()
-        self._testLRUCacheTools()
+            self.fail('Could not import pylibmc.')
 
     def _testDecorator(self, specific_cache):
-        from server.cache_util import cached, strhash
+        from girder.plugins.large_image.cache_util import cached, strhash
         temp = Fib()
         temp.num = cached(cache=specific_cache,
                           key=strhash)(temp.num)
 
         self.assertEquals(temp.num(100), 354224848179261915075)
 
-    def _testLRUCacheTools(self):
-        from server.cache_util import Cache
+    def testLRUCacheTools(self):
+        from girder.plugins.large_image.cache_util import Cache
 
         self._testDecorator(Cache(1000))
 
-    def _testCacheMemcached(self):
-        from server.cache_util import MemCache
+    def testCacheMemcached(self):
+        from girder.plugins.large_image.cache_util import MemCache
 
         self._testDecorator(MemCache())
 
     def testcheckCacheMemcached(self):
-
-        from server.cache_util import MemCache
+        from girder.plugins.large_image.cache_util import MemCache
         # go though and check if all 100 fib numbers are in cache
         # it is stored in cache as ('fib', #)
-        self._testCacheMemcached()
+        self.testCacheMemcached()
 
         cache = MemCache()
         try:
@@ -109,4 +92,4 @@ class LargeImageCacheTest(base.TestCase):
             val = cache['(100,)']
             self.assertEquals(val, 354224848179261915075)
         except KeyError:
-            self.fail('could not retrieve recent fibonacci number ')
+            self.fail('Could not retrieve recent fibonacci number.')

@@ -29,13 +29,14 @@ def strhash(*args, **kwargs):
 class MemCache(Cache):
     """subclass of cache that uses a memcached store"""
 
-    def __init__(self, missing=None, getsizeof=None):
+    def __init__(self, url='localhost', username=None, password=None,
+                 missing=None, getsizeof=None):
         super(MemCache, self).__init__(0, missing, getsizeof)
         # name mangling to override 'private variable' __data in cache
         # pylibmc used to connect to memcached client
-        self._Cache__data = pylibmc.Client(['127.0.0.1'], binary=True,
-                                           behaviors={'tcp_nodelay': True,
-                                                      'ketama': True})
+        self._Cache__data = pylibmc.Client(
+            [url], binary=True, username=username, password=password,
+            behaviors={'tcp_nodelay': True, 'ketama': True})
 
     def __repr__(self):
         return 'Memcache doesnt list its keys'

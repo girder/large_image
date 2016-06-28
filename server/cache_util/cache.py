@@ -17,40 +17,12 @@
 #  limitations under the License.
 ###############################################################################
 
-import math
 
 import six
 
-from .memcache import MemCache, strhash
+from .memcache import strhash
 from cachetools import LRUCache, Cache
-
-
-import threading
-
-try:
-    import psutil
-except ImportError:
-    psutil = None
-
-
-def pickAvailableCache(sizeEach):
-    """
-    Given an estimated size of an item, return how many of those items would
-    fit in a fixed portion of the available virtual memory.
-
-    :param sizeEach: the expected size of an item that could be cached.
-    :return: the number of items that should be cached.  Always at least two.
-    """
-    # Estimate usage based on (1 / portion) of the total virtual memory.  Each
-    # class has its own cache, and many methods have their own class, so make
-    # this conservative.
-    portion = 16
-    if psutil:
-        memory = psutil.virtual_memory().total
-    else:
-        memory = 1024 ** 3
-    numItems = max(int(math.floor(memory / portion / sizeEach)), 2)
-    return numItems
+from .cachefactory import CacheFactory
 
 
 def defaultCacheKeyFunc(args, kwargs):
@@ -104,7 +76,7 @@ class LruCacheMetaclass(type):
     def __call__(cls, *args, **kwargs):  # noqa - N805
 
         cache = LruCacheMetaclass.caches[cls]
-        instance = None
+
         key = strhash(args[0], kwargs)
         try:
             instance = cache[key]
@@ -116,13 +88,5 @@ class LruCacheMetaclass(type):
         return instance
 
 # Decide whether to use Memcached or cachetools
-UseMemCached = False
-tileCache = None
-tileCacheLock = None
-if UseMemCached:
-    tileCache = MemCache()
-    # lock needed because pylibmc(memcached client) is not threadsafe
-    tileCacheLock = threading.Lock()
-else:
-    # decide how much memory to designate for the cachetools cache
-    tileCache = Cache(pickAvailableCache(256 ** 2 * 4))
+
+tileCache, tileLock = CacheFactory().getCache()
