@@ -1,9 +1,9 @@
+cachetools==1.1.6
 enum34==1.1.6
 jsonschema==2.5.1
 psutil==4.2.0
-six==1.10.0
-cachetools==1.1.6
 pylibmc==1.5.1
+six==1.10.0
 
 # Pillow is already required by another Girder plugin, but include it since we
 # can be installed by setup.py

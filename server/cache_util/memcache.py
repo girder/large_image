@@ -27,9 +27,9 @@ def strhash(*args, **kwargs):
 
 
 class MemCache(Cache):
-    """subclass of cache that uses a memcached store"""
+    """Use memcached as the backing cache."""
 
-    def __init__(self, url='localhost', username=None, password=None,
+    def __init__(self, url='127.0.0.1', username=None, password=None,
                  missing=None, getsizeof=None):
         super(MemCache, self).__init__(0, missing, getsizeof)
         # name mangling to override 'private variable' __data in cache
@@ -39,18 +39,18 @@ class MemCache(Cache):
             behaviors={'tcp_nodelay': True, 'ketama': True})
 
     def __repr__(self):
-        return 'Memcache doesnt list its keys'
+        return 'Memcache doesn\'t list its keys'
 
     def __iter__(self):
-        print('return fake iter')
+        # return invalide iter
         return None
 
     def __len__(self):
-        print('return fake length')
+        # return invalid length
         return -1
 
     def __contains__(self, key):
-        print('cache contains key')
+        # cache never contains key
         return None
 
     def __delitem__(self, key):
@@ -77,4 +77,4 @@ class MemCache(Cache):
         try:
             self._Cache__data[hexVal] = value
         except KeyError:
-            print('Failed to save value %s \nwith key %s' % (value, hexVal))
+            print('Failed to save value %s with key %s' % (value, hexVal))

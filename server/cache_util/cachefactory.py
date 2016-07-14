@@ -22,9 +22,11 @@ import threading
 import math
 # attempt to import girder config
 try:
+    from girder import constants
     from girder.utility import config
 except ImportError:
-    pass
+    config = None
+    constants = None
 
 from .memcache import MemCache
 from cachetools import LRUCache
@@ -35,18 +37,16 @@ except ImportError:
     psutil = None
 
 
-def pickAvailableCache(sizeEach):
+def pickAvailableCache(sizeEach, portion=8):
     """
     Given an estimated size of an item, return how many of those items would
     fit in a fixed portion of the available virtual memory.
 
     :param sizeEach: the expected size of an item that could be cached.
+    :param portion: the inverse fraction of the memory which can be used.
     :return: the number of items that should be cached.  Always at least two.
     """
-    # Estimate usage based on (1 / portion) of the total virtual memory.  Each
-    # class has its own cache, and many methods have their own class, so make
-    # this conservative.
-    portion = 16
+    # Estimate usage based on (1 / portion) of the total virtual memory.
     if psutil:
         memory = psutil.virtual_memory().total
     else:
@@ -56,43 +56,43 @@ def pickAvailableCache(sizeEach):
 
 
 class CacheFactory():
-
     def getCache(self):
-
+        defaultConfig = {}
         if config:
-            curConfig = config.getConfig()
-            if 'large_image' in curConfig:
-                cacheBackEnd = curConfig['large_image']['cache_backend']
-                # use memcached
-                if cacheBackEnd.lower() == 'memcached':
-                    print 'using memcached'
-                    # lock needed because pylibmc(memcached client)
-                    # is not threadsafe
-                    tileCacheLock = threading.Lock()
+            curConfig = config.getConfig().get('large_image', defaultConfig)
+        else:
+            curConfig = defaultConfig
+        cacheBackend = curConfig.get('cache_backend')
+        if cacheBackend:
+            cacheBackend = str(cacheBackend).lower()
+        if cacheBackend == 'memcached':
+            # lock needed because pylibmc(memcached client) is not threadsafe
+            tileCacheLock = threading.Lock()
 
-                    # check if credentials and location exist for girder
-                    # otherwise assume location is localhost with no password
-                    url = curConfig['large_image']['cache_memcached_url']
-                    if url is '':
-                        url = 'localhost'
+            # check if credentials and location exist for girder otherwise
+            # assume location is 127.0.0.1 (localhost) with no password
+            url = curConfig.get('cache_memcached_url')
+            if not url:
+                url = '127.0.0.1'
+            memcachedUsername = curConfig.get('cache_memcached_username')
+            if not memcachedUsername:
+                memcachedUsername = None
+            memcachedPassword = curConfig.get('cache_memcached_password')
+            if not memcachedPassword:
+                memcachedPassword = None
 
-                    memcachedUsername = curConfig['large_image']['cache'
-                                                                 '_memcached_'
-                                                                 'username']
-
-                    memcachedPassword = curConfig['large_'
-                                                  'image']['cache_memcached_'
-                                                           'password']
-                    if memcachedUsername == '':
-                        memcachedUsername = None
-
-                    if memcachedPassword == '':
-                        memcachedPassword = None
-
-                    tileCache = MemCache(url, memcachedUsername,
-                                         memcachedPassword)
-
-                    return tileCache, tileCacheLock
-
-        tileCache = LRUCache(pickAvailableCache(256**2*4))
-        return tileCache, None
+            tileCache = MemCache(url, memcachedUsername, memcachedPassword)
+        else:  # fallback backend
+            cacheBackend = 'python'
+            try:
+                portion = int(curConfig.get('cache_python_memory_portion', 8))
+                if portion < 3:
+                    portion = 3
+            except ValueError:
+                portion = 16
+            tileCache = LRUCache(pickAvailableCache(256**2 * 4, portion))
+            tileCacheLock = None
+        if constants:
+            print(constants.TerminalColor.info(
+                'Using %s for large_image caching' % cacheBackend))
+        return tileCache, tileCacheLock
