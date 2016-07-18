@@ -76,13 +76,11 @@ class TileSource(object):
         self.sizeX = None
         self.sizeY = None
 
-        self.getThumbnail = cached(TileSource.cache,
-                                   key=self.wrapKey,
-                                   lock=TileSource.cache_lock)(
-            self.getThumbnail)
-        self.getTile = cached(TileSource.cache,
-                              key=self.wrapKey,
-                              lock=TileSource.cache_lock)(self.getTile)
+        self.getThumbnail = cached(
+            self.cache, key=self.wrapKey, lock=self.cache_lock)(
+                self.getThumbnail)
+        self.getTile = cached(
+            self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
 
     def wrapKey(self, *args, **kwargs):
         return strhash(self.getState()) + strhash(*args, **kwargs)

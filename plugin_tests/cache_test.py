@@ -79,7 +79,7 @@ class LargeImageCacheTest(base.TestCase):
 
         self._testDecorator(MemCache())
 
-    def testcheckCacheMemcached(self):
+    def testCheckCacheMemcached(self):
         from girder.plugins.large_image.cache_util import MemCache
         # go though and check if all 100 fib numbers are in cache
         # it is stored in cache as ('fib', #)

@@ -145,6 +145,6 @@ class TestTileSource(TileSource):
         return 'image/png'
 
     def getState(self):
-
-        return 'test' + self.encoding+str(self.minLevel)+str(self.maxLevel) +\
-               str(self.tileHeight)+str(self.tileWidth)+str(self.fractal)
+        return 'test %r %r %r %r %r %r' % (
+            self.encoding, self.minLevel, self.maxLevel, self.tileWidth,
+            self.tileHeight, self.fractal)
