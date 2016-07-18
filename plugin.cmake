@@ -44,7 +44,7 @@ add_eslint_test(
   ESLINT_CONFIG_FILE "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/.eslintrc"
 )
 
-add_python_test(cache PLUGIN large_image)
+add_python_test(cache PLUGIN large_image BIND_SERVER)
 
 add_python_test(tiles PLUGIN large_image BIND_SERVER EXTERNAL_DATA
   "plugins/large_image/sample_image.ptif"
@@ -53,7 +53,7 @@ add_python_test(tiles PLUGIN large_image BIND_SERVER EXTERNAL_DATA
 set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
-add_python_test(import PLUGIN large_image)
+add_python_test(import PLUGIN large_image BIND_SERVER)
 
 add_python_test(girderless PLUGIN large_image BIND_SERVER EXTERNAL_DATA
   "plugins/large_image/sample_image.ptif"
