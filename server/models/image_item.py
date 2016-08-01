@@ -257,5 +257,5 @@ class ImageItem(Item):
         :returns: regionData, regionMime: the image data and the mime type.
         """
         tileSource = self._loadTileSource(item, **kwargs)
-        thumbData, thumbMime = tileSource.getRegion(**kwargs)
-        return thumbData, thumbMime
+        regionData, regionMime = tileSource.getRegion(**kwargs)
+        return regionData, regionMime

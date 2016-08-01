@@ -73,6 +73,35 @@ class LargeImageCachedTilesTest(base.TestCase):
         TestTileSource.getTile = countGetTile
         TestTileSource.wrapKey = wrapKey
 
+    def _uploadFile(self, path):
+        """
+        Upload the specified path to the admin user's public folder and return
+        the resulting item.
+
+        :param path: path to upload.
+        :returns: file: the created file.
+        """
+        name = os.path.basename(path)
+        with open(path, 'rb') as file:
+            data = file.read()
+        resp = self.request(
+            path='/file', method='POST', user=self.admin, params={
+                'parentType': 'folder',
+                'parentId': self.publicFolder['_id'],
+                'name': name,
+                'size': len(data)
+            })
+        self.assertStatusOk(resp)
+        uploadId = resp.json['_id']
+
+        fields = [('offset', 0), ('uploadId', uploadId)]
+        files = [('chunk', name, data)]
+        resp = self.multipartRequest(
+            path='/file/chunk', fields=fields, files=files, user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertIn('itemId', resp.json)
+        return resp.json
+
     def setUp(self):
         self._monitorTileCounts()
         base.TestCase.setUp(self)
@@ -253,6 +282,30 @@ class LargeImageCachedTilesTest(base.TestCase):
         # Running a second time should take entirely from cache
         self._testTilesZXY('test', meta, params, PNGHeader)
         self.assertEqual(self.tileCounter, counter3)
+
+    def testLargeRegion(self):
+        # Create a test tile with the default options
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_svs_image.svs'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        # Get metadata to use in our tests
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+
+        params = {
+            'regionWidth': min(10000, tileMetadata['sizeX']),
+            'regionHeight': min(10000, tileMetadata['sizeY']),
+            'width': 480,
+            'height': 480,
+            'encoding': 'PNG'
+        }
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
 
 
 class MemcachedCache(LargeImageCachedTilesTest):

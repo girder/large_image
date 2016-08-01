@@ -42,7 +42,7 @@ class MemCache(Cache):
         return 'Memcache doesn\'t list its keys'
 
     def __iter__(self):
-        # return invalide iter
+        # return invalid iter
         return None
 
     def __len__(self):
@@ -54,7 +54,6 @@ class MemCache(Cache):
         return None
 
     def __delitem__(self, key):
-
         del self._Cache__data[key]
 
     def __getitem__(self, key):
@@ -78,3 +77,8 @@ class MemCache(Cache):
             self._Cache__data[hexVal] = value
         except KeyError:
             print('Failed to save value %s with key %s' % (value, hexVal))
+        except pylibmc.Error as exc:
+            # memcahced won't cache items larger than 1 Mb, but this returns a
+            # 'SUCCESS' error.  Raise other errors.
+            if 'SUCCESS' not in exc.message:
+                raise

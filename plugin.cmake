@@ -54,14 +54,19 @@ set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
 add_python_test(cached_tiles PLUGIN large_image SUBMODULE MemcachedCache
-  BIND_SERVER)
+  BIND_SERVER EXTERNAL_DATA
+  "plugins/large_image/sample_jp2k_33003_svs_image.svs")
 set_property(TEST server_large_image.cached_tiles.MemcachedCache APPEND
-  PROPERTY ENVIRONMENT "LARGE_IMAGE_CACHE_BACKEND=memcached")
+  PROPERTY ENVIRONMENT
+  "LARGE_IMAGE_CACHE_BACKEND=memcached"
+  "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
 add_python_test(cached_tiles PLUGIN large_image SUBMODULE PythonCache
   BIND_SERVER)
 set_property(TEST server_large_image.cached_tiles.PythonCache APPEND PROPERTY
-  ENVIRONMENT "LARGE_IMAGE_CACHE_BACKEND=python")
+  ENVIRONMENT
+  "LARGE_IMAGE_CACHE_BACKEND=python"
+  "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
 add_python_test(import PLUGIN large_image BIND_SERVER)
 
