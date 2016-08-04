@@ -27,7 +27,7 @@ import openslide
 import PIL
 
 from .base import FileTileSource, TileSourceException
-from .cache import LruCacheMetaclass
+from ..cache_util import LruCacheMetaclass, pickAvailableCache
 
 try:
     import girder
@@ -41,8 +41,10 @@ class SVSFileTileSource(FileTileSource):
     """
     Provides tile access to SVS files.
     """
-    cacheMaxSize = 2
-    cacheTimeout = 60
+    # Cache size is based on what the class needs, which does not include
+    # individual tiles
+    cacheMaxSize = pickAvailableCache(1024 ** 2)
+    cacheTimeout = 300
     name = 'svsfile'
 
     @staticmethod
@@ -133,6 +135,11 @@ class SVSFileTileSource(FileTileSource):
                 'scale': scale
             })
 
+    def getState(self):
+        return super(SVSFileTileSource, self).getState() + ',' + str(
+            self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
+            self.jpegSubsampling)
+
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z < 0:
             raise TileSourceException('z layer does not exist')
@@ -196,8 +203,10 @@ if girder:
         """
         Provides tile access to Girder items with an SVS file.
         """
-        cacheMaxSize = 2
-        cacheTimeout = 60
+        # Cache size is based on what the class needs, which does not include
+        # individual tiles
+        cacheMaxSize = pickAvailableCache(1024 ** 2)
+        cacheTimeout = 300
         name = 'svs'
 
         @staticmethod

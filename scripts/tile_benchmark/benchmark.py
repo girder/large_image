@@ -87,9 +87,9 @@ def get_data(host, requested_levels, requested_num_tiles, url=None,
     num_levels = -1
     data = meta_data()
     # get data about server, host url and params
-    if host == "atlas":
+    if host == 'atlas':
         data = atlas_init()
-    elif host == "iip":
+    elif host == 'iip':
         data = iip_init()
     else:
         data = girder_init(url, image_id)

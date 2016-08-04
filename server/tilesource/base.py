@@ -17,8 +17,11 @@
 #  limitations under the License.
 #############################################################################
 
+import abc
 import math
 from six import BytesIO
+
+from ..cache_util import tileCache, tileLock, strhash, cached
 
 try:
     import girder
@@ -30,6 +33,7 @@ try:
     from girder.models.model_base import AccessType
 except ImportError:
     import logging as logger
+
     girder = None
 
     class TileGeneralException(Exception):
@@ -38,6 +42,7 @@ except ImportError:
 # Not having PIL disables thumbnail creation, but isn't fatal
 try:
     import PIL
+
     if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
         logger.warning('Error: Pillow v3.0 or later is required')
         PIL = None
@@ -61,12 +66,28 @@ class TileSource(object):
     }
     name = None
 
+    cache = tileCache
+    cache_lock = tileLock
+
     def __init__(self, *args, **kwargs):
         self.tileWidth = None
         self.tileHeight = None
         self.levels = None
         self.sizeX = None
         self.sizeY = None
+
+        self.getThumbnail = cached(
+            self.cache, key=self.wrapKey, lock=self.cache_lock)(
+                self.getThumbnail)
+        self.getTile = cached(
+            self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
+
+    def wrapKey(self, *args, **kwargs):
+        return strhash(self.getState()) + strhash(*args, **kwargs)
+
+    @abc.abstractmethod
+    def getState(self):
+        return None
 
     def _calculateWidthHeight(self, width, height, regionWidth, regionHeight):
         """
@@ -308,7 +329,7 @@ class TileSource(object):
             regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
         # Use RGB mode.  If we need to support alpha on some encodings, this
         # can changed to RGBA.
-        mode = 'RGBA' if kwargs.get('encoding') in ('PNG', ) else 'RGB'
+        mode = 'RGBA' if kwargs.get('encoding') in ('PNG',) else 'RGB'
 
         # We can construct an image using PIL.Image.new:
         #   image = PIL.Image.new('RGB', (regionWidth, regionHeight))
@@ -350,7 +371,11 @@ class TileSource(object):
 class FileTileSource(TileSource):
     def __init__(self, path, *args, **kwargs):
         super(FileTileSource, self).__init__(path, *args, **kwargs)
+
         self.largeImagePath = path
+
+    def getState(self):
+        return self._getLargeImagePath()
 
     def _getLargeImagePath(self):
         return self.largeImagePath
@@ -381,6 +406,10 @@ if girder:
         def __init__(self, item, *args, **kwargs):
             super(GirderTileSource, self).__init__(item, *args, **kwargs)
             self.item = item
+
+        def getState(self):
+            return str(self.item['largeImage']['fileId']) + ',' + str(
+                self.item['updated'])
 
         def _getLargeImagePath(self):
             try:
