@@ -55,7 +55,7 @@ set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
 
 add_python_test(cached_tiles PLUGIN large_image SUBMODULE MemcachedCache
   BIND_SERVER EXTERNAL_DATA
-  "plugins/large_image/sample_jp2k_33003_svs_image.svs")
+  "plugins/large_image/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs")
 set_property(TEST server_large_image.cached_tiles.MemcachedCache APPEND
   PROPERTY ENVIRONMENT
   "LARGE_IMAGE_CACHE_BACKEND=memcached"
