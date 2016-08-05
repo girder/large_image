@@ -142,7 +142,7 @@ class LargeImageTilesTest(base.TestCase):
         return infoDict
 
     def _testTilesZXY(self, itemId, metadata, tileParams={},
-                      imgHeader=JPEGHeader):
+                      imgHeader=JPEGHeader, token=None):
         """
         Test that the tile server is serving images.
 
@@ -154,6 +154,10 @@ class LargeImageTilesTest(base.TestCase):
         :param imgHeader: if something other than a JPEG is expected, this is
                           the first few bytes of the expected image.
         """
+        if token:
+            kwargs = {'token': token}
+        else:
+            kwargs = {'user': self.admin}
         # We should get images for all valid levels, but only within the
         # expected range of tiles.
         for z in range(metadata.get('minLevel', 0), metadata['levels']):
@@ -164,8 +168,8 @@ class LargeImageTilesTest(base.TestCase):
             # Check the four corners on each level
             for (x, y) in ((0, 0), (maxX, 0), (0, maxY), (maxX, maxY)):
                 resp = self.request(path='/item/%s/tiles/zxy/%d/%d/%d' % (
-                    itemId, z, x, y), user=self.admin, params=tileParams,
-                    isJson=False)
+                    itemId, z, x, y), params=tileParams, isJson=False,
+                    **kwargs)
                 if (resp.output_status[:3] != '200' and
                         metadata.get('sparse') and z > metadata['sparse']):
                     self.assertStatus(resp, 404)
@@ -176,7 +180,7 @@ class LargeImageTilesTest(base.TestCase):
             # Check out of range each level
             for (x, y) in ((-1, 0), (maxX + 1, 0), (0, -1), (0, maxY + 1)):
                 resp = self.request(path='/item/%s/tiles/zxy/%d/%d/%d' % (
-                    itemId, z, x, y), user=self.admin, params=tileParams)
+                    itemId, z, x, y), params=tileParams, **kwargs)
                 if x < 0 or y < 0:
                     self.assertStatus(resp, 400)
                     self.assertTrue('must be positive integers' in
@@ -187,24 +191,23 @@ class LargeImageTilesTest(base.TestCase):
                                     'outside layer' in resp.json['message'])
         # Check negative z level
         resp = self.request(path='/item/%s/tiles/zxy/-1/0/0' % itemId,
-                            user=self.admin, params=tileParams)
+                            params=tileParams, **kwargs)
         self.assertStatus(resp, 400)
         self.assertIn('must be positive integers', resp.json['message'])
         # Check non-integer z level
         resp = self.request(path='/item/%s/tiles/zxy/abc/0/0' % itemId,
-                            user=self.admin, params=tileParams)
+                            params=tileParams, **kwargs)
         self.assertStatus(resp, 400)
         self.assertIn('must be integers', resp.json['message'])
         # If we set the minLevel, test one lower than it
         if 'minLevel' in metadata:
             resp = self.request(path='/item/%s/tiles/zxy/%d/0/0' % (
-                itemId, metadata['minLevel'] - 1), user=self.admin,
-                params=tileParams)
+                itemId, metadata['minLevel'] - 1), params=tileParams, **kwargs)
             self.assertStatus(resp, 404)
             self.assertIn('layer does not exist', resp.json['message'])
         # Check too large z level
         resp = self.request(path='/item/%s/tiles/zxy/%d/0/0' % (
-            itemId, metadata['levels']), user=self.admin, params=tileParams)
+            itemId, metadata['levels']), params=tileParams, **kwargs)
         self.assertStatus(resp, 404)
         self.assertIn('layer does not exist', resp.json['message'])
 
@@ -862,3 +865,24 @@ class LargeImageTilesTest(base.TestCase):
             user=self.admin, encoding='PNG')
         image, mime = source.getThumbnail(encoding='JPEG', width=200)
         self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
+
+    def testTilesLoadModelCache(self):
+        from girder.plugins.large_image import loadmodelcache
+        loadmodelcache.invalidateLoadModelCache()
+        token = self._genToken(self.admin)
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            token=token, params={'fileId': fileId})
+        self.assertStatusOk(resp)
+        # Now the tile request should tell us about the file.  These are
+        # specific to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, token=token)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        tileMetadata['sparse'] = 5
+        self._testTilesZXY(itemId, tileMetadata, token=token)
+        self.assertGreater(loadmodelcache.LoadModelCache[
+            loadmodelcache.LoadModelCache.keys()[0]]['hits'], 70)

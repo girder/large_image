@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-###############################################################################
+#############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,7 +15,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-###############################################################################
+#############################################################################
 
 import cherrypy
 
@@ -28,7 +28,7 @@ from girder.models.model_base import AccessType
 
 from ..models import TileGeneralException
 
-from .. import constants
+from .. import constants, loadmodelcache
 
 
 class TilesItemResource(Item):
@@ -186,12 +186,22 @@ class TilesItemResource(Item):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-    @access.cookie
+    # Without caching, this checks for permissions every time.  By using the
+    # LoadModelCache, three database lookups are avoided, which saves around
+    # 6 ms in tests.
+    #   @access.cookie   # access.cookie always looks up the token
+    #   @access.public
+    #   @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    #   def getTile(self, item, z, x, y, params):
+    #       return self._getTile(item, z, x, y, params)
     @access.public
-    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
-    def getTile(self, item, z, x, y, params):
-        # TODO: cache the user / item loading in the 'loadmodel' decorator
-        # TODO: parse params?
+    def getTile(self, itemId, z, x, y, params):
+        item = loadmodelcache.loadModel(
+            self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
+        # Explicitly set a expires time to encourage browsers to cache this for
+        # a while.
+        cherrypy.response.headers['Expires'] = cherrypy.lib.httputil.HTTPDate(
+            cherrypy.serving.response.time + 600)
         return self._getTile(item, z, x, y, params)
 
     @describeRoute(
