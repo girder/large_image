@@ -55,6 +55,13 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
                     x: Math.ceil(this.sizeX / this.tileWidth / scale),
                     y: Math.ceil(this.sizeY / this.tileHeight / scale)
                 };
+            }, this),
+            tilesMaxBounds: _.bind(function (level) {
+                var scale = Math.pow(2, maxLevel - level);
+                return {
+                    x: Math.floor(this.sizeX / scale),
+                    y: Math.floor(this.sizeY / scale)
+                };
             }, this)
         };
         this.viewer = geo.map(mapParams);
