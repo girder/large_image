@@ -1,6 +1,8 @@
+cachetools==1.1.6
 enum34==1.1.6
 jsonschema==2.5.1
-repoze.lru==0.6
+psutil==4.2.0
+pylibmc==1.5.1
 six==1.10.0
 
 # Pillow is already required by another Girder plugin, but include it since we
@@ -13,4 +15,3 @@ numpy==1.10.2
 libtiff==0.4.0
 
 openslide-python>=1.1.0
-

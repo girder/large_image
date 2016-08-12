@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-##############################################################################
+###############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,12 +15,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-##############################################################################
+###############################################################################
 
-import server
-from server import tilesource
-from server import cache_util
+from .cache import LruCacheMetaclass,  tileCache, tileLock
+from .memcache import MemCache, strhash
+from .cachefactory import CacheFactory, pickAvailableCache
+from cachetools import cached, Cache, LRUCache
 
-getTileSource = tilesource.getTileSource  # noqa
 
-__all__ = [server, tilesource, getTileSource, cache_util]
+# flake8: noqa
+__all__ = (CacheFactory, tileCache, tileLock, MemCache, strhash,
+           LruCacheMetaclass, pickAvailableCache, cached, Cache, LRUCache)

@@ -22,7 +22,8 @@ import cherrypy
 from girder.api import access
 from girder.api.v1.item import Item
 from girder.api.describe import describeRoute, Description
-from girder.api.rest import filtermodel, loadmodel, RestException
+from girder.api.rest import filtermodel, loadmodel, RestException, \
+    setRawResponse
 from girder.models.model_base import AccessType
 
 from ..models import TileGeneralException
@@ -53,6 +54,8 @@ class TilesItemResource(Item):
         # This is added to the system route
         apiRoot.system.route('GET', ('setting', 'large_image'),
                              self.getPublicSettings)
+        # Cache the model singleton
+        self.imageItemModel = self.model('image_item', 'large_image')
 
     @describeRoute(
         Description('Create a large image for this item.')
@@ -78,9 +81,8 @@ class TilesItemResource(Item):
         user = self.getCurrentUser()
         token = self.getCurrentToken()
         try:
-            return self.model(
-                'image_item', 'large_image').createImageItem(
-                    item, largeImageFile, user, token)
+            return self.imageItemModel.createImageItem(
+                item, largeImageFile, user, token)
         except TileGeneralException as e:
             raise RestException(e.message)
 
@@ -120,8 +122,7 @@ class TilesItemResource(Item):
         :return: the tile metadata.
         """
         try:
-            return self.model('image_item', 'large_image').getMetadata(
-                item, **imageArgs)
+            return self.imageItemModel.getMetadata(item, **imageArgs)
         except TileGeneralException as e:
             raise RestException(e.message, code=400)
 
@@ -165,13 +166,13 @@ class TilesItemResource(Item):
             raise RestException('x, y, and z must be positive integers',
                                 code=400)
         try:
-            tileData, tileMime = self.model(
-                'image_item', 'large_image').getTile(
-                    item, x, y, z, **imageArgs)
+            tileData, tileMime = self.imageItemModel.getTile(
+                item, x, y, z, **imageArgs)
         except TileGeneralException as e:
             raise RestException(e.message, code=404)
         cherrypy.response.headers['Content-Type'] = tileMime
-        return lambda: tileData
+        setRawResponse()
+        return tileData
 
     @describeRoute(
         Description('Get a large image tile.')
@@ -216,7 +217,7 @@ class TilesItemResource(Item):
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def deleteTiles(self, item, params):
-        deleted = self.model('image_item', 'large_image').delete(item)
+        deleted = self.imageItemModel.delete(item)
         # TODO: a better response
         return {
             'deleted': deleted
@@ -253,14 +254,15 @@ class TilesItemResource(Item):
             ('encoding', str),
         ])
         try:
-            thumbData, thumbMime = self.model(
-                'image_item', 'large_image').getThumbnail(item, **params)
+            thumbData, thumbMime = self.imageItemModel.getThumbnail(
+                item, **params)
         except TileGeneralException as e:
             raise RestException(e.message)
         except ValueError as e:
             raise RestException('Value Error: %s' % e.message)
         cherrypy.response.headers['Content-Type'] = thumbMime
-        return lambda: thumbData
+        setRawResponse()
+        return thumbData
 
     @describeRoute(
         Description('Get any region of a large image item, optionally scaling '
@@ -329,14 +331,15 @@ class TilesItemResource(Item):
             ('encoding', str),
         ])
         try:
-            regionData, regionMime = self.model(
-                'image_item', 'large_image').getRegion(item, **params)
+            regionData, regionMime = self.imageItemModel.getRegion(
+                item, **params)
         except TileGeneralException as e:
             raise RestException(e.message)
         except ValueError as e:
             raise RestException('Value Error: %s' % e.message)
         cherrypy.response.headers['Content-Type'] = regionMime
-        return lambda: regionData
+        setRawResponse()
+        return regionData
 
     @describeRoute(
         Description('Get public settings for large image display.')
