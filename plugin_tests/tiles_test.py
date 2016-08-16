@@ -77,15 +77,17 @@ class LargeImageTilesTest(base.TestCase):
                     }])})
         self.assertStatusOk(resp)
 
-    def _uploadFile(self, path):
+    def _uploadFile(self, path, name=None):
         """
         Upload the specified path to the admin user's public folder and return
         the resulting item.
 
         :param path: path to upload.
+        :param name: optional name for the file.
         :returns: file: the created file.
         """
-        name = os.path.basename(path)
+        if not name:
+            name = os.path.basename(path)
         with open(path, 'rb') as file:
             data = file.read()
         resp = self.request(
@@ -267,7 +269,13 @@ class LargeImageTilesTest(base.TestCase):
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
-        # We shouldn't have tile information yet
+        # We should already have tile information.  Ask to delete it so we can
+        # do other tests
+        resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['deleted'], True)
+        # Now we shouldn't have tile information
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
@@ -332,6 +340,12 @@ class LargeImageTilesTest(base.TestCase):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         items = [{'itemId': str(file['itemId']), 'fileId': str(file['_id'])}]
+        # We should already have tile information.  Ask to delete it so we can
+        # do other tests
+        resp = self.request(path='/item/%s/tiles' % str(file['itemId']),
+                            method='DELETE', user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['deleted'], True)
         # Create a second item
         resp = self.request(path='/item', method='POST', user=self.admin,
                             params={'folderId': self.publicFolder['_id'],
@@ -446,6 +460,14 @@ class LargeImageTilesTest(base.TestCase):
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
+        # Make sure we don't auto-create a largeImage
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'),
+            'yb10kx5k.tiff')
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
 
     def testTilesFromBadFiles(self):
         # Uploading a monochrome file should result in no useful tiles.
@@ -478,6 +500,12 @@ class LargeImageTilesTest(base.TestCase):
             '01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
+        # We should already have tile information.  Ask to delete it so we can
+        # do other tests
+        resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['deleted'], True)
         # Ask to make this a tile-based item
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': fileId})
@@ -556,6 +584,12 @@ class LargeImageTilesTest(base.TestCase):
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
+        # We should already have tile information.  Ask to delete it so we can
+        # do other tests
+        resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['deleted'], True)
         # We shouldn't be able to get a thumbnail yet
         resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
                             user=self.admin)
@@ -662,15 +696,6 @@ class LargeImageTilesTest(base.TestCase):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
-        # We shouldn't be able to get a region yet
-        resp = self.request(path='/item/%s/tiles/region' % itemId,
-                            user=self.admin)
-        self.assertStatus(resp, 400)
-        self.assertIn('No large image file', resp.json['message'])
-        # Ask to make this a tile-based item
-        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            user=self.admin)
-        self.assertStatusOk(resp)
         # Get metadata to use in our tests
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatusOk(resp)
@@ -796,10 +821,6 @@ class LargeImageTilesTest(base.TestCase):
             os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.TCGA-DU-6399-'
             '01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs'))
         itemId = str(file['itemId'])
-        # Ask to make this a tile-based item
-        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            user=self.admin)
-        self.assertStatusOk(resp)
         params = {'regionWidth': 2000, 'regionHeight': 1500,
                   'width': 1000, 'height': 1000, 'encoding': 'PNG'}
         resp = self.request(path='/item/%s/tiles/region' % itemId,
@@ -849,10 +870,6 @@ class LargeImageTilesTest(base.TestCase):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
-        fileId = str(file['_id'])
-        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            user=self.admin, params={'fileId': fileId})
-        self.assertStatusOk(resp)
         # We should have access via getTileSource
         source = getTileSource('girder_item://' + itemId, user=self.admin)
         image, mime = source.getThumbnail(encoding='PNG', height=200)
@@ -873,10 +890,6 @@ class LargeImageTilesTest(base.TestCase):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
-        fileId = str(file['_id'])
-        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            token=token, params={'fileId': fileId})
-        self.assertStatusOk(resp)
         # Now the tile request should tell us about the file.  These are
         # specific to our test file
         resp = self.request(path='/item/%s/tiles' % itemId, token=token)

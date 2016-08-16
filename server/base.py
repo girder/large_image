@@ -17,7 +17,7 @@
 #  limitations under the License.
 ###############################################################################
 
-from girder import events, plugin
+from girder import events, plugin, logger
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
@@ -48,6 +48,32 @@ def _postUpload(event):
         item['largeImage']['fileId'] = fileObj['_id']
         item['largeImage']['sourceName'] = 'tiff'
         Item.save(item)
+
+
+def checkForLargeImageFiles(event):
+    file = event.info
+    possible = False
+    mimeType = file.get('mimeType')
+    if mimeType in ('image/tiff', 'image/x-tiff', 'image/x-ptif'):
+        possible = True
+    exts = file.get('exts')
+    if isinstance(exts, list):
+        for ext in exts:
+            if ext in ('svs', 'ptif', 'tif', 'tiff'):
+                possible = True
+    if not file.get('itemId') or not possible:
+        return
+    item = ModelImporter.model('item').load(
+        file['itemId'], force=True, exc=False)
+    if not item or item.get('largeImage'):
+        return
+    imageItemModel = ModelImporter.model('image_item', 'large_image')
+    try:
+        imageItemModel.createImageItem(item, file, createJob=False)
+    except Exception:
+        # We couldn't automatically set this as a large image
+        logger.info('Saved file %s cannot be automatically used as a '
+                    'largeImage' % str(file['_id']))
 
 
 def validateSettings(event):
@@ -90,3 +116,5 @@ def load(info):
     events.bind('model.group.save.after', 'large_image',
                 invalidateLoadModelCache)
     events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
+    events.bind('model.file.save.after', 'large_image',
+                checkForLargeImageFiles)
