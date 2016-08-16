@@ -22,6 +22,7 @@ from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
 from . import constants
+from .loadmodelcache import invalidateLoadModelCache
 
 
 def _postUpload(event):
@@ -84,3 +85,8 @@ def load(info):
 
     events.bind('data.process', 'large_image', _postUpload)
     events.bind('model.setting.validate', 'large_image', validateSettings)
+    events.bind('model.folder.save.after', 'large_image',
+                invalidateLoadModelCache)
+    events.bind('model.group.save.after', 'large_image',
+                invalidateLoadModelCache)
+    events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
