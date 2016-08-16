@@ -20,6 +20,8 @@
 import cherrypy
 import time
 
+from girder.api.rest import getCurrentToken
+
 LoadModelCache = {}
 LoadModelCacheMaxEntries = 100
 LoadModelCacheExpiryDuration = 300  # seconds
@@ -62,6 +64,10 @@ def loadModel(resource, model, plugin='_core', id=None, allowCookie=False,
         entry = cacheEntry['result']
         cacheEntry['hits'] += 1
     else:
+        # we have to get the token separately from the user if we are using
+        # cookies.
+        if allowCookie:
+            getCurrentToken(allowCookie)
         entry = resource.model(model, plugin).load(
             id=id, level=level, user=resource.getCurrentUser())
         if key:
