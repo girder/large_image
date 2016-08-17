@@ -52,7 +52,8 @@ class TilesItemResource(Item):
         apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTestTile)
         filter_logging.addLoggingFilter(
-            'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}', 250)
+            'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}',
+            frequency=250)
         # This is added to the system route
         apiRoot.system.route('GET', ('setting', 'large_image'),
                              self.getPublicSettings)
