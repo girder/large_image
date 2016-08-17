@@ -57,10 +57,13 @@ def checkForLargeImageFiles(event):
     if mimeType in ('image/tiff', 'image/x-tiff', 'image/x-ptif'):
         possible = True
     exts = file.get('exts')
-    if isinstance(exts, list) and exts[-1] in (
+    if isinstance(exts, list) and len(exts) >= 1 and exts[-1] in (
             'svs', 'ptif', 'tif', 'tiff', 'ndpi'):
         possible = True
     if not file.get('itemId') or not possible:
+        return
+    if not ModelImporter.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET, True):
         return
     item = ModelImporter.model('item').load(
         file['itemId'], force=True, exc=False)
@@ -79,7 +82,8 @@ def validateSettings(event):
     key, val = event.info['key'], event.info['value']
 
     if key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
-               constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER):
+               constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+               constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
         if str(val).lower() not in ('false', 'true', ''):
             return
         val = (str(val).lower() != 'false')

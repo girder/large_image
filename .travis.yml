@@ -47,7 +47,7 @@ addons:
             - libsqlite3-dev
 
 before_install:
-    - GIRDER_VERSION=f6d29825c42295ca29e45a0f1164ffb070bc795c
+    - GIRDER_VERSION=084980c40d661a84a2c2c277672b92e9b3fbe254
     - GIRDER_WORKER_VERSION=508693448f97d4b8ee229429c4db6a89e4aa0d58
     - main_path=$PWD
     - build_path=$PWD/build

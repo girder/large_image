@@ -837,7 +837,8 @@ class LargeImageTilesTest(base.TestCase):
         from girder.models.model_base import ValidationException
 
         for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
-                    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER):
+                    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+                    constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
             self.model('setting').set(key, 'false')
             self.assertFalse(self.model('setting').get(key))
             self.model('setting').set(key, 'true')
@@ -862,6 +863,8 @@ class LargeImageTilesTest(base.TestCase):
             constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER], True)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS], True)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET], True)
 
     def testGetTileSource(self):
         from girder.plugins.large_image.tilesource import getTileSource
@@ -899,3 +902,31 @@ class LargeImageTilesTest(base.TestCase):
         self._testTilesZXY(itemId, tileMetadata, token=token)
         self.assertGreater(loadmodelcache.LoadModelCache[
             loadmodelcache.LoadModelCache.keys()[0]]['hits'], 70)
+
+    def testTilesAutoSetOption(self):
+        from girder.plugins.large_image import constants
+
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'),
+            'sample_image.PTIF')
+        itemId = str(file['itemId'])
+        # We should already have tile information.
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        # Turn off auto-set and try again
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET, 'false')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
+        # Turn it back on
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET, 'true')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
