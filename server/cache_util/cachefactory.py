@@ -22,11 +22,11 @@ import threading
 import math
 # attempt to import girder config
 try:
-    from girder import constants
+    from girder import logprint
     from girder.utility import config
 except ImportError:
+    import logging as logprint
     config = None
-    constants = None
 
 from .memcache import MemCache
 from cachetools import LRUCache
@@ -92,7 +92,5 @@ class CacheFactory():
                 portion = 16
             tileCache = LRUCache(pickAvailableCache(256**2 * 4, portion))
             tileCacheLock = None
-        if constants:
-            print(constants.TerminalColor.info(
-                'Using %s for large_image caching' % cacheBackend))
+        logprint.info('Using %s for large_image caching' % cacheBackend)
         return tileCache, tileCacheLock
