@@ -50,6 +50,11 @@ def _postUpload(event):
         Item.save(item)
 
 
+def removeThumbnails(event):
+    ModelImporter.model('image_item', 'large_image').removeThumbnailFiles(
+        event.info)
+
+
 def validateSettings(event):
     key, val = event.info['key'], event.info['value']
 
@@ -90,3 +95,4 @@ def load(info):
     events.bind('model.group.save.after', 'large_image',
                 invalidateLoadModelCache)
     events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
+    events.bind('model.item.remove', 'large_image', removeThumbnails)

@@ -230,7 +230,19 @@ class TileSource(object):
         if ((width is not None and width < 2) or
                 (height is not None and height < 2)):
             raise ValueError('Invalid width or height.  Minimum value is 2.')
-
+        if width is None and height is None:
+            width = height = 256
+        # There are two code paths for generating thumbnails.  If
+        # alwaysUseLevelZero is True, then the the thumbnail is generated more
+        # swiftly, but may look poor.  We may want to add a parameter for this
+        # option, or only use the high-quality results.
+        alwaysUseLevelZero = False
+        if not alwaysUseLevelZero:
+            params = dict(kwargs)
+            for key in ('left', 'top', 'right', 'bottom', 'regionWidth',
+                        'regionHeight'):
+                params.pop(key, None)
+            return self.getRegion(width, height, **params)
         metadata = self.getMetadata()
         tileData = self.getTile(0, 0, 0)
         image = PIL.Image.open(BytesIO(tileData))
@@ -239,11 +251,6 @@ class TileSource(object):
         imageHeight = int(math.floor(
             metadata['sizeY'] * 2 ** -(metadata['levels'] - 1)))
         image = image.crop((0, 0, imageWidth, imageHeight))
-
-        # If we wanted to return a default thumbnail of the level 0 tile,
-        # disable this conditional.
-        if width is None and height is None:
-            width = height = 256
 
         if width or height:
             width, height = self._calculateWidthHeight(

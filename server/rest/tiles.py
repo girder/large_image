@@ -264,12 +264,14 @@ class TilesItemResource(Item):
             ('encoding', str),
         ])
         try:
-            thumbData, thumbMime = self.imageItemModel.getThumbnail(
-                item, **params)
+            result = self.imageItemModel.getThumbnail(item, **params)
         except TileGeneralException as e:
             raise RestException(e.message)
         except ValueError as e:
             raise RestException('Value Error: %s' % e.message)
+        if not isinstance(result, tuple):
+            return result
+        thumbData, thumbMime = result
         cherrypy.response.headers['Content-Type'] = thumbMime
         setRawResponse()
         return thumbData

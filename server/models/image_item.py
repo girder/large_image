@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-###############################################################################
+#############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,9 +15,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-###############################################################################
+#############################################################################
 
+import json
 import os
+import six
 
 from girder.models.model_base import ValidationException
 from girder.models.item import Item
@@ -221,7 +223,7 @@ class ImageItem(Item):
 
             self.save(item)
             deleted = True
-
+        self.removeThumbnailFiles(item)
         return deleted
 
     def getThumbnail(self, item, width=None, height=None, **kwargs):
@@ -237,12 +239,63 @@ class ImageItem(Item):
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, and jpegSubsampling.  This is also passed to the
             tile source.
-        :returns: thumbData, thumbMime: the image data and the mime type.
+        :returns: thumbData, thumbMime: the image data and the mime type OR
+            a generator which will yield a file.
         """
+        # check if a thumbnail file exists with a particular key
+        keydict = dict(kwargs, width=width, height=height)
+        key = json.dumps(keydict, sort_keys=True, separators=(',', ':'))
+        fileModel = self.model('file')
+        existing = fileModel.findOne({
+            'attachedToType': 'item',
+            'attachedToId': item['_id'],
+            'isLargeImageThumbnail': True,
+            'thumbnailKey': key
+        })
+        if existing:
+            return self.model('file').download(existing)
         tileSource = self._loadTileSource(item, **kwargs)
         thumbData, thumbMime = tileSource.getThumbnail(
             width, height, **kwargs)
+        # TODO: add logic to determine if we should save this thumbnail and if
+        # we should remove excess thumbnails (lru, for instance)
+        saveFile = True
+        if saveFile:
+            # Save the thumbnail as a file
+            thumbfile = self.model('upload').uploadFromFile(
+                six.BytesIO(thumbData), size=len(thumbData),
+                name='_largeImageThumbnail', parentType=None, parent=None,
+                user=None, mimeType=thumbMime)
+            thumbfile.update({
+                'attachedToType': 'item',
+                'attachedToId': item['_id'],
+                'isLargeImageThumbnail': True,
+                'thumbnailKey': key,
+            })
+            # Ideally, we would check that the file is still wanted before we
+            # save it.  This is probably imposible without true transactions in
+            # Mongo.
+            fileModel.save(thumbfile)
+        # Return the data
         return thumbData, thumbMime
+
+    def removeThumbnailFiles(self, item, **kwargs):
+        """
+        Remove all large image thumbnails from an item.
+
+        :param item: the item that owns the thumbnails.
+        :param **kwargs: additional parameters to determine which files to
+                         remove.
+        """
+        fileModel = self.model('file')
+        query = {
+            'attachedToType': 'item',
+            'attachedToId': item['_id'],
+            'isLargeImageThumbnail': True,
+        }
+        query.update(kwargs)
+        for file in fileModel.find(query):
+            fileModel.remove(file)
 
     def getRegion(self, item, **kwargs):
         """
