@@ -1,0 +1,38 @@
+.g-widget-metadata-header
+  i.icon-tags #{title}
+.g-widget-metadata-container.li-metadata-tabs
+  ul.nav.nav-tabs(role="tablist")
+    li.active(role="presentation")
+      a(href="#li-metadata-image", role="tab", data-toggle="tab") Image
+    li(role="presentation")
+      a(href="#li-metadata-stain", role="tab", data-toggle="tab") Stain
+    li(role="presentation")
+      a(href="#li-metadata-clinical", role="tab", data-toggle="tab") Clinical
+    li(role="presentation")
+      a(href="#li-metadata-user", role="tab", data-toggle="tab") Custom
+
+  .tab-content
+    .tab-pane.active#li-metadata-image(role="tabpanel")
+      table.table.table-hover.table-condensed
+        thead
+          th Property
+          th Value
+        each value, key in largeImage
+          tr
+            td(scope="row") #{key}
+            td #{value}
+    .tab-pane#li-metadata-stain(role="tabpanel")
+      table.table.table-hover.table-condensed
+        thead
+          th Property
+          th Value
+    .tab-pane#li-metadata-clinical(role="tabpanel")
+      table.table.table-hover.table-condensed
+        thead
+          th Property
+          th Value
+    .tab-pane#li-metadata-user(role="tabpanel")
+      table.table.table-hover.table-condensed
+        thead
+          th Property
+          th Value
