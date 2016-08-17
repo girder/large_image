@@ -21,6 +21,11 @@ from cachetools import Cache, hashkey
 import pylibmc
 import hashlib
 
+try:
+    from girder import logprint
+except ImportError:
+    import logging as logprint
+
 
 def strhash(*args, **kwargs):
     return str(hashkey(*args, **kwargs))
@@ -76,9 +81,10 @@ class MemCache(Cache):
         try:
             self._Cache__data[hexVal] = value
         except KeyError:
-            print('Failed to save value %s with key %s' % (value, hexVal))
+            logprint.error('Failed to save value %s with key %s' % (
+                value, hexVal))
         except pylibmc.Error as exc:
-            # memcahced won't cache items larger than 1 Mb, but this returns a
+            # memcached won't cache items larger than 1 Mb, but this returns a
             # 'SUCCESS' error.  Raise other errors.
             if 'SUCCESS' not in exc.message:
                 raise

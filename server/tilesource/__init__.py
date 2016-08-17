@@ -28,10 +28,10 @@ from .base import TileSource, getTileSourceFromDict, TileSourceException, \
 try:
     import girder
     from girder.constants import TerminalColor
-    from girder import logger
+    from girder import logprint
     from .base import GirderTileSource
 except ImportError:
-    import logging as logger
+    import logging as logprint
     girder = None
 
 
@@ -72,11 +72,7 @@ for source in sourceList:
         if getattr(sourceClass, 'name', None):
             AvailableTileSources[sourceClass.name] = sourceClass
     except ImportError:
-        if girder:
-            print(TerminalColor.error('Error: Could not import %s' % className))
-            logger.exception('Error: Could not import %s' % className)
-        else:
-            logger.warning('Error: Could not import %s' % className)
+        logprint.exception('Error: Could not import %s' % className)
 
 # Create a partial function that will work through the known functions to get a
 # tile source.
