@@ -20,6 +20,7 @@
 from girder import events, plugin
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
+from girder.plugins.jobs.constants import JobStatus
 
 from . import constants
 from .loadmodelcache import invalidateLoadModelCache
@@ -48,6 +49,31 @@ def _postUpload(event):
         item['largeImage']['fileId'] = fileObj['_id']
         item['largeImage']['sourceName'] = 'tiff'
         Item.save(item)
+
+
+def _updateJob(event):
+    """
+    Called when a job is saved.  If this is a large image job and it is ended,
+    clean up after it, mark it as done.
+    """
+    job = event.info
+    meta = job.get('meta', {})
+    if (meta.get('creator') != 'large_image' or not meta.get('itemId') or
+            meta.get('task') != 'createImageItem'):
+        return
+    if job['status'] not in (JobStatus.ERROR, JobStatus.CANCELED,
+                             JobStatus.SUCCESS):
+        return
+    item = ModelImporter.model('item').load(meta['itemId'], force=True,
+                                            exc=False)
+    if not item:
+        return
+    if item.get('largeImage', {}).get('expected'):
+        del item['largeImage']['expected']
+    if (job['status'] in (JobStatus.ERROR, JobStatus.CANCELED) and
+            'largeImage' in item):
+        del item['largeImage']
+    ModelImporter.model('item').save(item)
 
 
 def validateSettings(event):
@@ -84,6 +110,7 @@ def load(info):
     ModelImporter.model('annotation', plugin='large_image')
 
     events.bind('data.process', 'large_image', _postUpload)
+    events.bind('model.job.save', 'large_image', _updateJob)
     events.bind('model.setting.validate', 'large_image', validateSettings)
     events.bind('model.folder.save.after', 'large_image',
                 invalidateLoadModelCache)

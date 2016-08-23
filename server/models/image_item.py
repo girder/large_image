@@ -113,7 +113,7 @@ class ImageItem(Item):
 
         inputs = {
             'in_path': workerUtils.girderInputSpec(
-                item, resourceType='item', token=token),
+                fileObj, resourceType='file', token=token),
             'quality': {
                 'mode': 'inline',
                 'type': 'number',
@@ -147,6 +147,11 @@ class ImageItem(Item):
             'jobInfo': workerUtils.jobInfoSpec(job, jobToken),
             'auto_convert': False,
             'validate': False
+        }
+        job['meta'] = {
+            'creator': 'large_image',
+            'itemId': str(item['_id']),
+            'task': 'createImageItem',
         }
 
         job = Job.save(job)

@@ -252,6 +252,8 @@ class LargeImageTilesTest(base.TestCase):
             except AssertionError as exc:
                 if 'File must have at least 1 level' in exc.args[0]:
                     return False
+                if 'No large image file' in exc.args[0]:
+                    return None
                 self.assertIn('is still pending creation', exc.args[0])
             item = self.model('item').load(itemId, user=self.admin)
             job = self.model('job', 'jobs').load(item['largeImage']['jobId'],
@@ -470,7 +472,7 @@ class LargeImageTilesTest(base.TestCase):
         resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
                             user=self.admin)
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json['deleted'], True)
+        self.assertEqual(resp.json['deleted'], False)
 
     def testTilesFromSVS(self):
         file = self._uploadFile(os.path.join(
