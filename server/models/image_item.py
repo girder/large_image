@@ -21,6 +21,7 @@ import json
 import os
 import six
 
+from girder.constants import SortDir
 from girder.models.model_base import ValidationException
 from girder.models.item import Item
 from girder.plugins.worker import utils as workerUtils
@@ -253,14 +254,19 @@ class ImageItem(Item):
             'thumbnailKey': key
         })
         if existing:
-            return self.model('file').download(existing)
+            return self.model('file').download(
+                existing, contentDisposition='inline')
         tileSource = self._loadTileSource(item, **kwargs)
         thumbData, thumbMime = tileSource.getThumbnail(
             width, height, **kwargs)
         # TODO: add logic to determine if we should save this thumbnail and if
         # we should remove excess thumbnails (lru, for instance)
-        saveFile = True
+        # ##DWM:: Load this from a setting
+        maxThumbnailFiles = 10
+        saveFile = maxThumbnailFiles > 0
         if saveFile:
+            # Make sure we don't exceed the desired number of thumbnails
+            self.removeThumbnailFiles(item, maxThumbnailFiles - 1)
             # Save the thumbnail as a file
             thumbfile = self.model('upload').uploadFromFile(
                 six.BytesIO(thumbData), size=len(thumbData),
@@ -279,11 +285,15 @@ class ImageItem(Item):
         # Return the data
         return thumbData, thumbMime
 
-    def removeThumbnailFiles(self, item, **kwargs):
+    def removeThumbnailFiles(self, item, keep=0,
+                             sort=[('_id', SortDir.DESCENDING)], **kwargs):
         """
         Remove all large image thumbnails from an item.
 
         :param item: the item that owns the thumbnails.
+        :param keep: keep this many entries.
+        :param sort: the sort method used.  The first (keep) records in this
+            sort order are kept.
         :param **kwargs: additional parameters to determine which files to
                          remove.
         """
@@ -294,7 +304,10 @@ class ImageItem(Item):
             'isLargeImageThumbnail': True,
         }
         query.update(kwargs)
-        for file in fileModel.find(query):
+        for file in fileModel.find(query, sort=sort):
+            if keep > 0:
+                keep -= 1
+                continue
             fileModel.remove(file)
 
     def getRegion(self, item, **kwargs):

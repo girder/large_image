@@ -214,7 +214,7 @@ class TileSource(object):
     def getTileMimeType(self):
         return 'image/jpeg'
 
-    def getThumbnail(self, width=None, height=None, **kwargs):
+    def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is
         preserved.  If neither width nor height is given, a default value is
@@ -223,6 +223,8 @@ class TileSource(object):
 
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
+        :param levelZero: if true, always use the level zero tile.  Otherwise,
+            the thumbnail is generated so that it is never upsampled.
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, and jpegSubsampling.
         :returns: thumbData, thumbMime: the image data and the mime type.
@@ -236,8 +238,7 @@ class TileSource(object):
         # alwaysUseLevelZero is True, then the the thumbnail is generated more
         # swiftly, but may look poor.  We may want to add a parameter for this
         # option, or only use the high-quality results.
-        alwaysUseLevelZero = False
-        if not alwaysUseLevelZero:
+        if not levelZero:
             params = dict(kwargs)
             for key in ('left', 'top', 'right', 'bottom', 'regionWidth',
                         'regionHeight'):
