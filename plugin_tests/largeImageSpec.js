@@ -54,6 +54,7 @@ describe('Test the large image plugin', function () {
             $('.g-large-image-thumbnails-hide').trigger('click');
             $('.g-large-image-viewer-hide').trigger('click');
             $('.g-large-image-default-viewer').val('geojs');
+            $('.g-large-image-auto-set-off').trigger('click');
             $('#g-large-image-form input.btn-primary').click();
         });
         waitsFor(function () {
@@ -65,6 +66,7 @@ describe('Test the large image plugin', function () {
             var settings = resp.responseJSON;
             return (settings['large_image.show_thumbnails'] === false &&
                     settings['large_image.show_viewer'] === false &&
+                    settings['large_image.auto_set'] === false &&
                     settings['large_image.default_viewer'] === 'geojs');
         }, 'large_image settings to change');
         girderTest.waitForLoad();

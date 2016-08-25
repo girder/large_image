@@ -37,7 +37,8 @@ class ImageItem(Item):
     def initialize(self):
         super(ImageItem, self).initialize()
 
-    def createImageItem(self, item, fileObj, user=None, token=None):
+    def createImageItem(self, item, fileObj, user=None, token=None,
+                        createJob=True):
         # Using setdefault ensures that 'largeImage' is in the item
         if 'fileId' in item.setdefault('largeImage', {}):
             # TODO: automatically delete the existing large file
@@ -61,6 +62,9 @@ class ImageItem(Item):
                 if AvailableTileSources[sourceName].canRead(item):
                     item['largeImage']['sourceName'] = sourceName
                     break
+        if 'sourceName' not in item['largeImage'] and not createJob:
+            raise TileGeneralException(
+                'A job must be used to generate a largeImage.')
         if 'sourceName' not in item['largeImage']:
             # No source was successful
             del item['largeImage']['fileId']
