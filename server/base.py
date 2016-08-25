@@ -70,6 +70,19 @@ def _updateJob(event):
         return
     if item.get('largeImage', {}).get('expected'):
         del item['largeImage']['expected']
+    notify = item.get('largeImage', {}).get('notify')
+    if notify:
+        del item['largeImage']['notify']
+        if job['status'] == JobStatus.SUCCESS:
+            msg = 'Large image created'
+        elif job['status'] == JobStatus.CANCELED:
+            msg = 'Large image creation canceled'
+        else:  # ERROR
+            msg = 'FAILED: Large image creation failed'
+        msg += ' for item %s' % item['name']
+        if not job.get('progress') or job['progress'].get('message') != msg:
+            ModelImporter.model('job', 'jobs').updateJob(
+                job, notify=True, progressMessage=msg)
     if (job['status'] in (JobStatus.ERROR, JobStatus.CANCELED) and
             'largeImage' in item):
         del item['largeImage']

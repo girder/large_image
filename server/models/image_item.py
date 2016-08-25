@@ -35,7 +35,7 @@ class ImageItem(Item):
         super(ImageItem, self).initialize()
 
     def createImageItem(self, item, fileObj, user=None, token=None,
-                        createJob=True):
+                        createJob=True, notify=False):
         # Using setdefault ensures that 'largeImage' is in the item
         if 'fileId' in item.setdefault('largeImage', {}):
             # TODO: automatically delete the existing large file
@@ -67,6 +67,7 @@ class ImageItem(Item):
             del item['largeImage']['fileId']
             job = self._createLargeImageJob(item, fileObj, user, token)
             item['largeImage']['expected'] = True
+            item['largeImage']['notify'] = notify
             item['largeImage']['originalId'] = fileObj['_id']
             item['largeImage']['jobId'] = job['_id']
 
