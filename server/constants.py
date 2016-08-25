@@ -23,3 +23,4 @@ class PluginSettings:
     LARGE_IMAGE_SHOW_THUMBNAILS = 'large_image.show_thumbnails'
     LARGE_IMAGE_SHOW_VIEWER = 'large_image.show_viewer'
     LARGE_IMAGE_DEFAULT_VIEWER = 'large_image.default_viewer'
+    LARGE_IMAGE_AUTO_SET = 'large_image.auto_set'

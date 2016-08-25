@@ -289,9 +289,6 @@ class LargeImageCachedTilesTest(base.TestCase):
             os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
             '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
         itemId = str(file['itemId'])
-        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
-                            user=self.admin)
-        self.assertStatusOk(resp)
         # Get metadata to use in our tests
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatusOk(resp)
