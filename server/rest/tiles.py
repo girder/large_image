@@ -366,5 +366,6 @@ class TilesItemResource(Item):
             constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER,
             constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
         ]
         return {k: self.model('setting').get(k) for k in keys}

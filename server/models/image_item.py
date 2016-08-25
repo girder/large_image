@@ -28,6 +28,7 @@ from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 
 from .base import TileGeneralException
+from .. import constants
 from ..tilesource import AvailableTileSources, TileSourceException
 
 
@@ -263,10 +264,9 @@ class ImageItem(Item):
         tileSource = self._loadTileSource(item, **kwargs)
         thumbData, thumbMime = tileSource.getThumbnail(
             width, height, **kwargs)
-        # TODO: add logic to determine if we should save this thumbnail and if
-        # we should remove excess thumbnails (lru, for instance)
-        # ##DWM:: Load this from a setting
-        maxThumbnailFiles = 10
+        # The logic on which files to save could be more sophisticated.
+        maxThumbnailFiles = int(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
         saveFile = maxThumbnailFiles > 0
         if saveFile:
             # Make sure we don't exceed the desired number of thumbnails
@@ -299,7 +299,9 @@ class ImageItem(Item):
         :param sort: the sort method used.  The first (keep) records in this
             sort order are kept.
         :param **kwargs: additional parameters to determine which files to
-                         remove.
+            remove.
+        :returns: a tuple of (the number of files before removal, the number of
+            files removed).
         """
         fileModel = self.model('file')
         query = {
@@ -308,11 +310,16 @@ class ImageItem(Item):
             'isLargeImageThumbnail': True,
         }
         query.update(kwargs)
+        present = 0
+        removed = 0
         for file in fileModel.find(query, sort=sort):
+            present += 1
             if keep > 0:
                 keep -= 1
                 continue
             fileModel.remove(file)
+            removed += 1
+        return (present, removed)
 
     def getRegion(self, item, **kwargs):
         """

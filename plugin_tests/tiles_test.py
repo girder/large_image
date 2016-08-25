@@ -692,6 +692,26 @@ class LargeImageTilesTest(base.TestCase):
             self.assertStatus(resp, entry[1])
             self.assertIn(entry[2], resp.json['message'])
 
+        # Test that we get a thumbnail from a cached file
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(JPEGHeader)], JPEGHeader)
+        self.assertEqual(len(image), defaultLength)
+
+        # We should report one thumbnail
+        item = self.model('item').load(itemId, user=self.admin)
+        present, removed = self.model(
+            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        self.assertGreater(present, 5)
+
+        # Remove the item, and then there should be zero files.
+        self.model('item').remove(item)
+        present, removed = self.model(
+            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        self.assertEqual(present, 0)
+
     def testRegions(self):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
@@ -847,11 +867,21 @@ class LargeImageTilesTest(base.TestCase):
                 self.model('setting').set(key, 'not valid')
                 self.assertTrue(False)
             except ValidationException as exc:
-                self.assertIn('Invalid setting', exc.args[0])
+                self.assertIn('must be a boolean', exc.args[0])
         self.model('setting').set(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
         self.assertEqual(self.model('setting').get(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER), 'geojs')
+        try:
+            self.model('setting').set(
+                constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, -1)
+            self.assertTrue(False)
+        except ValidationException as exc:
+            self.assertIn('must be a non-negatuve integer', exc.args[0])
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 5)
+        self.assertEqual(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES), 5)
         # Test the system/setting/large_image end point
         resp = self.request(path='/system/setting/large_image', user=None)
         self.assertStatusOk(resp)
@@ -865,6 +895,8 @@ class LargeImageTilesTest(base.TestCase):
             constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS], True)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_AUTO_SET], True)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES], 5)
 
     def testGetTileSource(self):
         from girder.plugins.large_image.tilesource import getTileSource

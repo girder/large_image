@@ -38,5 +38,13 @@ form#g-large-image-form(role="form")
       label.radio-inline
         input.g-large-image-auto-set-off(type="radio" name="g-large-image-auto-set" checked=(settings['large_image.auto_set'] !== false ? undefined : 'checked'))
         | No automatic use
+  .form-group
+    label
+      | Maximum number of thumbnail files to save per item
+    p.g-large-image-description
+      | Caching files speeds up thumbnail retrieval but takes some storage space.  Use 0 to not cache thumbnails as files.
+    input.input-sm.form-control.g-large-image-max-thumbnail-files(
+      type="text", value="#{settings['large_image.max_thumbnail_files']}",
+      placeholder="Use 0 to not cache thumbnails as files.")
   p#g-large-image-error-message.g-validation-failed-message
   input.btn.btn-sm.btn-primary(type="submit", value="Save")
