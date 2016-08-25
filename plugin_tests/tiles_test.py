@@ -25,7 +25,6 @@ import struct
 import time
 from six.moves import range
 
-import girder
 from girder import config
 from tests import base
 
@@ -257,11 +256,6 @@ class LargeImageTilesTest(base.TestCase):
                 if 'No large image file' in exc.args[0]:
                     return None
                 self.assertIn('is still pending creation', exc.args[0])
-            item = self.model('item').load(itemId, user=self.admin)
-            job = self.model('job', 'jobs').load(item['largeImage']['jobId'],
-                                                 user=self.admin)
-            if job['status'] == girder.plugins.jobs.constants.JobStatus.ERROR:
-                return None
             time.sleep(0.1)
         self.assertStatusOk(resp)
         return resp.json
