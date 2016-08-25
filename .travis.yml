@@ -1,11 +1,13 @@
 language: python
 
 python:
-    - "2.7"
+  - "2.7"
 
 cache:
-    directories:
-        - $HOME/.cache
+  directories:
+    - $HOME/.cache
+    - $HOME/build/girder_testing_build/store
+    - $HOME/build/girder_testing_build/data
 
 # sudo: false
 sudo: required
@@ -13,123 +15,127 @@ sudo: required
 dist: trusty
 
 compiler:
-    - gcc
+  - gcc
 
 addons:
-    apt:
-        packages:
-            # Pillow dependencies (see
-            # https://pillow.readthedocs.org/en/latest/installation.html)
-            - libtiff5-dev
-            - libjpeg8-dev
-            - zlib1g-dev
-            - libfreetype6-dev
-            - liblcms2-dev
-            - libwebp-dev
-            - tcl8.6-dev
-            - tk8.6-dev
-            - python-tk
-            # vips
-            - libvips-tools
-            # openjpeg
-            - libglib2.0-dev
-            - libjpeg-dev
-            - libxml2-dev
-            - libpng12-dev
-            # openslide
-            - autoconf
-            - automake
-            - libtool
-            - pkg-config
-            - libcairo2-dev
-            - libgdk-pixbuf2.0-dev
-            - libxml2-dev 
-            - libsqlite3-dev
+  apt:
+    packages:
+      # Pillow dependencies (see
+      # https://pillow.readthedocs.org/en/latest/installation.html)
+      - libtiff5-dev
+      - libjpeg8-dev
+      - zlib1g-dev
+      - libfreetype6-dev
+      - liblcms2-dev
+      - libwebp-dev
+      - tcl8.6-dev
+      - tk8.6-dev
+      - python-tk
+      # vips
+      - libvips-tools
+      # openjpeg
+      - libglib2.0-dev
+      - libjpeg-dev
+      - libxml2-dev
+      - libpng12-dev
+      # openslide
+      - autoconf
+      - automake
+      - libtool
+      - pkg-config
+      - libcairo2-dev
+      - libgdk-pixbuf2.0-dev
+      - libxml2-dev 
+      - libsqlite3-dev
 
 before_install:
-    - GIRDER_VERSION=4ee695152af8817df26cde7f1987cabcc2057615
-    - GIRDER_WORKER_VERSION=508693448f97d4b8ee229429c4db6a89e4aa0d58
-    - main_path=$PWD
-    - build_path=$PWD/build
-    - mkdir -p $build_path
+  - GIRDER_VERSION=4ee695152af8817df26cde7f1987cabcc2057615
+  - GIRDER_WORKER_VERSION=508693448f97d4b8ee229429c4db6a89e4aa0d58
+  - main_path=$PWD
+  - build_path=$PWD/build
+  - mkdir -p $build_path
 
-    - girder_path=$build_path/girder
-    - rm -fr $girder_path
-    - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout $GIRDER_VERSION
-    - ln -sf $main_path $girder_path/plugins/
-    - ls -l $girder_path/plugins
+  - girder_path=$build_path/girder
+  - rm -fr $girder_path
+  - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout $GIRDER_VERSION
+  - ln -sf $main_path $girder_path/plugins/
+  - ls -l $girder_path/plugins
 
-    - CACHE=$HOME/.cache CMAKE_VERSION=3.1.0 CMAKE_SHORT_VERSION=3.1 source $girder_path/scripts/install_cmake.sh
-    - cmake --version
+  - CACHE=$HOME/.cache CMAKE_VERSION=3.1.0 CMAKE_SHORT_VERSION=3.1 source $girder_path/scripts/install_cmake.sh
+  - cmake --version
 
-    # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
-    # so install it from source.
-    - cd $build_path
-    # - wget -O openjpeg-2.1.tar.gz https://github.com/uclouvain/openjpeg/archive/version.2.1.tar.gz
-    # - tar -zxf openjpeg-2.1.tar.gz
-    # - cd openjpeg-version.2.1
-    - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
-    - tar -zxf openjpeg-1.5.2.tar.gz
-    - cd openjpeg-version.1.5.2
-    - cmake .
-    - make
-    - sudo make install
-    - sudo ldconfig
-    - cd $main_path
+  # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
+  # so install it from source.
+  - cd $build_path
+  # - wget -O openjpeg-2.1.tar.gz https://github.com/uclouvain/openjpeg/archive/version.2.1.tar.gz
+  # - tar -zxf openjpeg-2.1.tar.gz
+  # - cd openjpeg-version.2.1
+  - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
+  - tar -zxf openjpeg-1.5.2.tar.gz
+  - cd openjpeg-version.1.5.2
+  - cmake .
+  - make
+  - sudo make install
+  - sudo ldconfig
+  - cd $main_path
 
-    # Build libtiff so it will use our openjpeg
-    - cd $build_path
-    - wget http://download.osgeo.org/libtiff/tiff-4.0.3.tar.gz
-    - tar -zxf tiff-4.0.3.tar.gz
-    - cd tiff-4.0.3
-    - ./configure
-    - make
-    - sudo make install
-    - sudo ldconfig
-    - cd $main_path
+  # Build libtiff so it will use our openjpeg
+  - cd $build_path
+  - wget http://download.osgeo.org/libtiff/tiff-4.0.3.tar.gz
+  - tar -zxf tiff-4.0.3.tar.gz
+  - cd tiff-4.0.3
+  - ./configure
+  - make
+  - sudo make install
+  - sudo ldconfig
+  - cd $main_path
 
-    # Build OpenSlide ourselves so that it will use our libtiff
-    - cd $build_path
-    - wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz
-    - tar -zxf openslide-3.4.1.tar.gz
-    - cd openslide-3.4.1
-    - autoreconf -i
-    - ./configure
-    - make
-    - sudo make install
-    - sudo ldconfig
-    - cd $main_path
+  # Build OpenSlide ourselves so that it will use our libtiff
+  - cd $build_path
+  - wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz
+  - tar -zxf openslide-3.4.1.tar.gz
+  - cd openslide-3.4.1
+  - autoreconf -i
+  - ./configure
+  - make
+  - sudo make install
+  - sudo ldconfig
+  - cd $main_path
 
-    - girder_worker_path=$girder_path/plugins/girder_worker
-    - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
-    - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
-    - pip install --no-cache-dir -U -r $girder_worker_path/requirements.txt -r $girder_worker_path/girder_worker/plugins/girder_io/requirements.txt
+  - girder_worker_path=$girder_path/plugins/girder_worker
+  - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
+  - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
+  - pip install --no-cache-dir -U -r $girder_worker_path/requirements.txt -r $girder_worker_path/girder_worker/plugins/girder_io/requirements.txt
 
-    - export MONGO_VERSION=3.0.7
-    - export PY_COVG="ON"
-    - CACHE=$HOME/.cache source $girder_path/scripts/install_mongo.sh
-    - mkdir /tmp/db
-    - mongod --dbpath=/tmp/db >/dev/null 2>/dev/null &
-    - mongod --version
+  - export MONGO_VERSION=3.0.7
+  - export PY_COVG="ON"
+  - CACHE=$HOME/.cache source $girder_path/scripts/install_mongo.sh
+  - mkdir /tmp/db
+  - mongod --dbpath=/tmp/db >/dev/null 2>/dev/null &
+  - mongod --version
 
-    - npm install -g npm
-    - npm --version
+  - npm install -g npm
+  - npm --version
 
-    - pip install --no-cache-dir -U pip virtualenv
+  - pip install --no-cache-dir -U pip virtualenv
 
-    - pip install --no-cache-dir numpy==1.10.2  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
+  - pip install --no-cache-dir numpy==1.10.2  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
 install:
-    - cd $girder_path
-    - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -r $main_path/requirements.txt -e .
-    - python -c "import openslide;print openslide.__version__"
-    - npm install
+  - cd $girder_path
+  - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -r $main_path/requirements.txt -e .
+  - python -c "import openslide;print openslide.__version__"
+  - npm install
 
 script:
-    - cd $girder_worker_path
-    - python -m girder_worker &
-    - mkdir -p $build_path/girder_testing_build
-    - cd $build_path/girder_testing_build
-    - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} $girder_path
-    - make
-    - JASMINE_TIMEOUT=15000 ctest -VV -R large_image
+  - cd $girder_worker_path
+  - python -m girder_worker >/tmp/worker.out 2>&1 &
+  - mkdir -p $build_path/girder_testing_build
+  - cd $build_path/girder_testing_build
+  - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} $girder_path
+  - make
+  - JASMINE_TIMEOUT=15000 ctest -VV -R large_image
+
+after_failure:
+  # On failures, show girder's error long and the worker output
+  - cat /tmp/worker.out

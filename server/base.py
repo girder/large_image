@@ -56,34 +56,32 @@ def _updateJob(event):
     Called when a job is saved.  If this is a large image job and it is ended,
     clean up after it, mark it as done.
     """
-    job = event.info
+    job = event.info['job']
     meta = job.get('meta', {})
     if (meta.get('creator') != 'large_image' or not meta.get('itemId') or
             meta.get('task') != 'createImageItem'):
         return
-    if job['status'] not in (JobStatus.ERROR, JobStatus.CANCELED,
-                             JobStatus.SUCCESS):
+    status = event.info['params'].get('status', job['status'])
+    if status not in (JobStatus.ERROR, JobStatus.CANCELED, JobStatus.SUCCESS):
         return
     item = ModelImporter.model('item').load(meta['itemId'], force=True,
                                             exc=False)
-    if not item:
+    if not item or 'largeImage' not in item:
         return
     if item.get('largeImage', {}).get('expected'):
         del item['largeImage']['expected']
     notify = item.get('largeImage', {}).get('notify')
     if notify:
         del item['largeImage']['notify']
-        if job['status'] == JobStatus.SUCCESS:
+        if status == JobStatus.SUCCESS:
             msg = 'Large image created'
-        elif job['status'] == JobStatus.CANCELED:
+        elif status == JobStatus.CANCELED:
             msg = 'Large image creation canceled'
         else:  # ERROR
             msg = 'FAILED: Large image creation failed'
         msg += ' for item %s' % item['name']
-        if not job.get('progress') or job['progress'].get('message') != msg:
-            ModelImporter.model('job', 'jobs').updateJob(
-                job, notify=True, progressMessage=msg)
-    if (job['status'] in (JobStatus.ERROR, JobStatus.CANCELED) and
+        event.info['params']['progressMessage'] = msg
+    if (status in (JobStatus.ERROR, JobStatus.CANCELED) and
             'largeImage' in item):
         del item['largeImage']
     ModelImporter.model('item').save(item)
@@ -151,7 +149,7 @@ def load(info):
     ModelImporter.model('annotation', plugin='large_image')
 
     events.bind('data.process', 'large_image', _postUpload)
-    events.bind('model.job.save', 'large_image', _updateJob)
+    events.bind('jobs.job.update', 'large_image', _updateJob)
     events.bind('model.setting.validate', 'large_image', validateSettings)
     events.bind('model.folder.save.after', 'large_image',
                 invalidateLoadModelCache)
