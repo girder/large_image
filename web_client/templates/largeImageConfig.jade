@@ -30,7 +30,7 @@ form#g-large-image-form(role="form")
   .form-group
     label Automatically use new items as large images
     p.g-large-image-description
-      | Uploaded and imported items with files that have mime-types or extensions that are typical of large images will be set as large image items if they can be used without running a conversion job.
+      | Uploaded and imported items with files that have MIME-types or extensions that are typical of large images will be set as large image items if they can be used without running a conversion job.
     .g-large-image-auto-set-container
       label.radio-inline
         input.g-large-image-auto-set-on(type="radio" name="g-large-image-auto-set" checked=(settings['large_image.auto_set'] !== false ? 'checked': undefined))
