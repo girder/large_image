@@ -305,6 +305,9 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(tileMetadata['sizeX'], 58368)
         self.assertEqual(tileMetadata['sizeY'], 12288)
         self.assertEqual(tileMetadata['levels'], 9)
+        self.assertEqual(tileMetadata['magnification'], 40)
+        self.assertEqual(tileMetadata['pixelWidthInMillimeters'], 0.00025)
+        self.assertEqual(tileMetadata['pixelHeightInMillimeters'], 0.00025)
         tileMetadata['sparse'] = 5
         self._testTilesZXY(itemId, tileMetadata)
 
@@ -420,6 +423,9 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(tileMetadata['sizeX'], 10000)
         self.assertEqual(tileMetadata['sizeY'], 5000)
         self.assertEqual(tileMetadata['levels'], 7)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['pixelWidthInMillimeters'], None)
+        self.assertEqual(tileMetadata['pixelHeightInMillimeters'], None)
         self._testTilesZXY(itemId, tileMetadata)
         # Ask to make this a tile-based item with an missing file ID (there are
         # now two files, so this will now fail).
@@ -517,6 +523,9 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(tileMetadata['sizeX'], 31872)
         self.assertEqual(tileMetadata['sizeY'], 13835)
         self.assertEqual(tileMetadata['levels'], 9)
+        self.assertEqual(tileMetadata['magnification'], 40)
+        self.assertEqual(tileMetadata['pixelWidthInMillimeters'], 0.0002457)
+        self.assertEqual(tileMetadata['pixelHeightInMillimeters'], 0.0002457)
         self._testTilesZXY(itemId, tileMetadata)
 
         # Ask to make this a tile-based item again
@@ -572,6 +581,9 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(tileMetadata['sizeX'], 0)
         self.assertEqual(tileMetadata['sizeY'], 0)
         self.assertEqual(tileMetadata['levels'], 0)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['pixelWidthInMillimeters'], None)
+        self.assertEqual(tileMetadata['pixelHeightInMillimeters'], None)
 
     def testThumbnails(self):
         file = self._uploadFile(os.path.join(
@@ -952,3 +964,46 @@ class LargeImageTilesTest(base.TestCase):
         itemId = str(file['itemId'])
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatusOk(resp)
+
+    def testMagnification(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
+            '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+        mag = source.getMagnification()
+        self.assertEqual(mag['magnification'], 40.0)
+        self.assertEqual(mag['mm_x'], 0.000252)
+        self.assertEqual(mag['mm_y'], 0.000252)
+        mag = source.getMagnificationForLevel()
+        self.assertEqual(mag['magnification'], 40.0)
+        self.assertEqual(mag['mm_x'], 0.000252)
+        self.assertEqual(mag['mm_y'], 0.000252)
+        self.assertEqual(mag['level'], 7)
+        mag = source.getMagnificationForLevel(0)
+        self.assertEqual(mag['magnification'], 0.3125)
+        self.assertEqual(mag['mm_x'], 0.032256)
+        self.assertEqual(mag['mm_y'], 0.032256)
+        self.assertEqual(mag['level'], 0)
+        self.assertEqual(source.getLevelForMagnification(), 7)
+        self.assertEqual(source.getLevelForMagnification(exact=True), None)
+        self.assertEqual(source.getLevelForMagnification(40), 7)
+        self.assertEqual(source.getLevelForMagnification(20), 6)
+        self.assertEqual(source.getLevelForMagnification(0.3125), 0)
+        self.assertEqual(source.getLevelForMagnification(15), 6)
+        self.assertEqual(source.getLevelForMagnification(25), 6)
+        self.assertEqual(source.getLevelForMagnification(
+            15, upscale=True), 6)
+        self.assertEqual(source.getLevelForMagnification(
+            25, upscale=True), 7)
+        self.assertEqual(source.getLevelForMagnification(mm_x=0.0005), 6)
+        self.assertEqual(source.getLevelForMagnification(
+            mm_x=0.0005, mm_y=0.002), 5)
+        self.assertEqual(source.getLevelForMagnification(
+            mm_x=0.0005, exact=True), None)
+        self.assertEqual(source.getLevelForMagnification(
+            mm_x=0.000504, exact=True), 6)
+        self.assertEqual(source.getLevelForMagnification(80), 7)
+        self.assertEqual(source.getLevelForMagnification(80, exact=True), None)
+        self.assertEqual(source.getLevelForMagnification(0.1), 0)

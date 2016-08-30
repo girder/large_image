@@ -200,12 +200,16 @@ class TileSource(object):
         return False
 
     def getMetadata(self):
+        mag = self.getMagnification()
         return {
             'levels': self.levels,
             'sizeX': self.sizeX,
             'sizeY': self.sizeY,
             'tileWidth': self.tileWidth,
             'tileHeight': self.tileHeight,
+            'magnification': mag['magnification'],
+            'pixelWidthInMillimeters': mag['mm_x'],
+            'pixelHeightInMillimeters': mag['mm_y'],
         }
 
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False):
@@ -374,6 +378,85 @@ class TileSource(object):
                 PIL.Image.BICUBIC if width > regionWidth else
                 PIL.Image.LANCZOS)
         return self._encodeImage(image, **kwargs)
+
+    def getMagnification(self):
+        """
+        Get the magnification for the highest-resolution level.
+
+        :return: magnification, width of a pixel in mm, height of a pixel in mm.
+        """
+        return {
+            'magnification': None,
+            'mm_x': None,
+            'mm_y': None
+        }
+
+    def getMagnificationForLevel(self, level=None):
+        """
+        Get the magnification at a particular level.
+
+        :param level: None to use the maximum level, otherwise the level to get
+            the magification factor of.
+        :return: magnification, width of a pixel in mm, height of a pixel in mm.
+        """
+        mag = self.getMagnification()
+
+        if level is not None and self.levels and level != self.levels - 1:
+            scale = 2.0 ** (self.levels - 1 - level)
+            if mag['magnification']:
+                mag['magnification'] /= scale
+            if mag['mm_x'] and mag['mm_y']:
+                mag['mm_x'] *= scale
+                mag['mm_y'] *= scale
+        if self.levels:
+            mag['level'] = level if level is not None else self.levels - 1
+        return mag
+
+    def getLevelForMagnification(self, magnification=None, exact=False,
+                                 mm_x=None, mm_y=None, upscale=False):
+        """
+        Get the level for a specific magnifcation or pixel size.  If the
+        magnification is unknown or no level is sufficient resolution, and an
+        exact match is not requested, the highest level will be returned.  If
+        an exact match is not found, the closest level is returned, unless
+        upscale=False, in which case it will always be the higher level.
+          At least one of magnification, mm_x, and mm_y must be specified.  If
+        more than one of these values is given, an average of those given will
+        be used (exact will require all of them to match).
+
+        :param magnification: the magnification ratio.
+        :param exact: if True, only a level that matches exactly will be
+            returned.
+        :param mm_x: the horizontal size of a pixel in millimeters.
+        :param mm_y: the vertical size of a pixel in millimeters.
+        :param upscale: if True, only allow upscale for non-exact matches.
+        :returns: the selected level or None for no match.
+        """
+        mag = self.getMagnificationForLevel()
+        ratios = []
+        if magnification and mag['magnification']:
+            ratios.append(float(magnification) / mag['magnification'])
+        if mm_x and mag['mm_x']:
+            ratios.append(mag['mm_x'] / mm_x)
+        if mm_y and mag['mm_y']:
+            ratios.append(mag['mm_y'] / mm_y)
+        ratios = [math.log(ratio) / math.log(2) for ratio in ratios]
+        # Perform some slight rounding to handle numerical precision issues
+        ratios = [round(ratio, 4) for ratio in ratios]
+        if not len(ratios):
+            return None if exact else mag['level']
+        if exact:
+            if any(int(ratio) != ratio or ratio != ratios[0]
+                   for ratio in ratios):
+                return None
+        ratio = sum(ratios) / len(ratios)
+        level = mag['level'] + ratio
+        level = int(math.ceil(level) if upscale else round(level))
+        if (exact and (level > mag['level'] or level < 0) or
+                (upscale and level > mag['level'])):
+            return None
+        level = max(0, min(mag['level'], level))
+        return level
 
 
 class FileTileSource(TileSource):

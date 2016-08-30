@@ -87,6 +87,23 @@ class TiffFileTileSource(FileTileSource):
         self.sizeX = self._tiffDirectories[-1].imageWidth
         self.sizeY = self._tiffDirectories[-1].imageHeight
 
+    def getMagnification(self):
+        """
+        Get the magnification at a particular level.
+
+        :return: magnification, width of a pixel in mm, height of a pixel in mm.
+        """
+        pixelInfo = self._tiffDirectories[-1].pixelInfo
+        mm_x = pixelInfo.get('mm_x')
+        mm_y = pixelInfo.get('mm_y')
+        # Estimate the magnification, as we don't have a direct value
+        mag = pixelInfo.get('magnification', 0.01 / mm_x if mm_x else None)
+        return {
+            'magnification': mag,
+            'mm_x': mm_x,
+            'mm_y': mm_y,
+        }
+
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
                 **kwargs):
         try:

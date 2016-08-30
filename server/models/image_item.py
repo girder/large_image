@@ -343,3 +343,12 @@ class ImageItem(Item):
         tileSource = self._loadTileSource(item, **kwargs)
         regionData, regionMime = tileSource.getRegion(**kwargs)
         return regionData, regionMime
+
+    def tileSource(self, item, **kwargs):
+        """
+        Get a tile source for an item.
+
+        :param item: the item with the tile source.
+        :return: magnification, width of a pixel in mm, height of a pixel in mm.
+        """
+        return self._loadTileSource(item, **kwargs)

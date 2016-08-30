@@ -135,6 +135,28 @@ class SVSFileTileSource(FileTileSource):
                 'scale': scale
             })
 
+    def getMagnification(self):
+        """
+        Get the magnification at a particular level.
+
+        :return: magnification, width of a pixel in mm, height of a pixel in mm.
+        """
+        mag = self._openslide.properties[
+            openslide.PROPERTY_NAME_OBJECTIVE_POWER]
+        mag = float(mag) if mag else None
+        try:
+            mm_x = float(self._openslide.properties[
+                openslide.PROPERTY_NAME_MPP_X]) * 0.001
+            mm_y = float(self._openslide.properties[
+                openslide.PROPERTY_NAME_MPP_Y]) * 0.001
+        except Exception:
+            mm_x = mm_y = None
+        return {
+            'magnification': mag,
+            'mm_x': mm_x,
+            'mm_y': mm_y,
+        }
+
     def getState(self):
         return super(SVSFileTileSource, self).getState() + ',' + str(
             self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
