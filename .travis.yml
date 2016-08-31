@@ -47,10 +47,15 @@ addons:
       - libgdk-pixbuf2.0-dev
       - libxml2-dev 
       - libsqlite3-dev
+      # girder worker
+      - rabbitmq-server
+
+services:
+  - rabbitmq
 
 before_install:
-  - GIRDER_VERSION=4ee695152af8817df26cde7f1987cabcc2057615
-  - GIRDER_WORKER_VERSION=508693448f97d4b8ee229429c4db6a89e4aa0d58
+  - GIRDER_VERSION=cb846cee604b07368800e99322c7347039a2a464
+  - GIRDER_WORKER_VERSION=2cfb739c096c2373f8bbe00853e3709f433192a6
   - main_path=$PWD
   - build_path=$PWD/build
   - mkdir -p $build_path
@@ -74,7 +79,7 @@ before_install:
   - tar -zxf openjpeg-1.5.2.tar.gz
   - cd openjpeg-version.1.5.2
   - cmake .
-  - make
+  - make -j 3
   - sudo make install
   - sudo ldconfig
   - cd $main_path
@@ -85,7 +90,7 @@ before_install:
   - tar -zxf tiff-4.0.3.tar.gz
   - cd tiff-4.0.3
   - ./configure
-  - make
+  - make -j 3
   - sudo make install
   - sudo ldconfig
   - cd $main_path
@@ -97,7 +102,7 @@ before_install:
   - cd openslide-3.4.1
   - autoreconf -i
   - ./configure
-  - make
+  - make -j 3
   - sudo make install
   - sudo ldconfig
   - cd $main_path
@@ -133,7 +138,7 @@ script:
   - mkdir -p $build_path/girder_testing_build
   - cd $build_path/girder_testing_build
   - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} $girder_path
-  - make
+  - make -j 3
   - JASMINE_TIMEOUT=15000 ctest -VV -R large_image
 
 after_failure:

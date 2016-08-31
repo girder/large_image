@@ -61,7 +61,7 @@ def _updateJob(event):
     if (meta.get('creator') != 'large_image' or not meta.get('itemId') or
             meta.get('task') != 'createImageItem'):
         return
-    status = event.info['params'].get('status', job['status'])
+    status = job['status']
     if status not in (JobStatus.ERROR, JobStatus.CANCELED, JobStatus.SUCCESS):
         return
     item = ModelImporter.model('item').load(meta['itemId'], force=True,
@@ -71,6 +71,7 @@ def _updateJob(event):
     if item.get('largeImage', {}).get('expected'):
         del item['largeImage']['expected']
     notify = item.get('largeImage', {}).get('notify')
+    msg = None
     if notify:
         del item['largeImage']['notify']
         if status == JobStatus.SUCCESS:
@@ -80,11 +81,12 @@ def _updateJob(event):
         else:  # ERROR
             msg = 'FAILED: Large image creation failed'
         msg += ' for item %s' % item['name']
-        event.info['params']['progressMessage'] = msg
     if (status in (JobStatus.ERROR, JobStatus.CANCELED) and
             'largeImage' in item):
         del item['largeImage']
     ModelImporter.model('item').save(item)
+    if msg:
+        ModelImporter.model('jobs', 'job').updateJob(job, progressMessage=msg)
 
 
 def checkForLargeImageFiles(event):
@@ -149,7 +151,7 @@ def load(info):
     ModelImporter.model('annotation', plugin='large_image')
 
     events.bind('data.process', 'large_image', _postUpload)
-    events.bind('jobs.job.update', 'large_image', _updateJob)
+    events.bind('jobs.job.update.after', 'large_image', _updateJob)
     events.bind('model.setting.validate', 'large_image', validateSettings)
     events.bind('model.folder.save.after', 'large_image',
                 invalidateLoadModelCache)

@@ -69,10 +69,10 @@ class LargeImageTilesTest(base.TestCase):
             '/system/setting', method='PUT', user=self.admin, params={
                 'list': json.dumps([{
                     'key': 'worker.broker',
-                    'value': 'mongodb://127.0.0.1/girder_worker'
+                    'value': 'amqp://guest@127.0.0.1/'
                     }, {
                     'key': 'worker.backend',
-                    'value': 'mongodb://127.0.0.1/girder_worker'
+                    'value': 'amqp://guest@127.0.0.1/'
                     }])})
         self.assertStatusOk(resp)
 
