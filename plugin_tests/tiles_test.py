@@ -25,7 +25,6 @@ import struct
 import time
 from six.moves import range
 
-import girder
 from girder import config
 from tests import base
 
@@ -70,10 +69,10 @@ class LargeImageTilesTest(base.TestCase):
             '/system/setting', method='PUT', user=self.admin, params={
                 'list': json.dumps([{
                     'key': 'worker.broker',
-                    'value': 'mongodb://127.0.0.1/girder_worker'
+                    'value': 'amqp://guest@127.0.0.1/'
                     }, {
                     'key': 'worker.backend',
-                    'value': 'mongodb://127.0.0.1/girder_worker'
+                    'value': 'amqp://guest@127.0.0.1/'
                     }])})
         self.assertStatusOk(resp)
 
@@ -254,12 +253,9 @@ class LargeImageTilesTest(base.TestCase):
             except AssertionError as exc:
                 if 'File must have at least 1 level' in exc.args[0]:
                     return False
+                if 'No large image file' in exc.args[0]:
+                    return None
                 self.assertIn('is still pending creation', exc.args[0])
-            item = self.model('item').load(itemId, user=self.admin)
-            job = self.model('job', 'jobs').load(item['largeImage']['jobId'],
-                                                 user=self.admin)
-            if job['status'] == girder.plugins.jobs.constants.JobStatus.ERROR:
-                return None
             time.sleep(0.1)
         self.assertStatusOk(resp)
         return resp.json
@@ -492,7 +488,7 @@ class LargeImageTilesTest(base.TestCase):
         resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
                             user=self.admin)
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json['deleted'], True)
+        self.assertEqual(resp.json['deleted'], False)
 
     def testTilesFromSVS(self):
         file = self._uploadFile(os.path.join(
