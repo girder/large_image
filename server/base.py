@@ -64,8 +64,7 @@ def _updateJob(event):
     status = job['status']
     if status not in (JobStatus.ERROR, JobStatus.CANCELED, JobStatus.SUCCESS):
         return
-    item = ModelImporter.model('item').load(meta['itemId'], force=True,
-                                            exc=False)
+    item = ModelImporter.model('item').load(meta['itemId'], force=True)
     if not item or 'largeImage' not in item:
         return
     if item.get('largeImage', {}).get('expected'):
