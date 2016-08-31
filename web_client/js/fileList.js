@@ -37,7 +37,7 @@ girder.wrap(girder.views.FileListWidget, 'render', function (render) {
         girder.restRequest({
             type: 'POST',
             path: 'item/' + this.parentItem.id + '/tiles',
-            data: {fileId: fileId},
+            data: {fileId: fileId, notify: true},
             error: function (error) {
                 if (error.status !== 0) {
                     girder.events.trigger('g:alert', {

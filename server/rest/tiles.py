@@ -66,6 +66,9 @@ class TilesItemResource(Item):
         .param('fileId', 'The ID of the source file containing the image. '
                          'Required if there is more than one file in the item.',
                required=False)
+        .param('notify', 'If a job is required to create the large image, '
+               'a nofication can be sent when it is complete.',
+               dataType='boolean', default=True, required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -85,7 +88,8 @@ class TilesItemResource(Item):
         token = self.getCurrentToken()
         try:
             return self.imageItemModel.createImageItem(
-                item, largeImageFile, user, token)
+                item, largeImageFile, user, token,
+                notify=self.boolParam('notify', params, default=True))
         except TileGeneralException as e:
             raise RestException(e.message)
 
