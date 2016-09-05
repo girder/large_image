@@ -18,29 +18,27 @@
 ###############################################################################
 
 # Deal with a bug where PEP257 crashes when parsing __all__
-# flake8: noqa
 
 import collections
 import functools
-import sys
 from .base import TileSource, getTileSourceFromDict, TileSourceException, \
     TileSourceAssetstoreException
 try:
     import girder
-    from girder.constants import TerminalColor
     from girder import logprint
-    from .base import GirderTileSource
+    from .base import GirderTileSource  # noqa
 except ImportError:
     import logging as logprint
     girder = None
 
 
 AvailableTileSources = collections.OrderedDict()
-all = [TileSource, TileSourceException, TileSourceAssetstoreException,
-       AvailableTileSources]
+__all__ = [
+    'TileSource', 'TileSourceException', 'TileSourceAssetstoreException',
+    'AvailableTileSources']  # noqa
 
 if girder:
-    all.append(GirderTileSource)
+    __all__.append('GirderTileSource')
 
 sourceList = [
     {'moduleName': '.tiff', 'className': 'TiffFileTileSource'},
@@ -67,7 +65,7 @@ for source in sourceList:
         # importing the tilesource module
         locals().update({className: sourceClass})
         # add it to our list of exports
-        all.append(sourceClass)
+        __all__.append(className)
         # add it to our dictionary of available sources if it has a name
         if getattr(sourceClass, 'name', None):
             AvailableTileSources[sourceClass.name] = sourceClass
@@ -78,6 +76,4 @@ for source in sourceList:
 # tile source.
 getTileSource = functools.partial(getTileSourceFromDict,
                                   AvailableTileSources)
-all.append(getTileSource)
-
-__all__ = all
+__all__.append('getTileSource')
