@@ -114,7 +114,11 @@ class TilesItemResource(Item):
         for paramName, paramType in typeList:
             try:
                 if paramName in params:
-                    results[paramName] = paramType(params[paramName])
+                    if paramType is bool:
+                        results[paramName] = str(params[paramName]).lower() in (
+                            'true', 'on', 'yes', '1')
+                    else:
+                        results[paramName] = paramType(params[paramName])
             except ValueError:
                 raise RestException(
                     '"%s" parameter is an incorrect type.' % paramName)
@@ -319,6 +323,20 @@ class TilesItemResource(Item):
                required=False, dataType='int')
         .param('height', 'The maximum height of the output image in pixels.',
                required=False, dataType='int')
+        .param('magnification', 'Magnification of the output image.  If '
+               'neither width for height is specified, the magnification, '
+               'mm_x, and mm_y parameters are used to select the output size.',
+               required=False, dataType='float')
+        .param('mm_x', 'The size of the output pixels in millimeters',
+               required=False, dataType='float')
+        .param('mm_y', 'The size of the output pixels in millimeters',
+               required=False, dataType='float')
+        .param('exact', 'If magnification, mm_x, or mm_y are specified, they '
+               'must match an existing level of the image exactly.',
+               required=False, dataType='boolean', default=False)
+        .param('upscale', 'If magnification, mm_x, or mm_y are specified, they '
+               'are allowed to upsample the image.', required=False,
+               dataType='boolean', default=False)
         .param('encoding', 'Output image encoding', required=False,
                enum=['JPEG', 'PNG'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
@@ -348,6 +366,11 @@ class TilesItemResource(Item):
             ('jpegQuality', int),
             ('jpegSubsampling', int),
             ('encoding', str),
+            ('magnification', float),
+            ('mm_x', float),
+            ('mm_y', float),
+            ('exact', bool),
+            ('upscale', bool),
         ])
         try:
             regionData, regionMime = self.imageItemModel.getRegion(

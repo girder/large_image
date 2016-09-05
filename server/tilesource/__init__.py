@@ -22,7 +22,8 @@
 import collections
 import functools
 from .base import TileSource, getTileSourceFromDict, TileSourceException, \
-    TileSourceAssetstoreException
+    TileSourceAssetstoreException, TileOutputMimeTypes, TILE_FORMAT_IMAGE, \
+    TILE_FORMAT_PIL, TILE_FORMAT_NUMPY
 try:
     import girder
     from girder import logprint
@@ -35,7 +36,8 @@ except ImportError:
 AvailableTileSources = collections.OrderedDict()
 __all__ = [
     'TileSource', 'TileSourceException', 'TileSourceAssetstoreException',
-    'AvailableTileSources']  # noqa
+    'AvailableTileSources', 'TileOutputMimeTypes', 'TILE_FORMAT_IMAGE',
+    'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY']  # noqa
 
 if girder:
     __all__.append('GirderTileSource')

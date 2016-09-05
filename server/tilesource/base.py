@@ -49,6 +49,21 @@ try:
 except ImportError:
     logger.warning('Error: Could not import PIL')
     PIL = None
+try:
+    import numpy
+except ImportError:
+    logger.warning('Error: Could not import numpy')
+    numpy = None
+
+
+TILE_FORMAT_IMAGE = 'image'
+TILE_FORMAT_PIL = 'PIL'
+TILE_FORMAT_NUMPY = 'numpy'
+
+TileOutputMimeTypes = {
+    'JPEG': 'image/jpeg',
+    'PNG': 'image/png'
+}
 
 
 class TileSourceException(TileGeneralException):
@@ -60,10 +75,6 @@ class TileSourceAssetstoreException(TileSourceException):
 
 
 class TileSource(object):
-    outputMimeTypes = {
-        'JPEG': 'image/jpeg',
-        'PNG': 'image/png'
-    }
     name = None
 
     cache = tileCache
@@ -123,12 +134,12 @@ class TileSource(object):
 
         :param image: a PIL image.
         :param encoding: a valid PIL encoding (typically 'PNG' or 'JPEG').
-                         Must also be in the outputMimeTypes map.
+                         Must also be in the TileOutputMimeTypes map.
         :param jpegQuality: the quality to use when encoding a JPEG.
         :param jpegSubsampling: the subsampling level to use when encoding a
                                 JPEG.
         """
-        if encoding not in self.outputMimeTypes:
+        if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
         if image.width == 0 or image.height == 0:
             tileData = b''
@@ -137,7 +148,7 @@ class TileSource(object):
             image.save(output, encoding, quality=jpegQuality,
                        subsampling=jpegSubsampling)
             tileData = output.getvalue()
-        return tileData, self.outputMimeTypes[encoding]
+        return tileData, TileOutputMimeTypes[encoding]
 
     def _getRegionBounds(self, metadata, **kwargs):
         """
@@ -188,6 +199,243 @@ class TileSource(object):
         bottom = min(metadata['sizeY'], max(top, int(round(bottom))))
 
         return left, top, right, bottom
+
+    def _tileIteratorInfo(self, width, height, **kwargs):
+        """
+        Get information necessary to construct a tile iterator.
+          If one of width or height is specified, the other is determined by
+        preserving aspect ratio.  If both are specified, the result may not be
+        that size, as aspect ratio is always preserved.  If neither are
+        specified, magnfication, mm_x, and/or mm_y are used to determine the
+        size.  If none of those are specified, the original maximum resolution
+        is returned.
+          left, top, right, bottom, regionWidth, and reionHeight are used to
+        select part of the image to return in maximum resolution pixel
+        coordinates.  By default, these are the entire image.  Any two of the
+        three parameters per axis may be specified.  If all three are given,
+        the width or height is ignored.
+
+        :param width: maximum width in pixels.
+        :param height: maximum height in pixels.
+        :param left: the top of the region to output.
+        :param top: the top of the region to output.
+        :param right: the top of the region to output.
+        :param bottom: the top of the region to output.
+        :param regionWidth: the width of the region to output.
+        :param regionHeight: the height of the region to output.
+        :param units: either 'pixels' (default) or 'fraction'.  If pixels, the
+            left, top, right, bottom, regionWidth, and regionHeight are in
+            maximum resolution pixels.  If fraction, they are all on a scale of
+            0 to 1.
+        :param magnification: the magnification ratio.
+        :param mm_x: the horizontal size of a pixel in millimeters.
+        :param mm_y: the vertical size of a pixel in millimeters.
+        :param exact: if True, only a level that matches exactly will be
+            returned.  This is only applied if magnification, mm_x, or mm_y is
+            used.
+        :param upscale: if True, only allow upscale for non-exact matches.
+            Otherwise, specificying magnification, mm_x, or mm_y will select
+            the closest level to the requested resolution.
+        :param format: a tuple of allowed formats.  Formats are members of
+            TILE_FORMAT_*.  This will avoid converting images if they are
+            in the desired output encoding (regardless of subparameters).
+            Otherwis,e TILE_FORMAT_PIL is returned.
+        :param **kwargs: optional arguments.  Some options are encoding,
+            jpegQuality, jpegSubsampling.
+        :returns: a dictionary of information needed for the tile iterator.
+                This is None if no tiles will be returned.  Otherwise, this
+                contains:
+            regionWidth, regionHeight: the total output of the iterator in
+                pixels.
+            xmin, ymin, xmax, ymax: the tiles that will be included during the
+                iteration: [xmin, xmax) and [ymin, ymax).
+            mode: either 'RGB' or 'RGBA'.  This determines the color space used
+                for tiles.
+            level: the tile level used for iteration.
+            metadata: tile source metadata (from getMetadata)
+            left, top: the coordinates within the image of the region returned
+                in the level pixel space.
+            width, height: the requested output resolution in pixels.  If this
+                is different that regionWidth and regionHeight, then the
+                original request was asking for a different scale that is being
+                delivered.
+        """
+        if ((width is not None and width < 0) or
+                (height is not None and height < 0)):
+            raise ValueError('Invalid width or height.  Minimum value is 0.')
+        metadata = self.getMetadata()
+        left, top, right, bottom = self._getRegionBounds(metadata, **kwargs)
+
+        # If we are asked for a specific output size, determine the scaling
+        regionWidth = right - left
+        regionHeight = bottom - top
+
+        magLevel = None
+        if width is None and height is None:
+            # If neither width nor height as specified, see if magnification,
+            # mm_x, or mm_y are requested.
+            magLevel = self.getLevelForMagnification(**kwargs)
+            if magLevel is None and kwargs.get('exact'):
+                return None
+            mag = self.getMagnificationForLevel(magLevel)
+            if mag.get('scale') in (1.0, None):
+                width, height = regionWidth, regionHeight
+            else:
+                width = regionWidth / mag['scale']
+                height = regionHeight / mag['scale']
+        width, height = self._calculateWidthHeight(
+            width, height, regionWidth, regionHeight)
+        if regionWidth == 0 or regionHeight == 0 or width == 0 or height == 0:
+            return None
+
+        preferredLevel = metadata['levels'] - 1
+        # If we are scaling the result, pick the tile level that is at least
+        # the resolution we need and is preferred by the tile source.
+        if width != regionWidth or height != regionHeight:
+            newLevel = self.getPreferredLevel(preferredLevel + int(
+                math.ceil(round(math.log(max(float(width) / regionWidth,
+                                             float(height) / regionHeight)) /
+                                math.log(2), 4))))
+            if newLevel < preferredLevel:
+                # scale the bounds to the level we will use
+                factor = 2 ** (preferredLevel - newLevel)
+                left = int(left / factor)
+                right = int(right / factor)
+                regionWidth = right - left
+                top = int(top / factor)
+                bottom = int(bottom / factor)
+                regionHeight = bottom - top
+                preferredLevel = newLevel
+        # If an exact magnification was requested and this tile source doesn't
+        # have tiles at the appropriate level, indicate that we won't return
+        # anything.
+        if (magLevel is not None and magLevel != preferredLevel and
+                kwargs.get('exact')):
+            return None
+
+        xmin = int(left / metadata['tileWidth'])
+        xmax = int(math.ceil(float(right) / metadata['tileWidth']))
+        ymin = int(top / metadata['tileHeight'])
+        ymax = int(math.ceil(float(bottom) / metadata['tileHeight']))
+
+        # Use RGB for JPEG, RGBA for PNG
+        mode = 'RGBA' if kwargs.get('encoding') in ('PNG',) else 'RGB'
+
+        info = {
+            'top': top,
+            'left': left,
+            'bottom': bottom,
+            'right': right,
+            'regionWidth': regionWidth,
+            'regionHeight': regionHeight,
+            'xmin': xmin,
+            'ymin': ymin,
+            'xmax': xmax,
+            'ymax': ymax,
+            'mode': mode,
+            'level': preferredLevel,
+            'metadata': metadata,
+            'width': width,
+            'height': height,
+            'format': kwargs.get('format', (TILE_FORMAT_PIL, )),
+            'encoding': kwargs.get('encoding'),
+        }
+        return info
+
+    def _tileIterator(self, iterInfo):
+        """
+        Given tile iterator information, iterate through the tiles.
+        Each tile is returned as part of a dictionary that includes
+            x, y: (left, top) coordinate in current magnification pixels
+            height, width: size of current tile in pixels
+            tile: cropped tile image
+            format: format of the tile.  Always TILE_FORMAT_PIL or
+                TILE_FORMAT_IMAGE.  TILE_FORMAT_IMAGE is only returned if it
+                was explicitly allowed and the tile is already in the correct
+                image encoding.
+            level: level of the current tile. None if not present
+            level_x, level_y: the tile reference number within the level.
+            magnification: magnification of the current tile
+            mm_x, mm_y: size of the current tile pixel in millimeters.
+            gx, gy - (left, top) coordinate in maximum-resolution pixels
+            gwidth, gheight: size of of the current tile in maximum resolution
+                pixels.
+        If a region that includes partial tiles is requested, those tiles are
+        cropped appropriately.  Most images will have tiles that get cropped
+        along the right and bottom egdes in any case.
+
+        :param iterInfo: tile iterator information.  See _tileIteratorInfo.
+        :yields: an iterator that returns a dictionary as listed above.
+        """
+        regionWidth = iterInfo['regionWidth']
+        regionHeight = iterInfo['regionHeight']
+        xmin = iterInfo['xmin']
+        ymin = iterInfo['ymin']
+        xmax = iterInfo['xmax']
+        ymax = iterInfo['ymax']
+        level = iterInfo['level']
+        metadata = iterInfo['metadata']
+        top = iterInfo['top']
+        left = iterInfo['left']
+        format = iterInfo['format']
+        encoding = iterInfo['encoding']
+
+        logger.info(
+            'Fetching region of an image with a source size of %d x %d; '
+            'getting %d tiles',
+            regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
+        mag = self.getMagnificationForLevel(level)
+        scale = mag.get('scale', 1.0)
+        for x in range(xmin, xmax):
+            for y in range(ymin, ymax):
+                tileData = self.getTile(
+                    x, y, level, pilImageAllowed=True, sparseFallback=True)
+                tileFormat = TILE_FORMAT_PIL
+                # If the tile isn't in PIL format, and it is not in an image
+                # format that is the same as a desired output format and
+                # encoding, convert it to PIL format.
+                if not isinstance(tileData, PIL.Image.Image):
+                    pilData = PIL.Image.open(BytesIO(tileData))
+                    if (format and 'TILE_FORMAT_IMAGE' in format and
+                            pilData.format == encoding):
+                        tileFormat = TILE_FORMAT_IMAGE
+                    else:
+                        tileData = pilData
+                posX = x * metadata['tileWidth'] - left
+                posY = y * metadata['tileHeight'] - top
+                tileWidth = metadata['tileWidth']
+                tileHeight = metadata['tileHeight']
+                # crop as needed
+                if (posX < 0 or posY < 0 or posX + tileWidth > regionWidth or
+                        posY + tileHeight > regionHeight):
+                    crop = (max(0, -posX),
+                            max(0, -posY),
+                            min(tileWidth, regionWidth - posX),
+                            min(tileHeight, regionHeight - posY))
+                    tileData = tileData.crop(crop)
+                    posX += crop[0]
+                    posY += crop[1]
+                    tileWidth = crop[2] - crop[0]
+                    tileHeight = crop[3] - crop[1]
+                tile = {
+                    'x': posX + left,
+                    'y': posY + top,
+                    'width': tileWidth,
+                    'height': tileHeight,
+                    'tile': tileData,
+                    'format': tileFormat,
+                    'level': level,
+                    'level_x': x,
+                    'level_y': y,
+                    'magnification': mag['magnification'],
+                    'mm_x': mag['mm_x'],
+                    'mm_y': mag['mm_y'],
+                }
+                tile['gx'] = tile['x'] * scale
+                tile['gy'] = tile['y'] * scale
+                tile['gwidth'] = tile['width'] * scale
+                tile['gheight'] = tile['height'] * scale
+                yield tile
 
     @classmethod
     def canRead(cls, *args, **kwargs):
@@ -291,58 +539,21 @@ class TileSource(object):
         :param height: maximum height in pixels.
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, top, left, right, bottom,
-            regionWidth, regionHeight, units ('pixels' or 'fraction').
+            regionWidth, regionHeight, units ('pixels' or 'fraction'),
+            magnification, mm_x, mm_y, exact, upscale.  See _tileIteratorInfo.
         :returns: regionData, regionMime: the image data and the mime type.
         """
-        if ((width is not None and width < 0) or
-                (height is not None and height < 0)):
-            raise ValueError('Invalid width or height.  Minimum value is 0.')
-        metadata = self.getMetadata()
-        left, top, right, bottom = self._getRegionBounds(metadata, **kwargs)
-
-        # If we are asked for a specific output size, determine the scaling
-        regionWidth = right - left
-        regionHeight = bottom - top
-
-        if width is None and height is None:
-            width, height = regionWidth, regionHeight
-        width, height = self._calculateWidthHeight(
-            width, height, regionWidth, regionHeight)
-        if regionWidth == 0 or regionHeight == 0 or width == 0 or height == 0:
+        iterInfo = self._tileIteratorInfo(width, height, **kwargs)
+        if iterInfo is None:
             image = PIL.Image.new('RGB', (0, 0))
             return self._encodeImage(image, **kwargs)
-
-        preferredLevel = metadata['levels'] - 1
-        # If we are scaling the result, pick the tile level that is at least
-        # the resolution we need and is preferred by the tile source.
-        if width != regionWidth or height != regionHeight:
-            newLevel = self.getPreferredLevel(preferredLevel + int(
-                math.ceil(math.log(max(float(width) / regionWidth,
-                                       float(height) / regionHeight)) /
-                          math.log(2))))
-            if newLevel < preferredLevel:
-                # scale the bounds to the level we will use
-                factor = 2 ** (preferredLevel - newLevel)
-                left = int(left / factor)
-                right = int(right / factor)
-                regionWidth = right - left
-                top = int(top / factor)
-                bottom = int(bottom / factor)
-                regionHeight = bottom - top
-                preferredLevel = newLevel
-
-        xmin = int(left / metadata['tileWidth'])
-        xmax = int(math.ceil(float(right) / metadata['tileWidth']))
-        ymin = int(top / metadata['tileHeight'])
-        ymax = int(math.ceil(float(bottom) / metadata['tileHeight']))
-        logger.info(
-            'Fetching region of an image with a source size of %d x %d; '
-            'getting %d tiles',
-            regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
-        # Use RGB mode.  If we need to support alpha on some encodings, this
-        # can changed to RGBA.
-        mode = 'RGBA' if kwargs.get('encoding') in ('PNG',) else 'RGB'
-
+        regionWidth = iterInfo['regionWidth']
+        regionHeight = iterInfo['regionHeight']
+        mode = iterInfo['mode']
+        top = iterInfo['top']
+        left = iterInfo['left']
+        width = iterInfo['width']
+        height = iterInfo['height']
         # We can construct an image using PIL.Image.new:
         #   image = PIL.Image.new('RGB', (regionWidth, regionHeight))
         # but, for large images (larger than 4 Megapixels), PIL allocates one
@@ -356,22 +567,15 @@ class TileSource(object):
             # PIL will reallocate buffers that aren't in 'raw', RGBA, 0, 1.
             # See PIL documentation and code for more details.
             b'\x00' * (regionWidth * regionHeight * 4), 'raw', 'RGBA', 0, 1)
-        for x in range(xmin, xmax):
-            for y in range(ymin, ymax):
-                tileData = self.getTile(
-                    x, y, preferredLevel, pilImageAllowed=True,
-                    sparseFallback=True)
-                if not isinstance(tileData, PIL.Image.Image):
-                    tileData = PIL.Image.open(BytesIO(tileData))
-                posX = x * metadata['tileWidth'] - left
-                posY = y * metadata['tileHeight'] - top
-                # Add each tile to the image.  PIL crops these if they are off
-                # the edge.
-                image.paste(tileData, (posX, posY),
-                            tileData if mode == 'RGBA' and
-                            tileData.mode == 'RGBA' else None)
-
+        for tile in self._tileIterator(iterInfo):
+            # Add each tile to the image.  PIL crops these if they are off the
+            # edge.
+            image.paste(tile['tile'], (tile['x'] - left, tile['y'] - top),
+                        tile['tile'] if mode == 'RGBA' and
+                        tile['tile'].mode == 'RGBA' else None)
         # Scale if we need to
+        width = int(math.floor(width))
+        height = int(math.floor(height))
         if width != regionWidth or height != regionHeight:
             image = image.resize(
                 (width, height),
@@ -402,18 +606,19 @@ class TileSource(object):
         mag = self.getMagnification()
 
         if level is not None and self.levels and level != self.levels - 1:
-            scale = 2.0 ** (self.levels - 1 - level)
+            mag['scale'] = 2.0 ** (self.levels - 1 - level)
             if mag['magnification']:
-                mag['magnification'] /= scale
+                mag['magnification'] /= mag['scale']
             if mag['mm_x'] and mag['mm_y']:
-                mag['mm_x'] *= scale
-                mag['mm_y'] *= scale
+                mag['mm_x'] *= mag['scale']
+                mag['mm_y'] *= mag['scale']
         if self.levels:
             mag['level'] = level if level is not None else self.levels - 1
         return mag
 
     def getLevelForMagnification(self, magnification=None, exact=False,
-                                 mm_x=None, mm_y=None, upscale=False):
+                                 mm_x=None, mm_y=None, upscale=False,
+                                 **kwargs):
         """
         Get the level for a specific magnifcation or pixel size.  If the
         magnification is unknown or no level is sufficient resolution, and an
@@ -457,6 +662,88 @@ class TileSource(object):
             return None
         level = max(0, min(mag['level'], level))
         return level
+
+    def tileIterator(self, format=(TILE_FORMAT_PIL, ), **kwargs):
+        """
+        Iterate on all tiles in the specifed region at the specified scale.
+        Each tile is returned as part of a dictionary that includes
+            x, y: (left, top) coordinate in current magnification pixels
+            height, width: size of current tile in pixels
+            tile: cropped tile image
+            format: format of the tile
+            level: level of the current tile. None if not present
+            level_x, level_y: the tile reference number within the level.
+            magnification: magnification of the current tile
+            mm_x, mm_y: size of the current tile pixel in millimeters.
+            gx, gy - (left, top) coordinate in maximum-resolution pixels
+            gwidth, gheight: size of of the current tile in maximum resolution
+                pixels.
+        If a region that includes partial tiles is requested, those tiles are
+        cropped appropriately.  Most images will have tiles that get cropped
+        along the right and bottom egdes in any case.  If an exact
+        magnification or scale is requested, no tiles will be returned unless
+        allowInterpolation is true.
+
+        :param format: the desired format or a tuple of allowed formats.
+            Formats are members of TILE_FORMAT_*.
+        :param width: maximum width in pixels.
+        :param height: maximum height in pixels.
+        :param left: the top of the region to output.
+        :param top: the top of the region to output.
+        :param right: the top of the region to output.
+        :param bottom: the top of the region to output.
+        :param regionWidth: the width of the region to output.
+        :param regionHeight: the height of the region to output.
+        :param units: either 'pixels' (default) or 'fraction'.  If pixels, the
+            left, top, right, bottom, regionWidth, and regionHeight are in
+            maximum resolution pixels.  If fraction, they are all on a scale of
+            0 to 1.
+        :param magnification: the magnification ratio.
+        :param mm_x: the horizontal size of a pixel in millimeters.
+        :param mm_y: the vertical size of a pixel in millimeters.
+        :param exact: if True, only a level that matches exactly will be
+            returned.  This is only applied if magnification, mm_x, or mm_y is
+            used.
+        :param upscale: if True, only allow upscale for non-exact matches.
+            Otherwise, specificying magnification, mm_x, or mm_y will select
+            the closest level to the requested resolution.
+        :param encoding: if format includes TILE_FORMAT_IMAGE, a valid PIL
+            encoding (typically 'PNG' or 'JPEG').  Must also be in the
+            TileOutputMimeTypes map.
+        :param jpegQuality: the quality to use when encoding a JPEG.
+        :param jpegSubsampling: the subsampling level to use when encoding a
+                                JPEG.
+        :param **kwargs: optional arguments.
+        :yields: an iterator that returns a dictionary as listed above.
+        """
+        if not isinstance(format, tuple):
+            format = (format, )
+        if TILE_FORMAT_IMAGE in format:
+            encoding = kwargs.get('encoding')
+            if encoding not in TileOutputMimeTypes:
+                raise ValueError('Invalid encoding "%s"' % encoding)
+        iterInfo = self._tileIteratorInfo(format=format, **kwargs)
+        if not iterInfo:
+            return
+        for tile in self._tileIterator(iterInfo):
+            if tile['format'] in format:
+                # already in an acceptable format
+                pass
+            elif TILE_FORMAT_NUMPY in format and numpy:
+                tile['tile'] = numpy.asarray(tile['tile'])
+                tile['format'] = format
+            elif TILE_FORMAT_IMAGE in format:
+                output = BytesIO()
+                tile['tile'].save(
+                    output, encoding, quality=kwargs.get('jpegQuality'),
+                    subsampling=kwargs.get('jpegSubsampling'))
+                tile['tile'] = output.getvalue()
+                tile['format'] = format
+            if tile['format'] not in format:
+                raise TileSourceException(
+                    'Cannot yield tiles in desired format %r' % (format, ))
+
+            yield tile
 
 
 class FileTileSource(TileSource):
