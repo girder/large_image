@@ -295,8 +295,7 @@ class ImageItem(Item):
         # Return the data
         return thumbData, thumbMime
 
-    def removeThumbnailFiles(self, item, keep=0,
-                             sort=[('_id', SortDir.DESCENDING)], **kwargs):
+    def removeThumbnailFiles(self, item, keep=0, sort=None, **kwargs):
         """
         Remove all large image thumbnails from an item.
 
@@ -309,6 +308,8 @@ class ImageItem(Item):
         :returns: a tuple of (the number of files before removal, the number of
             files removed).
         """
+        if not sort:
+            sort = [('_id', SortDir.DESCENDING)]
         fileModel = self.model('file')
         query = {
             'attachedToType': 'item',

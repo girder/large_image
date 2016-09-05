@@ -21,6 +21,7 @@ import json
 import math
 import os
 import requests
+import six
 import struct
 import time
 from six.moves import range
@@ -529,13 +530,10 @@ class LargeImageTilesTest(base.TestCase):
         self._testTilesZXY(itemId, tileMetadata, params, PNGHeader)
 
         # Check that invalid encodings are rejected
-        try:
+        with six.assertRaisesRegex(self, Exception, 'Invalid encoding'):
             resp = self.request(path='/item/%s/tiles' % itemId,
                                 user=self.admin,
                                 params={'encoding': 'invalid'})
-            self.assertTrue(False)
-        except AssertionError as exc:
-            self.assertIn('Invalid encoding', exc.args[0])
 
         # Check that JPEG options are honored.
         resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
@@ -859,21 +857,17 @@ class LargeImageTilesTest(base.TestCase):
             self.assertFalse(self.model('setting').get(key))
             self.model('setting').set(key, 'true')
             self.assertTrue(self.model('setting').get(key))
-            try:
+            with six.assertRaisesRegex(self, ValidationException,
+                                       'must be a boolean'):
                 self.model('setting').set(key, 'not valid')
-                self.assertTrue(False)
-            except ValidationException as exc:
-                self.assertIn('must be a boolean', exc.args[0])
         self.model('setting').set(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
         self.assertEqual(self.model('setting').get(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER), 'geojs')
-        try:
+        with six.assertRaisesRegex(self, ValidationException,
+                                   'must be a non-negative integer'):
             self.model('setting').set(
                 constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, -1)
-            self.assertTrue(False)
-        except ValidationException as exc:
-            self.assertIn('must be a non-negatuve integer', exc.args[0])
         self.model('setting').set(
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 5)
         self.assertEqual(self.model('setting').get(

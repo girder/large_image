@@ -145,7 +145,7 @@ def validateNonnegativeInteger(doc):
         if val < 0:
             raise ValueError
     except ValueError:
-        raise ValidationException('%s must be a non-negatuve integer.' % (
+        raise ValidationException('%s must be a non-negative integer.' % (
             doc['key'], ), 'value')
     doc['value'] = val
 
