@@ -18,6 +18,9 @@ girder.views.largeImageConfig = girder.View.extend({
             }, {
                 key: 'large_image.auto_set',
                 value: this.$('.g-large-image-auto-set-on').prop('checked')
+            }, {
+                key: 'large_image.max_thumbnail_files',
+                value: this.$('.g-large-image-max-thumbnail-files').val() - 0
             }]);
         }
     },

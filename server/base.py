@@ -18,8 +18,9 @@
 ###############################################################################
 
 from girder import events, plugin, logger
-from girder.constants import AccessType
-from girder.utility.model_importer import ModelImporter
+from girder.constants import AccessType, SettingDefault
+from girder.models.model_base import ModelImporter, ValidationException
+from girder.utility import setting_utilities
 from girder.plugins.jobs.constants import JobStatus
 
 from . import constants
@@ -100,7 +101,7 @@ def checkForLargeImageFiles(event):
     if not file.get('itemId') or not possible:
         return
     if not ModelImporter.model('setting').get(
-            constants.PluginSettings.LARGE_IMAGE_AUTO_SET, True):
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
         return
     item = ModelImporter.model('item').load(
         file['itemId'], force=True, exc=False)
@@ -115,22 +116,60 @@ def checkForLargeImageFiles(event):
                     'largeImage' % str(file['_id']))
 
 
-def validateSettings(event):
-    key, val = event.info['key'], event.info['value']
+def removeThumbnails(event):
+    ModelImporter.model('image_item', 'large_image').removeThumbnailFiles(
+        event.info)
 
-    if key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
-               constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
-               constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
-        if str(val).lower() not in ('false', 'true', ''):
-            return
-        val = (str(val).lower() != 'false')
-    elif key == constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER:
-        val = str(val).strip()
-    else:
-        return
-    event.info['value'] = val
-    event.preventDefault().stopPropagation()
 
+# Validators
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+    constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
+})
+def validateBoolean(doc):
+    val = doc['value']
+    if str(val).lower() not in ('false', 'true', ''):
+        raise ValidationException('%s must be a boolean.' % doc['key'], 'value')
+    doc['value'] = (str(val).lower() != 'false')
+
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
+})
+def validateNonnegativeInteger(doc):
+    val = doc['value']
+    try:
+        val = int(val)
+        if val < 0:
+            raise ValueError
+    except ValueError:
+        raise ValidationException('%s must be a non-negative integer.' % (
+            doc['key'], ), 'value')
+    doc['value'] = val
+
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER
+})
+def validateDefaultViewer(doc):
+    doc['value'] = str(doc['value']).strip()
+
+
+# Defaults
+
+# Defaults that have fixed values can just be added to the system defaults
+# dictionary.
+SettingDefault.defaults.update({
+    constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS: True,
+    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER: True,
+    constants.PluginSettings.LARGE_IMAGE_AUTO_SET: True,
+    constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES: 10,
+})
+
+
+# Configuration and load
 
 @plugin.config(
     name='Large image',
@@ -151,7 +190,6 @@ def load(info):
 
     events.bind('data.process', 'large_image', _postUpload)
     events.bind('jobs.job.update.after', 'large_image', _updateJob)
-    events.bind('model.setting.validate', 'large_image', validateSettings)
     events.bind('model.folder.save.after', 'large_image',
                 invalidateLoadModelCache)
     events.bind('model.group.save.after', 'large_image',
@@ -159,3 +197,4 @@ def load(info):
     events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
     events.bind('model.file.save.after', 'large_image',
                 checkForLargeImageFiles)
+    events.bind('model.item.remove', 'large_image', removeThumbnails)

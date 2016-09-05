@@ -214,7 +214,7 @@ class TileSource(object):
     def getTileMimeType(self):
         return 'image/jpeg'
 
-    def getThumbnail(self, width=None, height=None, **kwargs):
+    def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is
         preserved.  If neither width nor height is given, a default value is
@@ -223,6 +223,8 @@ class TileSource(object):
 
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
+        :param levelZero: if true, always use the level zero tile.  Otherwise,
+            the thumbnail is generated so that it is never upsampled.
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, and jpegSubsampling.
         :returns: thumbData, thumbMime: the image data and the mime type.
@@ -230,7 +232,18 @@ class TileSource(object):
         if ((width is not None and width < 2) or
                 (height is not None and height < 2)):
             raise ValueError('Invalid width or height.  Minimum value is 2.')
-
+        if width is None and height is None:
+            width = height = 256
+        # There are two code paths for generating thumbnails.  If
+        # alwaysUseLevelZero is True, then the the thumbnail is generated more
+        # swiftly, but may look poor.  We may want to add a parameter for this
+        # option, or only use the high-quality results.
+        if not levelZero:
+            params = dict(kwargs)
+            for key in ('left', 'top', 'right', 'bottom', 'regionWidth',
+                        'regionHeight'):
+                params.pop(key, None)
+            return self.getRegion(width, height, **params)
         metadata = self.getMetadata()
         tileData = self.getTile(0, 0, 0)
         image = PIL.Image.open(BytesIO(tileData))
@@ -239,11 +252,6 @@ class TileSource(object):
         imageHeight = int(math.floor(
             metadata['sizeY'] * 2 ** -(metadata['levels'] - 1)))
         image = image.crop((0, 0, imageWidth, imageHeight))
-
-        # If we wanted to return a default thumbnail of the level 0 tile,
-        # disable this conditional.
-        if width is None and height is None:
-            width = height = 256
 
         if width or height:
             width, height = self._calculateWidthHeight(
