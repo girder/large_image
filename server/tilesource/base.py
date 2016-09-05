@@ -200,7 +200,7 @@ class TileSource(object):
 
         return left, top, right, bottom
 
-    def _tileIteratorInfo(self, width, height, **kwargs):
+    def _tileIteratorInfo(self, width=None, height=None, **kwargs):
         """
         Get information necessary to construct a tile iterator.
           If one of width or height is specified, the other is determined by
@@ -663,19 +663,20 @@ class TileSource(object):
         level = max(0, min(mag['level'], level))
         return level
 
-    def tileIterator(self, format=(TILE_FORMAT_PIL, ), **kwargs):
+    def tileIterator(self, format=(TILE_FORMAT_PIL, ), resample=False,
+                     **kwargs):
         """
         Iterate on all tiles in the specifed region at the specified scale.
         Each tile is returned as part of a dictionary that includes
-            x, y: (left, top) coordinate in current magnification pixels
-            height, width: size of current tile in pixels
+            x, y: (left, top) coordinates in current magnification pixels
+            width, height: size of current tile in pixels
             tile: cropped tile image
             format: format of the tile
             level: level of the current tile. None if not present
             level_x, level_y: the tile reference number within the level.
             magnification: magnification of the current tile
             mm_x, mm_y: size of the current tile pixel in millimeters.
-            gx, gy - (left, top) coordinate in maximum-resolution pixels
+            gx, gy: (left, top) coordinate in maximum-resolution pixels
             gwidth, gheight: size of of the current tile in maximum resolution
                 pixels.
         If a region that includes partial tiles is requested, those tiles are
@@ -686,6 +687,17 @@ class TileSource(object):
 
         :param format: the desired format or a tuple of allowed formats.
             Formats are members of TILE_FORMAT_*.
+        :param resample: If True or one of PIL.Image.NEAREST, LANCZOS,
+            BILINEAR, or BICUBIC to resample tiles that are not the target
+            output size.  Tiles that are resampled may have non-integer x, y,
+            width, and height values, and will have an additional dictionary
+            entries of:
+                scaled: the scaling factor that was applied (less than 1 is
+                    downsampled).
+                tile_x, tile_y: (left, top) coordinates before scaling
+                tile_width, tile_height: size of the current tile before
+                    scaling.
+            Note that scipy.misc.imresize uses PIL internally.
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
         :param left: the top of the region to output.
@@ -722,10 +734,14 @@ class TileSource(object):
             encoding = kwargs.get('encoding')
             if encoding not in TileOutputMimeTypes:
                 raise ValueError('Invalid encoding "%s"' % encoding)
-        iterInfo = self._tileIteratorInfo(format=format, **kwargs)
+        iterFormat = format if resample in (False, None) else (
+            TILE_FORMAT_PIL, )
+        iterInfo = self._tileIteratorInfo(format=iterFormat, **kwargs)
         if not iterInfo:
             return
+        # TODO: check if resampling is needed.
         for tile in self._tileIterator(iterInfo):
+            # TODO: resample as needed
             if tile['format'] in format:
                 # already in an acceptable format
                 pass
@@ -742,7 +758,6 @@ class TileSource(object):
             if tile['format'] not in format:
                 raise TileSourceException(
                     'Cannot yield tiles in desired format %r' % (format, ))
-
             yield tile
 
 

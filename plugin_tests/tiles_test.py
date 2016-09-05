@@ -1007,3 +1007,27 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(source.getLevelForMagnification(80), 7)
         self.assertEqual(source.getLevelForMagnification(80, exact=True), None)
         self.assertEqual(source.getLevelForMagnification(0.1), 0)
+
+    def testTileIterator(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
+            '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+        tileCount = 0
+        visited = {}
+        for tile in source.tileIterator(magnification=5):
+            visited.setdefault(tile['level_x'], {})[tile['level_y']] = True
+            tileCount += 1
+            self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
+            self.assertEqual(tile['width'], 256 if tile['level_x'] < 11 else 61)
+            self.assertEqual(tile['height'], 256 if tile['level_y'] < 11 else 79)
+        self.assertEqual(tileCount, 144)
+        self.assertEqual(len(visited), 12)
+        self.assertEqual(len(visited[0]), 12)
+        # Check with a non-native magnfication
+        tileCount = 0
+        for tile in source.tileIterator(magnification=4, exact=True):
+            tileCount += 1
+        self.assertEqual(tileCount, 0)
