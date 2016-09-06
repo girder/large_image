@@ -994,9 +994,21 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(source.getLevelForMagnification(15), 6)
         self.assertEqual(source.getLevelForMagnification(25), 6)
         self.assertEqual(source.getLevelForMagnification(
-            15, upscale=True), 6)
+            15, rounding='ceil'), 6)
         self.assertEqual(source.getLevelForMagnification(
-            25, upscale=True), 7)
+            25, rounding='ceil'), 7)
+        self.assertEqual(source.getLevelForMagnification(
+            15, rounding=False), 5.585)
+        self.assertEqual(source.getLevelForMagnification(
+            25, rounding=False), 6.3219)
+        self.assertEqual(source.getLevelForMagnification(
+            45, rounding=False), 7)
+        self.assertEqual(source.getLevelForMagnification(
+            15, rounding=None), 5.585)
+        self.assertEqual(source.getLevelForMagnification(
+            25, rounding=None), 6.3219)
+        self.assertEqual(source.getLevelForMagnification(
+            45, rounding=None), 7.1699)
         self.assertEqual(source.getLevelForMagnification(mm_x=0.0005), 6)
         self.assertEqual(source.getLevelForMagnification(
             mm_x=0.0005, mm_y=0.002), 5)
@@ -1026,8 +1038,24 @@ class LargeImageTilesTest(base.TestCase):
         self.assertEqual(tileCount, 144)
         self.assertEqual(len(visited), 12)
         self.assertEqual(len(visited[0]), 12)
-        # Check with a non-native magnfication
+        # Check with a non-native magnfication with exact=True
         tileCount = 0
         for tile in source.tileIterator(magnification=4, exact=True):
             tileCount += 1
         self.assertEqual(tileCount, 0)
+        # Check with a non-native magnfication without resampling
+        tileCount = 0
+        for tile in source.tileIterator(magnification=2):
+            tileCount += 1
+            self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
+            self.assertEqual(tile['width'], 256 if tile['level_x'] < 11 else 61)
+            self.assertEqual(tile['height'], 256 if tile['level_y'] < 11 else 79)
+        self.assertEqual(tileCount, 144)
+        # Check with a non-native magnfication with resampling
+        tileCount = 0
+        for tile in source.tileIterator(magnification=2, resample=True):
+            tileCount += 1
+            self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
+            self.assertEqual(tile['width'], 102 if tile['level_x'] < 11 else 24)
+            self.assertEqual(tile['height'], 102 if tile['level_y'] < 11 else 31)
+        self.assertEqual(tileCount, 144)

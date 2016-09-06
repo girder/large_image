@@ -334,9 +334,6 @@ class TilesItemResource(Item):
         .param('exact', 'If magnification, mm_x, or mm_y are specified, they '
                'must match an existing level of the image exactly.',
                required=False, dataType='boolean', default=False)
-        .param('upscale', 'If magnification, mm_x, or mm_y are specified, they '
-               'are allowed to upsample the image.', required=False,
-               dataType='boolean', default=False)
         .param('encoding', 'Output image encoding', required=False,
                enum=['JPEG', 'PNG'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
@@ -370,7 +367,6 @@ class TilesItemResource(Item):
             ('mm_x', float),
             ('mm_y', float),
             ('exact', bool),
-            ('upscale', bool),
         ])
         try:
             regionData, regionMime = self.imageItemModel.getRegion(

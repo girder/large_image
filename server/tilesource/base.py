@@ -111,10 +111,11 @@ class TileSource(object):
         :param regionWidth: the width of the source data.
         :param regionHeight: the height of the source data.
         :returns: the width and height that is no larger than that specified
-                  and preserves aspect ratio.
+                  and preserves aspect ratio, and the scaling factor used for
+                  the conversion.
         """
         if regionWidth == 0 or regionHeight == 0:
-            return 0, 0
+            return 0, 0, 1
         # Constrain the maximum size if both width and height weren't
         # specified, in case the image is very short or very narrow.
         if height and not width:
@@ -122,10 +123,12 @@ class TileSource(object):
         if width and not height:
             height = width * 16
         if width * regionHeight > height * regionWidth:
+            scale = float(height) / regionHeight
             width = max(1, int(regionWidth * height / regionHeight))
         else:
+            scale = float(width) / regionWidth
             height = max(1, int(regionHeight * width / regionWidth))
-        return width, height
+        return width, height, scale
 
     def _encodeImage(self, image, encoding='JPEG', jpegQuality=95,
                      jpegSubsampling=0, **kwargs):
@@ -233,9 +236,6 @@ class TileSource(object):
         :param exact: if True, only a level that matches exactly will be
             returned.  This is only applied if magnification, mm_x, or mm_y is
             used.
-        :param upscale: if True, only allow upscale for non-exact matches.
-            Otherwise, specificying magnification, mm_x, or mm_y will select
-            the closest level to the requested resolution.
         :param format: a tuple of allowed formats.  Formats are members of
             TILE_FORMAT_*.  This will avoid converting images if they are
             in the desired output encoding (regardless of subparameters).
@@ -270,21 +270,28 @@ class TileSource(object):
         regionWidth = right - left
         regionHeight = bottom - top
 
+        requestedScale = None
         magLevel = None
         if width is None and height is None:
             # If neither width nor height as specified, see if magnification,
             # mm_x, or mm_y are requested.
-            magLevel = self.getLevelForMagnification(**kwargs)
+            magArgs = kwargs.copy()
+            magArgs['rounding'] = None
+            magLevel = self.getLevelForMagnification(**magArgs)
             if magLevel is None and kwargs.get('exact'):
                 return None
             mag = self.getMagnificationForLevel(magLevel)
             if mag.get('scale') in (1.0, None):
                 width, height = regionWidth, regionHeight
+                requestedScale = 1
             else:
                 width = regionWidth / mag['scale']
                 height = regionHeight / mag['scale']
-        width, height = self._calculateWidthHeight(
+                requestedScale = mag['scale']
+        width, height, calcScale = self._calculateWidthHeight(
             width, height, regionWidth, regionHeight)
+        if requestedScale is None:
+            requestedScale = calcScale
         if regionWidth == 0 or regionHeight == 0 or width == 0 or height == 0:
             return None
 
@@ -306,6 +313,7 @@ class TileSource(object):
                 bottom = int(bottom / factor)
                 regionHeight = bottom - top
                 preferredLevel = newLevel
+                requestedScale /= factor
         # If an exact magnification was requested and this tile source doesn't
         # have tiles at the appropriate level, indicate that we won't return
         # anything.
@@ -339,6 +347,7 @@ class TileSource(object):
             'height': height,
             'format': kwargs.get('format', (TILE_FORMAT_PIL, )),
             'encoding': kwargs.get('encoding'),
+            'requestedScale': requestedScale,
         }
         return info
 
@@ -506,7 +515,7 @@ class TileSource(object):
         image = image.crop((0, 0, imageWidth, imageHeight))
 
         if width or height:
-            width, height = self._calculateWidthHeight(
+            width, height, caclScale = self._calculateWidthHeight(
                 width, height, imageWidth, imageHeight)
 
             image = image.resize(
@@ -540,7 +549,7 @@ class TileSource(object):
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, top, left, right, bottom,
             regionWidth, regionHeight, units ('pixels' or 'fraction'),
-            magnification, mm_x, mm_y, exact, upscale.  See _tileIteratorInfo.
+            magnification, mm_x, mm_y, exact.  See _tileIteratorInfo.
         :returns: regionData, regionMime: the image data and the mime type.
         """
         iterInfo = self._tileIteratorInfo(width, height, **kwargs)
@@ -617,14 +626,12 @@ class TileSource(object):
         return mag
 
     def getLevelForMagnification(self, magnification=None, exact=False,
-                                 mm_x=None, mm_y=None, upscale=False,
+                                 mm_x=None, mm_y=None, rounding='round',
                                  **kwargs):
         """
         Get the level for a specific magnifcation or pixel size.  If the
         magnification is unknown or no level is sufficient resolution, and an
-        exact match is not requested, the highest level will be returned.  If
-        an exact match is not found, the closest level is returned, unless
-        upscale=False, in which case it will always be the higher level.
+        exact match is not requested, the highest level will be returned.
           At least one of magnification, mm_x, and mm_y must be specified.  If
         more than one of these values is given, an average of those given will
         be used (exact will require all of them to match).
@@ -634,7 +641,10 @@ class TileSource(object):
             returned.
         :param mm_x: the horizontal size of a pixel in millimeters.
         :param mm_y: the vertical size of a pixel in millimeters.
-        :param upscale: if True, only allow upscale for non-exact matches.
+        :param rounding: if False, a fractional level may be returned.  If
+            'ceil' or 'round', that function is used to convert the level to an
+            integer (the exact flag still applies).  If None, the level is not
+            cropped to the actual image's level range.
         :returns: the selected level or None for no match.
         """
         mag = self.getMagnificationForLevel()
@@ -654,13 +664,16 @@ class TileSource(object):
             if any(int(ratio) != ratio or ratio != ratios[0]
                    for ratio in ratios):
                 return None
-        ratio = sum(ratios) / len(ratios)
+        ratio = round(sum(ratios) / len(ratios), 4)
         level = mag['level'] + ratio
-        level = int(math.ceil(level) if upscale else round(level))
+        if rounding:
+            level = int(math.ceil(level) if rounding == 'ceil' else
+                        round(level))
         if (exact and (level > mag['level'] or level < 0) or
-                (upscale and level > mag['level'])):
+                (rounding == 'ceil' and level > mag['level'])):
             return None
-        level = max(0, min(mag['level'], level))
+        if rounding is not None:
+            level = max(0, min(mag['level'], level))
         return level
 
     def tileIterator(self, format=(TILE_FORMAT_PIL, ), resample=False,
@@ -716,9 +729,6 @@ class TileSource(object):
         :param exact: if True, only a level that matches exactly will be
             returned.  This is only applied if magnification, mm_x, or mm_y is
             used.
-        :param upscale: if True, only allow upscale for non-exact matches.
-            Otherwise, specificying magnification, mm_x, or mm_y will select
-            the closest level to the requested resolution.
         :param encoding: if format includes TILE_FORMAT_IMAGE, a valid PIL
             encoding (typically 'PNG' or 'JPEG').  Must also be in the
             TileOutputMimeTypes map.
@@ -739,9 +749,27 @@ class TileSource(object):
         iterInfo = self._tileIteratorInfo(format=iterFormat, **kwargs)
         if not iterInfo:
             return
-        # TODO: check if resampling is needed.
+        # check if the desired scale is different from the actual scale and
+        # resampling is needed.  Ignore small scale differences.
+        if (resample in (False, None) or
+                round(iterInfo['requestedScale'], 2) == 1.0):
+            resample = None
         for tile in self._tileIterator(iterInfo):
-            # TODO: resample as needed
+            # resample if needed
+            if resample is not None:
+                tile['scaled'] = 1.0 / iterInfo['requestedScale']
+                tile['tile_x'] = tile['x']
+                tile['tile_y'] = tile['y']
+                tile['tile_width'] = tile['width']
+                tile['tile_height'] = tile['height']
+                tile['width'] = max(1, int(
+                    tile['tile'].size[0] / iterInfo['requestedScale']))
+                tile['height'] = max(1, int(
+                    tile['tile'].size[1] / iterInfo['requestedScale']))
+                tile['x'] = float(tile['x']) / iterInfo['requestedScale']
+                tile['y'] = float(tile['y']) / iterInfo['requestedScale']
+                tile['tile'] = tile['tile'].resize(
+                    (tile['width'], tile['height']), resample=resample)
             if tile['format'] in format:
                 # already in an acceptable format
                 pass
