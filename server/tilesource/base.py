@@ -465,8 +465,8 @@ class TileSource(object):
             'tileWidth': self.tileWidth,
             'tileHeight': self.tileHeight,
             'magnification': mag['magnification'],
-            'pixelWidthInMillimeters': mag['mm_x'],
-            'pixelHeightInMillimeters': mag['mm_y'],
+            'mm_x': mag['mm_x'],
+            'mm_y': mag['mm_y'],
         }
 
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False):
@@ -515,7 +515,7 @@ class TileSource(object):
         image = image.crop((0, 0, imageWidth, imageHeight))
 
         if width or height:
-            width, height, caclScale = self._calculateWidthHeight(
+            width, height, calcScale = self._calculateWidthHeight(
                 width, height, imageWidth, imageHeight)
 
             image = image.resize(
@@ -699,7 +699,9 @@ class TileSource(object):
         allowInterpolation is true.
 
         :param format: the desired format or a tuple of allowed formats.
-            Formats are members of TILE_FORMAT_*.
+            Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
+            TILE_FORMAT_IMAGE).  If TILE_FORMAT_IMAGE, encoding must be
+            specified.
         :param resample: If True or one of PIL.Image.NEAREST, LANCZOS,
             BILINEAR, or BICUBIC to resample tiles that are not the target
             output size.  Tiles that are resampled may have non-integer x, y,
@@ -775,14 +777,11 @@ class TileSource(object):
                 pass
             elif TILE_FORMAT_NUMPY in format and numpy:
                 tile['tile'] = numpy.asarray(tile['tile'])
-                tile['format'] = format
+                tile['format'] = TILE_FORMAT_NUMPY
             elif TILE_FORMAT_IMAGE in format:
-                output = BytesIO()
-                tile['tile'].save(
-                    output, encoding, quality=kwargs.get('jpegQuality'),
-                    subsampling=kwargs.get('jpegSubsampling'))
-                tile['tile'] = output.getvalue()
-                tile['format'] = format
+                tile['tile'], mimeType = self._encodeImage(
+                    tile['tile'], **kwargs)
+                tile['format'] = TILE_FORMAT_IMAGE
             if tile['format'] not in format:
                 raise TileSourceException(
                     'Cannot yield tiles in desired format %r' % (format, ))
