@@ -457,7 +457,7 @@ class TileSource(object):
         return False
 
     def getMetadata(self):
-        mag = self.getMagnification()
+        mag = self._getMagnification()
         return {
             'levels': self.levels,
             'sizeX': self.sizeX,
@@ -592,7 +592,7 @@ class TileSource(object):
                 PIL.Image.LANCZOS)
         return self._encodeImage(image, **kwargs)
 
-    def getMagnification(self):
+    def _getMagnification(self):
         """
         Get the magnification for the highest-resolution level.
 
@@ -612,7 +612,7 @@ class TileSource(object):
             the magification factor of.
         :return: magnification, width of a pixel in mm, height of a pixel in mm.
         """
-        mag = self.getMagnification()
+        mag = self._getMagnification()
 
         if level is not None and self.levels and level != self.levels - 1:
             mag['scale'] = 2.0 ** (self.levels - 1 - level)
@@ -632,9 +632,10 @@ class TileSource(object):
         Get the level for a specific magnifcation or pixel size.  If the
         magnification is unknown or no level is sufficient resolution, and an
         exact match is not requested, the highest level will be returned.
-          At least one of magnification, mm_x, and mm_y must be specified.  If
-        more than one of these values is given, an average of those given will
-        be used (exact will require all of them to match).
+          If none of magnification, mm_x, and mm_y are specified, the maximum
+        level is returned is exact is False.  If more than one of these values
+        is given, an average of those given will be used (exact will require
+        all of them to match).
 
         :param magnification: the magnification ratio.
         :param exact: if True, only a level that matches exactly will be

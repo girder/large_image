@@ -50,7 +50,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         itemId = str(file['itemId'])
         item = self.model('item').load(itemId, user=self.admin)
         source = self.model('image_item', 'large_image').tileSource(item)
-        mag = source.getMagnification()
+        mag = source._getMagnification()
         self.assertEqual(mag['magnification'], 40.0)
         self.assertEqual(mag['mm_x'], 0.000252)
         self.assertEqual(mag['mm_y'], 0.000252)
@@ -178,5 +178,6 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                 encoding='PNG'):
             tileCount += 1
             self.assertFalse(isinstance(tile['tile'], PIL.Image.Image))
-            self.assertEqual(tile['tile'][:len(common.PNGHeader)], common.PNGHeader)
+            self.assertEqual(tile['tile'][:len(common.PNGHeader)],
+                             common.PNGHeader)
         self.assertEqual(tileCount, 144)

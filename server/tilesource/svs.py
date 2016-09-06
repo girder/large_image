@@ -135,7 +135,7 @@ class SVSFileTileSource(FileTileSource):
                 'scale': scale
             })
 
-    def getMagnification(self):
+    def _getMagnification(self):
         """
         Get the magnification at a particular level.
 

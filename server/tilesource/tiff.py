@@ -87,7 +87,7 @@ class TiffFileTileSource(FileTileSource):
         self.sizeX = self._tiffDirectories[-1].imageWidth
         self.sizeY = self._tiffDirectories[-1].imageHeight
 
-    def getMagnification(self):
+    def _getMagnification(self):
         """
         Get the magnification at a particular level.
 
