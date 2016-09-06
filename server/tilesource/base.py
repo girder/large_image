@@ -246,7 +246,9 @@ class TileSource(object):
                 This is None if no tiles will be returned.  Otherwise, this
                 contains:
             regionWidth, regionHeight: the total output of the iterator in
-                pixels.
+                pixels.  This may be larger than the requested resolution
+                (given by width and height) if there isn't an exact match
+                between the requested resolution and available native tiles.
             xmin, ymin, xmax, ymax: the tiles that will be included during the
                 iteration: [xmin, xmax) and [ymin, ymax).
             mode: either 'RGB' or 'RGBA'.  This determines the color space used
@@ -257,7 +259,7 @@ class TileSource(object):
                 in the level pixel space.
             width, height: the requested output resolution in pixels.  If this
                 is different that regionWidth and regionHeight, then the
-                original request was asking for a different scale that is being
+                original request was asking for a different scale than is being
                 delivered.
         """
         if ((width is not None and width < 0) or
@@ -405,11 +407,13 @@ class TileSource(object):
                 # encoding, convert it to PIL format.
                 if not isinstance(tileData, PIL.Image.Image):
                     pilData = PIL.Image.open(BytesIO(tileData))
-                    if (format and 'TILE_FORMAT_IMAGE' in format and
+                    if (format and TILE_FORMAT_IMAGE in format and
                             pilData.format == encoding):
                         tileFormat = TILE_FORMAT_IMAGE
                     else:
                         tileData = pilData
+                else:
+                    pilData = tileData
                 posX = x * metadata['tileWidth'] - left
                 posY = y * metadata['tileHeight'] - top
                 tileWidth = metadata['tileWidth']
@@ -421,7 +425,7 @@ class TileSource(object):
                             max(0, -posY),
                             min(tileWidth, regionWidth - posX),
                             min(tileHeight, regionHeight - posY))
-                    tileData = tileData.crop(crop)
+                    tileData = pilData.crop(crop)
                     posX += crop[0]
                     posY += crop[1]
                     tileWidth = crop[2] - crop[0]
@@ -544,8 +548,8 @@ class TileSource(object):
         the highest resolution level is used.  If both are given, the returned
         image will be no larger than either size.
 
-        :param width: maximum width in pixels.
-        :param height: maximum height in pixels.
+        :param width: maximum output width in pixels.
+        :param height: maximum output height in pixels.
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, top, left, right, bottom,
             regionWidth, regionHeight, units ('pixels' or 'fraction'),
@@ -633,9 +637,9 @@ class TileSource(object):
         magnification is unknown or no level is sufficient resolution, and an
         exact match is not requested, the highest level will be returned.
           If none of magnification, mm_x, and mm_y are specified, the maximum
-        level is returned is exact is False.  If more than one of these values
-        is given, an average of those given will be used (exact will require
-        all of them to match).
+        level is returned.  If more than one of these values is given, an
+        average of those given will be used (exact will require all of them to
+        match).
 
         :param magnification: the magnification ratio.
         :param exact: if True, only a level that matches exactly will be
@@ -660,7 +664,7 @@ class TileSource(object):
         # Perform some slight rounding to handle numerical precision issues
         ratios = [round(ratio, 4) for ratio in ratios]
         if not len(ratios):
-            return None if exact else mag['level']
+            return mag['level']
         if exact:
             if any(int(ratio) != ratio or ratio != ratios[0]
                    for ratio in ratios):

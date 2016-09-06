@@ -65,7 +65,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(mag['mm_y'], 0.032256)
         self.assertEqual(mag['level'], 0)
         self.assertEqual(source.getLevelForMagnification(), 7)
-        self.assertEqual(source.getLevelForMagnification(exact=True), None)
+        self.assertEqual(source.getLevelForMagnification(exact=True), 7)
         self.assertEqual(source.getLevelForMagnification(40), 7)
         self.assertEqual(source.getLevelForMagnification(20), 6)
         self.assertEqual(source.getLevelForMagnification(0.3125), 0)
@@ -181,3 +181,36 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
             self.assertEqual(tile['tile'][:len(common.PNGHeader)],
                              common.PNGHeader)
         self.assertEqual(tileCount, 144)
+
+        # Use a ptif to test getting tiles as images
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+        # Ask for either PIL or IMAGE data, we should get image data
+        tileCount = 0
+        jpegTileCount = 0
+        for tile in source.tileIterator(
+                magnification=2.5,
+                format=(tilesource.TILE_FORMAT_PIL,
+                        tilesource.TILE_FORMAT_IMAGE),
+                encoding='JPEG'):
+            tileCount += 1
+            if not isinstance(tile['tile'], PIL.Image.Image):
+                self.assertEqual(tile['tile'][:len(common.JPEGHeader)],
+                                 common.JPEGHeader)
+                jpegTileCount += 1
+        self.assertEqual(tileCount, 45)
+        self.assertGreater(jpegTileCount, 0)
+        # Ask for PNGs
+        tileCount = 0
+        for tile in source.tileIterator(
+                magnification=2.5,
+                format=tilesource.TILE_FORMAT_IMAGE,
+                encoding='PNG'):
+            tileCount += 1
+            self.assertEqual(tile['tile'][:len(common.PNGHeader)],
+                             common.PNGHeader)
+        self.assertEqual(tileCount, 45)
+#
