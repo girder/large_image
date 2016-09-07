@@ -50,7 +50,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         itemId = str(file['itemId'])
         item = self.model('item').load(itemId, user=self.admin)
         source = self.model('image_item', 'large_image').tileSource(item)
-        mag = source._getMagnification()
+        mag = source.getNativeMagnification()
         self.assertEqual(mag['magnification'], 40.0)
         self.assertEqual(mag['mm_x'], 0.000252)
         self.assertEqual(mag['mm_y'], 0.000252)

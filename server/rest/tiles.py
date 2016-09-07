@@ -317,8 +317,11 @@ class TilesItemResource(Item):
                required=False, dataType='float')
         .param('units', 'Units used for left, top, right, bottom, '
                'regionWidth, and regionHeight.  Note that output width and '
-               'height are always in pixels.', required=False,
-               enum=['pixels', 'fraction'], default='pixels')
+               'height are always in pixels.  base_pixels are pixels at the '
+               'maximum resolution, pixels and mm are at the specified '
+               'magnfication, fraction is a scale of [0-1].', required=False,
+               enum=['base_pixels', 'pixels', 'mm', 'fraction'],
+               default='base_pixels')
         .param('width', 'The maximum width of the output image in pixels.',
                required=False, dataType='int')
         .param('height', 'The maximum height of the output image in pixels.',

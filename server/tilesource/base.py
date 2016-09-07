@@ -64,6 +64,21 @@ TileOutputMimeTypes = {
     'JPEG': 'image/jpeg',
     'PNG': 'image/png'
 }
+TileInputUnits = {
+    None: 'base_pixels',
+    'base_pixel': 'base_pixels',
+    'base_pixels': 'base_pixels',
+    'pixel': 'mag_pixels',
+    'pixels': 'mag_pixels',
+    'mag_pixel': 'mag_pixels',
+    'mag_pixels': 'mag_pixels',
+    'magnification_pixel': 'mag_pixels',
+    'magnification_pixels': 'mag_pixels',
+    'mm': 'mm',
+    'millimeter': 'mm',
+    'millimeters': 'mm',
+    'fraction': 'fraction',
+}
 
 
 class TileSourceException(TileGeneralException):
@@ -153,28 +168,45 @@ class TileSource(object):
             tileData = output.getvalue()
         return tileData, TileOutputMimeTypes[encoding]
 
-    def _getRegionBounds(self, metadata, **kwargs):
+    def _getRegionBounds(self, metadata, desiredMagnification, **kwargs):
         """
         Given a set of arguments that can include left, right, top, bottom,
         regionWidth, regionHeight, and units, generate actual pixel values for
         left, top, right, and bottom.
 
         :param metadata: the metadata associated with this source.
+        :param desiredMagnification: the output from getMagnificationForLevel
+            for the desired magnfication used to convert mag_pixels and mm.
         :param **kwargs: optional parameters.  See above.
         :returns: left, top, right, bottom bounds in pixels.
         """
-        if kwargs.get('units') not in (None, 'pixel', 'pixels', 'fraction'):
+        if kwargs.get('units') not in TileInputUnits:
             raise ValueError('Invalid units "%s"' % kwargs['units'])
         # Copy kwargs so we don't alter an input dictionary
         kwargs = kwargs.copy()
-        # Convert fraction units to pixels
-        if kwargs.get('units') == 'fraction':
-            for key in ('left', 'right', 'regionWidth'):
-                if key in kwargs:
-                    kwargs[key] = kwargs[key] * metadata['sizeX']
-            for key in ('top', 'bottom', 'regionHeight'):
-                if key in kwargs:
-                    kwargs[key] = kwargs[key] * metadata['sizeY']
+        # Convert units to max-resolution pixels
+        units = TileInputUnits[kwargs.get('units')]
+        scaleX = scaleY = 1
+        if units == 'fraction':
+            scaleX = metadata['sizeX']
+            scaleY = metadata['sizeY']
+        elif units == 'mag_pixels':
+            if not (desiredMagnification or {}).get('scale'):
+                raise ValueError('No magnification to use for units')
+            scaleX = scaleY = desiredMagnification['scale']
+        elif units == 'mm':
+            if (not (desiredMagnification or {}).get('scale') or
+                    not (desiredMagnification or {}).get('mm_x') or
+                    not (desiredMagnification or {}).get('mm_y')):
+                raise ValueError('No mm_x or mm_y to use for units')
+            scaleX = desiredMagnification['scale'] / desiredMagnification['mm_x']
+            scaleY = desiredMagnification['scale'] / desiredMagnification['mm_y']
+        for key in ('left', 'right', 'regionWidth'):
+            if key in kwargs and scaleX and scaleX != 1:
+                kwargs[key] = kwargs[key] * scaleX
+        for key in ('top', 'bottom', 'regionHeight'):
+            if key in kwargs and scaleY and scaleY != 1:
+                kwargs[key] = kwargs[key] * scaleY
         # convert negative references to right or bottom offsets
         for key in ('left', 'right', 'top', 'bottom'):
             if key in kwargs and kwargs.get(key) < 0:
@@ -265,15 +297,9 @@ class TileSource(object):
         if ((width is not None and width < 0) or
                 (height is not None and height < 0)):
             raise ValueError('Invalid width or height.  Minimum value is 0.')
-        metadata = self.getMetadata()
-        left, top, right, bottom = self._getRegionBounds(metadata, **kwargs)
 
-        # If we are asked for a specific output size, determine the scaling
-        regionWidth = right - left
-        regionHeight = bottom - top
-
-        requestedScale = None
         magLevel = None
+        mag = None
         if width is None and height is None:
             # If neither width nor height as specified, see if magnification,
             # mm_x, or mm_y are requested.
@@ -283,6 +309,15 @@ class TileSource(object):
             if magLevel is None and kwargs.get('exact'):
                 return None
             mag = self.getMagnificationForLevel(magLevel)
+
+        metadata = self.getMetadata()
+        left, top, right, bottom = self._getRegionBounds(
+            metadata, mag, **kwargs)
+        regionWidth = right - left
+        regionHeight = bottom - top
+
+        requestedScale = None
+        if width is None and height is None:
             if mag.get('scale') in (1.0, None):
                 width, height = regionWidth, regionHeight
                 requestedScale = 1
@@ -364,7 +399,7 @@ class TileSource(object):
                 TILE_FORMAT_IMAGE.  TILE_FORMAT_IMAGE is only returned if it
                 was explicitly allowed and the tile is already in the correct
                 image encoding.
-            level: level of the current tile. None if not present
+            level: level of the current tile
             level_x, level_y: the tile reference number within the level.
             magnification: magnification of the current tile
             mm_x, mm_y: size of the current tile pixel in millimeters.
@@ -461,7 +496,7 @@ class TileSource(object):
         return False
 
     def getMetadata(self):
-        mag = self._getMagnification()
+        mag = self.getNativeMagnification()
         return {
             'levels': self.levels,
             'sizeX': self.sizeX,
@@ -553,7 +588,7 @@ class TileSource(object):
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, top, left, right, bottom,
             regionWidth, regionHeight, units ('pixels' or 'fraction'),
-            magnification, mm_x, mm_y, exact.  See _tileIteratorInfo.
+            magnification, mm_x, mm_y, exact.  See tileIterator.
         :returns: regionData, regionMime: the image data and the mime type.
         """
         iterInfo = self._tileIteratorInfo(width, height, **kwargs)
@@ -596,7 +631,7 @@ class TileSource(object):
                 PIL.Image.LANCZOS)
         return self._encodeImage(image, **kwargs)
 
-    def _getMagnification(self):
+    def getNativeMagnification(self):
         """
         Get the magnification for the highest-resolution level.
 
@@ -616,7 +651,7 @@ class TileSource(object):
             the magification factor of.
         :return: magnification, width of a pixel in mm, height of a pixel in mm.
         """
-        mag = self._getMagnification()
+        mag = self.getNativeMagnification()
 
         if level is not None and self.levels and level != self.levels - 1:
             mag['scale'] = 2.0 ** (self.levels - 1 - level)
@@ -687,10 +722,10 @@ class TileSource(object):
         Iterate on all tiles in the specifed region at the specified scale.
         Each tile is returned as part of a dictionary that includes
             x, y: (left, top) coordinates in current magnification pixels
-            width, height: size of current tile in pixels
+            width, height: size of current tile incurrent magnification pixels
             tile: cropped tile image
             format: format of the tile
-            level: level of the current tile. None if not present
+            level: level of the current tile
             level_x, level_y: the tile reference number within the level.
             magnification: magnification of the current tile
             mm_x, mm_y: size of the current tile pixel in millimeters.
@@ -726,10 +761,13 @@ class TileSource(object):
         :param bottom: the top of the region to output.
         :param regionWidth: the width of the region to output.
         :param regionHeight: the height of the region to output.
-        :param units: either 'pixels' (default) or 'fraction'.  If pixels, the
-            left, top, right, bottom, regionWidth, and regionHeight are in
-            maximum resolution pixels.  If fraction, they are all on a scale of
-            0 to 1.
+        :param units: either 'base_pixels' (default), 'pixels', 'mm', or
+            'fraction'.  The units apply to left, top, right, bottom,
+            regionWidth, and regionHeight.  base_pixels are in maximum
+            resolution pixels.  pixels is in the specified magnification
+            pixels.  mm is in the specified magnification scale.  fraction is a
+            scale of 0 to 1.  pixels and mm are only available if the
+            magnification and mm per pixel are defined for the image.
         :param magnification: the magnification ratio.
         :param mm_x: the horizontal size of a pixel in millimeters.
         :param mm_y: the vertical size of a pixel in millimeters.
