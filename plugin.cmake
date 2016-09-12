@@ -55,7 +55,8 @@ set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
 
 add_python_test(cached_tiles PLUGIN large_image SUBMODULE MemcachedCache
   BIND_SERVER EXTERNAL_DATA
-  "plugins/large_image/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs")
+  "plugins/large_image/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs"
+  )
 set_property(TEST server_large_image.cached_tiles.MemcachedCache APPEND
   PROPERTY ENVIRONMENT
   "LARGE_IMAGE_CACHE_BACKEND=memcached"
@@ -68,18 +69,28 @@ set_property(TEST server_large_image.cached_tiles.PythonCache APPEND PROPERTY
   "LARGE_IMAGE_CACHE_BACKEND=python"
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
+add_python_test(sources PLUGIN large_image BIND_SERVER EXTERNAL_DATA
+  "plugins/large_image/sample_image.ptif"
+  "plugins/large_image/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs"
+  )
+set_property(TEST server_large_image.sources APPEND PROPERTY ENVIRONMENT
+  "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
+
+
 add_python_test(import PLUGIN large_image BIND_SERVER)
 
 add_python_test(girderless PLUGIN large_image EXTERNAL_DATA
-  "plugins/large_image/sample_image.ptif"
+  # There is a bug in cmake that fails when an external data file is added to
+  # three separate tests, so comment out the file.
+  # "plugins/large_image/sample_image.ptif"
   "plugins/large_image/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs"
   )
 set_property(TEST server_large_image.girderless APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
 add_web_client_test(
-    large_image
-    "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/largeImageSpec.js"
-    PLUGIN large_image)
+  large_image
+  "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/largeImageSpec.js"
+  PLUGIN large_image)
 
 add_web_client_test(annotation "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/annotation.js" PLUGIN large_image)

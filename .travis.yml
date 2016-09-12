@@ -45,7 +45,7 @@ addons:
       - pkg-config
       - libcairo2-dev
       - libgdk-pixbuf2.0-dev
-      - libxml2-dev 
+      - libxml2-dev
       - libsqlite3-dev
       # girder worker
       - rabbitmq-server
@@ -54,6 +54,8 @@ services:
   - rabbitmq
 
 before_install:
+  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "3" ]; then export PY3="true"; else export PY2="true"; fi
+  - if [ -n "${PY3}" ]; then export MONGO_VERSION=3.0.7; export PY_COVG="OFF"; else export MONGO_VERSION=2.6.11; export PY_COVG="ON"; export DEPLOY=true; fi
   - GIRDER_VERSION=cb846cee604b07368800e99322c7347039a2a464
   - GIRDER_WORKER_VERSION=2cfb739c096c2373f8bbe00853e3709f433192a6
   - main_path=$PWD
@@ -66,7 +68,7 @@ before_install:
   - ln -sf $main_path $girder_path/plugins/
   - ls -l $girder_path/plugins
 
-  - CACHE=$HOME/.cache CMAKE_VERSION=3.1.0 CMAKE_SHORT_VERSION=3.1 source $girder_path/scripts/install_cmake.sh
+  - CACHE=$HOME/.cache CMAKE_VERSION=3.4.3 CMAKE_SHORT_VERSION=3.4 source $girder_path/scripts/install_cmake.sh
   - cmake --version
 
   # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
@@ -137,9 +139,9 @@ script:
   - python -m girder_worker >/tmp/worker.out 2>&1 &
   - mkdir -p $build_path/girder_testing_build
   - cd $build_path/girder_testing_build
-  - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} $girder_path
+  - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DCOVERAGE_MINIMUM_PASS=80 -DJS_COVERAGE_MINIMUM_PASS=9 -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path
   - make -j 3
-  - JASMINE_TIMEOUT=15000 ctest -VV -R large_image
+  - JASMINE_TIMEOUT=15000 ctest -VV
 
 after_failure:
   # On failures, show girder's error long and the worker output
