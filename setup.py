@@ -40,6 +40,7 @@ setup(
     packages=[
         'large_image',
         'large_image.server',
+        'large_image.server.cache_util',
         'large_image.server.models',
         'large_image.server.rest',
         'large_image.server.tilesource',
