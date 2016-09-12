@@ -109,7 +109,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         source = self.model('image_item', 'large_image').tileSource(item)
         tileCount = 0
         visited = {}
-        for tile in source.tileIterator(magnification=5):
+        for tile in source.tileIterator(output={'magnification': 5}):
             visited.setdefault(tile['level_x'], {})[tile['level_y']] = True
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
@@ -120,20 +120,23 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(len(visited[0]), 12)
         # Check with a non-native magnfication with exact=True
         tileCount = 0
-        for tile in source.tileIterator(magnification=4, exact=True):
+        for tile in source.tileIterator(
+                output={'magnification': 4, 'exact': True}):
             tileCount += 1
         self.assertEqual(tileCount, 0)
         # Check with a non-native (but factor of 2) magnfication with exact=True
-        for tile in source.tileIterator(magnification=2.5, exact=True):
+        for tile in source.tileIterator(
+                output={'magnification': 2.5, 'exact': True}):
             tileCount += 1
         self.assertEqual(tileCount, 0)
         # Check with a native magnfication with exact=True
-        for tile in source.tileIterator(magnification=5, exact=True):
+        for tile in source.tileIterator(
+                output={'magnification': 5, 'exact': True}):
             tileCount += 1
         self.assertEqual(tileCount, 144)
         # Check with a non-native magnfication without resampling
         tileCount = 0
-        for tile in source.tileIterator(magnification=2):
+        for tile in source.tileIterator(output={'magnification': 2}):
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'], 256 if tile['level_x'] < 11 else 61)
@@ -141,7 +144,8 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(tileCount, 144)
         # Check with a non-native magnfication with resampling
         tileCount = 0
-        for tile in source.tileIterator(magnification=2, resample=True):
+        for tile in source.tileIterator(
+                output={'magnification': 2}, resample=True):
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'], 102 if tile['level_x'] < 11 else 24)
@@ -151,7 +155,8 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         # Ask for numpy array as results
         tileCount = 0
         for tile in source.tileIterator(
-                magnification=5, format=tilesource.TILE_FORMAT_NUMPY):
+                output={'magnification': 5},
+                format=tilesource.TILE_FORMAT_NUMPY):
             tileCount += 1
             self.assertTrue(isinstance(tile['tile'], numpy.ndarray))
             self.assertEqual(tile['tile'].shape, (
@@ -163,7 +168,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         # Ask for either PIL or IMAGE data, we should get PIL data
         tileCount = 0
         for tile in source.tileIterator(
-                magnification=5,
+                output={'magnification': 5},
                 format=(tilesource.TILE_FORMAT_PIL,
                         tilesource.TILE_FORMAT_IMAGE),
                 encoding='JPEG'):
@@ -173,7 +178,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         # Ask for PNGs
         tileCount = 0
         for tile in source.tileIterator(
-                magnification=5,
+                output={'magnification': 5},
                 format=tilesource.TILE_FORMAT_IMAGE,
                 encoding='PNG'):
             tileCount += 1
@@ -192,7 +197,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         tileCount = 0
         jpegTileCount = 0
         for tile in source.tileIterator(
-                magnification=2.5,
+                output={'magnification': 2.5},
                 format=(tilesource.TILE_FORMAT_PIL,
                         tilesource.TILE_FORMAT_IMAGE),
                 encoding='JPEG'):
@@ -206,11 +211,10 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         # Ask for PNGs
         tileCount = 0
         for tile in source.tileIterator(
-                magnification=2.5,
+                output={'magnification': 2.5},
                 format=tilesource.TILE_FORMAT_IMAGE,
                 encoding='PNG'):
             tileCount += 1
             self.assertEqual(tile['tile'][:len(common.PNGHeader)],
                              common.PNGHeader)
         self.assertEqual(tileCount, 45)
-#

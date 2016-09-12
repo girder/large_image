@@ -513,9 +513,9 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         badParams = [
             ({'encoding': 'invalid', 'width': 10}, 400, 'Invalid encoding'),
             ({'width': 'invalid'}, 400, 'incorrect type'),
-            ({'width': -5}, 400, 'Invalid width or height'),
+            ({'width': -5}, 400, 'Invalid output width or height'),
             ({'height': 'invalid'}, 400, 'incorrect type'),
-            ({'height': -5}, 400, 'Invalid width or height'),
+            ({'height': -5}, 400, 'Invalid output width or height'),
             ({'jpegQuality': 'invalid', 'width': 10}, 400, 'incorrect type'),
             ({'jpegSubsampling': 'invalid', 'width': 10}, 400,
              'incorrect type'),
