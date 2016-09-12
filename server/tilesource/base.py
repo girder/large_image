@@ -287,11 +287,13 @@ class TileSource(object):
                 per pixel are defined for the image.
         :param output: a dictionary of optional values which specify the size
                 of the output.
-            maxWidth: maximum width in pixels.  If either maxWidth or maxHeight
-                is specified, magnfication, mm_x, and mm_y are ignored.
+            maxWidth: maximum width in pixels.
             maxHeight: maximum height in pixels.
-            magnification: the magnification ratio.  Only used is maxWidth and
-                maxHeight are not specified or None.
+        :param scale: a dictionary of optional values which specify the scale
+                of the region and / or output.  This applies to region if
+                pixels or mm are used for inits.  It applies to output if
+                neither output maxWidth nor maxHeight is specified.  It
+            magnification: the magnification ratio.
             mm_x: the horizontal size of a pixel in millimeters.
             mm_y: the vertical size of a pixel in millimeters.
             exact: if True, only a level that matches exactly will be returned.
@@ -338,10 +340,10 @@ class TileSource(object):
         if maxWidth is None and maxHeight is None:
             # If neither width nor height as specified, see if magnification,
             # mm_x, or mm_y are requested.
-            magArgs = kwargs.get('output', {}).copy()
+            magArgs = kwargs.get('scale', {}).copy()
             magArgs['rounding'] = None
             magLevel = self.getLevelForMagnification(**magArgs)
-            if magLevel is None and kwargs.get('output', {}).get('exact'):
+            if magLevel is None and kwargs.get('scale', {}).get('exact'):
                 return None
             mag = self.getMagnificationForLevel(magLevel)
 
@@ -391,7 +393,7 @@ class TileSource(object):
         # have tiles at the appropriate level, indicate that we won't return
         # anything.
         if (magLevel is not None and magLevel != preferredLevel and
-                kwargs.get('output', {}).get('exact')):
+                kwargs.get('scale', {}).get('exact')):
             return None
 
         xmin = int(left / metadata['tileWidth'])
