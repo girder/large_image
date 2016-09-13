@@ -65,7 +65,8 @@ class CacheFactory():
             curConfig = config.getConfig().get('large_image', defaultConfig)
         else:
             curConfig = defaultConfig
-        cacheBackend = curConfig.get('cache_backend')
+        # memcached is the fallback default, if available.
+        cacheBackend = curConfig.get('cache_backend', 'memcached')
         if cacheBackend:
             cacheBackend = str(cacheBackend).lower()
         if cacheBackend == 'memcached' and MemCache:
