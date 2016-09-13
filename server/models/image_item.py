@@ -233,7 +233,7 @@ class ImageItem(Item):
 
             del item['largeImage']
 
-            self.save(item)
+            item = self.save(item)
             deleted = True
         self.removeThumbnailFiles(item)
         return deleted

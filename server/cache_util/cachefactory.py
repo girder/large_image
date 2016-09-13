@@ -28,7 +28,10 @@ except ImportError:
     import logging as logprint
     config = None
 
-from .memcache import MemCache
+try:
+    from .memcache import MemCache
+except ImportError:
+    MemCache = None
 from cachetools import LRUCache
 
 try:
@@ -65,7 +68,7 @@ class CacheFactory():
         cacheBackend = curConfig.get('cache_backend')
         if cacheBackend:
             cacheBackend = str(cacheBackend).lower()
-        if cacheBackend == 'memcached':
+        if cacheBackend == 'memcached' and MemCache:
             # lock needed because pylibmc(memcached client) is not threadsafe
             tileCacheLock = threading.Lock()
 

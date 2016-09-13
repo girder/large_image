@@ -23,7 +23,7 @@ from girder.api import access, filter_logging
 from girder.api.v1.item import Item
 from girder.api.describe import describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, RestException, \
-    setRawResponse
+    setRawResponse, setResponseHeader
 from girder.models.model_base import AccessType
 
 from ..models import TileGeneralException
@@ -204,7 +204,7 @@ class TilesItemResource(Item):
                 item, x, y, z, **imageArgs)
         except TileGeneralException as e:
             raise RestException(e.message, code=404)
-        cherrypy.response.headers['Content-Type'] = tileMime
+        setResponseHeader('Content-Type', tileMime)
         setRawResponse()
         return tileData
 
@@ -234,8 +234,8 @@ class TilesItemResource(Item):
             self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
         # Explicitly set a expires time to encourage browsers to cache this for
         # a while.
-        cherrypy.response.headers['Expires'] = cherrypy.lib.httputil.HTTPDate(
-            cherrypy.serving.response.time + 600)
+        setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
+            cherrypy.serving.response.time + 600))
         return self._getTile(item, z, x, y, params)
 
     @describeRoute(
@@ -306,7 +306,7 @@ class TilesItemResource(Item):
         if not isinstance(result, tuple):
             return result
         thumbData, thumbMime = result
-        cherrypy.response.headers['Content-Type'] = thumbMime
+        setResponseHeader('Content-Type', thumbMime)
         setRawResponse()
         return thumbData
 
@@ -402,7 +402,7 @@ class TilesItemResource(Item):
             raise RestException(e.message)
         except ValueError as e:
             raise RestException('Value Error: %s' % e.message)
-        cherrypy.response.headers['Content-Type'] = regionMime
+        setResponseHeader('Content-Type', regionMime)
         setRawResponse()
         return regionData
 

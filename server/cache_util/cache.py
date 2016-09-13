@@ -20,9 +20,12 @@
 
 import six
 
-from .memcache import strhash
-from cachetools import LRUCache, Cache
+from cachetools import LRUCache, Cache, hashkey
 from .cachefactory import CacheFactory
+
+
+def strhash(*args, **kwargs):
+    return str(hashkey(*args, **kwargs))
 
 
 def defaultCacheKeyFunc(args, kwargs):
