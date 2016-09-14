@@ -17,7 +17,7 @@
 #  limitations under the License.
 #############################################################################
 
-from cachetools import Cache, hashkey
+from cachetools import Cache
 import pylibmc
 import hashlib
 
@@ -25,10 +25,6 @@ try:
     from girder import logprint
 except ImportError:
     import logging as logprint
-
-
-def strhash(*args, **kwargs):
-    return str(hashkey(*args, **kwargs))
 
 
 class MemCache(Cache):

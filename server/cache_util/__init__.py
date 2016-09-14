@@ -17,12 +17,15 @@
 #  limitations under the License.
 ###############################################################################
 
-from .cache import LruCacheMetaclass,  tileCache, tileLock
-from .memcache import MemCache, strhash
+from .cache import LruCacheMetaclass, tileCache, tileLock, strhash
+try:
+    from .memcache import MemCache
+except ImportError:
+    MemCache = None
 from .cachefactory import CacheFactory, pickAvailableCache
 from cachetools import cached, Cache, LRUCache
 
 
-# flake8: noqa
-__all__ = (CacheFactory, tileCache, tileLock, MemCache, strhash,
-           LruCacheMetaclass, pickAvailableCache, cached, Cache, LRUCache)
+__all__ = ('CacheFactory', 'tileCache', 'tileLock', 'MemCache', 'strhash',
+           'LruCacheMetaclass', 'pickAvailableCache', 'cached', 'Cache',
+           'LRUCache')

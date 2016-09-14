@@ -130,7 +130,8 @@ before_install:
 
 install:
   - cd $girder_path
-  - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -r $main_path/requirements.txt -e .
+  - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -e .
+  - pip install -r $main_path/requirements.txt -e .
   - python -c "import openslide;print openslide.__version__"
   - npm install
 
