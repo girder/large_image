@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-###############################################################################
+#############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,9 +15,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-###############################################################################
+#############################################################################
 
 import os
+import six
 
 from girder import config
 from tests import base
@@ -61,13 +62,16 @@ class LargeImageCacheTest(base.TestCase):
         except ImportError:
             self.fail('Could not import pylibmc.')
 
-    def _testDecorator(self, specific_cache):
+    def _testDecorator(self, specific_cache, maxNum=100):
         from girder.plugins.large_image.cache_util import cached, strhash
         temp = Fib()
         temp.num = cached(cache=specific_cache,
                           key=strhash)(temp.num)
-
-        self.assertEquals(temp.num(100), 354224848179261915075)
+        temp.num(maxNum)
+        if maxNum >= 3:
+            self.assertEquals(temp.num(3), 2)
+        if maxNum >= 100:
+            self.assertEquals(temp.num(100), 354224848179261915075)
 
     def testLRUCacheTools(self):
         from girder.plugins.large_image.cache_util import Cache
@@ -83,9 +87,10 @@ class LargeImageCacheTest(base.TestCase):
         from girder.plugins.large_image.cache_util import MemCache
         # go though and check if all 100 fib numbers are in cache
         # it is stored in cache as ('fib', #)
-        self.testCacheMemcached()
-
         cache = MemCache()
+
+        self._testDecorator(cache)
+
         try:
             val = cache['(2,)']
             self.assertEquals(val, 1)
@@ -93,3 +98,13 @@ class LargeImageCacheTest(base.TestCase):
             self.assertEquals(val, 354224848179261915075)
         except KeyError:
             self.fail('Could not retrieve recent fibonacci number.')
+
+    def testBadMemcachedUrl(self):
+        from girder.plugins.large_image.cache_util import MemCache
+        # go though and check if all 100 fib numbers are in cache
+        # it is stored in cache as ('fib', #)
+        cache = MemCache(url=['192.0.2.254', '192.0.2.253'])
+
+        self._testDecorator(cache, 3)
+        with six.assertRaisesRegex(self, KeyError, '(2,)'):
+            cache['(2,)']

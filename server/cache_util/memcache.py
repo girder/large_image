@@ -17,9 +17,11 @@
 #  limitations under the License.
 #############################################################################
 
-from cachetools import Cache
-import pylibmc
+import cachetools
 import hashlib
+import pylibmc
+import six
+import time
 
 try:
     from girder import logprint
@@ -27,17 +29,33 @@ except ImportError:
     import logging as logprint
 
 
-class MemCache(Cache):
+class MemCache(cachetools.Cache):
     """Use memcached as the backing cache."""
 
     def __init__(self, url='127.0.0.1', username=None, password=None,
                  missing=None, getsizeof=None):
         super(MemCache, self).__init__(0, missing, getsizeof)
+        if isinstance(url, six.string_types):
+            url = [url]
+        # pylibmc used to connect to memcached client.  Set failover behavior.
+        # See http://sendapatch.se/projects/pylibmc/behaviors.html
+        behaviors = {
+            'tcp_nodelay': True,
+            'ketama': True,
+            'no_block': True,
+            'retry_timeout': 1,
+            'dead_timeout': 10,
+        }
+        # Adding remove_failed prevents recovering in a single memcached server
+        # instance, so onlydo it if there are multiple servers
+        if len(url) > 1:
+            behaviors['remove_failed'] = 1
         # name mangling to override 'private variable' __data in cache
-        # pylibmc used to connect to memcached client
         self._Cache__data = pylibmc.Client(
-            [url], binary=True, username=username, password=password,
-            behaviors={'tcp_nodelay': True, 'ketama': True})
+            url, binary=True, username=username, password=password,
+            behaviors=behaviors)
+        self.lastError = {}
+        self.throttleErrors = 10  # seconds between logging errors
 
     def __repr__(self):
         return 'Memcache doesn\'t list its keys'
@@ -57,6 +75,27 @@ class MemCache(Cache):
     def __delitem__(self, key):
         del self._Cache__data[key]
 
+    def logError(self, err, func, msg):
+        """
+        Log errors, but throttle them so as not to spam the logs.
+
+        :param err: error to log.
+        :param func: function to use for logging.  This is something like
+            logprint.exception or logger.error.
+        :param msg: the message to log.
+        """
+        curtime = time.time()
+        key = (err, func)
+        if (curtime - self.lastError.get(key, {}).get('time', 0) >
+                self.throttleErrors):
+            skipped = self.lastError.get(key, {}).get('skipped', 0)
+            if skipped:
+                msg += '  (%d similar messages)' % skipped
+            self.lastError[key] = {'time': curtime, 'skipped': 0}
+            func(msg)
+        else:
+            self.lastError[key]['skipped'] += 1
+
     def __getitem__(self, key):
         assert(isinstance(key, str))
 
@@ -66,6 +105,14 @@ class MemCache(Cache):
         try:
             return self._Cache__data[hexVal]
         except KeyError:
+            return self.__missing__(key)
+        except pylibmc.ServerDown:
+            self.logError(pylibmc.ServerDown, logprint.exception,
+                          'Memcached ServerDown exception')
+            return self.__missing__(key)
+        except pylibmc.Error:
+            self.logError(pylibmc.Error, logprint.exception,
+                          'pylibmc exception')
             return self.__missing__(key)
 
     def __setitem__(self, key, value):
@@ -77,10 +124,15 @@ class MemCache(Cache):
         try:
             self._Cache__data[hexVal] = value
         except KeyError:
-            logprint.error('Failed to save value %s with key %s' % (
-                value, hexVal))
+            self.logError(
+                KeyError, logprint.error,
+                'Failed to save value %s with key %s' % (value, hexVal))
+        except pylibmc.ServerDown:
+            self.logError(pylibmc.ServerDown, logprint.exception,
+                          'Memcached ServerDown exception')
         except pylibmc.Error as exc:
             # memcached won't cache items larger than 1 Mb, but this returns a
             # 'SUCCESS' error.  Raise other errors.
             if 'SUCCESS' not in exc.message:
-                raise
+                self.logError(pylibmc.Error, logprint.exception,
+                              'pylibmc exception')
