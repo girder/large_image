@@ -19,7 +19,7 @@ Installation
 
 1.  `Install OpenSlide <http://openslide.org/download/>`_
 
-    If you are install on Ubuntu 14.04, there is a known bug in OpenJPEG that will prevent OpenSlide from reading certain files.  This requires building OpenJPEG, libtiff, and OpenSlide from source to work around the problem.
+    If you are using Ubuntu 14.04, there is a known bug in OpenJPEG that will prevent OpenSlide from reading certain files.  This requires building OpenJPEG, libtiff, and OpenSlide from source to work around the problem.  For more information, there is an `ansible script <https://github.com/DigitalSlideArchive/HistomicsTK/blob/master/ansible/roles/openslide/tasks/main.yml>`_ that builds these libraries, and some `notes on the process <https://github.com/DigitalSlideArchive/digital_slide_archive/wiki/VIPS-and-OpenSlide-Installation>`_.
 
     You may want to install optional utilities:
 
