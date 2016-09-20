@@ -3,6 +3,7 @@
 
 import json
 import pkg_resources
+import sys
 
 try:
     from setuptools import setup
@@ -23,7 +24,11 @@ try:
         ireqs = pkg_resources.parse_requirements(f.read())
 except pkg_resources.RequirementParseError:
     raise
+# Don't include pylibmc for Windows
+if 'win' in sys.platform:
+    ireqs = [req for req in ireqs if req.key not in ('pylibmc', )]
 requirements = [str(req) for req in ireqs]
+
 
 test_requirements = [
     # TODO: Should we list Girder here?
@@ -40,6 +45,7 @@ setup(
     packages=[
         'large_image',
         'large_image.server',
+        'large_image.server.cache_util',
         'large_image.server.models',
         'large_image.server.rest',
         'large_image.server.tilesource',

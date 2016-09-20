@@ -17,14 +17,15 @@
 #  limitations under the License.
 ###############################################################################
 
-import base64
 import ctypes
 import os
 import six
 
-from libtiff import libtiff_ctypes
-from ..cache_util import Cache, cached, strhash
 from functools import partial
+from libtiff import libtiff_ctypes
+from xml.etree import cElementTree
+
+from ..cache_util import Cache, cached, strhash
 
 
 def patchLibtiff():
@@ -200,6 +201,8 @@ class TiledTiffDirectory(object):
         self._tileHeight = self._tiffFile.GetField('TileLength')
         self._imageWidth = self._tiffFile.GetField('ImageWidth')
         self._imageHeight = self._tiffFile.GetField('ImageLength')
+        self.parse_image_description(
+            self._tiffFile.GetField('ImageDescription'))
 
     def _getJpegTables(self):
         """
@@ -417,6 +420,11 @@ class TiledTiffDirectory(object):
         # TODO: fetch lazily and memoize
         return self._imageHeight
 
+    @property
+    def pixelInfo(self):
+        # TODO: fetch lazily and memoize
+        return self._pixelInfo
+
     def getTile(self, x, y):
         """
         Get the complete JPEG image from a tile.
@@ -449,89 +457,41 @@ class TiledTiffDirectory(object):
         return imageBuffer.getvalue()
 
     # TODO: refactor and remove this
-    def parse_image_description(self):
-        from xml.etree import cElementTree as ET  # noqa - N814
-        import logging
-        logger = logging.getLogger('slideatlas')
+    def parse_image_description(self, meta=None):
 
-        self.levels = {}
-        self.isBigTIFF = False
-        self.barcode = ""
-        self.tif = None
+        self._pixelInfo = {}
+        self._embeddedImages = {}
 
-        self.meta = self.tif.GetField("ImageDescription")
-
-        if self.meta is None:
-            # Missing meta information (typical of zeiss files)
-            # Verify that the levels exist
-            logger.warning('No ImageDescription in file')
+        if not meta:
             return
-
         try:
-            xml = ET.fromstring(self.meta)
-
-            # Parse the string for BigTIFF format
-            descstr = xml.find(
-                ".//*[@Name='DICOM_DERIVATION_DESCRIPTION']").text
-            if descstr.find("useBigTIFF=1") > 0:
-                self.isBigTIFF = True
-
-            # Parse the barcode string
-            self.barcode = base64.b64decode(
-                xml.find(".//*[@Name='PIM_DP_UFS_BARCODE']").text)
-            # self.barcode["words"] = self.barcode["str"].split("|")
-            # self.barcode["physician_id"], self.barcode["case_id"] = \
-            # self.barcode["words"][0].split(" ")
-            # self.barcode["stain_id"] = self.barcode["words"][4]
-
-            logger.debug(self.barcode)
-
-            # Parse the attribute named "DICOM_DERIVATION_DESCRIPTION"
-            # tiff-useBigTIFF=1-clip=2-gain=10-useRgb=\
-            #     0-levels=10003,10002,10000,10001-q75;PHILIPS
-            # UFS V1.6.5574
-            descstr = xml.find(
-                ".//*[@Name='DICOM_DERIVATION_DESCRIPTION']").text
-            if descstr.find("useBigTIFF=1") > 0:
-                self.isBigTIFF = True
-
-            # logger.debug(descstr)
-
-            for b in xml.findall(
-                    ".//DataObject[@ObjectType='PixelDataRepresentation']"):
-                level = int(b.find(
-                    ".//*[@Name='PIIM_PIXEL_DATA_REPRESENTATION_NUMBER']").text)
-                columns = int(b.find(
-                    ".//*[@Name='PIIM_PIXEL_DATA_REPRESENTATION_COLUMNS']"
-                ).text)
-                rows = int(b.find(
-                    ".//*[@Name='PIIM_PIXEL_DATA_REPRESENTATION_ROWS']").text)
-                self.levels[level] = [columns, rows]
-
-            self.embedded_images = {}
+            xml = cElementTree.fromstring(meta)
+        except Exception:
+            return
+        try:
+            image = xml.find(
+                ".//DataObject[@ObjectType='DPScannedImage']")
+            columns = int(image.find(".//*[@Name='PIM_DP_IMAGE_COLUMNS']").text)
+            rows = int(image.find(".//*[@Name='PIM_DP_IMAGE_ROWS']").text)
+            spacing = [float(val.strip('"')) for val in image.find(
+                ".//*[@Name='DICOM_PIXEL_SPACING']").text.split()]
+            self._pixelInfo = {
+                'width': columns,
+                'height': rows,
+                'mm_x': spacing[0],
+                'mm_y': spacing[1]
+            }
+        except Exception:
+            pass
+        try:
             # Extract macro and label images
-            for animage in xml.findall(".//*[@ObjectType='DPScannedImage']"):
-                typestr = animage.find(".//*[@Name='PIM_DP_IMAGE_TYPE']").text
+            for image in xml.findall(".//*[@ObjectType='DPScannedImage']"):
+                typestr = image.find(".//*[@Name='PIM_DP_IMAGE_TYPE']").text
                 if typestr == "LABELIMAGE":
-                    self.embedded_images["label"] = animage.find(
+                    self._embeddedImages["label"] = image.find(
                         ".//*[@Name='PIM_DP_IMAGE_DATA']").text
-                    pass
                 elif typestr == "MACROIMAGE":
-                    self.embedded_images["macro"] = animage.find(
+                    self._embeddedImages["macro"] = image.find(
                         ".//*[@Name='PIM_DP_IMAGE_DATA']").text
-                    pass
-                elif typestr == "WSI":
-                    pass
-                else:
-                    logger.error('Unforeseen embedded image: %s', typestr)
-
-                # columns = int(b.find(
-                #     ".//*[@Name='PIIM_PIXEL_DATA_REPRESENTATION_COLUMNS']"
-                # ).text)
-
-            if descstr.find("useBigTIFF=1") > 0:
-                self.isBigTIFF = True
-
-        except Exception as E:
-            logger.warning('Image Description failed for valid '
-                           'Philips XML because %s', E.message)
+        except Exception:
+            pass

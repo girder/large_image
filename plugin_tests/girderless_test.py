@@ -19,14 +19,13 @@
 
 import math
 import os
-
-from tests import base
+import unittest
 
 JPEGHeader = '\xff\xd8\xff'
 PNGHeader = '\x89PNG'
 
 
-class LargeImageGirderlessTest(base.TestCase):
+class LargeImageGirderlessTest(unittest.TestCase):
     def _testTilesZXY(self, source, metadata, tileParams={},
                       imgHeader=JPEGHeader):
         """
@@ -83,10 +82,6 @@ class LargeImageGirderlessTest(base.TestCase):
         except tilesource.TileSourceException:
             image = None
         self.assertIsNone(image)
-
-    def setUp(*args, **kwargs):
-        # Avoid starting girder
-        pass
 
     def testWithoutGirder(self):
         from large_image import tilesource

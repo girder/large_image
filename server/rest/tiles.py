@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-###############################################################################
+#############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,20 +15,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-###############################################################################
+#############################################################################
 
 import cherrypy
 
-from girder.api import access
+from girder.api import access, filter_logging
 from girder.api.v1.item import Item
 from girder.api.describe import describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, RestException, \
-    setRawResponse
+    setRawResponse, setResponseHeader
 from girder.models.model_base import AccessType
 
 from ..models import TileGeneralException
 
-from .. import constants
+from .. import constants, loadmodelcache
 
 
 class TilesItemResource(Item):
@@ -51,6 +51,9 @@ class TilesItemResource(Item):
         apiRoot.item.route('GET', ('test', 'tiles'), self.getTestTilesInfo)
         apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTestTile)
+        filter_logging.addLoggingFilter(
+            'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}',
+            frequency=250)
         # This is added to the system route
         apiRoot.system.route('GET', ('setting', 'large_image'),
                              self.getPublicSettings)
@@ -63,6 +66,9 @@ class TilesItemResource(Item):
         .param('fileId', 'The ID of the source file containing the image. '
                          'Required if there is more than one file in the item.',
                required=False)
+        .param('notify', 'If a job is required to create the large image, '
+               'a nofication can be sent when it is complete.',
+               dataType='boolean', default=True, required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -82,7 +88,8 @@ class TilesItemResource(Item):
         token = self.getCurrentToken()
         try:
             return self.imageItemModel.createImageItem(
-                item, largeImageFile, user, token)
+                item, largeImageFile, user, token,
+                notify=self.boolParam('notify', params, default=True))
         except TileGeneralException as e:
             raise RestException(e.message)
 
@@ -101,16 +108,43 @@ class TilesItemResource(Item):
 
     @classmethod
     def _parseParams(cls, params, keepUnknownParams, typeList):
+        """
+        Given a dictionary of parameters, check that a list of parameters are
+        valid data types.  The parameters within the list are validated and
+        copied to a dictionary by themselves.
+
+        :param params: the dictionary of parameters to validate.
+        :param keepUnknownParams: True to copy all parameters, not just those
+            in the typeList.  The parameters in the typeList are still
+            validated.
+        :param typeList: a list of tuples of the form (key, dataType, [outkey1,
+            [outkey2]]).  If output keys are used, the original key is renamed
+            to the the output key.  If two output keys are specified, the
+            original key is renamed to outkey2 and placed in a sub-dictionary
+            names outkey1.
+        :returns: params: a validated and possibly filtered list of parameters.
+        """
         results = {}
         if keepUnknownParams:
             results = dict(params)
-        for paramName, paramType in typeList:
-            try:
-                if paramName in params:
-                    results[paramName] = paramType(params[paramName])
-            except ValueError:
-                raise RestException(
-                    '"%s" parameter is an incorrect type.' % paramName)
+        for entry in typeList:
+            key, dataType, outkey1, outkey2 = (list(entry) + [None]*2)[:4]
+            if key in params:
+                try:
+                    if dataType is bool:
+                        results[key] = str(params[key]).lower() in (
+                            'true', 'on', 'yes', '1')
+                    else:
+                        results[key] = dataType(params[key])
+                except ValueError:
+                    raise RestException(
+                        '"%s" parameter is an incorrect type.' % key)
+                if outkey1 is not None:
+                    if outkey2 is not None:
+                        results.setdefault(outkey1, {})[outkey2] = results[key]
+                    else:
+                        results[outkey1] = results[key]
+                    del results[key]
         return results
 
     def _getTilesInfo(self, item, imageArgs):
@@ -170,7 +204,7 @@ class TilesItemResource(Item):
                 item, x, y, z, **imageArgs)
         except TileGeneralException as e:
             raise RestException(e.message, code=404)
-        cherrypy.response.headers['Content-Type'] = tileMime
+        setResponseHeader('Content-Type', tileMime)
         setRawResponse()
         return tileData
 
@@ -186,12 +220,22 @@ class TilesItemResource(Item):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-    @access.cookie
+    # Without caching, this checks for permissions every time.  By using the
+    # LoadModelCache, three database lookups are avoided, which saves around
+    # 6 ms in tests.
+    #   @access.cookie   # access.cookie always looks up the token
+    #   @access.public
+    #   @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    #   def getTile(self, item, z, x, y, params):
+    #       return self._getTile(item, z, x, y, params)
     @access.public
-    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
-    def getTile(self, item, z, x, y, params):
-        # TODO: cache the user / item loading in the 'loadmodel' decorator
-        # TODO: parse params?
+    def getTile(self, itemId, z, x, y, params):
+        item = loadmodelcache.loadModel(
+            self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
+        # Explicitly set a expires time to encourage browsers to cache this for
+        # a while.
+        setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
+            cherrypy.serving.response.time + 600))
         return self._getTile(item, z, x, y, params)
 
     @describeRoute(
@@ -254,13 +298,15 @@ class TilesItemResource(Item):
             ('encoding', str),
         ])
         try:
-            thumbData, thumbMime = self.imageItemModel.getThumbnail(
-                item, **params)
+            result = self.imageItemModel.getThumbnail(item, **params)
         except TileGeneralException as e:
             raise RestException(e.message)
         except ValueError as e:
             raise RestException('Value Error: %s' % e.message)
-        cherrypy.response.headers['Content-Type'] = thumbMime
+        if not isinstance(result, tuple):
+            return result
+        thumbData, thumbMime = result
+        setResponseHeader('Content-Type', thumbMime)
         setRawResponse()
         return thumbData
 
@@ -274,32 +320,47 @@ class TilesItemResource(Item):
                'dimensions).  When scaling must be applied, the image is '
                'downsampled from a higher resolution layer, never upsampled.')
         .param('itemId', 'The ID of the item.', paramType='path')
-        .param('left', 'The left column (0-based) of the region to return.  '
+        .param('left', 'The left column (0-based) of the region to process.  '
                'Negative values are offsets from the right edge.',
                required=False, dataType='float')
-        .param('top', 'The top row (0-based) of the region to return.  '
+
+        .param('top', 'The top row (0-based) of the region to process.  '
                'Negative values are offsets from the bottom edge.',
                required=False, dataType='float')
         .param('right', 'The right column (0-based from the left) of the '
-               'region to return.  The region will not include this column.  '
+               'region to process.  The region will not include this column.  '
                'Negative values are offsets from the right edge.',
                required=False, dataType='float')
         .param('bottom', 'The bottom row (0-based from the top) of the region '
-               'to return.  The region will not include this row.  Negative '
+               'to process.  The region will not include this row.  Negative '
                'values are offsets from the bottom edge.',
                required=False, dataType='float')
-        .param('regionWidth', 'The width of the region to return.',
+        .param('regionWidth', 'The width of the region to process.',
                required=False, dataType='float')
-        .param('regionHeight', 'The height of the region to return.',
+        .param('regionHeight', 'The height of the region to process.',
                required=False, dataType='float')
         .param('units', 'Units used for left, top, right, bottom, '
-               'regionWidth, and regionHeight.  Note that output width and '
-               'height are always in pixels.', required=False,
-               enum=['pixels', 'fraction'], default='pixels')
+               'regionWidth, and regionHeight.  base_pixels are pixels at the '
+               'maximum resolution, pixels and mm are at the specified '
+               'magnfication, fraction is a scale of [0-1].', required=False,
+               enum=['base_pixels', 'pixels', 'mm', 'fraction'],
+               default='base_pixels')
+
         .param('width', 'The maximum width of the output image in pixels.',
                required=False, dataType='int')
         .param('height', 'The maximum height of the output image in pixels.',
                required=False, dataType='int')
+        .param('magnification', 'Magnification of the output image.  If '
+               'neither width for height is specified, the magnification, '
+               'mm_x, and mm_y parameters are used to select the output size.',
+               required=False, dataType='float')
+        .param('mm_x', 'The size of the output pixels in millimeters',
+               required=False, dataType='float')
+        .param('mm_y', 'The size of the output pixels in millimeters',
+               required=False, dataType='float')
+        .param('exact', 'If magnification, mm_x, or mm_y are specified, they '
+               'must match an existing level of the image exactly.',
+               required=False, dataType='boolean', default=False)
         .param('encoding', 'Output image encoding', required=False,
                enum=['JPEG', 'PNG'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
@@ -317,18 +378,22 @@ class TilesItemResource(Item):
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesRegion(self, item, params):
         params = self._parseParams(params, True, [
-            ('left', float),
-            ('top', float),
-            ('right', float),
-            ('bottom', float),
-            ('regionWidth', float),
-            ('regionHeight', float),
-            ('units', str),
-            ('width', int),
-            ('height', int),
+            ('left', float, 'region', 'left'),
+            ('top', float, 'region', 'top'),
+            ('right', float, 'region', 'right'),
+            ('bottom', float, 'region', 'bottom'),
+            ('regionWidth', float, 'region', 'width'),
+            ('regionHeight', float, 'region', 'height'),
+            ('units', str, 'region', 'units'),
+            ('width', int, 'output', 'maxWidth'),
+            ('height', int, 'output', 'maxHeight'),
+            ('magnification', float, 'scale', 'magnification'),
+            ('mm_x', float, 'scale', 'mm_x'),
+            ('mm_y', float, 'scale', 'mm_y'),
+            ('exact', bool, 'scale', 'exact'),
+            ('encoding', str),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
-            ('encoding', str),
         ])
         try:
             regionData, regionMime = self.imageItemModel.getRegion(
@@ -337,7 +402,7 @@ class TilesItemResource(Item):
             raise RestException(e.message)
         except ValueError as e:
             raise RestException('Value Error: %s' % e.message)
-        cherrypy.response.headers['Content-Type'] = regionMime
+        setResponseHeader('Content-Type', regionMime)
         setRawResponse()
         return regionData
 
@@ -350,5 +415,7 @@ class TilesItemResource(Item):
             constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
             constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER,
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
         ]
         return {k: self.model('setting').get(k) for k in keys}

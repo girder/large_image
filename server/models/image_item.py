@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-###############################################################################
+#############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,16 +15,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-###############################################################################
+#############################################################################
 
+import json
 import os
+import six
 
+from girder.constants import SortDir
 from girder.models.model_base import ValidationException
 from girder.models.item import Item
 from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 
 from .base import TileGeneralException
+from .. import constants
 from ..tilesource import AvailableTileSources, TileSourceException
 
 
@@ -34,7 +38,8 @@ class ImageItem(Item):
     def initialize(self):
         super(ImageItem, self).initialize()
 
-    def createImageItem(self, item, fileObj, user=None, token=None):
+    def createImageItem(self, item, fileObj, user=None, token=None,
+                        createJob=True, notify=False):
         # Using setdefault ensures that 'largeImage' is in the item
         if 'fileId' in item.setdefault('largeImage', {}):
             # TODO: automatically delete the existing large file
@@ -58,11 +63,15 @@ class ImageItem(Item):
                 if AvailableTileSources[sourceName].canRead(item):
                     item['largeImage']['sourceName'] = sourceName
                     break
+        if 'sourceName' not in item['largeImage'] and not createJob:
+            raise TileGeneralException(
+                'A job must be used to generate a largeImage.')
         if 'sourceName' not in item['largeImage']:
             # No source was successful
             del item['largeImage']['fileId']
             job = self._createLargeImageJob(item, fileObj, user, token)
             item['largeImage']['expected'] = True
+            item['largeImage']['notify'] = notify
             item['largeImage']['originalId'] = fileObj['_id']
             item['largeImage']['jobId'] = job['_id']
 
@@ -113,7 +122,7 @@ class ImageItem(Item):
 
         inputs = {
             'in_path': workerUtils.girderInputSpec(
-                item, resourceType='item', token=token),
+                fileObj, resourceType='file', token=token),
             'quality': {
                 'mode': 'inline',
                 'type': 'number',
@@ -147,6 +156,11 @@ class ImageItem(Item):
             'jobInfo': workerUtils.jobInfoSpec(job, jobToken),
             'auto_convert': False,
             'validate': False
+        }
+        job['meta'] = {
+            'creator': 'large_image',
+            'itemId': str(item['_id']),
+            'task': 'createImageItem',
         }
 
         job = Job.save(job)
@@ -219,9 +233,9 @@ class ImageItem(Item):
 
             del item['largeImage']
 
-            self.save(item)
+            item = self.save(item)
             deleted = True
-
+        self.removeThumbnailFiles(item)
         return deleted
 
     def getThumbnail(self, item, width=None, height=None, **kwargs):
@@ -237,12 +251,82 @@ class ImageItem(Item):
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, and jpegSubsampling.  This is also passed to the
             tile source.
-        :returns: thumbData, thumbMime: the image data and the mime type.
+        :returns: thumbData, thumbMime: the image data and the mime type OR
+            a generator which will yield a file.
         """
+        # check if a thumbnail file exists with a particular key
+        keydict = dict(kwargs, width=width, height=height)
+        key = json.dumps(keydict, sort_keys=True, separators=(',', ':'))
+        fileModel = self.model('file')
+        existing = fileModel.findOne({
+            'attachedToType': 'item',
+            'attachedToId': item['_id'],
+            'isLargeImageThumbnail': True,
+            'thumbnailKey': key
+        })
+        if existing:
+            return self.model('file').download(
+                existing, contentDisposition='inline')
         tileSource = self._loadTileSource(item, **kwargs)
         thumbData, thumbMime = tileSource.getThumbnail(
             width, height, **kwargs)
+        # The logic on which files to save could be more sophisticated.
+        maxThumbnailFiles = int(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
+        saveFile = maxThumbnailFiles > 0
+        if saveFile:
+            # Make sure we don't exceed the desired number of thumbnails
+            self.removeThumbnailFiles(item, maxThumbnailFiles - 1)
+            # Save the thumbnail as a file
+            thumbfile = self.model('upload').uploadFromFile(
+                six.BytesIO(thumbData), size=len(thumbData),
+                name='_largeImageThumbnail', parentType=None, parent=None,
+                user=None, mimeType=thumbMime)
+            thumbfile.update({
+                'attachedToType': 'item',
+                'attachedToId': item['_id'],
+                'isLargeImageThumbnail': True,
+                'thumbnailKey': key,
+            })
+            # Ideally, we would check that the file is still wanted before we
+            # save it.  This is probably imposible without true transactions in
+            # Mongo.
+            fileModel.save(thumbfile)
+        # Return the data
         return thumbData, thumbMime
+
+    def removeThumbnailFiles(self, item, keep=0, sort=None, **kwargs):
+        """
+        Remove all large image thumbnails from an item.
+
+        :param item: the item that owns the thumbnails.
+        :param keep: keep this many entries.
+        :param sort: the sort method used.  The first (keep) records in this
+            sort order are kept.
+        :param **kwargs: additional parameters to determine which files to
+            remove.
+        :returns: a tuple of (the number of files before removal, the number of
+            files removed).
+        """
+        if not sort:
+            sort = [('_id', SortDir.DESCENDING)]
+        fileModel = self.model('file')
+        query = {
+            'attachedToType': 'item',
+            'attachedToId': item['_id'],
+            'isLargeImageThumbnail': True,
+        }
+        query.update(kwargs)
+        present = 0
+        removed = 0
+        for file in fileModel.find(query, sort=sort):
+            present += 1
+            if keep > 0:
+                keep -= 1
+                continue
+            fileModel.remove(file)
+            removed += 1
+        return (present, removed)
 
     def getRegion(self, item, **kwargs):
         """
@@ -259,3 +343,12 @@ class ImageItem(Item):
         tileSource = self._loadTileSource(item, **kwargs)
         regionData, regionMime = tileSource.getRegion(**kwargs)
         return regionData, regionMime
+
+    def tileSource(self, item, **kwargs):
+        """
+        Get a tile source for an item.
+
+        :param item: the item with the tile source.
+        :return: magnification, width of a pixel in mm, height of a pixel in mm.
+        """
+        return self._loadTileSource(item, **kwargs)

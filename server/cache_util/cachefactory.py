@@ -22,13 +22,16 @@ import threading
 import math
 # attempt to import girder config
 try:
-    from girder import constants
+    from girder import logprint
     from girder.utility import config
 except ImportError:
+    import logging as logprint
     config = None
-    constants = None
 
-from .memcache import MemCache
+try:
+    from .memcache import MemCache
+except ImportError:
+    MemCache = None
 from cachetools import LRUCache
 
 try:
@@ -62,10 +65,11 @@ class CacheFactory():
             curConfig = config.getConfig().get('large_image', defaultConfig)
         else:
             curConfig = defaultConfig
-        cacheBackend = curConfig.get('cache_backend')
+        # memcached is the fallback default, if available.
+        cacheBackend = curConfig.get('cache_backend', 'memcached')
         if cacheBackend:
             cacheBackend = str(cacheBackend).lower()
-        if cacheBackend == 'memcached':
+        if cacheBackend == 'memcached' and MemCache:
             # lock needed because pylibmc(memcached client) is not threadsafe
             tileCacheLock = threading.Lock()
 
@@ -92,7 +96,5 @@ class CacheFactory():
                 portion = 16
             tileCache = LRUCache(pickAvailableCache(256**2 * 4, portion))
             tileCacheLock = None
-        if constants:
-            print(constants.TerminalColor.info(
-                'Using %s for large_image caching' % cacheBackend))
+        logprint.info('Using %s for large_image caching' % cacheBackend)
         return tileCache, tileCacheLock

@@ -17,11 +17,14 @@
 #  limitations under the License.
 ###############################################################################
 
-from girder import events, plugin
-from girder.constants import AccessType
-from girder.utility.model_importer import ModelImporter
+from girder import events, plugin, logger
+from girder.constants import AccessType, SettingDefault
+from girder.models.model_base import ModelImporter, ValidationException
+from girder.utility import setting_utilities
+from girder.plugins.jobs.constants import JobStatus
 
 from . import constants
+from .loadmodelcache import invalidateLoadModelCache
 
 
 def _postUpload(event):
@@ -49,21 +52,124 @@ def _postUpload(event):
         Item.save(item)
 
 
-def validateSettings(event):
-    key, val = event.info['key'], event.info['value']
-
-    if key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
-               constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER):
-        if str(val).lower() not in ('false', 'true', ''):
-            return
-        val = (str(val).lower() != 'false')
-    elif key == constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER:
-        val = str(val).strip()
-    else:
+def _updateJob(event):
+    """
+    Called when a job is saved.  If this is a large image job and it is ended,
+    clean up after it, mark it as done.
+    """
+    job = event.info['job']
+    meta = job.get('meta', {})
+    if (meta.get('creator') != 'large_image' or not meta.get('itemId') or
+            meta.get('task') != 'createImageItem'):
         return
-    event.info['value'] = val
-    event.preventDefault().stopPropagation()
+    status = job['status']
+    if status not in (JobStatus.ERROR, JobStatus.CANCELED, JobStatus.SUCCESS):
+        return
+    item = ModelImporter.model('item').load(meta['itemId'], force=True)
+    if not item or 'largeImage' not in item:
+        return
+    if item.get('largeImage', {}).get('expected'):
+        del item['largeImage']['expected']
+    notify = item.get('largeImage', {}).get('notify')
+    msg = None
+    if notify:
+        del item['largeImage']['notify']
+        if status == JobStatus.SUCCESS:
+            msg = 'Large image created'
+        elif status == JobStatus.CANCELED:
+            msg = 'Large image creation canceled'
+        else:  # ERROR
+            msg = 'FAILED: Large image creation failed'
+        msg += ' for item %s' % item['name']
+    if (status in (JobStatus.ERROR, JobStatus.CANCELED) and
+            'largeImage' in item):
+        del item['largeImage']
+    ModelImporter.model('item').save(item)
+    if msg:
+        ModelImporter.model('jobs', 'job').updateJob(job, progressMessage=msg)
 
+
+def checkForLargeImageFiles(event):
+    file = event.info
+    possible = False
+    mimeType = file.get('mimeType')
+    if mimeType in ('image/tiff', 'image/x-tiff', 'image/x-ptif'):
+        possible = True
+    exts = file.get('exts')
+    if exts and exts[-1] in ('svs', 'ptif', 'tif', 'tiff', 'ndpi'):
+        possible = True
+    if not file.get('itemId') or not possible:
+        return
+    if not ModelImporter.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
+        return
+    item = ModelImporter.model('item').load(
+        file['itemId'], force=True, exc=False)
+    if not item or item.get('largeImage'):
+        return
+    imageItemModel = ModelImporter.model('image_item', 'large_image')
+    try:
+        imageItemModel.createImageItem(item, file, createJob=False)
+    except Exception:
+        # We couldn't automatically set this as a large image
+        logger.info('Saved file %s cannot be automatically used as a '
+                    'largeImage' % str(file['_id']))
+
+
+def removeThumbnails(event):
+    ModelImporter.model('image_item', 'large_image').removeThumbnailFiles(
+        event.info)
+
+
+# Validators
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+    constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
+})
+def validateBoolean(doc):
+    val = doc['value']
+    if str(val).lower() not in ('false', 'true', ''):
+        raise ValidationException('%s must be a boolean.' % doc['key'], 'value')
+    doc['value'] = (str(val).lower() != 'false')
+
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
+})
+def validateNonnegativeInteger(doc):
+    val = doc['value']
+    try:
+        val = int(val)
+        if val < 0:
+            raise ValueError
+    except ValueError:
+        raise ValidationException('%s must be a non-negative integer.' % (
+            doc['key'], ), 'value')
+    doc['value'] = val
+
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER
+})
+def validateDefaultViewer(doc):
+    doc['value'] = str(doc['value']).strip()
+
+
+# Defaults
+
+# Defaults that have fixed values can just be added to the system defaults
+# dictionary.
+SettingDefault.defaults.update({
+    constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS: True,
+    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER: True,
+    constants.PluginSettings.LARGE_IMAGE_AUTO_SET: True,
+    constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES: 10,
+})
+
+
+# Configuration and load
 
 @plugin.config(
     name='Large image',
@@ -83,4 +189,12 @@ def load(info):
     ModelImporter.model('annotation', plugin='large_image')
 
     events.bind('data.process', 'large_image', _postUpload)
-    events.bind('model.setting.validate', 'large_image', validateSettings)
+    events.bind('jobs.job.update.after', 'large_image', _updateJob)
+    events.bind('model.folder.save.after', 'large_image',
+                invalidateLoadModelCache)
+    events.bind('model.group.save.after', 'large_image',
+                invalidateLoadModelCache)
+    events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
+    events.bind('model.file.save.after', 'large_image',
+                checkForLargeImageFiles)
+    events.bind('model.item.remove', 'large_image', removeThumbnails)
