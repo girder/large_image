@@ -73,9 +73,10 @@ class TiffFileTileSource(FileTileSource):
                 self._tiffDirectories.append(tiffDirectory)
 
         if not self._tiffDirectories:
-            logger.info('File %s didn\'t meet requirements for tile source: '
-                        '%s' % (largeImagePath, lastException))
-            raise TileSourceException('File must have at least 1 level')
+            msg = 'File %s didn\'t meet requirements for tile source: %s' % (
+                largeImagePath, lastException)
+            logger.debug(msg)
+            raise TileSourceException(msg)
 
         # Multiresolution TIFFs are stored with full-resolution layer in
         #   directory 0

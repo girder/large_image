@@ -235,7 +235,7 @@ class LargeImageCommonTest(base.TestCase):
                 self.assertStatusOk(resp)
                 break
             except AssertionError as exc:
-                if 'File must have at least 1 level' in exc.args[0]:
+                if 'didn\'t meet requirements' in exc.args[0]:
                     return False
                 if 'No large image file' in exc.args[0]:
                     return None
