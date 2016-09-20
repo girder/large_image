@@ -47,7 +47,7 @@ class MemCache(cachetools.Cache):
             'dead_timeout': 10,
         }
         # Adding remove_failed prevents recovering in a single memcached server
-        # instance, so onlydo it if there are multiple servers
+        # instance, so only do it if there are multiple servers
         if len(url) > 1:
             behaviors['remove_failed'] = 1
         # name mangling to override 'private variable' __data in cache
