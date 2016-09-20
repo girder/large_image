@@ -34,7 +34,8 @@ def _postUpload(event):
     result image.
     """
     fileObj = event.info['file']
-    if 'itemId' not in fileObj:
+    # There may not be an itemId (on thumbnails, for instance)
+    if not fileObj.get('itemId'):
         return
 
     Item = ModelImporter.model('item')
