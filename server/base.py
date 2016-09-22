@@ -21,10 +21,14 @@ from girder import events, plugin, logger
 from girder.constants import AccessType, SettingDefault
 from girder.models.model_base import ModelImporter, ValidationException
 from girder.utility import setting_utilities
-from girder.plugins.jobs.constants import JobStatus
 
 from . import constants
 from .loadmodelcache import invalidateLoadModelCache
+
+# This is imported from girder.plugins.jobs.constants, but cannot be done
+# until after the plugin has been found and imported.  If using from an
+# entrypoint, the load of this value must be deferred.
+JobStatus = None
 
 
 def _postUpload(event):
@@ -57,6 +61,10 @@ def _updateJob(event):
     Called when a job is saved.  If this is a large image job and it is ended,
     clean up after it, mark it as done.
     """
+    global JobStatus
+    if not JobStatus:
+        from girder.plugins.jobs.constants import JobStatus
+
     job = event.info['job']
     meta = job.get('meta', {})
     if (meta.get('creator') != 'large_image' or not meta.get('itemId') or
