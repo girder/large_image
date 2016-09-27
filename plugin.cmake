@@ -69,7 +69,7 @@ set_property(TEST server_large_image.cached_tiles.PythonCache APPEND PROPERTY
   "LARGE_IMAGE_CACHE_BACKEND=python"
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
-add_python_test(sources PLUGIN large_image BIND_SERVER 
+add_python_test(sources PLUGIN large_image BIND_SERVER
   # There is a bug in cmake that fails when external data files are added to
   # multiple tests, so comment out the external data directive.
   # EXTERNAL_DATA
@@ -82,7 +82,16 @@ set_property(TEST server_large_image.sources APPEND PROPERTY ENVIRONMENT
 
 add_python_test(import PLUGIN large_image BIND_SERVER)
 
-add_python_test(girderless PLUGIN large_image 
+add_python_test(large_image PLUGIN large_image
+  # There is a bug in cmake that fails when external data files are added to
+  # multiple tests, so comment out the external data directive.
+  # EXTERNAL_DATA
+  # "plugins/large_image/sample_image.ptif"
+  )
+set_property(TEST server_large_image.large_image APPEND PROPERTY ENVIRONMENT
+  "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
+
+add_python_test(girderless PLUGIN large_image
   # There is a bug in cmake that fails when external data files are added to
   # multiple tests, so comment out the external data directive.
   # EXTERNAL_DATA
@@ -92,7 +101,7 @@ add_python_test(girderless PLUGIN large_image
 set_property(TEST server_large_image.girderless APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
-add_python_test(examples PLUGIN large_image 
+add_python_test(examples PLUGIN large_image
   # There is a bug in cmake that fails when external data files are added to
   # multiple tests, so comment out the external data directive.
   # EXTERNAL_DATA

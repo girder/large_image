@@ -17,11 +17,9 @@
 #  limitations under the License.
 ##############################################################################
 
-# Deal with a bug where PEP257 crashes when parsing __all__
-# flake8: noqa
-
 from .tiles import TilesItemResource
+from .large_image import LargeImageResource
 from .annotation import AnnotationResource
 
 
-__all__ = (TilesItemResource, AnnotationResource)
+__all__ = ('TilesItemResource', 'LargeImageResource', 'AnnotationResource')

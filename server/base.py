@@ -190,9 +190,10 @@ SettingDefault.defaults.update({
     dependencies={'worker'},
 )
 def load(info):
-    from .rest import TilesItemResource, AnnotationResource
+    from .rest import TilesItemResource, LargeImageResource, AnnotationResource
 
     TilesItemResource(info['apiRoot'])
+    info['apiRoot'].large_image = LargeImageResource()
     info['apiRoot'].annotation = AnnotationResource()
 
     ModelImporter.model('item').exposeFields(

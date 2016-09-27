@@ -43,6 +43,14 @@ class LargeImageCommonTest(base.TestCase):
             'admin': True
         }
         self.admin = self.model('user').createUser(**admin)
+        user = {
+            'email': 'user@email.com',
+            'login': 'userlogin',
+            'firstName': 'Common',
+            'lastName': 'User',
+            'password': 'userpassword'
+        }
+        self.user = self.model('user').createUser(**user)
         folders = self.model('folder').childFolders(
             self.admin, 'user', user=self.admin)
         for folder in folders:

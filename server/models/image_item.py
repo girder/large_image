@@ -227,8 +227,10 @@ class ImageItem(Item):
                     item['largeImage'].get('fileId')
 
                 if 'fileId' in item['largeImage']:
-                    self.model('file').remove(self.model('file').load(
-                        id=item['largeImage']['fileId'], force=True))
+                    file = self.model('file').load(
+                        id=item['largeImage']['fileId'], force=True)
+                    if file:
+                        self.model('file').remove(file)
                 del item['largeImage']['originalId']
 
             del item['largeImage']
@@ -256,6 +258,8 @@ class ImageItem(Item):
         """
         # check if a thumbnail file exists with a particular key
         keydict = dict(kwargs, width=width, height=height)
+        for key in [key for key in keydict if keydict[key] is None]:
+            del keydict[key]
         key = json.dumps(keydict, sort_keys=True, separators=(',', ':'))
         fileModel = self.model('file')
         existing = fileModel.findOne({
