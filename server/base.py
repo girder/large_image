@@ -34,7 +34,8 @@ def _postUpload(event):
     result image.
     """
     fileObj = event.info['file']
-    if 'itemId' not in fileObj:
+    # There may not be an itemId (on thumbnails, for instance)
+    if not fileObj.get('itemId'):
         return
 
     Item = ModelImporter.model('item')
@@ -69,7 +70,10 @@ def _updateJob(event):
     if not item or 'largeImage' not in item:
         return
     if item.get('largeImage', {}).get('expected'):
-        del item['largeImage']['expected']
+        # We can get a SUCCESS message before we get the upload message, so
+        # don't clear the expected status on success.
+        if status != JobStatus.SUCCESS:
+            del item['largeImage']['expected']
     notify = item.get('largeImage', {}).get('notify')
     msg = None
     if notify:
@@ -86,7 +90,7 @@ def _updateJob(event):
         del item['largeImage']
     ModelImporter.model('item').save(item)
     if msg:
-        ModelImporter.model('jobs', 'job').updateJob(job, progressMessage=msg)
+        ModelImporter.model('job', 'jobs').updateJob(job, progressMessage=msg)
 
 
 def checkForLargeImageFiles(event):
