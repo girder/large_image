@@ -218,3 +218,34 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
             self.assertEqual(tile['tile'][:len(common.PNGHeader)],
                              common.PNGHeader)
         self.assertEqual(tileCount, 45)
+
+    def testGetRegion(self):
+        from girder.plugins.large_image import tilesource
+
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
+            '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+
+        # By default, getRegion gets an image
+        image, mimeType = source.getRegion(scale={'magnification': 2.5})
+        self.assertEqual(mimeType, 'image/jpeg')
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+
+        # We should be able to get a NUMPY array instead
+        image, imageFormat = source.getRegion(
+            scale={'magnification': 2.5},
+            format=tilesource.TILE_FORMAT_NUMPY)
+        self.assertEqual(imageFormat, tilesource.TILE_FORMAT_NUMPY)
+        self.assertTrue(isinstance(image, numpy.ndarray))
+        self.assertEqual(image.shape, (1447, 1438, 4))
+
+        # We should be able to get a PIL image
+        image, imageFormat = source.getRegion(
+            scale={'magnification': 2.5},
+            format=(tilesource.TILE_FORMAT_PIL, tilesource.TILE_FORMAT_NUMPY))
+        self.assertEqual(imageFormat, tilesource.TILE_FORMAT_PIL)
+        self.assertEqual(image.width, 1438)
+        self.assertEqual(image.height, 1447)
