@@ -59,19 +59,22 @@ def _postUpload(event):
 
 def _updateJob(event):
     """
-    Called when a job is saved.  If this is a large image job and it is ended,
-    clean up after it, mark it as done.
+    Called when a job is saved, updated, or removed.  If this is a large image
+    job and it is ended, clean up after it.
     """
     global JobStatus
     if not JobStatus:
         from girder.plugins.jobs.constants import JobStatus
 
-    job = event.info['job']
+    job = event.info['job'] if event.name == 'jobs.job.update.after' else event.info
     meta = job.get('meta', {})
     if (meta.get('creator') != 'large_image' or not meta.get('itemId') or
             meta.get('task') != 'createImageItem'):
         return
     status = job['status']
+    if event.name == 'model.job.remove' and status not in (
+            JobStatus.ERROR, JobStatus.CANCELED, JobStatus.SUCCESS):
+        status = JobStatus.CANCELED
     if status not in (JobStatus.ERROR, JobStatus.CANCELED, JobStatus.SUCCESS):
         return
     item = ModelImporter.model('item').load(meta['itemId'], force=True)
@@ -97,7 +100,7 @@ def _updateJob(event):
             'largeImage' in item):
         del item['largeImage']
     ModelImporter.model('item').save(item)
-    if msg:
+    if msg and event.name != 'model.job.remove':
         ModelImporter.model('job', 'jobs').updateJob(job, progressMessage=msg)
 
 
@@ -203,6 +206,8 @@ def load(info):
 
     events.bind('data.process', 'large_image', _postUpload)
     events.bind('jobs.job.update.after', 'large_image', _updateJob)
+    events.bind('model.job.save', 'large_image', _updateJob)
+    events.bind('model.job.remove', 'large_image', _updateJob)
     events.bind('model.folder.save.after', 'large_image',
                 invalidateLoadModelCache)
     events.bind('model.group.save.after', 'large_image',

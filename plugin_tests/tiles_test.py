@@ -254,6 +254,11 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
 
+        # Try to create an image, but delete the job and check that it fails.
+        fileId = str(file['_id'])
+        result = self._postTileViaHttp(itemId, fileId, jobAction='delete')
+        self.assertIsNone(result)
+
     def testTilesFromBadFiles(self):
         # Uploading a monochrome file should result in no useful tiles.
         file = self._uploadFile(os.path.join(

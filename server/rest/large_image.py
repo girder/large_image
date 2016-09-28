@@ -38,38 +38,47 @@ def createThumbnailsJob(job):
         the model getThumbnail function.
     """
     jobModel = ModelImporter.model('job', 'jobs')
-    jobModel.updateJob(
+    job = jobModel.updateJob(
         job, log='Started creating large image thumbnails\n',
         status=JobStatus.RUNNING)
     checkedOrCreated = 0
     try:
         spec = job['kwargs']['spec']
+        logInterval = float(job['kwargs'].get('logInterval', 10))
         itemModel = ModelImporter.model('item')
         imageItemModel = ModelImporter.model('image_item', 'large_image')
         for entry in spec:
-            jobModel.updateJob(
+            job = jobModel.updateJob(
                 job, log='Creating thumbnails for %r\n' % entry)
             lastLogTime = time.time()
             items = itemModel.find({'largeImage.fileId': {'$exists': True}})
             for item in items:
                 imageItemModel.getThumbnail(item, **entry)
                 checkedOrCreated += 1
-                if time.time() - lastLogTime > 15:
-                    jobModel.updateJob(
+                # Periodically, log the state of the job and check if it was
+                # deleted or canceled.
+                if time.time() - lastLogTime > logInterval:
+                    job = jobModel.updateJob(
                         job, log='Checked or created %d thumbnail file%s\n' % (
                             checkedOrCreated,
                             's' if checkedOrCreated != 1 else ''))
                     lastLogTime = time.time()
+                    # Check if the job was deleted or canceled; if so, quit
+                    job = jobModel.load(id=job['_id'], force=True)
+                    if not job or job['status'] == JobStatus.CANCELED:
+                        logger.info('Large image thumbnails job %s' % (
+                            'deleted' if not job else 'canceled'))
+                        return
     except Exception:
         logger.exception('Error with large image create thumbnails job')
-        jobModel.updateJob(
+        job = jobModel.updateJob(
             job, log='Error creating large image thumbnails\n',
             status=JobStatus.ERROR)
         return
     msg = 'Finished creating large image thumbnails (%d checked or created)' % (
         checkedOrCreated)
     logger.info(msg)
-    jobModel.updateJob(job, log=msg + '\n', status=JobStatus.SUCCESS)
+    job = jobModel.updateJob(job, log=msg + '\n', status=JobStatus.SUCCESS)
 
 
 class LargeImageResource(Resource):
@@ -118,6 +127,11 @@ class LargeImageResource(Resource):
         .param('spec', 'A JSON list of thumbnail specifications to create.  '
                'The specifications typically include width, height, encoding, '
                'and encoding options.')
+        .param('logInterval', 'The number of seconds between log messages.  '
+               'This also determines how often the creation job is checked if '
+               'it has been canceled or deleted.  A value of 0 will log after '
+               'each thumbnail is checked or created.', required=False,
+               dataType='float')
     )
     @access.admin
     def createThumbnails(self, params):
@@ -133,10 +147,13 @@ class LargeImageResource(Resource):
         if maxThumbnailFiles <= 0:
             raise RestException('Thumbnail files are not enabled.')
         jobModel = self.model('job', 'jobs')
+        jobKwargs = {'spec': spec}
+        if params.get('logInterval') is not None:
+            jobKwargs['logInterval'] = float(params['logInterval'])
         job = jobModel.createLocalJob(
             module='girder.plugins.large_image.rest.large_image',
             function='createThumbnailsJob',
-            kwargs={'spec': spec},
+            kwargs=jobKwargs,
             title='Create large image thumbnail files.',
             type='large_image_create_thumbnails',
             user=self.getCurrentUser(),

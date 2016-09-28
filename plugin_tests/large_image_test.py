@@ -44,14 +44,25 @@ def tearDownModule():
 
 # Test large_image endpoints
 class LargeImageLargeImageTest(common.LargeImageCommonTest):
-    def _createThumbnails(self, spec):
+    def _createThumbnails(self, spec, cancel=False):
         from girder.plugins.jobs.constants import JobStatus
 
+        params = {'spec': json.dumps(spec)}
+        if cancel:
+            params['logInterval'] = 0
         resp = self.request(
             method='PUT', path='/large_image/thumbnails', user=self.admin,
-            params={'spec': json.dumps(spec)})
+            params=params)
         self.assertStatusOk(resp)
         job = resp.json
+        if cancel:
+            jobModel = self.model('job', 'jobs')
+            job = jobModel.load(id=job['_id'], force=True)
+            while job['status'] != JobStatus.RUNNING:
+                time.sleep(0.01)
+                job = jobModel.load(id=job['_id'], force=True)
+            job = jobModel.cancelJob(job)
+
         starttime = time.time()
         while True:
             self.assertTrue(time.time() - starttime < 30)
@@ -61,6 +72,8 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
                 return True
             if resp.json.get('status') == JobStatus.ERROR:
                 return False
+            if resp.json.get('status') == JobStatus.CANCELED:
+                return 'canceled'
             time.sleep(0.1)
 
     def testThumbnailFileJob(self):
@@ -116,6 +129,21 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 3)
 
+        # We should be able to cancel a job
+        slowList = [
+            {'width': 1600, 'height': 1000},
+            {'width': 3200, 'height': 2000},
+            {'width': 1600, 'height': 1002},
+            {'width': 1600, 'height': 1003},
+            {'width': 1600, 'height': 1004},
+        ]
+        self.assertEqual(self._createThumbnails(slowList, cancel=True),
+                         'canceled')
+        present, removed = self.model(
+            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        self.assertLess(present, 3 + len(slowList))
+        count = present
+
         # Test GET thumbnails
         resp = self.request(path='/large_image/thumbnails', user=self.user)
         self.assertStatus(resp, 403)
@@ -126,7 +154,7 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         self.assertIn('must be a JSON list', resp.json['message'])
         resp = self.request(path='/large_image/thumbnails', user=self.admin)
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json, 3)
+        self.assertEqual(resp.json, count)
         resp = self.request(
             path='/large_image/thumbnails', user=self.admin,
             params={'spec': json.dumps([{'width': 160, 'height': 100}])})
@@ -150,7 +178,7 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         present, removed = self.model(
             'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
-        self.assertEqual(present, 2)
+        self.assertEqual(present, count - 1)
 
         # Try to delete some that don't exist
         resp = self.request(
@@ -159,7 +187,7 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         present, removed = self.model(
             'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
-        self.assertEqual(present, 2)
+        self.assertEqual(present, count - 1)
 
         # Delete them all
         resp = self.request(

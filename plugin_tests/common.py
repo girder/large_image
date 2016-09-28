@@ -26,6 +26,8 @@ from six.moves import range
 
 from tests import base
 
+from girder.constants import SortDir
+
 
 JPEGHeader = '\xff\xd8\xff'
 PNGHeader = '\x89PNG'
@@ -145,8 +147,6 @@ class LargeImageCommonTest(base.TestCase):
         :param imgHeader: if something other than a JPEG is expected, this is
                           the first few bytes of the expected image.
         """
-        import sys
-        sys.stderr.write('%r\n' % [itemId, metadata, tileParams, imgHeader, token])  # ##DWM::
         if token:
             kwargs = {'token': token}
         else:
@@ -204,7 +204,7 @@ class LargeImageCommonTest(base.TestCase):
         self.assertStatus(resp, 404)
         self.assertIn('layer does not exist', resp.json['message'])
 
-    def _postTileViaHttp(self, itemId, fileId):
+    def _postTileViaHttp(self, itemId, fileId, jobAction=None):
         """
         When we know we need to process a job, we have to use an actual http
         request rather than the normal simulated request to cherrypy.  This is
@@ -213,6 +213,7 @@ class LargeImageCommonTest(base.TestCase):
 
         :param itemId: the id of the item with the file to process.
         :param fileId: the id of the file that should be processed.
+        :param jobAction: if 'delete', delete the job immediately.
         :returns: metadata from the tile if the conversion was successful,
                   False if it converted but didn't result in useable tiles, and
                   None if it failed.
@@ -233,6 +234,11 @@ class LargeImageCommonTest(base.TestCase):
         self.assertEqual(req.status_code, 400)
         self.assertTrue('Item already has' in req.json()['message'] or
                         'Item is scheduled' in req.json()['message'])
+
+        if jobAction == 'delete':
+            jobModel = self.model('job', 'jobs')
+            jobModel.remove(jobModel.find(
+                {}, sort=[('_id', SortDir.DESCENDING)])[0])
 
         starttime = time.time()
         resp = None
