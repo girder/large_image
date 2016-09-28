@@ -20,6 +20,7 @@
 import numpy
 import os
 import PIL.Image
+import six
 
 from girder import config
 from tests import base
@@ -249,3 +250,94 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(imageFormat, tilesource.TILE_FORMAT_PIL)
         self.assertEqual(image.width, 1438)
         self.assertEqual(image.height, 1447)
+
+    def testConvertRegionScale(self):
+        from girder.plugins.large_image import tilesource
+
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
+            '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+
+        # If we aren't using pixels as our units and don't specify a target
+        # unit, this should do nothing.  This source image is 23021 x 23162
+        sourceRegion = {'width': 0.8, 'height': 0.7, 'units': 'fraction'}
+        targetRegion = source.convertRegionScale(sourceRegion)
+        self.assertEqual(sourceRegion, targetRegion)
+
+        # Units must be valid
+        with six.assertRaisesRegex(self, ValueError, 'Invalid units'):
+            source.convertRegionScale({'units': 'unknown'})
+        with six.assertRaisesRegex(self, ValueError, 'Invalid units'):
+            source.convertRegionScale(sourceRegion, targetUnits='unknown')
+
+        # We can convert to pixels
+        targetRegion = source.convertRegionScale(
+            sourceRegion, targetScale={'magnification': 2.5},
+            targetUnits='pixels')
+        self.assertEqual(int(targetRegion['width']), 1151)
+        self.assertEqual(int(targetRegion['height']), 1013)
+        self.assertEqual(targetRegion['units'], 'mag_pixels')
+
+        # Now use that to convert to a different magnification
+        sourceRegion = targetRegion
+        sourceScale = {'magnification': 2.5}
+
+        # Test other conversions
+        targetScale = {'magnification': 1.25}
+        targetRegion = source.convertRegionScale(
+            sourceRegion, sourceScale, targetScale)
+        self.assertEqual(int(targetRegion['width']), 18417)
+        self.assertEqual(int(targetRegion['height']), 16213)
+        self.assertEqual(targetRegion['units'], 'base_pixels')
+
+        targetRegion = source.convertRegionScale(
+            sourceRegion, sourceScale, targetScale, targetUnits='fraction')
+        self.assertAlmostEqual(targetRegion['width'], 0.8, places=4)
+        self.assertAlmostEqual(targetRegion['height'], 0.7, places=4)
+        self.assertEqual(targetRegion['units'], 'fraction')
+
+        targetRegion = source.convertRegionScale(
+            sourceRegion, sourceScale, targetScale, targetUnits='mm')
+        self.assertAlmostEqual(targetRegion['width'], 4.6411, places=3)
+        self.assertAlmostEqual(targetRegion['height'], 4.0857, places=3)
+        self.assertEqual(targetRegion['units'], 'mm')
+        with six.assertRaisesRegex(self, ValueError, 'No mm_x'):
+            source.convertRegionScale(
+                sourceRegion, sourceScale, None, targetUnits='mm')
+
+        targetRegion = source.convertRegionScale(
+            sourceRegion, sourceScale, targetScale, targetUnits='pixels')
+        self.assertEqual(int(targetRegion['width']), 575)
+        self.assertEqual(int(targetRegion['height']), 506)
+        self.assertEqual(targetRegion['units'], 'mag_pixels')
+        with six.assertRaisesRegex(self, ValueError, 'No magnification'):
+            source.convertRegionScale(
+                sourceRegion, sourceScale, None, targetUnits='pixels')
+
+        # test getRegionAtAnotherScale
+        image, imageFormat = source.getRegionAtAnotherScale(
+            sourceRegion, sourceScale, targetScale,
+            format=tilesource.TILE_FORMAT_NUMPY)
+        self.assertEqual(imageFormat, tilesource.TILE_FORMAT_NUMPY)
+        self.assertTrue(isinstance(image, numpy.ndarray))
+        self.assertEqual(image.shape, (506, 575, 4))
+        with six.assertRaisesRegex(self, TypeError, 'unexpected keyword'):
+            source.getRegionAtAnotherScale(
+                sourceRegion, sourceScale, region=sourceRegion,
+                format=tilesource.TILE_FORMAT_NUMPY)
+
+        # test tileIteratorAtAnotherScale
+        tileCount = 0
+        for tile in source.tileIteratorAtAnotherScale(
+                sourceRegion, sourceScale, targetScale,
+                format=tilesource.TILE_FORMAT_NUMPY):
+            tileCount += 1
+        self.assertEqual(tileCount, 72)
+        with six.assertRaisesRegex(self, TypeError, 'unexpected keyword'):
+            for tile in source.tileIteratorAtAnotherScale(
+                    sourceRegion, sourceScale, region=sourceRegion,
+                    format=tilesource.TILE_FORMAT_NUMPY):
+                tileCount += 1
