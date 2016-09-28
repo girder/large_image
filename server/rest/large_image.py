@@ -78,8 +78,39 @@ class LargeImageResource(Resource):
         super(LargeImageResource, self).__init__()
 
         self.resourceName = 'large_image'
+        self.route('GET', ('thumbnails',), self.countThumbnails)
         self.route('PUT', ('thumbnails',), self.createThumbnails)
         self.route('DELETE', ('thumbnails',), self.deleteThumbnails)
+
+    @describeRoute(
+        Description('Count the number of cached thumbnail files for '
+                    'large_image items.')
+        .param('spec', 'A JSON list of thumbnail specifications to count.  '
+               'If empty, all cached thumbnails are counted.  The '
+               'specifications typically include width, height, encoding, and '
+               'encoding options.', required=False)
+    )
+    @access.admin
+    def countThumbnails(self, params):
+        spec = params.get('spec')
+        if spec is not None:
+            try:
+                spec = json.loads(spec)
+                if not isinstance(spec, list):
+                    raise ValueError()
+            except ValueError:
+                raise RestException('The spec parameter must be a JSON list.')
+            spec = [json.dumps(entry, sort_keys=True, separators=(',', ':'))
+                    for entry in spec]
+        else:
+            spec = [None]
+        count = 0
+        for entry in spec:
+            query = {'isLargeImageThumbnail': True, 'attachedToType': 'item'}
+            if entry is not None:
+                query['thumbnailKey'] = entry
+            count += self.model('file').find(query).count()
+        return count
 
     @describeRoute(
         Description('Create cached thumbnail files from large_image items.')

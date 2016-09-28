@@ -116,6 +116,23 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 3)
 
+        # Test GET thumbnails
+        resp = self.request(path='/large_image/thumbnails', user=self.user)
+        self.assertStatus(resp, 403)
+        resp = self.request(
+            path='/large_image/thumbnails', user=self.admin,
+            params={'spec': json.dumps({})})
+        self.assertStatus(resp, 400)
+        self.assertIn('must be a JSON list', resp.json['message'])
+        resp = self.request(path='/large_image/thumbnails', user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, 3)
+        resp = self.request(
+            path='/large_image/thumbnails', user=self.admin,
+            params={'spec': json.dumps([{'width': 160, 'height': 100}])})
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, 1)
+
         # Test DELETE thumbnails
         resp = self.request(method='DELETE', path='/large_image/thumbnails',
                             user=self.user)
