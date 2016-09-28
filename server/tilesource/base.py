@@ -146,7 +146,8 @@ class TileSource(object):
         return width, height, scale
 
     def _encodeImage(self, image, encoding='JPEG', jpegQuality=95,
-                     jpegSubsampling=0, **kwargs):
+                     jpegSubsampling=0, format=(TILE_FORMAT_IMAGE, ),
+                     **kwargs):
         """
         Convert a PIL image into the raw output bytes and a mime type.
 
@@ -156,17 +157,37 @@ class TileSource(object):
         :param jpegQuality: the quality to use when encoding a JPEG.
         :param jpegSubsampling: the subsampling level to use when encoding a
                                 JPEG.
+        :param format: the desired format or a tuple of allowed formats.
+            Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
+            TILE_FORMAT_IMAGE).
+        :returns:
+            imageData: the image data in the specified format and encoding
+            imageFormatOrMimeType: the image mime type if the format is
+                TILE_FORMAT_IMAGE, or the format of the image data if it is
+                anything else.
         """
-        if encoding not in TileOutputMimeTypes:
-            raise ValueError('Invalid encoding "%s"' % encoding)
-        if image.width == 0 or image.height == 0:
-            tileData = b''
-        else:
-            output = BytesIO()
-            image.save(output, encoding, quality=jpegQuality,
-                       subsampling=jpegSubsampling)
-            tileData = output.getvalue()
-        return tileData, TileOutputMimeTypes[encoding]
+        if not isinstance(format, tuple):
+            format = (format, )
+        imageData = image
+        imageFormatOrMimeType = TILE_FORMAT_PIL
+        if TILE_FORMAT_PIL in format:
+            # already in an acceptable format
+            pass
+        elif TILE_FORMAT_NUMPY in format:
+            imageData = numpy.asarray(image)
+            imageFormatOrMimeType = TILE_FORMAT_NUMPY
+        elif TILE_FORMAT_IMAGE in format:
+            if encoding not in TileOutputMimeTypes:
+                raise ValueError('Invalid encoding "%s"' % encoding)
+            imageFormatOrMimeType = TileOutputMimeTypes[encoding]
+            if image.width == 0 or image.height == 0:
+                imageData = b''
+            else:
+                output = BytesIO()
+                image.save(output, encoding, quality=jpegQuality,
+                           subsampling=jpegSubsampling)
+                imageData = output.getvalue()
+        return imageData, imageFormatOrMimeType
 
     def _getRegionBounds(self, metadata, left=None, top=None, right=None,
                          bottom=None, width=None, height=None,
@@ -617,21 +638,26 @@ class TileSource(object):
             return level
         return max(0, min(level, metadata['levels'] - 1))
 
-    def getRegion(self, **kwargs):
+    def getRegion(self, format=(TILE_FORMAT_IMAGE, ), **kwargs):
         """
         Get a rectangular region from the current tile source.  Aspect ratio is
         preserved.  If neither width nor height is given, the original size of
         the highest resolution level is used.  If both are given, the returned
         image will be no larger than either size.
 
+        :param format: the desired format or a tuple of allowed formats.
+            Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
+            TILE_FORMAT_IMAGE).  If TILE_FORMAT_IMAGE, encoding may be
+            specified.
         :param **kwargs: optional arguments.  Some options are region, output,
             encoding, jpegQuality, jpegSubsampling.  See tileIterator.
-        :returns: regionData, regionMime: the image data and the mime type.
+        :returns: regionData, formatOrRegionMime: the image data and either the
+            mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
             image = PIL.Image.new('RGB', (0, 0))
-            return self._encodeImage(image, **kwargs)
+            return self._encodeImage(image, format=format, **kwargs)
         regionWidth = iterInfo['region']['width']
         regionHeight = iterInfo['region']['height']
         top = iterInfo['region']['top']
@@ -666,7 +692,7 @@ class TileSource(object):
                 (outWidth, outHeight),
                 PIL.Image.BICUBIC if outWidth > regionWidth else
                 PIL.Image.LANCZOS)
-        return self._encodeImage(image, **kwargs)
+        return self._encodeImage(image, format=format, **kwargs)
 
     def getNativeMagnification(self):
         """
