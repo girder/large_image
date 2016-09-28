@@ -15,14 +15,14 @@ girder.wrap(girder.views.ItemListWidget, 'render', function (render) {
      *      thumbnails are located.
      */
     function _loadMoreImages(parent) {
-        var loading = $('.large_image_thumbnail img.loading', parent).length;
-        if (maxSimultaneous > loading) {
-          $('.large_image_thumbnail img.waiting', parent).slice(0, maxSimultaneous - loading).each(function () {
-            var img = $(this);
-            img.removeClass('waiting').addClass('loading');
-            img.attr('src', img.attr('deferred-src'));
-          });
-        }
+      var loading = $('.large_image_thumbnail img.loading', parent).length;
+      if (maxSimultaneous > loading) {
+        $('.large_image_thumbnail img.waiting', parent).slice(0, maxSimultaneous - loading).each(function () {
+          var img = $(this);
+          img.removeClass('waiting').addClass('loading');
+          img.attr('src', img.attr('deferred-src'));
+        });
+      }
     }
 
     render.call(this);
