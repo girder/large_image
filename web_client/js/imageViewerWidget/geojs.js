@@ -20,13 +20,16 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
 
         // TODO: if a viewer already exists, do we render again?
         var w = this.sizeX, h = this.sizeY;
-        // TODO: this.levels
+        var mapW = $(this.el).innerWidth(), mapH = $(this.el).innerHeight();
         var mapParams = {
             node: this.el,
             ingcs: '+proj=longlat +axis=esu',
             gcs: '+proj=longlat +axis=enu',
             maxBounds: {left: 0, top: 0, right: w, bottom: h},
             center: {x: w / 2, y: h / 2},
+            min: Math.min(0, Math.floor(Math.log(Math.min(
+                (mapW || this.tileWidth) / this.tileWidth,
+                (mapH || this.tileHeight) / this.tileHeight)) / Math.log(2))),
             max: Math.ceil(Math.log(Math.max(
                 w / this.tileWidth,
                 h / this.tileHeight)) / Math.log(2)),

@@ -46,6 +46,7 @@ try:
     if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
         logger.warning('Error: Pillow v3.0 or later is required')
         PIL = None
+    import PIL.Image
 except ImportError:
     logger.warning('Error: Could not import PIL')
     PIL = None
@@ -361,10 +362,7 @@ class TileSource(object):
         if maxWidth is None and maxHeight is None:
             # If neither width nor height as specified, see if magnification,
             # mm_x, or mm_y are requested.
-            import sys  # ##DWM::
-            sys.stderr.write('%r\n' % [kwargs.get('scale'), kwargs.get('scale') or {}])  # ##DWM::
             magArgs = (kwargs.get('scale') or {}).copy()
-            # magArgs = kwargs.get('scale', {}).copy()
             magArgs['rounding'] = None
             magLevel = self.getLevelForMagnification(**magArgs)
             if magLevel is None and kwargs.get('scale', {}).get('exact'):

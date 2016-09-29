@@ -22,7 +22,7 @@ form#g-large-image-form(role="form")
         input.g-large-image-viewer-hide(type="radio" name="g-large-image-viewer" checked=(settings['large_image.show_viewer'] !== false ? undefined : 'checked'))
         | Don't show
   .form-group
-    label Default large image item viewer 
+    label Default large image item viewer
     .g-large-image-default-viewer-container
       select.form-control.input-sm.g-large-image-default-viewer
         each viewer in viewers
@@ -46,5 +46,14 @@ form#g-large-image-form(role="form")
     input.input-sm.form-control.g-large-image-max-thumbnail-files(
       type="text", value="#{settings['large_image.max_thumbnail_files']}",
       placeholder="Use 0 to not cache thumbnails as files.")
+  .form-group
+    label
+      | Maximum size of regular images to use without conversion
+    p.g-large-image-description
+      | Images in common formats, such as JPEG and PNG can be used as large images without conversion if they are not too large.
+    input.input-sm.form-control.g-large-image-max-small-image-size(
+      type="text", value="#{settings['large_image.max_small_image_size']}",
+      title="The maximum size in pixels.  0 to not use regular images.",
+      placeholder="0 to not use regular images.")
   p#g-large-image-error-message.g-validation-failed-message
   input.btn.btn-sm.btn-primary(type="submit", value="Save")

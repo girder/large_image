@@ -25,3 +25,4 @@ class PluginSettings:
     LARGE_IMAGE_DEFAULT_VIEWER = 'large_image.default_viewer'
     LARGE_IMAGE_AUTO_SET = 'large_image.auto_set'
     LARGE_IMAGE_MAX_THUMBNAIL_FILES = 'large_image.max_thumbnail_files'
+    LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE = 'large_image.max_small_image_size'

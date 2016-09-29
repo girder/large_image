@@ -149,6 +149,7 @@ def validateBoolean(doc):
 
 @setting_utilities.validator({
     constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
+    constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE,
 })
 def validateNonnegativeInteger(doc):
     val = doc['value']
@@ -178,6 +179,7 @@ SettingDefault.defaults.update({
     constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER: True,
     constants.PluginSettings.LARGE_IMAGE_AUTO_SET: True,
     constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES: 10,
+    constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE: 4096,
 })
 
 

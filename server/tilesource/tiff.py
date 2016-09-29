@@ -36,7 +36,7 @@ except ImportError:
     import logging as logger
 
 try:
-    import PIL
+    import PIL.Image
 except ImportError:
     PIL = None
 

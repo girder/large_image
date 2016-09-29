@@ -255,6 +255,10 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertIn('No large image file', resp.json['message'])
 
     def testTilesFromBadFiles(self):
+        # Don't use small images for this test
+        from girder.plugins.large_image import constants
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 0)
         # Uploading a monochrome file should result in no useful tiles.
         file = self._uploadFile(os.path.join(
             os.path.dirname(__file__), 'test_files', 'small.jpg'))
@@ -698,6 +702,14 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 5)
         self.assertEqual(self.model('setting').get(
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES), 5)
+        with six.assertRaisesRegex(self, ValidationException,
+                                   'must be a non-negative integer'):
+            self.model('setting').set(
+                constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, -1)
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 1024)
+        self.assertEqual(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE), 1024)
         # Test the system/setting/large_image end point
         resp = self.request(path='/system/setting/large_image', user=None)
         self.assertStatusOk(resp)
@@ -713,6 +725,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             constants.PluginSettings.LARGE_IMAGE_AUTO_SET], True)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES], 5)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE], 1024)
 
     def testGetTileSource(self):
         from girder.plugins.large_image.tilesource import getTileSource
