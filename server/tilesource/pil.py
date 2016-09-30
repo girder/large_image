@@ -79,7 +79,8 @@ class PILFileTileSource(FileTileSource):
         return (path,
                 kwargs.get('jpegQuality'),
                 kwargs.get('jpegSubsampling'),
-                kwargs.get('encoding'))
+                kwargs.get('encoding'),
+                kwargs.get('maxSize'))
 
     def __init__(self, path, jpegQuality=95, jpegSubsampling=0,
                  encoding='JPEG', maxSize=None, **kwargs):
@@ -97,14 +98,13 @@ class PILFileTileSource(FileTileSource):
         """
         super(PILFileTileSource, self).__init__(path, **kwargs)
 
-        import sys
-        sys.stderr.write('PIL %r\n' % [encoding, kwargs])  # ##DWM::
         if encoding not in ('PNG', 'JPEG'):
             raise ValueError('Invalid encoding "%s"' % encoding)
 
         self.encoding = encoding
         self.jpegQuality = int(jpegQuality)
         self.jpegSubsampling = int(jpegSubsampling)
+        self.maxSize = maxSize
 
         largeImagePath = self._getLargeImagePath()
 
@@ -124,6 +124,11 @@ class PILFileTileSource(FileTileSource):
         maxWidth, maxHeight = getMaxSize(maxSize)
         if self.tileWidth > maxWidth or self.tileHeight > maxHeight:
             raise TileSourceException('PIL tile size is too large.')
+
+    def getState(self):
+        return super(PILFileTileSource, self).getState() + ',' + str(
+            self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
+            self.jpegSubsampling)
 
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z != 0:
@@ -162,4 +167,5 @@ if girder:
             return (item.get('largeImage', {}).get('fileId'),
                     kwargs.get('jpegQuality'),
                     kwargs.get('jpegSubsampling'),
-                    kwargs.get('encoding'))
+                    kwargs.get('encoding'),
+                    kwargs.get('maxSize'))

@@ -354,6 +354,77 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
         self.assertTrue(len(image) < defaultLength)
 
+    def testTilesFromPIL(self):
+        # Allow images bigger than our test
+        from girder.plugins.large_image import constants
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 2048)
+
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_Easy1.png'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        # Ask to make this a tile-based item
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatusOk(resp)
+        # Now the tile request should tell us about the file.  These are
+        # specific to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 1790)
+        self.assertEqual(tileMetadata['tileHeight'], 1046)
+        self.assertEqual(tileMetadata['sizeX'], 1790)
+        self.assertEqual(tileMetadata['sizeY'], 1046)
+        self.assertEqual(tileMetadata['levels'], 1)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['mm_x'], None)
+        self.assertEqual(tileMetadata['mm_y'], None)
+        self._testTilesZXY(itemId, tileMetadata)
+
+        # Ask to make this a tile-based item again
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatus(resp, 400)
+        self.assertIn('Item already has', resp.json['message'])
+
+        # Ask for PNGs
+        params = {'encoding': 'PNG'}
+        self._testTilesZXY(itemId, tileMetadata, params, common.PNGHeader)
+
+        # Check that invalid encodings are rejected
+        with six.assertRaisesRegex(self, Exception, 'Invalid encoding'):
+            resp = self.request(path='/item/%s/tiles' % itemId,
+                                user=self.admin,
+                                params={'encoding': 'invalid'})
+
+        # Check that JPEG options are honored.
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        defaultLength = len(image)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'jpegQuality': 10})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'jpegSubsampling': 2})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+
+        # ##DWM::
+
     def testDummyTileSource(self):
         # We can't actually load the dummy source via the endpoints if we have
         # all of the requirements installed, so just check that it exists and

@@ -137,8 +137,6 @@ class LargeImageCommonTest(base.TestCase):
         :param imgHeader: if something other than a JPEG is expected, this is
                           the first few bytes of the expected image.
         """
-        import sys
-        sys.stderr.write('%r\n' % [itemId, metadata, tileParams, imgHeader, token])  # ##DWM::
         if token:
             kwargs = {'token': token}
         else:
