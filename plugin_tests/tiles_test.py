@@ -17,6 +17,7 @@
 #  limitations under the License.
 #############################################################################
 
+import json
 import os
 import six
 import struct
@@ -423,7 +424,28 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
         self.assertTrue(len(image) < defaultLength)
 
-        # ##DWM::
+        # Test with different max size options.
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin,
+                            params={'maxSize': 100})
+        self.assertStatus(resp, 400)
+        self.assertIn('tile size is too large', resp.json['message'])
+        resp = self.request(path='/item/%s/tiles' % itemId,
+                            user=self.admin,
+                            params={'maxSize': 1800})
+        self.assertStatusOk(resp)
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin,
+                            params={'maxSize': 'not valid'})
+        self.assertStatus(resp, 400)
+        self.assertIn('maxSize must be', resp.json['message'])
+        resp = self.request(
+            path='/item/%s/tiles' % itemId, user=self.admin,
+            params={'maxSize': json.dumps({'width': 1800, 'height': 1100})})
+        self.assertStatusOk(resp)
+        resp = self.request(
+            path='/item/%s/tiles' % itemId, user=self.admin,
+            params={'maxSize': json.dumps({'width': 1100, 'height': 1800})})
+        self.assertStatus(resp, 400)
+        self.assertIn('tile size is too large', resp.json['message'])
 
     def testDummyTileSource(self):
         # We can't actually load the dummy source via the endpoints if we have

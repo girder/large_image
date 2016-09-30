@@ -17,6 +17,7 @@
 #  limitations under the License.
 #############################################################################
 
+import json
 import six
 
 from six import BytesIO
@@ -104,6 +105,13 @@ class PILFileTileSource(FileTileSource):
         self.encoding = encoding
         self.jpegQuality = int(jpegQuality)
         self.jpegSubsampling = int(jpegSubsampling)
+        if isinstance(maxSize, six.string_types):
+            try:
+                maxSize = json.loads(maxSize)
+            except Exception:
+                raise TileSourceException(
+                    'maxSize must be None, an integer, a dictionary, or a '
+                    'JSON string that converts to one of those.')
         self.maxSize = maxSize
 
         largeImagePath = self._getLargeImagePath()
