@@ -17,6 +17,7 @@
 #  limitations under the License.
 #############################################################################
 
+import json
 import os
 import six
 import struct
@@ -255,6 +256,10 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertIn('No large image file', resp.json['message'])
 
     def testTilesFromBadFiles(self):
+        # Don't use small images for this test
+        from girder.plugins.large_image import constants
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 0)
         # Uploading a monochrome file should result in no useful tiles.
         file = self._uploadFile(os.path.join(
             os.path.dirname(__file__), 'test_files', 'small.jpg'))
@@ -349,6 +354,98 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         image = self.getBody(resp, text=False)
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
         self.assertTrue(len(image) < defaultLength)
+
+    def testTilesFromPIL(self):
+        # Allow images bigger than our test
+        from girder.plugins.large_image import constants
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 2048)
+
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_Easy1.png'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        # Ask to make this a tile-based item
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatusOk(resp)
+        # Now the tile request should tell us about the file.  These are
+        # specific to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 1790)
+        self.assertEqual(tileMetadata['tileHeight'], 1046)
+        self.assertEqual(tileMetadata['sizeX'], 1790)
+        self.assertEqual(tileMetadata['sizeY'], 1046)
+        self.assertEqual(tileMetadata['levels'], 1)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['mm_x'], None)
+        self.assertEqual(tileMetadata['mm_y'], None)
+        self._testTilesZXY(itemId, tileMetadata)
+
+        # Ask to make this a tile-based item again
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatus(resp, 400)
+        self.assertIn('Item already has', resp.json['message'])
+
+        # Ask for PNGs
+        params = {'encoding': 'PNG'}
+        self._testTilesZXY(itemId, tileMetadata, params, common.PNGHeader)
+
+        # Check that invalid encodings are rejected
+        with six.assertRaisesRegex(self, Exception, 'Invalid encoding'):
+            resp = self.request(path='/item/%s/tiles' % itemId,
+                                user=self.admin,
+                                params={'encoding': 'invalid'})
+
+        # Check that JPEG options are honored.
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        defaultLength = len(image)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'jpegQuality': 10})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'jpegSubsampling': 2})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+
+        # Test with different max size options.
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin,
+                            params={'maxSize': 100})
+        self.assertStatus(resp, 400)
+        self.assertIn('tile size is too large', resp.json['message'])
+        resp = self.request(path='/item/%s/tiles' % itemId,
+                            user=self.admin,
+                            params={'maxSize': 1800})
+        self.assertStatusOk(resp)
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin,
+                            params={'maxSize': 'not valid'})
+        self.assertStatus(resp, 400)
+        self.assertIn('maxSize must be', resp.json['message'])
+        resp = self.request(
+            path='/item/%s/tiles' % itemId, user=self.admin,
+            params={'maxSize': json.dumps({'width': 1800, 'height': 1100})})
+        self.assertStatusOk(resp)
+        resp = self.request(
+            path='/item/%s/tiles' % itemId, user=self.admin,
+            params={'maxSize': json.dumps({'width': 1100, 'height': 1800})})
+        self.assertStatus(resp, 400)
+        self.assertIn('tile size is too large', resp.json['message'])
 
     def testDummyTileSource(self):
         # We can't actually load the dummy source via the endpoints if we have
@@ -698,6 +795,14 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 5)
         self.assertEqual(self.model('setting').get(
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES), 5)
+        with six.assertRaisesRegex(self, ValidationException,
+                                   'must be a non-negative integer'):
+            self.model('setting').set(
+                constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, -1)
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 1024)
+        self.assertEqual(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE), 1024)
         # Test the system/setting/large_image end point
         resp = self.request(path='/system/setting/large_image', user=None)
         self.assertStatusOk(resp)
@@ -713,6 +818,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             constants.PluginSettings.LARGE_IMAGE_AUTO_SET], True)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES], 5)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE], 1024)
 
     def testGetTileSource(self):
         from girder.plugins.large_image.tilesource import getTileSource

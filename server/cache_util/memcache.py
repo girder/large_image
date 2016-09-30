@@ -123,6 +123,10 @@ class MemCache(cachetools.Cache):
 
         try:
             self._Cache__data[hexVal] = value
+        except TypeError:
+            self.logError(
+                TypeError, logprint.error,
+                'Failed to save value %r with key %s' % (value, hexVal))
         except KeyError:
             self.logError(
                 KeyError, logprint.error,
