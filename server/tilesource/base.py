@@ -146,7 +146,8 @@ class TileSource(object):
         return width, height, scale
 
     def _encodeImage(self, image, encoding='JPEG', jpegQuality=95,
-                     jpegSubsampling=0, **kwargs):
+                     jpegSubsampling=0, format=(TILE_FORMAT_IMAGE, ),
+                     **kwargs):
         """
         Convert a PIL image into the raw output bytes and a mime type.
 
@@ -156,17 +157,37 @@ class TileSource(object):
         :param jpegQuality: the quality to use when encoding a JPEG.
         :param jpegSubsampling: the subsampling level to use when encoding a
                                 JPEG.
+        :param format: the desired format or a tuple of allowed formats.
+            Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
+            TILE_FORMAT_IMAGE).
+        :returns:
+            imageData: the image data in the specified format and encoding
+            imageFormatOrMimeType: the image mime type if the format is
+                TILE_FORMAT_IMAGE, or the format of the image data if it is
+                anything else.
         """
-        if encoding not in TileOutputMimeTypes:
-            raise ValueError('Invalid encoding "%s"' % encoding)
-        if image.width == 0 or image.height == 0:
-            tileData = b''
-        else:
-            output = BytesIO()
-            image.save(output, encoding, quality=jpegQuality,
-                       subsampling=jpegSubsampling)
-            tileData = output.getvalue()
-        return tileData, TileOutputMimeTypes[encoding]
+        if not isinstance(format, tuple):
+            format = (format, )
+        imageData = image
+        imageFormatOrMimeType = TILE_FORMAT_PIL
+        if TILE_FORMAT_PIL in format:
+            # already in an acceptable format
+            pass
+        elif TILE_FORMAT_NUMPY in format:
+            imageData = numpy.asarray(image)
+            imageFormatOrMimeType = TILE_FORMAT_NUMPY
+        elif TILE_FORMAT_IMAGE in format:
+            if encoding not in TileOutputMimeTypes:
+                raise ValueError('Invalid encoding "%s"' % encoding)
+            imageFormatOrMimeType = TileOutputMimeTypes[encoding]
+            if image.width == 0 or image.height == 0:
+                imageData = b''
+            else:
+                output = BytesIO()
+                image.save(output, encoding, quality=jpegQuality,
+                           subsampling=jpegSubsampling)
+                imageData = output.getvalue()
+        return imageData, imageFormatOrMimeType
 
     def _getRegionBounds(self, metadata, left=None, top=None, right=None,
                          bottom=None, width=None, height=None,
@@ -340,7 +361,10 @@ class TileSource(object):
         if maxWidth is None and maxHeight is None:
             # If neither width nor height as specified, see if magnification,
             # mm_x, or mm_y are requested.
-            magArgs = kwargs.get('scale', {}).copy()
+            import sys  # ##DWM::
+            sys.stderr.write('%r\n' % [kwargs.get('scale'), kwargs.get('scale') or {}])  # ##DWM::
+            magArgs = (kwargs.get('scale') or {}).copy()
+            # magArgs = kwargs.get('scale', {}).copy()
             magArgs['rounding'] = None
             magLevel = self.getLevelForMagnification(**magArgs)
             if magLevel is None and kwargs.get('scale', {}).get('exact'):
@@ -617,21 +641,126 @@ class TileSource(object):
             return level
         return max(0, min(level, metadata['levels'] - 1))
 
-    def getRegion(self, **kwargs):
+    def convertRegionScale(self, sourceRegion, sourceScale=None,
+                           targetScale=None, targetUnits=None):
+        """
+        Convert a region from one scale to another.  If the source region's
+        units are anything other than pixels, this does nothing.  Otherwise,
+        sourceScale must be specified, an a new region is created in the
+        targetScale's pixel coordinates.
+
+        :param sourceRegion: a dictionary of optional values which specify the
+                part of an image to process.
+            left: the left edge (inclusive) of the region to process.
+            top: the top edge (inclusive) of the region to process.
+            right: the right edge (exclusive) of the region to process.
+            bottom: the bottom edge (exclusive) of the region to process.
+            width: the width of the region to process.
+            height: the height of the region to process.
+            units: either 'base_pixels' (default), 'pixels', 'mm', or
+                'fraction'.  base_pixels are in maximum resolution pixels.
+                pixels is in the specified magnification pixels.  mm is in the
+                specified magnification scale.  fraction is a scale of 0 to 1.
+                pixels and mm are only available if the magnification and mm
+                per pixel are defined for the image.
+        :param sourceScale: a dictionary of optional values which specify the
+                scale of the source region.  Required if the sourceRegion is
+                in "mag_pixels" units.
+            magnification: the magnification ratio.
+            mm_x: the horizontal size of a pixel in millimeters.
+            mm_y: the vertical size of a pixel in millimeters.
+        :param targetScale: a dictionary of optional values which specify the
+                scale of the target region.  Required in targetUnits is in
+                "mag_pixels" units.
+            magnification: the magnification ratio.
+            mm_x: the horizontal size of a pixel in millimeters.
+            mm_y: the vertical size of a pixel in millimeters.
+        :param targetUnits: if not None, convert the region to these units.
+            Otherwise, the units are will either be the sourceRegion units if
+            those are not "mag_pixels" or base_pixels.  If "mag_pixels", the
+            targetScale must be specified.
+        """
+        units = sourceRegion.get('units')
+        if units not in TileInputUnits:
+            raise ValueError('Invalid units "%s"' % units)
+        units = TileInputUnits[units]
+        if targetUnits is not None:
+            if targetUnits not in TileInputUnits:
+                raise ValueError('Invalid units "%s"' % targetUnits)
+            targetUnits = TileInputUnits[targetUnits]
+        if (units != 'mag_pixels' and (
+                targetUnits is None or targetUnits == units)):
+            return sourceRegion
+        magArgs = (sourceScale or {}).copy()
+        magArgs['rounding'] = None
+        magLevel = self.getLevelForMagnification(**magArgs)
+        mag = self.getMagnificationForLevel(magLevel)
+        metadata = self.getMetadata()
+        # Get region in base pixels
+        left, top, right, bottom = self._getRegionBounds(
+            metadata, desiredMagnification=mag, **sourceRegion)
+        # If requested, convert region to targetUnits
+        magArgs = (targetScale or {}).copy()
+        magArgs['rounding'] = None
+        magLevel = self.getLevelForMagnification(**magArgs)
+        desiredMagnification = self.getMagnificationForLevel(magLevel)
+
+        scaleX = scaleY = 1
+        if targetUnits == 'fraction':
+            scaleX = metadata['sizeX']
+            scaleY = metadata['sizeY']
+        elif targetUnits == 'mag_pixels':
+            if not (desiredMagnification or {}).get('scale'):
+                raise ValueError('No magnification to use for units')
+            scaleX = scaleY = desiredMagnification['scale']
+        elif targetUnits == 'mm':
+            if (not (desiredMagnification or {}).get('scale') or
+                    not (desiredMagnification or {}).get('mm_x') or
+                    not (desiredMagnification or {}).get('mm_y')):
+                raise ValueError('No mm_x or mm_y to use for units')
+            scaleX = (desiredMagnification['scale'] /
+                      desiredMagnification['mm_x'])
+            scaleY = (desiredMagnification['scale'] /
+                      desiredMagnification['mm_y'])
+        left = float(left) / scaleX
+        right = float(right) / scaleX
+        top = float(top) / scaleY
+        bottom = float(bottom) / scaleY
+        targetRegion = {
+            'left': left,
+            'top': top,
+            'right': right,
+            'bottom': bottom,
+            'width': right - left,
+            'height': bottom - top,
+            'units': TileInputUnits[targetUnits],
+        }
+        # Reduce region information to match what was supplied
+        for key in ('left', 'top', 'right', 'bottom', 'width', 'height'):
+            if key not in sourceRegion:
+                del targetRegion[key]
+        return targetRegion
+
+    def getRegion(self, format=(TILE_FORMAT_IMAGE, ), **kwargs):
         """
         Get a rectangular region from the current tile source.  Aspect ratio is
         preserved.  If neither width nor height is given, the original size of
         the highest resolution level is used.  If both are given, the returned
         image will be no larger than either size.
 
+        :param format: the desired format or a tuple of allowed formats.
+            Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
+            TILE_FORMAT_IMAGE).  If TILE_FORMAT_IMAGE, encoding may be
+            specified.
         :param **kwargs: optional arguments.  Some options are region, output,
             encoding, jpegQuality, jpegSubsampling.  See tileIterator.
-        :returns: regionData, regionMime: the image data and the mime type.
+        :returns: regionData, formatOrRegionMime: the image data and either the
+            mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
             image = PIL.Image.new('RGB', (0, 0))
-            return self._encodeImage(image, **kwargs)
+            return self._encodeImage(image, format=format, **kwargs)
         regionWidth = iterInfo['region']['width']
         regionHeight = iterInfo['region']['height']
         top = iterInfo['region']['top']
@@ -666,7 +795,24 @@ class TileSource(object):
                 (outWidth, outHeight),
                 PIL.Image.BICUBIC if outWidth > regionWidth else
                 PIL.Image.LANCZOS)
-        return self._encodeImage(image, **kwargs)
+        return self._encodeImage(image, format=format, **kwargs)
+
+    def getRegionAtAnotherScale(self, sourceRegion, sourceScale=None,
+                                targetScale=None, targetUnits=None, **kwargs):
+        """
+        This takes the same parameters and returns the same results as
+        getRegion, except instead of region and scale, it takes sourceRegion,
+        sourceScale, targetScale, and targetUnits.  These parameters are the
+        same as convertRegionScale.  See those two functions for parameter
+        definitions.
+        """
+        for key in ('region', 'scale'):
+            if key in kwargs:
+                raise TypeError('getRegionAtAnotherScale() got an unexpected '
+                                'keyword argument of \'%s\'' % key)
+        region = self.convertRegionScale(sourceRegion, sourceScale,
+                                         targetScale, targetUnits)
+        return self.getRegion(region=region, scale=targetScale, **kwargs)
 
     def getNativeMagnification(self):
         """
@@ -809,6 +955,10 @@ class TileSource(object):
             maxWidth: maximum width in pixels.  If either maxWidth or maxHeight
                 is specified, magnfication, mm_x, and mm_y are ignored.
             maxHeight: maximum height in pixels.
+        :param scale: a dictionary of optional values which specify the scale
+                of the region and / or output.  This applies to region if
+                pixels or mm are used for inits.  It applies to output if
+                neither output maxWidth nor maxHeight is specified.  It
             magnification: the magnification ratio.  Only used is maxWidth and
                 maxHeight are not specified or None.
             mm_x: the horizontal size of a pixel in millimeters.
@@ -870,6 +1020,24 @@ class TileSource(object):
                 raise TileSourceException(
                     'Cannot yield tiles in desired format %r' % (format, ))
             yield tile
+
+    def tileIteratorAtAnotherScale(self, sourceRegion, sourceScale=None,
+                                   targetScale=None, targetUnits=None,
+                                   **kwargs):
+        """
+        This takes the same parameters and returns the same results as
+        tileIterator, except instead of region and scale, it takes
+        sourceRegion, sourceScale, targetScale, and targetUnits.  These
+        parameters are the same as convertRegionScale.  See those two functions
+        for parameter definitions.
+        """
+        for key in ('region', 'scale'):
+            if key in kwargs:
+                raise TypeError('getRegionAtAnotherScale() got an unexpected '
+                                'keyword argument of \'%s\'' % key)
+        region = self.convertRegionScale(sourceRegion, sourceScale,
+                                         targetScale, targetUnits)
+        return self.tileIterator(region=region, scale=targetScale, **kwargs)
 
 
 class FileTileSource(TileSource):

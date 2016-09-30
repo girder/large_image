@@ -21,10 +21,14 @@ from girder import events, plugin, logger
 from girder.constants import AccessType, SettingDefault
 from girder.models.model_base import ModelImporter, ValidationException
 from girder.utility import setting_utilities
-from girder.plugins.jobs.constants import JobStatus
 
 from . import constants
 from .loadmodelcache import invalidateLoadModelCache
+
+# This is imported from girder.plugins.jobs.constants, but cannot be done
+# until after the plugin has been found and imported.  If using from an
+# entrypoint, the load of this value must be deferred.
+JobStatus = None
 
 
 def _postUpload(event):
@@ -34,7 +38,8 @@ def _postUpload(event):
     result image.
     """
     fileObj = event.info['file']
-    if 'itemId' not in fileObj:
+    # There may not be an itemId (on thumbnails, for instance)
+    if not fileObj.get('itemId'):
         return
 
     Item = ModelImporter.model('item')
@@ -57,6 +62,10 @@ def _updateJob(event):
     Called when a job is saved.  If this is a large image job and it is ended,
     clean up after it, mark it as done.
     """
+    global JobStatus
+    if not JobStatus:
+        from girder.plugins.jobs.constants import JobStatus
+
     job = event.info['job']
     meta = job.get('meta', {})
     if (meta.get('creator') != 'large_image' or not meta.get('itemId') or
@@ -69,7 +78,10 @@ def _updateJob(event):
     if not item or 'largeImage' not in item:
         return
     if item.get('largeImage', {}).get('expected'):
-        del item['largeImage']['expected']
+        # We can get a SUCCESS message before we get the upload message, so
+        # don't clear the expected status on success.
+        if status != JobStatus.SUCCESS:
+            del item['largeImage']['expected']
     notify = item.get('largeImage', {}).get('notify')
     msg = None
     if notify:
@@ -86,7 +98,7 @@ def _updateJob(event):
         del item['largeImage']
     ModelImporter.model('item').save(item)
     if msg:
-        ModelImporter.model('jobs', 'job').updateJob(job, progressMessage=msg)
+        ModelImporter.model('job', 'jobs').updateJob(job, progressMessage=msg)
 
 
 def checkForLargeImageFiles(event):
