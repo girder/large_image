@@ -173,6 +173,7 @@ if girder:
         def cacheKeyFunc(args, kwargs):
             item = args[0]
             return (item.get('largeImage', {}).get('fileId'),
+                    item.get('updated'),
                     kwargs.get('jpegQuality'),
                     kwargs.get('jpegSubsampling'),
                     kwargs.get('encoding'),
