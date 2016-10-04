@@ -1,4 +1,4 @@
-cachetools>=1.1.6
+cachetools>=1.1.6,<2.0.0
 enum34>=1.1.6
 jsonschema>=2.5.1
 psutil>=4.2.0
