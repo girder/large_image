@@ -255,6 +255,11 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
 
+        # Try to create an image, but delete the job and check that it fails.
+        fileId = str(file['_id'])
+        result = self._postTileViaHttp(itemId, fileId, jobAction='delete')
+        self.assertIsNone(result)
+
     def testTilesFromBadFiles(self):
         # Don't use small images for this test
         from girder.plugins.large_image import constants
