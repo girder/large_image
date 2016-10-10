@@ -36,7 +36,7 @@ except ImportError:
     import logging as logger
 
 try:
-    import PIL
+    import PIL.Image
 except ImportError:
     PIL = None
 
@@ -143,4 +143,5 @@ if girder:
         @staticmethod
         def cacheKeyFunc(args, kwargs):
             item = args[0]
-            return item.get('largeImage', {}).get('fileId')
+            return (item.get('largeImage', {}).get('fileId'),
+                    item.get('updated'))

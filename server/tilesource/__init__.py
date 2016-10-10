@@ -17,8 +17,6 @@
 #  limitations under the License.
 ###############################################################################
 
-# Deal with a bug where PEP257 crashes when parsing __all__
-
 import collections
 import functools
 from .base import TileSource, getTileSourceFromDict, TileSourceException, \
@@ -48,6 +46,8 @@ sourceList = [
      'girder': True},
     {'moduleName': '.svs', 'className': 'SVSFileTileSource'},
     {'moduleName': '.svs', 'className': 'SVSGirderTileSource', 'girder': True},
+    {'moduleName': '.pil', 'className': 'PILFileTileSource'},
+    {'moduleName': '.pil', 'className': 'PILGirderTileSource', 'girder': True},
     {'moduleName': '.test', 'className': 'TestTileSource'},
     {'moduleName': '.dummy', 'className': 'DummyTileSource'},
 ]

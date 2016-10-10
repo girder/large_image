@@ -284,11 +284,9 @@ class ImageItem(Item):
             # Save the thumbnail as a file
             thumbfile = self.model('upload').uploadFromFile(
                 six.BytesIO(thumbData), size=len(thumbData),
-                name='_largeImageThumbnail', parentType=None, parent=None,
-                user=None, mimeType=thumbMime)
+                name='_largeImageThumbnail', parentType='item', parent=item,
+                user=None, mimeType=thumbMime, attachParent=True)
             thumbfile.update({
-                'attachedToType': 'item',
-                'attachedToId': item['_id'],
                 'isLargeImageThumbnail': True,
                 'thumbnailKey': key,
             })
