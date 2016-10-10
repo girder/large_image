@@ -258,8 +258,7 @@ class ImageItem(Item):
         """
         # check if a thumbnail file exists with a particular key
         keydict = dict(kwargs, width=width, height=height)
-        for key in [key for key in keydict if keydict[key] is None]:
-            del keydict[key]
+        keydict = {k: v for k, v in six.viewitems(keydict) if v is not None}
         key = json.dumps(keydict, sort_keys=True, separators=(',', ':'))
         fileModel = self.model('file')
         existing = fileModel.findOne({
