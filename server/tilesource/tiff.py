@@ -52,11 +52,6 @@ class TiffFileTileSource(FileTileSource):
     cacheTimeout = 300
     name = 'tifffile'
 
-    @staticmethod
-    def cacheKeyFunc(args, kwargs):
-        path = args[0]
-        return path
-
     def __init__(self, item, **kwargs):
         super(TiffFileTileSource, self).__init__(item, **kwargs)
 
@@ -108,15 +103,17 @@ class TiffFileTileSource(FileTileSource):
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
                 **kwargs):
         try:
-            return self._tiffDirectories[z].getTile(x, y)
+            tile = self._tiffDirectories[z].getTile(x, y)
+            return self._outputTile(tile, 'JPEG', x, y, z, pilImageAllowed,
+                                    **kwargs)
         except IndexError:
             raise TileSourceException('z layer does not exist')
         except InvalidOperationTiffException as e:
             raise TileSourceException(e.message)
         except IOTiffException as e:
-            if sparseFallback and pilImageAllowed and z and PIL:
-                image = self.getTile(x / 2, y / 2, z - 1, pilImageAllowed,
-                                     sparseFallback)
+            if sparseFallback and z and PIL:
+                image = self.getTile(x / 2, y / 2, z - 1, pilImageAllowed=True,
+                                     sparseFallback=sparseFallback, edge=False)
                 if not isinstance(image, PIL.Image.Image):
                     image = PIL.Image.open(BytesIO(image))
                 image = image.crop((
@@ -125,7 +122,8 @@ class TiffFileTileSource(FileTileSource):
                     self.tileWidth if x % 2 else self.tileWidth / 2,
                     self.tileHeight if y % 2 else self.tileHeight / 2))
                 image = image.resize((self.tileWidth, self.tileHeight))
-                return image
+                return self._outputTile(image, 'PIL', x, y, z, pilImageAllowed,
+                                        **kwargs)
             raise TileSourceException('Internal I/O failure: %s' % e.message)
 
 
@@ -139,9 +137,3 @@ if girder:
         cacheMaxSize = pickAvailableCache(1024 ** 2)
         cacheTimeout = 300
         name = 'tiff'
-
-        @staticmethod
-        def cacheKeyFunc(args, kwargs):
-            item = args[0]
-            return (item.get('largeImage', {}).get('fileId'),
-                    item.get('updated'))

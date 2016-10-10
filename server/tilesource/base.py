@@ -47,6 +47,8 @@ try:
         logger.warning('Error: Pillow v3.0 or later is required')
         PIL = None
     import PIL.Image
+    import PIL.ImageColor
+    import PIL.ImageDraw
 except ImportError:
     logger.warning('Error: Could not import PIL')
     PIL = None
@@ -96,12 +98,31 @@ class TileSource(object):
     cache = tileCache
     cache_lock = tileLock
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, jpegQuality=95, jpegSubsampling=0,
+                 encoding='JPEG', edge=False, *args, **kwargs):
+        """
+        Initialize the tile class.
+
+        :param jpegQuality: when serving jpegs, use this quality.
+        :param jpegSubsampling: when serving jpegs, use this subsampling (0 is
+                                full chroma, 1 is half, 2 is quarter).
+        :param encoding: 'JPEG' or 'PNG'.
+        :param edge: False to leave edge tiles whole, True or 'crop' to crop
+            edge tiles, otherwise, an #rrggbb color to fill edges.
+        """
         self.tileWidth = None
         self.tileHeight = None
         self.levels = None
         self.sizeX = None
         self.sizeY = None
+
+        if encoding not in ('PNG', 'JPEG'):
+            raise ValueError('Invalid encoding "%s"' % encoding)
+
+        self.encoding = encoding
+        self.jpegQuality = int(jpegQuality)
+        self.jpegSubsampling = int(jpegSubsampling)
+        self.edge = edge
 
         self.getThumbnail = cached(
             self.cache, key=self.wrapKey, lock=self.cache_lock)(
@@ -109,12 +130,13 @@ class TileSource(object):
         self.getTile = cached(
             self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
 
-    def wrapKey(self, *args, **kwargs):
-        return strhash(self.getState()) + strhash(*args, **kwargs)
-
     @abc.abstractmethod
     def getState(self):
-        return None
+        return str(self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
+            self.jpegSubsampling) + ',' + str(self.edge)
+
+    def wrapKey(self, *args, **kwargs):
+        return strhash(self.getState()) + strhash(*args, **kwargs)
 
     def _calculateWidthHeight(self, width, height, regionWidth, regionHeight):
         """
@@ -549,6 +571,55 @@ class TileSource(object):
                 tile['gheight'] = tile['height'] * scale
                 yield tile
 
+    def _outputTile(self, tile, tileEncoding, x, y, z, pilImageAllowed=False,
+                    **kwargs):
+        """
+        Convert a tile from a PIL image or image in memory to the desired
+        encoding.
+
+        :param tile: the tile to convert.
+        :param tileEncoding: the current tile encoding.
+        :param x: tile x value.  Used for cropping or edge adjustment.
+        :param y: tile y value.  Used for cropping or edge adjustment.
+        :param z: tile z (level) value.  Used for cropping or edge adjustment.
+        :param pilImageAllowed: True if a PIL image may be returned.
+        :returns: either a PIL image or a memory object with an image file.
+        """
+        isEdge = False
+        if self.edge:
+            sizeX = int(self.sizeX * 2 ** (z - (self.levels - 1)))
+            sizeY = int(self.sizeY * 2 ** (z - (self.levels - 1)))
+            maxX = (x + 1) * self.tileWidth
+            maxY = (y + 1) * self.tileHeight
+            isEdge = maxX > sizeX or maxY > sizeY
+        if tileEncoding != TILE_FORMAT_PIL:
+            if tileEncoding == self.encoding and not isEdge:
+                return tile
+            tile = PIL.Image.open(BytesIO(tile))
+        if isEdge:
+            contentWidth = min(self.tileWidth,
+                               sizeX - (maxX - self.tileWidth))
+            contentHeight = min(self.tileHeight,
+                                sizeY - (maxY - self.tileHeight))
+            if self.edge in (True, 'crop'):
+                tile = tile.crop((0, 0, contentWidth, contentHeight))
+            else:
+                color = PIL.ImageColor.getrgb(self.edge)
+                if contentWidth < self.tileWidth:
+                    PIL.ImageDraw.Draw(tile).rectangle(
+                        [(contentWidth, 0), (self.tileWidth, contentHeight)],
+                        fill=color, outline=None)
+                if contentHeight < self.tileHeight:
+                    PIL.ImageDraw.Draw(tile).rectangle(
+                        [(0, contentHeight), (self.tileWidth, self.tileHeight)],
+                        fill=color, outline=None)
+        if pilImageAllowed:
+            return tile
+        output = BytesIO()
+        tile.save(output, self.encoding, quality=self.jpegQuality,
+                  subsampling=self.jpegSubsampling)
+        return output.getvalue()
+
     @classmethod
     def canRead(cls, *args, **kwargs):
         """
@@ -576,6 +647,8 @@ class TileSource(object):
         raise NotImplementedError()
 
     def getTileMimeType(self):
+        if self.encoding == 'PNG':
+            return 'image/png'
         return 'image/jpeg'
 
     def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
@@ -1040,12 +1113,14 @@ class TileSource(object):
 
 class FileTileSource(TileSource):
     def __init__(self, path, *args, **kwargs):
-        super(FileTileSource, self).__init__(path, *args, **kwargs)
-
+        super(FileTileSource, self).__init__(*args, **kwargs)
         self.largeImagePath = path
 
+    @abc.abstractmethod
     def getState(self):
-        return self._getLargeImagePath()
+        return self._getLargeImagePath() + ',' + str(
+            self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
+            self.jpegSubsampling) + ',' + str(self.edge)
 
     def _getLargeImagePath(self):
         return self.largeImagePath
@@ -1077,9 +1152,12 @@ if girder:
             super(GirderTileSource, self).__init__(item, *args, **kwargs)
             self.item = item
 
+        @abc.abstractmethod
         def getState(self):
             return str(self.item['largeImage']['fileId']) + ',' + str(
-                self.item['updated'])
+                self.item['updated']) + ',' + str(
+                self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
+                self.jpegSubsampling) + ',' + str(self.edge)
 
         def _getLargeImagePath(self):
             try:
