@@ -17,7 +17,6 @@
 #  limitations under the License.
 #############################################################################
 
-import abc
 import math
 from six import BytesIO
 
@@ -130,7 +129,6 @@ class TileSource(object):
         self.getTile = cached(
             self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
 
-    @abc.abstractmethod
     def getState(self):
         return str(self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
             self.jpegSubsampling) + ',' + str(self.edge)
@@ -1116,7 +1114,6 @@ class FileTileSource(TileSource):
         super(FileTileSource, self).__init__(*args, **kwargs)
         self.largeImagePath = path
 
-    @abc.abstractmethod
     def getState(self):
         return self._getLargeImagePath() + ',' + str(
             self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
@@ -1152,7 +1149,6 @@ if girder:
             super(GirderTileSource, self).__init__(item, *args, **kwargs)
             self.item = item
 
-        @abc.abstractmethod
         def getState(self):
             return str(self.item['largeImage']['fileId']) + ',' + str(
                 self.item['updated']) + ',' + str(
