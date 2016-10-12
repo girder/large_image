@@ -220,6 +220,50 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                              common.PNGHeader)
         self.assertEqual(tileCount, 45)
 
+        # Test getting a single tile
+        sourceRegion = {
+            'width': 0.7, 'height': 0.6,
+            'left': 0.15, 'top': 0.2,
+            'units': 'fraction'}
+        tileCount = 0
+        for tile in source.tileIterator(
+                region=sourceRegion,
+                scale={'magnification': 5},
+                tile_position=25):
+            tileCount += 1
+            self.assertEqual(tile['tile_position']['position'], 25)
+            self.assertEqual(tile['tile_position']['x'], 8)
+            self.assertEqual(tile['tile_position']['y'], 2)
+            self.assertEqual(tile['tile_position']['i'], 4)
+            self.assertEqual(tile['tile_position']['j'], 1)
+            self.assertEqual(tile['iterator_range']['xmin'], 4)
+            self.assertEqual(tile['iterator_range']['ymin'], 1)
+            self.assertEqual(tile['iterator_range']['xmax'], 25)
+            self.assertEqual(tile['iterator_range']['ymax'], 5)
+            self.assertEqual(tile['iterator_range']['i'], 21)
+            self.assertEqual(tile['iterator_range']['j'], 4)
+            self.assertEqual(tile['iterator_range']['position'], 84)
+        self.assertEqual(tileCount, 1)
+        tiles = list(source.tileIterator(
+            region=sourceRegion, scale={'magnification': 5},
+            tile_position={'position': 25}))
+        self.assertEqual(len(tiles), 1)
+        self.assertEqual(tiles[0]['tile_position']['position'], 25)
+        tiles = list(source.tileIterator(
+            region=sourceRegion, scale={'magnification': 5},
+            tile_position={'x': 8, 'y': 2}))
+        self.assertEqual(len(tiles), 1)
+        self.assertEqual(tiles[0]['tile_position']['position'], 25)
+        tiles = list(source.tileIterator(
+            region=sourceRegion, scale={'magnification': 5},
+            tile_position={'i': 4, 'j': 1}))
+        self.assertEqual(len(tiles), 1)
+        self.assertEqual(tiles[0]['tile_position']['position'], 25)
+        tiles = list(source.tileIterator(
+            region=sourceRegion, scale={'magnification': 5},
+            tile_position={'position': 90}))
+        self.assertEqual(len(tiles), 0)
+
     def testGetRegion(self):
         from girder.plugins.large_image import tilesource
 
@@ -234,6 +278,11 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         image, mimeType = source.getRegion(scale={'magnification': 2.5})
         self.assertEqual(mimeType, 'image/jpeg')
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+
+        # Adding a tile position request should be ignored
+        image2, imageFormat = source.getRegion(scale={'magnification': 2.5},
+                                               tile_position=1)
+        self.assertEqual(image, image2)
 
         # We should be able to get a NUMPY array instead
         image, imageFormat = source.getRegion(
@@ -341,3 +390,46 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                     sourceRegion, sourceScale, region=sourceRegion,
                     format=tilesource.TILE_FORMAT_NUMPY):
                 tileCount += 1
+
+    def testGetSingleTile(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+
+        sourceRegion = {
+            'width': 0.7, 'height': 0.6,
+            'left': 0.15, 'top': 0.2,
+            'units': 'fraction'}
+        sourceScale = {'magnification': 5}
+        targetScale = {'magnification': 2.5}
+        tile = source.getSingleTile(
+            region=sourceRegion, scale=sourceScale, tile_position=25)
+        self.assertEqual(tile['tile_position']['position'], 25)
+        self.assertEqual(tile['tile_position']['x'], 8)
+        self.assertEqual(tile['tile_position']['y'], 2)
+        self.assertEqual(tile['tile_position']['i'], 4)
+        self.assertEqual(tile['tile_position']['j'], 1)
+        self.assertEqual(tile['iterator_range']['xmin'], 4)
+        self.assertEqual(tile['iterator_range']['ymin'], 1)
+        self.assertEqual(tile['iterator_range']['xmax'], 25)
+        self.assertEqual(tile['iterator_range']['ymax'], 5)
+        self.assertEqual(tile['iterator_range']['i'], 21)
+        self.assertEqual(tile['iterator_range']['j'], 4)
+        self.assertEqual(tile['iterator_range']['position'], 84)
+
+        tile = source.getSingleTileAtAnotherScale(
+            sourceRegion, sourceScale, targetScale, tile_position=25)
+        self.assertEqual(tile['tile_position']['position'], 25)
+        self.assertEqual(tile['tile_position']['x'], 5)
+        self.assertEqual(tile['tile_position']['y'], 2)
+        self.assertEqual(tile['tile_position']['i'], 3)
+        self.assertEqual(tile['tile_position']['j'], 2)
+        self.assertEqual(tile['iterator_range']['xmin'], 2)
+        self.assertEqual(tile['iterator_range']['ymin'], 0)
+        self.assertEqual(tile['iterator_range']['xmax'], 13)
+        self.assertEqual(tile['iterator_range']['ymax'], 3)
+        self.assertEqual(tile['iterator_range']['i'], 11)
+        self.assertEqual(tile['iterator_range']['j'], 3)
+        self.assertEqual(tile['iterator_range']['position'], 33)
