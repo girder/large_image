@@ -19,9 +19,23 @@ girder.views.ImageViewerWidget = girder.View.extend({
         }, this));
     },
 
-    _getTileUrl: function (level, x, y) {
-        return '/api/v1/item/' + this.itemId + '/tiles/zxy/' +
+    /**
+     * Return a url for a specific tile.  This can also be used to generate a
+     * template url if the level, x, and y parameters are template strings
+     * rather than integers.
+     *
+     * @param {number|string} level: the tile level or a template string.
+     * @param {number|string} x: the tile x position or a template string.
+     * @param {number|string} y: the tile y position or a template string.
+     * @param {object} [query]: optional query parameters to add to the url.
+     */
+    _getTileUrl: function (level, x, y, query) {
+        var url = '/api/v1/item/' + this.itemId + '/tiles/zxy/' +
             level + '/' + x + '/' + y;
+        if (query) {
+          url += '?' + $.param(query);
+        }
+        return url;
     },
 
     /**

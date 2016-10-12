@@ -33,7 +33,9 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
                 tileHeight: this.tileHeight,
                 minLevel: 0,
                 maxLevel: this.levels - 1,
-                getTileUrl: _.bind(this._getTileUrl, this),
+                getTileUrl: _.bind(function (z, x, y) {
+                  return this._getTileUrl(z, x, y, {edge: 'crop'});
+                }, this),
                 ajaxWithCredentials: true
             }
         });

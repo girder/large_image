@@ -20,7 +20,6 @@
 import math
 import six
 
-from six import BytesIO
 from six.moves import range
 
 import openslide
@@ -47,33 +46,13 @@ class SVSFileTileSource(FileTileSource):
     cacheTimeout = 300
     name = 'svsfile'
 
-    @staticmethod
-    def cacheKeyFunc(args, kwargs):
-        path = args[0]
-        return (path,
-                kwargs.get('jpegQuality'),
-                kwargs.get('jpegSubsampling'),
-                kwargs.get('encoding'))
-
-    def __init__(self, path, jpegQuality=95, jpegSubsampling=0,
-                 encoding='JPEG', **kwargs):
+    def __init__(self, path, **kwargs):
         """
         Initialize the tile class.
 
         :param path: the associated file path.
-        :param jpegQuality: when serving jpegs, use this quality.
-        :param jpegSubsampling: when serving jpegs, use this subsampling (0 is
-                                full chroma, 1 is half, 2 is quarter).
-        :param encoding: 'JPEG' or 'PNG'.
         """
         super(SVSFileTileSource, self).__init__(path, **kwargs)
-
-        if encoding not in ('PNG', 'JPEG'):
-            raise ValueError('Invalid encoding "%s"' % encoding)
-
-        self.encoding = encoding
-        self.jpegQuality = int(jpegQuality)
-        self.jpegSubsampling = int(jpegSubsampling)
 
         largeImagePath = self._getLargeImagePath()
 
@@ -160,11 +139,6 @@ class SVSFileTileSource(FileTileSource):
             'mm_y': mm_y,
         }
 
-    def getState(self):
-        return super(SVSFileTileSource, self).getState() + ',' + str(
-            self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
-            self.jpegSubsampling)
-
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z < 0:
             raise TileSourceException('z layer does not exist')
@@ -194,17 +168,7 @@ class SVSFileTileSource(FileTileSource):
         if svslevel['scale'] != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight),
                                PIL.Image.LANCZOS)
-        if pilImageAllowed:
-            return tile
-        output = BytesIO()
-        tile.save(output, self.encoding, quality=self.jpegQuality,
-                  subsampling=self.jpegSubsampling)
-        return output.getvalue()
-
-    def getTileMimeType(self):
-        if self.encoding == 'JPEG':
-            return 'image/jpeg'
-        return 'image/png'
+        return self._outputTile(tile, 'PIL', x, y, z, pilImageAllowed, **kwargs)
 
     def getPreferredLevel(self, level):
         """
@@ -233,12 +197,3 @@ if girder:
         cacheMaxSize = pickAvailableCache(1024 ** 2)
         cacheTimeout = 300
         name = 'svs'
-
-        @staticmethod
-        def cacheKeyFunc(args, kwargs):
-            item = args[0]
-            return (item.get('largeImage', {}).get('fileId'),
-                    item.get('updated'),
-                    kwargs.get('jpegQuality'),
-                    kwargs.get('jpegSubsampling'),
-                    kwargs.get('encoding'))
