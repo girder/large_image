@@ -38,7 +38,8 @@ girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
                 [90.0, 180.0]
             ],
             layers: [
-                L.tileLayer(this._getTileUrl('{z}', '{x}', '{y}'), {
+                L.tileLayer(
+                    this._getTileUrl('{z}', '{x}', '{y}', {edge: '#DDD'}), {
                     // in theory, tileSize: new L.Point(this.tileWidth,
                     // this.tileHeight) is supposed to support non-square
                     // tiles, but it doesn't work

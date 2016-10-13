@@ -360,6 +360,37 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
         self.assertTrue(len(image) < defaultLength)
 
+        # Test that edge options are honored
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG', 'edge': 'crop'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 124)
+        self.assertEqual(height, 54)
+        with six.assertRaisesRegex(self, Exception, 'unknown color specifier'):
+            self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                         user=self.admin, isJson=False,
+                         params={'edge': 'not_a_color'})
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG', 'edge': '#DDD'})
+        self.assertStatusOk(resp)
+        greyImage = self.getBody(resp, text=False)
+        self.assertEqual(greyImage[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', greyImage[16:24])
+        self.assertEqual(width, 240)
+        self.assertEqual(height, 240)
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG', 'edge': 'yellow'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        self.assertNotEqual(greyImage, image)
+
     def testTilesFromPIL(self):
         # Allow images bigger than our test
         from girder.plugins.large_image import constants

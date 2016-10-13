@@ -20,7 +20,6 @@
 import json
 import six
 
-from six import BytesIO
 
 import PIL.Image
 
@@ -74,37 +73,17 @@ class PILFileTileSource(FileTileSource):
     cacheTimeout = 300
     name = 'pilfile'
 
-    @staticmethod
-    def cacheKeyFunc(args, kwargs):
-        path = args[0]
-        return (path,
-                kwargs.get('jpegQuality'),
-                kwargs.get('jpegSubsampling'),
-                kwargs.get('encoding'),
-                kwargs.get('maxSize'))
-
-    def __init__(self, path, jpegQuality=95, jpegSubsampling=0,
-                 encoding='JPEG', maxSize=None, **kwargs):
+    def __init__(self, path, maxSize=None, **kwargs):
         """
         Initialize the tile class.
 
         :param path: the associated file path.
-        :param jpegQuality: when serving jpegs, use this quality.
-        :param jpegSubsampling: when serving jpegs, use this subsampling (0 is
-                                full chroma, 1 is half, 2 is quarter).
-        :param encoding: 'JPEG' or 'PNG'.
         :param maxSize: either a number or an object with {'width': (width),
             'height': height} in pixels.  If None, the default max size is
             used.
         """
         super(PILFileTileSource, self).__init__(path, **kwargs)
 
-        if encoding not in ('PNG', 'JPEG'):
-            raise ValueError('Invalid encoding "%s"' % encoding)
-
-        self.encoding = encoding
-        self.jpegQuality = int(jpegQuality)
-        self.jpegSubsampling = int(jpegSubsampling)
         if isinstance(maxSize, six.string_types):
             try:
                 maxSize = json.loads(maxSize)
@@ -136,7 +115,7 @@ class PILFileTileSource(FileTileSource):
     def getState(self):
         return super(PILFileTileSource, self).getState() + ',' + str(
             self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
-            self.jpegSubsampling)
+            self.jpegSubsampling) + ',' + str(self.edge)
 
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z != 0:
@@ -145,17 +124,8 @@ class PILFileTileSource(FileTileSource):
             raise TileSourceException('x is outside layer')
         if y != 0:
             raise TileSourceException('y is outside layer')
-        if pilImageAllowed:
-            return self._pilImage
-        output = BytesIO()
-        self._pilImage.save(output, self.encoding, quality=self.jpegQuality,
-                            subsampling=self.jpegSubsampling)
-        return output.getvalue()
-
-    def getTileMimeType(self):
-        if self.encoding == 'JPEG':
-            return 'image/jpeg'
-        return 'image/png'
+        return self._outputTile(self._pilImage, 'PIL', x, y, z,
+                                pilImageAllowed, **kwargs)
 
 
 if girder:
@@ -168,13 +138,3 @@ if girder:
         cacheMaxSize = pickAvailableCache(1024 ** 2)
         cacheTimeout = 300
         name = 'pil'
-
-        @staticmethod
-        def cacheKeyFunc(args, kwargs):
-            item = args[0]
-            return (item.get('largeImage', {}).get('fileId'),
-                    item.get('updated'),
-                    kwargs.get('jpegQuality'),
-                    kwargs.get('jpegSubsampling'),
-                    kwargs.get('encoding'),
-                    kwargs.get('maxSize'))

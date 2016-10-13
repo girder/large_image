@@ -17,9 +17,6 @@
 #  limitations under the License.
 ###############################################################################
 
-
-import six
-
 from cachetools import LRUCache, Cache, hashkey
 from .cachefactory import CacheFactory
 
@@ -28,14 +25,10 @@ def strhash(*args, **kwargs):
     return str(hashkey(*args, **kwargs))
 
 
-def defaultCacheKeyFunc(args, kwargs):
-    return (args, frozenset(six.viewitems(kwargs)))
-
-
 class LruCacheMetaclass(type):
     """
     """
-    caches = dict()
+    caches = {}
 
     def __new__(metacls, name, bases, namespace, **kwargs):  # noqa - N804
         # Get metaclass parameters by finding and removing them from the class
@@ -50,16 +43,6 @@ class LruCacheMetaclass(type):
 
         timeout = namespace.pop('cacheTimeout', None)
         timeout = kwargs.get('cacheTimeout', timeout)
-
-        keyFunc = namespace.pop('cacheKeyFunc', None)
-        keyFunc = kwargs.get('cacheKeyFunc', keyFunc)
-        # The @staticmethod wrapper stored the original function in __func__,
-        # and we need to use that as our keyFunc
-        if (hasattr(keyFunc, '__func__') and
-                hasattr(keyFunc.__func__, '__call__')):
-            keyFunc = keyFunc.__func__
-        if not keyFunc:
-            keyFunc = defaultCacheKeyFunc
 
         # TODO: use functools.lru_cache if's available in Python 3?
         cache = LRUCache(Cache(maxSize))

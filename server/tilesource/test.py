@@ -18,7 +18,6 @@
 ###############################################################################
 
 import colorsys
-from six import BytesIO
 from .base import TileSource, TileSourceException
 
 import PIL
@@ -32,7 +31,7 @@ class TestTileSource(TileSource):
 
     def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
-                 fractal=False, encoding='PNG'):
+                 fractal=False, **kwargs):
         """
         Initialize the tile class.  The optional params options can include:
 
@@ -49,7 +48,10 @@ class TestTileSource(TileSource):
             two, draw a simple fractal on the tiles.
         :param encoding: 'PNG' or 'JPEG'.
         """
-        super(TestTileSource, self).__init__()
+        if not kwargs.get('encoding'):
+            kwargs = kwargs.copy()
+            kwargs['encoding'] = 'PNG'
+        super(TestTileSource, self).__init__(**kwargs)
 
         self.minLevel = minLevel
         self.maxLevel = maxLevel
@@ -63,9 +65,6 @@ class TestTileSource(TileSource):
                       if sizeX is None else sizeX)
         self.sizeY = (((2 ** self.maxLevel) * self.tileHeight)
                       if sizeY is None else sizeY)
-        if encoding not in ('PNG', 'JPEG'):
-            raise ValueError('Invalid encoding "%s"' % encoding)
-        self.encoding = encoding
         # Used for reporting tile information
         self.levels = self.maxLevel + 1
 
@@ -134,17 +133,9 @@ class TestTileSource(TileSource):
             fill=(0, 0, 0),
             font=imageDrawFont
         )
-
-        output = BytesIO()
-        image.save(output, self.encoding, quality=95)
-        return output.getvalue()
-
-    def getTileMimeType(self):
-        if self.encoding == 'JPEG':
-            return 'image/jpeg'
-        return 'image/png'
+        return self._outputTile(image, 'PIL', x, y, z, **kwargs)
 
     def getState(self):
         return 'test %r %r %r %r %r %r' % (
-            self.encoding, self.minLevel, self.maxLevel, self.tileWidth,
-            self.tileHeight, self.fractal)
+            super(TestTileSource, self).getState(), self.minLevel,
+            self.maxLevel, self.tileWidth, self.tileHeight, self.fractal)
