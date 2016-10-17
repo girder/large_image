@@ -198,7 +198,7 @@ def load(info):
     from .rest import TilesItemResource, LargeImageResource, AnnotationResource
 
     TilesItemResource(info['apiRoot'])
-    info['apiRoot'].large_image = LargeImageResource()
+    info['apiRoot'].large_image = LargeImageResource(info['apiRoot'])
     info['apiRoot'].annotation = AnnotationResource()
 
     ModelImporter.model('item').exposeFields(

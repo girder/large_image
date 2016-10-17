@@ -61,7 +61,7 @@ describe('Test the large image plugin', function () {
         });
         waitsFor(function () {
             var resp = girder.restRequest({
-                path: 'system/setting/large_image',
+                path: 'large_image/settings',
                 type: 'GET',
                 async: false
             });
