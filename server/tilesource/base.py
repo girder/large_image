@@ -129,6 +129,12 @@ class TileSource(object):
         self.getTile = cached(
             self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
 
+    @staticmethod
+    def getLRUHash(*args, **kwargs):
+        return strhash(
+            kwargs.get('encoding'), kwargs.get('jpegQuality'),
+            kwargs.get('jpegSubsampling'), kwargs.get('edge'))
+
     def getState(self):
         return str(self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
             self.jpegSubsampling) + ',' + str(self.edge)
@@ -1114,6 +1120,12 @@ class FileTileSource(TileSource):
         super(FileTileSource, self).__init__(*args, **kwargs)
         self.largeImagePath = path
 
+    @staticmethod
+    def getLRUHash(*args, **kwargs):
+        return strhash(
+            args[0], kwargs.get('encoding'), kwargs.get('jpegQuality'),
+            kwargs.get('jpegSubsampling'), kwargs.get('edge'))
+
     def getState(self):
         return self._getLargeImagePath() + ',' + str(
             self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
@@ -1148,6 +1160,13 @@ if girder:
         def __init__(self, item, *args, **kwargs):
             super(GirderTileSource, self).__init__(item, *args, **kwargs)
             self.item = item
+
+        @staticmethod
+        def getLRUHash(*args, **kwargs):
+            return strhash(
+                str(args[0]['largeImage']['fileId']), args[0]['updated'],
+                kwargs.get('encoding'), kwargs.get('jpegQuality'),
+                kwargs.get('jpegSubsampling'), kwargs.get('edge'))
 
         def getState(self):
             return str(self.item['largeImage']['fileId']) + ',' + str(

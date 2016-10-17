@@ -19,6 +19,7 @@
 
 import colorsys
 from .base import TileSource, TileSourceException
+from ..cache_util import strhash
 
 import PIL
 from PIL import Image, ImageDraw, ImageFont
@@ -134,6 +135,15 @@ class TestTileSource(TileSource):
             font=imageDrawFont
         )
         return self._outputTile(image, 'PIL', x, y, z, **kwargs)
+
+    @staticmethod
+    def getLRUHash(*args, **kwargs):
+        return strhash(
+            super(TestTileSource, TestTileSource).getLRUHash(
+                *args, **kwargs),
+            kwargs.get('minLevel'), kwargs.get('maxLevel'),
+            kwargs.get('tileWidth'), kwargs.get('tileHeight'),
+            kwargs.get('fractal'))
 
     def getState(self):
         return 'test %r %r %r %r %r %r' % (

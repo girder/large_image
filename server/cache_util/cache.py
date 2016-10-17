@@ -63,7 +63,10 @@ class LruCacheMetaclass(type):
 
         cache = LruCacheMetaclass.caches[cls]
 
-        key = strhash(args[0], kwargs)
+        if hasattr(cls, 'getLRUHash'):
+            key = cls.getLRUHash(*args, **kwargs)
+        else:
+            key = strhash(args[0], kwargs)
         try:
             instance = cache[key]
         except KeyError:

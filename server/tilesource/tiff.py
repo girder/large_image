@@ -48,7 +48,7 @@ class TiffFileTileSource(FileTileSource):
     """
     # Cache size is based on what the class needs, which does not include
     # individual tiles
-    cacheMaxSize = pickAvailableCache(1024 ** 2)
+    cacheMaxSize = pickAvailableCache(1024 ** 2, 100)
     cacheTimeout = 300
     name = 'tifffile'
 
