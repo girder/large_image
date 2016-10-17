@@ -342,10 +342,11 @@ class TileSource(object):
                 This is only applied if magnification, mm_x, or mm_y is used.
         :param tile_position: if present, either a number to only yield the
             (tile_position)th tile [0 to (xmax - min) * (ymax - ymin)) that the
-            iterator would yield, or a dictionary of {i, j} to yield that tile,
-            where 0, 0 is the first tile yielded, and xmax - xmin - 1,
-            ymax - ymin - 1 is the last tile yielded, or a dictionary of {x, y}
-            to yield that specific tile if it is in the region.
+            iterator would yield, or a dictionary of {region_x, region_y} to
+            yield that tile, where 0, 0 is the first tile yielded, and
+            xmax - xmin - 1, ymax - ymin - 1 is the last tile yielded, or a
+            dictionary of {level_x, level_y} to yield that specific tile if it
+            is in the region.
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling.
         :returns: a dictionary of information needed for the tile iterator.
@@ -494,18 +495,21 @@ class TileSource(object):
             level_x, level_y: the tile reference number within the level.
             tile_position: a dictionary of the tile position within the
                     iterator, containing:
-                x, y: the same as level_x, level_y
-                i, j: 0, 0 is the first tile in the full iteration (when not
-                    restrictioning the iteration to a single tile).
+                level_x, level_y: the tile reference number within the level.
+                region_x, region_y: 0, 0 is the first tile in the full
+                    iteration (when not restrictioning the iteration to a
+                    single tile).
                 position: a 0-based value for the tile within the full
                     iteration.
             iterator_range: a dictionary of the output range of the iterator:
-                xmin, ymin, xmax, ymax: the tiles that are be included during
-                    the full iteration: [xmin, xmax) and [ymin, ymax).
-                i, j: the number of tiles included during the full iteration.
-                    This is xmax - xmin, ymax - ymin.
+                level_x_min, level_y_min, level_x_max, level_y_max: the tiles
+                    that are be included during the full iteration:
+                    [layer_x_min, layer_x_max) and [layer_y_min, layer_y_max).
+                region_x_max, region_y_max: the number of tiles included during
+                    the full iteration.   This is layer_x_max - layer_x_min,
+                    layer_y_max - layer_y_min.
                 position: the total number of tiles included in the full
-                    iteration.
+                    iteration.  This is region_x_max * region_y_max.
             magnification: magnification of the current tile
             mm_x, mm_y: size of the current tile pixel in millimeters.
             gx, gy - (left, top) coordinate in maximum-resolution pixels
@@ -541,11 +545,12 @@ class TileSource(object):
             if isinstance(tilePos, dict):
                 if tilePos.get('position') is not None:
                     tilePos = tilePos['position']
-                elif 'i' in tilePos and 'j' in tilePos:
-                    tilePos = tilePos['i'] + tilePos['j'] * (xmax - xmin)
-                elif 'x' in tilePos and 'y' in tilePos:
-                    tilePos = ((tilePos['x'] - xmin) +
-                               (tilePos['y'] - ymin) * (xmax - xmin))
+                elif 'region_x' in tilePos and 'region_y' in tilePos:
+                    tilePos = (tilePos['region_x'] +
+                               tilePos['region_y'] * (xmax - xmin))
+                elif 'level_x' in tilePos and 'level_y' in tilePos:
+                    tilePos = ((tilePos['level_x'] - xmin) +
+                               (tilePos['level_y'] - ymin) * (xmax - xmin))
             if tilePos < 0 or tilePos >= (ymax - ymin) * (xmax - xmin):
                 xmax = xmin
             else:
@@ -602,21 +607,21 @@ class TileSource(object):
                     'mm_x': mag['mm_x'],
                     'mm_y': mag['mm_y'],
                     'tile_position': {
-                        'x': x,
-                        'y': y,
-                        'i': x - iterInfo['xmin'],
-                        'j': y - iterInfo['ymin'],
+                        'level_x': x,
+                        'level_y': y,
+                        'region_x': x - iterInfo['xmin'],
+                        'region_y': y - iterInfo['ymin'],
                         'position': ((x - iterInfo['xmin']) +
                                      (y - iterInfo['ymin']) *
                                      (iterInfo['xmax'] - iterInfo['xmin'])),
                     },
                     'iterator_range': {
-                        'xmin': iterInfo['xmin'],
-                        'ymin': iterInfo['ymin'],
-                        'xmax': iterInfo['xmax'],
-                        'ymax': iterInfo['ymax'],
-                        'i': iterInfo['xmax'] - iterInfo['xmin'],
-                        'j': iterInfo['ymax'] - iterInfo['ymin'],
+                        'level_x_min': iterInfo['xmin'],
+                        'level_y_min': iterInfo['ymin'],
+                        'level_x_max': iterInfo['xmax'],
+                        'level_y_max': iterInfo['ymax'],
+                        'region_x_max': iterInfo['xmax'] - iterInfo['xmin'],
+                        'region_y_max': iterInfo['ymax'] - iterInfo['ymin'],
                         'position': ((iterInfo['xmax'] - iterInfo['xmin']) *
                                      (iterInfo['ymax'] - iterInfo['ymin']))
                     },
@@ -1171,8 +1176,9 @@ class TileSource(object):
 
     def getSingleTile(self, *args, **kwargs):
         """
-        Return the first tile from an iterator.  This takes exactly the same
-        parameters as tileIterator.
+        Return any single tile from an iterator.  This takes exactly the same
+        parameters as tileIterator.  Use tile_position to get a specific tile,
+        otherwise the first tile is returned.
 
         :return: a tile dictionary or None.
         """
@@ -1180,8 +1186,9 @@ class TileSource(object):
 
     def getSingleTileAtAnotherScale(self, *args, **kwargs):
         """
-        Return the first tile from an rescaled iterator.  This takes exactly
-        the same parameters as tileIteratorAtAnotherScale.
+        Return any single tile from a rescaled iterator.  This takes exactly
+        the same parameters as tileIteratorAtAnotherScale.  Use tile_position
+        to get a specific tile, otherwise the first tile is returned.
 
         :return: a tile dictionary or None.
         """
