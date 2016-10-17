@@ -24,6 +24,7 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import describeRoute, Description
 from girder.api.rest import Resource, RestException
+from girder.constants import AccessType
 from girder.plugins.jobs.constants import JobStatus
 from girder.utility.model_importer import ModelImporter
 
@@ -83,13 +84,32 @@ def createThumbnailsJob(job):
 
 class LargeImageResource(Resource):
 
-    def __init__(self):
+    def __init__(self, apiRoot):
         super(LargeImageResource, self).__init__()
 
         self.resourceName = 'large_image'
+        self.route('GET', ('settings',), self.getPublicSettings)
         self.route('GET', ('thumbnails',), self.countThumbnails)
         self.route('PUT', ('thumbnails',), self.createThumbnails)
         self.route('DELETE', ('thumbnails',), self.deleteThumbnails)
+
+        # This is added to the resource route
+        apiRoot.resource.route('GET', (':id', 'items'), self.getResourceItems)
+
+    @describeRoute(
+        Description('Get public settings for large image display.')
+    )
+    @access.public
+    def getPublicSettings(self, params):
+        keys = [
+            constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+            constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER,
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE,
+        ]
+        return {k: self.model('setting').get(k) for k in keys}
 
     @describeRoute(
         Description('Count the number of cached thumbnail files for '
@@ -193,3 +213,75 @@ class LargeImageResource(Resource):
                 self.model('file').remove(file)
                 removed += 1
         return removed
+
+    def allChildItems(self, parent, parentType, user, limit=0, offset=0,
+                      sort=None, _internal=None, **kwargs):
+        """
+        This generator will yield all items that are children of the resource
+        or recursively children of child folders of the resource, with access
+        policy filtering.  Passes any kwargs to the find function.
+
+        :param parent: The parent object.
+        :type parentType: Type of the parent object.
+        :param parentType: The parent type.
+        :type parentType: 'user', 'folder', or 'collection'
+        :param user: The user running the query. Only returns items that this
+                     user can see.
+        :param limit: Result limit.
+        :param offset: Result offset.
+        :param sort: The sort structure to pass to pymongo.  Child folders are
+            served depth first, and this sort is applied within the resource
+            and then within each child folder.  Child items are processed
+            before child folders.
+        """
+        if _internal is None:
+            _internal = {
+                'limit': limit,
+                'offset': offset,
+                'done': False
+            }
+        model = self.model(parentType)
+        if hasattr(model, 'childItems'):
+            for item in model.childItems(
+                    parent, user=user,
+                    limit=_internal['limit'] + _internal['offset'],
+                    offset=0, sort=sort, **kwargs):
+                if _internal['offset']:
+                    _internal['offset'] -= 1
+                else:
+                    yield item
+                    if _internal['limit']:
+                        _internal['limit'] -= 1
+                        if not _internal['limit']:
+                            _internal['done'] = True
+                            return
+        for folder in self.model('folder').childFolders(
+                parentType=parentType, parent=parent, user=user,
+                limit=0, offset=0, sort=sort, **kwargs):
+            if _internal['done']:
+                return
+            for item in self.allChildItems(folder, 'folder', user, sort=sort,
+                                           _internal=_internal, **kwargs):
+                yield item
+
+    @describeRoute(
+        Description('Get all of the items that are children of a resource.')
+        .param('id', 'The ID of the resource.', paramType='path')
+        .param('type', 'The type of the resource (folder, collection, or '
+               'user).')
+        .pagingParams(defaultSort='_id')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Access was denied for the resource.', 403)
+    )
+    @access.public
+    def getResourceItems(self, id, params):
+        user = self.getCurrentUser()
+        modelType = params['type']
+        model = self.model(modelType)
+        doc = model.load(id=id, user=user, level=AccessType.READ)
+        if not doc:
+            raise RestException('Resource not found.')
+        limit, offset, sort = self.getPagingParameters(params, '_id')
+        return list(self.allChildItems(
+            parentType=modelType, parent=doc, user=user,
+            limit=limit, offset=offset, sort=sort))

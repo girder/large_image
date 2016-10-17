@@ -805,58 +805,6 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(width, 500)
         self.assertEqual(height, 375)
 
-    def testSettings(self):
-        from girder.plugins.large_image import constants
-        from girder.models.model_base import ValidationException
-
-        for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
-                    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
-                    constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
-            self.model('setting').set(key, 'false')
-            self.assertFalse(self.model('setting').get(key))
-            self.model('setting').set(key, 'true')
-            self.assertTrue(self.model('setting').get(key))
-            with six.assertRaisesRegex(self, ValidationException,
-                                       'must be a boolean'):
-                self.model('setting').set(key, 'not valid')
-        self.model('setting').set(
-            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
-        self.assertEqual(self.model('setting').get(
-            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER), 'geojs')
-        with six.assertRaisesRegex(self, ValidationException,
-                                   'must be a non-negative integer'):
-            self.model('setting').set(
-                constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, -1)
-        self.model('setting').set(
-            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 5)
-        self.assertEqual(self.model('setting').get(
-            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES), 5)
-        with six.assertRaisesRegex(self, ValidationException,
-                                   'must be a non-negative integer'):
-            self.model('setting').set(
-                constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, -1)
-        self.model('setting').set(
-            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 1024)
-        self.assertEqual(self.model('setting').get(
-            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE), 1024)
-        # Test the system/setting/large_image end point
-        resp = self.request(path='/system/setting/large_image', user=None)
-        self.assertStatusOk(resp)
-        settings = resp.json
-        # The values were set earlier
-        self.assertEqual(settings[
-            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER], 'geojs')
-        self.assertEqual(settings[
-            constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER], True)
-        self.assertEqual(settings[
-            constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS], True)
-        self.assertEqual(settings[
-            constants.PluginSettings.LARGE_IMAGE_AUTO_SET], True)
-        self.assertEqual(settings[
-            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES], 5)
-        self.assertEqual(settings[
-            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE], 1024)
-
     def testGetTileSource(self):
         from girder.plugins.large_image.tilesource import getTileSource
 
