@@ -47,7 +47,10 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None):
 
     :param sizeEach: the expected size of an item that could be cached.
     :param portion: the inverse fraction of the memory which can be used.
-    :return: the number of items that should be cached.  Always at least two.
+    :param maxItems: if specified, the number of items is never more than this
+        value.
+    :return: the number of items that should be cached.  Always at least two,
+        unless maxItems is less.
     """
     # Estimate usage based on (1 / portion) of the total virtual memory.
     if psutil:
