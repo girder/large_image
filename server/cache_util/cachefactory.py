@@ -40,14 +40,17 @@ except ImportError:
     psutil = None
 
 
-def pickAvailableCache(sizeEach, portion=8):
+def pickAvailableCache(sizeEach, portion=8, maxItems=None):
     """
     Given an estimated size of an item, return how many of those items would
     fit in a fixed portion of the available virtual memory.
 
     :param sizeEach: the expected size of an item that could be cached.
     :param portion: the inverse fraction of the memory which can be used.
-    :return: the number of items that should be cached.  Always at least two.
+    :param maxItems: if specified, the number of items is never more than this
+        value.
+    :return: the number of items that should be cached.  Always at least two,
+        unless maxItems is less.
     """
     # Estimate usage based on (1 / portion) of the total virtual memory.
     if psutil:
@@ -55,6 +58,8 @@ def pickAvailableCache(sizeEach, portion=8):
     else:
         memory = 1024 ** 3
     numItems = max(int(math.floor(memory / portion / sizeEach)), 2)
+    if maxItems:
+        numItems = min(numItems, maxItems)
     return numItems
 
 

@@ -20,7 +20,7 @@
 import math
 from six import BytesIO
 
-from ..cache_util import tileCache, tileLock, strhash, cached
+from ..cache_util import tileCache, tileLock, strhash, methodcache
 
 try:
     import girder
@@ -123,11 +123,19 @@ class TileSource(object):
         self.jpegSubsampling = int(jpegSubsampling)
         self.edge = edge
 
+        """
         self.getThumbnail = cached(
             self.cache, key=self.wrapKey, lock=self.cache_lock)(
                 self.getThumbnail)
         self.getTile = cached(
             self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
+        """
+
+    @staticmethod
+    def getLRUHash(*args, **kwargs):
+        return strhash(
+            kwargs.get('encoding'), kwargs.get('jpegQuality'),
+            kwargs.get('jpegSubsampling'), kwargs.get('edge'))
 
     def getState(self):
         return str(self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
@@ -704,6 +712,7 @@ class TileSource(object):
             'mm_y': mag['mm_y'],
         }
 
+    @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False):
         raise NotImplementedError()
 
@@ -712,6 +721,7 @@ class TileSource(object):
             return 'image/png'
         return 'image/jpeg'
 
+    @methodcache()
     def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is
@@ -1200,6 +1210,12 @@ class FileTileSource(TileSource):
         super(FileTileSource, self).__init__(*args, **kwargs)
         self.largeImagePath = path
 
+    @staticmethod
+    def getLRUHash(*args, **kwargs):
+        return strhash(
+            args[0], kwargs.get('encoding'), kwargs.get('jpegQuality'),
+            kwargs.get('jpegSubsampling'), kwargs.get('edge'))
+
     def getState(self):
         return self._getLargeImagePath() + ',' + str(
             self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
@@ -1234,6 +1250,13 @@ if girder:
         def __init__(self, item, *args, **kwargs):
             super(GirderTileSource, self).__init__(item, *args, **kwargs)
             self.item = item
+
+        @staticmethod
+        def getLRUHash(*args, **kwargs):
+            return strhash(
+                str(args[0]['largeImage']['fileId']), args[0]['updated'],
+                kwargs.get('encoding'), kwargs.get('jpegQuality'),
+                kwargs.get('jpegSubsampling'), kwargs.get('edge'))
 
         def getState(self):
             return str(self.item['largeImage']['fileId']) + ',' + str(
