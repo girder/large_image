@@ -18,8 +18,10 @@
 ###############################################################################
 
 import colorsys
+import six
 from .base import TileSource, TileSourceException
-from ..cache_util import strhash, methodcache
+from ..cache_util import strhash, methodcache, LruCacheMetaclass, \
+    pickAvailableCache
 
 import PIL
 from PIL import Image, ImageDraw, ImageFont
@@ -27,7 +29,14 @@ if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
     raise ImportError('Pillow v3.0 or later is required')
 
 
+# Used in testing
+tileCounter = 0
+
+
+@six.add_metaclass(LruCacheMetaclass)
 class TestTileSource(TileSource):
+    cacheMaxSize = pickAvailableCache(1024 ** 2)
+    cacheTimeout = 300
     name = 'test'
 
     def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,
@@ -88,7 +97,7 @@ class TestTileSource(TileSource):
                             ], color, None)
             sq /= 2
 
-    @methodcache(lock=True)
+    @methodcache()
     def getTile(self, x, y, z, *args, **kwargs):
         widthCount = 2 ** z
 
@@ -135,6 +144,8 @@ class TestTileSource(TileSource):
             fill=(0, 0, 0),
             font=imageDrawFont
         )
+        global tileCounter
+        tileCounter += 1
         return self._outputTile(image, 'PIL', x, y, z, **kwargs)
 
     @staticmethod

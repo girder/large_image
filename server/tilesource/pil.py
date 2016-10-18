@@ -124,7 +124,7 @@ class PILFileTileSource(FileTileSource):
         return super(PILFileTileSource, self).getState() + ',' + str(
             self.maxSize)
 
-    @methodcache(lock=True)
+    @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z != 0:
             raise TileSourceException('z layer does not exist')

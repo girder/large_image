@@ -47,33 +47,32 @@ def tearDownModule():
 
 class LargeImageCachedTilesTest(common.LargeImageCommonTest):
     def _monitorTileCounts(self):
-        if hasattr(self, 'tileCounter'):
-            return
-        from girder.plugins.large_image.tilesource.test import TestTileSource
-        originalGetTile = TestTileSource.getTile
-        originalWrapKey = TestTileSource.wrapKey
-        self.tileCounter = 0
-        self.keyPrefix = str(time.time())
+        from girder.plugins.large_image.tilesource import test
+        test.tileCounter = 0
 
-        def countGetTile(ttsself, *args, **kwargs):
-            # Increment the counter after the call, so that exceptions won't
-            # increment it.
-            result = originalGetTile(ttsself, *args, **kwargs)
-            self.tileCounter += 1
-            return result
+        self.originalWrapKey = test.TestTileSource.wrapKey
+        self.keyPrefix = str(time.time())
 
         def wrapKey(*args, **kwargs):
             # Ensure that this test has unique keys
-            return self.keyPrefix + originalWrapKey(*args, **kwargs)
+            return self.keyPrefix + self.originalWrapKey(*args, **kwargs)
 
-        TestTileSource.getTile = countGetTile
-        TestTileSource.wrapKey = wrapKey
+        test.TestTileSource.wrapKey = wrapKey
+
+    def _stopMonitorTileCounts(self):
+        from girder.plugins.large_image.tilesource.test import TestTileSource
+        TestTileSource.wrapKey = self.originalWrapKey
 
     def setUp(self):
         self._monitorTileCounts()
         common.LargeImageCommonTest.setUp(self)
 
+    def tearDown(self):
+        self._stopMonitorTileCounts()
+
     def testTilesFromTest(self):
+        from girder.plugins.large_image.tilesource import test
+
         # Create a test tile with the default options
         params = {'encoding': 'JPEG'}
         meta = self._createTestTiles(params, {
@@ -82,11 +81,11 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         })
         self._testTilesZXY('test', meta, params)
         # We should have generated tiles
-        self.assertGreater(self.tileCounter, 0)
-        counter1 = self.tileCounter
+        self.assertGreater(test.tileCounter, 0)
+        counter1 = test.tileCounter
         # Running a second time should take entirely from cache
         self._testTilesZXY('test', meta, params)
-        self.assertEqual(self.tileCounter, counter1)
+        self.assertEqual(test.tileCounter, counter1)
 
         # Test most of our parameters in a single special case
         params = {
@@ -105,11 +104,11 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         meta['minLevel'] = 2
         self._testTilesZXY('test', meta, params)
         # We should have generated tiles
-        self.assertGreater(self.tileCounter, counter1)
-        counter2 = self.tileCounter
+        self.assertGreater(test.tileCounter, counter1)
+        counter2 = test.tileCounter
         # Running a second time should take entirely from cache
         self._testTilesZXY('test', meta, params)
-        self.assertEqual(self.tileCounter, counter2)
+        self.assertEqual(test.tileCounter, counter2)
 
         # Test the fractal tiles with PNG
         params = {'fractal': 'true'}
@@ -119,11 +118,11 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         })
         self._testTilesZXY('test', meta, params, common.PNGHeader)
         # We should have generated tiles
-        self.assertGreater(self.tileCounter, counter2)
-        counter3 = self.tileCounter
+        self.assertGreater(test.tileCounter, counter2)
+        counter3 = test.tileCounter
         # Running a second time should take entirely from cache
         self._testTilesZXY('test', meta, params, common.PNGHeader)
-        self.assertEqual(self.tileCounter, counter3)
+        self.assertEqual(test.tileCounter, counter3)
 
     def testLargeRegion(self):
         # Create a test tile with the default options

@@ -712,7 +712,7 @@ class TileSource(object):
             'mm_y': mag['mm_y'],
         }
 
-    @methodcache(lock=True)
+    @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False):
         raise NotImplementedError()
 
@@ -721,7 +721,7 @@ class TileSource(object):
             return 'image/png'
         return 'image/jpeg'
 
-    @methodcache(lock=True)
+    @methodcache()
     def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is

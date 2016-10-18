@@ -18,7 +18,7 @@
 ###############################################################################
 
 import six
-from cachetools import LRUCache, Cache, hashkey
+from cachetools import LRUCache, hashkey
 
 from .cachefactory import CacheFactory
 
@@ -27,47 +27,38 @@ def strhash(*args, **kwargs):
     return str(hashkey(*args, **kwargs))
 
 
-def methodcache(key=None, lock=None):
+def methodcache(key=None):
     """
     Decorator to wrap a function with a memoizing callable that saves results
     in self.cache.  This is largely taken from cachetools, but uses a cache
-    from self.cache rather than a passed value.
+    from self.cache rather than a passed value.  If self.cache_lock is
+    present and not none, a lock is used.
 
     :param key: if a function, use that for the key, otherwise use self.wrapKey.
-    :param lock: if True, use self.cache_lock for a lock, otherwise don't use a
-        lock.
     """
     def decorator(func):
-        if lock is None:
-            @six.wraps(func)
-            def wrapper(self, *args, **kwargs):
-                k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
-                try:
-                    return self.cache[k]
-                except KeyError:
-                    pass  # key not found
-                v = func(self, *args, **kwargs)
-                try:
-                    self.cache[k] = v
-                except ValueError:
-                    pass  # value too large
-                return v
-        else:
-            @six.wraps(func)
-            def wrapper(self, *args, **kwargs):
-                k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
-                try:
+        @six.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
+            lock = getattr(self, 'cache_lock', None)
+            try:
+                if lock:
                     with self.cache_lock:
                         return self.cache[k]
-                except KeyError:
-                    pass  # key not found
-                v = func(self, *args, **kwargs)
-                try:
+                else:
+                    return self.cache[k]
+            except KeyError:
+                pass  # key not found
+            v = func(self, *args, **kwargs)
+            try:
+                if lock:
                     with self.cache_lock:
                         self.cache[k] = v
-                except ValueError:
-                    pass  # value too large
-                return v
+                else:
+                    self.cache[k] = v
+            except ValueError:
+                pass  # value too large
+            return v
         return wrapper
     return decorator
 
@@ -92,7 +83,7 @@ class LruCacheMetaclass(type):
         timeout = kwargs.get('cacheTimeout', timeout)
 
         # TODO: use functools.lru_cache if's available in Python 3?
-        cache = LRUCache(Cache(maxSize))
+        cache = LRUCache(maxSize)
 
         cls = super(LruCacheMetaclass, metacls).__new__(
             metacls, name, bases, namespace)

@@ -100,7 +100,7 @@ class TiffFileTileSource(FileTileSource):
             'mm_y': mm_y,
         }
 
-    @methodcache(lock=True)
+    @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
                 **kwargs):
         try:
