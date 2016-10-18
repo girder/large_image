@@ -17,6 +17,7 @@
 #  limitations under the License.
 #############################################################################
 
+import gc
 import os
 import time
 
@@ -145,6 +146,54 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         resp = self.request(path='/item/%s/tiles/region' % itemId,
                             user=self.admin, isJson=False, params=params)
         self.assertStatusOk(resp)
+
+    def testTiffClosed(self):
+        # test the Tiff files are properly closed.
+        from girder.plugins.large_image.tilesource.tiff import \
+            TiffGirderTileSource
+        from girder.plugins.large_image.tilesource.tiff_reader import \
+            TiledTiffDirectory
+        from girder.plugins.large_image.cache_util.cache import \
+            LruCacheMetaclass
+
+        orig_del = TiledTiffDirectory.__del__
+        orig_init = TiledTiffDirectory.__init__
+        self.delCount = 0
+        self.initCount = 0
+
+        def countDelete(*args, **kwargs):
+            self.delCount += 1
+            orig_del(*args, **kwargs)
+
+        def countInit(*args, **kwargs):
+            self.initCount += 1
+            orig_init(*args, **kwargs)
+
+        TiledTiffDirectory.__del__ = countDelete
+        TiledTiffDirectory.__init__ = countInit
+
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        # Clear the cache to free references and force garbage collection
+        LruCacheMetaclass.caches[TiffGirderTileSource].clear()
+        gc.collect(2)
+        self.initCount = 0
+        self.delCount = 0
+        source = self.model('image_item', 'large_image').tileSource(item)
+        self.assertIsNotNone(source)
+        self.assertEqual(self.initCount, 10)
+        # Create another source; we shouldn't init it again, as it should be
+        # cached.
+        source = self.model('image_item', 'large_image').tileSource(item)
+        self.assertIsNotNone(source)
+        self.assertEqual(self.initCount, 10)
+        source = None
+        # Clear the cache to free references and force garbage collection
+        LruCacheMetaclass.caches[TiffGirderTileSource].clear()
+        gc.collect(2)
+        self.assertEqual(self.delCount, 10)
 
 
 class MemcachedCache(LargeImageCachedTilesTest):
