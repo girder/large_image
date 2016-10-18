@@ -348,6 +348,13 @@ class TileSource(object):
             mm_y: the vertical size of a pixel in millimeters.
             exact: if True, only a level that matches exactly will be returned.
                 This is only applied if magnification, mm_x, or mm_y is used.
+        :param tile_position: if present, either a number to only yield the
+            (tile_position)th tile [0 to (xmax - min) * (ymax - ymin)) that the
+            iterator would yield, or a dictionary of {region_x, region_y} to
+            yield that tile, where 0, 0 is the first tile yielded, and
+            xmax - xmin - 1, ymax - ymin - 1 is the last tile yielded, or a
+            dictionary of {level_x, level_y} to yield that specific tile if it
+            is in the region.
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling.
         :returns: a dictionary of information needed for the tile iterator.
@@ -477,6 +484,7 @@ class TileSource(object):
             'format': kwargs.get('format', (TILE_FORMAT_PIL, )),
             'encoding': kwargs.get('encoding'),
             'requestedScale': requestedScale,
+            'tile_position': kwargs.get('tile_position')
         }
         return info
 
@@ -493,6 +501,23 @@ class TileSource(object):
                 image encoding.
             level: level of the current tile
             level_x, level_y: the tile reference number within the level.
+            tile_position: a dictionary of the tile position within the
+                    iterator, containing:
+                level_x, level_y: the tile reference number within the level.
+                region_x, region_y: 0, 0 is the first tile in the full
+                    iteration (when not restrictioning the iteration to a
+                    single tile).
+                position: a 0-based value for the tile within the full
+                    iteration.
+            iterator_range: a dictionary of the output range of the iterator:
+                level_x_min, level_y_min, level_x_max, level_y_max: the tiles
+                    that are be included during the full iteration:
+                    [layer_x_min, layer_x_max) and [layer_y_min, layer_y_max).
+                region_x_max, region_y_max: the number of tiles included during
+                    the full iteration.   This is layer_x_max - layer_x_min,
+                    layer_y_max - layer_y_min.
+                position: the total number of tiles included in the full
+                    iteration.  This is region_x_max * region_y_max.
             magnification: magnification of the current tile
             mm_x, mm_y: size of the current tile pixel in millimeters.
             gx, gy - (left, top) coordinate in maximum-resolution pixels
@@ -522,6 +547,25 @@ class TileSource(object):
             'Fetching region of an image with a source size of %d x %d; '
             'getting %d tiles',
             regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
+        # If tile is specified, return at most one tile
+        if iterInfo.get('tile_position') is not None:
+            tilePos = iterInfo.get('tile_position')
+            if isinstance(tilePos, dict):
+                if tilePos.get('position') is not None:
+                    tilePos = tilePos['position']
+                elif 'region_x' in tilePos and 'region_y' in tilePos:
+                    tilePos = (tilePos['region_x'] +
+                               tilePos['region_y'] * (xmax - xmin))
+                elif 'level_x' in tilePos and 'level_y' in tilePos:
+                    tilePos = ((tilePos['level_x'] - xmin) +
+                               (tilePos['level_y'] - ymin) * (xmax - xmin))
+            if tilePos < 0 or tilePos >= (ymax - ymin) * (xmax - xmin):
+                xmax = xmin
+            else:
+                ymin += int(tilePos / (xmax - xmin))
+                ymax = ymin + 1
+                xmin += (tilePos % (xmax - xmin))
+                xmax = xmin + 1
         mag = self.getMagnificationForLevel(level)
         scale = mag.get('scale', 1.0)
         for x in range(xmin, xmax):
@@ -570,6 +614,25 @@ class TileSource(object):
                     'magnification': mag['magnification'],
                     'mm_x': mag['mm_x'],
                     'mm_y': mag['mm_y'],
+                    'tile_position': {
+                        'level_x': x,
+                        'level_y': y,
+                        'region_x': x - iterInfo['xmin'],
+                        'region_y': y - iterInfo['ymin'],
+                        'position': ((x - iterInfo['xmin']) +
+                                     (y - iterInfo['ymin']) *
+                                     (iterInfo['xmax'] - iterInfo['xmin'])),
+                    },
+                    'iterator_range': {
+                        'level_x_min': iterInfo['xmin'],
+                        'level_y_min': iterInfo['ymin'],
+                        'level_x_max': iterInfo['xmax'],
+                        'level_y_max': iterInfo['ymax'],
+                        'region_x_max': iterInfo['xmax'] - iterInfo['xmin'],
+                        'region_y_max': iterInfo['ymax'] - iterInfo['ymin'],
+                        'position': ((iterInfo['xmax'] - iterInfo['xmin']) *
+                                     (iterInfo['ymax'] - iterInfo['ymin']))
+                    },
                 }
                 tile['gx'] = tile['x'] * scale
                 tile['gy'] = tile['y'] * scale
@@ -836,6 +899,9 @@ class TileSource(object):
         :returns: regionData, formatOrRegionMime: the image data and either the
             mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
+        if 'tile_position' in kwargs:
+            kwargs = kwargs.copy()
+            kwargs.pop('tile_position', None)
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
             image = PIL.Image.new('RGB', (0, 0))
@@ -1117,6 +1183,26 @@ class TileSource(object):
         region = self.convertRegionScale(sourceRegion, sourceScale,
                                          targetScale, targetUnits)
         return self.tileIterator(region=region, scale=targetScale, **kwargs)
+
+    def getSingleTile(self, *args, **kwargs):
+        """
+        Return any single tile from an iterator.  This takes exactly the same
+        parameters as tileIterator.  Use tile_position to get a specific tile,
+        otherwise the first tile is returned.
+
+        :return: a tile dictionary or None.
+        """
+        return next(self.tileIterator(*args, **kwargs), None)
+
+    def getSingleTileAtAnotherScale(self, *args, **kwargs):
+        """
+        Return any single tile from a rescaled iterator.  This takes exactly
+        the same parameters as tileIteratorAtAnotherScale.  Use tile_position
+        to get a specific tile, otherwise the first tile is returned.
+
+        :return: a tile dictionary or None.
+        """
+        return next(self.tileIteratorAtAnotherScale(*args, **kwargs), None)
 
 
 class FileTileSource(TileSource):
