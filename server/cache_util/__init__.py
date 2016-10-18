@@ -17,7 +17,7 @@
 #  limitations under the License.
 ###############################################################################
 
-from .cache import LruCacheMetaclass, tileCache, tileLock, strhash
+from .cache import LruCacheMetaclass, tileCache, tileLock, strhash, methodcache
 try:
     from .memcache import MemCache
 except ImportError:
@@ -28,4 +28,4 @@ from cachetools import cached, Cache, LRUCache
 
 __all__ = ('CacheFactory', 'tileCache', 'tileLock', 'MemCache', 'strhash',
            'LruCacheMetaclass', 'pickAvailableCache', 'cached', 'Cache',
-           'LRUCache')
+           'LRUCache', 'methodcache')

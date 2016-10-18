@@ -26,7 +26,7 @@ import openslide
 import PIL
 
 from .base import FileTileSource, TileSourceException
-from ..cache_util import LruCacheMetaclass, pickAvailableCache
+from ..cache_util import LruCacheMetaclass, pickAvailableCache, methodcache
 
 try:
     import girder
@@ -139,6 +139,7 @@ class SVSFileTileSource(FileTileSource):
             'mm_y': mm_y,
         }
 
+    @methodcache(lock=True)
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z < 0:
             raise TileSourceException('z layer does not exist')

@@ -19,7 +19,7 @@
 
 import colorsys
 from .base import TileSource, TileSourceException
-from ..cache_util import strhash
+from ..cache_util import strhash, methodcache
 
 import PIL
 from PIL import Image, ImageDraw, ImageFont
@@ -88,6 +88,7 @@ class TestTileSource(TileSource):
                             ], color, None)
             sq /= 2
 
+    @methodcache(lock=True)
     def getTile(self, x, y, z, *args, **kwargs):
         widthCount = 2 ** z
 

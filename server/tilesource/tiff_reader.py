@@ -25,7 +25,7 @@ from functools import partial
 from libtiff import libtiff_ctypes
 from xml.etree import cElementTree
 
-from ..cache_util import Cache, cached, strhash
+from ..cache_util import LRUCache, strhash, methodcache
 
 
 def patchLibtiff():
@@ -88,13 +88,7 @@ class TiledTiffDirectory(object):
         # create local cache to store Jpeg tables and
         # getTileByteCountsType
 
-        self.cache = Cache(2)
-        self._getJpegTables = cached(
-            self.cache, key=partial(strhash, '_getJpegTables')
-        )(self._getJpegTables)
-        self._getTileByteCountsType = cached(
-            self.cache, key=partial(strhash, '_getTileByteCountsType')
-        )(self._getTileByteCountsType)
+        self.cache = LRUCache(10)
 
         self._tiffFile = None
 
@@ -204,6 +198,7 @@ class TiledTiffDirectory(object):
         self.parse_image_description(
             self._tiffFile.GetField('ImageDescription'))
 
+    @methodcache(key=partial(strhash, '_getJpegTables'))
     def _getJpegTables(self):
         """
         Get the common JPEG Huffman-coding and quantization tables.
@@ -278,6 +273,7 @@ class TiledTiffDirectory(object):
             self._tiffFile, pixelX, pixelY, 0, 0).value
         return tileNum
 
+    @methodcache(key=partial(strhash, '_getTileByteCountsType'))
     def _getTileByteCountsType(self):
         """
         Get data type of the elements in the TIFFTAG_TILEBYTECOUNTS array.

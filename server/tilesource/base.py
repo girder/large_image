@@ -20,7 +20,7 @@
 import math
 from six import BytesIO
 
-from ..cache_util import tileCache, tileLock, strhash, cached
+from ..cache_util import tileCache, tileLock, strhash, methodcache
 
 try:
     import girder
@@ -123,11 +123,13 @@ class TileSource(object):
         self.jpegSubsampling = int(jpegSubsampling)
         self.edge = edge
 
+        """
         self.getThumbnail = cached(
             self.cache, key=self.wrapKey, lock=self.cache_lock)(
                 self.getThumbnail)
         self.getTile = cached(
             self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
+        """
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -647,6 +649,7 @@ class TileSource(object):
             'mm_y': mag['mm_y'],
         }
 
+    @methodcache(lock=True)
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False):
         raise NotImplementedError()
 
@@ -655,6 +658,7 @@ class TileSource(object):
             return 'image/png'
         return 'image/jpeg'
 
+    @methodcache(lock=True)
     def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is

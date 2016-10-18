@@ -24,7 +24,8 @@ import six
 import PIL.Image
 
 from .base import FileTileSource, TileSourceException
-from ..cache_util import LruCacheMetaclass, pickAvailableCache, strhash
+from ..cache_util import LruCacheMetaclass, pickAvailableCache, strhash, \
+    methodcache
 
 try:
     import girder
@@ -123,6 +124,7 @@ class PILFileTileSource(FileTileSource):
         return super(PILFileTileSource, self).getState() + ',' + str(
             self.maxSize)
 
+    @methodcache(lock=True)
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z != 0:
             raise TileSourceException('z layer does not exist')
