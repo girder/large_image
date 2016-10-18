@@ -112,8 +112,6 @@ before_install:
   - girder_worker_path=$girder_path/plugins/girder_worker
   - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
   - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
-  # Work around a failed wheel on pycparser - see https://github.com/pyca/cryptography/issues/3187
-  - pip install --no-cache-dir -U cryptography==1.4 --no-binary pycparser
   - pip install --no-cache-dir -U -r $girder_worker_path/requirements.txt -r $girder_worker_path/girder_worker/plugins/girder_io/requirements.txt
 
   - export MONGO_VERSION=3.0.7

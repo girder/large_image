@@ -56,7 +56,7 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None):
         memory = 1024 ** 3
     numItems = max(int(math.floor(memory / portion / sizeEach)), 2)
     if maxItems:
-        numItems = max(numItems, maxItems)
+        numItems = min(numItems, maxItems)
     return numItems
 
 
