@@ -28,7 +28,7 @@ from girder.models.model_base import AccessType
 
 from ..models import TileGeneralException
 
-from .. import constants, loadmodelcache
+from .. import loadmodelcache
 
 
 class TilesItemResource(Item):
@@ -54,9 +54,6 @@ class TilesItemResource(Item):
         filter_logging.addLoggingFilter(
             'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}',
             frequency=250)
-        # This is added to the system route
-        apiRoot.system.route('GET', ('setting', 'large_image'),
-                             self.getPublicSettings)
         # Cache the model singleton
         self.imageItemModel = self.model('image_item', 'large_image')
 
@@ -405,18 +402,3 @@ class TilesItemResource(Item):
         setResponseHeader('Content-Type', regionMime)
         setRawResponse()
         return regionData
-
-    @describeRoute(
-        Description('Get public settings for large image display.')
-    )
-    @access.public
-    def getPublicSettings(self, params):
-        keys = [
-            constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
-            constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
-            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER,
-            constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
-            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
-            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE,
-        ]
-        return {k: self.model('setting').get(k) for k in keys}

@@ -58,6 +58,8 @@ class LargeImageCommonTest(base.TestCase):
         for folder in folders:
             if folder['name'] == 'Public':
                 self.publicFolder = folder
+            if folder['name'] == 'Private':
+                self.privateFolder = folder
         # Authorize our user for Girder Worker
         resp = self.request(
             '/system/setting', method='PUT', user=self.admin, params={
