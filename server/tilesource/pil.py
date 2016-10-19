@@ -24,7 +24,8 @@ import six
 import PIL.Image
 
 from .base import FileTileSource, TileSourceException
-from ..cache_util import LruCacheMetaclass, pickAvailableCache
+from ..cache_util import LruCacheMetaclass, pickAvailableCache, strhash, \
+    methodcache
 
 try:
     import girder
@@ -112,11 +113,18 @@ class PILFileTileSource(FileTileSource):
         if self.tileWidth > maxWidth or self.tileHeight > maxHeight:
             raise TileSourceException('PIL tile size is too large.')
 
+    @staticmethod
+    def getLRUHash(*args, **kwargs):
+        return strhash(
+            super(PILFileTileSource, PILFileTileSource).getLRUHash(
+                *args, **kwargs),
+            kwargs.get('maxSize'))
+
     def getState(self):
         return super(PILFileTileSource, self).getState() + ',' + str(
-            self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
-            self.jpegSubsampling) + ',' + str(self.edge)
+            self.maxSize)
 
+    @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z != 0:
             raise TileSourceException('z layer does not exist')
@@ -138,3 +146,14 @@ if girder:
         cacheMaxSize = pickAvailableCache(1024 ** 2)
         cacheTimeout = 300
         name = 'pil'
+
+        @staticmethod
+        def getLRUHash(*args, **kwargs):
+            return strhash(
+                super(PILGirderTileSource, PILGirderTileSource).getLRUHash(
+                    *args, **kwargs),
+                kwargs.get('maxSize'))
+
+        def getState(self):
+            return super(PILGirderTileSource, self).getState() + ',' + str(
+                self.maxSize)

@@ -23,7 +23,7 @@ import six
 from six import BytesIO
 
 from .base import FileTileSource, TileSourceException
-from ..cache_util import pickAvailableCache, LruCacheMetaclass
+from ..cache_util import pickAvailableCache, LruCacheMetaclass, methodcache
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException
 
@@ -48,7 +48,7 @@ class TiffFileTileSource(FileTileSource):
     """
     # Cache size is based on what the class needs, which does not include
     # individual tiles
-    cacheMaxSize = pickAvailableCache(1024 ** 2)
+    cacheMaxSize = pickAvailableCache(1024 ** 2, 100)
     cacheTimeout = 300
     name = 'tifffile'
 
@@ -58,7 +58,7 @@ class TiffFileTileSource(FileTileSource):
         largeImagePath = self._getLargeImagePath()
         lastException = None
 
-        self._tiffDirectories = list()
+        self._tiffDirectories = []
         for directoryNum in itertools.count():
             try:
                 tiffDirectory = TiledTiffDirectory(largeImagePath, directoryNum)
@@ -100,6 +100,7 @@ class TiffFileTileSource(FileTileSource):
             'mm_y': mm_y,
         }
 
+    @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
                 **kwargs):
         try:
