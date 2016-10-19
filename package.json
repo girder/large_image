@@ -1,6 +1,6 @@
 {
   "name": "large_image",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A Girder plugin to create, serve, and display large multiresolution images.",
   "homepage": "https://github.com/DigitalSlideArchive/large_image",
   "bugs": {
@@ -10,13 +10,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/DigitalSlideArchive/large_image.git"
-  },
-  "dependencies": {
-    "geojs": "0.10.2",
-    "tinycolor2": "^1.3.0"
-  },
-  "devDependencies": {
-    "sinon": "^1.17.4"
   },
   "scripts": {}
 }

@@ -1,15 +1,17 @@
-girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend({
+import _ from 'underscore';
+
+import ImageViewerWidget from './base';
+
+var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
+        ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $('head').prepend(
             $('<link rel="stylesheet" href="https://beta.slide-atlas.org/webgl-viewer/static/css/sa.css">'));
 
         $.getScript(
             'https://beta.slide-atlas.org/webgl-viewer/static/sa.max.js',
-            _.bind(function () {
-                this.render();
-            }, this)
+            () => this.render()
         );
     },
 
@@ -51,6 +53,8 @@ girder.views.SlideAtlasImageViewerWidget = girder.views.ImageViewerWidget.extend
         if (window.SlideAtlas) {
             delete window.SlideAtlas;
         }
-        girder.views.ImageViewerWidget.prototype.destroy.call(this);
+        ImageViewerWidget.prototype.destroy.call(this);
     }
 });
+
+export default SlideAtlasImageViewerWidget;

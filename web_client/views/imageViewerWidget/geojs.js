@@ -1,12 +1,12 @@
-girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
+import ImageViewerWidget from './base';
+
+var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
+        ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $.getScript(
-            girder.staticRoot + '/built/plugins/large_image/geo.min.js',
-            _.bind(function () {
-                this.render();
-            }, this)
+            'https://cdnjs.cloudflare.com/ajax/libs/geojs/0.10.3/geo.min.js',
+            () => this.render()
         );
     },
 
@@ -52,20 +52,20 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
             tileWidth: this.tileWidth,
             tileHeight: this.tileHeight,
             tileRounding: Math.ceil,
-            tilesAtZoom: _.bind(function (level) {
+            tilesAtZoom: (level) => {
                 var scale = Math.pow(2, maxLevel - level);
                 return {
                     x: Math.ceil(this.sizeX / this.tileWidth / scale),
                     y: Math.ceil(this.sizeY / this.tileHeight / scale)
                 };
-            }, this),
-            tilesMaxBounds: _.bind(function (level) {
+            },
+            tilesMaxBounds: (level) => {
                 var scale = Math.pow(2, maxLevel - level);
                 return {
                     x: Math.floor(this.sizeX / scale),
                     y: Math.floor(this.sizeY / scale)
                 };
-            }, this)
+            }
         };
         this.viewer = geo.map(mapParams);
         this.viewer.createLayer('osm', layerParams);
@@ -81,6 +81,8 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
         if (window.geo) {
             delete window.geo;
         }
-        girder.views.ImageViewerWidget.prototype.destroy.call(this);
+        ImageViewerWidget.prototype.destroy.call(this);
     }
 });
+
+export default GeojsImageViewerWidget;

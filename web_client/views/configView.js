@@ -1,7 +1,16 @@
+import View from 'girder/views/View';
+
+import PluginConfigBreadcrumbWidget from 'girder/views/widgets/PluginConfigBreadcrumbWidget';
+import { restRequest } from 'girder/rest';
+import events from 'girder/events';
+
+import ConfigViewTemplate from '../templates/largeImageConfig.pug';
+import '../stylesheets/largeImageConfig.styl';
+
 /**
  * Show the default quota settings for users and collections.
  */
-girder.views.largeImageConfig = girder.View.extend({
+var ConfigView = View.extend({
     events: {
         'submit #g-large-image-form': function (event) {
             event.preventDefault();
@@ -28,20 +37,19 @@ girder.views.largeImageConfig = girder.View.extend({
         }
     },
     initialize: function () {
-        girder.views.largeImageConfig.getSettings(_.bind(
-            function (settings) {
-                this.settings = settings;
-                this.render();
-            }, this));
+        ConfigView.getSettings((settings) => {
+            this.settings = settings;
+            this.render();
+        });
     },
 
     render: function () {
-        this.$el.html(girder.templates.largeImageConfig({
+        this.$el.html(ConfigViewTemplate({
             settings: this.settings,
-            viewers: girder.views.largeImageConfig.viewers
+            viewers: ConfigView.viewers
         }));
         if (!this.breadcrumb) {
-            this.breadcrumb = new girder.views.PluginConfigBreadcrumbWidget({
+            this.breadcrumb = new PluginConfigBreadcrumbWidget({
                 pluginName: 'Large image',
                 el: this.$('.g-config-breadcrumb-container'),
                 parentView: this
@@ -53,27 +61,27 @@ girder.views.largeImageConfig = girder.View.extend({
 
     _saveSettings: function (settings) {
         /* Now save the settings */
-        girder.restRequest({
+        return restRequest({
             type: 'PUT',
             path: 'system/setting',
             data: {
                 list: JSON.stringify(settings)
             },
             error: null
-        }).done(_.bind(function () {
+        }).done(() => {
             /* Clear the settings that may have been loaded. */
-            girder.views.largeImageConfig.clearSettings();
-            girder.events.trigger('g:alert', {
+            ConfigView.clearSettings();
+            events.trigger('g:alert', {
                 icon: 'ok',
                 text: 'Settings saved.',
                 type: 'success',
                 timeout: 4000
             });
-        }, this)).error(_.bind(function (resp) {
+        }).error((resp) => {
             this.$('#g-large-image-error-message').text(
                 resp.responseJSON.message
             );
-        }, this));
+        });
     }
 }, {
     /* Class methods and objects */
@@ -84,27 +92,27 @@ girder.views.largeImageConfig = girder.View.extend({
         {
             name: 'openseadragon',
             label: 'OpenSeaDragon',
-            type: 'OpenseadragonImageViewerWidget'
+            type: 'openseadragon'
         },
         {
             name: 'openlayers',
             label: 'OpenLayers',
-            type: 'OpenlayersImageViewerWidget'
+            type: 'openlayers'
         },
         {
             name: 'leaflet',
             label: 'Leaflet',
-            type: 'LeafletImageViewerWidget'
+            type: 'leaflet'
         },
         {
             name: 'geojs',
             label: 'GeoJS',
-            type: 'GeojsImageViewerWidget'
+            type: 'geojs'
         },
         {
             name: 'slideatlas',
             label: 'SlideAtlas',
-            type: 'SlideAtlasImageViewerWidget'
+            type: 'slideatlas'
         }
     ],
 
@@ -117,19 +125,19 @@ girder.views.largeImageConfig = girder.View.extend({
      *      without any delay.
      */
     getSettings: function (callback) {
-        if (!girder.views.largeImageConfig.settings) {
-            girder.restRequest({
+        if (!ConfigView.settings) {
+            restRequest({
                 type: 'GET',
                 path: 'system/setting/large_image'
-            }).done(function (resp) {
-                girder.views.largeImageConfig.settings = resp;
+            }).done((resp) => {
+                ConfigView.settings = resp;
                 if (callback) {
-                    callback(girder.views.largeImageConfig.settings);
+                    callback(ConfigView.settings);
                 }
             });
         } else {
             if (callback) {
-                callback(girder.views.largeImageConfig.settings);
+                callback(ConfigView.settings);
             }
         }
     },
@@ -138,14 +146,8 @@ girder.views.largeImageConfig = girder.View.extend({
      * Clear the settings so that getSettings will refetch them.
      */
     clearSettings: function () {
-        delete girder.views.largeImageConfig.settings;
+        delete ConfigView.settings;
     }
 });
 
-girder.router.route(
-    'plugins/large_image/config', 'largeImageConfig', function () {
-        girder.events.trigger('g:navigateTo',
-                              girder.views.largeImageConfig);
-    });
-
-girder.exposePluginConfig('large_image', 'plugins/large_image/config');
+export default ConfigView;

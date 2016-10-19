@@ -113,7 +113,9 @@ set_property(TEST server_large_image.examples APPEND PROPERTY ENVIRONMENT
 
 add_web_client_test(
   large_image
-  "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/largeImageSpec.js"
+  "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/largeImageSpec.js"
   PLUGIN large_image)
 
-add_web_client_test(annotation "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/annotation.js" PLUGIN large_image)
+#add_puglint_test(
+#  large_image
+#  "${CMAKE_CURRENT_LIST_DIR}/web_client/templates")

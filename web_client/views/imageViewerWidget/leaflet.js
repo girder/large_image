@@ -1,15 +1,15 @@
-girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
+import ImageViewerWidget from './base';
+
+var LeafletImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
+        ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $('head').prepend(
             $('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css">'));
 
         $.getScript(
             'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
-            _.bind(function () {
-                this.render();
-            }, this)
+            () => this.render()
         );
     },
 
@@ -40,12 +40,12 @@ girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
             layers: [
                 L.tileLayer(
                     this._getTileUrl('{z}', '{x}', '{y}', {edge: '#DDD'}), {
-                    // in theory, tileSize: new L.Point(this.tileWidth,
-                    // this.tileHeight) is supposed to support non-square
-                    // tiles, but it doesn't work
-                    tileSize: this.tileWidth,
-                    continuousWorld: true
-                })
+                        // in theory, tileSize: new L.Point(this.tileWidth,
+                        // this.tileHeight) is supposed to support non-square
+                        // tiles, but it doesn't work
+                        tileSize: this.tileWidth,
+                        continuousWorld: true
+                    })
             ],
             attributionControl: false
         });
@@ -61,6 +61,8 @@ girder.views.LeafletImageViewerWidget = girder.views.ImageViewerWidget.extend({
             delete window.L;
         }
         // TODO: delete CSS
-        girder.views.ImageViewerWidget.prototype.destroy.call(this);
+        ImageViewerWidget.prototype.destroy.call(this);
     }
 });
+
+export default LeafletImageViewerWidget;
