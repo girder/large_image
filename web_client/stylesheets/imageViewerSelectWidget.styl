@@ -1,3 +1,5 @@
+@import nib
+
 .g-item-image-viewer-select
   select
     display inline
@@ -8,6 +10,11 @@
     border 1px solid #f0f0f0
     width 100%
     height 600px
+    -webkit-touch-callout none
+    user-select none
+
+    &:focus
+      outline none
 
 .g-li-full-screen
   width 100%
