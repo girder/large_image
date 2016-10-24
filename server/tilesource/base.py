@@ -1206,6 +1206,7 @@ class TileSource(object):
 
 
 class FileTileSource(TileSource):
+
     def __init__(self, path, *args, **kwargs):
         super(FileTileSource, self).__init__(*args, **kwargs)
         self.largeImagePath = path
