@@ -56,7 +56,7 @@ services:
 before_install:
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "3" ]; then export PY3="true"; else export PY2="true"; fi
   - if [ -n "${PY3}" ]; then export MONGO_VERSION=3.0.7; export PY_COVG="OFF"; else export MONGO_VERSION=2.6.11; export PY_COVG="ON"; export DEPLOY=true; fi
-  - GIRDER_VERSION=24b633385145f166fa34f651f0c036d334f71321
+  - GIRDER_VERSION=2b6b62096913a7a43d5fe0ef47377f1b018cba20
   - GIRDER_WORKER_VERSION=2730afb8585911bce1870c528c9453d20fc89c0b
   - main_path=$PWD
   - build_path=$PWD/build
