@@ -17,10 +17,45 @@
 #  limitations under the License.
 ###############################################################################
 
+try:
+    import resource
+except ImportError:
+    resource = None
 import six
-from cachetools import LRUCache, hashkey
+from cachetools import hashkey
 
-from .cachefactory import CacheFactory
+from girder import logger
+from .cachefactory import CacheFactory, pickAvailableCache
+
+
+# If we have a resource module, ask to use as many file handles as the hard
+# limit allows, then calculate that how may tile sources we can have open based
+# on the actual limit.
+MaximumTileSources = 10
+if resource:
+    try:
+        SoftNoFile, HardNoFile = resource.getrlimit(resource.RLIMIT_NOFILE)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (HardNoFile, HardNoFile))
+        SoftNoFile, HardNoFile = resource.getrlimit(resource.RLIMIT_NOFILE)
+        # Reserve some file handles for general use, and expect that tile
+        # sources could use many handles each.  This is conservative, since
+        # running out of file handles breaks the program in general.
+        MaximumTileSources = max(3, (SoftNoFile - 10) / 20)
+    except Exception:
+        pass
+
+
+CacheProperties = {
+    'tilesource': {
+        # Cache size is based on what the class needs, which does not include
+        # individual tiles
+        'cacheMaxSize': pickAvailableCache(
+            1024 ** 2, maxItems=MaximumTileSources),
+        # The cache timeout is not currently being used, but it is set here in
+        # case we ever choose to implement it.
+        'cacheTimeout': 300,
+    }
+}
 
 
 def strhash(*args, **kwargs):
@@ -66,45 +101,59 @@ def methodcache(key=None):
 class LruCacheMetaclass(type):
     """
     """
-    caches = {}
+    namedCaches = {}
+    classCaches = {}
 
     def __new__(metacls, name, bases, namespace, **kwargs):  # noqa - N804
         # Get metaclass parameters by finding and removing them from the class
         # namespace (necessary for Python 2), or preferentially as metaclass
         # arguments (only in Python 3).
 
-        maxSize = namespace.pop('cacheMaxSize', None)
+        cacheName = namespace.get('cacheName', None)
+        cacheName = kwargs.get('cacheName', cacheName)
+
+        maxSize = CacheProperties.get(cacheName, {}).get('cacheMaxSize', None)
+        maxSize = namespace.pop('cacheMaxSize', maxSize)
         maxSize = kwargs.get('cacheMaxSize', maxSize)
         if maxSize is None:
             raise TypeError('Usage of the LruCacheMetaclass requires a '
-                            '"cacheMaxSize" attribute on the class.')
+                            '"cacheMaxSize" attribute on the class %s.' % name)
 
-        timeout = namespace.pop('cacheTimeout', None)
+        timeout = CacheProperties.get(cacheName, {}).get('cacheTimeout', None)
+        timeout = namespace.pop('cacheTimeout', timeout)
         timeout = kwargs.get('cacheTimeout', timeout)
-
-        # TODO: use functools.lru_cache if's available in Python 3?
-        cache = LRUCache(maxSize)
 
         cls = super(LruCacheMetaclass, metacls).__new__(
             metacls, name, bases, namespace)
+        if not cacheName:
+            cacheName = cls
+
+        if LruCacheMetaclass.namedCaches.get(cacheName) is None:
+            cache, cacheLock = CacheFactory().getCache(maxSize)
+            LruCacheMetaclass.namedCaches[cacheName] = cache
+            logger.info('Created LRU Cache for %r with %d maximum size' % (
+                cacheName, maxSize))
+        else:
+            cache = LruCacheMetaclass.namedCaches[cacheName]
 
         # Don't store the cache in cls.__dict__, because we don't want it to be
         # part of the attribute lookup hierarchy
         # TODO: consider putting it in cls.__dict__, to inspect statistics
         # cls is hashable though, so use it to lookup the cache, in case an
         # identically-named class gets redefined
-        LruCacheMetaclass.caches[cls] = cache
+        LruCacheMetaclass.classCaches[cls] = cache
 
         return cls
 
     def __call__(cls, *args, **kwargs):  # noqa - N805
 
-        cache = LruCacheMetaclass.caches[cls]
+        cache = LruCacheMetaclass.classCaches[cls]
 
         if hasattr(cls, 'getLRUHash'):
             key = cls.getLRUHash(*args, **kwargs)
         else:
             key = strhash(args[0], kwargs)
+        key = cls.__name__ + ' ' + key
         try:
             instance = cache[key]
         except KeyError:

@@ -64,19 +64,37 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None):
 
 
 class CacheFactory():
-    def getCache(self):
+    logged = False
+
+    def getConfig(self):
         defaultConfig = {}
         if config:
             curConfig = config.getConfig().get('large_image', defaultConfig)
         else:
             curConfig = defaultConfig
+        return curConfig
+
+    def getCacheSize(self, numItems):
+        if numItems is None:
+            curConfig = self.getConfig()
+            try:
+                portion = int(curConfig.get('cache_python_memory_portion', 8))
+                if portion < 3:
+                    portion = 3
+            except ValueError:
+                portion = 16
+            numItems = pickAvailableCache(256**2 * 4, portion)
+        return numItems
+
+    def getCache(self, numItems=None):
+        curConfig = self.getConfig()
         # memcached is the fallback default, if available.
         cacheBackend = curConfig.get('cache_backend', 'memcached')
         if cacheBackend:
             cacheBackend = str(cacheBackend).lower()
-        if cacheBackend == 'memcached' and MemCache:
+        if cacheBackend == 'memcached' and MemCache and numItems is None:
             # lock needed because pylibmc(memcached client) is not threadsafe
-            tileCacheLock = threading.Lock()
+            cacheLock = threading.Lock()
 
             # check if credentials and location exist for girder otherwise
             # assume location is 127.0.0.1 (localhost) with no password
@@ -90,16 +108,12 @@ class CacheFactory():
             if not memcachedPassword:
                 memcachedPassword = None
 
-            tileCache = MemCache(url, memcachedUsername, memcachedPassword)
+            cache = MemCache(url, memcachedUsername, memcachedPassword)
         else:  # fallback backend
             cacheBackend = 'python'
-            try:
-                portion = int(curConfig.get('cache_python_memory_portion', 8))
-                if portion < 3:
-                    portion = 3
-            except ValueError:
-                portion = 16
-            tileCache = LRUCache(pickAvailableCache(256**2 * 4, portion))
-            tileCacheLock = None
-        logprint.info('Using %s for large_image caching' % cacheBackend)
-        return tileCache, tileCacheLock
+            cache = LRUCache(self.getCacheSize(numItems))
+            cacheLock = None
+        if numItems is None and not CacheFactory.logged:
+            logprint.info('Using %s for large_image caching' % cacheBackend)
+            CacheFactory.logged = True
+        return cache, cacheLock

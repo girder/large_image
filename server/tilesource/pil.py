@@ -24,8 +24,7 @@ import six
 import PIL.Image
 
 from .base import FileTileSource, TileSourceException
-from ..cache_util import LruCacheMetaclass, pickAvailableCache, strhash, \
-    methodcache
+from ..cache_util import LruCacheMetaclass, strhash, methodcache
 
 try:
     import girder
@@ -68,10 +67,7 @@ class PILFileTileSource(FileTileSource):
     """
     Provides tile access to single image PIL files.
     """
-    # Cache size is based on what the class needs, which does not include
-    # individual tiles
-    cacheMaxSize = pickAvailableCache(1024 ** 2)
-    cacheTimeout = 300
+    cacheName = 'tilesource'
     name = 'pilfile'
 
     def __init__(self, path, maxSize=None, **kwargs):
@@ -143,8 +139,7 @@ if girder:
         """
         # Cache size is based on what the class needs, which does not include
         # individual tiles
-        cacheMaxSize = pickAvailableCache(1024 ** 2)
-        cacheTimeout = 300
+        cacheName = 'tilesource'
         name = 'pil'
 
         @staticmethod
