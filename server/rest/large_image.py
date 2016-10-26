@@ -83,7 +83,7 @@ def createThumbnailsJob(job):
 
 class LargeImageResource(Resource):
 
-    def __init__(self, apiRoot):
+    def __init__(self):
         super(LargeImageResource, self).__init__()
 
         self.resourceName = 'large_image'
