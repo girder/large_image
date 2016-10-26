@@ -91,6 +91,8 @@ class LargeImageResource(Resource):
         self.route('GET', ('thumbnails',), self.countThumbnails)
         self.route('PUT', ('thumbnails',), self.createThumbnails)
         self.route('DELETE', ('thumbnails',), self.deleteThumbnails)
+        self.route('DELETE', ('tiles', 'incomplete'),
+                   self.deleteIncompleteTiles)
 
     @describeRoute(
         Description('Get public settings for large image display.')
@@ -209,3 +211,34 @@ class LargeImageResource(Resource):
                 self.model('file').remove(file)
                 removed += 1
         return removed
+
+    @describeRoute(
+        Description('Remove large images from items where the large image job '
+                    'incomplete.')
+        .notes('This is used to clean up all large image conversion jobs that '
+               'have failed to complete.  If a job is in progress, it will be '
+               'cancelled.  The return value is the number of items that were '
+               'adjusted.')
+    )
+    @access.admin
+    def deleteIncompleteTiles(self, params):
+        itemModel = self.model('item')
+        imageItemModel = self.model('image_item', 'large_image')
+        jobModel = self.model('job', 'jobs')
+        result = {'removed': 0}
+        while True:
+            item = itemModel.findOne({'largeImage.expected': True})
+            if not item:
+                break
+            job = jobModel.load(item['largeImage']['jobId'], force=True)
+            if job and job.get('status') in (
+                    JobStatus.QUEUED, JobStatus.RUNNING):
+                job = jobModel.cancelJob(job)
+            if job and job.get('status') in (
+                    JobStatus.QUEUED, JobStatus.RUNNING):
+                result['message'] = ('The job for item %s could not be '
+                                     'canceled' % (str(item['_id'])))
+                break
+            imageItemModel.delete(item)
+            result['removed'] += 1
+        return result

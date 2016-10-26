@@ -22,7 +22,7 @@ import os
 import six
 import time
 
-from girder import config
+from girder import config, events
 from tests import base
 
 from . import common
@@ -248,3 +248,54 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         present, removed = self.model(
             'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
         self.assertLess(present, 3 + len(slowList))
+
+    def testDeleteIncompleteTile(self):
+        # Test the large_image/settings end point
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.user)
+        self.assertStatus(resp, 403)
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.admin)
+        self.assertStatusOk(resp)
+        results = resp.json
+        self.assertEqual(results['removed'], 0)
+
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
+        itemId = str(file['itemId'])
+        # Use a simulated cherrypy request, as it won't complete properly
+        resp = self.request(
+            method='POST', path='/item/%s/tiles' % itemId, user=self.admin)
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.admin)
+        self.assertStatusOk(resp)
+        results = resp.json
+        self.assertEqual(results['removed'], 1)
+
+        def preventCancel(evt):
+            evt.preventDefault()
+
+        # Prevent a job from cancelling
+        events.bind('jobs.cancel', 'testDeleteIncompleteTile', preventCancel)
+        resp = self.request(
+            method='POST', path='/item/%s/tiles' % itemId, user=self.admin)
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.admin)
+        self.assertStatusOk(resp)
+        results = resp.json
+        self.assertEqual(results['removed'], 0)
+        self.assertIn('could not be canceled', results['message'])
+        events.unbind('jobs.cancel', 'testDeleteIncompleteTile')
+        # Now we should be able to cancel the job
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.admin)
+        self.assertStatusOk(resp)
+        results = resp.json
+        self.assertEqual(results['removed'], 1)
+
+#
