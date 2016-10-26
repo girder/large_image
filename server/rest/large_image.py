@@ -87,11 +87,27 @@ class LargeImageResource(Resource):
         super(LargeImageResource, self).__init__()
 
         self.resourceName = 'large_image'
+        self.route('GET', ('settings',), self.getPublicSettings)
         self.route('GET', ('thumbnails',), self.countThumbnails)
         self.route('PUT', ('thumbnails',), self.createThumbnails)
         self.route('DELETE', ('thumbnails',), self.deleteThumbnails)
         self.route('DELETE', ('tiles', 'incomplete'),
                    self.deleteIncompleteTiles)
+
+    @describeRoute(
+        Description('Get public settings for large image display.')
+    )
+    @access.public
+    def getPublicSettings(self, params):
+        keys = [
+            constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+            constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER,
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE,
+        ]
+        return {k: self.model('setting').get(k) for k in keys}
 
     @describeRoute(
         Description('Count the number of cached thumbnail files for '
