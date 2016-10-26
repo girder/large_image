@@ -19,9 +19,10 @@
 
 import json
 import os
+import six
 import time
 
-from girder import config
+from girder import config, events
 from tests import base
 
 from . import common
@@ -75,6 +76,58 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             if resp.json.get('status') == JobStatus.CANCELED:
                 return 'canceled'
             time.sleep(0.1)
+
+    def testSettings(self):
+        from girder.plugins.large_image import constants
+        from girder.models.model_base import ValidationException
+
+        for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
+                    constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+                    constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
+            self.model('setting').set(key, 'false')
+            self.assertFalse(self.model('setting').get(key))
+            self.model('setting').set(key, 'true')
+            self.assertTrue(self.model('setting').get(key))
+            with six.assertRaisesRegex(self, ValidationException,
+                                       'must be a boolean'):
+                self.model('setting').set(key, 'not valid')
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
+        self.assertEqual(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER), 'geojs')
+        with six.assertRaisesRegex(self, ValidationException,
+                                   'must be a non-negative integer'):
+            self.model('setting').set(
+                constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, -1)
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 5)
+        self.assertEqual(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES), 5)
+        with six.assertRaisesRegex(self, ValidationException,
+                                   'must be a non-negative integer'):
+            self.model('setting').set(
+                constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, -1)
+        self.model('setting').set(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 1024)
+        self.assertEqual(self.model('setting').get(
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE), 1024)
+        # Test the large_image/settings end point
+        resp = self.request(path='/large_image/settings', user=None)
+        self.assertStatusOk(resp)
+        settings = resp.json
+        # The values were set earlier
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER], 'geojs')
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER], True)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS], True)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_AUTO_SET], True)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES], 5)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE], 1024)
 
     def testThumbnailFileJob(self):
         # Create files via a job
@@ -195,3 +248,54 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         present, removed = self.model(
             'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
         self.assertLess(present, 3 + len(slowList))
+
+    def testDeleteIncompleteTile(self):
+        # Test the large_image/settings end point
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.user)
+        self.assertStatus(resp, 403)
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.admin)
+        self.assertStatusOk(resp)
+        results = resp.json
+        self.assertEqual(results['removed'], 0)
+
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
+        itemId = str(file['itemId'])
+        # Use a simulated cherrypy request, as it won't complete properly
+        resp = self.request(
+            method='POST', path='/item/%s/tiles' % itemId, user=self.admin)
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.admin)
+        self.assertStatusOk(resp)
+        results = resp.json
+        self.assertEqual(results['removed'], 1)
+
+        def preventCancel(evt):
+            evt.preventDefault()
+
+        # Prevent a job from cancelling
+        events.bind('jobs.cancel', 'testDeleteIncompleteTile', preventCancel)
+        resp = self.request(
+            method='POST', path='/item/%s/tiles' % itemId, user=self.admin)
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.admin)
+        self.assertStatusOk(resp)
+        results = resp.json
+        self.assertEqual(results['removed'], 0)
+        self.assertIn('could not be canceled', results['message'])
+        events.unbind('jobs.cancel', 'testDeleteIncompleteTile')
+        # Now we should be able to cancel the job
+        resp = self.request(
+            method='DELETE', path='/large_image/tiles/incomplete',
+            user=self.admin)
+        self.assertStatusOk(resp)
+        results = resp.json
+        self.assertEqual(results['removed'], 1)
+
+#
