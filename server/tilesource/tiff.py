@@ -18,19 +18,20 @@
 ###############################################################################
 
 import itertools
-
+import math
 import six
 from six import BytesIO
+from six.moves import range
 
 from .base import FileTileSource, TileSourceException
 from ..cache_util import LruCacheMetaclass, methodcache
 from .tiff_reader import TiledTiffDirectory, TiffException, \
-    InvalidOperationTiffException, IOTiffException
+    InvalidOperationTiffException, IOTiffException, ValidationTiffException
 
 try:
     import girder
     from girder import logger
-    from .base import GirderTileSource
+    from .base import GirderTileSource, TILE_FORMAT_PIL
 except ImportError:
     girder = None
     import logging as logger
@@ -55,24 +56,43 @@ class TiffFileTileSource(FileTileSource):
         largeImagePath = self._getLargeImagePath()
         lastException = None
 
-        self._tiffDirectories = []
+        directories = {}
+        first = None
         for directoryNum in itertools.count():
             try:
-                tiffDirectory = TiledTiffDirectory(largeImagePath, directoryNum)
+                td = TiledTiffDirectory(largeImagePath, directoryNum)
+            except ValidationTiffException as lastException:
+                continue
             except TiffException as lastException:
                 break
+            # Ensure all directories have the same tile size
+            if first:
+                if (td.tileWidth != first.tileWidth or
+                        td.tileHeight != first.tileHeight):
+                    continue
             else:
-                self._tiffDirectories.append(tiffDirectory)
+                first = td
+            level = int(math.ceil(math.log(max(
+                float(td.imageWidth) / td.tileWidth,
+                float(td.imageHeight) / td.tileHeight)) / math.log(2)))
+            # If two directories are at the same level, keep the higher
+            # resolution one
+            if (level in directories and td.imageWidth * td.imageHeight <
+                    directories[level].imageWidth *
+                    directories[level].imageHeight):
+                continue
+            directories[level] = td
 
-        if not self._tiffDirectories:
+        if not len(directories):
             msg = 'File %s didn\'t meet requirements for tile source: %s' % (
                 largeImagePath, lastException)
             logger.debug(msg)
             raise TileSourceException(msg)
 
-        # Multiresolution TIFFs are stored with full-resolution layer in
-        #   directory 0
-        self._tiffDirectories.reverse()
+        # Sort the directories so that the highest resolution is the last one;
+        # if a level is missing, put a None value in its place.
+        self._tiffDirectories = [directories.get(key) for key in
+                                 range(max(directories.keys()) + 1)]
 
         self.tileWidth = self._tiffDirectories[-1].tileWidth
         self.tileHeight = self._tiffDirectories[-1].tileHeight
@@ -89,7 +109,7 @@ class TiffFileTileSource(FileTileSource):
         pixelInfo = self._tiffDirectories[-1].pixelInfo
         mm_x = pixelInfo.get('mm_x')
         mm_y = pixelInfo.get('mm_y')
-        # Estimate the magnification, as we don't have a direct value
+        # Estimate the magnification if we don't have a direct value
         mag = pixelInfo.get('magnification', 0.01 / mm_x if mm_x else None)
         return {
             'magnification': mag,
@@ -101,8 +121,16 @@ class TiffFileTileSource(FileTileSource):
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
                 **kwargs):
         try:
-            tile = self._tiffDirectories[z].getTile(x, y)
-            return self._outputTile(tile, 'JPEG', x, y, z, pilImageAllowed,
+            if self._tiffDirectories[z] is None:
+                if sparseFallback:
+                    raise IOTiffException('Missing z level %d' % z)
+                tile = self.getTileFromEmptyDirectory(x, y, z)
+            else:
+                tile = self._tiffDirectories[z].getTile(x, y)
+                format = 'JPEG'
+            if PIL and isinstance(tile, PIL.Image.Image):
+                format = TILE_FORMAT_PIL
+            return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     **kwargs)
         except IndexError:
             raise TileSourceException('z layer does not exist')
@@ -123,6 +151,53 @@ class TiffFileTileSource(FileTileSource):
                 return self._outputTile(image, 'PIL', x, y, z, pilImageAllowed,
                                         **kwargs)
             raise TileSourceException('Internal I/O failure: %s' % e.message)
+
+    def getTileFromEmptyDirectory(self, x, y, z):
+        """
+        Given the x, y, z tile location in an unpopulated level, get tiles from
+        higher resolution levels to make the lower-res tile.
+
+        :param x: location of tile within original level.
+        :param y: location of tile within original level.
+        :param z: original level.
+        :returns: tile in PIL format.
+        """
+        scale = 1
+        while self._tiffDirectories[z] is None:
+            scale *= 2
+            z += 1
+        tile = PIL.Image.new(
+            'RGBA', (self.tileWidth * scale, self.tileHeight * scale))
+        maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
+        maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
+        for newX in range(scale):
+            for newY in range(scale):
+                if ((newX or newY) and ((x * scale + newX) >= maxX or
+                                        (y * scale + newY) >= maxY)):
+                    continue
+                subtile = self.getTile(
+                    x * scale + newX, y * scale + newY, z,
+                    pilImageAllowed=True, sparseFallback=True, edge=False)
+                if not isinstance(subtile, PIL.Image.Image):
+                    subtile = PIL.Image.open(BytesIO(subtile))
+                tile.paste(subtile, (newX * self.tileWidth,
+                                     newY * self.tileHeight))
+        return tile.resize((self.tileWidth, self.tileHeight),
+                           PIL.Image.LANCZOS)
+
+    def getPreferredLevel(self, level):
+        """
+        Given a desired level (0 is minimum resolution, self.levels - 1 is max
+        resolution), return the level that contains actual data that is no
+        lower resolution.
+
+        :param level: desired level
+        :returns level: a level with actual data that is no lower resolution.
+        """
+        level = max(0, min(level, self.levels - 1))
+        while self._tiffDirectories[level] is None and level < self.levels - 1:
+            level += 1
+        return level
 
 
 if girder:
