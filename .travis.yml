@@ -74,12 +74,12 @@ before_install:
   # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
   # so install it from source.
   - cd $build_path
-  # - wget -O openjpeg-2.1.tar.gz https://github.com/uclouvain/openjpeg/archive/version.2.1.tar.gz
-  # - tar -zxf openjpeg-2.1.tar.gz
-  # - cd openjpeg-version.2.1
-  - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
-  - tar -zxf openjpeg-1.5.2.tar.gz
-  - cd openjpeg-version.1.5.2
+  - wget -O openjpeg-2.1.tar.gz https://github.com/uclouvain/openjpeg/archive/version.2.1.tar.gz
+  - tar -zxf openjpeg-2.1.tar.gz
+  - cd openjpeg-version.2.1
+  # - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
+  # - tar -zxf openjpeg-1.5.2.tar.gz
+  # - cd openjpeg-version.1.5.2
   - cmake .
   - make -j 3
   - sudo make install
