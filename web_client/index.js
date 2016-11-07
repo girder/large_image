@@ -1,0 +1,2 @@
+var views = {};
+export { views };
