@@ -244,6 +244,8 @@ class TiledTiffDirectory(object):
 
         # Strip the Start / End Of Image markers
         tableData = tableBuffer[2:tableSize - 2]
+        # Add JFIF information to the header to keep iOS 10 happy
+        tableData = b'\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00' + tableData
         return tableData
 
     def _toTileNum(self, x, y):
