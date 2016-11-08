@@ -151,3 +151,6 @@ script:
 after_failure:
   # On failures, show girder's error long and the worker output
   - cat /tmp/worker.out
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash) -R $main_path -s $build_path
