@@ -20,8 +20,7 @@
 import colorsys
 import six
 from .base import TileSource, TileSourceException
-from ..cache_util import strhash, methodcache, LruCacheMetaclass, \
-    pickAvailableCache
+from ..cache_util import strhash, methodcache, LruCacheMetaclass
 
 import PIL
 from PIL import Image, ImageDraw, ImageFont
@@ -35,8 +34,7 @@ tileCounter = 0
 
 @six.add_metaclass(LruCacheMetaclass)
 class TestTileSource(TileSource):
-    cacheMaxSize = pickAvailableCache(1024 ** 2)
-    cacheTimeout = 300
+    cacheName = 'tilesource'
     name = 'test'
 
     def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,

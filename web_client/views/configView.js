@@ -128,7 +128,7 @@ var ConfigView = View.extend({
         if (!ConfigView.settings) {
             restRequest({
                 type: 'GET',
-                path: 'system/setting/large_image'
+                path: 'large_image/settings'
             }).done((resp) => {
                 ConfigView.settings = resp;
                 if (callback) {
