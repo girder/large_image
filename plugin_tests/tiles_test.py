@@ -391,6 +391,23 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
         self.assertNotEqual(greyImage, image)
 
+    def testTilesFromPTIFJpeg2K(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'huron.image2_jpeg2k.tif'))
+        itemId = str(file['itemId'])
+        # The tile request should tell us about the file.  These are specific
+        # to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 256)
+        self.assertEqual(tileMetadata['tileHeight'], 256)
+        self.assertEqual(tileMetadata['sizeX'], 9158)
+        self.assertEqual(tileMetadata['sizeY'], 11273)
+        self.assertEqual(tileMetadata['levels'], 7)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self._testTilesZXY(itemId, tileMetadata)
+
     def testTilesFromPIL(self):
         # Allow images bigger than our test
         from girder.plugins.large_image import constants

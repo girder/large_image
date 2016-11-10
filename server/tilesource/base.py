@@ -904,7 +904,10 @@ class TileSource(object):
             kwargs.pop('tile_position', None)
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
-            image = PIL.Image.new('RGB', (0, 0))
+            # In PIL 3.4.2, you can't directly create a 0 sized image.  It was
+            # easier to do this before:
+            #  image = PIL.Image.new('RGB', (0, 0))
+            image = PIL.Image.new('RGB', (1, 1)).crop((0, 0, 0, 0))
             return self._encodeImage(image, format=format, **kwargs)
         regionWidth = iterInfo['region']['width']
         regionHeight = iterInfo['region']['height']
