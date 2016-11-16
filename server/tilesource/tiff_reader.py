@@ -133,6 +133,14 @@ class TiledTiffDirectory(object):
         except TypeError:
             raise IOTiffException(
                 'Could not open TIFF file: %s' % filePath)
+        # pylibtiff changed the case of some functions between version 0.4 and
+        # the version that supports libtiff 4.0.6.  To support both, ensure
+        # that the cased functions exist.
+        for func in ('SetDirectory', 'IsTiled', 'GetField'):
+            if (not hasattr(self._tiffFile, func) and
+                    hasattr(self._tiffFile, func.lower())):
+                setattr(self._tiffFile, func, getattr(
+                    self._tiffFile, func.lower()))
 
         self._directoryNum = directoryNum
         if self._tiffFile.SetDirectory(self._directoryNum) != 1:
