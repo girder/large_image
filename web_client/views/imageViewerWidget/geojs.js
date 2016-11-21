@@ -1,3 +1,5 @@
+import { staticRoot } from 'girder/rest';
+
 import ImageViewerWidget from './base';
 
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
@@ -5,7 +7,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $.getScript(
-            'https://cdnjs.cloudflare.com/ajax/libs/geojs/0.10.3/geo.min.js',
+            staticRoot + '/built/plugins/large_image/extra/geojs.js',
             () => this.render()
         );
     },
