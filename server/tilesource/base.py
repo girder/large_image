@@ -924,11 +924,16 @@ class TileSource(object):
         # memory ourselves in one block, the memory manager does a better job.
         # Furthermode, if the source buffer isn't in RGBA format, the memory is
         # still often inaccessible.
-        image = PIL.Image.frombuffer(
-            mode, (regionWidth, regionHeight),
-            # PIL will reallocate buffers that aren't in 'raw', RGBA, 0, 1.
-            # See PIL documentation and code for more details.
-            b'\x00' * (regionWidth * regionHeight * 4), 'raw', 'RGBA', 0, 1)
+        try:
+            image = PIL.Image.frombuffer(
+                mode, (regionWidth, regionHeight),
+                # PIL will reallocate buffers that aren't in 'raw', RGBA, 0, 1.
+                # See PIL documentation and code for more details.
+                b'\x00' * (regionWidth * regionHeight * 4), 'raw', 'RGBA', 0, 1)
+        except MemoryError:
+            raise TileSourceException(
+                'Insufficient memory to get region of %d x %d pixels.' % (
+                    regionWidth, regionHeight))
         for tile in self._tileIterator(iterInfo):
             # Add each tile to the image.  PIL crops these if they are off the
             # edge.
