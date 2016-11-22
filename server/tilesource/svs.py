@@ -158,10 +158,14 @@ class SVSFileTileSource(FileTileSource):
         # We ask to read an area that will cover the tile at the z level.  The
         # scale we computed in the __init__ process for this svs level tells
         # how much larger a region we need to read.
-        tile = self._openslide.read_region(
-            (offsetx, offsety), svslevel['svslevel'],
-            (self.tileWidth * svslevel['scale'],
-             self.tileHeight * svslevel['scale']))
+        try:
+            tile = self._openslide.read_region(
+                (offsetx, offsety), svslevel['svslevel'],
+                (self.tileWidth * svslevel['scale'],
+                 self.tileHeight * svslevel['scale']))
+        except openslide.lowlevel.OpenSlideError as exc:
+            raise TileSourceException(
+                'Failed to get OpenSlide region (%r).' % exc)
         # Always scale to the svs level 0 tile size.
         if svslevel['scale'] != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight),

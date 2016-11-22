@@ -28,6 +28,7 @@ from girder.plugins.jobs.constants import JobStatus
 from girder.utility.model_importer import ModelImporter
 
 from .. import constants
+from ..models.base import TileGeneralException
 
 
 def createThumbnailsJob(job):
@@ -42,6 +43,7 @@ def createThumbnailsJob(job):
         job, log='Started creating large image thumbnails\n',
         status=JobStatus.RUNNING)
     checkedOrCreated = 0
+    failedImages = 0
     try:
         spec = job['kwargs']['spec']
         logInterval = float(job['kwargs'].get('logInterval', 10))
@@ -53,8 +55,14 @@ def createThumbnailsJob(job):
             lastLogTime = time.time()
             items = itemModel.find({'largeImage.fileId': {'$exists': True}})
             for item in items:
-                imageItemModel.getThumbnail(item, **entry)
-                checkedOrCreated += 1
+                try:
+                    imageItemModel.getThumbnail(item, **entry)
+                    checkedOrCreated += 1
+                except TileGeneralException as exc:
+                    failedImages += 1
+                    lastFailed = str(item['_id'])
+                    logger.info('Failed to get thumbnail for item %s: %r' % (
+                        lastFailed, exc))
                 # Periodically, log the state of the job and check if it was
                 # deleted or canceled.
                 if time.time() - lastLogTime > logInterval:
@@ -62,6 +70,12 @@ def createThumbnailsJob(job):
                         job, log='Checked or created %d thumbnail file%s\n' % (
                             checkedOrCreated,
                             's' if checkedOrCreated != 1 else ''))
+                    if failedImages:
+                        job = jobModel.updateJob(
+                            job, log='Failed on %d thumbnail file%s (last '
+                            'failure on item %s)\n' % (
+                                failedImages,
+                                's' if failedImages != 1 else '', lastFailed))
                     lastLogTime = time.time()
                     # Check if the job was deleted or canceled; if so, quit
                     job = jobModel.load(id=job['_id'], force=True)
@@ -77,6 +91,9 @@ def createThumbnailsJob(job):
         return
     msg = 'Finished creating large image thumbnails (%d checked or created)' % (
         checkedOrCreated)
+    if failedImages:
+        msg += ' (%d failed, last failure on item %s)' % (
+            failedImages, lastFailed)
     logger.info(msg)
     job = jobModel.updateJob(job, log=msg + '\n', status=JobStatus.SUCCESS)
 
