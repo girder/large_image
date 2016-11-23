@@ -81,6 +81,11 @@ class ValidationTiffException(TiffException):
 
 class TiledTiffDirectory(object):
 
+    CoreFunctions = [
+        'SetDirectory', 'GetField', 'LastDirectory', 'GetMode', 'IsTiled',
+        'IsByteSwapped', 'IsUpSampled', 'IsMSB2LSB', 'NumberOfStrips'
+    ]
+
     def __init__(self, filePath, directoryNum):
         """
         Create a new reader for a tiled image file directory in a TIFF file.
@@ -136,7 +141,7 @@ class TiledTiffDirectory(object):
         # pylibtiff changed the case of some functions between version 0.4 and
         # the version that supports libtiff 4.0.6.  To support both, ensure
         # that the cased functions exist.
-        for func in ('SetDirectory', 'IsTiled', 'GetField'):
+        for func in self.CoreFunctions:
             if (not hasattr(self._tiffFile, func) and
                     hasattr(self._tiffFile, func.lower())):
                 setattr(self._tiffFile, func, getattr(
@@ -159,45 +164,46 @@ class TiledTiffDirectory(object):
 
         :raises: ValidationTiffException
         """
-        if self._tiffInfo['SamplesPerPixel'] < 3:
+        if self._tiffInfo.get('samplesperpixel') < 3:
             raise ValidationTiffException('Only RGB TIFF files are supported')
 
-        if self._tiffInfo['BitsPerSample'] != 8:
+        if self._tiffInfo.get('bitspersample') != 8:
             raise ValidationTiffException(
                 'Only single-byte sampled TIFF files are supported')
 
-        if self._tiffInfo['SampleFormat'] not in (
+        if self._tiffInfo.get('sampleformat') not in (
                 None,  # default is still SAMPLEFORMAT_UINT
                 libtiff_ctypes.SAMPLEFORMAT_UINT):
             raise ValidationTiffException(
                 'Only unsigned int sampled TIFF files are supported')
 
-        if self._tiffInfo['PlanarConfig'] != libtiff_ctypes.PLANARCONFIG_CONTIG:
+        if self._tiffInfo.get('planarconfig') != libtiff_ctypes.PLANARCONFIG_CONTIG:
             raise ValidationTiffException(
                 'Only contiguous planar configuration TIFF files are supported')
 
-        if self._tiffInfo['Photometric'] not in (
+        if self._tiffInfo.get('photometric') not in (
                 libtiff_ctypes.PHOTOMETRIC_RGB,
                 libtiff_ctypes.PHOTOMETRIC_YCBCR):
             raise ValidationTiffException(
                 'Only RGB and YCbCr photometric interpretation TIFF files are '
                 'supported')
 
-        if self._tiffInfo['Orientation'] != libtiff_ctypes.ORIENTATION_TOPLEFT:
+        if self._tiffInfo.get('orientation') != libtiff_ctypes.ORIENTATION_TOPLEFT:
             raise ValidationTiffException(
                 'Only top-left orientation TIFF files are supported')
 
-        if self._tiffInfo['Compression'] not in (
+        if self._tiffInfo.get('compression') not in (
                 libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005):
             raise ValidationTiffException(
                 'Only JPEG compression TIFF files are supported')
 
-        if (not self._tiffInfo['isTiled'] or not self._tiffInfo['TileWidth'] or
-                not self._tiffInfo['TileLength']):
+        if (not self._tiffInfo.get('istiled') or
+                not self._tiffInfo.get('tilewidth') or
+                not self._tiffInfo.get('tilelength')):
             raise ValidationTiffException('Only tiled TIFF files are supported')
 
-        if (self._tiffInfo['Compression'] == libtiff_ctypes.COMPRESSION_JPEG and
-                self._tiffInfo['JpegTablesMode'] !=
+        if (self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG and
+                self._tiffInfo.get('jpegtablesmode') !=
                 libtiff_ctypes.JPEGTABLESMODE_QUANT |
                 libtiff_ctypes.JPEGTABLESMODE_HUFF):
             raise ValidationTiffException(
@@ -205,19 +211,24 @@ class TiledTiffDirectory(object):
                 'tables are supported')
 
     def _loadMetadata(self):
-        fields = [
-            'SamplesPerPixel', 'BitsPerSample', 'SampleFormat', 'PlanarConfig',
-            'Photometric', 'Orientation', 'Compression', 'TileWidth',
-            'TileLength', 'JpegTablesMode', 'ImageWidth', 'ImageLength',
-            'ImageDescription']
-        info = {field: self._tiffFile.GetField(field) for field in fields}
-        info['isTiled'] = self._tiffFile.IsTiled()
+        fields = [key.split('_', 1)[1].lower() for key in
+                  dir(libtiff_ctypes.tiff_h) if key.startswith('TIFFTAG_')]
+        info = {}
+        for field in fields:
+            value = self._tiffFile.GetField(field)
+            if value is not None:
+                info[field] = value
+        for func in self.CoreFunctions[2:]:
+            if hasattr(self._tiffFile, func):
+                value = getattr(self._tiffFile, func)
+                if value:
+                    info[func.lower()] = value
         self._tiffInfo = info
-        self._tileWidth = info['TileWidth']
-        self._tileHeight = info['TileLength']
-        self._imageWidth = info['ImageWidth']
-        self._imageHeight = info['ImageLength']
-        self.parse_image_description(info['ImageDescription'])
+        self._tileWidth = info.get('tilewidth')
+        self._tileHeight = info.get('tilelength')
+        self._imageWidth = info.get('imagewidth')
+        self._imageHeight = info.get('imagelength')
+        self.parse_image_description(info.get('imagedescription', ''))
 
     @methodcache(key=partial(strhash, '_getJpegTables'))
     def _getJpegTables(self):
@@ -456,7 +467,7 @@ class TiledTiffDirectory(object):
 
         imageBuffer = six.BytesIO()
 
-        if self._tiffInfo['Compression'] == libtiff_ctypes.COMPRESSION_JPEG:
+        if self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG:
             # Write JPEG Start Of Image marker
             imageBuffer.write(b'\xff\xd8')
             imageBuffer.write(self._getJpegTables())
@@ -469,7 +480,7 @@ class TiledTiffDirectory(object):
             imageBuffer.write(b'\xff\xd9')
             return imageBuffer.getvalue()
 
-        if self._tiffInfo['Compression'] in (33003, 33005):
+        if self._tiffInfo.get('compression') in (33003, 33005):
             # Get the whole frame, which is JPEG 2000 format, and convert it to
             # a PIL image
             imageBuffer.write(self._getJpegFrame(tileNum, True))
