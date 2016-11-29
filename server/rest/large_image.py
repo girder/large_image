@@ -79,9 +79,14 @@ def createThumbnailsJob(job):
                     lastLogTime = time.time()
                     # Check if the job was deleted or canceled; if so, quit
                     job = jobModel.load(id=job['_id'], force=True)
-                    if not job or job['status'] == JobStatus.CANCELED:
-                        logger.info('Large image thumbnails job %s' % (
-                            'deleted' if not job else 'canceled'))
+                    if (not job or job['status'] in (
+                            JobStatus.CANCELED, JobStatus.ERROR)):
+                        cause = {
+                            None: 'deleted',
+                            JobStatus.CANCELED: 'canceled',
+                            JobStatus.ERROR: 'stopped due to error',
+                        }[None if not job else job.get('status')]
+                        logger.info('Large image thumbnails job %s' % cause)
                         return
     except Exception:
         logger.exception('Error with large image create thumbnails job')
