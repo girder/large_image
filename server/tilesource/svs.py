@@ -30,9 +30,11 @@ from ..cache_util import LruCacheMetaclass, methodcache
 
 try:
     import girder
+    from girder import logger
     from .base import GirderTileSource
 except ImportError:
     girder = None
+    import logging as logger
 
 
 @six.add_metaclass(LruCacheMetaclass)
@@ -92,6 +94,7 @@ class SVSFileTileSource(FileTileSource):
         # resolution SVS level that contains at least as many pixels.  If this
         # is not the same scale as we expect, note the scale factor so we can
         # load an appropriate area and scale it to the tile size later.
+        maxSize = 16384   # This should probably be based on available memory
         for level in range(self.levels):
             levelW = max(1, self.sizeX / 2 ** (self.levels - 1 - level))
             levelH = max(1, self.sizeY / 2 ** (self.levels - 1 - level))
@@ -106,6 +109,12 @@ class SVSFileTileSource(FileTileSource):
                     break
                 bestlevel = svslevel
                 scale = int(round(svsLevelDimensions[svslevel][0] / levelW))
+            if (self.tileWidth * scale > maxSize or
+                    self.tileHeight * scale > maxSize):
+                msg = ('OpenSlide has no small-scale tiles (level %d is at %d '
+                       'scale)' % (level, scale))
+                logger.info(msg)
+                raise TileSourceException(msg)
             self._svslevels.append({
                 'svslevel': bestlevel,
                 'scale': scale
