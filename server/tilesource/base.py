@@ -91,6 +91,73 @@ class TileSourceAssetstoreException(TileSourceException):
     pass
 
 
+class LazyTileDict(dict):
+    """
+    Tiles returned from the tile iterator and dictioaries of information with
+    actual image data in the 'tile' key and the format in the 'format' key.
+    Since some applications need information about the tile but don't need the
+    image data, these two values are lazily computed.  The LazyTileDict can be
+    treated like a regular dictionary, except that when either of those two
+    keys are first accessed, they will cause the image to be loaded and
+    possibly converted to a PIL image and cropped.
+    """
+    def __init__(self, tileInfo, *args, **kwargs):
+        """
+        Create a LazyTileDict dictionary where there is enough information to
+        load the tile image.  ang and kwargs are as for the dict() class.
+
+        :param tileInfo: a dictionary of x, y, level, format, encoding, crop,
+            and source, used for fetching the tile image.
+        """
+        self.x = tileInfo['x']
+        self.y = tileInfo['y']
+        self.level = tileInfo['level']
+        self.format = tileInfo['format']
+        self.encoding = tileInfo['encoding']
+        self.crop = tileInfo['crop']
+        self.source = tileInfo['source']
+        self.loaded = False
+        result = super(LazyTileDict, self).__init__(*args, **kwargs)
+        # We set this initially so that they are listed in known keys using the
+        # native dictionary methods
+        self['tile'] = None
+        self['format'] = None
+        return result
+
+    def __getitem__(self, key, *args, **kwargs):
+        """
+        If this is the first time either the tile or format key is requested,
+        load the tile image data.  Otherwise, just return the internal
+        dictionary result.
+
+        See the base dict class for function details.
+        """
+        if not self.loaded and key in ('tile', 'format'):
+            tileData = self.source.getTile(
+                self.x, self.y, self.level,
+                pilImageAllowed=True, sparseFallback=True)
+            tileFormat = TILE_FORMAT_PIL
+            # If the tile isn't in PIL format, and it is not in an image format
+            # that is the same as a desired output format and encoding, convert
+            # it to PIL format.
+            if not isinstance(tileData, PIL.Image.Image):
+                pilData = PIL.Image.open(BytesIO(tileData))
+                if (self.format and TILE_FORMAT_IMAGE in self.format and
+                        pilData.format == self.encoding):
+                    tileFormat = TILE_FORMAT_IMAGE
+                else:
+                    tileData = pilData
+            else:
+                pilData = tileData
+            if self.crop:
+                tileData = pilData.crop(self.crop)
+                tileFormat = TILE_FORMAT_PIL
+            self['tile'] = tileData
+            self['format'] = tileFormat
+            self.loaded = True
+        return super(LazyTileDict, self).__getitem__(key, *args, **kwargs)
+
+
 class TileSource(object):
     name = None
 
@@ -122,14 +189,6 @@ class TileSource(object):
         self.jpegQuality = int(jpegQuality)
         self.jpegSubsampling = int(jpegSubsampling)
         self.edge = edge
-
-        """
-        self.getThumbnail = cached(
-            self.cache, key=self.wrapKey, lock=self.cache_lock)(
-                self.getThumbnail)
-        self.getTile = cached(
-            self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
-        """
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -570,21 +629,7 @@ class TileSource(object):
         scale = mag.get('scale', 1.0)
         for x in range(xmin, xmax):
             for y in range(ymin, ymax):
-                tileData = self.getTile(
-                    x, y, level, pilImageAllowed=True, sparseFallback=True)
-                tileFormat = TILE_FORMAT_PIL
-                # If the tile isn't in PIL format, and it is not in an image
-                # format that is the same as a desired output format and
-                # encoding, convert it to PIL format.
-                if not isinstance(tileData, PIL.Image.Image):
-                    pilData = PIL.Image.open(BytesIO(tileData))
-                    if (format and TILE_FORMAT_IMAGE in format and
-                            pilData.format == encoding):
-                        tileFormat = TILE_FORMAT_IMAGE
-                    else:
-                        tileData = pilData
-                else:
-                    pilData = tileData
+                crop = None
                 posX = x * metadata['tileWidth'] - left
                 posY = y * metadata['tileHeight'] - top
                 tileWidth = metadata['tileWidth']
@@ -596,18 +641,23 @@ class TileSource(object):
                             max(0, -posY),
                             min(tileWidth, regionWidth - posX),
                             min(tileHeight, regionHeight - posY))
-                    tileData = pilData.crop(crop)
                     posX += crop[0]
                     posY += crop[1]
                     tileWidth = crop[2] - crop[0]
                     tileHeight = crop[3] - crop[1]
-                tile = {
+                tile = LazyTileDict({
+                    'x': x,
+                    'y': y,
+                    'level': level,
+                    'format': format,
+                    'encoding': encoding,
+                    'crop': crop,
+                    'source': self
+                }, {
                     'x': posX + left,
                     'y': posY + top,
                     'width': tileWidth,
                     'height': tileHeight,
-                    'tile': tileData,
-                    'format': tileFormat,
                     'level': level,
                     'level_x': x,
                     'level_y': y,
@@ -633,7 +683,7 @@ class TileSource(object):
                         'position': ((iterInfo['xmax'] - iterInfo['xmin']) *
                                      (iterInfo['ymax'] - iterInfo['ymin']))
                     },
-                }
+                })
                 tile['gx'] = tile['x'] * scale
                 tile['gy'] = tile['y'] * scale
                 tile['gwidth'] = tile['width'] * scale
