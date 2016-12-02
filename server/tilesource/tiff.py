@@ -56,6 +56,8 @@ class TiffFileTileSource(FileTileSource):
         largeImagePath = self._getLargeImagePath()
         lastException = None
 
+        # Query all know directories in the tif file.  Only keep track of
+        # directories that contain tiled images.
         alldir = []
         for directoryNum in itertools.count():
             try:
@@ -66,18 +68,27 @@ class TiffFileTileSource(FileTileSource):
                 break
             if not td.tileWidth or not td.tileHeight:
                 continue
+            # Calculate the tile level, where 0 is a single tile, 1 is up to a
+            # set of 2x2 tiles, 2 is 4x4, etc.
             level = int(math.ceil(math.log(max(
                 float(td.imageWidth) / td.tileWidth,
                 float(td.imageHeight) / td.tileHeight)) / math.log(2)))
+            # Store information for sorting with the directory.
             alldir.append((td.tileWidth * td.tileHeight, level, td))
+        # If there are no tiled images, raise an exception.
         if not len(alldir):
             msg = 'File %s didn\'t meet requirements for tile source: %s' % (
                 largeImagePath, lastException)
             logger.debug(msg)
             raise TileSourceException(msg)
+        # Sort the known directories by image area (width * height).  Given
+        # equal area, sort by the level.
         alldir.sort()
+        # The highest resolution image is our preferred image
         highest = alldir[-1][-1]
         directories = {}
+        # Discard any images that use a different tiling scheme than our
+        # preferred image
         for dir in alldir:
             td = dir[-1]
             level = dir[-2]
