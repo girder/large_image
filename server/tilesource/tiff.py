@@ -56,8 +56,9 @@ class TiffFileTileSource(FileTileSource):
         largeImagePath = self._getLargeImagePath()
         lastException = None
 
-        directories = {}
-        first = None
+        # Query all know directories in the tif file.  Only keep track of
+        # directories that contain tiled images.
+        alldir = []
         for directoryNum in itertools.count():
             try:
                 td = TiledTiffDirectory(largeImagePath, directoryNum)
@@ -65,40 +66,47 @@ class TiffFileTileSource(FileTileSource):
                 continue
             except TiffException as lastException:
                 break
-            # Ensure all directories have the same tile size
-            if first:
-                if (td.tileWidth != first.tileWidth or
-                        td.tileHeight != first.tileHeight):
-                    continue
-            else:
-                first = td
+            if not td.tileWidth or not td.tileHeight:
+                continue
+            # Calculate the tile level, where 0 is a single tile, 1 is up to a
+            # set of 2x2 tiles, 2 is 4x4, etc.
             level = int(math.ceil(math.log(max(
                 float(td.imageWidth) / td.tileWidth,
                 float(td.imageHeight) / td.tileHeight)) / math.log(2)))
-            # If two directories are at the same level, keep the higher
-            # resolution one
-            if (level in directories and td.imageWidth * td.imageHeight <
-                    directories[level].imageWidth *
-                    directories[level].imageHeight):
-                continue
-            directories[level] = td
-
-        if not len(directories):
+            # Store information for sorting with the directory.
+            alldir.append((td.tileWidth * td.tileHeight, level, td))
+        # If there are no tiled images, raise an exception.
+        if not len(alldir):
             msg = 'File %s didn\'t meet requirements for tile source: %s' % (
                 largeImagePath, lastException)
             logger.debug(msg)
             raise TileSourceException(msg)
+        # Sort the known directories by image area (width * height).  Given
+        # equal area, sort by the level.
+        alldir.sort()
+        # The highest resolution image is our preferred image
+        highest = alldir[-1][-1]
+        directories = {}
+        # Discard any images that use a different tiling scheme than our
+        # preferred image
+        for dir in alldir:
+            td = dir[-1]
+            level = dir[-2]
+            if (td.tileWidth != highest.tileWidth or
+                    td.tileHeight != highest.tileHeight):
+                continue
+            directories[level] = td
 
         # Sort the directories so that the highest resolution is the last one;
         # if a level is missing, put a None value in its place.
         self._tiffDirectories = [directories.get(key) for key in
                                  range(max(directories.keys()) + 1)]
 
-        self.tileWidth = self._tiffDirectories[-1].tileWidth
-        self.tileHeight = self._tiffDirectories[-1].tileHeight
+        self.tileWidth = highest.tileWidth
+        self.tileHeight = highest.tileHeight
         self.levels = len(self._tiffDirectories)
-        self.sizeX = self._tiffDirectories[-1].imageWidth
-        self.sizeY = self._tiffDirectories[-1].imageHeight
+        self.sizeX = highest.imageWidth
+        self.sizeY = highest.imageHeight
 
     def getNativeMagnification(self):
         """
