@@ -111,11 +111,15 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         tileCount = 0
         visited = {}
         for tile in source.tileIterator(scale={'magnification': 5}):
+            # Check that we haven't loaded the tile's image yet
+            self.assertFalse(getattr(tile, 'loaded', None))
             visited.setdefault(tile['level_x'], {})[tile['level_y']] = True
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'], 256 if tile['level_x'] < 11 else 61)
             self.assertEqual(tile['height'], 256 if tile['level_y'] < 11 else 79)
+            # Check that we have loaded the tile's image
+            self.assertTrue(getattr(tile, 'loaded', None))
         self.assertEqual(tileCount, 144)
         self.assertEqual(len(visited), 12)
         self.assertEqual(len(visited[0]), 12)
