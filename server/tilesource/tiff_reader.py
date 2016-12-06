@@ -220,7 +220,7 @@ class TiledTiffDirectory(object):
                 info[field] = value
         for func in self.CoreFunctions[2:]:
             if hasattr(self._tiffFile, func):
-                value = getattr(self._tiffFile, func)
+                value = getattr(self._tiffFile, func)()
                 if value:
                     info[func.lower()] = value
         self._tiffInfo = info

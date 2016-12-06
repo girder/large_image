@@ -223,6 +223,23 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
             self.assertEqual(tile['tile'][:len(common.PNGHeader)],
                              common.PNGHeader)
         self.assertEqual(tileCount, 45)
+        # Test some internal properties
+        self.assertEqual(len(source._tiffDirectories), 9)
+        info = source._tiffDirectories[-1]._tiffInfo
+        self.assertEqual(info['bitspersample'], 8)
+        self.assertEqual(info['compression'], 7)
+        self.assertEqual(info['imagelength'], 12288)
+        self.assertEqual(info['imagewidth'], 58368)
+        self.assertEqual(info['istiled'], 1)
+        self.assertEqual(info['jpegcolormode'], 0)
+        self.assertEqual(info['jpegquality'], 75)
+        self.assertEqual(info['jpegtablesmode'], 3)
+        self.assertEqual(info['orientation'], 1)
+        self.assertEqual(info['photometric'], 6)
+        self.assertEqual(info['planarconfig'], 1)
+        self.assertEqual(info['samplesperpixel'], 3)
+        self.assertEqual(info['tilelength'], 256)
+        self.assertEqual(info['tilewidth'], 256)
 
         # Test getting a single tile
         sourceRegion = {
