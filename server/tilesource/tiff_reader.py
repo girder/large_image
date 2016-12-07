@@ -164,8 +164,10 @@ class TiledTiffDirectory(object):
 
         :raises: ValidationTiffException
         """
-        if self._tiffInfo.get('samplesperpixel') < 3:
-            raise ValidationTiffException('Only RGB TIFF files are supported')
+        if (self._tiffInfo.get('samplesperpixel') != 1 and
+                self._tiffInfo.get('samplesperpixel') < 3):
+            raise ValidationTiffException(
+                'Only RGB and greyscale TIFF files are supported')
 
         if self._tiffInfo.get('bitspersample') != 8:
             raise ValidationTiffException(
@@ -182,11 +184,12 @@ class TiledTiffDirectory(object):
                 'Only contiguous planar configuration TIFF files are supported')
 
         if self._tiffInfo.get('photometric') not in (
+                libtiff_ctypes.PHOTOMETRIC_MINISBLACK,
                 libtiff_ctypes.PHOTOMETRIC_RGB,
                 libtiff_ctypes.PHOTOMETRIC_YCBCR):
             raise ValidationTiffException(
-                'Only RGB and YCbCr photometric interpretation TIFF files are '
-                'supported')
+                'Only greyscale (black is 0), RGB, and YCbCr photometric '
+                'interpretation TIFF files are supported')
 
         if self._tiffInfo.get('orientation') != libtiff_ctypes.ORIENTATION_TOPLEFT:
             raise ValidationTiffException(
