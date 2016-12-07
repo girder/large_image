@@ -798,7 +798,7 @@ class TileSource(object):
             if self.edge in (True, 'crop'):
                 tile = tile.crop((0, 0, contentWidth, contentHeight))
             else:
-                color = PIL.ImageColor.getrgb(self.edge)
+                color = PIL.ImageColor.getcolor(self.edge, tile.mode)
                 if contentWidth < self.tileWidth:
                     PIL.ImageDraw.Draw(tile).rectangle(
                         [(contentWidth, 0), (self.tileWidth, contentHeight)],
