@@ -64,7 +64,9 @@ class TiffFileTileSource(FileTileSource):
                 td = TiledTiffDirectory(largeImagePath, directoryNum)
             except ValidationTiffException as lastException:
                 continue
-            except TiffException as lastException:
+            except TiffException as exc:
+                if not lastException:
+                    lastException = exc
                 break
             if not td.tileWidth or not td.tileHeight:
                 continue
