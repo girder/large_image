@@ -164,6 +164,10 @@ class TiledTiffDirectory(object):
 
         :raises: ValidationTiffException
         """
+        # For any non-supported file, we probably can add a conversion task in
+        # the create_image.py script, such as flatten or colourspace.  These
+        # should only be done if necessary, which would require the conversion
+        # job to check output and perform subsequent processing as needed.
         if (self._tiffInfo.get('samplesperpixel') != 1 and
                 self._tiffInfo.get('samplesperpixel') < 3):
             raise ValidationTiffException(
@@ -297,6 +301,9 @@ class TiledTiffDirectory(object):
         pixelX = x * self._tileWidth
         pixelY = y * self._tileHeight
 
+        if pixelX >= self._imageWidth or pixelY >= self._imageHeight:
+            raise InvalidOperationTiffException(
+                'Tile x=%d, y=%d does not exist' % (x, y))
         if libtiff_ctypes.libtiff.TIFFCheckTile(
                 self._tiffFile, pixelX, pixelY, 0, 0) == 0:
             raise InvalidOperationTiffException(
