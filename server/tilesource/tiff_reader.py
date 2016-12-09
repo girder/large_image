@@ -164,8 +164,14 @@ class TiledTiffDirectory(object):
 
         :raises: ValidationTiffException
         """
-        if self._tiffInfo.get('samplesperpixel') < 3:
-            raise ValidationTiffException('Only RGB TIFF files are supported')
+        # For any non-supported file, we probably can add a conversion task in
+        # the create_image.py script, such as flatten or colourspace.  These
+        # should only be done if necessary, which would require the conversion
+        # job to check output and perform subsequent processing as needed.
+        if (self._tiffInfo.get('samplesperpixel') != 1 and
+                self._tiffInfo.get('samplesperpixel') < 3):
+            raise ValidationTiffException(
+                'Only RGB and greyscale TIFF files are supported')
 
         if self._tiffInfo.get('bitspersample') != 8:
             raise ValidationTiffException(
@@ -182,11 +188,12 @@ class TiledTiffDirectory(object):
                 'Only contiguous planar configuration TIFF files are supported')
 
         if self._tiffInfo.get('photometric') not in (
+                libtiff_ctypes.PHOTOMETRIC_MINISBLACK,
                 libtiff_ctypes.PHOTOMETRIC_RGB,
                 libtiff_ctypes.PHOTOMETRIC_YCBCR):
             raise ValidationTiffException(
-                'Only RGB and YCbCr photometric interpretation TIFF files are '
-                'supported')
+                'Only greyscale (black is 0), RGB, and YCbCr photometric '
+                'interpretation TIFF files are supported')
 
         if self._tiffInfo.get('orientation') != libtiff_ctypes.ORIENTATION_TOPLEFT:
             raise ValidationTiffException(
@@ -220,7 +227,7 @@ class TiledTiffDirectory(object):
                 info[field] = value
         for func in self.CoreFunctions[2:]:
             if hasattr(self._tiffFile, func):
-                value = getattr(self._tiffFile, func)
+                value = getattr(self._tiffFile, func)()
                 if value:
                     info[func.lower()] = value
         self._tiffInfo = info
@@ -294,6 +301,9 @@ class TiledTiffDirectory(object):
         pixelX = x * self._tileWidth
         pixelY = y * self._tileHeight
 
+        if pixelX >= self._imageWidth or pixelY >= self._imageHeight:
+            raise InvalidOperationTiffException(
+                'Tile x=%d, y=%d does not exist' % (x, y))
         if libtiff_ctypes.libtiff.TIFFCheckTile(
                 self._tiffFile, pixelX, pixelY, 0, 0) == 0:
             raise InvalidOperationTiffException(

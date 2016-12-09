@@ -64,15 +64,17 @@ class TiffFileTileSource(FileTileSource):
                 td = TiledTiffDirectory(largeImagePath, directoryNum)
             except ValidationTiffException as lastException:
                 continue
-            except TiffException as lastException:
+            except TiffException as exc:
+                if not lastException:
+                    lastException = exc
                 break
             if not td.tileWidth or not td.tileHeight:
                 continue
             # Calculate the tile level, where 0 is a single tile, 1 is up to a
             # set of 2x2 tiles, 2 is 4x4, etc.
-            level = int(math.ceil(math.log(max(
+            level = max(0, int(math.ceil(math.log(max(
                 float(td.imageWidth) / td.tileWidth,
-                float(td.imageHeight) / td.tileHeight)) / math.log(2)))
+                float(td.imageHeight) / td.tileHeight)) / math.log(2))))
             # Store information for sorting with the directory.
             alldir.append((td.tileWidth * td.tileHeight, level, td))
         # If there are no tiled images, raise an exception.
@@ -133,6 +135,7 @@ class TiffFileTileSource(FileTileSource):
                 if sparseFallback:
                     raise IOTiffException('Missing z level %d' % z)
                 tile = self.getTileFromEmptyDirectory(x, y, z)
+                format = TILE_FORMAT_PIL
             else:
                 tile = self._tiffDirectories[z].getTile(x, y)
                 format = 'JPEG'

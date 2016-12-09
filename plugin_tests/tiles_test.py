@@ -260,14 +260,31 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         result = self._postTileViaHttp(itemId, fileId, jobAction='delete')
         self.assertIsNone(result)
 
+    def testTilesFromGreyscale(self):
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'grey10kx5k.tif'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        tileMetadata = self._postTileViaHttp(itemId, fileId)
+        self.assertEqual(tileMetadata['tileWidth'], 256)
+        self.assertEqual(tileMetadata['tileHeight'], 256)
+        self.assertEqual(tileMetadata['sizeX'], 10000)
+        self.assertEqual(tileMetadata['sizeY'], 5000)
+        self.assertEqual(tileMetadata['levels'], 7)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['mm_x'], None)
+        self.assertEqual(tileMetadata['mm_y'], None)
+        self._testTilesZXY(itemId, tileMetadata)
+
     def testTilesFromBadFiles(self):
         # Don't use small images for this test
         from girder.plugins.large_image import constants
         self.model('setting').set(
             constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 0)
-        # Uploading a monochrome file should result in no useful tiles.
+        # Uploading a monochrome with alpha file should result in no useful
+        # tiles.
         file = self._uploadFile(os.path.join(
-            os.path.dirname(__file__), 'test_files', 'small.jpg'))
+            os.path.dirname(__file__), 'test_files', 'small_la.png'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
         tileMetadata = self._postTileViaHttp(itemId, fileId)
