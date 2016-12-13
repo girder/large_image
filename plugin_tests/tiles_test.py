@@ -276,6 +276,29 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(tileMetadata['mm_y'], None)
         self._testTilesZXY(itemId, tileMetadata)
 
+    def testTilesWithUnicodeName(self):
+        # Unicode file names shouldn't cause problems.
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
+        # Our normal testing method doesn't pass through the unicode name
+        # proeprly, so just change it after upload.
+        file = self.model('file').load(file['_id'], force=True)
+        file['name'] = u'\u0441\u043b\u0430\u0439\u0434'
+        file = self.model('file').save(file)
+
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        tileMetadata = self._postTileViaHttp(itemId, fileId)
+        self.assertEqual(tileMetadata['tileWidth'], 256)
+        self.assertEqual(tileMetadata['tileHeight'], 256)
+        self.assertEqual(tileMetadata['sizeX'], 10000)
+        self.assertEqual(tileMetadata['sizeY'], 5000)
+        self.assertEqual(tileMetadata['levels'], 7)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['mm_x'], None)
+        self.assertEqual(tileMetadata['mm_y'], None)
+        self._testTilesZXY(itemId, tileMetadata)
+
     def testTilesFromBadFiles(self):
         # Don't use small images for this test
         from girder.plugins.large_image import constants
