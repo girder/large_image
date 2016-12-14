@@ -134,7 +134,10 @@ class TiledTiffDirectory(object):
             raise InvalidOperationTiffException(
                 'TIFF file does not exist: %s' % filePath)
         try:
-            self._tiffFile = libtiff_ctypes.TIFF.open(filePath)
+            bytePath = filePath
+            if not isinstance(bytePath, six.binary_type):
+                bytePath = filePath.encode('utf8')
+            self._tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         except TypeError:
             raise IOTiffException(
                 'Could not open TIFF file: %s' % filePath)
