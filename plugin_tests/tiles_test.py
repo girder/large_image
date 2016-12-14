@@ -106,7 +106,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], True)
 
-        # We should no longer have tile informaton
+        # We should no longer have tile information
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
@@ -242,7 +242,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
                             user=self.admin)
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], True)
-        # We should no longer have tile informaton
+        # We should no longer have tile information
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
@@ -281,7 +281,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         file = self._uploadFile(os.path.join(
             os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
         # Our normal testing method doesn't pass through the unicode name
-        # proeprly, so just change it after upload.
+        # properly, so just change it after upload.
         file = self.model('file').load(file['_id'], force=True)
         file['name'] = u'\u0441\u043b\u0430\u0439\u0434'
         file = self.model('file').save(file)
