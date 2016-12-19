@@ -108,8 +108,8 @@ class TiledTiffDirectory(object):
 
         self._open(filePath, directoryNum)
         self._loadMetadata()
-        logger.debug('TiffDirectory %d Information %r',
-                     directoryNum, self._tiffInfo)
+        # logger.debug('TiffDirectory %d Information %r',
+        #             directoryNum, self._tiffInfo)
         try:
             self._validate()
         except ValidationTiffException:
