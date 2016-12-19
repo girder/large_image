@@ -29,6 +29,7 @@ from tests import base
 from girder.constants import SortDir
 
 
+JFIFHeader = '\xff\xd8\xff\xe0\x00\x10JFIF'
 JPEGHeader = '\xff\xd8\xff'
 PNGHeader = '\x89PNG'
 
