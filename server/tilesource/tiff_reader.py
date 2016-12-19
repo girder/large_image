@@ -31,6 +31,7 @@ try:
     from girder import logger
 except ImportError:
     import logging as logger
+    logger.getLogger().setLevel(logger.INFO)
 try:
     import PIL.Image
 except ImportError:
@@ -108,8 +109,8 @@ class TiledTiffDirectory(object):
 
         self._open(filePath, directoryNum)
         self._loadMetadata()
-        # logger.debug('TiffDirectory %d Information %r',
-        #              directoryNum, self._tiffInfo)
+        logger.debug('TiffDirectory %d Information %r',
+                     directoryNum, self._tiffInfo)
         try:
             self._validate()
         except ValidationTiffException:
@@ -230,8 +231,8 @@ class TiledTiffDirectory(object):
                 if value is not None:
                     info[field] = value
             except TypeError as err:
-                logger.debug('Loading field %s in directory number %s '
-                             'resulted in TypeError - %s',
+                logger.debug('Loading field "%s" in directory number %d '
+                             'resulted in TypeError - "%s"',
                              field, self._directoryNum, err)
 
         for func in self.CoreFunctions[2:]:

@@ -32,7 +32,7 @@ try:
     from girder.models.model_base import AccessType
 except ImportError:
     import logging as logger
-
+    logger.getLogger().setLevel(logger.INFO)
     girder = None
 
     class TileGeneralException(Exception):
@@ -676,12 +676,10 @@ class TileSource(object):
         format = iterInfo['format']
         encoding = iterInfo['encoding']
 
-        """
-        logger.info(
+        logger.debug(
             'Fetching region of an image with a source size of %d x %d; '
             'getting %d tiles',
             regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
-        """
 
         # If tile is specified, return at most one tile
         if iterInfo.get('tile_position') is not None:
