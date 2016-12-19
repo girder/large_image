@@ -787,7 +787,9 @@ class TileSource(object):
             maxY = (y + 1) * self.tileHeight
             isEdge = maxX > sizeX or maxY > sizeY
         if tileEncoding != TILE_FORMAT_PIL:
-            if tileEncoding == self.encoding and not isEdge:
+            if (tileEncoding == self.encoding and not isEdge and
+                    (self.encoding != 'JPEG' or
+                     not kwargs.get('alwaysConvertJPEG'))):
                 return tile
             tile = PIL.Image.open(BytesIO(tile))
         if isEdge:

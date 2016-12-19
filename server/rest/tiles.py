@@ -196,9 +196,20 @@ class TilesItemResource(Item):
         if x < 0 or y < 0 or z < 0:
             raise RestException('x, y, and z must be positive integers',
                                 code=400)
+        # In iOS 10.1, only JPEGs that have a JFIF header and read.  However,
+        # if we universally add a JFIF header, this breaks the colorspace
+        # parsing that browsers do on RGB-encoded JPEG (see
+        # https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/
+        # doc-files/jpeg_metadata.html#color for a disuccsion on how colorspace
+        # is determined.  Since we would rather not reencode tiles if possible,
+        # we set a flag if we happen to be on an iOS device.  If the tile is a
+        # JPEG, then it will be parsed by PIL and reencoded.
+        userAgent = cherrypy.request.headers.get('User-Agent', '').lower()
+        alwaysConvertJPEG = ('ipad' in userAgent or 'ipod' in userAgent or
+                             'iphone' in userAgent)
         try:
             tileData, tileMime = self.imageItemModel.getTile(
-                item, x, y, z, **imageArgs)
+                item, x, y, z, alwaysConvertJPEG=alwaysConvertJPEG, **imageArgs)
         except TileGeneralException as e:
             raise RestException(e.message, code=404)
         setResponseHeader('Content-Type', tileMime)
