@@ -232,7 +232,7 @@ class TiledTiffDirectory(object):
             except TypeError as err:
                 logger.debug('Loading field %s in directory number %s '
                              'resulted in TypeError - %s',
-                             err, self._directoryNum, field)
+                             field, self._directoryNum, err)
 
         for func in self.CoreFunctions[2:]:
             if hasattr(self._tiffFile, func):
