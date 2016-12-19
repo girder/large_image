@@ -109,7 +109,7 @@ class TiledTiffDirectory(object):
         self._open(filePath, directoryNum)
         self._loadMetadata()
         # logger.debug('TiffDirectory %d Information %r',
-        #             directoryNum, self._tiffInfo)
+        #              directoryNum, self._tiffInfo)
         try:
             self._validate()
         except ValidationTiffException:
@@ -230,8 +230,9 @@ class TiledTiffDirectory(object):
                 if value is not None:
                     info[field] = value
             except TypeError as err:
-                logger.debug('TypeError %s on loading field %s',
-                             err, field)
+                logger.debug('Loading field %s in directory number %s '
+                             'resulted in TypeError - %s',
+                             err, self._directoryNum, field)
 
         for func in self.CoreFunctions[2:]:
             if hasattr(self._tiffFile, func):
