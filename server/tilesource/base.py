@@ -676,10 +676,13 @@ class TileSource(object):
         format = iterInfo['format']
         encoding = iterInfo['encoding']
 
+        """
         logger.info(
             'Fetching region of an image with a source size of %d x %d; '
             'getting %d tiles',
             regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
+        """
+
         # If tile is specified, return at most one tile
         if iterInfo.get('tile_position') is not None:
             tilePos = iterInfo.get('tile_position')
