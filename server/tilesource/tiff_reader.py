@@ -225,9 +225,14 @@ class TiledTiffDirectory(object):
                   dir(libtiff_ctypes.tiff_h) if key.startswith('TIFFTAG_')]
         info = {}
         for field in fields:
-            value = self._tiffFile.GetField(field)
-            if value is not None:
-                info[field] = value
+            try:
+                value = self._tiffFile.GetField(field)
+                if value is not None:
+                    info[field] = value
+            except TypeError as err:
+                logger.debug('TypeError %s on loading field %s',
+                             err, field)
+
         for func in self.CoreFunctions[2:]:
             if hasattr(self._tiffFile, func):
                 value = getattr(self._tiffFile, func)()
