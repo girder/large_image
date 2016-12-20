@@ -27,6 +27,7 @@ except ImportError as exc:
     if 'plugins' not in exc.message and 'girder' not in exc.message:
         raise
     import logging as logger
-    logger.info('Girder is unavailable.  Run as a girder plugin for girder '
-                'access.')
+    logger.getLogger().setLevel(logger.INFO)
+    logger.debug('Girder is unavailable.  Run as a girder plugin for girder '
+                 'access.')
     girder = None
