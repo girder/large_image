@@ -270,19 +270,22 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                 tile_size={'width': 300, 'height': 275},
                 tile_overlap={'x': 25, 'y': 20}):
             tileCount += 1
-            import sys  # ##DWM::
-            sys.stderr.write('%r\n' % [
-                tile['level_x'], tile['level_y'],
-                tile['width'], tile['height']])  # ##DWM::
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'],
-                             325 if not tile['level_x'] else 350
-                             if tile['level_x'] < 12 else 73)
+                             275 if not tile['level_x'] else 300
+                             if tile['level_x'] < 14 else 173)
             self.assertEqual(tile['height'],
-                             295 if not tile['level_y'] else 315
-                             if tile['level_y'] < 2 else 238)
-        self.assertEqual(tileCount, 39)
-        # ##DWM::
+                             255 if not tile['level_y'] else 275
+                             if tile['level_y'] < 3 else 83)
+            self.assertEqual(tile['tile_overlap']['left'],
+                             0 if not tile['level_x'] else 25)
+            self.assertEqual(tile['tile_overlap']['right'],
+                             25 if tile['level_x'] < 14 else 0)
+            self.assertEqual(tile['tile_overlap']['top'],
+                             0 if not tile['level_y'] else 20)
+            self.assertEqual(tile['tile_overlap']['bottom'],
+                             20 if tile['level_y'] < 3 else 0)
+        self.assertEqual(tileCount, 60)
 
     def testTileIteratorSingleTile(self):
         file = self._uploadFile(os.path.join(

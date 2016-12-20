@@ -527,8 +527,8 @@ class TileSource(object):
             height: the desired tile height.
         :param tile_overlap: if present, retile the output adding a symmetric
                 overlap to the tiles.  If either x or y is not specified, it
-                defaults to zero.  The overlap is in addition to the normal
-                tile size.  This is a dictionary containing:
+                defaults to zero.  The overlap does not change the tile size,
+                only the stride of the tiles.  This is a dictionary containing:
             x: the overlap on the left and right in pixels.
             y: the overlap on the top and bottom in pixels.
         :param **kwargs: optional arguments.  Some options are encoding,
@@ -633,11 +633,20 @@ class TileSource(object):
             'width': metadata['tileWidth'],
             'height': metadata['tileHeight'],
         }
+        tile_overlap = {
+            'x': kwargs.get('tile_overlap', {}).get('x', 0) or 0,
+            'y': kwargs.get('tile_overlap', {}).get('y', 0) or 0,
+        }
         if 'tile_size' in kwargs:
             tile_size['width'] = kwargs['tile_size'].get(
                 'width', kwargs['tile_size'].get('height', tile_size['width']))
             tile_size['height'] = kwargs['tile_size'].get(
                 'height', kwargs['tile_size'].get('width', tile_size['height']))
+        # Tile size includes the overlap
+        tile_size['width'] -= tile_overlap['x'] * 2
+        tile_size['height'] -= tile_overlap['y'] * 2
+        if tile_size['width'] <= 0 or tile_size['height'] <= 0:
+            raise ValueError('Invalid tile_size or tile_overlap.')
 
         xmin = int(left / tile_size['width'])
         xmax = int(math.ceil(float(right) / tile_size['width']))
@@ -670,10 +679,7 @@ class TileSource(object):
             'format': kwargs.get('format', (TILE_FORMAT_PIL, )),
             'encoding': kwargs.get('encoding'),
             'requestedScale': requestedScale,
-            'tile_overlap': {
-                'x': kwargs.get('tile_overlap', {}).get('x', 0) or 0,
-                'y': kwargs.get('tile_overlap', {}).get('y', 0) or 0,
-            },
+            'tile_overlap': tile_overlap,
             'tile_position': kwargs.get('tile_position'),
             'tile_size': tile_size,
         }
@@ -1332,8 +1338,8 @@ class TileSource(object):
             height: the desired tile height.
         :param tile_overlap: if present, retile the output adding a symmetric
                 overlap to the tiles.  If either x or y is not specified, it
-                defaults to zero.  The overlap is in addition to the normal
-                tile size.  This is a dictionary containing:
+                defaults to zero.  The overlap does not change the tile size,
+                only the stride of the tiles.  This is a dictionary containing:
             x: the overlap on the left and right in pixels.
             y: the overlap on the top and bottom in pixels.
         :param encoding: if format includes TILE_FORMAT_IMAGE, a valid PIL
