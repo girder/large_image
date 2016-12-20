@@ -241,6 +241,56 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(info['tilelength'], 256)
         self.assertEqual(info['tilewidth'], 256)
 
+    def testTileIteratorRetiling(self):
+        from girder.plugins.large_image import tilesource
+
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+
+        # Test retiling to 500 x 400
+        tileCount = 0
+        for tile in source.tileIterator(
+                scale={'magnification': 2.5},
+                format=tilesource.TILE_FORMAT_PIL,
+                tile_size={'width': 500, 'height': 400}):
+            tileCount += 1
+            self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
+            self.assertEqual(tile['width'], 500 if tile['level_x'] < 7 else 148)
+            self.assertEqual(tile['height'], 400 if tile['level_y'] < 1 else 368)
+        self.assertEqual(tileCount, 16)
+
+        # Test retiling to 300 x 275 with 25 x 20 pixels overlap
+        tileCount = 0
+        for tile in source.tileIterator(
+                scale={'magnification': 2.5},
+                format=tilesource.TILE_FORMAT_PIL,
+                tile_size={'width': 300, 'height': 275},
+                tile_overlap={'x': 25, 'y': 20}):
+            tileCount += 1
+            import sys  # ##DWM::
+            sys.stderr.write('%r\n' % [
+                tile['level_x'], tile['level_y'],
+                tile['width'], tile['height']])  # ##DWM::
+            self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
+            self.assertEqual(tile['width'],
+                             325 if not tile['level_x'] else 350
+                             if tile['level_x'] < 12 else 73)
+            self.assertEqual(tile['height'],
+                             295 if not tile['level_y'] else 315
+                             if tile['level_y'] < 2 else 238)
+        self.assertEqual(tileCount, 39)
+        # ##DWM::
+
+    def testTileIteratorSingleTile(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+
         # Test getting a single tile
         sourceRegion = {
             'width': 0.7, 'height': 0.6,

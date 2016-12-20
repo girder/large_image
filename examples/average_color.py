@@ -47,8 +47,8 @@ if __name__ == '__main__':
         description='Compute the mean color of a tiled image')
     parser.add_argument('path', metavar='image-path', type=str,
                         help='Path of the tiled image to examine')
-    parser.add_argument('-m', '--maginfication', dest='magnfication',
+    parser.add_argument('-m', '--magnification', dest='magnification',
                         type=float,
                         help='Magnification to use to examine the image')
     args = parser.parse_args()
-    average_color(args.path, args.magnfication)
+    average_color(args.path, args.magnification)
