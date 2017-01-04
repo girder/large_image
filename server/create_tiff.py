@@ -30,8 +30,10 @@ out_path = os.path.join(_tempdir, out_filename)
 
 convert_command = (
     'vips',
-    # '--vips-concurrency', '1',
-    # '--vips-progress',
+    # Additional vips options can be added to aid debugging.  For instance,
+    #   '--vips-concurrency', '1',
+    #   '--vips-progress',
+    # can show how vips is processing a file.
     'tiffsave',
     in_path,
     out_path,
