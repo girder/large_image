@@ -32,6 +32,18 @@ from .. import loadmodelcache
 
 
 def _adjustParams(params):
+    """
+    Check the user agent of a request.  If it appears to be from an iOS device,
+    and the request is asking for JPEG encoding (or hasn't specified an
+    encoding), then make sure the output is JFIF.
+
+    It is unfortunate that this requires analyzing the user agent, as this
+    method if brittle.  However, other browsers can handle non-JFIF jpegs, and
+    we do not want to encur the overhead of conversion if it is not necessary
+    (converting to JFIF may require colorspace transforms).
+
+    :param params: the request parameters.  May be modified.
+    """
     try:
         userAgent = cherrypy.request.headers.get('User-Agent', '').lower()
     except Exception:

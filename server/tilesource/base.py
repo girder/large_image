@@ -64,7 +64,9 @@ TILE_FORMAT_NUMPY = 'numpy'
 
 TileOutputMimeTypes = {
     # JFIF forces conversion to JPEG through PIL to ensure the image is in a
-    # common colorspace.
+    # common colorspace.  JPEG colorspace is complex: see
+    #   https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/
+    #                           doc-files/jpeg_metadata.html
     'JFIF': 'image/jpeg',
     'JPEG': 'image/jpeg',
     'PNG': 'image/png'
