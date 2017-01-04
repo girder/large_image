@@ -35,6 +35,7 @@ try:
 except ImportError:
     girder = None
     import logging as logger
+    logger.getLogger().setLevel(logger.INFO)
 
 try:
     import PIL.Image
