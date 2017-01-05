@@ -94,6 +94,27 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         tileMetadata['sparse'] = 5
         self._testTilesZXY(itemId, tileMetadata)
 
+        # Check that we conditionally get JFIF headers
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertNotEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'JFIF'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            additionalHeaders=[('User-Agent', 'iPad')])
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
         # Ask to make this a tile-based item again
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': fileId})

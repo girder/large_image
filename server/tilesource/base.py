@@ -63,8 +63,16 @@ TILE_FORMAT_PIL = 'PIL'
 TILE_FORMAT_NUMPY = 'numpy'
 
 TileOutputMimeTypes = {
+    # JFIF forces conversion to JPEG through PIL to ensure the image is in a
+    # common colorspace.  JPEG colorspace is complex: see
+    #   https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/
+    #                           doc-files/jpeg_metadata.html
+    'JFIF': 'image/jpeg',
     'JPEG': 'image/jpeg',
     'PNG': 'image/png'
+}
+TileOutputPILFormat = {
+    'JFIF': 'JPEG'
 }
 TileInputUnits = {
     None: 'base_pixels',
@@ -127,8 +135,8 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
             imageData = b''
         else:
             output = BytesIO()
-            image.save(output, encoding, quality=jpegQuality,
-                       subsampling=jpegSubsampling)
+            image.save(output, TileOutputPILFormat.get(encoding, encoding),
+                       quality=jpegQuality, subsampling=jpegSubsampling)
             imageData = output.getvalue()
     return imageData, imageFormatOrMimeType
 
@@ -300,7 +308,7 @@ class TileSource(object):
         self.sizeX = None
         self.sizeY = None
 
-        if encoding not in ('PNG', 'JPEG'):
+        if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
 
         self.encoding = encoding
@@ -811,8 +819,9 @@ class TileSource(object):
         if pilImageAllowed:
             return tile
         output = BytesIO()
-        tile.save(output, self.encoding, quality=self.jpegQuality,
-                  subsampling=self.jpegSubsampling)
+        tile.save(
+            output, TileOutputPILFormat.get(self.encoding, self.encoding),
+            quality=self.jpegQuality, subsampling=self.jpegSubsampling)
         return output.getvalue()
 
     @classmethod
@@ -843,9 +852,7 @@ class TileSource(object):
         raise NotImplementedError()
 
     def getTileMimeType(self):
-        if self.encoding == 'PNG':
-            return 'image/png'
-        return 'image/jpeg'
+        return TileOutputMimeTypes.get(self.encoding, 'image/jpeg')
 
     @methodcache()
     def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):

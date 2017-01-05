@@ -30,6 +30,10 @@ out_path = os.path.join(_tempdir, out_filename)
 
 convert_command = (
     'vips',
+    # Additional vips options can be added to aid debugging.  For instance,
+    #   '--vips-concurrency', '1',
+    #   '--vips-progress',
+    # can show how vips is processing a file.
     'tiffsave',
     in_path,
     out_path,
@@ -42,12 +46,20 @@ convert_command = (
     '--bigtiff'
 )
 
+try:
+    import six.moves
+    print('Command: %s' % (
+        ' '.join([six.moves.shlex_quote(arg) for arg in convert_command])))
+except ImportError:
+    pass
 proc = subprocess.Popen(convert_command, stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE)
 out, err = proc.communicate()
 
-if proc.returncode:
+if out.strip():
     print('stdout: ' + out)
+if err.strip():
     print('stderr: ' + err)
+if proc.returncode:
     raise Exception('VIPS command failed (rc=%d): %s' % (
         proc.returncode, ' '.join(convert_command)))

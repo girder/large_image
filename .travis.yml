@@ -126,13 +126,14 @@ before_install:
   - mongod --version
 
   - npm install -g npm
+  - npm install -g npm-install-retry
   - npm --version
 
   - pip install --no-cache-dir -U pip virtualenv
 
   - pip install --no-cache-dir numpy==1.10.2  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
-  - if [ ${LIBTIFF_VERSION} == "4.0.6" ]; then pip install "git+https://github.com/pearu/pylibtiff@848785a6a9a4e2c6eb6f56ca9f7e8f6b32e523d5" --force-reinstal --ignore-installed --upgrade; fi
+  - if [ ${LIBTIFF_VERSION} == "4.0.6" ]; then pip install "git+https://github.com/pearu/pylibtiff@848785a6a9a4e2c6eb6f56ca9f7e8f6b32e523d5" --force-reinstall --ignore-installed --upgrade; fi
 
 
 install:
@@ -140,7 +141,10 @@ install:
   - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -e .
   - pip install -r $main_path/requirements.txt -e .
   - python -c "import openslide;print openslide.__version__"
-  - npm install
+  # This was
+  # - npm install
+  # but since there are often connection failures, use the retry package.
+  - npm-install-retry
 
 script:
   - cd $girder_worker_path
