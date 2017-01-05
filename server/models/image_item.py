@@ -20,6 +20,7 @@
 import json
 import os
 import six
+import time
 
 from girder.constants import SortDir
 from girder.models.model_base import ValidationException
@@ -90,6 +91,11 @@ class ImageItem(Item):
             user=user)
         jobToken = Job.createJobToken(job)
 
+        outputName = os.path.splitext(fileObj['name'])[0] + '.tiff'
+        if outputName == fileObj['name']:
+            outputName = (os.path.splitext(fileObj['name'])[0] + '.' +
+                          time.strftime('%Y%m%d-%H%M%S') + '.tiff')
+
         task = {
             'mode': 'python',
             'script': script,
@@ -139,7 +145,7 @@ class ImageItem(Item):
                 'mode': 'inline',
                 'type': 'string',
                 'format': 'text',
-                'data': os.path.splitext(fileObj['name'])[0] + '.tiff'
+                'data': outputName
             }
         }
 

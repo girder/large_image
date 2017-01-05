@@ -30,9 +30,12 @@ from ..cache_util import LruCacheMetaclass, methodcache
 
 try:
     import girder
+    from girder import logger
     from .base import GirderTileSource
 except ImportError:
     girder = None
+    import logging as logger
+    logger.getLogger().setLevel(logger.INFO)
 
 
 @six.add_metaclass(LruCacheMetaclass)
@@ -92,6 +95,7 @@ class SVSFileTileSource(FileTileSource):
         # resolution SVS level that contains at least as many pixels.  If this
         # is not the same scale as we expect, note the scale factor so we can
         # load an appropriate area and scale it to the tile size later.
+        maxSize = 16384   # This should probably be based on available memory
         for level in range(self.levels):
             levelW = max(1, self.sizeX / 2 ** (self.levels - 1 - level))
             levelH = max(1, self.sizeY / 2 ** (self.levels - 1 - level))
@@ -106,6 +110,12 @@ class SVSFileTileSource(FileTileSource):
                     break
                 bestlevel = svslevel
                 scale = int(round(svsLevelDimensions[svslevel][0] / levelW))
+            if (self.tileWidth * scale > maxSize or
+                    self.tileHeight * scale > maxSize):
+                msg = ('OpenSlide has no small-scale tiles (level %d is at %d '
+                       'scale)' % (level, scale))
+                logger.info(msg)
+                raise TileSourceException(msg)
             self._svslevels.append({
                 'svslevel': bestlevel,
                 'scale': scale
@@ -158,10 +168,14 @@ class SVSFileTileSource(FileTileSource):
         # We ask to read an area that will cover the tile at the z level.  The
         # scale we computed in the __init__ process for this svs level tells
         # how much larger a region we need to read.
-        tile = self._openslide.read_region(
-            (offsetx, offsety), svslevel['svslevel'],
-            (self.tileWidth * svslevel['scale'],
-             self.tileHeight * svslevel['scale']))
+        try:
+            tile = self._openslide.read_region(
+                (offsetx, offsety), svslevel['svslevel'],
+                (self.tileWidth * svslevel['scale'],
+                 self.tileHeight * svslevel['scale']))
+        except openslide.lowlevel.OpenSlideError as exc:
+            raise TileSourceException(
+                'Failed to get OpenSlide region (%r).' % exc)
         # Always scale to the svs level 0 tile size.
         if svslevel['scale'] != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight),

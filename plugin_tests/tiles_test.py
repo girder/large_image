@@ -94,6 +94,27 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         tileMetadata['sparse'] = 5
         self._testTilesZXY(itemId, tileMetadata)
 
+        # Check that we conditionally get JFIF headers
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertNotEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'JFIF'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            additionalHeaders=[('User-Agent', 'iPad')])
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
         # Ask to make this a tile-based item again
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': fileId})
@@ -106,7 +127,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], True)
 
-        # We should no longer have tile informaton
+        # We should no longer have tile information
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
@@ -242,7 +263,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
                             user=self.admin)
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], True)
-        # We should no longer have tile informaton
+        # We should no longer have tile information
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
@@ -260,14 +281,54 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         result = self._postTileViaHttp(itemId, fileId, jobAction='delete')
         self.assertIsNone(result)
 
+    def testTilesFromGreyscale(self):
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'grey10kx5k.tif'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        tileMetadata = self._postTileViaHttp(itemId, fileId)
+        self.assertEqual(tileMetadata['tileWidth'], 256)
+        self.assertEqual(tileMetadata['tileHeight'], 256)
+        self.assertEqual(tileMetadata['sizeX'], 10000)
+        self.assertEqual(tileMetadata['sizeY'], 5000)
+        self.assertEqual(tileMetadata['levels'], 7)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['mm_x'], None)
+        self.assertEqual(tileMetadata['mm_y'], None)
+        self._testTilesZXY(itemId, tileMetadata)
+
+    def testTilesWithUnicodeName(self):
+        # Unicode file names shouldn't cause problems.
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
+        # Our normal testing method doesn't pass through the unicode name
+        # properly, so just change it after upload.
+        file = self.model('file').load(file['_id'], force=True)
+        file['name'] = u'\u0441\u043b\u0430\u0439\u0434'
+        file = self.model('file').save(file)
+
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        tileMetadata = self._postTileViaHttp(itemId, fileId)
+        self.assertEqual(tileMetadata['tileWidth'], 256)
+        self.assertEqual(tileMetadata['tileHeight'], 256)
+        self.assertEqual(tileMetadata['sizeX'], 10000)
+        self.assertEqual(tileMetadata['sizeY'], 5000)
+        self.assertEqual(tileMetadata['levels'], 7)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['mm_x'], None)
+        self.assertEqual(tileMetadata['mm_y'], None)
+        self._testTilesZXY(itemId, tileMetadata)
+
     def testTilesFromBadFiles(self):
         # Don't use small images for this test
         from girder.plugins.large_image import constants
         self.model('setting').set(
             constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 0)
-        # Uploading a monochrome file should result in no useful tiles.
+        # Uploading a monochrome with alpha file should result in no useful
+        # tiles.
         file = self._uploadFile(os.path.join(
-            os.path.dirname(__file__), 'test_files', 'small.jpg'))
+            os.path.dirname(__file__), 'test_files', 'small_la.png'))
         itemId = str(file['itemId'])
         fileId = str(file['_id'])
         tileMetadata = self._postTileViaHttp(itemId, fileId)
@@ -390,6 +451,23 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         image = self.getBody(resp, text=False)
         self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
         self.assertNotEqual(greyImage, image)
+
+    def testTilesFromPTIFJpeg2K(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'huron.image2_jpeg2k.tif'))
+        itemId = str(file['itemId'])
+        # The tile request should tell us about the file.  These are specific
+        # to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 256)
+        self.assertEqual(tileMetadata['tileHeight'], 256)
+        self.assertEqual(tileMetadata['sizeX'], 9158)
+        self.assertEqual(tileMetadata['sizeY'], 11273)
+        self.assertEqual(tileMetadata['levels'], 7)
+        self.assertEqual(tileMetadata['magnification'], None)
+        self._testTilesZXY(itemId, tileMetadata)
 
     def testTilesFromPIL(self):
         # Allow images bigger than our test

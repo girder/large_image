@@ -27,6 +27,16 @@ from xml.etree import cElementTree
 
 from ..cache_util import LRUCache, strhash, methodcache
 
+try:
+    from girder import logger
+except ImportError:
+    import logging as logger
+    logger.getLogger().setLevel(logger.INFO)
+try:
+    import PIL.Image
+except ImportError:
+    PIL = None
+
 
 def patchLibtiff():
     libtiff_ctypes.libtiff.TIFFFieldWithTag.restype = \
@@ -72,6 +82,11 @@ class ValidationTiffException(TiffException):
 
 class TiledTiffDirectory(object):
 
+    CoreFunctions = [
+        'SetDirectory', 'GetField', 'LastDirectory', 'GetMode', 'IsTiled',
+        'IsByteSwapped', 'IsUpSampled', 'IsMSB2LSB', 'NumberOfStrips'
+    ]
+
     def __init__(self, filePath, directoryNum):
         """
         Create a new reader for a tiled image file directory in a TIFF file.
@@ -93,12 +108,14 @@ class TiledTiffDirectory(object):
         self._tiffFile = None
 
         self._open(filePath, directoryNum)
+        self._loadMetadata()
+        logger.debug('TiffDirectory %d Information %r',
+                     directoryNum, self._tiffInfo)
         try:
             self._validate()
         except ValidationTiffException:
             self._close()
             raise
-        self._loadMetadata()
 
     def __del__(self):
         self._close()
@@ -118,10 +135,21 @@ class TiledTiffDirectory(object):
             raise InvalidOperationTiffException(
                 'TIFF file does not exist: %s' % filePath)
         try:
-            self._tiffFile = libtiff_ctypes.TIFF.open(filePath)
+            bytePath = filePath
+            if not isinstance(bytePath, six.binary_type):
+                bytePath = filePath.encode('utf8')
+            self._tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         except TypeError:
             raise IOTiffException(
                 'Could not open TIFF file: %s' % filePath)
+        # pylibtiff changed the case of some functions between version 0.4 and
+        # the version that supports libtiff 4.0.6.  To support both, ensure
+        # that the cased functions exist.
+        for func in self.CoreFunctions:
+            if (not hasattr(self._tiffFile, func) and
+                    hasattr(self._tiffFile, func.lower())):
+                setattr(self._tiffFile, func, getattr(
+                    self._tiffFile, func.lower()))
 
         self._directoryNum = directoryNum
         if self._tiffFile.SetDirectory(self._directoryNum) != 1:
@@ -140,63 +168,84 @@ class TiledTiffDirectory(object):
 
         :raises: ValidationTiffException
         """
-        if self._tiffFile.GetField('SamplesPerPixel') < 3:
-            raise ValidationTiffException('Only RGB TIFF files are supported')
+        # For any non-supported file, we probably can add a conversion task in
+        # the create_image.py script, such as flatten or colourspace.  These
+        # should only be done if necessary, which would require the conversion
+        # job to check output and perform subsequent processing as needed.
+        if (self._tiffInfo.get('samplesperpixel') != 1 and
+                self._tiffInfo.get('samplesperpixel') < 3):
+            raise ValidationTiffException(
+                'Only RGB and greyscale TIFF files are supported')
 
-        if self._tiffFile.GetField('BitsPerSample') != 8:
-            raise ValidationTiffException('Only single-byte sampled TIFF files'
-                                          ' are supported')
+        if self._tiffInfo.get('bitspersample') != 8:
+            raise ValidationTiffException(
+                'Only single-byte sampled TIFF files are supported')
 
-        if self._tiffFile.GetField('SampleFormat') not in (
+        if self._tiffInfo.get('sampleformat') not in (
                 None,  # default is still SAMPLEFORMAT_UINT
                 libtiff_ctypes.SAMPLEFORMAT_UINT):
-            raise ValidationTiffException('Only unsigned int sampled TIFF files'
-                                          ' are supported')
+            raise ValidationTiffException(
+                'Only unsigned int sampled TIFF files are supported')
 
-        if self._tiffFile.GetField('PlanarConfig') != \
-                libtiff_ctypes.PLANARCONFIG_CONTIG:
-            raise ValidationTiffException('Only contiguous planar configuration'
-                                          ' TIFF files are supported')
+        if self._tiffInfo.get('planarconfig') != libtiff_ctypes.PLANARCONFIG_CONTIG:
+            raise ValidationTiffException(
+                'Only contiguous planar configuration TIFF files are supported')
 
-        if self._tiffFile.GetField('Photometric') not in (
+        if self._tiffInfo.get('photometric') not in (
+                libtiff_ctypes.PHOTOMETRIC_MINISBLACK,
                 libtiff_ctypes.PHOTOMETRIC_RGB,
                 libtiff_ctypes.PHOTOMETRIC_YCBCR):
-            raise ValidationTiffException('Only RGB and YCbCr photometric'
-                                          ' interpretation TIFF files are'
-                                          ' supported')
+            raise ValidationTiffException(
+                'Only greyscale (black is 0), RGB, and YCbCr photometric '
+                'interpretation TIFF files are supported')
 
-        if self._tiffFile.GetField('Orientation') != \
-                libtiff_ctypes.ORIENTATION_TOPLEFT:
-            raise ValidationTiffException('Only top-left orientation TIFF files'
-                                          ' are supported')
+        if self._tiffInfo.get('orientation') != libtiff_ctypes.ORIENTATION_TOPLEFT:
+            raise ValidationTiffException(
+                'Only top-left orientation TIFF files are supported')
 
-        if self._tiffFile.GetField('Compression') != \
-                libtiff_ctypes.COMPRESSION_JPEG:
-            raise ValidationTiffException('Only JPEG compression TIFF files are'
-                                          ' supported')
+        if self._tiffInfo.get('compression') not in (
+                libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005):
+            raise ValidationTiffException(
+                'Only JPEG compression TIFF files are supported')
 
-        if not self._tiffFile.IsTiled():
+        if (not self._tiffInfo.get('istiled') or
+                not self._tiffInfo.get('tilewidth') or
+                not self._tiffInfo.get('tilelength')):
             raise ValidationTiffException('Only tiled TIFF files are supported')
 
-        if self._tiffFile.GetField('TileWidth') != \
-                self._tiffFile.GetField('TileLength'):
-            raise ValidationTiffException('Non-square TIFF tiles are not'
-                                          ' supported')
-
-        if self._tiffFile.GetField('JpegTablesMode') != \
-                libtiff_ctypes.JPEGTABLESMODE_QUANT | \
-                libtiff_ctypes.JPEGTABLESMODE_HUFF:
-            raise ValidationTiffException('Only TIFF files with separate'
-                                          ' Huffman and quantization tables are'
-                                          ' supported')
+        if (self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG and
+                self._tiffInfo.get('jpegtablesmode') !=
+                libtiff_ctypes.JPEGTABLESMODE_QUANT |
+                libtiff_ctypes.JPEGTABLESMODE_HUFF):
+            raise ValidationTiffException(
+                'Only TIFF files with separate Huffman and quantization '
+                'tables are supported')
 
     def _loadMetadata(self):
-        self._tileWidth = self._tiffFile.GetField('TileWidth')
-        self._tileHeight = self._tiffFile.GetField('TileLength')
-        self._imageWidth = self._tiffFile.GetField('ImageWidth')
-        self._imageHeight = self._tiffFile.GetField('ImageLength')
-        self.parse_image_description(
-            self._tiffFile.GetField('ImageDescription'))
+        fields = [key.split('_', 1)[1].lower() for key in
+                  dir(libtiff_ctypes.tiff_h) if key.startswith('TIFFTAG_')]
+        info = {}
+        for field in fields:
+            try:
+                value = self._tiffFile.GetField(field)
+                if value is not None:
+                    info[field] = value
+            except TypeError as err:
+                logger.debug('Loading field "%s" in directory number %d '
+                             'resulted in TypeError - "%s"',
+                             field, self._directoryNum, err)
+
+        for func in self.CoreFunctions[2:]:
+            if hasattr(self._tiffFile, func):
+                value = getattr(self._tiffFile, func)()
+                if value:
+                    info[func.lower()] = value
+        self._tiffInfo = info
+        self._tileWidth = info.get('tilewidth')
+        self._tileHeight = info.get('tilelength')
+        self._imageWidth = info.get('imagewidth')
+        self._imageHeight = info.get('imagelength')
+        self.parse_image_description(info.get('imagedescription', ''))
 
     @methodcache(key=partial(strhash, '_getJpegTables'))
     def _getJpegTables(self):
@@ -211,8 +260,6 @@ class TiledTiffDirectory(object):
         :rtype: bytes
         :raises: Exception
         """
-        # TODO: does this vary with Z?
-
         # TIFFTAG_JPEGTABLES uses (uint32*, void**) output arguments
         # http://www.remotesensing.org/libtiff/man/TIFFGetField.3tiff.html
 
@@ -258,16 +305,17 @@ class TiledTiffDirectory(object):
         :rtype int
         :raises: InvalidOperationTiffException
         """
-        # TODO: is it worth it to memoize this?
-
         # TIFFCheckTile and TIFFComputeTile require pixel coordinates
         pixelX = x * self._tileWidth
         pixelY = y * self._tileHeight
 
+        if pixelX >= self._imageWidth or pixelY >= self._imageHeight:
+            raise InvalidOperationTiffException(
+                'Tile x=%d, y=%d does not exist' % (x, y))
         if libtiff_ctypes.libtiff.TIFFCheckTile(
                 self._tiffFile, pixelX, pixelY, 0, 0) == 0:
-            raise InvalidOperationTiffException('Tile x=%d, y=%d does not'
-                                                ' exist' % (x, y))
+            raise InvalidOperationTiffException(
+                'Tile x=%d, y=%d does not exist' % (x, y))
 
         tileNum = libtiff_ctypes.libtiff.TIFFComputeTile(
             self._tiffFile, pixelX, pixelY, 0, 0).value
@@ -336,12 +384,14 @@ class TiledTiffDirectory(object):
         # long to an int
         return int(rawTileSizes[tileNum])
 
-    def _getJpegFrame(self, tileNum):
+    def _getJpegFrame(self, tileNum, entire=False):
         """
         Get the raw encoded JPEG image frame from a tile.
 
         :param tileNum: The internal tile number of the desired tile.
         :type tileNum: int
+        :param entire: True to return the entire frame.  False to strip off
+            container information.
         :return: The JPEG image frame, including a JPEG Start Of Frame marker.
         :rtype: bytes
         :raises: InvalidOperationTiffException or IOTiffException
@@ -362,6 +412,8 @@ class TiledTiffDirectory(object):
             # It's unlikely that this will ever occur, but incomplete reads will
             # be checked for by looking for the JPEG end marker
             raise IOTiffException('Buffer overflow when reading tile')
+        if entire:
+            return frameBuffer.raw[:]
 
         if frameBuffer.raw[:2] != b'\xff\xd8':
             raise IOTiffException('Missing JPEG Start Of Image marker in frame')
@@ -392,7 +444,6 @@ class TiledTiffDirectory(object):
         :return: The tile width in pixels.
         :rtype: int
         """
-        # TODO: fetch lazily and memoize
         return self._tileWidth
 
     @property
@@ -403,22 +454,18 @@ class TiledTiffDirectory(object):
         :return: The tile height in pixels.
         :rtype: int
         """
-        # TODO: fetch lazily and memoize
         return self._tileHeight
 
     @property
     def imageWidth(self):
-        # TODO: fetch lazily and memoize
         return self._imageWidth
 
     @property
     def imageHeight(self):
-        # TODO: fetch lazily and memoize
         return self._imageHeight
 
     @property
     def pixelInfo(self):
-        # TODO: fetch lazily and memoize
         return self._pixelInfo
 
     def getTile(self, x, y):
@@ -429,6 +476,7 @@ class TiledTiffDirectory(object):
         :type x: int
         :param y: The row index of the desired tile.
         :type y: int
+        :return: either a buffer with a JPEG or a PIL image.
         :rtype: bytes
         :raises: InvalidOperationTiffException or IOTiffException
         """
@@ -437,22 +485,27 @@ class TiledTiffDirectory(object):
 
         imageBuffer = six.BytesIO()
 
-        # Write JPEG Start Of Image marker
-        imageBuffer.write(b'\xff\xd8')
+        if self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG:
+            # Write JPEG Start Of Image marker
+            imageBuffer.write(b'\xff\xd8')
+            imageBuffer.write(self._getJpegTables())
+            imageBuffer.write(self._getJpegFrame(tileNum))
+            # Write JPEG End Of Image marker
+            imageBuffer.write(b'\xff\xd9')
+            return imageBuffer.getvalue()
 
-        imageBuffer.write(self._getJpegTables())
+        if self._tiffInfo.get('compression') in (33003, 33005):
+            # Get the whole frame, which is JPEG 2000 format, and convert it to
+            # a PIL image
+            imageBuffer.write(self._getJpegFrame(tileNum, True))
+            image = PIL.Image.open(imageBuffer)
+            # Converting the image mode ensures that it gets loaded once and is
+            # in a form we expect.  IF this isn't done, then PIL can load the
+            # image multiple times, which sometimes throws an exception in
+            # PIL's JPEG 2000 module.
+            image = image.convert('RGB')
+            return image
 
-        # TODO: why write padding?
-        imageBuffer.write(b'\xff\xff\xff\xff')
-
-        imageBuffer.write(self._getJpegFrame(tileNum))
-
-        # Write JPEG End Of Image marker
-        imageBuffer.write(b'\xff\xd9')
-
-        return imageBuffer.getvalue()
-
-    # TODO: refactor and remove this
     def parse_image_description(self, meta=None):
 
         self._pixelInfo = {}
@@ -463,6 +516,13 @@ class TiledTiffDirectory(object):
         try:
             xml = cElementTree.fromstring(meta)
         except Exception:
+            if 'AppMag = ' in meta:
+                try:
+                    self._pixelInfo = {
+                        'magnification': float(meta.split('AppMag = ')[1])
+                    }
+                except Exception:
+                    pass
             return
         try:
             image = xml.find(
@@ -491,3 +551,4 @@ class TiledTiffDirectory(object):
                         ".//*[@Name='PIM_DP_IMAGE_DATA']").text
         except Exception:
             pass
+        return True

@@ -32,7 +32,7 @@ try:
     from girder.models.model_base import AccessType
 except ImportError:
     import logging as logger
-
+    logger.getLogger().setLevel(logger.INFO)
     girder = None
 
     class TileGeneralException(Exception):
@@ -63,8 +63,16 @@ TILE_FORMAT_PIL = 'PIL'
 TILE_FORMAT_NUMPY = 'numpy'
 
 TileOutputMimeTypes = {
+    # JFIF forces conversion to JPEG through PIL to ensure the image is in a
+    # common colorspace.  JPEG colorspace is complex: see
+    #   https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/
+    #                           doc-files/jpeg_metadata.html
+    'JFIF': 'image/jpeg',
     'JPEG': 'image/jpeg',
     'PNG': 'image/png'
+}
+TileOutputPILFormat = {
+    'JFIF': 'JPEG'
 }
 TileInputUnits = {
     None: 'base_pixels',
@@ -91,6 +99,191 @@ class TileSourceAssetstoreException(TileSourceException):
     pass
 
 
+def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
+                 format=(TILE_FORMAT_IMAGE, ), **kwargs):
+    """
+    Convert a PIL image into the raw output bytes and a mime type.
+
+    :param image: a PIL image.
+    :param encoding: a valid PIL encoding (typically 'PNG' or 'JPEG').  Must
+        also be in the TileOutputMimeTypes map.
+    :param jpegQuality: the quality to use when encoding a JPEG.
+    :param jpegSubsampling: the subsampling level to use when encoding a JPEG.
+    :param format: the desired format or a tuple of allowed formats.  Formats
+        are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY, TILE_FORMAT_IMAGE).
+    :returns:
+        imageData: the image data in the specified format and encoding.
+        imageFormatOrMimeType: the image mime type if the format is
+            TILE_FORMAT_IMAGE, or the format of the image data if it is
+            anything else.
+    """
+    if not isinstance(format, tuple):
+        format = (format, )
+    imageData = image
+    imageFormatOrMimeType = TILE_FORMAT_PIL
+    if TILE_FORMAT_PIL in format:
+        # already in an acceptable format
+        pass
+    elif TILE_FORMAT_NUMPY in format:
+        imageData = numpy.asarray(image)
+        imageFormatOrMimeType = TILE_FORMAT_NUMPY
+    elif TILE_FORMAT_IMAGE in format:
+        if encoding not in TileOutputMimeTypes:
+            raise ValueError('Invalid encoding "%s"' % encoding)
+        imageFormatOrMimeType = TileOutputMimeTypes[encoding]
+        if image.width == 0 or image.height == 0:
+            imageData = b''
+        else:
+            output = BytesIO()
+            image.save(output, TileOutputPILFormat.get(encoding, encoding),
+                       quality=jpegQuality, subsampling=jpegSubsampling)
+            imageData = output.getvalue()
+    return imageData, imageFormatOrMimeType
+
+
+class LazyTileDict(dict):
+    """
+    Tiles returned from the tile iterator and dictioaries of information with
+    actual image data in the 'tile' key and the format in the 'format' key.
+    Since some applications need information about the tile but don't need the
+    image data, these two values are lazily computed.  The LazyTileDict can be
+    treated like a regular dictionary, except that when either of those two
+    keys are first accessed, they will cause the image to be loaded and
+    possibly converted to a PIL image and cropped.
+
+    Unless setFormat is called on the tile, tile images may always be returned
+    as PIL images.
+    """
+    def __init__(self, tileInfo, *args, **kwargs):
+        """
+        Create a LazyTileDict dictionary where there is enough information to
+        load the tile image.  ang and kwargs are as for the dict() class.
+
+        :param tileInfo: a dictionary of x, y, level, format, encoding, crop,
+            and source, used for fetching the tile image.
+        """
+        self.deferredKeys = ('tile', 'format')
+        self.x = tileInfo['x']
+        self.y = tileInfo['y']
+        self.level = tileInfo['level']
+        self.format = tileInfo['format']
+        self.encoding = tileInfo['encoding']
+        self.crop = tileInfo['crop']
+        self.source = tileInfo['source']
+        self.alwaysAllowPIL = True
+        self.resample = tileInfo.get('resample', False)
+        self.requestedScale = tileInfo.get('requestedScale')
+        self.imageKwargs = {}
+        self.loaded = False
+        result = super(LazyTileDict, self).__init__(*args, **kwargs)
+        # We set this initially so that they are listed in known keys using the
+        # native dictionary methods
+        self['tile'] = None
+        self['format'] = None
+        return result
+
+    def setFormat(self, format, resample=False, imageKwargs=None):
+        """
+        Set a more restrictuve output format for a tile, possibly also resizing
+        it via resampling.  If this is not called, the tile may either as one
+        of the specified formats or as a PIL image.
+
+        :param format: a tuple or list of allowed formats.  Formats are members
+            of TILE_FORMAT_*.  This will avoid converting images if they are
+            in the desired output encoding (regardless of subparameters).
+        :param resample: if true, allow resampling.  Once turned on, this
+            cannot be turned off on the tile.
+        :param imageKwargs: additional parameters taht should be passed to
+            _encodeImage.
+        """
+        # If any parameters are changed, mark the tile as not loaded, so that
+        # referring to a deferredKey will reload the image.
+        self.alwaysAllowPIL = False
+        if format is not None and format != self.format:
+            self.format = format
+            self.loaded = False
+        if (resample and not self.resample and self.requestedScale and
+                round(self.requestedScale, 2) != 1.0):
+            self.resample = resample
+            self['scaled'] = 1.0 / self.requestedScale
+            self['tile_x'] = self.get('tile_x', self['x'])
+            self['tile_y'] = self.get('tile_y', self['y'])
+            self['tile_width'] = self.get('tile_width', self['width'])
+            self['tile_height'] = self.get('tile_width', self['height'])
+            self['x'] = float(self['tile_x']) / self.requestedScale
+            self['y'] = float(self['tile_y']) / self.requestedScale
+            # If we can resample the tile, many parameters may change
+            # once the image is loaded.
+            self.deferredKeys = ('tile', 'format', 'width', 'height')
+            self.loaded = False
+        if imageKwargs is not None:
+            self.imageKwargs = imageKwargs
+            self.loaded = False
+
+    def __getitem__(self, key, *args, **kwargs):
+        """
+        If this is the first time either the tile or format key is requested,
+        load the tile image data.  Otherwise, just return the internal
+        dictionary result.
+
+        See the base dict class for function details.
+        """
+        if not self.loaded and key in self.deferredKeys:
+            # Flag this immediately to avoid recursion if we refer to the
+            # tile's own values.
+            self.loaded = True
+
+            tileData = self.source.getTile(
+                self.x, self.y, self.level,
+                pilImageAllowed=True, sparseFallback=True)
+            tileFormat = TILE_FORMAT_PIL
+            # If the tile isn't in PIL format, and it is not in an image format
+            # that is the same as a desired output format and encoding, convert
+            # it to PIL format.
+            if not isinstance(tileData, PIL.Image.Image):
+                pilData = PIL.Image.open(BytesIO(tileData))
+                if (self.format and TILE_FORMAT_IMAGE in self.format and
+                        pilData.format == self.encoding):
+                    tileFormat = TILE_FORMAT_IMAGE
+                else:
+                    tileData = pilData
+            else:
+                pilData = tileData
+            if self.crop:
+                tileData = pilData.crop(self.crop)
+                tileFormat = TILE_FORMAT_PIL
+
+            # resample if needed
+            if self.resample and self.requestedScale:
+                self['width'] = max(1, int(
+                    tileData.size[0] / self.requestedScale))
+                self['height'] = max(1, int(
+                    tileData.size[1] / self.requestedScale))
+                tileData = tileData.resize(
+                    (self['width'], self['height']), resample=self.resample)
+
+            # Reformat the image if required
+            if not self.alwaysAllowPIL:
+                if tileFormat in self.format:
+                    # already in an acceptable format
+                    pass
+                elif TILE_FORMAT_NUMPY in self.format and numpy:
+                    tileData = numpy.asarray(tileData)
+                    tileFormat = TILE_FORMAT_NUMPY
+                elif TILE_FORMAT_IMAGE in self.format:
+                    tileData, mimeType = _encodeImage(
+                        tileData, **self.imageKwargs)
+                    tileFormat = TILE_FORMAT_IMAGE
+                if tileFormat not in self.format:
+                    raise TileSourceException(
+                        'Cannot yield tiles in desired format %r' % (
+                            self.format, ))
+
+            self['tile'] = tileData
+            self['format'] = tileFormat
+        return super(LazyTileDict, self).__getitem__(key, *args, **kwargs)
+
+
 class TileSource(object):
     name = None
 
@@ -115,21 +308,13 @@ class TileSource(object):
         self.sizeX = None
         self.sizeY = None
 
-        if encoding not in ('PNG', 'JPEG'):
+        if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
 
         self.encoding = encoding
         self.jpegQuality = int(jpegQuality)
         self.jpegSubsampling = int(jpegSubsampling)
         self.edge = edge
-
-        """
-        self.getThumbnail = cached(
-            self.cache, key=self.wrapKey, lock=self.cache_lock)(
-                self.getThumbnail)
-        self.getTile = cached(
-            self.cache, key=self.wrapKey, lock=self.cache_lock)(self.getTile)
-        """
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -173,50 +358,6 @@ class TileSource(object):
             scale = float(width) / regionWidth
             height = max(1, int(regionHeight * width / regionWidth))
         return width, height, scale
-
-    def _encodeImage(self, image, encoding='JPEG', jpegQuality=95,
-                     jpegSubsampling=0, format=(TILE_FORMAT_IMAGE, ),
-                     **kwargs):
-        """
-        Convert a PIL image into the raw output bytes and a mime type.
-
-        :param image: a PIL image.
-        :param encoding: a valid PIL encoding (typically 'PNG' or 'JPEG').
-                         Must also be in the TileOutputMimeTypes map.
-        :param jpegQuality: the quality to use when encoding a JPEG.
-        :param jpegSubsampling: the subsampling level to use when encoding a
-                                JPEG.
-        :param format: the desired format or a tuple of allowed formats.
-            Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
-            TILE_FORMAT_IMAGE).
-        :returns:
-            imageData: the image data in the specified format and encoding
-            imageFormatOrMimeType: the image mime type if the format is
-                TILE_FORMAT_IMAGE, or the format of the image data if it is
-                anything else.
-        """
-        if not isinstance(format, tuple):
-            format = (format, )
-        imageData = image
-        imageFormatOrMimeType = TILE_FORMAT_PIL
-        if TILE_FORMAT_PIL in format:
-            # already in an acceptable format
-            pass
-        elif TILE_FORMAT_NUMPY in format:
-            imageData = numpy.asarray(image)
-            imageFormatOrMimeType = TILE_FORMAT_NUMPY
-        elif TILE_FORMAT_IMAGE in format:
-            if encoding not in TileOutputMimeTypes:
-                raise ValueError('Invalid encoding "%s"' % encoding)
-            imageFormatOrMimeType = TileOutputMimeTypes[encoding]
-            if image.width == 0 or image.height == 0:
-                imageData = b''
-            else:
-                output = BytesIO()
-                image.save(output, encoding, quality=jpegQuality,
-                           subsampling=jpegSubsampling)
-                imageData = output.getvalue()
-        return imageData, imageFormatOrMimeType
 
     def _getRegionBounds(self, metadata, left=None, top=None, right=None,
                          bottom=None, width=None, height=None,
@@ -543,10 +684,11 @@ class TileSource(object):
         format = iterInfo['format']
         encoding = iterInfo['encoding']
 
-        logger.info(
+        logger.debug(
             'Fetching region of an image with a source size of %d x %d; '
             'getting %d tiles',
             regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
+
         # If tile is specified, return at most one tile
         if iterInfo.get('tile_position') is not None:
             tilePos = iterInfo.get('tile_position')
@@ -570,21 +712,7 @@ class TileSource(object):
         scale = mag.get('scale', 1.0)
         for x in range(xmin, xmax):
             for y in range(ymin, ymax):
-                tileData = self.getTile(
-                    x, y, level, pilImageAllowed=True, sparseFallback=True)
-                tileFormat = TILE_FORMAT_PIL
-                # If the tile isn't in PIL format, and it is not in an image
-                # format that is the same as a desired output format and
-                # encoding, convert it to PIL format.
-                if not isinstance(tileData, PIL.Image.Image):
-                    pilData = PIL.Image.open(BytesIO(tileData))
-                    if (format and TILE_FORMAT_IMAGE in format and
-                            pilData.format == encoding):
-                        tileFormat = TILE_FORMAT_IMAGE
-                    else:
-                        tileData = pilData
-                else:
-                    pilData = tileData
+                crop = None
                 posX = x * metadata['tileWidth'] - left
                 posY = y * metadata['tileHeight'] - top
                 tileWidth = metadata['tileWidth']
@@ -596,18 +724,24 @@ class TileSource(object):
                             max(0, -posY),
                             min(tileWidth, regionWidth - posX),
                             min(tileHeight, regionHeight - posY))
-                    tileData = pilData.crop(crop)
                     posX += crop[0]
                     posY += crop[1]
                     tileWidth = crop[2] - crop[0]
                     tileHeight = crop[3] - crop[1]
-                tile = {
+                tile = LazyTileDict({
+                    'x': x,
+                    'y': y,
+                    'level': level,
+                    'format': format,
+                    'encoding': encoding,
+                    'crop': crop,
+                    'requestedScale': iterInfo['requestedScale'],
+                    'source': self,
+                }, {
                     'x': posX + left,
                     'y': posY + top,
                     'width': tileWidth,
                     'height': tileHeight,
-                    'tile': tileData,
-                    'format': tileFormat,
                     'level': level,
                     'level_x': x,
                     'level_y': y,
@@ -633,7 +767,7 @@ class TileSource(object):
                         'position': ((iterInfo['xmax'] - iterInfo['xmin']) *
                                      (iterInfo['ymax'] - iterInfo['ymin']))
                     },
-                }
+                })
                 tile['gx'] = tile['x'] * scale
                 tile['gy'] = tile['y'] * scale
                 tile['gwidth'] = tile['width'] * scale
@@ -673,7 +807,7 @@ class TileSource(object):
             if self.edge in (True, 'crop'):
                 tile = tile.crop((0, 0, contentWidth, contentHeight))
             else:
-                color = PIL.ImageColor.getrgb(self.edge)
+                color = PIL.ImageColor.getcolor(self.edge, tile.mode)
                 if contentWidth < self.tileWidth:
                     PIL.ImageDraw.Draw(tile).rectangle(
                         [(contentWidth, 0), (self.tileWidth, contentHeight)],
@@ -685,8 +819,9 @@ class TileSource(object):
         if pilImageAllowed:
             return tile
         output = BytesIO()
-        tile.save(output, self.encoding, quality=self.jpegQuality,
-                  subsampling=self.jpegSubsampling)
+        tile.save(
+            output, TileOutputPILFormat.get(self.encoding, self.encoding),
+            quality=self.jpegQuality, subsampling=self.jpegSubsampling)
         return output.getvalue()
 
     @classmethod
@@ -717,9 +852,7 @@ class TileSource(object):
         raise NotImplementedError()
 
     def getTileMimeType(self):
-        if self.encoding == 'PNG':
-            return 'image/png'
-        return 'image/jpeg'
+        return TileOutputMimeTypes.get(self.encoding, 'image/jpeg')
 
     @methodcache()
     def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
@@ -767,7 +900,7 @@ class TileSource(object):
             image = image.resize(
                 (width, height),
                 PIL.Image.BICUBIC if width > imageWidth else PIL.Image.LANCZOS)
-        return self._encodeImage(image, **kwargs)
+        return _encodeImage(image, **kwargs)
 
     def getPreferredLevel(self, level):
         """
@@ -904,8 +1037,11 @@ class TileSource(object):
             kwargs.pop('tile_position', None)
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
-            image = PIL.Image.new('RGB', (0, 0))
-            return self._encodeImage(image, format=format, **kwargs)
+            # In PIL 3.4.2, you can't directly create a 0 sized image.  It was
+            # easier to do this before:
+            #  image = PIL.Image.new('RGB', (0, 0))
+            image = PIL.Image.new('RGB', (1, 1)).crop((0, 0, 0, 0))
+            return _encodeImage(image, format=format, **kwargs)
         regionWidth = iterInfo['region']['width']
         regionHeight = iterInfo['region']['height']
         top = iterInfo['region']['top']
@@ -921,11 +1057,16 @@ class TileSource(object):
         # memory ourselves in one block, the memory manager does a better job.
         # Furthermode, if the source buffer isn't in RGBA format, the memory is
         # still often inaccessible.
-        image = PIL.Image.frombuffer(
-            mode, (regionWidth, regionHeight),
-            # PIL will reallocate buffers that aren't in 'raw', RGBA, 0, 1.
-            # See PIL documentation and code for more details.
-            b'\x00' * (regionWidth * regionHeight * 4), 'raw', 'RGBA', 0, 1)
+        try:
+            image = PIL.Image.frombuffer(
+                mode, (regionWidth, regionHeight),
+                # PIL will reallocate buffers that aren't in 'raw', RGBA, 0, 1.
+                # See PIL documentation and code for more details.
+                b'\x00' * (regionWidth * regionHeight * 4), 'raw', 'RGBA', 0, 1)
+        except MemoryError:
+            raise TileSourceException(
+                'Insufficient memory to get region of %d x %d pixels.' % (
+                    regionWidth, regionHeight))
         for tile in self._tileIterator(iterInfo):
             # Add each tile to the image.  PIL crops these if they are off the
             # edge.
@@ -940,7 +1081,7 @@ class TileSource(object):
                 (outWidth, outHeight),
                 PIL.Image.BICUBIC if outWidth > regionWidth else
                 PIL.Image.LANCZOS)
-        return self._encodeImage(image, format=format, **kwargs)
+        return _encodeImage(image, format=format, **kwargs)
 
     def getRegionAtAnotherScale(self, sourceRegion, sourceScale=None,
                                 targetScale=None, targetUnits=None, **kwargs):
@@ -1136,34 +1277,7 @@ class TileSource(object):
                 round(iterInfo['requestedScale'], 2) == 1.0):
             resample = None
         for tile in self._tileIterator(iterInfo):
-            # resample if needed
-            if resample is not None:
-                tile['scaled'] = 1.0 / iterInfo['requestedScale']
-                tile['tile_x'] = tile['x']
-                tile['tile_y'] = tile['y']
-                tile['tile_width'] = tile['width']
-                tile['tile_height'] = tile['height']
-                tile['width'] = max(1, int(
-                    tile['tile'].size[0] / iterInfo['requestedScale']))
-                tile['height'] = max(1, int(
-                    tile['tile'].size[1] / iterInfo['requestedScale']))
-                tile['x'] = float(tile['x']) / iterInfo['requestedScale']
-                tile['y'] = float(tile['y']) / iterInfo['requestedScale']
-                tile['tile'] = tile['tile'].resize(
-                    (tile['width'], tile['height']), resample=resample)
-            if tile['format'] in format:
-                # already in an acceptable format
-                pass
-            elif TILE_FORMAT_NUMPY in format and numpy:
-                tile['tile'] = numpy.asarray(tile['tile'])
-                tile['format'] = TILE_FORMAT_NUMPY
-            elif TILE_FORMAT_IMAGE in format:
-                tile['tile'], mimeType = self._encodeImage(
-                    tile['tile'], **kwargs)
-                tile['format'] = TILE_FORMAT_IMAGE
-            if tile['format'] not in format:
-                raise TileSourceException(
-                    'Cannot yield tiles in desired format %r' % (format, ))
+            tile.setFormat(format, resample, kwargs)
             yield tile
 
     def tileIteratorAtAnotherScale(self, sourceRegion, sourceScale=None,

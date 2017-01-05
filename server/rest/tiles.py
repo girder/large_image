@@ -31,6 +31,29 @@ from ..models import TileGeneralException
 from .. import loadmodelcache
 
 
+def _adjustParams(params):
+    """
+    Check the user agent of a request.  If it appears to be from an iOS device,
+    and the request is asking for JPEG encoding (or hasn't specified an
+    encoding), then make sure the output is JFIF.
+
+    It is unfortunate that this requires analyzing the user agent, as this
+    method if brittle.  However, other browsers can handle non-JFIF jpegs, and
+    we do not want to encur the overhead of conversion if it is not necessary
+    (converting to JFIF may require colorspace transforms).
+
+    :param params: the request parameters.  May be modified.
+    """
+    try:
+        userAgent = cherrypy.request.headers.get('User-Agent', '').lower()
+    except Exception:
+        pass
+    if params.get('encoding', 'JPEG') == 'JPEG':
+        if ('ipad' in userAgent or 'ipod' in userAgent or
+                'iphone' in userAgent):
+            params['encoding'] = 'JFIF'
+
+
 class TilesItemResource(Item):
 
     def __init__(self, apiRoot):
@@ -92,6 +115,7 @@ class TilesItemResource(Item):
 
     @classmethod
     def _parseTestParams(cls, params):
+        _adjustParams(params)
         return cls._parseParams(params, False, [
             ('minLevel', int),
             ('maxLevel', int),
@@ -227,6 +251,7 @@ class TilesItemResource(Item):
     #       return self._getTile(item, z, x, y, params)
     @access.public
     def getTile(self, itemId, z, x, y, params):
+        _adjustParams(params)
         item = loadmodelcache.loadModel(
             self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
         # Explicitly set a expires time to encourage browsers to cache this for
@@ -287,6 +312,7 @@ class TilesItemResource(Item):
     @access.public
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesThumbnail(self, item, params):
+        _adjustParams(params)
         params = self._parseParams(params, True, [
             ('width', int),
             ('height', int),
@@ -374,6 +400,7 @@ class TilesItemResource(Item):
     @access.public
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesRegion(self, item, params):
+        _adjustParams(params)
         params = self._parseParams(params, True, [
             ('left', float, 'region', 'left'),
             ('top', float, 'region', 'top'),

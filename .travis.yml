@@ -3,6 +3,10 @@ language: python
 python:
   - "2.7"
 
+env:
+  - LIBTIFF_VERSION=4.0.3 OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
+  - LIBTIFF_VERSION=4.0.6 OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2"
+
 cache:
   directories:
     - $HOME/.cache
@@ -77,12 +81,12 @@ before_install:
   # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
   # so install it from source.
   - cd $build_path
-  # - wget -O openjpeg-2.1.tar.gz https://github.com/uclouvain/openjpeg/archive/version.2.1.tar.gz
-  # - tar -zxf openjpeg-2.1.tar.gz
-  # - cd openjpeg-version.2.1
-  - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
-  - tar -zxf openjpeg-1.5.2.tar.gz
-  - cd openjpeg-version.1.5.2
+  - wget -O "openjpeg-$OPENJPEG_VERSION.tar.gz" "https://github.com/uclouvain/openjpeg/archive/$OPENJPEG_FILE"
+  - tar -zxf "openjpeg-$OPENJPEG_VERSION.tar.gz"
+  - cd "$OPENJPEG_DIR"
+  # - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
+  # - tar -zxf openjpeg-1.5.2.tar.gz
+  # - cd openjpeg-version.1.5.2
   - cmake .
   - make -j 3
   - sudo make install
@@ -91,9 +95,9 @@ before_install:
 
   # Build libtiff so it will use our openjpeg
   - cd $build_path
-  - wget http://download.osgeo.org/libtiff/tiff-4.0.3.tar.gz
-  - tar -zxf tiff-4.0.3.tar.gz
-  - cd tiff-4.0.3
+  - wget "http://download.osgeo.org/libtiff/tiff-$LIBTIFF_VERSION.tar.gz"
+  - tar -zxf "tiff-$LIBTIFF_VERSION.tar.gz"
+  - cd "tiff-$LIBTIFF_VERSION"
   - ./configure
   - make -j 3
   - sudo make install
@@ -125,18 +129,25 @@ before_install:
   - mongod --version
 
   - npm install -g npm
+  - npm install -g npm-install-retry
   - npm --version
 
   - pip install --no-cache-dir -U pip virtualenv
 
   - pip install --no-cache-dir numpy==1.10.2  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
+  - if [ ${LIBTIFF_VERSION} == "4.0.6" ]; then pip install "git+https://github.com/pearu/pylibtiff@848785a6a9a4e2c6eb6f56ca9f7e8f6b32e523d5" --force-reinstall --ignore-installed --upgrade; fi
+
+
 install:
   - cd $girder_path
   - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -e .
   - pip install -r $main_path/requirements.txt -e .
   - python -c "import openslide;print openslide.__version__"
-  - npm install
+  # This was
+  # - npm install
+  # but since there are often connection failures, use the retry package.
+  - npm-install-retry
   - BABEL_ENV=cover NYC_CWD=$main_path girder-install web --plugins=large_image,worker,jobs --dev
 
 script:
