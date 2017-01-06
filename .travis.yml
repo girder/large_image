@@ -10,6 +10,7 @@ env:
 cache:
   directories:
     - $HOME/.cache
+    - $HOME/build/libs
     - $HOME/build/girder_testing_build/store
     - $HOME/build/girder_testing_build/data
 
@@ -83,6 +84,8 @@ before_install:
   - main_path=$PWD
   - build_path=$PWD/build
   - mkdir -p $build_path
+  - lib_build_path=$PWD/build/libs
+  - mkdir -p $lib_build_path
 
   - girder_path=$build_path/girder
   - rm -fr $girder_path
@@ -95,7 +98,7 @@ before_install:
 
   # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
   # so install it from source.
-  - cd $build_path
+  - cd $lib_build_path
   - wget -O "openjpeg-$OPENJPEG_VERSION.tar.gz" "https://github.com/uclouvain/openjpeg/archive/$OPENJPEG_FILE"
   - tar -zxf "openjpeg-$OPENJPEG_VERSION.tar.gz"
   - cd "$OPENJPEG_DIR"
@@ -109,8 +112,8 @@ before_install:
   - cd $main_path
 
   # Build libtiff so it will use our openjpeg
-  - cd $build_path
-  - wget "http://download.osgeo.org/libtiff/tiff-$LIBTIFF_VERSION.tar.gz"
+  - cd $lib_build_path
+  - wget -O "tiff-$LIBTIFF_VERSION.tar.gz" "http://download.osgeo.org/libtiff/tiff-$LIBTIFF_VERSION.tar.gz"
   - tar -zxf "tiff-$LIBTIFF_VERSION.tar.gz"
   - cd "tiff-$LIBTIFF_VERSION"
   - ./configure
@@ -120,7 +123,7 @@ before_install:
   - cd $main_path
 
   # Build OpenSlide ourselves so that it will use our libtiff
-  - cd $build_path
+  - cd $lib_build_path
   - wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz
   - tar -zxf openslide-3.4.1.tar.gz
   - cd openslide-3.4.1
@@ -133,7 +136,7 @@ before_install:
 
   # Build vips to use our libraries
   - if [ "$BUILD_VIPS" = "yes" ]; then
-    cd $build_path &&
+    cd $lib_build_path &&
     wget -O vips-8.4.5.tar.gz http://www.vips.ecs.soton.ac.uk/supported/current/vips-8.4.5.tar.gz &&
     tar -zxf vips-8.4.5.tar.gz &&
     cd vips-8.4.5 &&
