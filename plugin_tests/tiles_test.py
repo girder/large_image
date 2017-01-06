@@ -321,24 +321,12 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self._testTilesZXY(itemId, tileMetadata)
 
     def testTilesFromBadFiles(self):
-        # Don't use small images for this test
-        from girder.plugins.large_image import constants
-        self.model('setting').set(
-            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 0)
-        # Uploading a monochrome with alpha file should result in no useful
-        # tiles.
-        file = self._uploadFile(os.path.join(
-            os.path.dirname(__file__), 'test_files', 'small_la.png'))
-        itemId = str(file['itemId'])
-        fileId = str(file['_id'])
-        tileMetadata = self._postTileViaHttp(itemId, fileId)
-        self.assertEqual(tileMetadata, False)
-        # We should be able to delete the conversion
-        resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
-                            user=self.admin)
-        self.assertStatusOk(resp)
-        self.assertEqual(resp.json['deleted'], True)
-        # Uploading a non-image file should run a job, too.
+        # As of vips 8.2.4, alpha and unusual channels are removed upon
+        # conversion to a JPEG-compressed tif file.  Originally, we performed a
+        # test to show that these files didn't work.  They now do (though if
+        # the file has a separated color space, it may not work as expected).
+
+        # Uploading a non-image file should run a job, but not result in tiles
         file = self._uploadFile(os.path.join(
             os.path.dirname(__file__), 'test_files', 'notanimage.txt'))
         itemId = str(file['itemId'])
@@ -349,6 +337,14 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
                             user=self.admin)
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], False)
+
+        # Uploading a two-channel ptif shouldn't result in a usable large image
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'small_la.tiff'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
 
     def testTilesFromSVS(self):
         file = self._uploadFile(os.path.join(
