@@ -5,7 +5,7 @@ python:
 
 env:
   - LIBTIFF_VERSION=4.0.3 OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
-  - LIBTIFF_VERSION=4.0.6 OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2"
+  - LIBTIFF_VERSION=4.0.6 OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
 
 cache:
   directories:
@@ -35,8 +35,6 @@ addons:
       - tcl8.6-dev
       - tk8.6-dev
       - python-tk
-      # vips
-      - libvips-tools
       # openjpeg
       - libglib2.0-dev
       - libjpeg-dev
@@ -51,6 +49,26 @@ addons:
       - libgdk-pixbuf2.0-dev
       - libxml2-dev
       - libsqlite3-dev
+      # install vips
+      - libvips-tools
+      # for building vips
+      - build-essential
+      - gobject-introspection
+      - libcfitsio3-dev
+      - libexif-dev
+      - libfftw3-dev
+      - libgif-dev
+      - libgirepository1.0-dev
+      - libglib2.0-dev
+      - libgsf-1-dev
+      - libjpeg-turbo8-dev
+      - libmagick++-dev
+      - libmatio-dev
+      - liborc-0.4-dev
+      - libpango1.0-dev
+      - libxml2-dev
+      - pkg-config
+      - python-gi-dev
       # girder worker
       - rabbitmq-server
 
@@ -112,6 +130,20 @@ before_install:
   - sudo make install
   - sudo ldconfig
   - cd $main_path
+
+  # Build vips to use our libraries
+  - if [ "$BUILD_VIPS" = "yes" ]; then
+    cd $build_path &&
+    wget -O vips-8.4.5.tar.gz http://www.vips.ecs.soton.ac.uk/supported/current/vips-8.4.5.tar.gz &&
+    tar -zxf vips-8.4.5.tar.gz &&
+    cd vips-8.4.5 &&
+    ./configure &&
+    make -j 3 &&
+    sudo make install &&
+    sudo ldconfig ;
+    fi
+  - cd $main_path
+  - vips --version
 
   - girder_worker_path=$girder_path/plugins/girder_worker
   - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
