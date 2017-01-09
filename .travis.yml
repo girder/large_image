@@ -137,11 +137,15 @@ before_install:
   # Build vips to use our libraries
   - if [ "$BUILD_VIPS" = "yes" ]; then
     cd $lib_build_path &&
+    if [ ! -f vips-8.4.5/config.status ]; then
     wget -O vips-8.4.5.tar.gz http://www.vips.ecs.soton.ac.uk/supported/current/vips-8.4.5.tar.gz &&
     tar -zxpf vips-8.4.5.tar.gz &&
     cd vips-8.4.5 &&
     ./configure &&
-    make -j 3 >/tmp/vips_build.txt &&
+    make -j 3 >/tmp/vips_build.txt ;
+    else
+    cd vips-8.4.5 ;
+    fi &&
     sudo make install &&
     sudo ldconfig ;
     fi
@@ -189,7 +193,7 @@ script:
   - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DCOVERAGE_MINIMUM_PASS=80 -DJS_COVERAGE_MINIMUM_PASS=9 -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path
   - make -j 3
   - JASMINE_TIMEOUT=15000 ctest -VV
-  
+
 after_failure:
   # On failures, show girder's error long and the worker output
   - cat /tmp/worker.out
