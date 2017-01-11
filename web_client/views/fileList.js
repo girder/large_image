@@ -1,46 +1,57 @@
-girder.wrap(girder.views.FileListWidget, 'render', function (render) {
+import _ from 'underscore';
+
+import { restRequest } from 'girder/rest';
+import events from 'girder/events';
+import FileListWidget from 'girder/views/widgets/FileListWidget';
+import { wrap } from 'girder/utilities/PluginUtils';
+import { AccessType } from 'girder/constants';
+
+import largeImageFileAction from '../templates/largeImage_fileAction.pug';
+import '../stylesheets/fileList.styl';
+
+wrap(FileListWidget, 'render', function (render) {
     render.call(this);
     if (!this.parentItem || !this.parentItem.get('_id')) {
         return this;
     }
-    if (this.parentItem.getAccessLevel() < girder.AccessType.WRITE) {
+    if (this.parentItem.getAccessLevel() < AccessType.WRITE) {
         return this;
     }
     var largeImage = this.parentItem.get('largeImage');
     var files = this.collection.toArray();
-    _.each(files, function (file) {
+    _.each(files, (file) => {
         var actions = $('.g-file-list-link[cid="' + file.cid + '"]',
                         this.$el).closest('.g-file-list-entry').children(
                         '.g-file-actions-container');
         if (!actions.length) {
             return;
         }
-        var fileAction = girder.templates.largeImage_fileAction({
+        var fileAction = largeImageFileAction({
             file: file, largeImage: largeImage});
         if (fileAction) {
             actions.prepend(fileAction);
         }
     });
-    $('.g-large-image-remove', this.$el).on('click', _.bind(function () {
-        girder.restRequest({
+    $('.g-large-image-remove', this.$el).on('click', () => {
+        restRequest({
             type: 'DELETE',
             path: 'item/' + this.parentItem.id + '/tiles',
             error: null
-        }).done(_.bind(function () {
+        }).done(() => {
             this.parentItem.unset('largeImage');
             this.parentItem.fetch();
-        }, this));
-    }, this));
-    $('.g-large-image-create', this.$el).on('click', _.bind(function (e) {
+        });
+    });
+    $('.g-large-image-create', this.$el).on('click', (e) => {
         var cid = $(e.currentTarget).parent().attr('file-cid');
         var fileId = this.collection.get(cid).id;
-        girder.restRequest({
+        restRequest({
             type: 'POST',
             path: 'item/' + this.parentItem.id + '/tiles',
             data: {fileId: fileId, notify: true},
             error: function (error) {
                 if (error.status !== 0) {
-                    girder.events.trigger('g:alert', {
+                    events.trigger('g:alert', {
                         text: error.responseJSON.message,
                         type: 'info',
                         timeout: 5000,
@@ -48,10 +59,10 @@ girder.wrap(girder.views.FileListWidget, 'render', function (render) {
                     });
                 }
             }
-        }).done(_.bind(function () {
+        }).done(() => {
             this.parentItem.unset('largeImage');
             this.parentItem.fetch();
-        }, this));
-    }, this));
+        });
+    });
     return this;
 });

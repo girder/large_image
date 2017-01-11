@@ -1,4 +1,13 @@
-girder.wrap(girder.views.ItemListWidget, 'render', function (render) {
+import _ from 'underscore';
+
+import { wrap } from 'girder/utilities/PluginUtils';
+import { apiRoot } from 'girder/rest';
+import ItemListWidget from 'girder/views/widgets/ItemListWidget';
+
+import largeImageConfig from './configView';
+import '../stylesheets/itemList.styl';
+
+wrap(ItemListWidget, 'render', function (render) {
     /* Chrome limits the number of connections to a single domain, which means
      * that time-consuming requests for thumbnails can bind-up the web browser.
      * To avoid this, limit the maximum number of thumbnails that are requested
@@ -26,7 +35,7 @@ girder.wrap(girder.views.ItemListWidget, 'render', function (render) {
     }
 
     render.call(this);
-    girder.views.largeImageConfig.getSettings(_.bind(function (settings) {
+    largeImageConfig.getSettings((settings) => {
         if (settings['large_image.show_thumbnails'] === false ||
                 $('.large_image_thumbnail', this.$el).length > 0) {
             return this;
@@ -43,7 +52,7 @@ girder.wrap(girder.views.ItemListWidget, 'render', function (render) {
                     /* We store the desired src attribute in deferred-src until
                      * we actually load the image. */
                     elem.append($('<img class="waiting"/>').attr(
-                            'deferred-src', girder.apiRoot + '/item/' +
+                            'deferred-src', apiRoot + '/item/' +
                             item.id + '/tiles/thumbnail?width=160&height=100'));
                     $('img', elem).one('error', function () {
                         $('img', elem).addClass('failed-to-load');
@@ -61,5 +70,5 @@ girder.wrap(girder.views.ItemListWidget, 'render', function (render) {
             _loadMoreImages(parent);
         }
         return this;
-    }, this));
+    });
 });
