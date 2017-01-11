@@ -5,6 +5,7 @@ import { apiRoot } from 'girder/rest';
 import ItemListWidget from 'girder/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
+import '../stylesheets/itemList.styl';
 
 wrap(ItemListWidget, 'render', function (render) {
     /* Chrome limits the number of connections to a single domain, which means
