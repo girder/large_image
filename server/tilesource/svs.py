@@ -60,26 +60,23 @@ class SVSFileTileSource(FileTileSource):
             self._openslide = openslide.OpenSlide(largeImagePath)
         except openslide.lowlevel.OpenSlideUnsupportedFormatError:
             raise TileSourceException('File cannot be opened via OpenSlide.')
-        # The tile size isn't in the official openslide interface
-        # documentation, but every example has the tile size in the properties.
-        # Try to read it, but fall back to 256 if it isn't et.
-        self.tileWidth = self.tileHeight = 256
-        try:
-            self.tileWidth = int(self._openslide.properties[
-                'openslide.level[0].tile-width'])
-        except ValueError:
-            pass
-        try:
-            self.tileHeight = int(self._openslide.properties[
-                'openslide.level[0].tile-height'])
-        except ValueError:
-            pass
-        if self.tileWidth <= 0 or self.tileHeight <= 0:
-            raise TileSourceException('OpenSlide tile size is invalid.')
-        self.sizeX = self._openslide.dimensions[0]
-        self.sizeY = self._openslide.dimensions[1]
-        if self.sizeX <= 0 or self.sizeY <= 0:
+
+        svsAvailableLevels = self._getAvailableLevels(largeImagePath)
+        if not len(svsAvailableLevels):
             raise TileSourceException('OpenSlide image size is invalid.')
+        self.sizeX = svsAvailableLevels[0]['width']
+        self.sizeY = svsAvailableLevels[0]['height']
+        if (self.sizeX != self._openslide.dimensions[0] or
+                self.sizeY != self._openslide.dimensions[1]):
+            msg = ('OpenSlide reports a dimension of %d x %d, but base layer '
+                   'has a dimension of %d x %d -- using base layer\'s '
+                   'dimensions.' % (
+                       self._openslide.dimensions[0],
+                       self._openslide.dimensions[1], self.sizeX, self.sizeY))
+            logger.info(msg)
+
+        self._getTileSize()
+
         self.levels = int(math.ceil(max(
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1
@@ -87,10 +84,9 @@ class SVSFileTileSource(FileTileSource):
             raise TileSourceException(
                 'OpenSlide image must have at least one level.')
         self._svslevels = []
-        svsLevelDimensions = self._openslide.level_dimensions
         # Precompute which SVS level should be used for our tile levels.  SVS
-        # level 0 is the maximum resolution.  We assume that the SVS levels are
-        # in descending resolution and are powers of two in scale.  For each of
+        # level 0 is the maximum resolution.  The SVS levels are in descending
+        # resolution and, we assume, are powers of two in scale.  For each of
         # our levels (where 0 is the minimum resolution), find the lowest
         # resolution SVS level that contains at least as many pixels.  If this
         # is not the same scale as we expect, note the scale factor so we can
@@ -102,14 +98,18 @@ class SVSFileTileSource(FileTileSource):
             # bestlevel and scale will be the picked svs level and the scale
             # between that level and what we really wanted.  We expect scale to
             # always be a positive integer power of two.
-            bestlevel = 0
+            bestlevel = svsAvailableLevels[0]['level']
             scale = 1
-            for svslevel in range(len(svsLevelDimensions)):
-                if (svsLevelDimensions[svslevel][0] < levelW - 1 or
-                        svsLevelDimensions[svslevel][1] < levelH - 1):
+            for svslevel in range(len(svsAvailableLevels)):
+                if (svsAvailableLevels[svslevel]['width'] < levelW - 1 or
+                        svsAvailableLevels[svslevel]['height'] < levelH - 1):
                     break
-                bestlevel = svslevel
-                scale = int(round(svsLevelDimensions[svslevel][0] / levelW))
+                bestlevel = svsAvailableLevels[svslevel]['level']
+                scale = int(round(svsAvailableLevels[svslevel]['width'] / levelW))
+            # If there are no tiles at a particular level, we have to read a
+            # larger area of a higher resolution level.  If such an area would
+            # be excessively large, we could have memroy issues, so raise an
+            # error.
             if (self.tileWidth * scale > maxSize or
                     self.tileHeight * scale > maxSize):
                 msg = ('OpenSlide has no small-scale tiles (level %d is at %d '
@@ -120,6 +120,70 @@ class SVSFileTileSource(FileTileSource):
                 'svslevel': bestlevel,
                 'scale': scale
             })
+
+    def _getTileSize(self):
+        """
+        Get the tile size.  The tile size isn't in the official openslide
+        interface documentation, but every example has the tile size in the
+        properties.  If the tile size has an excessive aspect ratio or isn't
+        set, fall back to a default of 256 x 256.  The read_region function
+        abstracts reading the tiles, so this may be less efficient, but will
+        still work.
+        """
+        # Try to read it, but fall back to 256 if it isn't set.
+        width = height = 256
+        try:
+            width = int(self._openslide.properties[
+                'openslide.level[0].tile-width'])
+        except ValueError:
+            pass
+        try:
+            height = int(self._openslide.properties[
+                'openslide.level[0].tile-height'])
+        except ValueError:
+            pass
+        # If the tile size is too small (<4) or wrong (<=0), use a default value
+        if width < 4:
+            width = 256
+        if height < 4:
+            height = 256
+        # If the tile has an excessive aspect ratio, use default values
+        if max(width, height) / min(width, height) >= 4:
+            width = height = 256
+        # Don't let tiles be bigger than the whole image.
+        self.tileWidth = min(width, self.sizeX)
+        self.tileHeight = min(height, self.sizeY)
+
+    def _getAvailableLevels(self, path):
+        """
+        Some SVS files (notably some NDPI variants) have levels that cannot be
+        read.  Get a list of levels, check that each is at least potentially
+        readable, and return a list of these sorted highest-resolution first.
+
+        :param path: the path of the SVS file.  After a failure, the file is
+            reopened to reset the error state.
+        :returns: levels.  A list of valid levels, each of which is a
+            dictionary of level (the internal 0-based level number), width, and
+            height.
+        """
+        levels = []
+        svsLevelDimensions = self._openslide.level_dimensions
+        for svslevel in range(len(svsLevelDimensions)):
+            try:
+                self._openslide.read_region((0, 0), svslevel, (1, 1))
+                level = {
+                    'level': svslevel,
+                    'width': svsLevelDimensions[svslevel][0],
+                    'height': svsLevelDimensions[svslevel][1],
+                }
+                if level['width'] > 0 and level['height'] > 0:
+                    # add to the list so that sorting will place the highest
+                    # resolution first.
+                    levels.append((-level['width'] * level['height'], level))
+            except openslide.lowlevel.OpenSlideError:
+                self._openslide = openslide.OpenSlide(path)
+        levels = [entry[-1] for entry in sorted(levels)]
+        return levels
 
     def getNativeMagnification(self):
         """
