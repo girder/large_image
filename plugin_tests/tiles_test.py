@@ -338,13 +338,29 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], False)
 
-        # Uploading a two-channel ptif shouldn't result in a usable large image
+        # Uploading a tif with a bad size shouldn't result in a usable large
+        # image
         file = self._uploadFile(os.path.join(
-            os.path.dirname(__file__), 'test_files', 'small_la.tiff'))
+            os.path.dirname(__file__), 'test_files', 'zero_gi.tif'))
         itemId = str(file['itemId'])
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
+
+    def testTilesFromSmallFile(self):
+        # Uploading a two-channel luminance-alpha ptif should work
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'small_la.tiff'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 2)
+        self.assertEqual(tileMetadata['tileHeight'], 1)
+        self.assertEqual(tileMetadata['sizeX'], 2)
+        self.assertEqual(tileMetadata['sizeY'], 1)
+        self.assertEqual(tileMetadata['levels'], 1)
+        self._testTilesZXY(itemId, tileMetadata)
 
     def testTilesFromSVS(self):
         file = self._uploadFile(os.path.join(
