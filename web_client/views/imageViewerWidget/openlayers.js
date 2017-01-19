@@ -1,15 +1,15 @@
-girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend({
+import ImageViewerWidget from './base';
+
+var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
+        ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $('head').prepend(
             $('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.css">'));
 
         $.getScript(
             'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.js',
-            _.bind(function () {
-                this.render();
-            }, this)
+            () => this.render()
         );
     },
 
@@ -62,6 +62,8 @@ girder.views.OpenlayersImageViewerWidget = girder.views.ImageViewerWidget.extend
             delete window.ol;
         }
         // TODO: delete CSS
-        girder.views.ImageViewerWidget.prototype.destroy.call(this);
+        ImageViewerWidget.prototype.destroy.call(this);
     }
 });
+
+export default OpenlayersImageViewerWidget;

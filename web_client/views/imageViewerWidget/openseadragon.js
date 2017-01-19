@@ -1,12 +1,14 @@
-girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.extend({
+import _ from 'underscore';
+
+import ImageViewerWidget from './base';
+
+var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
+        ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $.getScript(
             'https://openseadragon.github.io/openseadragon/openseadragon.min.js',
-            _.bind(function () {
-                this.render();
-            }, this)
+            () => this.render()
         );
     },
 
@@ -34,7 +36,7 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
                 minLevel: 0,
                 maxLevel: this.levels - 1,
                 getTileUrl: _.bind(function (z, x, y) {
-                  return this._getTileUrl(z, x, y, {edge: 'crop'});
+                    return this._getTileUrl(z, x, y, {edge: 'crop'});
                 }, this),
                 ajaxWithCredentials: true
             }
@@ -50,6 +52,8 @@ girder.views.OpenseadragonImageViewerWidget = girder.views.ImageViewerWidget.ext
         if (window.OpenSeadragon) {
             delete window.OpenSeadragon;
         }
-        girder.views.ImageViewerWidget.prototype.destroy.call(this);
+        ImageViewerWidget.prototype.destroy.call(this);
     }
 });
+
+export default OpenseadragonImageViewerWidget;

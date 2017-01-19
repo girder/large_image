@@ -1,12 +1,14 @@
-girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
+import { staticRoot } from 'girder/rest';
+
+import ImageViewerWidget from './base';
+
+var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        girder.views.ImageViewerWidget.prototype.initialize.call(this, settings);
+        ImageViewerWidget.prototype.initialize.call(this, settings);
 
         $.getScript(
-            girder.staticRoot + '/built/plugins/large_image/geo.min.js',
-            _.bind(function () {
-                this.render();
-            }, this)
+            staticRoot + '/built/plugins/large_image/extra/geojs.js',
+            () => this.render()
         );
     },
 
@@ -37,6 +39,8 @@ girder.views.GeojsImageViewerWidget = girder.views.ImageViewerWidget.extend({
         if (window.geo) {
             delete window.geo;
         }
-        girder.views.ImageViewerWidget.prototype.destroy.call(this);
+        ImageViewerWidget.prototype.destroy.call(this);
     }
 });
+
+export default GeojsImageViewerWidget;
