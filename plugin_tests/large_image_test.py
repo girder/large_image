@@ -148,7 +148,8 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         resp = self.request(method='PUT', path='/large_image/thumbnails',
                             user=self.admin)
         self.assertStatus(resp, 400)
-        self.assertIn('\'spec\' is required', resp.json['message'])
+        self.assertIn('spec', resp.json['message'])
+        self.assertIn('is required', resp.json['message'])
         resp = self.request(
             method='PUT', path='/large_image/thumbnails', user=self.admin,
             params={'spec': json.dumps({})})

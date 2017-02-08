@@ -79,8 +79,8 @@ services:
 before_install:
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "3" ]; then export PY3="true"; else export PY2="true"; fi
   - if [ -n "${PY3}" ]; then export MONGO_VERSION=3.0.7; export PY_COVG="OFF"; else export MONGO_VERSION=2.6.11; export PY_COVG="ON"; export DEPLOY=true; fi
-  - GIRDER_VERSION=ca235cc2b9029bc7ac5dd058da453b29b1c2597a
-  - GIRDER_WORKER_VERSION=2730afb8585911bce1870c528c9453d20fc89c0b
+  - GIRDER_VERSION=master
+  - GIRDER_WORKER_VERSION=master
   - main_path=$PWD
   - build_path=$PWD/build
   - mkdir -p $build_path
@@ -155,10 +155,11 @@ before_install:
   - cd $main_path
   - vips --version
 
-  - girder_worker_path=$girder_path/plugins/girder_worker
+  - girder_worker_path=$build_path/girder_worker
   - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
   - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
   - pip install --no-cache-dir -U -r $girder_worker_path/requirements.txt -r $girder_worker_path/girder_worker/plugins/girder_io/requirements.txt
+  - pip install --no-cache-dir -U -e $girder_worker_path'[girder_io]'
 
   - export MONGO_VERSION=3.0.7
   - export PY_COVG="ON"
