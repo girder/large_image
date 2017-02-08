@@ -94,6 +94,27 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         tileMetadata['sparse'] = 5
         self._testTilesZXY(itemId, tileMetadata)
 
+        # Check that we conditionally get JFIF headers
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertNotEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'JFIF'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False,
+                            additionalHeaders=[('User-Agent', 'iPad')])
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JFIFHeader)], common.JFIFHeader)
+
         # Ask to make this a tile-based item again
         resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
                             user=self.admin, params={'fileId': fileId})
@@ -300,24 +321,12 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self._testTilesZXY(itemId, tileMetadata)
 
     def testTilesFromBadFiles(self):
-        # Don't use small images for this test
-        from girder.plugins.large_image import constants
-        self.model('setting').set(
-            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 0)
-        # Uploading a monochrome with alpha file should result in no useful
-        # tiles.
-        file = self._uploadFile(os.path.join(
-            os.path.dirname(__file__), 'test_files', 'small_la.png'))
-        itemId = str(file['itemId'])
-        fileId = str(file['_id'])
-        tileMetadata = self._postTileViaHttp(itemId, fileId)
-        self.assertEqual(tileMetadata, False)
-        # We should be able to delete the conversion
-        resp = self.request(path='/item/%s/tiles' % itemId, method='DELETE',
-                            user=self.admin)
-        self.assertStatusOk(resp)
-        self.assertEqual(resp.json['deleted'], True)
-        # Uploading a non-image file should run a job, too.
+        # As of vips 8.2.4, alpha and unusual channels are removed upon
+        # conversion to a JPEG-compressed tif file.  Originally, we performed a
+        # test to show that these files didn't work.  They now do (though if
+        # the file has a separated color space, it may not work as expected).
+
+        # Uploading a non-image file should run a job, but not result in tiles
         file = self._uploadFile(os.path.join(
             os.path.dirname(__file__), 'test_files', 'notanimage.txt'))
         itemId = str(file['itemId'])
@@ -328,6 +337,30 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
                             user=self.admin)
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['deleted'], False)
+
+        # Uploading a tif with a bad size shouldn't result in a usable large
+        # image
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'zero_gi.tif'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        self.assertIn('No large image file', resp.json['message'])
+
+    def testTilesFromSmallFile(self):
+        # Uploading a two-channel luminance-alpha ptif should work
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'small_la.tiff'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 2)
+        self.assertEqual(tileMetadata['tileHeight'], 1)
+        self.assertEqual(tileMetadata['sizeX'], 2)
+        self.assertEqual(tileMetadata['sizeY'], 1)
+        self.assertEqual(tileMetadata['levels'], 1)
+        self._testTilesZXY(itemId, tileMetadata)
 
     def testTilesFromSVS(self):
         file = self._uploadFile(os.path.join(

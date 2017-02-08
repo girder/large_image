@@ -21,8 +21,8 @@ import math
 import os
 import unittest
 
-JPEGHeader = '\xff\xd8\xff'
-PNGHeader = '\x89PNG'
+JPEGHeader = b'\xff\xd8\xff'
+PNGHeader = b'\x89PNG'
 
 
 class LargeImageGirderlessTest(unittest.TestCase):
