@@ -63,3 +63,13 @@ class LargeImageExamplesTest(unittest.TestCase):
         results = process.stdout.readlines()
         finalColor = [float(val) for val in results[-1].split()[-3:]]
         self.assertEqual(finalColor, firstColor)
+
+        # We should get the same result if we retile the image to process it
+        # with different options.
+        process = subprocess.Popen([
+            'python', prog, imagePath, '-m', '2.5',
+            '-w', '657', '-h', '323', '-x', '20', '-y', '13', '-e'],
+            shell=False, stdout=subprocess.PIPE, cwd=examplesDir)
+        results = process.stdout.readlines()
+        finalColor = [float(val) for val in results[-1].split()[-3:]]
+        self.assertEqual(finalColor, firstColor)

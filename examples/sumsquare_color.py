@@ -62,6 +62,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '-y', dest='overlap_y', type=int,
         help='Vertical tile overlap used to examine the image')
+    parser.add_argument(
+        '-e', dest='overlap_edges', action='store_true', default=False,
+        help='Overlaped tiles start at the edge and are cropped.')
     args = parser.parse_args()
     kwargs = {}
     if args.tile_width or args.tile_height:
@@ -71,7 +74,7 @@ if __name__ == '__main__':
         if args.tile_height:
             kwargs['tile_size']['height'] = args.tile_height
     if args.overlap_x or args.overlap_y:
-        kwargs['tile_overlap'] = {}
+        kwargs['tile_overlap'] = {'edges': args.overlap_edges}
         if args.overlap_x:
             kwargs['tile_overlap']['x'] = args.overlap_x
         if args.overlap_y:

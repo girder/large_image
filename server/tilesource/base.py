@@ -539,6 +539,8 @@ class TileSource(object):
                 only the stride of the tiles.  This is a dictionary containing:
             x: the overlap on the left and right in pixels.
             y: the overlap on the top and bottom in pixels.
+            edges: if True, then the edge tiles will exclude the overlap
+                distance.  If unset or False, the edge tiles are full size.
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling.
         :returns: a dictionary of information needed for the tile iterator.
@@ -644,7 +646,13 @@ class TileSource(object):
         tile_overlap = {
             'x': kwargs.get('tile_overlap', {}).get('x', 0) or 0,
             'y': kwargs.get('tile_overlap', {}).get('y', 0) or 0,
+            'edges': kwargs.get('tile_overlap', {}).get('edges', False),
+            'offset_x': 0,
+            'offset_y': 0,
         }
+        if not tile_overlap['edges']:
+            tile_overlap['offset_x'] = tile_overlap['x']
+            tile_overlap['offset_y'] = tile_overlap['y']
         if 'tile_size' in kwargs:
             tile_size['width'] = kwargs['tile_size'].get(
                 'width', kwargs['tile_size'].get('height', tile_size['width']))
@@ -656,10 +664,17 @@ class TileSource(object):
         if tile_size['width'] <= 0 or tile_size['height'] <= 0:
             raise ValueError('Invalid tile_size or tile_overlap.')
 
+        # If the overlapped tiles don't run over the edge, then the functional
+        # size of the region is reduced by the overlap.  This factor is stored
+        # in the overlap offset_*.
         xmin = int(left / tile_size['width'])
-        xmax = int(math.ceil(float(right) / tile_size['width']))
+        xmax = int(math.ceil((float(right) - tile_overlap['offset_x'] * 2) /
+                             tile_size['width']))
         ymin = int(top / tile_size['height'])
-        ymax = int(math.ceil(float(bottom) / tile_size['height']))
+        ymax = int(math.ceil((float(bottom) - tile_overlap['offset_y'] * 2) /
+                             tile_size['height']))
+        tile_overlap.update({'xmin': xmin, 'xmax': xmax,
+                             'ymin': ymin, 'ymax': ymax})
 
         # Use RGB for JPEG, RGBA for PNG
         mode = 'RGBA' if kwargs.get('encoding') in ('PNG',) else 'RGB'
@@ -782,11 +797,11 @@ class TileSource(object):
         retile = (tileSize['width'] != metadata['tileWidth'] or
                   tileSize['height'] != metadata['tileHeight'] or
                   tileOverlap['x'] or tileOverlap['y'])
-        for x in range(xmin, xmax):
-            for y in range(ymin, ymax):
+        for y in range(ymin, ymax):
+            for x in range(xmin, xmax):
                 crop = None
-                posX = x * tileSize['width'] - tileOverlap['x'] - left
-                posY = y * tileSize['height'] - tileOverlap['y'] - top
+                posX = x * tileSize['width'] - tileOverlap['x'] + tileOverlap['offset_x'] - left
+                posY = y * tileSize['height'] - tileOverlap['y'] + tileOverlap['offset_y'] - top
                 tileWidth = tileSize['width'] + tileOverlap['x'] * 2
                 tileHeight = tileSize['height'] + tileOverlap['y'] * 2
                 # crop as needed
@@ -801,11 +816,17 @@ class TileSource(object):
                     tileWidth = crop[2] - crop[0]
                     tileHeight = crop[3] - crop[1]
                 overlap = {
-                    'left': max(0, x * tileSize['width'] - left - posX),
-                    'top': max(0, y * tileSize['height'] - top - posY)
+                    'left': max(0, x * tileSize['width'] + tileOverlap['offset_x'] - left - posX),
+                    'top': max(0, y * tileSize['height'] + tileOverlap['offset_y'] - top - posY),
                 }
                 overlap['right'] = max(0, tileWidth - tileSize['width'] - overlap['left'])
                 overlap['bottom'] = max(0, tileHeight - tileSize['height'] - overlap['top'])
+                if tileOverlap['offset_x']:
+                    overlap['left'] = 0 if x == tileOverlap['xmin'] else overlap['left']
+                    overlap['right'] = 0 if x + 1 == tileOverlap['xmax'] else overlap['right']
+                if tileOverlap['offset_y']:
+                    overlap['top'] = 0 if y == tileOverlap['ymin'] else overlap['top']
+                    overlap['bottom'] = 0 if y + 1 == tileOverlap['ymax'] else overlap['bottom']
                 tile = LazyTileDict({
                     'x': x,
                     'y': y,
@@ -1349,6 +1370,16 @@ class TileSource(object):
                 only the stride of the tiles.  This is a dictionary containing:
             x: the overlap on the left and right in pixels.
             y: the overlap on the top and bottom in pixels.
+            edges: if True, then the edge tiles will exclude the overlap
+                distance.  If unset or False, the edge tiles are full size.
+                    As an example, suppose an image that is 8 pixels across
+                (01234567) and a tile size of 5 is requested with an overlap of
+                2.  If the edges option is False (the default), the following
+                tiles are returned: 01234, 12345, 23456, 34567.  Each tile
+                reports its overlap, and the non-overlapped area of each tile
+                is 012, 3, 4, 567.  If the edges option is True, the tiles
+                returned are: 012, 0123, 01234, 12345, 23456, 34567, 4567, 567,
+                with the non-overlapped area of each as 0, 1, 2, 3, 4, 5, 6, 7.
         :param encoding: if format includes TILE_FORMAT_IMAGE, a valid PIL
             encoding (typically 'PNG' or 'JPEG').  Must also be in the
             TileOutputMimeTypes map.
