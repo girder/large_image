@@ -2,14 +2,14 @@
   "name": "large_image",
   "version": "0.3.0",
   "description": "A Girder plugin to create, serve, and display large multiresolution images.",
-  "homepage": "https://github.com/DigitalSlideArchive/large_image",
+  "homepage": "https://github.com/girder/large_image",
   "bugs": {
-    "url": "https://github.com/DigitalSlideArchive/large_image/issues"
+    "url": "https://github.com/girder/large_image/issues"
   },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DigitalSlideArchive/large_image.git"
+    "url": "https://github.com/girder/large_image.git"
   },
   "scripts": {}
 }
