@@ -33,7 +33,7 @@ Installation
 
     * psutil - this helps determine how much memory is available for caching
 
-3.  git clone https://github.com/DigitalSlideArchive/large_image.git
+3.  git clone https://github.com/girder/large_image.git
 
 4.  cd large_image
 
@@ -49,10 +49,10 @@ Examples
 
 .. _Girder: https://github.com/girder/girder
 
-.. |build-status| image:: https://travis-ci.org/DigitalSlideArchive/large_image.svg?branch=master
-    :target: https://travis-ci.org/DigitalSlideArchive/large_image
+.. |build-status| image:: https://travis-ci.org/girder/large_image.svg?branch=master
+    :target: https://travis-ci.org/girder/large_image
     :alt: Build Status
 
-.. |license-badge| image:: https://raw.githubusercontent.com/girder/girder/master/docs/license.png
-    :target: https://pypi.python.org/pypi/girder
+.. |license-badge| image:: https://img.shields.io/badge/license-Apache%202-blue.svg
+    :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
     :alt: License
