@@ -107,6 +107,8 @@ class TiledTiffDirectory(object):
 
         self._tiffFile = None
 
+        import sys
+        sys.stderr.write('%d %s\n' % (os.path.getsize(filePath), filePath))  # ##DWM::
         self._open(filePath, directoryNum)
         self._loadMetadata()
         logger.debug('TiffDirectory %d Information %r',
@@ -539,16 +541,19 @@ class TiledTiffDirectory(object):
             }
         except Exception:
             pass
-        try:
-            # Extract macro and label images
-            for image in xml.findall(".//*[@ObjectType='DPScannedImage']"):
+        # Extract macro and label images
+        for image in xml.findall(".//*[@ObjectType='DPScannedImage']"):
+            try:
                 typestr = image.find(".//*[@Name='PIM_DP_IMAGE_TYPE']").text
-                if typestr == "LABELIMAGE":
-                    self._embeddedImages["label"] = image.find(
-                        ".//*[@Name='PIM_DP_IMAGE_DATA']").text
-                elif typestr == "MACROIMAGE":
-                    self._embeddedImages["macro"] = image.find(
-                        ".//*[@Name='PIM_DP_IMAGE_DATA']").text
-        except Exception:
-            pass
+                datastr = image.find(".//*[@Name='PIM_DP_IMAGE_DATA']").text
+            except Exception:
+                continue
+            if not typestr or not datastr:
+                continue
+            typemap = {
+                'LABELIMAGE': 'label',
+                'MACROIMAGE': 'macro',
+                'WSI': 'thumbnail',
+            }
+            self._embeddedImages[typemap.get(typestr, typestr.lower())] = datastr
         return True

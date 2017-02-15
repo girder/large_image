@@ -359,3 +359,27 @@ class ImageItem(Item):
         :return: magnification, width of a pixel in mm, height of a pixel in mm.
         """
         return self._loadTileSource(item, **kwargs)
+
+    def getAssociatedImagesList(self, item, **kwargs):
+        """
+        Return a list of associated images.
+
+        :param item: the item with the tile source.
+        :return: a list of keys of associated images.
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        return tileSource.getAssociatedImagesList()
+
+    def getAssociatedImage(self, item, imageKey, *args, **kwargs):
+        """
+        Return an associated image.
+
+        :param item: the item with the tile source.
+        :param imageKey: the key of the associated image to retreive.
+        :param **kwargs: optional arguments.  Some options are width, height,
+            encoding, jpegQuality, and jpegSubsampling.
+        :returns: imageData, imageMime: the image data and the mime type, or
+            None if the associated image doesn't exist.
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        return tileSource.getAssociatedImage(imageKey, *args, **kwargs)

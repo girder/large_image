@@ -17,6 +17,7 @@
 #  limitations under the License.
 ###############################################################################
 
+import base64
 import itertools
 import math
 import six
@@ -210,6 +211,30 @@ class TiffFileTileSource(FileTileSource):
         while self._tiffDirectories[level] is None and level < self.levels - 1:
             level += 1
         return level
+
+    def getAssociatedImagesList(self):
+        """
+        Get a list of all associated images.
+
+        :return: the list of image keys.
+        """
+        imageList = set()
+        for td in self._tiffDirectories:
+            imageList |= set(td._embeddedImages)
+        return sorted(imageList)
+
+    def _getAssociatedImage(self, imageKey):
+        """
+        Get an associated image in PIL format.
+
+        :param imageKey: the key of the associated image.
+        :return: the image in PIL format or None.
+        """
+        for td in self._tiffDirectories:
+            if imageKey in td._embeddedImages:
+                image = PIL.Image.open(BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
+                return image
+        return None
 
 
 if girder:
