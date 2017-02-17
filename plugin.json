@@ -8,7 +8,7 @@
     },
     "npm": {
         "dependencies": {
-            "geojs": "0.10.5"
+            "geojs": "0.11.0"
         }
     }
 }
