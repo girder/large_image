@@ -40,8 +40,8 @@ setup(
     description=pkginfo['description'],
     long_description=readme,
     author='Kitware, Inc.',
-    author_email='developers@digitalslidearchive.net',
-    url='https://github.com/DigitalSlideArchive/large_image',
+    author_email='kitware@kitware.com',
+    url='https://github.com/girder/large_image',
     packages=[
         'large_image',
         'large_image.server',
