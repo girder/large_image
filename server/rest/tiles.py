@@ -466,8 +466,9 @@ class TilesItemResource(Item):
     @access.public
     def getAssociatedImage(self, itemId, image, params):
         _adjustParams(params)
+        # We can't use the loadmodel decorator, as we want to allow cookies
         item = loadmodelcache.loadModel(
-            self, 'item', id=itemId, allowCookie=True, level=AccessType.ADMIN)
+            self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
         params = self._parseParams(params, True, [
             ('width', int),
             ('height', int),
