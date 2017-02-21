@@ -1,4 +1,4 @@
-import _ from 'underscore';
+import { staticRoot } from 'girder/rest';
 
 import ImageViewerWidget from './base';
 
@@ -6,18 +6,25 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         ImageViewerWidget.prototype.initialize.call(this, settings);
 
-        $('head').prepend(
-            $('<link rel="stylesheet" href="https://beta.slide-atlas.org/webgl-viewer/static/css/sa.css">'));
+        if (!$('head #large_image-slideatlas-css').length) {
+            $('head').prepend(
+                $('<link>', {
+                    id: 'large_image-slideatlas-css',
+                    rel: 'stylesheet',
+                    href: staticRoot + '/built/plugins/large_image/extra/slideatlas/sa.css'
+                })
+            );
+        }
 
         $.getScript(
-            'https://beta.slide-atlas.org/webgl-viewer/static/sa.max.js',
+            staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
             () => this.render()
         );
     },
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.SlideAtlas || !this.tileWidth || !this.tileHeight) {
+        if (!window.SA || !this.tileWidth || !this.tileHeight) {
             return;
         }
 
@@ -27,19 +34,24 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         }
 
         // TODO: if a viewer already exists, do we render again?
-        this.$el.saViewer({
+        // SlideAtlas bundles its own version of jQuery, which should attach itself to "window.$" when it's sourced
+        // The "this.$el" still uses the Girder version of jQuery, which will not have "saViewer" registered on it.
+        window.$(this.el).saViewer({
             zoomWidget: true,
             drawWidget: true,
-            prefixUrl: 'https://beta.slide-atlas.org/webgl-viewer/static/',
+            prefixUrl: staticRoot + '/built/plugins/large_image/extra/slideatlas/img/',
             tileSource: {
                 height: this.sizeY,
                 width: this.sizeX,
                 tileSize: this.tileWidth,
                 minLevel: 0,
                 maxLevel: this.levels - 1,
-                getTileUrl: _.bind(this._getTileUrl, this),
-                ajaxWithCredentials: true
-            }});
+                getTileUrl: (level, x, y, z) => {
+                    // Drop the "z" argument
+                    return this._getTileUrl(level, x, y);
+                }
+            }
+        });
         this.viewer = this.el.saViewer;
 
         return this;
@@ -47,11 +59,11 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
 
     destroy: function () {
         if (this.viewer) {
-            this.$el.saViewer('destroy');
+            window.$(this.el).saViewer('destroy');
             this.viewer = null;
         }
-        if (window.SlideAtlas) {
-            delete window.SlideAtlas;
+        if (window.SA) {
+            delete window.SA;
         }
         ImageViewerWidget.prototype.destroy.call(this);
     }
