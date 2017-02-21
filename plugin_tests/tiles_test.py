@@ -971,9 +971,6 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json, ['label', 'macro'])
         resp = self.request(path='/item/%s/tiles/images/label' % itemId,
-                            user=None, isJson=False)
-        self.assertStatus(resp, 401)
-        resp = self.request(path='/item/%s/tiles/images/label' % itemId,
                             user=self.admin, isJson=False)
         self.assertStatusOk(resp)
         image = self.getBody(resp, text=False)
