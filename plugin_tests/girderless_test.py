@@ -19,7 +19,12 @@
 
 import math
 import os
+import sys
 import unittest
+
+# Ensure that girder can't be imported
+sys.modules['girder'] = None
+
 
 JPEGHeader = b'\xff\xd8\xff'
 PNGHeader = b'\x89PNG'

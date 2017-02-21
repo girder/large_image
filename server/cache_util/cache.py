@@ -24,7 +24,10 @@ except ImportError:
 import six
 from cachetools import hashkey
 
-from girder import logger
+try:
+    from girder import logger
+except ImportError:
+    import logging as logger
 from .cachefactory import CacheFactory, pickAvailableCache
 
 
