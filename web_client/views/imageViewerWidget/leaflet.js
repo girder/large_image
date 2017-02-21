@@ -4,8 +4,15 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         ImageViewerWidget.prototype.initialize.call(this, settings);
 
-        $('head').prepend(
-            $('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css">'));
+        if (!$('#large_image-leaflet-css', 'head').length) {
+            $('head').prepend(
+                $('<link>', {
+                    id: 'large_image-leaflet-css',
+                    rel: 'stylesheet',
+                    href: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css'
+                })
+            );
+        }
 
         $.getScript(
             'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',

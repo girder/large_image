@@ -4,8 +4,15 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         ImageViewerWidget.prototype.initialize.call(this, settings);
 
-        $('head').prepend(
-            $('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.css">'));
+        if (!$('#large_image-openlayers-css', 'head').length) {
+            $('head').prepend(
+                $('<link>', {
+                    id: 'large_image-openlayers-css',
+                    rel: 'stylesheet',
+                    href: 'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.css'
+                })
+            );
+        }
 
         $.getScript(
             'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.js',
