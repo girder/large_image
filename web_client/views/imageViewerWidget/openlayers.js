@@ -4,7 +4,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         ImageViewerWidget.prototype.initialize.call(this, settings);
 
-        if (!$('#large_image-openlayers-css', 'head').length) {
+        if (!$('head #large_image-openlayers-css').length) {
             $('head').prepend(
                 $('<link>', {
                     id: 'large_image-openlayers-css',
