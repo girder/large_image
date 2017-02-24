@@ -56,6 +56,7 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
             ],
             attributionControl: false
         });
+        this.trigger('g:imageRendered', this);
         return this;
     },
 

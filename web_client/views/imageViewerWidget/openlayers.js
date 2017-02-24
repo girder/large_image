@@ -57,6 +57,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
             }),
             logo: false
         });
+        this.trigger('g:imageRendered', this);
         return this;
     },
 
