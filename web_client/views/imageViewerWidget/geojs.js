@@ -28,6 +28,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this.viewer = geo.map(params.map);
         this.viewer.createLayer('osm', params.layer);
 
+        this.trigger('g:imageRendered', this);
         return this;
     },
 

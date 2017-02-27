@@ -41,6 +41,7 @@ var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
                 ajaxWithCredentials: true
             }
         });
+        this.trigger('g:imageRendered', this);
         return this;
     },
 

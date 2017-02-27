@@ -15,7 +15,6 @@ var ImageViewerWidget = View.extend({
             this.sizeX = resp.sizeX;
             this.sizeY = resp.sizeY;
             this.render();
-            this.trigger('g:imageRendered', this);
         });
     },
 

@@ -54,6 +54,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         });
         this.viewer = this.el.saViewer;
 
+        this.trigger('g:imageRendered', this);
         return this;
     },
 
