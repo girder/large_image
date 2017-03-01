@@ -262,14 +262,14 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
             self.assertEqual(tile['height'], 400 if tile['level_y'] < 1 else 368)
         self.assertEqual(tileCount, 16)
 
-        # Test retiling to 300 x 275 with 25 x 20 pixels overlap with trimmed
+        # Test retiling to 300 x 275 with 50 x 40 pixels overlap with trimmed
         # edges
         tileCount = 0
         for tile in source.tileIterator(
                 scale={'magnification': 2.5},
                 format=tilesource.TILE_FORMAT_PIL,
                 tile_size={'width': 300, 'height': 275},
-                tile_overlap={'x': 25, 'y': 20, 'edges': True}):
+                tile_overlap={'x': 50, 'y': 40, 'edges': True}):
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'],
@@ -288,14 +288,14 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                              20 if tile['level_y'] < 3 else 0)
         self.assertEqual(tileCount, 60)
 
-        # Test retiling to 300 x 275 with 25 x 20 pixels overlap without
+        # Test retiling to 300 x 275 with 50 x 40 pixels overlap without
         # trimmed edges
         tileCount = 0
         for tile in source.tileIterator(
                 scale={'magnification': 2.5},
                 format=tilesource.TILE_FORMAT_PIL,
                 tile_size={'width': 300, 'height': 275},
-                tile_overlap={'x': 25, 'y': 20}):
+                tile_overlap={'x': 50, 'y': 40}):
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'],
@@ -310,6 +310,56 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                              0 if not tile['level_y'] else 20)
             self.assertEqual(tile['tile_overlap']['bottom'],
                              20 if tile['level_y'] < 3 else 0)
+        self.assertEqual(tileCount, 60)
+
+        # Test retiling to 300 x 275 with 51 x 41 pixels overlap with trimmed
+        # edges
+        tileCount = 0
+        for tile in source.tileIterator(
+                scale={'magnification': 2.5},
+                format=tilesource.TILE_FORMAT_PIL,
+                tile_size={'width': 300, 'height': 275},
+                tile_overlap={'x': 51, 'y': 41, 'edges': True}):
+            tileCount += 1
+            self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
+            self.assertEqual(tile['width'],
+                             275 if not tile['level_x'] else 300
+                             if tile['level_x'] < 14 else 187)
+            self.assertEqual(tile['height'],
+                             255 if not tile['level_y'] else 275
+                             if tile['level_y'] < 3 else 86)
+            self.assertEqual(tile['tile_overlap']['left'],
+                             0 if not tile['level_x'] else 25)
+            self.assertEqual(tile['tile_overlap']['right'],
+                             26 if tile['level_x'] < 14 else 0)
+            self.assertEqual(tile['tile_overlap']['top'],
+                             0 if not tile['level_y'] else 20)
+            self.assertEqual(tile['tile_overlap']['bottom'],
+                             21 if tile['level_y'] < 3 else 0)
+        self.assertEqual(tileCount, 60)
+
+        # Test retiling to 300 x 275 with 51 x 41 pixels overlap without
+        # trimmed edges
+        tileCount = 0
+        for tile in source.tileIterator(
+                scale={'magnification': 2.5},
+                format=tilesource.TILE_FORMAT_PIL,
+                tile_size={'width': 300, 'height': 275},
+                tile_overlap={'x': 51, 'y': 41}):
+            tileCount += 1
+            self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
+            self.assertEqual(tile['width'],
+                             300 if tile['level_x'] < 14 else 162)
+            self.assertEqual(tile['height'],
+                             275 if tile['level_y'] < 3 else 66)
+            self.assertEqual(tile['tile_overlap']['left'],
+                             0 if not tile['level_x'] else 25)
+            self.assertEqual(tile['tile_overlap']['right'],
+                             26 if tile['level_x'] < 14 else 0)
+            self.assertEqual(tile['tile_overlap']['top'],
+                             0 if not tile['level_y'] else 20)
+            self.assertEqual(tile['tile_overlap']['bottom'],
+                             21 if tile['level_y'] < 3 else 0)
         self.assertEqual(tileCount, 60)
 
     def testTileIteratorSingleTile(self):

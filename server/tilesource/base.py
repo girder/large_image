@@ -537,8 +537,8 @@ class TileSource(object):
                 overlap to the tiles.  If either x or y is not specified, it
                 defaults to zero.  The overlap does not change the tile size,
                 only the stride of the tiles.  This is a dictionary containing:
-            x: the overlap on the left and right in pixels.
-            y: the overlap on the top and bottom in pixels.
+            x: the horizontal overlap in pixels.
+            y: the vertical overlap in pixels.
             edges: if True, then the edge tiles will exclude the overlap
                 distance.  If unset or False, the edge tiles are full size.
         :param **kwargs: optional arguments.  Some options are encoding,
@@ -651,16 +651,17 @@ class TileSource(object):
             'offset_y': 0,
         }
         if not tile_overlap['edges']:
-            tile_overlap['offset_x'] = tile_overlap['x']
-            tile_overlap['offset_y'] = tile_overlap['y']
+            # offset by half the overlap
+            tile_overlap['offset_x'] = tile_overlap['x'] // 2
+            tile_overlap['offset_y'] = tile_overlap['y'] // 2
         if 'tile_size' in kwargs:
             tile_size['width'] = kwargs['tile_size'].get(
                 'width', kwargs['tile_size'].get('height', tile_size['width']))
             tile_size['height'] = kwargs['tile_size'].get(
                 'height', kwargs['tile_size'].get('width', tile_size['height']))
         # Tile size includes the overlap
-        tile_size['width'] -= tile_overlap['x'] * 2
-        tile_size['height'] -= tile_overlap['y'] * 2
+        tile_size['width'] -= tile_overlap['x']
+        tile_size['height'] -= tile_overlap['y']
         if tile_size['width'] <= 0 or tile_size['height'] <= 0:
             raise ValueError('Invalid tile_size or tile_overlap.')
 
@@ -668,10 +669,10 @@ class TileSource(object):
         # size of the region is reduced by the overlap.  This factor is stored
         # in the overlap offset_*.
         xmin = int(left / tile_size['width'])
-        xmax = int(math.ceil((float(right) - tile_overlap['offset_x'] * 2) /
+        xmax = int(math.ceil((float(right) - tile_overlap['offset_x']) /
                              tile_size['width']))
         ymin = int(top / tile_size['height'])
-        ymax = int(math.ceil((float(bottom) - tile_overlap['offset_y'] * 2) /
+        ymax = int(math.ceil((float(bottom) - tile_overlap['offset_y']) /
                              tile_size['height']))
         tile_overlap.update({'xmin': xmin, 'xmax': xmax,
                              'ymin': ymin, 'ymax': ymax})
@@ -800,10 +801,12 @@ class TileSource(object):
         for y in range(ymin, ymax):
             for x in range(xmin, xmax):
                 crop = None
-                posX = x * tileSize['width'] - tileOverlap['x'] + tileOverlap['offset_x'] - left
-                posY = y * tileSize['height'] - tileOverlap['y'] + tileOverlap['offset_y'] - top
-                tileWidth = tileSize['width'] + tileOverlap['x'] * 2
-                tileHeight = tileSize['height'] + tileOverlap['y'] * 2
+                posX = (x * tileSize['width'] - tileOverlap['x'] // 2 +
+                        tileOverlap['offset_x'] - left)
+                posY = (y * tileSize['height'] - tileOverlap['y'] // 2 +
+                        tileOverlap['offset_y'] - top)
+                tileWidth = tileSize['width'] + tileOverlap['x']
+                tileHeight = tileSize['height'] + tileOverlap['y']
                 # crop as needed
                 if (posX < 0 or posY < 0 or posX + tileWidth > regionWidth or
                         posY + tileHeight > regionHeight):
@@ -1368,13 +1371,16 @@ class TileSource(object):
                 overlap to the tiles.  If either x or y is not specified, it
                 defaults to zero.  The overlap does not change the tile size,
                 only the stride of the tiles.  This is a dictionary containing:
-            x: the overlap on the left and right in pixels.
-            y: the overlap on the top and bottom in pixels.
+            x: the horizontal overlap in pixels.
+            y: the vertical overlap in pixels.
             edges: if True, then the edge tiles will exclude the overlap
                 distance.  If unset or False, the edge tiles are full size.
+                    The overlap is conceptually split between the two sides of
+                the tile.  This is only relevant to where overlap is reported
+                or if edges is True
                     As an example, suppose an image that is 8 pixels across
                 (01234567) and a tile size of 5 is requested with an overlap of
-                2.  If the edges option is False (the default), the following
+                4.  If the edges option is False (the default), the following
                 tiles are returned: 01234, 12345, 23456, 34567.  Each tile
                 reports its overlap, and the non-overlapped area of each tile
                 is 012, 3, 4, 567.  If the edges option is True, the tiles

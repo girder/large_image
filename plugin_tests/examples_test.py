@@ -58,7 +58,7 @@ class LargeImageExamplesTest(unittest.TestCase):
         # We should get the same result if we retile the image to process it
         process = subprocess.Popen([
             'python', prog, imagePath, '-m', '2.5',
-            '-w', '800', '-h', '423', '-x', '20', '-y', '13'],
+            '-w', '800', '-h', '423', '-x', '40', '-y', '26'],
             shell=False, stdout=subprocess.PIPE, cwd=examplesDir)
         results = process.stdout.readlines()
         finalColor = [float(val) for val in results[-1].split()[-3:]]
@@ -68,7 +68,24 @@ class LargeImageExamplesTest(unittest.TestCase):
         # with different options.
         process = subprocess.Popen([
             'python', prog, imagePath, '-m', '2.5',
-            '-w', '657', '-h', '323', '-x', '20', '-y', '13', '-e'],
+            '-w', '657', '-h', '323', '-x', '40', '-y', '26', '-e'],
+            shell=False, stdout=subprocess.PIPE, cwd=examplesDir)
+        results = process.stdout.readlines()
+        finalColor = [float(val) for val in results[-1].split()[-3:]]
+        self.assertEqual(finalColor, firstColor)
+
+        # We should get the same results with odd overlaps
+        process = subprocess.Popen([
+            'python', prog, imagePath, '-m', '2.5',
+            '-w', '800', '-h', '423', '-x', '41', '-y', '27'],
+            shell=False, stdout=subprocess.PIPE, cwd=examplesDir)
+        results = process.stdout.readlines()
+        finalColor = [float(val) for val in results[-1].split()[-3:]]
+        self.assertEqual(finalColor, firstColor)
+
+        process = subprocess.Popen([
+            'python', prog, imagePath, '-m', '2.5',
+            '-w', '657', '-h', '323', '-x', '41', '-y', '27', '-e'],
             shell=False, stdout=subprocess.PIPE, cwd=examplesDir)
         results = process.stdout.readlines()
         finalColor = [float(val) for val in results[-1].split()[-3:]]
