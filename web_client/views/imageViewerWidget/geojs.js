@@ -10,6 +10,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             staticRoot + '/built/plugins/large_image/extra/geojs.js',
             () => this.render()
         );
+        this._layers = {};
     },
 
     render: function () {
@@ -41,7 +42,25 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             delete window.geo;
         }
         ImageViewerWidget.prototype.destroy.call(this);
+    },
+
+    drawAnnotation: function (annotation) {
+        var geojson = annotation.geojson();
+        var layer = this.viewer.createLayer('feature', {
+            features: ['point', 'line', 'polygon']
+        });
+        this._layers[annotation.id] = layer;
+        window.geo.createFileReader('jsonReader', {layer})
+            .read(geojson, () => this.viewer.draw());
+    },
+
+    removeAnnotation: function (annotation) {
+        var layer = this._layers[annotation.id];
+        if (layer) {
+            this.viewer.deleteLayer(layer);
+        }
     }
+
 });
 
 export default GeojsImageViewerWidget;

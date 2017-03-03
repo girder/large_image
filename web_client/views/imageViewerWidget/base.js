@@ -35,6 +35,14 @@ var ImageViewerWidget = View.extend({
             url += '?' + $.param(query);
         }
         return url;
+    },
+
+    drawAnnotation: function () {
+        throw new Error('Viewer does not support drawing annotations');
+    },
+
+    removeAnnotation: function () {
+        throw new Error('Viewer does not support drawing annotations');
     }
 });
 
