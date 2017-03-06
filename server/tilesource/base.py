@@ -791,7 +791,7 @@ class TileSource(object):
             else:
                 ymin += int(tilePos / (xmax - xmin))
                 ymax = ymin + 1
-                xmin += (tilePos % (xmax - xmin))
+                xmin += int(tilePos % (xmax - xmin))
                 xmax = xmin + 1
         mag = self.getMagnificationForLevel(level)
         scale = mag.get('scale', 1.0)
@@ -801,10 +801,10 @@ class TileSource(object):
         for y in range(ymin, ymax):
             for x in range(xmin, xmax):
                 crop = None
-                posX = (x * tileSize['width'] - tileOverlap['x'] // 2 +
-                        tileOverlap['offset_x'] - left)
-                posY = (y * tileSize['height'] - tileOverlap['y'] // 2 +
-                        tileOverlap['offset_y'] - top)
+                posX = int(x * tileSize['width'] - tileOverlap['x'] // 2 +
+                           tileOverlap['offset_x'] - left)
+                posY = int(y * tileSize['height'] - tileOverlap['y'] // 2 +
+                           tileOverlap['offset_y'] - top)
                 tileWidth = tileSize['width'] + tileOverlap['x']
                 tileHeight = tileSize['height'] + tileOverlap['y']
                 # crop as needed
@@ -812,8 +812,8 @@ class TileSource(object):
                         posY + tileHeight > regionHeight):
                     crop = (max(0, -posX),
                             max(0, -posY),
-                            min(tileWidth, regionWidth - posX),
-                            min(tileHeight, regionHeight - posY))
+                            int(min(tileWidth, regionWidth - posX)),
+                            int(min(tileHeight, regionHeight - posY)))
                     posX += crop[0]
                     posY += crop[1]
                     tileWidth = crop[2] - crop[0]
