@@ -21,6 +21,8 @@
 # Constants representing the setting keys for this plugin
 class PluginSettings:
     LARGE_IMAGE_SHOW_THUMBNAILS = 'large_image.show_thumbnails'
+    LARGE_IMAGE_SHOW_EXTRA = 'large_image.show_extra'
+    LARGE_IMAGE_SHOW_EXTRA_ADMIN = 'large_image.show_extra_admin'
     LARGE_IMAGE_SHOW_VIEWER = 'large_image.show_viewer'
     LARGE_IMAGE_DEFAULT_VIEWER = 'large_image.default_viewer'
     LARGE_IMAGE_AUTO_SET = 'large_image.auto_set'

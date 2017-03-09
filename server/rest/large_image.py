@@ -124,6 +124,8 @@ class LargeImageResource(Resource):
         keys = [
             constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
             constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+            constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
+            constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN,
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER,
             constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,

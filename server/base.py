@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-###############################################################################
+#############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,7 +15,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-###############################################################################
+#############################################################################
+
+import json
 
 from girder import events, plugin, logger
 from girder.constants import AccessType, SettingDefault
@@ -148,6 +150,26 @@ def validateBoolean(doc):
     if str(val).lower() not in ('false', 'true', ''):
         raise ValidationException('%s must be a boolean.' % doc['key'], 'value')
     doc['value'] = (str(val).lower() != 'false')
+
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
+    constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN,
+})
+def validateDictOrJSON(doc):
+    val = doc['value']
+    try:
+        if isinstance(val, dict):
+            doc['value'] = json.dumps(val)
+        elif val is None or val.strip() == '':
+            doc['value'] = ''
+        else:
+            parsed = json.loads(val)
+            if not isinstance(parsed, dict):
+                raise ValidationException('%s must be a JSON object.' % doc['key'], 'value')
+            doc['value'] = val.strip()
+    except (ValueError, AttributeError):
+        raise ValidationException('%s must be a JSON object.' % doc['key'], 'value')
 
 
 @setting_utilities.validator({
