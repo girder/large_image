@@ -33,7 +33,7 @@ class MemCache(cachetools.Cache):
     """Use memcached as the backing cache."""
 
     def __init__(self, url='127.0.0.1', username=None, password=None,
-                 missing=None, getsizeof=None):
+                 missing=None, getsizeof=None, mustBeAvailable=False):
         super(MemCache, self).__init__(0, missing, getsizeof)
         if isinstance(url, six.string_types):
             url = [url]
@@ -54,6 +54,10 @@ class MemCache(cachetools.Cache):
         self._Cache__data = pylibmc.Client(
             url, binary=True, username=username, password=password,
             behaviors=behaviors)
+        if mustBeAvailable:
+            # Try to set a value; this will throw an error if the server is
+            # unreachable, so we don't bother trying to user it.
+            self._Cache__data['large_image_cache_test'] = time.time()
         self.lastError = {}
         self.throttleErrors = 10  # seconds between logging errors
 
