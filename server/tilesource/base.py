@@ -644,8 +644,8 @@ class TileSource(object):
             'height': metadata['tileHeight'],
         }
         tile_overlap = {
-            'x': kwargs.get('tile_overlap', {}).get('x', 0) or 0,
-            'y': kwargs.get('tile_overlap', {}).get('y', 0) or 0,
+            'x': int(kwargs.get('tile_overlap', {}).get('x', 0) or 0),
+            'y': int(kwargs.get('tile_overlap', {}).get('y', 0) or 0),
             'edges': kwargs.get('tile_overlap', {}).get('edges', False),
             'offset_x': 0,
             'offset_y': 0,
@@ -655,10 +655,10 @@ class TileSource(object):
             tile_overlap['offset_x'] = tile_overlap['x'] // 2
             tile_overlap['offset_y'] = tile_overlap['y'] // 2
         if 'tile_size' in kwargs:
-            tile_size['width'] = kwargs['tile_size'].get(
-                'width', kwargs['tile_size'].get('height', tile_size['width']))
-            tile_size['height'] = kwargs['tile_size'].get(
-                'height', kwargs['tile_size'].get('width', tile_size['height']))
+            tile_size['width'] = int(kwargs['tile_size'].get(
+                'width', kwargs['tile_size'].get('height', tile_size['width'])))
+            tile_size['height'] = int(kwargs['tile_size'].get(
+                'height', kwargs['tile_size'].get('width', tile_size['height'])))
         # Tile size includes the overlap
         tile_size['width'] -= tile_overlap['x']
         tile_size['height'] -= tile_overlap['y']

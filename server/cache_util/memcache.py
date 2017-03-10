@@ -107,8 +107,8 @@ class MemCache(cachetools.Cache):
         except KeyError:
             return self.__missing__(key)
         except pylibmc.ServerDown:
-            self.logError(pylibmc.ServerDown, logprint.exception,
-                          'Memcached ServerDown exception')
+            self.logError(pylibmc.ServerDown, logprint.info,
+                          'Memcached ServerDown')
             return self.__missing__(key)
         except pylibmc.Error:
             self.logError(pylibmc.Error, logprint.exception,
@@ -132,8 +132,8 @@ class MemCache(cachetools.Cache):
                 KeyError, logprint.error,
                 'Failed to save value %s with key %s' % (value, hexVal))
         except pylibmc.ServerDown:
-            self.logError(pylibmc.ServerDown, logprint.exception,
-                          'Memcached ServerDown exception')
+            self.logError(pylibmc.ServerDown, logprint.info,
+                          'Memcached ServerDown')
         except pylibmc.Error as exc:
             # memcached won't cache items larger than 1 Mb, but this returns a
             # 'SUCCESS' error.  Raise other errors.
