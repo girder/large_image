@@ -22,10 +22,11 @@ import threading
 import math
 # attempt to import girder config
 try:
-    from girder import logprint
+    from girder import logprint, logger
     from girder.utility import config
 except ImportError:
-    import logging as logprint
+    import logging as logger
+    logprint = logger
     config = None
 
 try:
@@ -92,6 +93,7 @@ class CacheFactory():
         cacheBackend = curConfig.get('cache_backend', 'memcached')
         if cacheBackend:
             cacheBackend = str(cacheBackend).lower()
+        cache = None
         if cacheBackend == 'memcached' and MemCache and numItems is None:
             # lock needed because pylibmc(memcached client) is not threadsafe
             cacheLock = threading.Lock()
@@ -107,9 +109,13 @@ class CacheFactory():
             memcachedPassword = curConfig.get('cache_memcached_password')
             if not memcachedPassword:
                 memcachedPassword = None
-
-            cache = MemCache(url, memcachedUsername, memcachedPassword)
-        else:  # fallback backend
+            try:
+                cache = MemCache(url, memcachedUsername, memcachedPassword,
+                                 mustBeAvailable=True)
+            except Exception:
+                logger.info('Cannot use memcached for caching.')
+                cache = None
+        if cache is None:  # fallback backend
             cacheBackend = 'python'
             cache = LRUCache(self.getCacheSize(numItems))
             cacheLock = None
