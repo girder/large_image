@@ -13,15 +13,27 @@ module.exports = function (grunt) {
                     src: '<%= large_image.geojs_path %>',
                     dest: '<%= pluginDir %>/large_image/web_client/extra/geojs.js'
                 }]
+            },
+            large_image_slideatlas: {
+                files: [{
+                    expand: true,
+                    cwd: 'node_modules/slideatlas-viewer/dist/',
+                    src: '**',
+                    dest: '<%= pluginDir %>/large_image/web_client/extra/slideatlas/'
+                }]
             }
         },
         default: {
             'copy:plugin-large_image': {
-                dependencies: ['copy:large_image_geojs']
+                dependencies: [
+                    'copy:large_image_geojs',
+                    'copy:large_image_slideatlas'
+                ]
             },
             'copy:large_image_geojs': {
                 dependencies: ['large_image_resolve']
             },
+            'copy:large_image_slideatlas': {},
             'large_image_resolve': {}
         }
     });

@@ -8,7 +8,9 @@
     },
     "npm": {
         "dependencies": {
-            "geojs": "0.11.0"
+            "geojs": "0.11.0",
+            "slideatlas-viewer": "4.0.3",
+            "tinycolor2": "^1.4.1"
         }
     }
 }

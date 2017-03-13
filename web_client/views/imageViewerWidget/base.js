@@ -15,7 +15,6 @@ var ImageViewerWidget = View.extend({
             this.sizeX = resp.sizeX;
             this.sizeY = resp.sizeY;
             this.render();
-            this.trigger('g:imageRendered', this);
         });
     },
 
@@ -36,6 +35,14 @@ var ImageViewerWidget = View.extend({
             url += '?' + $.param(query);
         }
         return url;
+    },
+
+    drawAnnotation: function () {
+        throw new Error('Viewer does not support drawing annotations');
+    },
+
+    removeAnnotation: function () {
+        throw new Error('Viewer does not support drawing annotations');
     }
 });
 
