@@ -224,7 +224,7 @@ class AnnotationSchema:
                 },
                 'decription': 'normal is the positive z-axis unless otherwise '
                               'specified',
-                'required': ['type', 'center', 'width', 'height', 'rotation'],
+                'required': ['type', 'center', 'width', 'height'],
                 # 'patternProperties': baseShapePatternProperties,
                 'additionalProperties': True,
             }
