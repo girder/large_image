@@ -70,8 +70,8 @@ addons:
       - libxml2-dev
       - pkg-config
       - python-gi-dev
-      # girder worker
-      - rabbitmq-server
+      # girder worker - not needed; included in travis
+      # - rabbitmq-server
 
 services:
   - rabbitmq
@@ -193,6 +193,7 @@ install:
 script:
   - cd $girder_worker_path
   - python -m girder_worker >/tmp/worker.out 2>&1 &
+  # - python -m girder_worker 2>&1 | tee /tmp/worker.out &
   - mkdir -p $HOME/build/girder_testing_build
   - cd $HOME/build/girder_testing_build
   - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DCOVERAGE_MINIMUM_PASS=80 -DJS_COVERAGE_MINIMUM_PASS=9 -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path

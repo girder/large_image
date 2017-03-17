@@ -50,6 +50,8 @@ def patchLibtiff():
     libtiff_ctypes.TIFFDataType.TIFF_SLONG8 = 17
     # BigTIFF 64-bit unsigned integer (offset)
     libtiff_ctypes.TIFFDataType.TIFF_IFD8 = 18
+
+
 patchLibtiff()
 
 
@@ -543,11 +545,11 @@ class TiledTiffDirectory(object):
             # Extract macro and label images
             for image in xml.findall(".//*[@ObjectType='DPScannedImage']"):
                 typestr = image.find(".//*[@Name='PIM_DP_IMAGE_TYPE']").text
-                if typestr == "LABELIMAGE":
-                    self._embeddedImages["label"] = image.find(
+                if typestr == 'LABELIMAGE':
+                    self._embeddedImages['label'] = image.find(
                         ".//*[@Name='PIM_DP_IMAGE_DATA']").text
-                elif typestr == "MACROIMAGE":
-                    self._embeddedImages["macro"] = image.find(
+                elif typestr == 'MACROIMAGE':
+                    self._embeddedImages['macro'] = image.find(
                         ".//*[@Name='PIM_DP_IMAGE_DATA']").text
         except Exception:
             pass

@@ -27,7 +27,7 @@ import numpy as np
 import requests
 
 
-class meta_data:
+class MetaData:
     def __init__(self):
         self.url = None
         self.num_levels = None
@@ -85,7 +85,7 @@ def get_data(host, requested_levels, requested_num_tiles, url=None,
              image_id=None):
     """Get request information for the and request tiles"""
     num_levels = -1
-    data = meta_data()
+    data = MetaData()
     # get data about server, host url and params
     if host == 'atlas':
         data = atlas_init()
@@ -119,7 +119,9 @@ def _get_coor(requested_levels):
 
 
 def iterate_over_tiles(host, data, requested_levels, requested_num_tiles):
-    """iterate from level 0 to requested_levels asking for tiles"""
+    """
+    Iterate from level 0 to requested_levels asking for tiles
+    """
     total_tiles = sum(2 ** (z * 2) for z in six.moves.range(requested_levels))
 
     count = 0
@@ -146,7 +148,7 @@ def iterate_over_tiles(host, data, requested_levels, requested_num_tiles):
 
 
 def iip_init():
-    data = meta_data()
+    data = MetaData()
 
     data.url = 'http://digitalslidearchive.emory.edu/fcgi-bin/iipsrv' \
                'Openslide.fcgi?DeepZoom=/GLOBAL_SCRATCH/PREUSS_LAB/BATCH1/' \
@@ -156,7 +158,7 @@ def iip_init():
 
 
 def atlas_init():
-    data = meta_data()
+    data = MetaData()
     num_level = 9
     image_id = '500c3e674834a3119800000c'
     database_id = '5074589002e31023d4292d83'
@@ -202,7 +204,7 @@ def girder_init(host, image_id):
     image_summary_url = '%sapi/v1/item/%s/tiles' % (host, image_id)
     image_summary_req = requests.get(image_summary_url)
 
-    data = meta_data()
+    data = MetaData()
     if image_summary_req.status_code == requests.codes.ok:
         try:
             img_data = image_summary_req.json()
@@ -291,12 +293,13 @@ def iip_request(data, z, x, y):
 
 
 def save(data):
-    """save file as server_type-server_name
+    """
+    Save file as server_type-server_name
     """
     for server_name in six.viewkeys(data):
         elapsed_time = data[server_name][-1]
         host = data[server_name][0]
-        data_file_name = "%s-%s_elapsed_time" % (host, server_name)
+        data_file_name = '%s-%s_elapsed_time' % (host, server_name)
         np.savetxt(data_file_name, elapsed_time)
 
 

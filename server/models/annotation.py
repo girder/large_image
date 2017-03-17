@@ -71,7 +71,7 @@ class AnnotationSchema:
                 'type': 'object',
                 'properties': {
                     'value': {'type': 'string'},
-                    'visability': {
+                    'visibility': {
                         'type': 'string',
                         # TODO: change to True, False, None?
                         'enum': ['hidden', 'always', 'onhover']
