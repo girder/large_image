@@ -19,6 +19,7 @@
 
 import json
 import os
+import pymongo
 import six
 import time
 
@@ -38,6 +39,12 @@ class ImageItem(Item):
     # items that antedate there being multiple options.
     def initialize(self):
         super(ImageItem, self).initialize()
+        self.ensureIndices(['largeImage.fileId'])
+        self.model('file').ensureIndices([([
+            ('isLargeImageThumbnail', pymongo.ASCENDING),
+            ('attachedToType', pymongo.ASCENDING),
+            ('attachedToId', pymongo.ASCENDING),
+        ], {})])
 
     def createImageItem(self, item, fileObj, user=None, token=None,
                         createJob=True, notify=False):
