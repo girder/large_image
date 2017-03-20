@@ -71,7 +71,7 @@ class AnnotationSchema:
                 'type': 'object',
                 'properties': {
                     'value': {'type': 'string'},
-                    'visability': {
+                    'visibility': {
                         'type': 'string',
                         # TODO: change to True, False, None?
                         'enum': ['hidden', 'always', 'onhover']
@@ -224,7 +224,7 @@ class AnnotationSchema:
                 },
                 'decription': 'normal is the positive z-axis unless otherwise '
                               'specified',
-                'required': ['type', 'center', 'width', 'height', 'rotation'],
+                'required': ['type', 'center', 'width', 'height'],
                 # 'patternProperties': baseShapePatternProperties,
                 'additionalProperties': True,
             }

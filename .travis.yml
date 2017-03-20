@@ -70,8 +70,8 @@ addons:
       - libxml2-dev
       - pkg-config
       - python-gi-dev
-      # girder worker
-      - rabbitmq-server
+      # girder worker - not needed; included in travis
+      # - rabbitmq-server
 
 services:
   - rabbitmq
@@ -158,7 +158,7 @@ before_install:
   - girder_worker_path=$build_path/girder_worker
   - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
   - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
-  - pip install --no-cache-dir -U -r $girder_worker_path/requirements.txt -r $girder_worker_path/girder_worker/plugins/girder_io/requirements.txt
+  - python $girder_worker_path/scripts/install_requirements.py --mode=dev
   - pip install --no-cache-dir -U -e $girder_worker_path'[girder_io]'
 
   - export MONGO_VERSION=3.0.7
@@ -193,6 +193,7 @@ install:
 script:
   - cd $girder_worker_path
   - python -m girder_worker >/tmp/worker.out 2>&1 &
+  # - python -m girder_worker 2>&1 | tee /tmp/worker.out &
   - mkdir -p $HOME/build/girder_testing_build
   - cd $HOME/build/girder_testing_build
   - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DCOVERAGE_MINIMUM_PASS=80 -DJS_COVERAGE_MINIMUM_PASS=9 -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path
