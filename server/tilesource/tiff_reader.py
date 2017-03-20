@@ -50,6 +50,8 @@ def patchLibtiff():
     libtiff_ctypes.TIFFDataType.TIFF_SLONG8 = 17
     # BigTIFF 64-bit unsigned integer (offset)
     libtiff_ctypes.TIFFDataType.TIFF_IFD8 = 18
+
+
 patchLibtiff()
 
 
