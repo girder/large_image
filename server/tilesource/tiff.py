@@ -31,11 +31,12 @@ from .tiff_reader import TiledTiffDirectory, TiffException, \
 try:
     import girder
     from girder import logger
-    from .base import GirderTileSource, TILE_FORMAT_PIL
+    from .base import GirderTileSource
 except ImportError:
     girder = None
     import logging as logger
     logger.getLogger().setLevel(logger.INFO)
+from .base import TILE_FORMAT_PIL
 
 try:
     import PIL.Image
