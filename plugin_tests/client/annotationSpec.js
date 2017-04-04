@@ -78,6 +78,48 @@ describe('Annotations', function () {
                 ]
             );
         });
+
+        it('open polyline', function () {
+            var obj = largeImage.annotations.geometry.polyline({
+                type: 'polyline',
+                id: 'a',
+                points: [
+                    [0, 1, 0],
+                    [1, 0, 0]
+                ],
+                closed: false
+            });
+
+            expect(obj.type).toBe('LineString');
+            expect(obj.coordinates.length).toBe(2);
+            expectClose(
+                obj.coordinates, [
+                    [0, 1], [1, 0]
+                ]
+            );
+        });
+
+        it('closed polyline', function () {
+            var obj = largeImage.annotations.geometry.polyline({
+                type: 'polyline',
+                id: 'a',
+                points: [
+                    [0, 1, 0],
+                    [1, 0, 0],
+                    [1, 1, 0]
+                ],
+                closed: true
+            });
+
+            expect(obj.type).toBe('Polygon');
+            expect(obj.coordinates.length).toBe(1);
+            expect(obj.coordinates[0].length).toBe(4);
+            expectClose(
+                obj.coordinates[0], [
+                    [0, 1], [1, 0], [1, 1], [0, 1]
+                ]
+            );
+        });
     });
 
     describe('style', function () {
@@ -130,6 +172,28 @@ describe('Annotations', function () {
                 width: 5,
                 height: 10,
                 rotation: 0
+            }]);
+            var features = obj.features;
+            expect(obj.type).toBe('FeatureCollection');
+            expect(features.length).toBe(1);
+            expect(features[0].id).toBe('a');
+
+            var properties = features[0].properties;
+            expect(properties.lineWidth).toBe(2);
+            expect(properties.fillColor).toBe('#000000');
+            expect(properties.fillOpacity).toBe(0);
+            expect(properties.strokeColor).toBe('#000000');
+            expect(properties.strokeOpacity).toBe(1);
+        });
+
+        it('polyline', function () {
+            var obj = largeImage.annotations.convert([{
+                type: 'polyline',
+                id: 'a',
+                points: [
+                    [0, 1, 0],
+                    [1, 0, 0]
+                ]
             }]);
             var features = obj.features;
             expect(obj.type).toBe('FeatureCollection');
