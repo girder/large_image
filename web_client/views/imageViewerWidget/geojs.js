@@ -7,13 +7,13 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         ImageViewerWidget.prototype.initialize.call(this, settings);
 
+        this._layers = {};
+        this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
+
         $.getScript(
             staticRoot + '/built/plugins/large_image/extra/geojs.js',
             () => this.render()
         );
-        this._layers = {};
-
-        this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
     },
 
     render: function () {
