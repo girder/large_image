@@ -9,6 +9,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         this._layers = {};
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
+        this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
 
         $.getScript(
             staticRoot + '/built/plugins/large_image/extra/geojs.js',
@@ -91,8 +92,22 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             }
         );
         layer.mode('rectangle');
-    }
+    },
 
+    startDrawMode: function (type) {
+        if (!this.viewer) {
+            return;
+        }
+        var layer = this.viewer.createLayer('annotation');
+        layer.geoOn(
+            window.geo.event.annotation.state,
+            (evt) => {
+                console.log(evt);
+                window.setTimeout(() => this.viewer.deleteLayer(layer), 10);
+            }
+        );
+        layer.mode(type);
+    }
 });
 
 export default GeojsImageViewerWidget;

@@ -120,6 +120,16 @@ describe('Annotations', function () {
                 ]
             );
         });
+
+        it('point', function () {
+            var obj = largeImage.annotations.geometry.point({
+                type: 'point',
+                id: 'a',
+                center: [1, 2, 0]
+            });
+            expect(obj.type).toBe('Point');
+            expect(obj.coordinates).toEqual([1, 2]);
+        });
     });
 
     describe('style', function () {
