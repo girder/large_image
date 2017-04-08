@@ -59,6 +59,40 @@ describe('geojs-annotations', function () {
         });
     });
 
+    it('convert', function () {
+        var style = {fill: false, stroke: false};
+        var type;
+        var coordinates;
+        var annotation = {
+            options: function () {
+                return {
+                    style: style
+                };
+            },
+            type: function () {
+                return type;
+            },
+            coordinates: function () {
+                return coordinates;
+            }
+        };
+
+        // invalid type
+        type = 'not valid';
+        expect(function () {
+            geojs.convert(annotation);
+        }).toThrow();
+
+        type = 'point';
+        coordinates = [{x: 0, y: 0}];
+        expect(geojs.convert(annotation)).toEqual({
+            type: 'point',
+            center: [0, 0, 0],
+            fillColor: 'rgba(0, 0, 0, 0)',
+            lineColor: 'rgba(0, 0, 0, 0)'
+        });
+    });
+
     describe('coordinates', function () {
         it('point', function () {
             expect(geojs.coordinates.point({x: 1, y: 2})).toEqual([1, 2, 0]);

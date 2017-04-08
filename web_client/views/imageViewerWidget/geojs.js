@@ -2,6 +2,7 @@ import { staticRoot } from 'girder/rest';
 import events from 'girder/events';
 
 import ImageViewerWidget from './base';
+import convertAnnotation from '../../annotations/geojs/convert';
 
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
@@ -102,8 +103,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         layer.geoOn(
             window.geo.event.annotation.state,
             (evt) => {
-                console.log(evt);
-                window.setTimeout(() => this.viewer.deleteLayer(layer), 10);
+                events.trigger('g:annotationCreated', convertAnnotation(evt.annotation));
+                this.viewer.deleteLayer(layer);
             }
         );
         layer.mode(type);
