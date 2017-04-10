@@ -109,8 +109,6 @@ class TiledTiffDirectory(object):
 
         self._tiffFile = None
 
-        import sys
-        sys.stderr.write('%d %s\n' % (os.path.getsize(filePath), filePath))  # ##DWM::
         self._open(filePath, directoryNum)
         self._loadMetadata()
         logger.debug('TiffDirectory %d Information %r',
