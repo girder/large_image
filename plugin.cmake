@@ -117,6 +117,16 @@ add_web_client_test(
   "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/largeImageSpec.js"
   PLUGIN large_image)
 
+add_web_client_test(
+  annotation
+  "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/annotationSpec.js"
+  PLUGIN large_image)
+
+add_web_client_test(
+  geojs
+  "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/geojsSpec.js"
+  PLUGIN large_image)
+
 #add_puglint_test(
 #  large_image
 #  "${CMAKE_CURRENT_LIST_DIR}/web_client/templates")

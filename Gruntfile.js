@@ -21,20 +21,28 @@ module.exports = function (grunt) {
                     src: '**',
                     dest: '<%= pluginDir %>/large_image/web_client/extra/slideatlas/'
                 }]
+            },
+            large_image_sinon: {
+                files: [{
+                    src: 'node_modules/sinon/pkg/sinon.js',
+                    dest: '<%= pluginDir %>/large_image/web_client/extra/sinon.js'
+                }]
             }
         },
         default: {
             'copy:plugin-large_image': {
                 dependencies: [
                     'copy:large_image_geojs',
-                    'copy:large_image_slideatlas'
+                    'copy:large_image_slideatlas',
+                    'copy:large_image_sinon'
                 ]
             },
             'copy:large_image_geojs': {
                 dependencies: ['large_image_resolve']
             },
             'copy:large_image_slideatlas': {},
-            'large_image_resolve': {}
+            'large_image_resolve': {},
+            'copy:large_image_sinon': {}
         }
     });
 };
