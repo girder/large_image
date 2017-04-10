@@ -1,4 +1,5 @@
 import _ from 'underscore';
+import Backbone from 'backbone';
 
 import { staticRoot } from 'girder/rest';
 import events from 'girder/events';
@@ -56,6 +57,18 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         }
     },
 
+    /**
+     * Render an annotation model on the image.  Currently,
+     * this is limited to annotation types that can be directly
+     * converted into geojson primatives.
+     *
+     * Internally, this generates a new feature layer for the
+     * annotation that is referenced by the annotation id.
+     * All "elements" contained inside this annotations are
+     * drawn in the referenced layer.
+     *
+     * @param {AnnotationModel} annotation
+     */
     drawAnnotation: function (annotation) {
         var geojson = annotation.geojson();
         var layer = this.viewer.createLayer('feature', {
@@ -66,6 +79,12 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             .read(geojson, () => this.viewer.draw());
     },
 
+    /**
+     * Remove an annotation from the image.  This simply
+     * finds a layer with the given id and removes it because
+     * each annotation is contained in its own layer.  If
+     * the annotation is not drawn, this is a noop.
+     */
     removeAnnotation: function (annotation) {
         var layer = this._layers[annotation.id];
         if (layer) {
@@ -73,8 +92,19 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         }
     },
 
+    /**
+     * Set the image interaction mode to region drawing mode.  This
+     * method takes an optional `model` argument where the region will
+     * be stored when created by the user.  In any case, this method
+     * returns a promise that resolves to an array defining the region:
+     *   [ left, top, width, height ]
+     *
+     * @param {Backbone.Model} [model] A model to set the region to
+     * @returns {Promise}
+     */
     drawRegion: function (model) {
-        this.startDrawMode('rectangle', {trigger: false}).then((elements) => {
+        model = model || new Backbone.Model();
+        return this.startDrawMode('rectangle', {trigger: false}).then((elements) => {
             /*
              * Strictly speaking, the rectangle drawn here could be rotated, but
              * for simplicity we will set the region model assuming it is not.
@@ -92,10 +122,20 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             model.set('value', [
                 left, top, width, height
             ], {trigger: true});
+
+            return model.get('value');
         });
     },
 
     /**
+     * Set the image interaction mode to draw the given type of annotation.
+     *
+     * @param {string} type An annotation type
+     * @param {object} [options]
+     * @param {boolean} [options.trigger=true]
+     *      Trigger a global event after creating each annotation element.
+     * @returns {Promise}
+     *      Resolves to an array of generated annotation elements.
      */
     startDrawMode: function (type, options) {
         var layer;
