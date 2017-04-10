@@ -1,3 +1,5 @@
+import _ from 'underscore';
+
 import { staticRoot } from 'girder/rest';
 import events from 'girder/events';
 
@@ -72,42 +74,59 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     drawRegion: function (model) {
-        if (!this.viewer) {
-            return;
-        }
-        var layer = this.viewer.createLayer('annotation');
-        layer.geoOn(
-            window.geo.event.annotation.state,
-            (evt) => {
-                var annotation = evt.annotation;
-                var left, top, width, height, c;
-                if (annotation.type() === 'rectangle') {
-                    c = annotation.coordinates();
-                    left = Math.round(c[0].x);
-                    top = Math.round(c[1].y);
-                    width = Math.round(c[2].x - left);
-                    height = Math.round(c[3].y - top);
-                    model.set('value', [left, top, width, height], {trigger: true});
-                    window.setTimeout(() => this.viewer.deleteLayer(layer), 10);
-                }
-            }
-        );
-        layer.mode('rectangle');
+        this.startDrawMode('rectangle', {trigger: false}).then((elements) => {
+            /*
+             * Strictly speaking, the rectangle drawn here could be rotated, but
+             * for simplicity we will set the region model assuming it is not.
+             * To be more precise, we could expand the region to contain the
+             * whole rotated rectangle.  A better solution would be to add
+             * a draw parameter to geojs that draws a rectangle aligned with
+             * the image coordinates.
+             */
+            var element = elements[0];
+            var width = Math.round(element.width);
+            var height = Math.round(element.height);
+            var left = Math.round(element.center[0] - element.width / 2);
+            var top = Math.round(element.center[1] - element.height / 2);
+
+            model.set('value', [
+                left, top, width, height
+            ], {trigger: true});
+        });
     },
 
-    startDrawMode: function (type) {
-        if (!this.viewer) {
-            return;
-        }
-        var layer = this.viewer.createLayer('annotation');
-        layer.geoOn(
-            window.geo.event.annotation.state,
-            (evt) => {
-                events.trigger('g:annotationCreated', convertAnnotation(evt.annotation));
-                this.viewer.deleteLayer(layer);
-            }
-        );
-        layer.mode(type);
+    /**
+     */
+    startDrawMode: function (type, options) {
+        var layer;
+        var elements = [];
+        var annotations = [];
+
+        return new Promise((resolve) => {
+            var element;
+
+            options = _.defaults(options || {}, {trigger: true});
+            layer = this.viewer.createLayer('annotation');
+            layer.geoOn(
+                window.geo.event.annotation.state,
+                (evt) => {
+                    element = convertAnnotation(evt.annotation);
+                    elements.push(element);
+                    annotations.push(evt.annotation);
+
+                    if (options.trigger) {
+                        events.trigger('g:annotationCreated', element, evt.annotation);
+                    }
+
+                    resolve(elements, annotations);
+
+                    // defer deleting the layer because geojs calls draw on it
+                    // after triggering this event
+                    window.setTimeout(() => this.viewer.deleteLayer(layer), 10);
+                }
+            );
+            layer.mode(type);
+        });
     }
 });
 
