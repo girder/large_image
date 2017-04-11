@@ -929,6 +929,15 @@ class TileSource(object):
             quality=self.jpegQuality, subsampling=self.jpegSubsampling)
         return output.getvalue()
 
+    def _getAssociatedImage(self, imageKey):
+        """
+        Get an associated image in PIL format.
+
+        :param imageKey: the key of the associated image.
+        :return: the image in PIL format or None.
+        """
+        return None
+
     @classmethod
     def canRead(cls, *args, **kwargs):
         """
@@ -1452,6 +1461,38 @@ class TileSource(object):
         :return: a tile dictionary or None.
         """
         return next(self.tileIteratorAtAnotherScale(*args, **kwargs), None)
+
+    def getAssociatedImagesList(self):
+        """
+        Return a list of associated images.
+
+        :return: the list of image keys.
+        """
+        return []
+
+    def getAssociatedImage(self, imageKey, *args, **kwargs):
+        """
+        Return an associated image.
+
+        :param imageKey: the key of the associated image to retreive.
+        :param **kwargs: optional arguments.  Some options are width, height,
+            encoding, jpegQuality, and jpegSubsampling.
+        :returns: imageData, imageMime: the image data and the mime type, or
+            None if the associated image doesn't exist.
+        """
+        image = self._getAssociatedImage(imageKey)
+        if not image:
+            return
+        imageWidth, imageHeight = image.size
+        width = kwargs.get('width')
+        height = kwargs.get('height')
+        if width or height:
+            width, height, calcScale = self._calculateWidthHeight(
+                width, height, imageWidth, imageHeight)
+            image = image.resize(
+                (width, height),
+                PIL.Image.BICUBIC if width > imageWidth else PIL.Image.LANCZOS)
+        return _encodeImage(image, **kwargs)
 
 
 class FileTileSource(TileSource):

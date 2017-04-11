@@ -959,3 +959,66 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         itemId = str(file['itemId'])
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatusOk(resp)
+
+    def testTilesAssociatedImages(self):
+        # Test with a PTIF image
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'),
+            'sample_image.PTIF')
+        itemId = str(file['itemId'])
+
+        resp = self.request(path='/item/%s/tiles/images' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, ['label', 'macro'])
+        resp = self.request(path='/item/%s/tiles/images/label' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        resp = self.request(
+            path='/item/%s/tiles/images/label' % itemId, user=self.admin,
+            isJson=False, params={'encoding': 'PNG', 'width': 256, 'height': 256})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(max(width, height), 256)
+        resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, None)
+
+        # Test with an SVS image
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.TCGA-DU-6399-'
+            '01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles/images' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, ['label', 'macro', 'thumbnail'])
+        resp = self.request(path='/item/%s/tiles/images/macro' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, None)
+
+        # Test with an image that doesn't have associated images
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_Easy1.png'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        # Ask to make this a tile-based item
+        resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                            user=self.admin, params={'fileId': fileId})
+        self.assertStatusOk(resp)
+        resp = self.request(path='/item/%s/tiles/images' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, [])
+        resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, None)

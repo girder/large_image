@@ -71,6 +71,10 @@ class TilesItemResource(Item):
                            self.getTilesRegion)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'images'),
+                           self.getAssociatedImagesList)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'images', ':image'),
+                           self.getAssociatedImage)
         apiRoot.item.route('GET', ('test', 'tiles'), self.getTestTilesInfo)
         apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTestTile)
@@ -429,3 +433,56 @@ class TilesItemResource(Item):
         setResponseHeader('Content-Type', regionMime)
         setRawResponse()
         return regionData
+
+    @describeRoute(
+        Description('Get a list of additional images associated with a large image.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getAssociatedImagesList(self, item, params):
+        try:
+            return self.imageItemModel.getAssociatedImagesList(item)
+        except TileGeneralException as e:
+            raise RestException(e.message, code=400)
+
+    @describeRoute(
+        Description('Get an image associated with a large image.')
+        .notes('Because associated images may contain PHI, admin access to '
+               'the item is required.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('image', 'The key of the associated image.', paramType='path')
+        .param('width', 'The maximum width of the image in pixels.',
+               required=False, dataType='int')
+        .param('height', 'The maximum height of the image in pixels.',
+               required=False, dataType='int')
+        .param('encoding', 'Image output encoding', required=False,
+               enum=['JPEG', 'PNG'], default='JPEG')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public
+    def getAssociatedImage(self, itemId, image, params):
+        _adjustParams(params)
+        # We can't use the loadmodel decorator, as we want to allow cookies
+        item = loadmodelcache.loadModel(
+            self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
+        params = self._parseParams(params, True, [
+            ('width', int),
+            ('height', int),
+            ('jpegQuality', int),
+            ('jpegSubsampling', int),
+            ('encoding', str),
+        ])
+        try:
+            result = self.imageItemModel.getAssociatedImage(item, image, **params)
+        except TileGeneralException as e:
+            raise RestException(e.message, code=400)
+        if not isinstance(result, tuple):
+            return result
+        imageData, imageMime = result
+        setResponseHeader('Content-Type', imageMime)
+        setRawResponse()
+        return imageData

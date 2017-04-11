@@ -262,6 +262,25 @@ class SVSFileTileSource(FileTileSource):
             scale /= 2
         return level
 
+    def getAssociatedImagesList(self):
+        """
+        Get a list of all associated images.
+
+        :return: the list of image keys.
+        """
+        return sorted(self._openslide.associated_images)
+
+    def _getAssociatedImage(self, imageKey):
+        """
+        Get an associated image in PIL format.
+
+        :param imageKey: the key of the associated image.
+        :return: the image in PIL format or None.
+        """
+        if imageKey in self._openslide.associated_images:
+            return self._openslide.associated_images[imageKey]
+        return None
+
 
 if girder:
     class SVSGirderTileSource(SVSFileTileSource, GirderTileSource):
