@@ -7,13 +7,13 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         ImageViewerWidget.prototype.initialize.call(this, settings);
 
+        this._layers = {};
+        this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
+
         $.getScript(
             staticRoot + '/built/plugins/large_image/extra/geojs.js',
             () => this.render()
         );
-        this._layers = {};
-
-        this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
     },
 
     render: function () {
@@ -22,6 +22,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             return;
         }
 
+        this._destroyViewer();
         var geo = window.geo; // this makes the style checker happy
 
         var w = this.sizeX, h = this.sizeY;
@@ -37,14 +38,18 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     destroy: function () {
-        if (this.viewer) {
-            this.viewer.exit();
-            this.viewer = null;
-        }
+        this._destroyViewer();
         if (window.geo) {
             delete window.geo;
         }
         ImageViewerWidget.prototype.destroy.call(this);
+    },
+
+    _destroyViewer: function () {
+        if (this.viewer) {
+            this.viewer.exit();
+            this.viewer = null;
+        }
     },
 
     drawAnnotation: function (annotation) {

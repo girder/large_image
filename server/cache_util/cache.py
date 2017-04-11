@@ -22,7 +22,6 @@ try:
 except ImportError:
     resource = None
 import six
-from cachetools import hashkey
 
 try:
     from girder import logger
@@ -62,7 +61,17 @@ CacheProperties = {
 
 
 def strhash(*args, **kwargs):
-    return str(hashkey(*args, **kwargs))
+    """
+    Generate a string hash value for an arbitrary set of args and kwargs.  This
+    relies on the repr of each element.
+
+    :param args: arbitrary tuple of args.
+    :param kwargs: arbitrary dictionary of kwargs.
+    :returns: hashed string of the arguments.
+    """
+    if kwargs:
+        return '%r,%r' % (args, sorted(kwargs.items()))
+    return '%r' % (args, )
 
 
 def methodcache(key=None):
@@ -165,6 +174,7 @@ class LruCacheMetaclass(type):
             cache[key] = instance
 
         return instance
+
 
 # Decide whether to use Memcached or cachetools
 
