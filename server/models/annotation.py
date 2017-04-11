@@ -394,7 +394,7 @@ class Annotation(Model):
         })
 
         self.exposeFields(AccessType.READ, (
-            'annotation', '_version',
+            'annotation', '_version', '_elementQuery',
         ) + self.baseFields)
         events.bind('model.item.remove', 'large_image', self._onItemRemove)
 
@@ -423,13 +423,15 @@ class Annotation(Model):
         }
         return self.save(doc)
 
-    def load(self, *args, **kwargs):
+    def load(self, id, region=None, *args, **kwargs):
         """
-        Load an annotation, adding all of the elements to it.
+        Load an annotation, adding all or a subset of the elements to it.
 
+        :param region: if present, a dictionary restricting which annotations
+            are returned.  See annotationelement.getElements.
         :returns: the matching annotation or none.
         """
-        annotation = super(Annotation, self).load(*args, **kwargs)
+        annotation = super(Annotation, self).load(id, *args, **kwargs)
         if annotation is not None:
             # It is possible that we are trying to read the elements of an
             # annotation as another thread is updating them.  In this case,
@@ -442,11 +444,11 @@ class Annotation(Model):
             maxRetries = 3
             for retry in range(maxRetries):
                 self.model('annotationelement', 'large_image').getElements(
-                    annotation)
+                    annotation, region)
                 if (len(annotation.get('annotation', {}).get('elements')) or
                         retry + 1 == maxRetries):
                     break
-                recheck = super(Annotation, self).load(*args, **kwargs)
+                recheck = super(Annotation, self).load(id, *args, **kwargs)
                 if (recheck is None or
                         annotation.get('_version') == recheck.get('_version')):
                     break
@@ -508,6 +510,7 @@ class Annotation(Model):
             oldversion = self.collection.find_one(
                 {'_id': annotation['_id']}).get('_version')
         annotation['_version'] = version
+        _elementQuery = annotation.pop('_elementQuery', None)
 
         def replaceElements(query, doc, *args, **kwargs):
             self.model('annotationelement', 'large_image').updateElements(
@@ -540,6 +543,8 @@ class Annotation(Model):
         result = super(Annotation, self).save(annotation, *args, **kwargs)
         self.collection.replace_one = replace_one
         self.collection.insert_one = insert_one
+        if _elementQuery:
+            result['_elementQuery'] = _elementQuery
         logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
         return result
 

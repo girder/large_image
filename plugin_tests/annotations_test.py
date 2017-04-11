@@ -17,9 +17,14 @@
 #  limitations under the License.
 #############################################################################
 
+import math
 import os
+import random
+import six
+from six.moves import range
 
 from girder import config
+from girder.constants import AccessType
 from tests import base
 
 from . import common
@@ -29,6 +34,44 @@ from . import common
 
 os.environ['GIRDER_PORT'] = os.environ.get('GIRDER_TEST_PORT', '20200')
 config.loadConfig()  # Must reload config to pickup correct port
+
+
+sampleAnnotationEmpty = {
+    'name': 'sample0',
+    'elements': []}
+sampleAnnotation = {
+    'name': 'sample',
+    'elements': [{
+        'type': 'rectangle',
+        'center': [20.0, 25.0, 0],
+        'width': 14.0,
+        'height': 15.0,
+    }]
+}
+
+
+def makeLargeSampleAnnotation():
+    """
+    Generate a large annotation for testing.
+
+    :returns: a large annotation
+    """
+    elements = []
+    annotation = {'name': 'sample_large', 'elements': elements}
+    skip = 0
+    random.seed(0)
+    for z in range(16):
+        for y in range(0, 10000, 32 * 2**z):
+            for x in range(0, 10000, 32 * 2**z):
+                if not skip % 17:
+                    elements.append({
+                        'type': 'rectangle',
+                        'center': [x + random.random(), y + random.random(), 0],
+                        'width': (8 + random.random()) * 2 ** z,
+                        'height': (8 + random.random()) * 2 ** z,
+                    })
+                skip += 1
+    return annotation
 
 
 def setUpModule():
@@ -106,10 +149,237 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
             [19, 20, 'b'],
         ]}))
 
-    # Add tests for:
-    # load
+    def testLoad(self):
+        annotModel = self.model('annotation', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+        with six.assertRaisesRegex(self, Exception, 'Invalid ObjectId'):
+            annotModel.load('nosuchid')
+        self.assertIsNone(annotModel.load('012345678901234567890123'))
+        annot = annotModel.createAnnotation(item, self.admin, sampleAnnotation)
+        loaded = annotModel.load(annot['_id'])
+        self.assertEqual(loaded['annotation']['elements'][0]['center'],
+                         annot['annotation']['elements'][0]['center'])
+
+        annot0 = annotModel.createAnnotation(item, self.admin,
+                                             sampleAnnotationEmpty)
+        loaded = annotModel.load(annot0['_id'])
+        self.assertEqual(len(loaded['annotation']['elements']), 0)
+
+    def testSave(self):
+        annotModel = self.model('annotation', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+        annot = annotModel.createAnnotation(item, self.admin, sampleAnnotation)
+        annot = annotModel.load(annot['_id'], region={'sort': 'size'})
+        annot['annotation']['elements'].extend([
+            {'type': 'point', 'center': [20.0, 25.0, 0]},
+            {'type': 'point', 'center': [10.0, 24.0, 0]},
+            {'type': 'point', 'center': [25.5, 23.0, 0]},
+        ])
+        saved = annotModel.save(annot)
+        loaded = annotModel.load(annot['_id'], region={'sort': 'size'})
+        self.assertEqual(len(saved['annotation']['elements']), 4)
+        self.assertEqual(len(loaded['annotation']['elements']), 4)
+        self.assertEqual(saved['annotation']['elements'][0]['type'], 'rectangle')
+        self.assertEqual(loaded['annotation']['elements'][0]['type'], 'point')
+        self.assertEqual(saved['annotation']['elements'][-1]['type'], 'point')
+        self.assertEqual(loaded['annotation']['elements'][-1]['type'], 'rectangle')
+
+    #  Add tests for:
     # remove
-    # save
     # updateAnnotaton
     # validate
     # _onItemRemove
+
+
+class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
+    def testInitialize(self):
+        # initialize should be called as we fetch the model
+        elemModel = self.model('annotationelement', 'large_image')
+        self.assertEqual(elemModel.name, 'annotationelement')
+
+    def testGetNextVersionValue(self):
+        elemModel = self.model('annotationelement', 'large_image')
+        val1 = elemModel.getNextVersionValue()
+        val2 = elemModel.getNextVersionValue()
+        self.assertGreater(val2, val1)
+        elemModel.versionId = None
+        val3 = elemModel.getNextVersionValue()
+        self.assertGreater(val3, val2)
+
+    def testBoundingBox(self):
+        elemModel = self.model('annotationelement', 'large_image')
+        bbox = elemModel._boundingBox({'points': [[1, -2, 3], [-4, 5, -6], [7, -8, 9]]})
+        self.assertEqual(bbox, {
+            'low': [-4, -8, -6],
+            'high': [7, 5, 9],
+            'details': 3,
+            'size': ((7+4)**2 + (8+5)**2)**0.5})
+        bbox = elemModel._boundingBox({'center': [1, -2, 3]})
+        self.assertEqual(bbox, {
+            'low': [0.5, -2.5, 3],
+            'high': [1.5, -1.5, 3],
+            'details': 1,
+            'size': 2**0.5})
+        bbox = elemModel._boundingBox({'center': [1, -2, 3], 'radius': 4})
+        self.assertEqual(bbox, {
+            'low': [-3, -6, 3],
+            'high': [5, 2, 3],
+            'details': 4,
+            'size': 8 * 2**0.5})
+        bbox = elemModel._boundingBox({'center': [1, -2, 3], 'width': 2, 'height': 4})
+        self.assertEqual(bbox, {
+            'low': [0, -4, 3],
+            'high': [2, 0, 3],
+            'details': 4,
+            'size': (2**2 + 4**2)**0.5})
+        bbox = elemModel._boundingBox({
+            'center': [1, -2, 3],
+            'width': 2, 'height': 4,
+            'rotation': math.pi * 0.25})
+        self.assertAlmostEqual(bbox['size'], 4, places=4)
+
+    def testGetElements(self):
+        annotModel = self.model('annotation', 'large_image')
+        elemModel = self.model('annotationelement', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+        largeSample = makeLargeSampleAnnotation()
+        # Use a copy of largeSample so we don't just have a referecne to it
+        annot = annotModel.createAnnotation(item, self.admin, largeSample.copy())
+        # Clear existing element data, the get elements
+        annot.pop('elements', None)
+        annot.pop('_elementQuery', None)
+        elemModel.getElements(annot)
+        self.assertNotIn('_elementQuery', annot)
+        self.assertEqual(len(annot['annotation']['elements']),
+                         len(largeSample['elements']))  # 7707
+        annot.pop('elements', None)
+        annot.pop('_elementQuery', None)
+        elemModel.getElements(annot, {'limit': 100})
+        self.assertIn('_elementQuery', annot)
+        self.assertEqual(annot['_elementQuery']['count'], len(largeSample['elements']))
+        self.assertEqual(annot['_elementQuery']['returned'], 100)
+        self.assertEqual(len(annot['annotation']['elements']), 100)
+        annot.pop('elements', None)
+        annot.pop('_elementQuery', None)
+        elemModel.getElements(annot, {
+            'left': 3000, 'right': 4000, 'top': 4500, 'bottom': 6500})
+        self.assertEqual(len(annot['annotation']['elements']), 157)
+        annot.pop('elements', None)
+        annot.pop('_elementQuery', None)
+        elemModel.getElements(annot, {
+            'left': 3000, 'right': 4000, 'top': 4500, 'bottom': 6500,
+            'minimumSize': 16})
+        self.assertEqual(len(annot['annotation']['elements']), 39)
+        annot.pop('elements', None)
+        annot.pop('_elementQuery', None)
+        elemModel.getElements(annot, {'maxDetails': 300})
+        self.assertEqual(len(annot['annotation']['elements']), 75)
+        annot.pop('elements', None)
+        annot.pop('_elementQuery', None)
+        elemModel.getElements(annot, {
+            'maxDetails': 300, 'sort': 'size', 'sortdir': -1})
+        elements = annot['annotation']['elements']
+        self.assertGreater(elements[0]['width'] * elements[0]['height'],
+                           elements[-1]['width'] * elements[-1]['height'])
+        annot.pop('elements', None)
+        annot.pop('_elementQuery', None)
+        elemModel.getElements(annot, {
+            'maxDetails': 300, 'sort': 'size', 'sortdir': 1})
+        elements = annot['annotation']['elements']
+        elements = annot['annotation']['elements']
+        self.assertLess(elements[0]['width'] * elements[0]['height'],
+                        elements[-1]['width'] * elements[-1]['height'])
+
+    #  Add tests for:
+    # removeElements
+    # removeOldElements
+    # updateElements
+
+
+class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
+    def testGetAnnotation(self):
+        annotModel = self.model('annotation', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+        annot = annotModel.createAnnotation(item, self.admin, sampleAnnotation)
+        annotId = str(annot['_id'])
+        resp = self.request(path='/annotation/%s' % annotId, user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['annotation']['elements'][0]['center'],
+                         annot['annotation']['elements'][0]['center'])
+        largeSample = makeLargeSampleAnnotation()
+        annot = annotModel.createAnnotation(item, self.admin, largeSample)
+        annotId = str(annot['_id'])
+        resp = self.request(path='/annotation/%s' % annotId, user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(len(resp.json['annotation']['elements']),
+                         len(largeSample['elements']))  # 7707
+        resp = self.request(
+            path='/annotation/%s' % annotId, user=self.admin, params={
+                'limit': 100,
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(len(resp.json['annotation']['elements']), 100)
+        resp = self.request(
+            path='/annotation/%s' % annotId, user=self.admin, params={
+                'left': 3000,
+                'right': 4000,
+                'top': 4500,
+                'bottom': 6500,
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(len(resp.json['annotation']['elements']), 157)
+        resp = self.request(
+            path='/annotation/%s' % annotId, user=self.admin, params={
+                'left': 3000,
+                'right': 4000,
+                'top': 4500,
+                'bottom': 6500,
+                'minimumSize': 16,
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(len(resp.json['annotation']['elements']), 39)
+        resp = self.request(
+            path='/annotation/%s' % annotId, user=self.admin, params={
+                'maxDetails': 300,
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(len(resp.json['annotation']['elements']), 75)
+        resp = self.request(
+            path='/annotation/%s' % annotId, user=self.admin, params={
+                'maxDetails': 300,
+                'sort': 'size',
+                'sortdir': -1,
+            })
+        self.assertStatusOk(resp)
+        elements = resp.json['annotation']['elements']
+        self.assertGreater(elements[0]['width'] * elements[0]['height'],
+                           elements[-1]['width'] * elements[-1]['height'])
+        resp = self.request(
+            path='/annotation/%s' % annotId, user=self.admin, params={
+                'maxDetails': 300,
+                'sort': 'size',
+                'sortdir': 1,
+            })
+        self.assertStatusOk(resp)
+        elements = resp.json['annotation']['elements']
+        self.assertLess(elements[0]['width'] * elements[0]['height'],
+                        elements[-1]['width'] * elements[-1]['height'])
+
+    #  Add tests for:
+    # find
+    # getAnnotationSchema
+    # createAnnotation
+    # updateAnnotation
+    # deleteAnnotation
