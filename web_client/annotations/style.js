@@ -2,7 +2,6 @@ import _ from 'underscore';
 import tc from 'tinycolor2';
 
 const props = [
-    'lineWidth',
     'label'
 ];
 
@@ -33,5 +32,8 @@ export default function style(json) {
         style.strokeOpacity = color.alpha;
     }
 
+    if (json.lineWidth) {
+        style.strokeWidth = json.lineWidth;
+    }
     return style;
 }

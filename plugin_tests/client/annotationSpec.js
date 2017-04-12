@@ -168,7 +168,7 @@ describe('Annotations', function () {
                 lineWidth: 2
             });
             expect(obj).toEqual({
-                lineWidth: 2
+                strokeWidth: 2
             });
         });
     });
@@ -189,7 +189,7 @@ describe('Annotations', function () {
             expect(features[0].id).toBe('a');
 
             var properties = features[0].properties;
-            expect(properties.lineWidth).toBe(2);
+            expect(properties.strokeWidth).toBe(2);
             expect(properties.fillColor).toBe('#000000');
             expect(properties.fillOpacity).toBe(0);
             expect(properties.strokeColor).toBe('#000000');
@@ -211,7 +211,7 @@ describe('Annotations', function () {
             expect(features[0].id).toBe('a');
 
             var properties = features[0].properties;
-            expect(properties.lineWidth).toBe(2);
+            expect(properties.strokeWidth).toBe(2);
             expect(properties.fillColor).toBe('#000000');
             expect(properties.fillOpacity).toBe(0);
             expect(properties.strokeColor).toBe('#000000');
