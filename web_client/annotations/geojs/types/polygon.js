@@ -4,7 +4,7 @@ import common from '../common';
 import array from '../coordinates/array';
 
 function polygon(annotation) {
-    const element = common(annotation);
+    const element = common(annotation, 'polyline');
     const coordinates = array(annotation.coordinates());
 
     return _.extend(element, {

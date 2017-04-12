@@ -9,66 +9,20 @@ girderTest.addScripts([
 
 describe('geojs-annotations', function () {
     var large_image, geojs;
+    var fillColor = 'rgba(0,0,0,0)';
+    var lineColor = 'rgb(0,0,0)';
+    var lineWidth = 2;
 
     beforeEach(function () {
         large_image = girder.plugins.large_image;
         geojs = large_image.annotations.geojs;
     });
 
-    it('common', function () {
-        var style;
-        var annotation = {
-            options: function () {
-                return {
-                    style: style
-                };
-            }
-        };
-
-        style = {
-            fill: false,
-            stroke: false
-        };
-        expect(geojs.common(annotation)).toEqual({
-            fillColor: 'rgba(0, 0, 0, 0)',
-            lineColor: 'rgba(0, 0, 0, 0)'
-        });
-
-        style = {
-            fill: true,
-            fillColor: {r: 1, g: 0, b: 0},
-            stroke: true,
-            strokeColor: {r: 0, g: 1, b: 0}
-        };
-        expect(geojs.common(annotation)).toEqual({
-            fillColor: 'rgb(255, 0, 0)',
-            lineColor: 'rgb(0, 255, 0)'
-        });
-
-        style = {
-            fill: true,
-            fillColor: {r: 1, g: 0, b: 0},
-            fillOpacity: 0.5,
-            stroke: true,
-            strokeColor: {r: 0, g: 1, b: 0},
-            strokeOpacity: 0.5
-        };
-        expect(geojs.common(annotation)).toEqual({
-            fillColor: 'rgba(255, 0, 0, 0.5)',
-            lineColor: 'rgba(0, 255, 0, 0.5)'
-        });
-    });
-
     it('convert', function () {
-        var style = {fill: false, stroke: false};
         var type;
         var coordinates;
+
         var annotation = {
-            options: function () {
-                return {
-                    style: style
-                };
-            },
             type: function () {
                 return type;
             },
@@ -88,8 +42,9 @@ describe('geojs-annotations', function () {
         expect(geojs.convert(annotation)).toEqual({
             type: 'point',
             center: [0, 0, 0],
-            fillColor: 'rgba(0, 0, 0, 0)',
-            lineColor: 'rgba(0, 0, 0, 0)'
+            fillColor: fillColor,
+            lineColor: lineColor,
+            lineWidth: lineWidth
         });
     });
 
@@ -114,7 +69,11 @@ describe('geojs-annotations', function () {
             stroke: false
         };
         var coordinates;
+        var type = type;
         var annotation = {
+            type: function () {
+                return type;
+            },
             options: function () {
                 return {
                     style: style
@@ -126,16 +85,19 @@ describe('geojs-annotations', function () {
         };
 
         it('point', function () {
+            type = 'point';
             coordinates = [{x: 1, y: 2}];
             expect(geojs.types.point(annotation)).toEqual({
                 type: 'point',
                 center: [1, 2, 0],
-                fillColor: 'rgba(0, 0, 0, 0)',
-                lineColor: 'rgba(0, 0, 0, 0)'
+                fillColor: fillColor,
+                lineColor: lineColor,
+                lineWidth: lineWidth
             });
         });
 
         it('rectangle', function () {
+            type = 'rectangle';
             coordinates = [
                 {x: 1, y: 2},
                 {x: 1, y: 4},
@@ -148,12 +110,15 @@ describe('geojs-annotations', function () {
                 width: 2,
                 height: 2,
                 rotation: 0,
-                fillColor: 'rgba(0, 0, 0, 0)',
-                lineColor: 'rgba(0, 0, 0, 0)'
+                fillColor: fillColor,
+                lineColor: lineColor,
+                lineWidth: lineWidth,
+                normal: [0, 0, 1]
             });
         });
 
         it('rotated rectangle', function () {
+            type = 'rectangle';
             coordinates = [
                 {x: 0, y: -1},
                 {x: -1, y: 0},
@@ -166,12 +131,15 @@ describe('geojs-annotations', function () {
                 width: Math.sqrt(2),
                 height: Math.sqrt(2),
                 rotation: Math.PI / 4,
-                fillColor: 'rgba(0, 0, 0, 0)',
-                lineColor: 'rgba(0, 0, 0, 0)'
+                fillColor: fillColor,
+                lineColor: lineColor,
+                lineWidth: lineWidth,
+                normal: [0, 0, 1]
             });
         });
 
         it('polygon', function () {
+            type = 'polygon';
             coordinates = [
                 {x: 0, y: 0},
                 {x: 1, y: 0},
@@ -187,8 +155,9 @@ describe('geojs-annotations', function () {
                     [1, 1, 0],
                     [0, 1, 0]
                 ],
-                fillColor: 'rgba(0, 0, 0, 0)',
-                lineColor: 'rgba(0, 0, 0, 0)'
+                fillColor: fillColor,
+                lineColor: lineColor,
+                lineWidth: lineWidth
             });
         });
     });
