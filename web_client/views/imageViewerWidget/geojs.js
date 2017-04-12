@@ -7,6 +7,16 @@ import events from 'girder/events';
 import ImageViewerWidget from './base';
 import convertAnnotation from '../../annotations/geojs/convert';
 
+function guid() {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+    }
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+        s4() + '-' + s4() + s4() + s4();
+}
+
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         ImageViewerWidget.prototype.initialize.call(this, settings);
@@ -151,6 +161,9 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 window.geo.event.annotation.state,
                 (evt) => {
                     element = convertAnnotation(evt.annotation);
+                    if (!element.id) {
+                        element.id = guid();
+                    }
                     elements.push(element);
                     annotations.push(evt.annotation);
 
