@@ -47,6 +47,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
         this.viewer = geo.map(params.map);
         this.viewer.createLayer('osm', params.layer);
+        this.annotationLayer = this.viewer.createLayer('annotation');
 
         this.trigger('g:imageRendered', this);
         return this;
@@ -81,10 +82,16 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      */
     drawAnnotation: function (annotation) {
         var geojson = annotation.geojson();
-        var layer = this.viewer.createLayer('feature', {
-            features: ['point', 'line', 'polygon']
-        });
-        this._layers[annotation.id] = layer;
+        var layer;
+        if (_.has(this._layers, annotation.id)) {
+            layer = this._layers[annotation.id];
+            layer.clear();
+        } else {
+            layer = this.viewer.createLayer('feature', {
+                features: ['point', 'line', 'polygon']
+            });
+            this._layers[annotation.id] = layer;
+        }
         window.geo.createFileReader('jsonReader', {layer})
             .read(geojson, () => this.viewer.draw());
     },
@@ -148,15 +155,17 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      *      Resolves to an array of generated annotation elements.
      */
     startDrawMode: function (type, options) {
-        var layer;
+        var layer = this.annotationLayer;
         var elements = [];
         var annotations = [];
 
+        layer.mode(null);
+        layer.geoOff(window.geo.event.annotation.state);
+        layer.removeAllAnnotations();
         return new Promise((resolve) => {
             var element;
 
             options = _.defaults(options || {}, {trigger: true});
-            layer = this.viewer.createLayer('annotation');
             layer.geoOn(
                 window.geo.event.annotation.state,
                 (evt) => {
@@ -171,11 +180,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                         events.trigger('g:annotationCreated', element, evt.annotation);
                     }
 
+                    layer.removeAllAnnotations();
                     resolve(elements, annotations);
-
-                    // defer deleting the layer because geojs calls draw on it
-                    // after triggering this event
-                    window.setTimeout(() => this.viewer.deleteLayer(layer), 10);
                 }
             );
             layer.mode(type);
