@@ -181,6 +181,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     }
 
                     layer.removeAllAnnotations();
+                    layer.geoOff(window.geo.event.annotation.state);
                     resolve(elements, annotations);
                 }
             );
