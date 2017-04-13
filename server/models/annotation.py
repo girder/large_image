@@ -111,7 +111,8 @@ class AnnotationSchema:
                         'type': 'string',
                         'enum': ['point']
                     },
-                    'center': coordSchema
+                    'center': coordSchema,
+                    'fillColor': colorSchema
                 },
                 'required': ['type', 'center'],
                 'patternProperties': baseShapePatternProperties,
