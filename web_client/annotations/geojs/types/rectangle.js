@@ -2,6 +2,10 @@ import _ from 'underscore';
 
 import common from '../common';
 
+/**
+ * Convert a geojs rectangle annotation to the large_image
+ * annotation schema.
+ */
 function rectangle(annotation) {
     const element = common(annotation);
     const [p1, p2, p3, p4] = annotation.coordinates();

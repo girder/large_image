@@ -7,6 +7,9 @@ import events from 'girder/events';
 import ImageViewerWidget from './base';
 import convertAnnotation from '../../annotations/geojs/convert';
 
+/**
+ * Generate a new "random" element id (24 random 16 digits).
+ */
 function guid() {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
@@ -100,6 +103,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * finds a layer with the given id and removes it because
      * each annotation is contained in its own layer.  If
      * the annotation is not drawn, this is a noop.
+     *
+     * @param {AnnotationModel} annotation
      */
     removeAnnotation: function (annotation) {
         var layer = this._layers[annotation.id];

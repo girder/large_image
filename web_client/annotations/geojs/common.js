@@ -10,6 +10,7 @@ import * as defaults from '../defaults';
  *
  * @param {annotation} annotation A geojs native annotation object
  * @param {string} type Override the detected output type
+ * @returns {object}
  */
 function common(annotation, type) {
     type = type || annotation.type();
