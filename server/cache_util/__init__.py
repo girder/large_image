@@ -17,15 +17,15 @@
 #  limitations under the License.
 ###############################################################################
 
-from .cache import LruCacheMetaclass, tileCache, tileLock, strhash, methodcache
+from .cache import LruCacheMetaclass, strhash, methodcache, getTileCache
 try:
     from .memcache import MemCache
 except ImportError:
     MemCache = None
-from .cachefactory import CacheFactory, pickAvailableCache
+from .cachefactory import CacheFactory, pickAvailableCache, setConfig, getConfig
 from cachetools import cached, Cache, LRUCache
 
 
-__all__ = ('CacheFactory', 'tileCache', 'tileLock', 'MemCache', 'strhash',
+__all__ = ('CacheFactory', 'getTileCache', 'MemCache', 'strhash',
            'LruCacheMetaclass', 'pickAvailableCache', 'cached', 'Cache',
-           'LRUCache', 'methodcache')
+           'LRUCache', 'methodcache', 'setConfig', 'getConfig')
