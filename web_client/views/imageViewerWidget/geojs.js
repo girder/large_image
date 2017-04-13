@@ -104,6 +104,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     removeAnnotation: function (annotation) {
         var layer = this._layers[annotation.id];
         if (layer) {
+            delete this._layers[annotation.id];
             this.viewer.deleteLayer(layer);
         }
     },
