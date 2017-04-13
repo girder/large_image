@@ -183,6 +183,8 @@ install:
   - cd $girder_path
   - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -e .
   - pip install -r $main_path/requirements.txt -e .
+  # Make sure we have a prefered version of celery for Girder Worker
+  - pip install -U 'celery>=4'
   - python -c "import openslide;print openslide.__version__"
   # This was
   # - npm install
