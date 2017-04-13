@@ -17,7 +17,7 @@ export default Model.extend({
         );
         this._elements.annotation = this;
 
-        this.listenTo(this._elements, 'change add remove', () => {
+        this.listenTo(this._elements, 'change add remove reset', () => {
             // copy the object to ensure a change event is triggered
             var annotation = _.extend({}, this.get('annotation'));
 
