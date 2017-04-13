@@ -1,3 +1,5 @@
+import _ from 'underscore';
+
 import * as defaults from '../defaults';
 
 /**
@@ -11,7 +13,7 @@ import * as defaults from '../defaults';
  */
 function common(annotation, type) {
     type = type || annotation.type();
-    return defaults[type] || {};
+    return _.extend({}, defaults[type] || {});
 }
 
 export default common;
