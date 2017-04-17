@@ -26,6 +26,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this._layers = {};
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
+        this._hoverEvents = settings.hoverEvents;
 
         $.getScript(
             staticRoot + '/built/plugins/large_image/extra/geojs.js',
@@ -83,6 +84,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * @param {AnnotationModel} annotation
      */
     drawAnnotation: function (annotation) {
+        var geo = window.geo;
         var geojson = annotation.geojson();
         var layer;
         if (_.has(this._layers, annotation.id)) {
@@ -95,7 +97,16 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this._layers[annotation.id] = layer;
         }
         window.geo.createFileReader('jsonReader', {layer})
-            .read(geojson, () => this.viewer.draw());
+            .read(geojson, (features) => {
+                _.each(features || [], (feature) => {
+                    feature.selectionAPI(this._hoverEvents);
+
+                    feature.geoOn(geo.event.feature.mouseover, (evt) => this._onMouseOverFeature(evt));
+                    feature.geoOn(geo.event.feature.mouseout, (evt) => this._onMouseOutFeature(evt));
+                    feature.geoOn(geo.event.feature.mouseclick, (evt) => this._onMouseClickFeature(evt));
+                });
+                this.viewer.draw();
+            });
     },
 
     /**
@@ -192,6 +203,18 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             );
             layer.mode(type);
         });
+    },
+
+    _onMouseOverFeature: function (evt) {
+        this.trigger('g:mouseOverAnnotation', evt.data);
+    },
+
+    _onMouseOutFeature: function (evt) {
+        this.trigger('g:mouseOutAnnotation', evt.data);
+    },
+
+    _onMouseClickFeature: function (evt) {
+        this.trigger('g:mouseClickAnnotation', evt.data);
     }
 });
 
