@@ -127,6 +127,11 @@ add_web_client_test(
   "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/geojsSpec.js"
   PLUGIN large_image)
 
+add_web_client_test(
+  geojs-annotations
+  "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/geojsAnnotationSpec.js"
+  PLUGIN large_image)
+
 #add_puglint_test(
 #  large_image
 #  "${CMAKE_CURRENT_LIST_DIR}/web_client/templates")
