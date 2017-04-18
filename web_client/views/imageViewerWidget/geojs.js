@@ -206,15 +206,30 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     _onMouseOverFeature: function (evt) {
-        this.trigger('g:mouseOverAnnotation', evt.data.properties.element);
+        var properties = evt.data.properties || {};
+        this.trigger(
+            'g:mouseOverAnnotation',
+            properties.element,
+            properties.annotation
+        );
     },
 
     _onMouseOutFeature: function (evt) {
-        this.trigger('g:mouseOutAnnotation', evt.data.properties.element);
+        var properties = evt.data.properties || {};
+        this.trigger(
+            'g:mouseOutAnnotation',
+            properties.element,
+            properties.annotation
+        );
     },
 
     _onMouseClickFeature: function (evt) {
-        this.trigger('g:mouseClickAnnotation', evt.data.properties.element);
+        var properties = evt.data.properties || {};
+        this.trigger(
+            'g:mouseClickAnnotation',
+            properties.element,
+            properties.annotation
+        );
     }
 });
 

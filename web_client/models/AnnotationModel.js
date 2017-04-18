@@ -47,7 +47,7 @@ export default Model.extend({
     geojson() {
         const json = this.get('annotation') || {};
         const elements = json.elements || [];
-        return convert(elements);
+        return convert(elements, {annotation: this.id});
     },
 
     /**
