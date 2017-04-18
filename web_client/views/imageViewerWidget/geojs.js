@@ -207,29 +207,35 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
     _onMouseOverFeature: function (evt) {
         var properties = evt.data.properties || {};
-        this.trigger(
-            'g:mouseOverAnnotation',
-            properties.element,
-            properties.annotation
-        );
+        if (properties.element && properties.annotation) {
+            this.trigger(
+                'g:mouseOverAnnotation',
+                properties.element,
+                properties.annotation
+            );
+        }
     },
 
     _onMouseOutFeature: function (evt) {
         var properties = evt.data.properties || {};
-        this.trigger(
-            'g:mouseOutAnnotation',
-            properties.element,
-            properties.annotation
-        );
+        if (properties.element && properties.annotation) {
+            this.trigger(
+                'g:mouseOutAnnotation',
+                properties.element,
+                properties.annotation
+            );
+        }
     },
 
     _onMouseClickFeature: function (evt) {
         var properties = evt.data.properties || {};
-        this.trigger(
-            'g:mouseClickAnnotation',
-            properties.element,
-            properties.annotation
-        );
+        if (properties.element && properties.annotation) {
+            this.trigger(
+                'g:mouseClickAnnotation',
+                properties.element,
+                properties.annotation
+            );
+        }
     }
 });
 
