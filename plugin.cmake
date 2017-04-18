@@ -84,7 +84,7 @@ set_property(TEST server_large_image.sources APPEND PROPERTY ENVIRONMENT
 
 add_python_test(import PLUGIN large_image BIND_SERVER)
 
-add_python_test(large_image PLUGIN large_image
+add_python_test(large_image PLUGIN large_image BIND_SERVER
   # There is a bug in cmake that fails when external data files are added to
   # multiple tests, so comment out the external data directive.
   # EXTERNAL_DATA
@@ -110,6 +110,15 @@ add_python_test(examples PLUGIN large_image
   # "plugins/large_image/sample_image.ptif"
   )
 set_property(TEST server_large_image.examples APPEND PROPERTY ENVIRONMENT
+  "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
+
+add_python_test(annotations PLUGIN large_image BIND_SERVER
+  # There is a bug in cmake that fails when external data files are added to
+  # multiple tests, so comment out the external data directive.
+  # EXTERNAL_DATA
+  # "plugins/large_image/sample_Easy1.png"
+  )
+set_property(TEST server_large_image.annotations APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
 add_web_client_test(

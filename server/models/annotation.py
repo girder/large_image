@@ -21,9 +21,12 @@ import datetime
 import enum
 import jsonschema
 import six
+import re
+import time
 from six.moves import range
 
 from girder import events
+from girder import logger
 from girder.constants import AccessType
 from girder.models.model_base import Model, ValidationException
 
@@ -297,6 +300,24 @@ class AnnotationSchema:
         ]
     }
 
+    annotationElementSchema = {
+        '$schema': 'http://json-schema.org/schema#',
+        # Shape subtypes are mutually exclusive, so for  efficiency, don't use
+        # 'oneOf'
+        'anyOf': [
+            # If we include the baseShapeSchema, then shapes that are as-yet
+            #  invented can be included.
+            # baseShapeSchema,
+            arrowShapeSchema,
+            circleShapeSchema,
+            ellipseShapeSchema,
+            pointShapeSchema,
+            polylineShapeSchema,
+            rectangleShapeSchema,
+            rectangleGridShapeSchema,
+        ]
+    }
+
     annotationSchema = {
         '$schema': 'http://json-schema.org/schema#',
         'id': '/girder/plugins/large_image/models/annotation',
@@ -317,22 +338,7 @@ class AnnotationSchema:
             },
             'elements': {
                 'type': 'array',
-                'items': {
-                    # Shape subtypes are mutually exclusive, so for
-                    #  efficiency. don't use 'oneOf'
-                    'anyOf': [
-                        # If we include the baseShapeSchema, then shapes that
-                        # are as-yet invented can be included.
-                        # baseShapeSchema,
-                        arrowShapeSchema,
-                        circleShapeSchema,
-                        ellipseShapeSchema,
-                        pointShapeSchema,
-                        polylineShapeSchema,
-                        rectangleShapeSchema,
-                        rectangleGridShapeSchema,
-                    ]
-                },
+                'items': annotationElementSchema,
                 # We want to ensure unique element IDs, if they are set.  If
                 # they are not set, we assign them from Mongo.
                 'title': 'Image Markup',
@@ -353,6 +359,13 @@ class Annotation(Model):
     stored as independent models to (eventually) permit faster spatial
     searching.
     """
+
+    validatorAnnotation = jsonschema.Draft4Validator(
+        AnnotationSchema.annotationSchema)
+    validatorAnnotationElement = jsonschema.Draft4Validator(
+        AnnotationSchema.annotationElementSchema)
+    idRegex = re.compile('^[0-9a-f]{24}$')
+    numberInstance = six.integer_types + (float, )
 
     class Skill(enum.Enum):
         NOVICE = 'novice'
@@ -481,6 +494,7 @@ class Annotation(Model):
         :returns: the saved document.  If it is a new document, the _id has
                   been added.
         """
+        starttime = time.time()
         replace_one = self.collection.replace_one
         insert_one = self.collection.insert_one
         version = self.model(
@@ -526,6 +540,7 @@ class Annotation(Model):
         result = super(Annotation, self).save(annotation, *args, **kwargs)
         self.collection.replace_one = replace_one
         self.collection.insert_one = insert_one
+        logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
         return result
 
     def updateAnnotation(self, annotation, updateUser=None):
@@ -540,12 +555,81 @@ class Annotation(Model):
         annotation['updatedId'] = updateUser['_id']
         return self.save(annotation)
 
+    def _similarElementStructure(self, a, b, parentKey=None):  # noqa
+        """
+        Compare two elements to determine if they are similar enough that if
+        one validates, the other should, too.  This is called recursively to
+        validate dictionaries.  In general, types must be the same,
+        dictionaries must contain the same keys, arrays must be the same
+        length.  The only differences that are allowed are numerical values may
+        be different, ids may be different, and point arrays may contain
+        different numbers of elements.
+
+        :param a: first element
+        :param b: second element
+        :param parentKey: if set, the key of the dictionary that used for this
+            part of the comparison.
+        :returns: True if the elements are similar.  False if they are not.
+        """
+        # This function exceeds the recommended complexity, but since it is
+        # needs to be relatively fast, breaking it into smaller functions is
+        # probably undesireable.
+        if type(a) != type(b):
+            return False
+        if isinstance(a, dict):
+            if len(a) != len(b):
+                return False
+            for k in a:
+                if k not in b:
+                    return False
+                if k == 'id':
+                    if not isinstance(b[k], six.string_types) or not self.idRegex.match(b[k]):
+                        return False
+                elif parentKey != 'label' or k != 'value':
+                    if not self._similarElementStructure(a[k], b[k], k):
+                        return False
+        elif isinstance(a, list):
+            if len(a) != len(b):
+                if parentKey != 'points' or len(a) < 3 or len(b) < 3:
+                    return False
+                # If this is an array of points, let it pass
+                for idx in range(len(b)):
+                    if (len(b[idx]) != 3 or
+                            not isinstance(b[idx][0], self.numberInstance) or
+                            not isinstance(b[idx][1], self.numberInstance) or
+                            not isinstance(b[idx][2], self.numberInstance)):
+                        return False
+                return True
+            for idx in range(len(a)):
+                if not self._similarElementStructure(a[idx], b[idx], parentKey):
+                    return False
+        elif not isinstance(a, self.numberInstance):
+            return a == b
+        # Either a number or the dictionary or list comparisons passed
+        return True
+
     def validate(self, doc):
+        starttime = time.time()
         try:
-            jsonschema.validate(doc.get('annotation'),
-                                AnnotationSchema.annotationSchema)
+            # This block could just use the json validator:
+            #   jsonschema.validate(doc.get('annotation'),
+            #                       AnnotationSchema.annotationSchema)
+            # but this is very slow.  Instead, validate the main structure and
+            # then validate each element.  If sequential elements are similar
+            # in structure, skip validating them.
+            annot = doc.get('annotation')
+            elements = annot.get('elements', [])
+            annot['elements'] = []
+            self.validatorAnnotation.validate(annot)
+            lastValidatedElement = None
+            for element in elements:
+                if not self._similarElementStructure(element, lastValidatedElement):
+                    self.validatorAnnotationElement.validate(element)
+                    lastValidatedElement = element
+            annot['elements'] = elements
         except jsonschema.ValidationError as exp:
             raise ValidationException(exp)
+        logger.debug('Validated in %5.3fs' % (time.time() - starttime))
         elementIds = [entry['id'] for entry in
                       doc['annotation'].get('elements', []) if 'id' in entry]
         if len(set(elementIds)) != len(elementIds):
