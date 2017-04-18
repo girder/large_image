@@ -14,7 +14,7 @@ function convertOne(annotation) {
         type: 'Feature',
         id: annotation.id,
         geometry: geometry[type](annotation),
-        properties: style(annotation)
+        properties: _.extend({element: annotation}, style(annotation))
     };
 }
 
