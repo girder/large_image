@@ -30,6 +30,10 @@ except ImportError:
 from .cachefactory import CacheFactory, pickAvailableCache
 
 
+_tileCache = None
+_tileLock = None
+
+
 # If we have a resource module, ask to use as many file handles as the hard
 # limit allows, then calculate that how may tile sources we can have open based
 # on the actual limit.
@@ -176,6 +180,15 @@ class LruCacheMetaclass(type):
         return instance
 
 
-# Decide whether to use Memcached or cachetools
+def getTileCache():
+    """
+    Get the preferred tile cache and lock.
 
-tileCache, tileLock = CacheFactory().getCache()
+    :returns: tileCache and tileLock.
+    """
+    global _tileCache, _tileLock
+
+    if _tileCache is None:
+        # Decide whether to use Memcached or cachetools
+        _tileCache, _tileLock = CacheFactory().getCache()
+    return _tileCache, _tileLock

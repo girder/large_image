@@ -6,6 +6,8 @@ import numpy
 
 import large_image
 
+large_image.cache_util.setConfig('cache_backend', 'python')
+
 
 def average_color(imagePath, magnification=None):
     """
