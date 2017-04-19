@@ -423,16 +423,18 @@ class Annotation(Model):
         }
         return self.save(doc)
 
-    def load(self, id, region=None, *args, **kwargs):
+    def load(self, id, region=None, getElements=True, *args, **kwargs):
         """
         Load an annotation, adding all or a subset of the elements to it.
 
         :param region: if present, a dictionary restricting which annotations
             are returned.  See annotationelement.getElements.
+        :param getElements: if False, don't get elements associated with this
+            annotation.
         :returns: the matching annotation or none.
         """
         annotation = super(Annotation, self).load(id, *args, **kwargs)
-        if annotation is not None:
+        if annotation is not None and getElements:
             # It is possible that we are trying to read the elements of an
             # annotation as another thread is updating them.  In this case,
             # there is a chance, that between when we get the annotation and

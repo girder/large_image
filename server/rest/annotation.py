@@ -201,7 +201,8 @@ class AnnotationResource(Resource):
         .errorResponse('Write access was denied for the annotation.', 403)
     )
     @access.user
-    @loadmodel(model='annotation', plugin='large_image')
+    # Load with a limit of 1 so that we don't bother getting most annotations
+    @loadmodel(model='annotation', plugin='large_image', getElements=False)
     def deleteAnnotation(self, annotation, params):
         # Ensure that we have write access to the parent item
         item = self.model('item').load(annotation.get('itemId'), force=True)

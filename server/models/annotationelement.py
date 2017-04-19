@@ -43,12 +43,15 @@ class Annotationelement(Model):
     def initialize(self):
         self.name = 'annotationelement'
         self.ensureIndices([
-            'annotationId', '_version', ([
+            'annotationId',
+            '_version',
+            ([
                 ('annotationId', SortDir.ASCENDING),
                 ('bbox.low.0', SortDir.ASCENDING),
                 ('bbox.low.1', SortDir.ASCENDING),
                 ('bbox.size', SortDir.ASCENDING),
-            ], {}), ([
+            ], {}),
+            ([
                 ('annotationId', SortDir.ASCENDING),
                 ('bbox.size', SortDir.DESCENDING),
             ], {})
@@ -144,15 +147,30 @@ class Annotationelement(Model):
         if region != {}:
             annotation['_elementQuery'] = _elementQuery
 
+    def removeWithQuery(self, query):
+        """
+        Remove all documents matching a given query from the collection.
+        For safety reasons, you may not pass an empty query.
+
+        Note: this does NOT return a Mongo DeleteResult.
+
+        :param query: The search query for documents to delete,
+            see general MongoDB docs for "find()"
+        :type query: dict
+        """
+        assert query
+
+        bulk = self.collection.initialize_unordered_bulk_op()
+        bulk.find(query).remove()
+        bulk.execute()
+
     def removeElements(self, annotation):
         """
-        Remove all elements related to the specified annoation.
+        Remove all elements related to the specified annotation.
 
         :param annotation: the annotation to remove elements from.
         """
-        self.model('annotationelement', 'large_image').removeWithQuery({
-            'annotationId': annotation['_id']
-        })
+        self.removeWithQuery({'annotationId': annotation['_id']})
 
     def removeOldElements(self, annotation, oldversion=None):
         """
@@ -168,7 +186,7 @@ class Annotationelement(Model):
             query['_version'] = {'$lt': annotation['_version']}
         else:
             query['_version'] = {'$lte': oldversion}
-        self.model('annotationelement', 'large_image').removeWithQuery(query)
+        self.removeWithQuery(query)
 
     def _boundingBox(self, element):
         """

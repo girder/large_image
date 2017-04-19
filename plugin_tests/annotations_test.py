@@ -190,8 +190,19 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
         self.assertEqual(saved['annotation']['elements'][-1]['type'], 'point')
         self.assertEqual(loaded['annotation']['elements'][-1]['type'], 'rectangle')
 
+    def testRemove(self):
+        annotModel = self.model('annotation', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+        annot = annotModel.createAnnotation(item, self.admin, sampleAnnotation)
+        self.assertIsNotNone(annotModel.load(annot['_id']))
+        result = annotModel.remove(annot)
+        self.assertEqual(result.deleted_count, 1)
+        self.assertIsNone(annotModel.load(annot['_id']))
+
     #  Add tests for:
-    # remove
     # updateAnnotaton
     # validate
     # _onItemRemove
@@ -299,8 +310,31 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
         self.assertLess(elements[0]['width'] * elements[0]['height'],
                         elements[-1]['width'] * elements[-1]['height'])
 
+    def testRemoveWithQuery(self):
+        annotModel = self.model('annotation', 'large_image')
+        elemModel = self.model('annotationelement', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+        annot = annotModel.createAnnotation(item, self.admin, sampleAnnotation)
+        self.assertEqual(len(annotModel.load(annot['_id'])['annotation']['elements']), 1)
+        elemModel.removeWithQuery({'annotationId': annot['_id']})
+        self.assertEqual(len(annotModel.load(annot['_id'])['annotation']['elements']), 0)
+
+    def testRemoveElements(self):
+        annotModel = self.model('annotation', 'large_image')
+        elemModel = self.model('annotationelement', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+        annot = annotModel.createAnnotation(item, self.admin, sampleAnnotation)
+        self.assertEqual(len(annotModel.load(annot['_id'])['annotation']['elements']), 1)
+        elemModel.removeElements(annot)
+        self.assertEqual(len(annotModel.load(annot['_id'])['annotation']['elements']), 0)
+
     #  Add tests for:
-    # removeElements
     # removeOldElements
     # updateElements
 
@@ -377,9 +411,22 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         self.assertLess(elements[0]['width'] * elements[0]['height'],
                         elements[-1]['width'] * elements[-1]['height'])
 
+    def testDeleteAnnotation(self):
+        annotModel = self.model('annotation', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+        annot = annotModel.createAnnotation(item, self.admin, sampleAnnotation)
+        annotId = str(annot['_id'])
+        self.assertIsNotNone(annotModel.load(annot['_id']))
+        resp = self.request(path='/annotation/%s' % annotId, user=self.admin,
+                            method='DELETE')
+        self.assertStatusOk(resp)
+        self.assertIsNone(annotModel.load(annot['_id']))
+
     #  Add tests for:
     # find
     # getAnnotationSchema
     # createAnnotation
     # updateAnnotation
-    # deleteAnnotation
