@@ -114,7 +114,7 @@ class CacheFactory():
     def getCache(self, numItems=None):
         curConfig = getConfig()
         # memcached is the fallback default, if available.
-        cacheBackend = curConfig.get('cache_backend', 'memcached')
+        cacheBackend = curConfig.get('cache_backend', 'memcached' if config else 'python')
         if cacheBackend:
             cacheBackend = str(cacheBackend).lower()
         cache = None
