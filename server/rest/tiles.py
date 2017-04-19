@@ -18,6 +18,7 @@
 #############################################################################
 
 import cherrypy
+import re
 
 from girder.api import access, filter_logging
 from girder.api.v1.item import Item
@@ -49,8 +50,8 @@ def _adjustParams(params):
     except Exception:
         pass
     if params.get('encoding', 'JPEG') == 'JPEG':
-        if ('ipad' in userAgent or 'ipod' in userAgent or
-                'iphone' in userAgent):
+        if ('ipad' in userAgent or 'ipod' in userAgent or 'iphone' in userAgent or
+                re.match('((?!chrome|android).)*safari', userAgent, re.IGNORECASE)):
             params['encoding'] = 'JFIF'
 
 
