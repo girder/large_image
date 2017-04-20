@@ -62,6 +62,14 @@ class LargeImageCacheTest(base.TestCase):
         except ImportError:
             self.fail('Could not import pylibmc.')
 
+    def testConfigFunctions(self):
+        from girder.plugins.large_image.cache_util import getConfig, setConfig
+        self.assertEquals(getConfig('cache_backend'), None)
+        self.assertEquals(getConfig('cache_backend', 'python'), 'python')
+        self.assertTrue(isinstance(getConfig(), dict))
+        setConfig('cache_backend', 'python')
+        self.assertEquals(getConfig('cache_backend'), 'python')
+
     def _testDecorator(self, specific_cache, maxNum=100):
         from girder.plugins.large_image.cache_util import cached, strhash
         temp = Fib()

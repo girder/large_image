@@ -20,7 +20,7 @@
 import math
 from six import BytesIO
 
-from ..cache_util import tileCache, tileLock, strhash, methodcache
+from ..cache_util import getTileCache, strhash, methodcache
 
 try:
     import girder
@@ -318,9 +318,6 @@ class LazyTileDict(dict):
 class TileSource(object):
     name = None
 
-    cache = tileCache
-    cache_lock = tileLock
-
     def __init__(self, jpegQuality=95, jpegSubsampling=0,
                  encoding='JPEG', edge=False, *args, **kwargs):
         """
@@ -333,6 +330,8 @@ class TileSource(object):
         :param edge: False to leave edge tiles whole, True or 'crop' to crop
             edge tiles, otherwise, an #rrggbb color to fill edges.
         """
+        self.cache, self.cache_lock = getTileCache()
+
         self.tileWidth = None
         self.tileHeight = None
         self.levels = None

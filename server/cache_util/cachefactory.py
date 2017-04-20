@@ -41,6 +41,39 @@ except ImportError:
     psutil = None
 
 
+defaultConfig = {}
+
+
+def getConfig(key=None, default=None):
+    """
+    Get the config dictionary or a value from the cache config settings.
+
+    :param key: if None, return the config dictionary.  Otherwise, return the
+        value of the key if it is set or the default value if it is not.
+    :param default: a value to return if a key is requested and not set.
+    :returns: either the config dictionary or the value of a key.
+    """
+    if config:
+        curConfig = config.getConfig().get('large_image', defaultConfig)
+    else:
+        curConfig = defaultConfig
+    if key is None:
+        return curConfig
+    return curConfig.get(key, default)
+
+
+def setConfig(key, value):
+    """
+    Set a value in the cache config settings.
+
+    :param key: the key to set.
+    :param value: the value to store in the key.
+    """
+    curConfig = getConfig()
+    if curConfig.get(key) is not value:
+        curConfig[key] = value
+
+
 def pickAvailableCache(sizeEach, portion=8, maxItems=None):
     """
     Given an estimated size of an item, return how many of those items would
@@ -67,19 +100,10 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None):
 class CacheFactory():
     logged = False
 
-    def getConfig(self):
-        defaultConfig = {}
-        if config:
-            curConfig = config.getConfig().get('large_image', defaultConfig)
-        else:
-            curConfig = defaultConfig
-        return curConfig
-
     def getCacheSize(self, numItems):
         if numItems is None:
-            curConfig = self.getConfig()
             try:
-                portion = int(curConfig.get('cache_python_memory_portion', 8))
+                portion = int(getConfig('cache_python_memory_portion', 8))
                 if portion < 3:
                     portion = 3
             except ValueError:
@@ -88,9 +112,9 @@ class CacheFactory():
         return numItems
 
     def getCache(self, numItems=None):
-        curConfig = self.getConfig()
+        curConfig = getConfig()
         # memcached is the fallback default, if available.
-        cacheBackend = curConfig.get('cache_backend', 'memcached')
+        cacheBackend = curConfig.get('cache_backend', 'memcached' if config else 'python')
         if cacheBackend:
             cacheBackend = str(cacheBackend).lower()
         cache = None

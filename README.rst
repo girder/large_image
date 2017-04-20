@@ -1,5 +1,5 @@
-Large Image |build-status| |license-badge|
-==========================================
+Large Image |build-status| |codecov-io| |license-badge|
+=======================================================
 
 As a Girder_ Plugin
 -------------------
@@ -56,3 +56,7 @@ Examples
 .. |license-badge| image:: https://img.shields.io/badge/license-Apache%202-blue.svg
     :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
     :alt: License
+
+.. |codecov-io| image:: https://codecov.io/github/girder/large_image/coverage.svg?branch=master
+   :target: https://codecov.io/github/girder/large_image?branch=master
+   :alt: codecov.io
