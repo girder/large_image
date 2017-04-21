@@ -47,7 +47,7 @@ wrap(ItemListWidget, 'render', function (render) {
         var access = item.getAccessLevel();
         var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
 
-        $.each(extra.images || [], function (imageName, idx) {
+        $.each(extra.images || [], function (idx, imageName) {
             elem = $('<div class="large_image_thumbnail"/>');
             container.append(elem);
             elem.append($('<img class="waiting"/>').attr(
