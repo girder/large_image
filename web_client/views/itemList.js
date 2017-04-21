@@ -47,7 +47,7 @@ wrap(ItemListWidget, 'render', function (render) {
         var access = item.getAccessLevel();
         var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
 
-        for (let imageName of extra.images || []) {
+        $.each(extra.images || [], function (imageName, idx) {
             elem = $('<div class="large_image_thumbnail"/>');
             container.append(elem);
             elem.append($('<img class="waiting"/>').attr(
@@ -55,7 +55,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 '/tiles/images/' + imageName + '?width=160&height=100'
             ));
             elem.attr('extra-image', imageName);
-        }
+        });
 
         $('.large_image_thumbnail', container).each(function () {
             var elem = $(this);
