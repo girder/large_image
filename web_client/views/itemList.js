@@ -47,6 +47,11 @@ wrap(ItemListWidget, 'render', function (render) {
         var access = item.getAccessLevel();
         var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
 
+        /* Set the maximum number of columns we have so that we can let css
+         * perform alignment. */
+        var numColumns = Math.max((extra.images || []).length + 1, parent.attr('large_image_columns') || 0);
+        parent.attr('large_image_columns', numColumns);
+
         $.each(extra.images || [], function (idx, imageName) {
             elem = $('<div class="large_image_thumbnail"/>');
             container.append(elem);
