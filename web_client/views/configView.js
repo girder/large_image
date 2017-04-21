@@ -33,6 +33,12 @@ var ConfigView = View.extend({
             }, {
                 key: 'large_image.max_small_image_size',
                 value: +this.$('.g-large-image-max-small-image-size').val()
+            }, {
+                key: 'large_image.show_extra',
+                value: this.$('.g-large-image-show-extra').val()
+            }, {
+                key: 'large_image.show_extra_admin',
+                value: this.$('.g-large-image-show-extra-admin').val()
             }]);
         }
     },

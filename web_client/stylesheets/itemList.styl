@@ -6,3 +6,12 @@ div.large_image_thumbnail
     margin auto
     &.loaded
       display block
+div.large_image_container
+  display inline-block
+  min-width 160px
+[large_image_columns="2"]
+  div.large_image_container
+    min-width 320px
+[large_image_columns="3"]
+  div.large_image_container
+    min-width 480px

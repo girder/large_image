@@ -2,6 +2,7 @@ import _ from 'underscore';
 
 import { wrap } from 'girder/utilities/PluginUtils';
 import { apiRoot } from 'girder/rest';
+import { AccessType } from 'girder/constants';
 import ItemListWidget from 'girder/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
@@ -24,9 +25,9 @@ wrap(ItemListWidget, 'render', function (render) {
      *      thumbnails are located.
      */
     function _loadMoreImages(parent) {
-        var loading = $('.large_image_thumbnail img.loading', parent).length;
+        var loading = $('.large_image_thumbnail img.loading,.large_image_associated img.loading', parent).length;
         if (maxSimultaneous > loading) {
-            $('.large_image_thumbnail img.waiting', parent).slice(0, maxSimultaneous - loading).each(function () {
+            $('.large_image_thumbnail img.waiting,.large_image_associated img.waiting', parent).slice(0, maxSimultaneous - loading).each(function () {
                 var img = $(this);
                 img.removeClass('waiting').addClass('loading');
                 img.attr('src', img.attr('deferred-src'));
@@ -34,10 +35,71 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     }
 
+    function addLargeImageDetails(item, container, parent, extraInfo) {
+        var elem;
+        elem = $('<div class="large_image_thumbnail"/>');
+        container.append(elem);
+        /* We store the desired src attribute in deferred-src until we actually
+         * load the image. */
+        elem.append($('<img class="waiting"/>').attr(
+                'deferred-src', apiRoot + '/item/' +
+                item.id + '/tiles/thumbnail?width=160&height=100'));
+        var access = item.getAccessLevel();
+        var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
+
+        /* Set the maximum number of columns we have so that we can let css
+         * perform alignment. */
+        var numColumns = Math.max((extra.images || []).length + 1, parent.attr('large_image_columns') || 0);
+        parent.attr('large_image_columns', numColumns);
+
+        $.each(extra.images || [], function (idx, imageName) {
+            elem = $('<div class="large_image_thumbnail"/>');
+            container.append(elem);
+            elem.append($('<img class="waiting"/>').attr(
+                'deferred-src', apiRoot + '/item/' + item.id +
+                '/tiles/images/' + imageName + '?width=160&height=100'
+            ));
+            elem.attr('extra-image', imageName);
+        });
+
+        $('.large_image_thumbnail', container).each(function () {
+            var elem = $(this);
+            /* Handle images loading or failing. */
+            $('img', elem).one('error', function () {
+                $('img', elem).addClass('failed-to-load');
+                $('img', elem).removeClass('loading waiting');
+                elem.addClass('failed-to-load');
+                _loadMoreImages(parent);
+            });
+            $('img', elem).one('load', function () {
+                $('img', elem).addClass('loaded');
+                $('img', elem).removeClass('loading waiting');
+                _loadMoreImages(parent);
+            });
+        });
+        _loadMoreImages(parent);
+    }
+
     render.call(this);
     largeImageConfig.getSettings((settings) => {
+        // we will want to also show metadata, so these entries might look like
+        // {images: ['label', 'macro'],  meta: [{key: 'abc', label: 'ABC'}]}
+        var extraInfo = {};
+        if (settings['large_image.show_extra']) {
+            try {
+                extraInfo[AccessType.READ] = JSON.parse(settings['large_image.show_extra']);
+            } catch (err) {
+            }
+        }
+        if (settings['large_image.show_extra_admin']) {
+            try {
+                extraInfo[AccessType.ADMIN] = JSON.parse(settings['large_image.show_extra_admin']);
+            } catch (err) {
+            }
+        }
+
         if (settings['large_image.show_thumbnails'] === false ||
-                $('.large_image_thumbnail', this.$el).length > 0) {
+                $('.large_image_container', this.$el).length > 0) {
             return this;
         }
         var items = this.collection.toArray();
@@ -47,27 +109,15 @@ wrap(ItemListWidget, 'render', function (render) {
         });
         if (hasAnyLargeImage) {
             $.each(items, function (idx, item) {
-                var elem = $('<div class="large_image_thumbnail"/>');
+                var elem = $('<div class="large_image_container"/>');
                 if (item.get('largeImage')) {
-                    /* We store the desired src attribute in deferred-src until
-                     * we actually load the image. */
-                    elem.append($('<img class="waiting"/>').attr(
-                            'deferred-src', apiRoot + '/item/' +
-                            item.id + '/tiles/thumbnail?width=160&height=100'));
-                    $('img', elem).one('error', function () {
-                        $('img', elem).addClass('failed-to-load');
-                        $('img', elem).removeClass('loading waiting');
-                        _loadMoreImages(parent);
-                    });
-                    $('img', elem).one('load', function () {
-                        $('img', elem).addClass('loaded');
-                        $('img', elem).removeClass('loading waiting');
-                        _loadMoreImages(parent);
+                    item.getAccessLevel(function () {
+                        addLargeImageDetails(item, elem, parent, extraInfo);
                     });
                 }
                 $('a[g-item-cid="' + item.cid + '"]>i', parent).before(elem);
+                _loadMoreImages(parent);
             });
-            _loadMoreImages(parent);
         }
         return this;
     });

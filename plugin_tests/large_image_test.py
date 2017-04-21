@@ -91,6 +91,19 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             with six.assertRaisesRegex(self, ValidationException,
                                        'must be a boolean'):
                 self.model('setting').set(key, 'not valid')
+        testExtraVal = json.dumps({'images': ['label']})
+        for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
+                    constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN):
+            self.model('setting').set(key, '')
+            self.assertEqual(self.model('setting').get(key), '')
+            self.model('setting').set(key, testExtraVal)
+            self.assertEqual(self.model('setting').get(key), testExtraVal)
+            with six.assertRaisesRegex(self, ValidationException,
+                                       'must be a JSON'):
+                self.model('setting').set(key, 'not valid')
+            with six.assertRaisesRegex(self, ValidationException,
+                                       'must be a JSON'):
+                self.model('setting').set(key, '[1]')
         self.model('setting').set(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
         self.assertEqual(self.model('setting').get(
@@ -122,6 +135,10 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER], True)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS], True)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA], testExtraVal)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN], testExtraVal)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_AUTO_SET], True)
         self.assertEqual(settings[
