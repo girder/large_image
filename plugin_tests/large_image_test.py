@@ -101,6 +101,9 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             with six.assertRaisesRegex(self, ValidationException,
                                        'must be a JSON'):
                 self.model('setting').set(key, 'not valid')
+            with six.assertRaisesRegex(self, ValidationException,
+                                       'must be a JSON'):
+                self.model('setting').set(key, '[1]')
         self.model('setting').set(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
         self.assertEqual(self.model('setting').get(
