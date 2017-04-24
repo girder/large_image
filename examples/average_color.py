@@ -6,6 +6,9 @@ import numpy
 
 import large_image
 
+# Explicitly set the caching method before we request any data
+large_image.cache_util.setConfig('cache_backend', 'python')
+
 
 def average_color(imagePath, magnification=None):
     """
