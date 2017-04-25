@@ -29,12 +29,12 @@ from girder import logger
 
 class Annotationelement(Model):
     bboxKeys = {
-        'left': ('bbox.high.0', '$gte'),
-        'right': ('bbox.low.0', '$lt'),
-        'top': ('bbox.high.1', '$gte'),
-        'bottom': ('bbox.low.1', '$lt'),
-        'low': ('bbox.high.2', '$gte'),
-        'high': ('bbox.low.2', '$lt'),
+        'left': ('bbox.highx', '$gte'),
+        'right': ('bbox.lowx', '$lt'),
+        'top': ('bbox.highy', '$gte'),
+        'bottom': ('bbox.lowy', '$lt'),
+        'low': ('bbox.highz', '$gte'),
+        'high': ('bbox.lowz', '$lt'),
         'minimumSize': ('bbox.size', '$gte'),
         'size': ('bbox.size', None),
         'details': ('bbox.details', None),
@@ -47,21 +47,15 @@ class Annotationelement(Model):
             '_version',
             ([
                 ('annotationId', SortDir.ASCENDING),
-                ('bbox.low.0', SortDir.ASCENDING),
-                ('bbox.low.1', SortDir.ASCENDING),
-                ('bbox.size', SortDir.ASCENDING),
+                ('bbox.lowx', SortDir.DESCENDING),
+                ('bbox.highx', SortDir.ASCENDING),
+                ('bbox.size', SortDir.DESCENDING),
             ], {}),
             ([
                 ('annotationId', SortDir.ASCENDING),
                 ('bbox.size', SortDir.DESCENDING),
             ], {})
         ])
-
-        # self.model('file').ensureIndices([([
-        #     ('isLargeImageThumbnail', pymongo.ASCENDING),
-        #     ('attachedToType', pymongo.ASCENDING),
-        #     ('attachedToId', pymongo.ASCENDING),
-        # ], {})])
 
         self.exposeFields(AccessType.READ, (
             '_id', '_version', 'annotationId', 'created', 'element'))
@@ -121,6 +115,9 @@ class Annotationelement(Model):
         elementCursor = self.find(
             query=query, sort=[(sortkey, sortdir)], limit=limit, offset=offset,
             fields={'_id': True, 'element': True, 'bbox.details': True})
+        # Giving mongo an index hint is faster in my limited testing
+        if 'left' in region and 'right' in region:
+            elementCursor.hint('annotationId_1_bbox.lowx_-1_bbox.highx_1_bbox.size_-1')
         annotation['annotation']['elements'] = []
 
         _elementQuery = {
@@ -198,26 +195,24 @@ class Annotationelement(Model):
         The size of the bounding box's x-y diagonal is also stored.
 
         :param element: the element to compute the bounding box for.
-        :returns: the bounding box dictionary.  This contains 'low' and 'high,
-            a pair of x-y-z coordinates with the minimum and maximum values in
-            each dimension, 'details' with the complexity of the element, and
-            'size' with the x-y diagonal size of the bounding box.
+        :returns: the bounding box dictionary.  This contains 'lowx', 'lowy',
+            'lowz', 'highx', 'highy', and 'highz, which are the minimum and
+            maximum values in each dimension, 'details' with the complexity of
+            the element, and 'size' with the x-y diagonal size of the bounding
+            box.
         """
         bbox = {}
         if 'points' in element:
-            bbox['low'] = [
-                min([p[0] for p in element['points']]),
-                min([p[1] for p in element['points']]),
-                min([p[2] for p in element['points']]),
-            ]
-            bbox['high'] = [
-                max([p[0] for p in element['points']]),
-                max([p[1] for p in element['points']]),
-                max([p[2] for p in element['points']]),
-            ]
+            bbox['lowx'] = min([p[0] for p in element['points']])
+            bbox['lowy'] = min([p[1] for p in element['points']])
+            bbox['lowz'] = min([p[2] for p in element['points']])
+            bbox['highx'] = max([p[0] for p in element['points']])
+            bbox['highy'] = max([p[1] for p in element['points']])
+            bbox['highz'] = max([p[2] for p in element['points']])
             bbox['details'] = len(element['points'])
         else:
             center = element['center']
+            bbox['lowz'] = bbox['highz'] = center[2]
             if 'width' in element:
                 w = element['width'] * 0.5
                 h = element['height'] * 0.5
@@ -225,24 +220,29 @@ class Annotationelement(Model):
                     absin = abs(math.sin(element['rotation']))
                     abcos = abs(math.cos(element['rotation']))
                     w, h = max(abcos * w, absin * h), max(absin * w, abcos * h)
-                bbox['low'] = [center[0] - w, center[1] - h, center[2]]
-                bbox['high'] = [center[0] + w, center[1] + h, center[2]]
+                bbox['lowx'] = center[0] - w
+                bbox['lowy'] = center[1] - h
+                bbox['highx'] = center[0] + w
+                bbox['highy'] = center[1] + h
                 bbox['details'] = 4
             elif 'radius' in element:
                 rad = element['radius']
-                bbox['low'] = [center[0] - rad, center[1] - rad, center[2]]
-                bbox['high'] = [center[0] + rad, center[1] + rad, center[2]]
+                bbox['lowx'] = center[0] - rad
+                bbox['lowy'] = center[1] - rad
+                bbox['highx'] = center[0] + rad
+                bbox['highy'] = center[1] + rad
                 bbox['details'] = 4
             else:
                 # This is a fall back for points.  Although they have no
                 # dimension, make the bounding box have some extent.
-                rad = 0.5
-                bbox['low'] = [center[0] - rad, center[1] - rad, center[2]]
-                bbox['high'] = [center[0] + rad, center[1] + rad, center[2]]
+                bbox['lowx'] = center[0] - 0.5
+                bbox['lowy'] = center[1] - 0.5
+                bbox['highx'] = center[0] + 0.5
+                bbox['highy'] = center[1] + 0.5
                 bbox['details'] = 1
         bbox['size'] = (
-            (bbox['high'][1] - bbox['low'][1])**2 +
-            (bbox['high'][0] - bbox['low'][0])**2) ** 0.5
+            (bbox['highy'] - bbox['lowy'])**2 +
+            (bbox['highx'] - bbox['lowx'])**2) ** 0.5
         return bbox
 
     def updateElements(self, annotation):

@@ -120,7 +120,7 @@ export default Model.extend({
      *      fetch occurs.
      */
     setView(bounds, zoom, maxZoom, drawFunc) {
-        if (this._pageElements === false) {
+        if (this._pageElements === false || !this.get('_id')) {
             return;
         }
         var width = bounds.right - bounds.left,

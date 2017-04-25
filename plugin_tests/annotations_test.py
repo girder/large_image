@@ -227,26 +227,26 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
         elemModel = self.model('annotationelement', 'large_image')
         bbox = elemModel._boundingBox({'points': [[1, -2, 3], [-4, 5, -6], [7, -8, 9]]})
         self.assertEqual(bbox, {
-            'low': [-4, -8, -6],
-            'high': [7, 5, 9],
+            'lowx': -4, 'lowy': -8, 'lowz': -6,
+            'highx': 7, 'highy': 5, 'highz': 9,
             'details': 3,
             'size': ((7+4)**2 + (8+5)**2)**0.5})
         bbox = elemModel._boundingBox({'center': [1, -2, 3]})
         self.assertEqual(bbox, {
-            'low': [0.5, -2.5, 3],
-            'high': [1.5, -1.5, 3],
+            'lowx': 0.5, 'lowy': -2.5, 'lowz': 3,
+            'highx': 1.5, 'highy': -1.5, 'highz': 3,
             'details': 1,
             'size': 2**0.5})
         bbox = elemModel._boundingBox({'center': [1, -2, 3], 'radius': 4})
         self.assertEqual(bbox, {
-            'low': [-3, -6, 3],
-            'high': [5, 2, 3],
+            'lowx': -3, 'lowy': -6, 'lowz': 3,
+            'highx': 5, 'highy': 2, 'highz': 3,
             'details': 4,
             'size': 8 * 2**0.5})
         bbox = elemModel._boundingBox({'center': [1, -2, 3], 'width': 2, 'height': 4})
         self.assertEqual(bbox, {
-            'low': [0, -4, 3],
-            'high': [2, 0, 3],
+            'lowx': 0, 'lowy': -4, 'lowz': 3,
+            'highx': 2, 'highy': 0, 'highz': 3,
             'details': 4,
             'size': (2**2 + 4**2)**0.5})
         bbox = elemModel._boundingBox({
