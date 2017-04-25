@@ -111,13 +111,12 @@ class Annotationelement(Model):
             sortkey = region.get('sort') or '_id'
         sortdir = int(region['sortdir']) if region.get('sortdir') else SortDir.ASCENDING
         limit = int(region['limit']) if region.get('limit') else 0
+        maxDetails = int(region.get('maxDetails') or 0)
+        queryLimit = maxDetails if maxDetails and (not limit or maxDetails < limit) else limit
         offset = int(region['offset']) if region.get('offset') else 0
         elementCursor = self.find(
-            query=query, sort=[(sortkey, sortdir)], limit=limit, offset=offset,
+            query=query, sort=[(sortkey, sortdir)], limit=queryLimit, offset=offset,
             fields={'_id': True, 'element': True, 'bbox.details': True})
-        # Giving mongo an index hint is faster in my limited testing
-        if 'left' in region and 'right' in region:
-            elementCursor.hint('annotationId_1_bbox.lowx_-1_bbox.highx_1_bbox.size_-1')
         annotation['annotation']['elements'] = []
 
         _elementQuery = {
@@ -127,7 +126,6 @@ class Annotationelement(Model):
             'sort': [sortkey, sortdir],
         }
         details = 0
-        maxDetails = int(region.get('maxDetails') or 0)
         if maxDetails:
             _elementQuery['maxDetails'] = maxDetails
         if limit:

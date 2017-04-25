@@ -129,12 +129,13 @@ export default Model.extend({
             yoverlap = (height * (this._viewArea - 1)) / 2,
             minxoverlap = xoverlap / 2,
             minyoverlap = yoverlap / 2;
-        if (this._region.left !== undefined &&
+        var canskip = (this._region.left !== undefined &&
             bounds.left >= this._region.left + minxoverlap &&
             bounds.top >= this._region.top + minyoverlap &&
             bounds.right <= this._region.right - minxoverlap &&
             bounds.bottom <= this._region.bottom - minyoverlap &&
-            Math.abs(this._lastZoom - zoom) < 1) {
+            Math.abs(this._lastZoom - zoom) < 1);
+        if (canskip && !this._inFetch) {
             return;
         }
         this._region.left = bounds.left - xoverlap;
@@ -144,16 +145,18 @@ export default Model.extend({
         /* ask for items that will be at least 0.5 pixels, minus a bit */
         this._lastZoom = zoom;
         this._region.minSize = Math.pow(2, maxZoom - zoom - 1) - 1;
-        var nextFetch = _.bind(function () {
-            var fetch = this.fetch();
-            if (drawFunc) {
-                fetch.then(drawFunc);
+        if (!this._nextFetch) {
+            var nextFetch = _.bind(function () {
+                var fetch = this.fetch();
+                if (drawFunc) {
+                    fetch.then(drawFunc);
+                }
+            }, this);
+            if (this._inFetch) {
+                this._nextFetch = nextFetch;
+            } else {
+                nextFetch();
             }
-        }, this);
-        if (this._inFetch) {
-            this._nextFetch = nextFetch;
-        } else {
-            nextFetch();
         }
     },
 
