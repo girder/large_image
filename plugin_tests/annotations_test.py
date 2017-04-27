@@ -269,7 +269,7 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
         annot.pop('elements', None)
         annot.pop('_elementQuery', None)
         elemModel.getElements(annot)
-        self.assertNotIn('_elementQuery', annot)
+        self.assertIn('_elementQuery', annot)
         self.assertEqual(len(annot['annotation']['elements']),
                          len(largeSample['elements']))  # 7707
         annot.pop('elements', None)

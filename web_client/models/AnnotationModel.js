@@ -74,27 +74,26 @@ export default Model.extend({
             restOpts.error = null;
         }
         this._inFetch = true;
-        return restRequest(restOpts).done(_.bind(function (resp) {
-            this._inFetch = false;
+        return restRequest(restOpts).done((resp) => {
             this.set(resp);
             if (this._pageElements === undefined && resp._elementQuery) {
                 this._pageElements = resp._elementQuery.count > resp._elementQuery.returned;
-                console.log('Paging element annotation queries.  There are ' + resp._elementQuery.count + ' total elements.');
             }
             if (opts.extraPath) {
                 this.trigger('g:fetched.' + opts.extraPath);
             } else {
                 this.trigger('g:fetched');
             }
-        }, this)).error(_.bind(function (err) {
+        }).error((err) => {
             this.trigger('g:error', err);
-        }, this)).always(_.bind(function () {
+        }).always(() => {
+            this._inFetch = false;
             if (this._nextFetch) {
                 var nextFetch = this._nextFetch;
                 this._nextFetch = null;
                 nextFetch();
             }
-        }, this));
+        });
     },
 
     /**
@@ -111,15 +110,15 @@ export default Model.extend({
 
     /**
      * Set the view.  If we are paging elements, possibly refetch the elements.
+     * Callers should listen for the g:fetched event to know when new elements
+     * have been fetched.
      *
      * @param {object} bounds: the corners of the visible region.  This is an
      *      object with left, top, right, bottom in pixels.
      * @param {number} zoom: the zoom factor.
      * @param {number} maxZoom: the maximum zoom factor.
-     * @param {function} drawFunc: if present, call this function if a new
-     *      fetch occurs.
      */
-    setView(bounds, zoom, maxZoom, drawFunc) {
+    setView(bounds, zoom, maxZoom) {
         if (this._pageElements === false || !this.get('_id')) {
             return;
         }
@@ -146,12 +145,9 @@ export default Model.extend({
         this._lastZoom = zoom;
         this._region.minSize = Math.pow(2, maxZoom - zoom - 1) - 1;
         if (!this._nextFetch) {
-            var nextFetch = _.bind(function () {
-                var fetch = this.fetch();
-                if (drawFunc) {
-                    fetch.then(drawFunc);
-                }
-            }, this);
+            var nextFetch = () => {
+                this.fetch();
+            };
             if (this._inFetch) {
                 this._nextFetch = nextFetch;
             } else {

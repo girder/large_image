@@ -94,17 +94,20 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             });
             this._layers[annotation.id] = layer;
 
-            var setBounds = _.bind(function () {
+            var setBounds = () => {
                 var zoom = this.viewer.zoom(),
                     bounds = this.viewer.bounds(),
                     zoomRange = this.viewer.zoomRange();
                 if (annotation.setView) {
-                    annotation.setView(bounds, zoom, zoomRange.max, _.bind(function () { this.drawAnnotation(annotation); }, this));
+                    annotation.setView(bounds, zoom, zoomRange.max);
                 }
-            }, this);
+            };
             if (layer.geoOn) {
                 layer.geoOn(window.geo.event.pan, setBounds);
             }
+            annotation.off('g:fetched').on('g:fetched', () => {
+                this.drawAnnotation(annotation);
+            });
             setBounds();
         }
         window.geo.createFileReader('jsonReader', {layer})

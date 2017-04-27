@@ -105,10 +105,11 @@ class AnnotationResource(Resource):
         .param('high', 'The highest z value (exclusive) of the area to fetch.',
                required=False, dataType='float')
         .param('minimumSize', 'Only annotations larger than or equal to this '
-               'size in pixels will be returned.  Size is determine by the '
-               'minimum orthogonal extent of the annotation.  This probably '
-               'should be 1 at the maximum zoom, 2 at the next level down, 4 '
-               'at the next, etc.', required=False, dataType='float')
+               'size in pixels will be returned.  Size is determined by the '
+               'length of the diagonal of the bounding box of an element.  '
+               'This probably should be 1 at the maximum zoom, 2 at the next '
+               'level down, 4 at the next, etc.', required=False,
+               dataType='float')
         .param('maxDetails', 'Limit the number of annotations returned based '
                'on complexity.  The complexity of an annotation is how many '
                'points are used to defined it.  This is applied in addition '
@@ -125,7 +126,7 @@ class AnnotationResource(Resource):
     def getAnnotation(self, id, params):
         annotation = self.model('annotation', 'large_image').load(id, region=params)
         # Ensure that we have read access to the parent item.  We could fail
-        # faster when tehre are permissions issues if we didn't load the
+        # faster when there are permissions issues if we didn't load the
         # annotation elements before checking the item access permissions.
         item = self.model('item').load(annotation.get('itemId'), force=True)
         self.model('item').requireAccess(

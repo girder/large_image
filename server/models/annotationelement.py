@@ -91,6 +91,25 @@ class Annotationelement(Model):
         """
         Given an annotation, fetch the elements from the database and add them
         to it.
+            When a region is used to request specific element, the following
+        keys can be specified:
+            left, right, top, bottom, low, high: the spatial area where
+        elements are located, all in pixels.  If an element's bounding box is
+        at least partially within the requested area, that element is included.
+            minimumSize: the minimum size of an element to return.
+            sort, sortdir: standard sort options.  The sort key can include
+        size and details.
+            limit: limit the total number of elements by this value.  Defaults
+        to no limit.
+            offset: the offset within the query to start returning values.  If
+        maxDetails is used, to get subsequent sets of elements, the offset
+        needs to be increased by the actual number of elements returned from a
+        previous query, which will vary based on the details of the elements.
+            maxDetails: if specified, limit the total number of elements by the
+        sum of their details values.  This is applied in addition to limit.
+        The sum of the details values of the elements may exceed maxDetails
+        slightly (the sum of all but the last element will be less than
+        maxDetails, but the last element may exceed the value).
 
         :param annotation: the annotation to get elements for.  Modified.
         :param region: if present, a dictionary restricting which annotations
@@ -139,8 +158,7 @@ class Annotationelement(Model):
                 break
         _elementQuery['returned'] = len(annotation['annotation']['elements'])
         _elementQuery['details'] = details
-        if region != {}:
-            annotation['_elementQuery'] = _elementQuery
+        annotation['_elementQuery'] = _elementQuery
 
     def removeWithQuery(self, query):
         """
@@ -248,7 +266,7 @@ class Annotationelement(Model):
         Given an annotation, extract the elements from it and update the
         database of them.
 
-        :param annotation: the annotation to save elements for.  Modified.`
+        :param annotation: the annotation to save elements for.  Modified.
         """
         startTime = time.time()
         elements = annotation['annotation'].get('elements', [])
@@ -267,9 +285,9 @@ class Annotationelement(Model):
             } for element in elements[chunk:chunk + chunkSize]]
             prepTime = time.time() - chunkStartTime
             res = self.collection.insert_many(entries)
-            for pos in range(len(entries)):
-                if 'id' not in entries[pos]['element']:
-                    entries[pos]['element']['id'] = str(res.inserted_ids[pos])
+            for pos, entry in enumerate(entries):
+                if 'id' not in entry['element']:
+                    entry['element']['id'] = str(res.inserted_ids[pos])
             # If the whole insert is slow, log information about it.
             if time.time() - startTime > 10:
                 logger.info('insert %d elements in %4.2fs (prep time %4.2fs), done %d/%d' % (
