@@ -351,7 +351,6 @@ class TilesItemResource(Item):
         .param('left', 'The left column (0-based) of the region to process.  '
                'Negative values are offsets from the right edge.',
                required=False, dataType='float')
-
         .param('top', 'The top row (0-based) of the region to process.  '
                'Negative values are offsets from the bottom edge.',
                required=False, dataType='float')

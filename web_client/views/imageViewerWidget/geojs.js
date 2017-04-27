@@ -93,6 +93,22 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 features: ['point', 'line', 'polygon']
             });
             this._layers[annotation.id] = layer;
+
+            var setBounds = () => {
+                var zoom = this.viewer.zoom(),
+                    bounds = this.viewer.bounds(),
+                    zoomRange = this.viewer.zoomRange();
+                if (annotation.setView) {
+                    annotation.setView(bounds, zoom, zoomRange.max);
+                }
+            };
+            if (layer.geoOn) {
+                layer.geoOn(window.geo.event.pan, setBounds);
+            }
+            annotation.off('g:fetched', null, this).on('g:fetched', () => {
+                this.drawAnnotation(annotation);
+            }, this);
+            setBounds();
         }
         window.geo.createFileReader('jsonReader', {layer})
             .read(geojson, () => this.viewer.draw());
@@ -107,6 +123,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * @param {AnnotationModel} annotation
      */
     removeAnnotation: function (annotation) {
+        annotation.off('g:fetched', null, this);
         var layer = this._layers[annotation.id];
         if (layer) {
             delete this._layers[annotation.id];
