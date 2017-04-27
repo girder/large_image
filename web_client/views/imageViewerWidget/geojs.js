@@ -105,9 +105,9 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             if (layer.geoOn) {
                 layer.geoOn(window.geo.event.pan, setBounds);
             }
-            annotation.off('g:fetched').on('g:fetched', () => {
+            annotation.off('g:fetched', null, this).on('g:fetched', () => {
                 this.drawAnnotation(annotation);
-            });
+            }, this);
             setBounds();
         }
         window.geo.createFileReader('jsonReader', {layer})
@@ -123,6 +123,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * @param {AnnotationModel} annotation
      */
     removeAnnotation: function (annotation) {
+        annotation.off('g:fetched', null, this);
         var layer = this._layers[annotation.id];
         if (layer) {
             delete this._layers[annotation.id];
