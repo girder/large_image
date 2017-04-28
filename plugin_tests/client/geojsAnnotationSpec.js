@@ -160,5 +160,24 @@ describe('geojs-annotations', function () {
                 lineWidth: lineWidth
             });
         });
+
+        it('line', function () {
+            type = 'line';
+            coordinates = [
+                {x: 0, y: 0},
+                {x: 1, y: 0}
+            ];
+            expect(geojs.types.line(annotation)).toEqual({
+                type: 'polyline',
+                closed: false,
+                points: [
+                    [0, 0, 0],
+                    [1, 0, 0]
+                ],
+                fillColor: fillColor,
+                lineColor: lineColor,
+                lineWidth: lineWidth
+            });
+        });
     });
 });
