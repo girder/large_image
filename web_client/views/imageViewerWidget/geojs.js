@@ -7,6 +7,10 @@ import events from 'girder/events';
 import ImageViewerWidget from './base';
 import convertAnnotation from '../../annotations/geojs/convert';
 
+// Import hammerjs for geojs touch events
+import Hammer from 'hammerjs';
+window.hammerjs = Hammer;
+
 /**
  * Generate a new "random" element id (24 random 16 digits).
  */
