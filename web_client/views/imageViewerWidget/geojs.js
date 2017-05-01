@@ -81,8 +81,15 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * drawn in the referenced layer.
      *
      * @param {AnnotationModel} annotation
+     * @param {object} [options]
+     * @param {boolean} [options.fetch=true]
+     *   Enable fetching the annotation from the server, including paging
+     *   the results.  If false, it is assumed the elements already
+     *   exist on the annotation object.  This is useful for temporarily
+     *   showing annotations that are not propagated to the server.
      */
-    drawAnnotation: function (annotation) {
+    drawAnnotation: function (annotation, options) {
+        options = _.defaults(options || {}, {fetch: true});
         var geojson = annotation.geojson();
         var layer;
         if (_.has(this._layers, annotation.id)) {
@@ -102,13 +109,17 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     annotation.setView(bounds, zoom, zoomRange.max);
                 }
             };
-            if (layer.geoOn) {
-                layer.geoOn(window.geo.event.pan, setBounds);
+
+            if (options.fetch) {
+                if (layer.geoOn) {
+                    layer.geoOn(window.geo.event.pan, setBounds);
+                }
+
+                annotation.off('g:fetched', null, this).on('g:fetched', () => {
+                    this.drawAnnotation(annotation);
+                }, this);
+                setBounds();
             }
-            annotation.off('g:fetched', null, this).on('g:fetched', () => {
-                this.drawAnnotation(annotation);
-            }, this);
-            setBounds();
         }
         window.geo.createFileReader('jsonReader', {layer})
             .read(geojson, () => this.viewer.draw());
