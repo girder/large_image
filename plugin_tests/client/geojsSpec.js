@@ -124,10 +124,12 @@ $(function () {
                 });
                 annotation.fetch();
             });
-            girderTest.waitForLoad();
 
+            girderTest.waitForLoad();
             runs(function () {
+                sinon.spy(annotation, 'setView');
                 viewer.drawAnnotation(annotation);
+                viewer.viewer.zoom(5);
             });
 
             girderTest.waitForLoad();
@@ -137,6 +139,9 @@ $(function () {
                 expect(viewer._layers[annotationId].features().length >= 1).toBe(true);
 
                 layerSpy = sinon.spy(viewer._layers[annotationId], '_exit');
+
+                sinon.assert.called(annotation.setView);
+                viewer.viewer.zoom(1);
             });
         });
 
@@ -144,6 +149,34 @@ $(function () {
             viewer.removeAnnotation(annotation);
             expect(viewer._layers).toEqual({});
             sinon.assert.calledOnce(layerSpy);
+        });
+
+        it('drawAnnotation without fetching', function () {
+            var model;
+            runs(function () {
+                model = new large_image.models.AnnotationModel({
+                    _id: 'invalid',
+                    annotation: {
+                        name: 'no fetch',
+                        elements: [{
+                            type: 'rectangle',
+                            center: [100, 100, 0],
+                            rotation: 0,
+                            width: 10,
+                            height: 10
+                        }]
+                    }
+                });
+                sinon.spy(model, 'setView');
+                viewer.drawAnnotation(model, {fetch: false});
+                viewer.viewer.zoom(5);
+            });
+
+            girderTest.waitForLoad();
+            runs(function () {
+                sinon.assert.notCalled(model.setView);
+                viewer.viewer.zoom(1);
+            });
         });
 
         it('drawRegion', function () {
