@@ -11,6 +11,15 @@ girderTest.startApp();
 $(function () {
     var itemId, annotationId, interactor;
 
+    function closeTo(a, b, tol) {
+        var i;
+        tol = tol || 6;
+        expect(a.length).toBe(b.length);
+        for (i = 0; i < a.length; i += 1) {
+            expect(a[i]).toBeCloseTo(b[i], tol);
+        }
+    }
+
     describe('setup', function () {
         it('create the admin user', function () {
             girderTest.createUser(
@@ -140,36 +149,30 @@ $(function () {
         it('drawRegion', function () {
             var model = new Backbone.Model();
             runs(function () {
+                var pt = viewer.viewer.gcsToDisplay({x: 100, y: 100});
                 viewer.drawRegion(model);
                 interactor.simulateEvent('mousedown', {
                     button: 'left',
-                    map: {
-                        x: 10,
-                        y: 10
-                    }
+                    map: pt
                 });
             });
             runs(function () {
+                var pt = viewer.viewer.gcsToDisplay({x: 115, y: 115});
                 // Due to a bug in geojs, this raises an error, but it is required to simulate
                 // a drag event on the map.
                 try {
                     interactor.simulateEvent('mousemove', {
                         button: 'left',
-                        map: {
-                            x: 1500,
-                            y: 1500
-                        }
+                        map: pt
                     });
                 } catch (e) {
                 }
             });
             runs(function () {
+                var pt = viewer.viewer.gcsToDisplay({x: 115, y: 115});
                 interactor.simulateEvent('mouseup', {
                     button: 'left',
-                    map: {
-                        x: 3000,
-                        y: 3000
-                    }
+                    map: pt
                 });
             });
             waitsFor(function () {
@@ -177,7 +180,189 @@ $(function () {
             });
 
             runs(function () {
-                expect(model.get('value')).toEqual([0, 0, 15, 15]);
+                expect(model.get('value')).toEqual([100, 100, 15, 15]);
+            });
+        });
+
+        it('draw point', function () {
+            var created;
+
+            runs(function () {
+                viewer.startDrawMode('point').then(function (elements) {
+                    expect(elements.length).toBe(1);
+                    expect(elements[0].type).toBe('point');
+                    closeTo(elements[0].center, [100, 200, 0]);
+                    created = true;
+                });
+                var pt = viewer.viewer.gcsToDisplay({x: 100, y: 200});
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: pt
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: pt
+                });
+            });
+
+            waitsFor(function () {
+                return created;
+            });
+        });
+
+        it('draw polygon', function () {
+            var created;
+
+            runs(function () {
+                viewer.startDrawMode('polygon').then(function (elements) {
+                    expect(elements.length).toBe(1);
+                    expect(elements[0].type).toBe('polyline');
+                    expect(elements[0].closed).toBe(true);
+                    expect(elements[0].points.length).toBe(3);
+                    closeTo(elements[0].points[0], [100, 200, 0]);
+                    closeTo(elements[0].points[1], [200, 200, 0]);
+                    closeTo(elements[0].points[2], [200, 300, 0]);
+                    created = true;
+                });
+
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 200})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 200})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 200})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+            });
+
+            waitsFor(function () {
+                return created;
+            });
+        });
+
+        it('draw line', function () {
+            var created;
+
+            runs(function () {
+                viewer.startDrawMode('line').then(function (elements) {
+                    expect(elements.length).toBe(1);
+                    expect(elements[0].type).toBe('polyline');
+                    expect(elements[0].closed).toBe(false);
+                    expect(elements[0].points.length).toBe(3);
+                    closeTo(elements[0].points[0], [100, 200, 0]);
+                    closeTo(elements[0].points[1], [200, 200, 0]);
+                    closeTo(elements[0].points[2], [200, 300, 0]);
+                    created = true;
+                });
+
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 200})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 200})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 200})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 300})
+                });
+            });
+
+            waitsFor(function () {
+                return created;
             });
         });
 
