@@ -1,4 +1,4 @@
-/* globals beforeEach, afterEach, describe, it, expect, sinon */
+/* globals beforeEach, afterEach, describe, it, expect, sinon, girder */
 /* eslint-disable camelcase, no-new */
 
 girderTest.addScripts([
@@ -9,7 +9,7 @@ girderTest.addScripts([
 girderTest.startApp();
 
 $(function () {
-    var itemId;
+    var itemId, annotationId;
 
     describe('setup', function () {
         it('create the admin user', function () {
@@ -44,10 +44,37 @@ $(function () {
                 itemId = $('.large_image_thumbnail img').prop('src').match(/\/item\/([^/]*)/)[1];
             });
         });
+        it('upload test annotation', function () {
+            runs(function () {
+                girder.rest.restRequest({
+                    path: 'annotation?itemId=' + itemId,
+                    contentType: 'application/json',
+                    processData: false,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        name: 'test annotation',
+                        elements: [{
+                            type: 'rectangle',
+                            center: [10, 10, 0],
+                            width: 2,
+                            height: 2,
+                            rotation: 0
+                        }]
+                    })
+                }).then(function (resp) {
+                    annotationId = resp._id;
+                });
+            });
+
+            girderTest.waitForLoad();
+            runs(function () {
+                expect(annotationId).toBeDefined();
+            });
+        });
     });
 
     describe('Geojs viewer', function () {
-        var girder, large_image, $el, GeojsViewer, viewer, geo, annotation, layer;
+        var girder, large_image, $el, GeojsViewer, viewer, geo, annotation, layerSpy;
 
         beforeEach(function () {
             geo = window.geo;
@@ -83,37 +110,33 @@ $(function () {
         });
 
         it('drawAnnotation', function () {
-            // doesn't work without webgl so mock some methods
-            layer = {
-                _exit: sinon.stub()
-            };
-            sinon.stub(viewer.viewer, 'createLayer').returns(layer);
-            sinon.spy(viewer.viewer, 'deleteLayer');
-            sinon.stub(geo, 'createFileReader').returns({
-                read: sinon.stub().callsArg(1)
+            runs(function () {
+                geo.util.mockVGLRenderer();
+                annotation = new large_image.models.AnnotationModel({
+                    _id: annotationId
+                });
+                annotation.fetch();
+            });
+            girderTest.waitForLoad();
+
+            runs(function () {
+                viewer.drawAnnotation(annotation);
             });
 
-            annotation = new large_image.models.AnnotationModel({
-                _id: 'a',
-                annotation: {
-                    name: 'test annotation',
-                    elements: [{
-                        type: 'Rectangle',
-                        id: 'aaa',
-                        center: [10, 10, 0],
-                        width: 2,
-                        height: 2,
-                        rotation: 0
-                    }]
-                }
+            girderTest.waitForLoad();
+            runs(function () {
+                expect(viewer._layers[annotationId]).toBeDefined();
+                // geojs makes to features for a polygon
+                expect(viewer._layers[annotationId].features().length >= 1).toBe(true);
+
+                layerSpy = sinon.spy(viewer._layers[annotationId], '_exit');
             });
-            viewer.drawAnnotation(annotation);
-            expect(viewer._layers[annotation.id]).toBe(layer);
         });
 
         it('removeAnnotation', function () {
             viewer.removeAnnotation(annotation);
-            sinon.assert.calledOnce(viewer.viewer.deleteLayer);
+            expect(viewer._layers).toEqual({});
+            sinon.assert.calledOnce(layerSpy);
         });
 
         it('destroy the viewer', function () {
