@@ -1,4 +1,4 @@
-/* globals beforeEach, afterEach, describe, it, expect, sinon, girder */
+/* globals beforeEach, afterEach, describe, it, expect, sinon, girder, Backbone */
 /* eslint-disable camelcase, no-new */
 
 girderTest.addScripts([
@@ -9,7 +9,7 @@ girderTest.addScripts([
 girderTest.startApp();
 
 $(function () {
-    var itemId, annotationId;
+    var itemId, annotationId, interactor;
 
     describe('setup', function () {
         it('create the admin user', function () {
@@ -74,29 +74,27 @@ $(function () {
     });
 
     describe('Geojs viewer', function () {
-        var girder, large_image, $el, GeojsViewer, viewer, geo, annotation, layerSpy;
+        var girder, large_image, $el, GeojsViewer, viewer, annotation, layerSpy;
 
         beforeEach(function () {
-            geo = window.geo;
             girder = window.girder;
             large_image = girder.plugins.large_image;
             GeojsViewer = large_image.views.imageViewerWidget.geojs;
+        });
+
+        it('script is loaded', function () {
             $el = $('<div/>').appendTo('body')
                 .css({
                     width: '400px',
                     height: '300px'
                 });
-        });
-
-        afterEach(function () {
-            $el.remove();
-        });
-
-        it('script is loaded', function () {
             viewer = new GeojsViewer({
                 el: $el,
                 itemId: itemId,
                 parentView: null
+            });
+            viewer.once('g:beforeFirstRender', function () {
+                window.geo.util.mockVGLRenderer();
             });
             waitsFor(function () {
                 return $('.geojs-layer.active').length >= 1;
@@ -106,12 +104,12 @@ $(function () {
                     width: 400,
                     height: 300
                 });
+                interactor = viewer.viewer.interactor();
             });
         });
 
         it('drawAnnotation', function () {
             runs(function () {
-                geo.util.mockVGLRenderer();
                 annotation = new large_image.models.AnnotationModel({
                     _id: annotationId
                 });
@@ -137,6 +135,50 @@ $(function () {
             viewer.removeAnnotation(annotation);
             expect(viewer._layers).toEqual({});
             sinon.assert.calledOnce(layerSpy);
+        });
+
+        it('drawRegion', function () {
+            var model = new Backbone.Model();
+            runs(function () {
+                viewer.drawRegion(model);
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: {
+                        x: 10,
+                        y: 10
+                    }
+                });
+            });
+            runs(function () {
+                // Due to a bug in geojs, this raises an error, but it is required to simulate
+                // a drag event on the map.
+                try {
+                    interactor.simulateEvent('mousemove', {
+                        button: 'left',
+                        map: {
+                            x: 1500,
+                            y: 1500
+                        }
+                    });
+                } catch (e) {
+                }
+            });
+            runs(function () {
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: {
+                        x: 3000,
+                        y: 3000
+                    }
+                });
+            });
+            waitsFor(function () {
+                return !!model.get('value');
+            });
+
+            runs(function () {
+                expect(model.get('value')).toEqual([0, 0, 15, 15]);
+            });
         });
 
         it('destroy the viewer', function () {
