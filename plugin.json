@@ -8,7 +8,8 @@
     },
     "npm": {
         "dependencies": {
-            "geojs": "0.11.0",
+            "hammerjs": "^2.0.8",
+            "geojs": "0.12.0",
             "slideatlas-viewer": "4.0.3",
             "sinon": "^2.1.0",
             "tinycolor2": "^1.4.1"
