@@ -33,7 +33,10 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         $.getScript(
             staticRoot + '/built/plugins/large_image/extra/geojs.js',
-            () => this.render()
+            () => {
+                this.trigger('g:beforeFirstRender', this);
+                this.render();
+            }
         );
     },
 
@@ -53,7 +56,9 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
         this.viewer = geo.map(params.map);
         this.viewer.createLayer('osm', params.layer);
-        this.annotationLayer = this.viewer.createLayer('annotation');
+        this.annotationLayer = this.viewer.createLayer('annotation', {
+            annotations: ['point', 'line', 'rectangle', 'polygon']
+        });
 
         this.trigger('g:imageRendered', this);
         return this;
