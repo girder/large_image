@@ -99,11 +99,20 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         window.geo.createFileReader('jsonReader', {layer})
             .read(geojson, (features) => {
                 _.each(features || [], (feature) => {
+                    var events = geo.event.feature;
+
                     feature.selectionAPI(this._hoverEvents);
 
-                    feature.geoOn(geo.event.feature.mouseover, (evt) => this._onMouseOverFeature(evt));
-                    feature.geoOn(geo.event.feature.mouseout, (evt) => this._onMouseOutFeature(evt));
-                    feature.geoOn(geo.event.feature.mouseclick, (evt) => this._onMouseClickFeature(evt));
+                    feature.geoOn(
+                        [
+                            events.mouseclick,
+                            events.mouseoff,
+                            events.mouseon,
+                            events.mouseover,
+                            events.mouseout
+                        ],
+                        (evt) => this._onMouseFeature(evt)
+                    );
                 });
                 this.viewer.draw();
             });
@@ -205,36 +214,35 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         });
     },
 
-    _onMouseOverFeature: function (evt) {
-        var properties = evt.data.properties || {};
-        if (properties.element && properties.annotation) {
-            this.trigger(
-                'g:mouseOverAnnotation',
-                properties.element,
-                properties.annotation
-            );
-        }
+    _setEventTypes: function () {
+        var events = window.geo.event.feature;
+        this._eventTypes = {
+            [events.mouseclick]: 'g:mouseClickAnnotation',
+            [events.mouseoff]: 'g:mouseOffAnnotation',
+            [events.mouseon]: 'g:mouseOnAnnotation',
+            [events.mouseover]: 'g:mouseOverAnnotation',
+            [events.mouseout]: 'g:mouseOutAnnotation'
+        };
     },
 
-    _onMouseOutFeature: function (evt) {
+    _onMouseFeature: function (evt) {
         var properties = evt.data.properties || {};
-        if (properties.element && properties.annotation) {
-            this.trigger(
-                'g:mouseOutAnnotation',
-                properties.element,
-                properties.annotation
-            );
-        }
-    },
+        var eventType;
 
-    _onMouseClickFeature: function (evt) {
-        var properties = evt.data.properties || {};
+        if (!this._eventTypes) {
+            this._setEventTypes();
+        }
+
         if (properties.element && properties.annotation) {
-            this.trigger(
-                'g:mouseClickAnnotation',
-                properties.element,
-                properties.annotation
-            );
+            eventType = this._eventTypes[evt.event];
+
+            if (eventType) {
+                this.trigger(
+                    eventType,
+                    properties.element,
+                    properties.annotation
+                );
+            }
         }
     }
 });
