@@ -23,7 +23,7 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import describeRoute, Description
 from girder.api.rest import Resource, loadmodel, filtermodel, RestException
-from girder.constants import AccessType
+from girder.constants import AccessType, SortDir
 from girder.models.model_base import ValidationException
 from ..models.annotation import AnnotationSchema
 
@@ -92,14 +92,42 @@ class AnnotationResource(Resource):
     @describeRoute(
         Description('Get an annotation by id.')
         .param('id', 'The ID of the annotation.', paramType='path')
+        .param('left', 'The left column of the area to fetch.',
+               required=False, dataType='float')
+        .param('right', 'The right column (exclusive) of the area to fetch.',
+               required=False, dataType='float')
+        .param('top', 'The top row of the area to fetch.',
+               required=False, dataType='float')
+        .param('bottom', 'The bottom row (exclusive) of the area to fetch.',
+               required=False, dataType='float')
+        .param('low', 'The lowest z value of the area to fetch.',
+               required=False, dataType='float')
+        .param('high', 'The highest z value (exclusive) of the area to fetch.',
+               required=False, dataType='float')
+        .param('minimumSize', 'Only annotations larger than or equal to this '
+               'size in pixels will be returned.  Size is determined by the '
+               'length of the diagonal of the bounding box of an element.  '
+               'This probably should be 1 at the maximum zoom, 2 at the next '
+               'level down, 4 at the next, etc.', required=False,
+               dataType='float')
+        .param('maxDetails', 'Limit the number of annotations returned based '
+               'on complexity.  The complexity of an annotation is how many '
+               'points are used to defined it.  This is applied in addition '
+               'to the limit.  Using maxDetails helps ensure results will be '
+               'able to be rendered.', required=False, dataType='int')
+        .pagingParams(defaultSort='_id', defaultLimit=None,
+                      defaultSortDir=SortDir.ASCENDING)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the annotation.', 403)
+        .notes('Use "size" or "details" as possible sort keys.')
     )
     @access.public
-    @loadmodel(model='annotation', plugin='large_image')
     @filtermodel(model='annotation', plugin='large_image')
-    def getAnnotation(self, annotation, params):
-        # Ensure that we have read access to the parent item
+    def getAnnotation(self, id, params):
+        annotation = self.model('annotation', 'large_image').load(id, region=params)
+        # Ensure that we have read access to the parent item.  We could fail
+        # faster when there are permissions issues if we didn't load the
+        # annotation elements before checking the item access permissions.
         item = self.model('item').load(annotation.get('itemId'), force=True)
         self.model('item').requireAccess(
             item, user=self.getCurrentUser(), level=AccessType.READ)
@@ -174,7 +202,8 @@ class AnnotationResource(Resource):
         .errorResponse('Write access was denied for the annotation.', 403)
     )
     @access.user
-    @loadmodel(model='annotation', plugin='large_image')
+    # Load with a limit of 1 so that we don't bother getting most annotations
+    @loadmodel(model='annotation', plugin='large_image', getElements=False)
     def deleteAnnotation(self, annotation, params):
         # Ensure that we have write access to the parent item
         item = self.model('item').load(annotation.get('itemId'), force=True)

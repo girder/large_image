@@ -7,6 +7,10 @@ import events from 'girder/events';
 import ImageViewerWidget from './base';
 import convertAnnotation from '../../annotations/geojs/convert';
 
+// Import hammerjs for geojs touch events
+import Hammer from 'hammerjs';
+window.hammerjs = Hammer;
+
 /**
  * Generate a new "random" element id (24 random 16 digits).
  */
@@ -30,7 +34,10 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         $.getScript(
             staticRoot + '/built/plugins/large_image/extra/geojs.js',
-            () => this.render()
+            () => {
+                this.trigger('g:beforeFirstRender', this);
+                this.render();
+            }
         );
     },
 
@@ -50,7 +57,9 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
         this.viewer = geo.map(params.map);
         this.viewer.createLayer('osm', params.layer);
-        this.annotationLayer = this.viewer.createLayer('annotation');
+        this.annotationLayer = this.viewer.createLayer('annotation', {
+            annotations: ['point', 'line', 'rectangle', 'polygon']
+        });
 
         this.trigger('g:imageRendered', this);
         return this;
@@ -82,9 +91,16 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * drawn in the referenced layer.
      *
      * @param {AnnotationModel} annotation
+     * @param {object} [options]
+     * @param {boolean} [options.fetch=true]
+     *   Enable fetching the annotation from the server, including paging
+     *   the results.  If false, it is assumed the elements already
+     *   exist on the annotation object.  This is useful for temporarily
+     *   showing annotations that are not propagated to the server.
      */
-    drawAnnotation: function (annotation) {
+    drawAnnotation: function (annotation, options) {
         var geo = window.geo;
+        options = _.defaults(options || {}, {fetch: true});
         var geojson = annotation.geojson();
         var layer;
         if (_.has(this._layers, annotation.id)) {
@@ -95,6 +111,26 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 features: ['point', 'line', 'polygon']
             });
             this._layers[annotation.id] = layer;
+
+            var setBounds = () => {
+                var zoom = this.viewer.zoom(),
+                    bounds = this.viewer.bounds(),
+                    zoomRange = this.viewer.zoomRange();
+                if (annotation.setView) {
+                    annotation.setView(bounds, zoom, zoomRange.max);
+                }
+            };
+
+            if (options.fetch) {
+                if (layer.geoOn) {
+                    layer.geoOn(window.geo.event.pan, setBounds);
+                }
+
+                annotation.off('g:fetched', null, this).on('g:fetched', () => {
+                    this.drawAnnotation(annotation);
+                }, this);
+                setBounds();
+            }
         }
         window.geo.createFileReader('jsonReader', {layer})
             .read(geojson, (features) => {
@@ -127,6 +163,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * @param {AnnotationModel} annotation
      */
     removeAnnotation: function (annotation) {
+        annotation.off('g:fetched', null, this);
         var layer = this._layers[annotation.id];
         if (layer) {
             delete this._layers[annotation.id];
