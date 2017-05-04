@@ -127,6 +127,12 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 }
 
                 annotation.off('g:fetched', null, this).on('g:fetched', () => {
+                    // Trigger anevent indicating to the listener that
+                    // mouseover states should reset.
+                    this.trigger(
+                        'g:mouseResetAnnotation',
+                        annotation
+                    );
                     this.drawAnnotation(annotation);
                 }, this);
                 setBounds();
