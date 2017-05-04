@@ -158,7 +158,7 @@ before_install:
   - girder_worker_path=$build_path/girder_worker
   - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
   - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
-  - python $girder_worker_path/scripts/install_requirements.py --mode=dev
+  - python $girder_worker_path/scripts/install_requirements.py # --mode=dev
   - pip install --no-cache-dir -U -e $girder_worker_path'[girder_io]'
 
   - export MONGO_VERSION=3.0.7
@@ -181,7 +181,7 @@ before_install:
 
 install:
   - cd $girder_path
-  - pip install --no-cache-dir -U -r requirements.txt -r requirements-dev.txt -e .
+  - pip install --no-cache-dir -U -r requirements-dev.txt -e .
   - pip install -r $main_path/requirements.txt -e .
   # Make sure we have a prefered version of celery for Girder Worker
   - pip install -U 'celery>=4'
@@ -205,7 +205,8 @@ script:
   - JASMINE_TIMEOUT=15000 ctest -VV
 
 after_failure:
-  # On failures, show girder's error long and the worker output
+  # On failures, show the worker output and other information
+  - pip freeze
   - cat /tmp/worker.out
 
 after_success:
