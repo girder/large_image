@@ -19,6 +19,7 @@
 
 import os
 import six
+import threading
 
 from girder import config
 from tests import base
@@ -116,3 +117,53 @@ class LargeImageCacheTest(base.TestCase):
         self._testDecorator(cache, 3)
         with six.assertRaisesRegex(self, KeyError, '(2,)'):
             cache['(2,)']
+
+    def testLRUThreadSafety(self):
+        # The cachetools LRU cache is not thread safe, and if two threads ask
+        # to evict an old value concurrently, the cache will raise a KeyError
+        # and then be in a broken state.  Test that we fall-back garcefully in
+        # this case.  Better, is to use a threading lock when setting the
+        # cache, which should never have the problem.
+        import cachetools  # noqa
+        from girder.plugins.large_image.cache_util import methodcache
+
+        self.cache = cachetools.LRUCache(10)
+        self.cache_lock = None
+        loopSize = 10000
+        sumDelta = 2
+
+        def keyFunc(x):
+            return x
+
+        @methodcache(keyFunc)
+        def add(self, x):
+            return x + sumDelta
+
+        def loop():
+            sum = 0
+            for x in range(loopSize):
+                sum += add(self, x)
+            sums.append(sum)
+
+        # Without a thread lock
+        sums = []
+        threadList = [threading.Thread(target=loop) for t in range(5)]
+        for t in threadList:
+            t.start()
+        for t in threadList:
+            t.join()
+        for sum in sums:
+            self.assertEqual(sum, loopSize * (loopSize - 1) / 2 + loopSize * sumDelta)
+
+        # With a thread lock
+        self.cache = cachetools.LRUCache(10)
+        self.cache_lock = threading.Lock()
+
+        sums = []
+        threadList = [threading.Thread(target=loop) for t in range(5)]
+        for t in threadList:
+            t.start()
+        for t in threadList:
+            t.join()
+        for sum in sums:
+            self.assertEqual(sum, loopSize * (loopSize - 1) / 2 + loopSize * sumDelta)

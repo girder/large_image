@@ -142,7 +142,7 @@ class CacheFactory():
         if cache is None:  # fallback backend
             cacheBackend = 'python'
             cache = LRUCache(self.getCacheSize(numItems))
-            cacheLock = None
+            cacheLock = threading.Lock()
         if numItems is None and not CacheFactory.logged:
             logprint.info('Using %s for large_image caching' % cacheBackend)
             CacheFactory.logged = True
