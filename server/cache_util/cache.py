@@ -109,6 +109,10 @@ def methodcache(key=None):
                     self.cache[k] = v
             except ValueError:
                 pass  # value too large
+            except KeyError:
+                # the key was refused for some reason
+                logger.debug('Had a cache KeyError while trying to store a '
+                             'value to key %r' % k)
             return v
         return wrapper
     return decorator
