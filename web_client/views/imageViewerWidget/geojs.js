@@ -127,7 +127,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 }
 
                 annotation.off('g:fetched', null, this).on('g:fetched', () => {
-                    // Trigger anevent indicating to the listener that
+                    // Trigger an event indicating to the listener that
                     // mouseover states should reset.
                     this.trigger(
                         'g:mouseResetAnnotation',
@@ -170,6 +170,12 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      */
     removeAnnotation: function (annotation) {
         annotation.off('g:fetched', null, this);
+        // Trigger an event indicating to the listener that
+        // mouseover states should reset.
+        this.trigger(
+            'g:mouseResetAnnotation',
+            annotation
+        );
         var layer = this._layers[annotation.id];
         if (layer) {
             delete this._layers[annotation.id];
