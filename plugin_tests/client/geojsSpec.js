@@ -230,6 +230,27 @@ $(function () {
             });
         });
 
+        it('mouse reset events', function () {
+            var mousereset, context = {};
+            runs(function () {
+                function onMouseReset(annotation) {
+                    expect(annotation.id).toBe(annotationId);
+                    mousereset = true;
+                }
+                viewer.on('g:mouseResetAnnotation', onMouseReset, context);
+                annotation.trigger('g:fetched');
+            });
+
+            waitsFor(function () {
+                return mousereset;
+            }, 'event to be fired');
+
+            runs(function () {
+                viewer.off(null, null, context);
+                viewer.viewer.zoom(1);
+            });
+        });
+
         it('removeAnnotation', function () {
             viewer.removeAnnotation(annotation);
             expect(viewer._layers).toEqual({});
