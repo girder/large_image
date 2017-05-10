@@ -64,9 +64,9 @@ $(function () {
                         name: 'test annotation',
                         elements: [{
                             type: 'rectangle',
-                            center: [10, 10, 0],
-                            width: 2,
-                            height: 2,
+                            center: [200, 200, 0],
+                            width: 400,
+                            height: 400,
                             rotation: 0
                         }]
                     })
@@ -100,7 +100,8 @@ $(function () {
             viewer = new GeojsViewer({
                 el: $el,
                 itemId: itemId,
-                parentView: null
+                parentView: null,
+                hoverEvents: true
             });
             viewer.once('g:beforeFirstRender', function () {
                 window.geo.util.mockVGLRenderer();
@@ -135,12 +136,117 @@ $(function () {
             girderTest.waitForLoad();
             runs(function () {
                 expect(viewer._layers[annotationId]).toBeDefined();
-                // geojs makes to features for a polygon
+                // geojs makes two features for a polygon
                 expect(viewer._layers[annotationId].features().length >= 1).toBe(true);
 
                 layerSpy = sinon.spy(viewer._layers[annotationId], '_exit');
 
                 sinon.assert.called(annotation.setView);
+                viewer.viewer.zoom(1);
+            });
+        });
+
+        it('mouse over events', function () {
+            var mouseon, mouseover, context = {};
+            runs(function () {
+                function onMouseOn(element, annotation) {
+                    expect(annotation).toBe(annotationId);
+                    mouseon = true;
+                }
+                function onMouseOver(element, annotation) {
+                    expect(annotation).toBe(annotationId);
+                    mouseover = true;
+                }
+                viewer.on('g:mouseOnAnnotation', onMouseOn, context);
+                viewer.on('g:mouseOverAnnotation', onMouseOver, context);
+                interactor.simulateEvent('mousemove', {
+                    map: viewer.viewer.gcsToDisplay({x: 1000, y: 1000})
+                });
+                interactor.simulateEvent('mousemove', {
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 100})
+                });
+            });
+
+            waitsFor(function () {
+                return mouseon && mouseover;
+            }, 'events to be fired');
+
+            runs(function () {
+                viewer.off(null, null, context);
+            });
+        });
+
+        it('mouse out events', function () {
+            var mouseout, mouseoff, context = {};
+            runs(function () {
+                function onMouseOut(element, annotation) {
+                    expect(annotation).toBe(annotationId);
+                    mouseout = true;
+                }
+                function onMouseOff(element, annotation) {
+                    expect(annotation).toBe(annotationId);
+                    mouseoff = true;
+                }
+                viewer.on('g:mouseOutAnnotation', onMouseOut, context);
+                viewer.on('g:mouseOffAnnotation', onMouseOff, context);
+                interactor.simulateEvent('mousemove', {
+                    map: viewer.viewer.gcsToDisplay({x: 1000, y: 1000})
+                });
+            });
+
+            waitsFor(function () {
+                return mouseoff && mouseout;
+            }, 'events to be fired');
+
+            runs(function () {
+                viewer.off(null, null, context);
+            });
+        });
+
+        it('mouse click events', function () {
+            var mouseclick, context = {};
+            runs(function () {
+                function onMouseClick(element, annotation) {
+                    expect(annotation).toBe(annotationId);
+                    mouseclick = true;
+                }
+                viewer.on('g:mouseClickAnnotation', onMouseClick, context);
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 100})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 100})
+                });
+            });
+
+            waitsFor(function () {
+                return mouseclick;
+            }, 'event to be fired');
+
+            runs(function () {
+                viewer.off(null, null, context);
+            });
+        });
+
+        it('mouse reset events', function () {
+            var mousereset, context = {};
+            runs(function () {
+                function onMouseReset(annotation) {
+                    expect(annotation.id).toBe(annotationId);
+                    mousereset = true;
+                }
+                viewer.on('g:mouseResetAnnotation', onMouseReset, context);
+                annotation.trigger('g:fetched');
+            });
+
+            waitsFor(function () {
+                return mousereset;
+            }, 'event to be fired');
+
+            runs(function () {
+                viewer.off(null, null, context);
                 viewer.viewer.zoom(1);
             });
         });

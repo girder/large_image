@@ -30,6 +30,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this._layers = {};
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
+        this._hoverEvents = settings.hoverEvents;
 
         $.getScript(
             staticRoot + '/built/plugins/large_image/extra/geojs.js',
@@ -98,6 +99,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      *   showing annotations that are not propagated to the server.
      */
     drawAnnotation: function (annotation, options) {
+        var geo = window.geo;
         options = _.defaults(options || {}, {fetch: true});
         var geojson = annotation.geojson();
         var layer;
@@ -125,13 +127,37 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 }
 
                 annotation.off('g:fetched', null, this).on('g:fetched', () => {
+                    // Trigger an event indicating to the listener that
+                    // mouseover states should reset.
+                    this.trigger(
+                        'g:mouseResetAnnotation',
+                        annotation
+                    );
                     this.drawAnnotation(annotation);
                 }, this);
                 setBounds();
             }
         }
         window.geo.createFileReader('jsonReader', {layer})
-            .read(geojson, () => this.viewer.draw());
+            .read(geojson, (features) => {
+                _.each(features || [], (feature) => {
+                    var events = geo.event.feature;
+
+                    feature.selectionAPI(this._hoverEvents);
+
+                    feature.geoOn(
+                        [
+                            events.mouseclick,
+                            events.mouseoff,
+                            events.mouseon,
+                            events.mouseover,
+                            events.mouseout
+                        ],
+                        (evt) => this._onMouseFeature(evt)
+                    );
+                });
+                this.viewer.draw();
+            });
     },
 
     /**
@@ -144,6 +170,12 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      */
     removeAnnotation: function (annotation) {
         annotation.off('g:fetched', null, this);
+        // Trigger an event indicating to the listener that
+        // mouseover states should reset.
+        this.trigger(
+            'g:mouseResetAnnotation',
+            annotation
+        );
         var layer = this._layers[annotation.id];
         if (layer) {
             delete this._layers[annotation.id];
@@ -229,6 +261,38 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             );
             layer.mode(type);
         });
+    },
+
+    _setEventTypes: function () {
+        var events = window.geo.event.feature;
+        this._eventTypes = {
+            [events.mouseclick]: 'g:mouseClickAnnotation',
+            [events.mouseoff]: 'g:mouseOffAnnotation',
+            [events.mouseon]: 'g:mouseOnAnnotation',
+            [events.mouseover]: 'g:mouseOverAnnotation',
+            [events.mouseout]: 'g:mouseOutAnnotation'
+        };
+    },
+
+    _onMouseFeature: function (evt) {
+        var properties = evt.data.properties || {};
+        var eventType;
+
+        if (!this._eventTypes) {
+            this._setEventTypes();
+        }
+
+        if (properties.element && properties.annotation) {
+            eventType = this._eventTypes[evt.event];
+
+            if (eventType) {
+                this.trigger(
+                    eventType,
+                    properties.element,
+                    properties.annotation
+                );
+            }
+        }
     }
 });
 
