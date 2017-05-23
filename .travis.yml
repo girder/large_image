@@ -4,8 +4,8 @@ python:
   - "2.7"
 
 env:
-  - LIBTIFF_VERSION=4.0.3 OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
-  - LIBTIFF_VERSION=4.0.6 OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
+  - LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1" 
+  - LIBTIFF_VERSION=4.0.6 LIBTIFF_DIR=     OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
 
 cache:
   directories:
@@ -116,7 +116,7 @@ before_install:
 
   # Build libtiff so it will use our openjpeg
   - cd $lib_build_path
-  - wget -O "tiff-$LIBTIFF_VERSION.tar.gz" "http://download.osgeo.org/libtiff/tiff-$LIBTIFF_VERSION.tar.gz"
+  - wget -O "tiff-$LIBTIFF_VERSION.tar.gz" "http://download.osgeo.org/libtiff$LIBTIFF_DIR/tiff-$LIBTIFF_VERSION.tar.gz"
   - tar -zxpf "tiff-$LIBTIFF_VERSION.tar.gz"
   - cd "tiff-$LIBTIFF_VERSION"
   - ./configure
