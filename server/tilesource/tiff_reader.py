@@ -268,6 +268,11 @@ class TiledTiffDirectory(object):
         tableSize = ctypes.c_uint32()
         tableBuffer = ctypes.c_voidp()
 
+        # Some versions of pylibtiff set an explicit list of argtypes for
+        # TIFFGetField.  When this is done, we need to adjust them to match
+        # what is needed for our specific call.  Other versions do not set
+        # argtypes, allowing any types to be passed without validationg, in
+        # which case we do not need to alter the list.
         if libtiff_ctypes.libtiff.TIFFGetField.argtypes:
             libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
                 libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
@@ -374,6 +379,11 @@ class TiledTiffDirectory(object):
         rawTileSizesType = self._getTileByteCountsType()
         rawTileSizes = ctypes.POINTER(rawTileSizesType)()
 
+        # Some versions of pylibtiff set an explicit list of argtypes for
+        # TIFFGetField.  When this is done, we need to adjust them to match
+        # what is needed for our specific call.  Other versions do not set
+        # argtypes, allowing any types to be passed without validationg, in
+        # which case we do not need to alter the list.
         if libtiff_ctypes.libtiff.TIFFGetField.argtypes:
             libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
                 libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
