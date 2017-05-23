@@ -176,7 +176,7 @@ before_install:
 
   - pip install --no-cache-dir numpy==1.10.2  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
-  - if [ ${LIBTIFF_VERSION} == "4.0.6" ]; then pip install "git+https://github.com/pearu/pylibtiff@848785a6a9a4e2c6eb6f56ca9f7e8f6b32e523d5" --force-reinstall --ignore-installed --upgrade; fi
+  - if [ ${LIBTIFF_VERSION} == "4.0.6" ]; then pip install "git+https://github.com/pearu/pylibtiff@33735eb7197eb33ed1a50bbc4bc5a47ce4305e92" --force-reinstall --ignore-installed --upgrade; fi
 
 
 install:
@@ -192,7 +192,7 @@ install:
   # - npm install
   # but since there are often connection failures, use the retry package.
   - npm-install-retry
-  - BABEL_ENV=cover NYC_CWD=$main_path girder-install web --plugins=large_image,worker,jobs --dev
+  - BABEL_ENV=cover NYC_CWD=$main_path girder-install web --plugins=jobs,worker,large_image --dev
 
 script:
   - cd $girder_worker_path

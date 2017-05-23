@@ -19,10 +19,12 @@
 
 import json
 import os
+import shutil
 import six
 import struct
 
 from girder import config
+from girder.utility import assetstore_utilities
 from tests import base
 
 from . import common
@@ -317,8 +319,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(tileMetadata['mm_y'], None)
         self._testTilesZXY(itemId, tileMetadata)
 
-    def testTilesWithUnicodeName(self):
-        # Unicode file names shouldn't cause problems.
+    def testTilesFromUnicodeName(self):
+        # Unicode file names shouldn't cause problems when generating tiles.
         file = self._uploadFile(os.path.join(
             os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
         # Our normal testing method doesn't pass through the unicode name
@@ -326,9 +328,13 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         file = self.model('file').load(file['_id'], force=True)
         file['name'] = u'\u0441\u043b\u0430\u0439\u0434'
         file = self.model('file').save(file)
+        fileId = str(file['_id'])
 
         itemId = str(file['itemId'])
-        fileId = str(file['_id'])
+        item = self.model('item').load(itemId, force=True)
+        item['name'] = u'item \u0441\u043b\u0430\u0439\u0434'
+        item = self.model('item').save(item)
+
         tileMetadata = self._postTileViaHttp(itemId, fileId)
         self.assertEqual(tileMetadata['tileWidth'], 256)
         self.assertEqual(tileMetadata['tileHeight'], 256)
@@ -339,6 +345,29 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(tileMetadata['mm_x'], None)
         self.assertEqual(tileMetadata['mm_y'], None)
         self._testTilesZXY(itemId, tileMetadata)
+
+    def testTilesWithUnicodeName(self):
+        # Unicode file names shouldn't cause problems when accessing ptifs.
+        # This requires an appropriate version of the python libtiff module.
+        name = u'\u0441\u043b\u0430\u0439\u0434.ptif'
+        origpath = os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif')
+        altpath = os.path.join(os.environ['LARGE_IMAGE_DATA'], name)
+        if os.path.exists(altpath):
+            os.unlink(altpath)
+        shutil.copy(origpath, altpath)
+        item = self.model('item').createItem(
+            name=name, creator=self.admin, folder=self.publicFolder,
+            reuseExisting=True)
+        adapter = assetstore_utilities.getAssetstoreAdapter(self.assetstore)
+        adapter.importFile(item, altpath, self.user, name=name)
+        resp = self.request(path='/item/%s/tiles' % item['_id'], user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 256)
+        self.assertEqual(tileMetadata['tileHeight'], 256)
+        self.assertEqual(tileMetadata['sizeX'], 58368)
+        self.assertEqual(tileMetadata['sizeY'], 12288)
 
     def testTilesFromBadFiles(self):
         # As of vips 8.2.4, alpha and unusual channels are removed upon

@@ -14,6 +14,6 @@ numpy>=1.10.2
 
 libtiff>=0.4.0
 # If you have OpenJPEG 2.1.1 or later or need libtiff 4.0.6 support, instead use
-# -e git+https://github.com/pearu/pylibtiff@848785a6a9a4e2c6eb6f56ca9f7e8f6b32e523d5
+# -e git+https://github.com/pearu/pylibtiff@33735eb7197eb33ed1a50bbc4bc5a47ce4305e92
 
 openslide-python>=1.1.0

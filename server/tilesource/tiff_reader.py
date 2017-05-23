@@ -268,9 +268,10 @@ class TiledTiffDirectory(object):
         tableSize = ctypes.c_uint32()
         tableBuffer = ctypes.c_voidp()
 
-        libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
-            libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
-            [ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_void_p)]
+        if libtiff_ctypes.libtiff.TIFFGetField.argtypes:
+            libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
+                libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
+                [ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_void_p)]
         if libtiff_ctypes.libtiff.TIFFGetField(
                 self._tiffFile,
                 libtiff_ctypes.TIFFTAG_JPEGTABLES,
@@ -373,9 +374,10 @@ class TiledTiffDirectory(object):
         rawTileSizesType = self._getTileByteCountsType()
         rawTileSizes = ctypes.POINTER(rawTileSizesType)()
 
-        libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
-            libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
-            [ctypes.POINTER(ctypes.POINTER(rawTileSizesType))]
+        if libtiff_ctypes.libtiff.TIFFGetField.argtypes:
+            libtiff_ctypes.libtiff.TIFFGetField.argtypes = \
+                libtiff_ctypes.libtiff.TIFFGetField.argtypes[:2] + \
+                [ctypes.POINTER(ctypes.POINTER(rawTileSizesType))]
         if libtiff_ctypes.libtiff.TIFFGetField(
                 self._tiffFile,
                 libtiff_ctypes.TIFFTAG_TILEBYTECOUNTS,
