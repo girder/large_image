@@ -52,7 +52,7 @@ wrap(ItemListWidget, 'render', function (render) {
         var numColumns = Math.max((extra.images || []).length + 1, parent.attr('large_image_columns') || 0);
         parent.attr('large_image_columns', numColumns);
 
-        $.each(extra.images || [], function (idx, imageName) {
+        _.each(extra.images || [], function (imageName) {
             elem = $('<div class="large_image_thumbnail"/>');
             container.append(elem);
             elem.append($('<img class="waiting"/>').attr(
@@ -99,7 +99,7 @@ wrap(ItemListWidget, 'render', function (render) {
         }
 
         if (settings['large_image.show_thumbnails'] === false ||
-                $('.large_image_container', this.$el).length > 0) {
+                this.$('.large_image_container').length > 0) {
             return this;
         }
         var items = this.collection.toArray();
@@ -108,7 +108,7 @@ wrap(ItemListWidget, 'render', function (render) {
             return item.has('largeImage');
         });
         if (hasAnyLargeImage) {
-            $.each(items, function (idx, item) {
+            _.each(items, function (item) {
                 var elem = $('<div class="large_image_container"/>');
                 if (item.get('largeImage')) {
                     item.getAccessLevel(function () {

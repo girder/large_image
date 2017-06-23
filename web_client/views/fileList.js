@@ -20,9 +20,8 @@ wrap(FileListWidget, 'render', function (render) {
     var largeImage = this.parentItem.get('largeImage');
     var files = this.collection.toArray();
     _.each(files, (file) => {
-        var actions = $('.g-file-list-link[cid="' + file.cid + '"]',
-                        this.$el).closest('.g-file-list-entry').children(
-                        '.g-file-actions-container');
+        var actions = this.$('.g-file-list-link[cid="' + file.cid + '"]')
+          .closest('.g-file-list-entry').children('.g-file-actions-container');
         if (!actions.length) {
             return;
         }
@@ -32,7 +31,7 @@ wrap(FileListWidget, 'render', function (render) {
             actions.prepend(fileAction);
         }
     });
-    $('.g-large-image-remove', this.$el).on('click', () => {
+    this.$('.g-large-image-remove').on('click', () => {
         restRequest({
             type: 'DELETE',
             path: 'item/' + this.parentItem.id + '/tiles',
@@ -42,7 +41,7 @@ wrap(FileListWidget, 'render', function (render) {
             this.parentItem.fetch();
         });
     });
-    $('.g-large-image-create', this.$el).on('click', (e) => {
+    this.$('.g-large-image-create').on('click', (e) => {
         var cid = $(e.currentTarget).parent().attr('file-cid');
         var fileId = this.collection.get(cid).id;
         restRequest({
