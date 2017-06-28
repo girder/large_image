@@ -91,7 +91,7 @@ before_install:
   - lib_build_path=$HOME/build/libs
   - mkdir -p $lib_build_path
 
-  - nvm install v5
+  - nvm install v6
   - npm install -g npm
 
   - girder_path=$build_path/girder
