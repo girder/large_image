@@ -51,12 +51,12 @@ form#g-large-image-form(role="form")
     p.g-large-image-description
       | Details to show for all users.
     input.input-sm.form-control.g-large-image-show-extra(
-      type="text", value=settings['large_image.show_extra'], placeholder="A JSON object listing extra details to show.",
+      type="text", value=settings['large_image.show_extra'], placeholder='A JSON object listing extra details to show.  For example: {"images": ["label", "macro"]}',
       title='This can be specified images and metadata as a JSON object such as {"images": ["label", "macro"]}')
     p.g-large-image-description
       | Details to show for admins and owners of the images.
     input.input-sm.form-control.g-large-image-show-extra-admin(
-      type="text", value=settings['large_image.show_extra_admin'], placeholder="A JSON object listing extra details to show.",
+      type="text", value=settings['large_image.show_extra_admin'], placeholder='A JSON object listing extra details to show.  For example: {"images": ["label", "macro"]}',
       title='This can be specified images and metadata as a JSON object such as {"images": ["label", "macro"]}')
   .form-group
     label
