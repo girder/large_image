@@ -77,6 +77,10 @@ services:
   - rabbitmq
 
 before_install:
+  # Fix a travis/boto issue.  See
+  # https://github.com/travis-ci/travis-ci/issues/7940
+  - sudo rm -f /etc/boto.cfg
+
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "3" ]; then export PY3="true"; else export PY2="true"; fi
   - if [ -n "${PY3}" ]; then export MONGO_VERSION=3.0.7; export PY_COVG="OFF"; else export MONGO_VERSION=2.6.11; export PY_COVG="ON"; export DEPLOY=true; fi
   - GIRDER_VERSION=master
@@ -87,7 +91,7 @@ before_install:
   - lib_build_path=$HOME/build/libs
   - mkdir -p $lib_build_path
 
-  - nvm install v5
+  - nvm install v6
   - npm install -g npm
 
   - girder_path=$build_path/girder

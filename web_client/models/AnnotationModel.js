@@ -84,7 +84,7 @@ export default Model.extend({
             } else {
                 this.trigger('g:fetched');
             }
-        }).error((err) => {
+        }).fail((err) => {
             this.trigger('g:error', err);
         }).always(() => {
             this._inFetch = false;

@@ -55,7 +55,7 @@ var ImageViewerSelectWidget = View.extend({
         if (_.findWhere(largeImageConfig.viewers, {name: name}) === undefined) {
             name = largeImageConfig.viewers[0].name;
         }
-        $('select.form-control', this.$el).val(name);
+        this.$('select.form-control').val(name);
         this._selectViewer(name);
         return this;
     },

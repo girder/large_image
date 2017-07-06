@@ -1,4 +1,5 @@
 import _ from 'underscore';
+
 import rotate from '../rotate';
 
 export default function rectangle(json) {

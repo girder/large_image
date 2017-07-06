@@ -1,5 +1,7 @@
 import _ from 'underscore';
 import Backbone from 'backbone';
+// Import hammerjs for geojs touch events
+import Hammer from 'hammerjs';
 
 import { staticRoot } from 'girder/rest';
 import events from 'girder/events';
@@ -7,8 +9,6 @@ import events from 'girder/events';
 import ImageViewerWidget from './base';
 import convertAnnotation from '../../annotations/geojs/convert';
 
-// Import hammerjs for geojs touch events
-import Hammer from 'hammerjs';
 window.hammerjs = Hammer;
 
 /**

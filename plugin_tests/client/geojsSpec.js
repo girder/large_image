@@ -72,6 +72,7 @@ $(function () {
                     })
                 }).then(function (resp) {
                     annotationId = resp._id;
+                    return null;
                 });
             });
 
@@ -332,6 +333,7 @@ $(function () {
                     expect(elements[0].type).toBe('point');
                     closeTo(elements[0].center, [100, 200, 0]);
                     created = true;
+                    return null;
                 });
                 var pt = viewer.viewer.gcsToDisplay({x: 100, y: 200});
                 interactor.simulateEvent('mousedown', {
@@ -362,6 +364,7 @@ $(function () {
                     closeTo(elements[0].points[1], [200, 200, 0]);
                     closeTo(elements[0].points[2], [200, 300, 0]);
                     created = true;
+                    return null;
                 });
 
                 interactor.simulateEvent('mousedown', {
@@ -440,6 +443,7 @@ $(function () {
                     closeTo(elements[0].points[1], [200, 200, 0]);
                     closeTo(elements[0].points[2], [200, 300, 0]);
                     created = true;
+                    return null;
                 });
 
                 interactor.simulateEvent('mousedown', {

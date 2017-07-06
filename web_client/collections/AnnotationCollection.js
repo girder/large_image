@@ -1,4 +1,5 @@
 import Collection from 'girder/collections/Collection';
+
 import AnnotationModel from '../models/AnnotationModel';
 
 export default Collection.extend({

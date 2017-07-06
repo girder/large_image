@@ -69,7 +69,7 @@ describe('geojs-annotations', function () {
             stroke: false
         };
         var coordinates;
-        var type = type;
+        var type;
         var annotation = {
             type: function () {
                 return type;
