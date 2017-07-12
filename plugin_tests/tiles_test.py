@@ -46,6 +46,97 @@ def tearDownModule():
 
 
 class LargeImageTilesTest(common.LargeImageCommonTest):
+    def _testEncodings(self, itemId, path='/item/%s/tiles/zxy/0/0/0',
+                       params={}, tileMetadata=None, error='raise'):
+        """
+        Test that different encodings are available for an endpoint.
+
+        :param itemId: an item to test.
+        :param path: the main endpoint to test.
+        :param params: additional parameters to send with all queries.
+        :param tileMetadata: if set, test the full tile tree.
+        :param error: 'raise' if an invalid encoding will raise an exception,
+            otherwise the expected status code for an invalid encoding.
+        """
+        params = params.copy()
+
+        # Check that invalid encodings are rejected
+        params['encoding'] = 'invalid'
+        with six.assertRaisesRegex(self, Exception, 'Invalid encoding'):
+            resp = self.request(path='/item/%s/tiles' % itemId,
+                                user=self.admin, params=params)
+        if error == 'raise':
+            with six.assertRaisesRegex(self, Exception, 'Invalid encoding'):
+                resp = self.request(path=path % itemId, user=self.admin,
+                                    params=params)
+        else:
+            resp = self.request(path=path % itemId, user=self.admin,
+                                params=params)
+            self.assertStatus(resp, error)
+
+        # Ask for PNGs
+        params['encoding'] = 'PNG'
+        if tileMetadata:
+            self._testTilesZXY(itemId, tileMetadata, params, common.PNGHeader)
+
+        resp = self.request(path=path % itemId, user=self.admin, isJson=False,
+                            params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+
+        # Check that JPEG options are honored.
+        # JPEG is the default encoding
+        del params['encoding']
+        resp = self.request(path=path % itemId, user=self.admin, isJson=False,
+                            params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        defaultLength = len(image)
+        # But it should also work explicitly
+        params['encoding'] = 'JPEG'
+        resp = self.request(path=path % itemId, user=self.admin, isJson=False,
+                            params=params)
+        self.assertStatusOk(resp)
+        self.assertEqual(image, self.getBody(resp, text=False))
+
+        params['jpegQuality'] = 10
+        resp = self.request(path=path % itemId, user=self.admin, isJson=False,
+                            params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+        del params['jpegQuality']
+
+        params['jpegSubsampling'] = 2
+        resp = self.request(path=path % itemId, user=self.admin, isJson=False,
+                            params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        self.assertTrue(len(image) < defaultLength)
+        del params['jpegSubsampling']
+
+        # Test TIFF output
+        params['encoding'] = 'TIFF'
+        resp = self.request(path=path % itemId, user=self.admin, isJson=False,
+                            params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.TIFFHeader)], common.TIFFHeader)
+        defaultLength = len(image)
+
+        params['tiffCompression'] = 'tiff_lzw'
+        resp = self.request(path=path % itemId, user=self.admin, isJson=False,
+                            params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.TIFFHeader)], common.TIFFHeader)
+        self.assertNotEqual(len(image), defaultLength)
+        del params['tiffCompression']
+
     def testTilesFromPTIF(self):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
@@ -448,39 +539,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatus(resp, 400)
         self.assertIn('Item already has', resp.json['message'])
 
-        # Ask for PNGs
-        params = {'encoding': 'PNG'}
-        self._testTilesZXY(itemId, tileMetadata, params, common.PNGHeader)
-
-        # Check that invalid encodings are rejected
-        with six.assertRaisesRegex(self, Exception, 'Invalid encoding'):
-            resp = self.request(path='/item/%s/tiles' % itemId,
-                                user=self.admin,
-                                params={'encoding': 'invalid'})
-
-        # Check that JPEG options are honored.
-        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
-                            user=self.admin, isJson=False)
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        defaultLength = len(image)
-
-        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
-                            user=self.admin, isJson=False,
-                            params={'jpegQuality': 10})
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        self.assertTrue(len(image) < defaultLength)
-
-        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
-                            user=self.admin, isJson=False,
-                            params={'jpegSubsampling': 2})
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        self.assertTrue(len(image) < defaultLength)
+        # Test different encodings
+        self._testEncodings(itemId, tileMetadata=tileMetadata)
 
         # Test that edge options are honored
         resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
@@ -565,39 +625,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatus(resp, 400)
         self.assertIn('Item already has', resp.json['message'])
 
-        # Ask for PNGs
-        params = {'encoding': 'PNG'}
-        self._testTilesZXY(itemId, tileMetadata, params, common.PNGHeader)
-
-        # Check that invalid encodings are rejected
-        with six.assertRaisesRegex(self, Exception, 'Invalid encoding'):
-            resp = self.request(path='/item/%s/tiles' % itemId,
-                                user=self.admin,
-                                params={'encoding': 'invalid'})
-
-        # Check that JPEG options are honored.
-        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
-                            user=self.admin, isJson=False)
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        defaultLength = len(image)
-
-        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
-                            user=self.admin, isJson=False,
-                            params={'jpegQuality': 10})
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        self.assertTrue(len(image) < defaultLength)
-
-        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
-                            user=self.admin, isJson=False,
-                            params={'jpegSubsampling': 2})
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        self.assertTrue(len(image) < defaultLength)
+        # Test different encodings
+        self._testEncodings(itemId, tileMetadata=tileMetadata)
 
         # Test with different max size options.
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin,
@@ -671,22 +700,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
         defaultLength = len(image)
 
-        # Test that JPEG options are honored
-        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
-                            user=self.admin, isJson=False,
-                            params={'jpegQuality': 10})
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        self.assertTrue(len(image) < defaultLength)
-
-        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
-                            user=self.admin, isJson=False,
-                            params={'jpegSubsampling': 2})
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        self.assertTrue(len(image) < defaultLength)
+        # Test different encodings
+        self._testEncodings(itemId, path='/item/%s/tiles/thumbnail', error=400)
 
         # Test width and height using PNGs
         resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
@@ -815,26 +830,10 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         image = origImage = self.getBody(resp, text=False)
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        defaultLength = len(image)
 
-        # Test that JPEG options are honored
-        params['jpegQuality'] = 10
-        resp = self.request(path='/item/%s/tiles/region' % itemId,
-                            user=self.admin, isJson=False, params=params)
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        self.assertTrue(len(image) < defaultLength)
-        del params['jpegQuality']
-
-        params['jpegSubsampling'] = 2
-        resp = self.request(path='/item/%s/tiles/region' % itemId,
-                            user=self.admin, isJson=False, params=params)
-        self.assertStatusOk(resp)
-        image = self.getBody(resp, text=False)
-        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
-        self.assertTrue(len(image) < defaultLength)
-        del params['jpegSubsampling']
+        # Test different encodings
+        self._testEncodings(itemId, path='/item/%s/tiles/region',
+                            params=params, error=400)
 
         # Test using negative offsets
         params['left'] -= tileMetadata['sizeX']
@@ -1032,6 +1031,11 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
         (width, height) = struct.unpack('!LL', image[16:24])
         self.assertEqual(max(width, height), 256)
+
+        # Test different encodings
+        self._testEncodings(itemId, path='/item/%s/tiles/images/label')
+
+        # Test missing associated image
         resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
                             user=self.admin)
         self.assertStatusOk(resp)

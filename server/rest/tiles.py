@@ -309,7 +309,7 @@ class TilesItemResource(Item):
         .param('height', 'The maximum height of the thumbnail in pixels.',
                required=False, dataType='int')
         .param('encoding', 'Thumbnail output encoding', required=False,
-               enum=['JPEG', 'PNG'], default='JPEG')
+               enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -323,6 +323,7 @@ class TilesItemResource(Item):
             ('height', int),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
+            ('tiffCompression', str),
             ('encoding', str),
         ])
         try:
@@ -389,13 +390,16 @@ class TilesItemResource(Item):
                'must match an existing level of the image exactly.',
                required=False, dataType='boolean', default=False)
         .param('encoding', 'Output image encoding', required=False,
-               enum=['JPEG', 'PNG'], default='JPEG')
+               enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
                required=False, dataType='int', default=95)
         .param('jpegSubsampling', 'Chroma subsampling used for generating '
                'JPEG images.  0, 1, and 2 are full, half, and quarter '
                'resolution chroma respectively.', required=False,
                enum=['0', '1', '2'], dataType='int', default='0')
+        .param('tiffCompression', 'Compression method when storing a TIFF '
+               'image', required=False,
+               enum=['raw', 'tiff_lzw', 'jpeg', 'tiff_adobe_deflate'])
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
         .errorResponse('Insufficient memory.')
@@ -422,6 +426,7 @@ class TilesItemResource(Item):
             ('encoding', str),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
+            ('tiffCompression', str),
         ])
         try:
             regionData, regionMime = self.imageItemModel.getRegion(
@@ -459,7 +464,7 @@ class TilesItemResource(Item):
         .param('height', 'The maximum height of the image in pixels.',
                required=False, dataType='int')
         .param('encoding', 'Image output encoding', required=False,
-               enum=['JPEG', 'PNG'], default='JPEG')
+               enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -474,6 +479,7 @@ class TilesItemResource(Item):
             ('height', int),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
+            ('tiffCompression', str),
             ('encoding', str),
         ])
         try:

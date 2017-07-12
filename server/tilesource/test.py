@@ -54,7 +54,7 @@ class TestTileSource(TileSource):
             maxLevel and tileHeight if None.
         :param fractal: if True, and the tile size is square and a power of
             two, draw a simple fractal on the tiles.
-        :param encoding: 'PNG' or 'JPEG'.
+        :param encoding: 'PNG', 'JPEG', or 'TIFF'.
         """
         if not kwargs.get('encoding'):
             kwargs = kwargs.copy()
