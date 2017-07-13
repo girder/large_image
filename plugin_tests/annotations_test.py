@@ -425,6 +425,68 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertIsNone(annotModel.load(annot['_id']))
 
+    def testFindAnnotatedImages(self):
+        annotModel = self.model('annotation', 'large_image')
+
+        def create_annotation(item, user):
+            return str(annotModel.createAnnotation(item, user, sampleAnnotation)['_id'])
+
+        def upload(name, user=self.user):
+            file = self._uploadFile(os.path.join(
+                os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'), name)
+            item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                           user=self.admin)
+
+            create_annotation(item, user)
+            create_annotation(item, user)
+            create_annotation(item, self.admin)
+
+            return str(item['_id'])
+
+        item1 = upload('image1.ptif', self.admin)
+        item2 = upload('image2.ptif')
+        item3 = upload('image3.ptif')
+
+        # test default search
+        resp = self.request('/annotation/images', user=self.admin, params={
+            'limit': 100
+        })
+        self.assertStatusOk(resp)
+        ids = [image['_id'] for image in resp.json]
+        self.assertEqual(ids, [item3, item2, item1])
+
+        # test filtering by user
+        resp = self.request('/annotation/images', user=self.admin, params={
+            'limit': 100,
+            'creatorId': self.user['_id']
+        })
+        self.assertStatusOk(resp)
+        ids = [image['_id'] for image in resp.json]
+        self.assertEqual(ids, [item3, item2])
+
+        # test sort direction
+        resp = self.request('/annotation/images', user=self.admin, params={
+            'limit': 100,
+            'sortdir': 1
+        })
+        self.assertStatusOk(resp)
+        ids = [image['_id'] for image in resp.json]
+        self.assertEqual(ids, [item1, item2, item3])
+
+        # test pagination
+        resp = self.request('/annotation/images', user=self.admin, params={
+            'limit': 1
+        })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json[0]['_id'], item3)
+
+        resp = self.request('/annotation/images', user=self.admin, params={
+            'limit': 1,
+            'offset': 2
+        })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json[0]['_id'], item1)
+
     #  Add tests for:
     # find
     # getAnnotationSchema
