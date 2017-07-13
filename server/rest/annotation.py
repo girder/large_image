@@ -237,11 +237,17 @@ class AnnotationResource(Resource):
         response = []
         imageIds = set()
         for annotation in annotations:
+            # short cut if the image has already been added to the results
+            if annotation['itemId'] in imageIds:
+                continue
+
             item = self.model('image_item', 'large_image').load(
                 annotation['itemId'], level=AccessType.READ,
                 user=user
             )
-            if not item or item['_id'] in imageIds:
+
+            # ignore if no such item exists
+            if not item:
                 continue
 
             if len(imageIds) >= offset:
