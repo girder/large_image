@@ -36,6 +36,7 @@ class AnnotationResource(Resource):
         self.resourceName = 'annotation'
         self.route('GET', (), self.find)
         self.route('GET', ('schema',), self.getAnnotationSchema)
+        self.route('GET', ('images',), self.findAnnotatedImages)
         self.route('GET', (':id',), self.getAnnotation)
         self.route('POST', (), self.createAnnotation)
         self.route('PUT', (':id',), self.updateAnnotation)
@@ -211,3 +212,49 @@ class AnnotationResource(Resource):
             self.model('item').requireAccess(
                 item, user=self.getCurrentUser(), level=AccessType.WRITE)
         self.model('annotation', 'large_image').remove(annotation)
+
+    @describeRoute(
+        Description('Search for annotated images.')
+        .param('creatorId', 'Limit to annotations created by this user', required=False)
+        .pagingParams(defaultSort='updated', defaultSortDir=-1)
+        .errorResponse()
+    )
+    @access.public
+    def findAnnotatedImages(self, params):
+        limit, offset, sort = self.getPagingParameters(
+            params, 'updated', SortDir.DESCENDING)
+        user = self.getCurrentUser()
+        query = {}
+
+        if 'creatorId' in params:
+            creator = self.model('user').load(params['creatorId'], force=True)
+            query = {'creatorId': creator['_id']}
+
+        annotations = self.model('annotation', 'large_image').find(
+            query, sort=sort, fields=['itemId']
+        )
+
+        response = []
+        imageIds = set()
+        for annotation in annotations:
+            # short cut if the image has already been added to the results
+            if annotation['itemId'] in imageIds:
+                continue
+
+            item = self.model('image_item', 'large_image').load(
+                annotation['itemId'], level=AccessType.READ,
+                user=user
+            )
+
+            # ignore if no such item exists
+            if not item:
+                continue
+
+            if len(imageIds) >= offset:
+                response.append(item)
+
+            imageIds.add(item['_id'])
+            if len(response) == limit:
+                break
+
+        return response
