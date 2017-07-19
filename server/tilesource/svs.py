@@ -183,6 +183,13 @@ class SVSFileTileSource(FileTileSource):
                 self._openslide = openslide.OpenSlide(path)
         # sort highest resolution first.
         levels = [entry[-1] for entry in sorted(levels, reverse=True)]
+        # Discard levels that are not a power-of-two compared to the highest
+        # resolution level.
+        levels = [entry for entry in levels if
+                  abs(((math.log(float(levels[0]['width']) / entry['width']) /
+                        math.log(2) - 0.5) % 1) - 0.5) < 0.02 and
+                  abs(((math.log(float(levels[0]['height']) / entry['height']) /
+                        math.log(2) - 0.5) % 1) - 0.5) < 0.02]
         return levels
 
     def getNativeMagnification(self):
