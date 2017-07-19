@@ -51,7 +51,11 @@ var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
             this.viewer = null;
         }
         if (window.OpenSeadragon) {
-            delete window.OpenSeadragon;
+            try {
+                delete window.OpenSeadragon;
+            } catch (err) {
+                window.OpenSeadragon = undefined;
+            }
         }
         ImageViewerWidget.prototype.destroy.call(this);
     }
