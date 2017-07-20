@@ -99,23 +99,19 @@ var ConfigView = View.extend({
             name: 'openseadragon',
             label: 'OpenSeaDragon',
             type: 'openseadragon'
-        },
-        {
+        }, {
             name: 'openlayers',
             label: 'OpenLayers',
             type: 'openlayers'
-        },
-        {
+        }, {
             name: 'leaflet',
             label: 'Leaflet',
             type: 'leaflet'
-        },
-        {
+        }, {
             name: 'geojs',
             label: 'GeoJS',
             type: 'geojs'
-        },
-        {
+        }, {
             name: 'slideatlas',
             label: 'SlideAtlas',
             type: 'slideatlas'

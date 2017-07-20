@@ -4,12 +4,13 @@ import ImageViewerWidget from './base';
 
 var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
-        $.getScript(
-            'https://openseadragon.github.io/openseadragon/openseadragon.min.js',
-            () => this.render()
-        );
+        $.ajax({  // like $.getScript, but allow caching
+            url: 'https://openseadragon.github.io/openseadragon/openseadragon.min.js',
+            dataType: 'script',
+            cache: true
+        }).done(() => {
+            ImageViewerWidget.prototype.initialize.call(this, settings);
+        });
     },
 
     render: function () {
@@ -52,13 +53,6 @@ var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
         if (this.viewer) {
             this.viewer.destroy();
             this.viewer = null;
-        }
-        if (window.OpenSeadragon) {
-            try {
-                delete window.OpenSeadragon;
-            } catch (err) {
-                window.OpenSeadragon = undefined;
-            }
         }
         this.deleted = true;
         ImageViewerWidget.prototype.destroy.call(this);

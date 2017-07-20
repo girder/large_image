@@ -10,10 +10,10 @@ $(function () {
             var girder = window.girder;
             var GeojsViewer = girder.plugins.large_image.views.imageViewerWidget.geojs;
             girder.utilities.PluginUtils.wrap(GeojsViewer, 'initialize', function (initialize) {
-                initialize.apply(this, arguments);
                 this.once('g:beforeFirstRender', function () {
                     window.geo.util.mockVGLRenderer();
                 });
+                initialize.apply(this, Array.prototype.slice.call(arguments, 1));
             });
         });
         it('create the admin user', function () {
@@ -56,6 +56,7 @@ $(function () {
             runs(function () {
                 $('.g-large-image-create').click();
             });
+            girderTest.waitForLoad();
             // wait for job to complete
             waitsFor(function () {
                 return $('.g-item-image-viewer-select').length !== 0;
@@ -65,10 +66,10 @@ $(function () {
     });
 
     describe('Image Viewer selection', function () {
-        var viewers = [];
+        var viewers = [], jQuery;  // use the original jQuery
         it('One viewer is loaded', function () {
             waitsFor(function () {
-                return $('.image-viewer').not('.hidden').length !== 0;
+                return $('.image-viewer').not('.hidden').not(':empty').length !== 0;
             }, 'one viewer to be shown');
             runs(function () {
                 expect($('.image-viewer').not('.hidden').length).toBe(1);
@@ -78,22 +79,28 @@ $(function () {
                     viewers.push($(this).val());
                 });
                 expect(viewers.length).toBe(5);
+                jQuery = $;
             }, 'get list of viewers');
         });
-        it('Select each viewer in turn', function () {
-            _.each(viewers, function (vid) {
+        it('Select each viewer in turn via change, then return to geojs', function () {
+            viewers.push('geojs');
+            _.each(viewers, function (vid, idx) {
                 runs(function () {
+                    var $ = jQuery;
                     $('.g-item-image-viewer-select .g-item-info-header select').val(vid).change();
-                    expect($('.image-viewer').not('.hidden').attr('id')).toBe(vid);
-                }, 'select ' + vid);
+                }, 'select ' + vid + ' (' + idx + ')');
                 waitsFor(function () {
+                    var $ = jQuery;
                     return !$('.image-viewer:empty').not('.hidden').length &&
                            !$('.image-viewer.hidden').not(':empty').length &&
-                           $('.image-viewer').not('.hidden:empty').length;
-                }, 'wait for ' + vid + ' to be visible');
+                           $('.image-viewer').not('.hidden').not(':empty').length &&
+                           $('.image-viewer').not('.hidden').length === 1 &&
+                           $('.image-viewer').not('.hidden').attr('id') === vid;
+                }, 'wait for ' + vid + ' (' + idx + ') to be visible');
                 runs(function () {
+                    var $ = jQuery;
                     expect($('.image-viewer').not('.hidden').length).toBe(1);
-                }, 'check ' + vid);
+                }, 'check ' + vid + ' (' + idx + ')');
             });
         });
     });

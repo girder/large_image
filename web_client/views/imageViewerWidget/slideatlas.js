@@ -4,8 +4,6 @@ import ImageViewerWidget from './base';
 
 var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
         if (!$('head #large_image-slideatlas-css').length) {
             $('head').prepend(
                 $('<link>', {
@@ -16,10 +14,13 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
             );
         }
 
-        $.getScript(
-            staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
-            () => this.render()
-        );
+        $.ajax({  // like $.getScript, but allow caching
+            url: staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
+            dataType: 'script',
+            cache: true
+        }).done(() => {
+            ImageViewerWidget.prototype.initialize.call(this, settings);
+        });
     },
 
     render: function () {
@@ -67,9 +68,6 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         if (this.viewer) {
             window.$(this.el).saViewer('destroy');
             this.viewer = null;
-        }
-        if (window.SA) {
-            delete window.SA;
         }
         this.deleted = true;
         ImageViewerWidget.prototype.destroy.call(this);

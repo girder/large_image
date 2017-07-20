@@ -2,8 +2,6 @@ import ImageViewerWidget from './base';
 
 var LeafletImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
         if (!$('head #large_image-leaflet-css').length) {
             $('head').prepend(
                 $('<link>', {
@@ -14,10 +12,13 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
             );
         }
 
-        $.getScript(
-            'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
-            () => this.render()
-        );
+        $.ajax({  // like $.getScript, but allow caching
+            url: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
+            dataType: 'script',
+            cache: true
+        }).done(() => {
+            ImageViewerWidget.prototype.initialize.call(this, settings);
+        });
     },
 
     render: function () {
@@ -69,9 +70,6 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
         if (this.viewer) {
             this.viewer.remove();
             this.viewer = null;
-        }
-        if (window.L) {
-            delete window.L;
         }
         this.deleted = true;
         // TODO: delete CSS

@@ -249,6 +249,8 @@ def load(info):
     events.bind('model.group.save.after', 'large_image',
                 invalidateLoadModelCache)
     events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
+    events.bind('model.item.save.after', 'large_image',
+                invalidateLoadModelCache)
     events.bind('model.file.save.after', 'large_image',
                 checkForLargeImageFiles)
     events.bind('model.item.remove', 'large_image', removeThumbnails)

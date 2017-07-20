@@ -2,8 +2,6 @@ import ImageViewerWidget from './base';
 
 var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
         if (!$('head #large_image-openlayers-css').length) {
             $('head').prepend(
                 $('<link>', {
@@ -14,10 +12,13 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
             );
         }
 
-        $.getScript(
-            'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.js',
-            () => this.render()
-        );
+        $.ajax({  // like $.getScript, but allow caching
+            url: 'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.js',
+            dataType: 'script',
+            cache: true
+        }).done(() => {
+            ImageViewerWidget.prototype.initialize.call(this, settings);
+        });
     },
 
     render: function () {
@@ -68,9 +69,6 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
         if (this.viewer) {
             this.viewer.setTarget(null);
             this.viewer = null;
-        }
-        if (window.ol) {
-            delete window.ol;
         }
         this.deleted = true;
         // TODO: delete CSS
