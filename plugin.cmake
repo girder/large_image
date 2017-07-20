@@ -137,7 +137,12 @@ add_web_client_test(
   PLUGIN large_image)
 
 add_web_client_test(
-  geojs-annotations
+  image_viewer
+  "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/imageViewerSpec.js"
+  PLUGIN large_image)
+
+add_web_client_test(
+  geojs_annotations
   "${CMAKE_CURRENT_LIST_DIR}/plugin_tests/client/geojsAnnotationSpec.js"
   PLUGIN large_image)
 

@@ -24,13 +24,18 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.SA || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.SA || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
+        }
+
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
         }
 
         if (this.tileWidth !== this.tileHeight) {
             console.error('The SlideAtlas viewer only supports square tiles.');
-            return;
+            return this;
         }
 
         // TODO: if a viewer already exists, do we render again?
@@ -66,6 +71,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         if (window.SA) {
             delete window.SA;
         }
+        this.deleted = true;
         ImageViewerWidget.prototype.destroy.call(this);
     }
 });

@@ -43,8 +43,13 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.geo || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.geo || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
+        }
+
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
         }
 
         this._destroyViewer();
@@ -70,6 +75,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         if (window.geo) {
             delete window.geo;
         }
+        this.deleted = true;
         ImageViewerWidget.prototype.destroy.call(this);
     },
 

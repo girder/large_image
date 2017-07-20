@@ -14,11 +14,14 @@ var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.OpenSeadragon || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.OpenSeadragon || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
         }
 
-        // TODO: if a viewer already exists, do we render again?
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
+        }
 
         var OpenSeadragon = window.OpenSeadragon; // this makes the style checker happy
 
@@ -57,6 +60,7 @@ var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
                 window.OpenSeadragon = undefined;
             }
         }
+        this.deleted = true;
         ImageViewerWidget.prototype.destroy.call(this);
     }
 });

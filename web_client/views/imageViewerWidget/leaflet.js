@@ -22,13 +22,18 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.L || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.L || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
+        }
+
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
         }
 
         if (this.tileWidth !== this.tileHeight) {
             console.error('The Leaflet viewer only supports square tiles.');
-            return;
+            return this;
         }
 
         // TODO: if a viewer already exists, do we render again?
@@ -68,6 +73,7 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
         if (window.L) {
             delete window.L;
         }
+        this.deleted = true;
         // TODO: delete CSS
         ImageViewerWidget.prototype.destroy.call(this);
     }

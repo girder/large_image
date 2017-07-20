@@ -17,6 +17,7 @@
 #  limitations under the License.
 #############################################################################
 
+import datetime
 import json
 
 from girder import events, plugin, logger
@@ -104,6 +105,17 @@ def _updateJob(event):
     ModelImporter.model('item').save(item)
     if msg and event.name != 'model.job.remove':
         ModelImporter.model('job', 'jobs').updateJob(job, progressMessage=msg)
+    if notify:
+        ModelImporter.model('notification').createNotification(
+            type='large_image.finished_image_item',
+            data={
+                'job_id': job['_id'],
+                'item_id': item['_id'],
+                'success': status == JobStatus.SUCCESS,
+                'status': status
+            },
+            user={'_id': job.get('userId')},
+            expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=30))
 
 
 def checkForLargeImageFiles(event):

@@ -22,11 +22,14 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.ol || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.ol || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
         }
 
-        // TODO: if a viewer already exists, do we render again?
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
+        }
 
         var ol = window.ol; // this makes the style checker happy
 
@@ -69,6 +72,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
         if (window.ol) {
             delete window.ol;
         }
+        this.deleted = true;
         // TODO: delete CSS
         ImageViewerWidget.prototype.destroy.call(this);
     }
