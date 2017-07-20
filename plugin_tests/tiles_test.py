@@ -85,6 +85,39 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         image = self.getBody(resp, text=False)
         self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
 
+        # test content disposition
+        if not tileMetadata:
+            params['contentDisposition'] = 'inline'
+            resp = self.request(path=path % itemId, user=self.admin,
+                                isJson=False, params=params)
+            self.assertStatusOk(resp)
+            self.assertTrue(resp.headers['Content-Disposition'].startswith('inline'))
+            self.assertTrue(
+                resp.headers['Content-Disposition'].endswith('.png') or
+                'largeImageThumbnail' in resp.headers['Content-Disposition'])
+            params['contentDisposition'] = 'attachment'
+            resp = self.request(path=path % itemId, user=self.admin,
+                                isJson=False, params=params)
+            self.assertStatusOk(resp)
+            self.assertTrue(resp.headers['Content-Disposition'].startswith('attachment'))
+            self.assertTrue(
+                resp.headers['Content-Disposition'].endswith('.png') or
+                'largeImageThumbnail' in resp.headers['Content-Disposition'])
+            params['contentDisposition'] = 'other'
+            resp = self.request(path=path % itemId, user=self.admin,
+                                isJson=False, params=params)
+            self.assertStatusOk(resp)
+            self.assertTrue(
+                resp.headers.get('Content-Disposition') is None or
+                'largeImageThumbnail' in resp.headers['Content-Disposition'])
+            del params['contentDisposition']
+            resp = self.request(path=path % itemId, user=self.admin,
+                                isJson=False, params=params)
+            self.assertStatusOk(resp)
+            self.assertTrue(
+                resp.headers.get('Content-Disposition') is None or
+                'largeImageThumbnail' in resp.headers['Content-Disposition'])
+
         # Check that JPEG options are honored.
         # JPEG is the default encoding
         del params['encoding']

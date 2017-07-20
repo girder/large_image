@@ -282,7 +282,10 @@ class ImageItem(Item):
         })
         if existing:
             return self.model('file').download(
-                existing, contentDisposition='inline')
+                existing,
+                contentDisposition='inline'
+                if kwargs.get('contentDisposition') != 'attachment'
+                else kwargs['contentDisposition'])
         tileSource = self._loadTileSource(item, **kwargs)
         thumbData, thumbMime = tileSource.getThumbnail(
             width, height, **kwargs)
