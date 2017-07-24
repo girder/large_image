@@ -195,7 +195,7 @@ class TilesItemResource(Item):
         except TileGeneralException as e:
             raise RestException(e.message, code=400)
 
-    def _setContentDisposition(self, item, contentDisposition, mime, subname, params):
+    def _setContentDisposition(self, item, contentDisposition, mime, subname):
         """
         If requested, set the content disposition and a suggested file name.
 
@@ -205,8 +205,6 @@ class TilesItemResource(Item):
         :param mime: the mimetype of the output image.  Used for the filename
             suffix.
         :param subname: a subname to append to the item name.
-        :param params: a dictionary of parameters.  Some of these can be used
-            to suggest a filename.
         """
         if (not item or not item.get('name') or
                 mime not in MimeTypeExtensions or
@@ -379,8 +377,7 @@ class TilesItemResource(Item):
             return result
         thumbData, thumbMime = result
         self._setContentDisposition(
-            item, params.get('contentDisposition'), thumbMime, 'thumbnail',
-            params)
+            item, params.get('contentDisposition'), thumbMime, 'thumbnail')
         setResponseHeader('Content-Type', thumbMime)
         setRawResponse()
         return thumbData
@@ -486,8 +483,7 @@ class TilesItemResource(Item):
         except ValueError as e:
             raise RestException('Value Error: %s' % e.message)
         self._setContentDisposition(
-            item, params.get('contentDisposition'), regionMime, 'region',
-            params)
+            item, params.get('contentDisposition'), regionMime, 'region')
         setResponseHeader('Content-Type', regionMime)
         setRawResponse()
         return regionData
@@ -547,7 +543,7 @@ class TilesItemResource(Item):
             return result
         imageData, imageMime = result
         self._setContentDisposition(
-            item, params.get('contentDisposition'), imageMime, image, params)
+            item, params.get('contentDisposition'), imageMime, image)
         setResponseHeader('Content-Type', imageMime)
         setRawResponse()
         return imageData
