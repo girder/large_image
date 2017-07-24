@@ -51,6 +51,7 @@ add_python_test(tiles PLUGIN large_image BIND_SERVER EXTERNAL_DATA
   "plugins/large_image/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs"
   "plugins/large_image/sample_Easy1.png"
   "plugins/large_image/huron.image2_jpeg2k.tif"
+  "plugins/large_image/G10-3_pelvis_crop-powers-of-3.tif"
   )
 set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")

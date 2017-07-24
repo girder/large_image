@@ -18,7 +18,9 @@
 #############################################################################
 
 import cherrypy
+import os
 import re
+import six
 
 from girder.api import access, filter_logging
 from girder.api.v1.item import Item
@@ -30,6 +32,13 @@ from girder.models.model_base import AccessType
 from ..models import TileGeneralException
 
 from .. import loadmodelcache
+
+
+MimeTypeExtensions = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/tiff': 'tiff',
+}
 
 
 def _adjustParams(params):
@@ -186,6 +195,34 @@ class TilesItemResource(Item):
         except TileGeneralException as e:
             raise RestException(e.message, code=400)
 
+    def _setContentDisposition(self, item, contentDisposition, mime, subname):
+        """
+        If requested, set the content disposition and a suggested file name.
+
+        :param item: an item that includes a name.
+        :param contentDisposition: either 'inline' or 'attachemnt', otherwise
+            no header is added.
+        :param mime: the mimetype of the output image.  Used for the filename
+            suffix.
+        :param subname: a subname to append to the item name.
+        """
+        if (not item or not item.get('name') or
+                mime not in MimeTypeExtensions or
+                contentDisposition not in ('inline', 'attachment')):
+            return
+        filename = os.path.splitext(item['name'])[0]
+        if subname:
+            filename += '-' + subname
+        filename += '.' + MimeTypeExtensions[mime]
+        if not isinstance(filename, six.text_type):
+            filename = filename.decode('utf8', 'ignore')
+        safeFilename = filename.encode('ascii', 'ignore').replace('"', '')
+        encodedFilename = six.moves.urllib.parse.quote(filename.encode('utf8', 'ignore'))
+        setResponseHeader(
+            'Content-Disposition',
+            '%s; filename="%s"; filename*=UTF-8\'\'%s' % (
+                contentDisposition, safeFilename, encodedFilename))
+
     @describeRoute(
         Description('Get large image metadata.')
         .param('itemId', 'The ID of the item.', paramType='path')
@@ -309,7 +346,10 @@ class TilesItemResource(Item):
         .param('height', 'The maximum height of the thumbnail in pixels.',
                required=False, dataType='int')
         .param('encoding', 'Thumbnail output encoding', required=False,
-               enum=['JPEG', 'PNG'], default='JPEG')
+               enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
+        .param('contentDisposition', 'Specify the Content-Disposition response '
+               'header disposition-type value.', required=False,
+               enum=['inline', 'attachment'])
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -323,7 +363,9 @@ class TilesItemResource(Item):
             ('height', int),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
+            ('tiffCompression', str),
             ('encoding', str),
+            ('contentDisposition', str),
         ])
         try:
             result = self.imageItemModel.getThumbnail(item, **params)
@@ -334,6 +376,8 @@ class TilesItemResource(Item):
         if not isinstance(result, tuple):
             return result
         thumbData, thumbMime = result
+        self._setContentDisposition(
+            item, params.get('contentDisposition'), thumbMime, 'thumbnail')
         setResponseHeader('Content-Type', thumbMime)
         setRawResponse()
         return thumbData
@@ -389,13 +433,19 @@ class TilesItemResource(Item):
                'must match an existing level of the image exactly.',
                required=False, dataType='boolean', default=False)
         .param('encoding', 'Output image encoding', required=False,
-               enum=['JPEG', 'PNG'], default='JPEG')
+               enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
                required=False, dataType='int', default=95)
         .param('jpegSubsampling', 'Chroma subsampling used for generating '
                'JPEG images.  0, 1, and 2 are full, half, and quarter '
                'resolution chroma respectively.', required=False,
                enum=['0', '1', '2'], dataType='int', default='0')
+        .param('tiffCompression', 'Compression method when storing a TIFF '
+               'image', required=False,
+               enum=['raw', 'tiff_lzw', 'jpeg', 'tiff_adobe_deflate'])
+        .param('contentDisposition', 'Specify the Content-Disposition response '
+               'header disposition-type value.', required=False,
+               enum=['inline', 'attachment'])
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
         .errorResponse('Insufficient memory.')
@@ -422,6 +472,8 @@ class TilesItemResource(Item):
             ('encoding', str),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
+            ('tiffCompression', str),
+            ('contentDisposition', str),
         ])
         try:
             regionData, regionMime = self.imageItemModel.getRegion(
@@ -430,6 +482,8 @@ class TilesItemResource(Item):
             raise RestException(e.message)
         except ValueError as e:
             raise RestException('Value Error: %s' % e.message)
+        self._setContentDisposition(
+            item, params.get('contentDisposition'), regionMime, 'region')
         setResponseHeader('Content-Type', regionMime)
         setRawResponse()
         return regionData
@@ -459,7 +513,10 @@ class TilesItemResource(Item):
         .param('height', 'The maximum height of the image in pixels.',
                required=False, dataType='int')
         .param('encoding', 'Image output encoding', required=False,
-               enum=['JPEG', 'PNG'], default='JPEG')
+               enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
+        .param('contentDisposition', 'Specify the Content-Disposition response '
+               'header disposition-type value.', required=False,
+               enum=['inline', 'attachment'])
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -474,7 +531,9 @@ class TilesItemResource(Item):
             ('height', int),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
+            ('tiffCompression', str),
             ('encoding', str),
+            ('contentDisposition', str),
         ])
         try:
             result = self.imageItemModel.getAssociatedImage(item, image, **params)
@@ -483,6 +542,8 @@ class TilesItemResource(Item):
         if not isinstance(result, tuple):
             return result
         imageData, imageMime = result
+        self._setContentDisposition(
+            item, params.get('contentDisposition'), imageMime, image)
         setResponseHeader('Content-Type', imageMime)
         setRawResponse()
         return imageData

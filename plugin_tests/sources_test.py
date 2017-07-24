@@ -223,6 +223,16 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
             self.assertEqual(tile['tile'][:len(common.PNGHeader)],
                              common.PNGHeader)
         self.assertEqual(tileCount, 45)
+        # Ask for TIFFs
+        tileCount = 0
+        for tile in source.tileIterator(
+                scale={'magnification': 2.5},
+                format=tilesource.TILE_FORMAT_IMAGE,
+                encoding='TIFF'):
+            tileCount += 1
+            self.assertEqual(tile['tile'][:len(common.TIFFHeader)],
+                             common.TIFFHeader)
+        self.assertEqual(tileCount, 45)
         # Test some internal properties
         self.assertEqual(len(source._tiffDirectories), 9)
         info = source._tiffDirectories[-1]._tiffInfo

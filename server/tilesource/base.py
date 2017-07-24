@@ -69,7 +69,8 @@ TileOutputMimeTypes = {
     #                           doc-files/jpeg_metadata.html
     'JFIF': 'image/jpeg',
     'JPEG': 'image/jpeg',
-    'PNG': 'image/png'
+    'PNG': 'image/png',
+    'TIFF': 'image/tiff',
 }
 TileOutputPILFormat = {
     'JFIF': 'JPEG'
@@ -100,7 +101,8 @@ class TileSourceAssetstoreException(TileSourceException):
 
 
 def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
-                 format=(TILE_FORMAT_IMAGE, ), **kwargs):
+                 format=(TILE_FORMAT_IMAGE, ), tiffCompression='raw',
+                 **kwargs):
     """
     Convert a PIL image into the raw output bytes and a mime type.
 
@@ -111,6 +113,7 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
     :param jpegSubsampling: the subsampling level to use when encoding a JPEG.
     :param format: the desired format or a tuple of allowed formats.  Formats
         are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY, TILE_FORMAT_IMAGE).
+    :param tiffCompression: the compression format to use when encoding a TIFF.
     :returns:
         imageData: the image data in the specified format and encoding.
         imageFormatOrMimeType: the image mime type if the format is
@@ -138,8 +141,9 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
             output = BytesIO()
             if encoding == 'JPEG' and image.mode not in ('L', 'RGB'):
                 image = image.convert('RGB')
-            image.save(output, encoding, quality=jpegQuality,
-                       subsampling=jpegSubsampling)
+            image.save(
+                output, encoding, quality=jpegQuality,
+                subsampling=jpegSubsampling, compression=tiffCompression)
             imageData = output.getvalue()
     return imageData, imageFormatOrMimeType
 
@@ -322,16 +326,19 @@ class TileSource(object):
     name = None
 
     def __init__(self, jpegQuality=95, jpegSubsampling=0,
-                 encoding='JPEG', edge=False, *args, **kwargs):
+                 encoding='JPEG', edge=False, tiffCompression='raw', *args,
+                 **kwargs):
         """
         Initialize the tile class.
 
         :param jpegQuality: when serving jpegs, use this quality.
         :param jpegSubsampling: when serving jpegs, use this subsampling (0 is
-                                full chroma, 1 is half, 2 is quarter).
-        :param encoding: 'JPEG' or 'PNG'.
+            full chroma, 1 is half, 2 is quarter).
+        :param encoding: 'JPEG', 'PNG', or 'TIFF'.
         :param edge: False to leave edge tiles whole, True or 'crop' to crop
             edge tiles, otherwise, an #rrggbb color to fill edges.
+        :param tiffCompression: the compression format to use when encoding a
+            TIFF.
         """
         self.cache, self.cache_lock = getTileCache()
 
@@ -347,17 +354,20 @@ class TileSource(object):
         self.encoding = encoding
         self.jpegQuality = int(jpegQuality)
         self.jpegSubsampling = int(jpegSubsampling)
+        self.tiffCompression = tiffCompression
         self.edge = edge
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
         return strhash(
             kwargs.get('encoding'), kwargs.get('jpegQuality'),
-            kwargs.get('jpegSubsampling'), kwargs.get('edge'))
+            kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
+            kwargs.get('edge'))
 
     def getState(self):
-        return str(self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
-            self.jpegSubsampling) + ',' + str(self.edge)
+        return str(self.encoding) + ',' + str(self.jpegQuality) + ',' + \
+            str(self.jpegSubsampling) + ',' + str(self.tiffCompression) + \
+            ',' + str(self.edge)
 
     def wrapKey(self, *args, **kwargs):
         return strhash(self.getState()) + strhash(*args, **kwargs)
@@ -544,7 +554,7 @@ class TileSource(object):
             edges: if True, then the edge tiles will exclude the overlap
                 distance.  If unset or False, the edge tiles are full size.
         :param **kwargs: optional arguments.  Some options are encoding,
-            jpegQuality, jpegSubsampling.
+            jpegQuality, jpegSubsampling, tiffCompression.
         :returns: a dictionary of information needed for the tile iterator.
                 This is None if no tiles will be returned.  Otherwise, this
                 contains:
@@ -680,7 +690,7 @@ class TileSource(object):
                              'ymin': ymin, 'ymax': ymax})
 
         # Use RGB for JPEG, RGBA for PNG
-        mode = 'RGBA' if kwargs.get('encoding') in ('PNG',) else 'RGB'
+        mode = 'RGBA' if kwargs.get('encoding') in ('PNG', 'TIFF') else 'RGB'
 
         info = {
             'region': {
@@ -931,7 +941,7 @@ class TileSource(object):
             tile = tile.convert('RGB')
         tile.save(
             output, encoding, quality=self.jpegQuality,
-            subsampling=self.jpegSubsampling)
+            subsampling=self.jpegSubsampling, compression=self.tiffCompression)
         return output.getvalue()
 
     def _getAssociatedImage(self, imageKey):
@@ -986,7 +996,7 @@ class TileSource(object):
         :param levelZero: if true, always use the level zero tile.  Otherwise,
             the thumbnail is generated so that it is never upsampled.
         :param **kwargs: optional arguments.  Some options are encoding,
-            jpegQuality, and jpegSubsampling.
+            jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: thumbData, thumbMime: the image data and the mime type.
         """
         if ((width is not None and width < 2) or
@@ -1147,7 +1157,8 @@ class TileSource(object):
             TILE_FORMAT_IMAGE).  If TILE_FORMAT_IMAGE, encoding may be
             specified.
         :param **kwargs: optional arguments.  Some options are region, output,
-            encoding, jpegQuality, jpegSubsampling.  See tileIterator.
+            encoding, jpegQuality, jpegSubsampling, tiffCompression.  See
+            tileIterator.
         :returns: regionData, formatOrRegionMime: the image data and either the
             mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
@@ -1401,11 +1412,13 @@ class TileSource(object):
                 returned are: 012, 0123, 01234, 12345, 23456, 34567, 4567, 567,
                 with the non-overlapped area of each as 0, 1, 2, 3, 4, 5, 6, 7.
         :param encoding: if format includes TILE_FORMAT_IMAGE, a valid PIL
-            encoding (typically 'PNG' or 'JPEG').  Must also be in the
+            encoding (typically 'PNG', 'JPEG', or 'TIFF').  Must also be in the
             TileOutputMimeTypes map.
         :param jpegQuality: the quality to use when encoding a JPEG.
         :param jpegSubsampling: the subsampling level to use when encoding a
-                                JPEG.
+            JPEG.
+        :param tiffCompression: the compression format when encoding a TIFF.
+            This is usually 'raw', 'tiff_lzw', 'jpeg', or 'tiff_adobe_deflate'.
         :param **kwargs: optional arguments.
         :yields: an iterator that returns a dictionary as listed above.
         """
@@ -1481,7 +1494,7 @@ class TileSource(object):
 
         :param imageKey: the key of the associated image to retreive.
         :param **kwargs: optional arguments.  Some options are width, height,
-            encoding, jpegQuality, and jpegSubsampling.
+            encoding, jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: imageData, imageMime: the image data and the mime type, or
             None if the associated image doesn't exist.
         """
@@ -1510,12 +1523,13 @@ class FileTileSource(TileSource):
     def getLRUHash(*args, **kwargs):
         return strhash(
             args[0], kwargs.get('encoding'), kwargs.get('jpegQuality'),
-            kwargs.get('jpegSubsampling'), kwargs.get('edge'))
+            kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
+            kwargs.get('edge'))
 
     def getState(self):
-        return self._getLargeImagePath() + ',' + str(
-            self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
-            self.jpegSubsampling) + ',' + str(self.edge)
+        return self._getLargeImagePath() + ',' + str(self.encoding) + ',' + \
+            str(self.jpegQuality) + ',' + str(self.jpegSubsampling) + ',' + \
+            str(self.tiffCompression) + ',' + str(self.edge)
 
     def _getLargeImagePath(self):
         return self.largeImagePath
@@ -1552,13 +1566,14 @@ if girder:
             return strhash(
                 str(args[0]['largeImage']['fileId']), args[0]['updated'],
                 kwargs.get('encoding'), kwargs.get('jpegQuality'),
-                kwargs.get('jpegSubsampling'), kwargs.get('edge'))
+                kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
+                kwargs.get('edge'))
 
         def getState(self):
-            return str(self.item['largeImage']['fileId']) + ',' + str(
-                self.item['updated']) + ',' + str(
-                self.encoding) + ',' + str(self.jpegQuality) + ',' + str(
-                self.jpegSubsampling) + ',' + str(self.edge)
+            return str(self.item['largeImage']['fileId']) + ',' + \
+                str(self.item['updated']) + ',' + str(self.encoding) + ',' + \
+                str(self.jpegQuality) + ',' + str(self.jpegSubsampling) + \
+                ',' + str(self.tiffCompression) + ',' + str(self.edge)
 
         def _getLargeImagePath(self):
             try:

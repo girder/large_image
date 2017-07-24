@@ -264,8 +264,8 @@ class ImageItem(Item):
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
         :param **kwargs: optional arguments.  Some options are encoding,
-            jpegQuality, and jpegSubsampling.  This is also passed to the
-            tile source.
+            jpegQuality, jpegSubsampling, and tiffCompression.  This is also
+            passed to the tile source.
         :returns: thumbData, thumbMime: the image data and the mime type OR
             a generator which will yield a file.
         """
@@ -281,8 +281,12 @@ class ImageItem(Item):
             'thumbnailKey': key
         })
         if existing:
+            if kwargs.get('contentDisposition') != 'attachment':
+                contentDisposition = 'inline'
+            else:
+                contentDisposition = kwargs['contentDisposition']
             return self.model('file').download(
-                existing, contentDisposition='inline')
+                existing, contentDisposition=contentDisposition)
         tileSource = self._loadTileSource(item, **kwargs)
         thumbData, thumbMime = tileSource.getThumbnail(
             width, height, **kwargs)
@@ -350,8 +354,8 @@ class ImageItem(Item):
         :param item: the item with the tile source.
         :param **kwargs: optional arguments.  Some options are left, top,
             right, bottom, regionWidth, regionHeight, units, width, height,
-            encoding, jpegQuality, and jpegSubsampling.  This is also passed to
-            the tile source.
+            encoding, jpegQuality, jpegSubsampling, and tiffCompression.  This
+            is also passed to the tile source.
         :returns: regionData, regionMime: the image data and the mime type.
         """
         tileSource = self._loadTileSource(item, **kwargs)
@@ -384,7 +388,7 @@ class ImageItem(Item):
         :param item: the item with the tile source.
         :param imageKey: the key of the associated image to retreive.
         :param **kwargs: optional arguments.  Some options are width, height,
-            encoding, jpegQuality, and jpegSubsampling.
+            encoding, jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: imageData, imageMime: the image data and the mime type, or
             None if the associated image doesn't exist.
         """
