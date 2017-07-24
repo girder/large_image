@@ -606,6 +606,24 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
         self.assertNotEqual(greyImage, image)
 
+    def testTilesFromPowerOf3Tiles(self):
+        from girder.plugins.large_image.tilesource import getTileSource
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'G10-3_pelvis_crop-powers-of-3.tif'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 128)
+        self.assertEqual(tileMetadata['tileHeight'], 128)
+        self.assertEqual(tileMetadata['sizeX'], 3000)
+        self.assertEqual(tileMetadata['sizeY'], 5000)
+        self.assertEqual(tileMetadata['levels'], 7)
+        self._testTilesZXY(itemId, tileMetadata)
+        source = getTileSource('girder_item://' + itemId, user=self.admin)
+        self.assertEqual(len(source._svslevels), 7)
+        self.assertTrue(all([level['svslevel'] == 0 for level in source._svslevels]))
+
     def testTilesFromPTIFJpeg2K(self):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'huron.image2_jpeg2k.tif'))

@@ -38,6 +38,25 @@ except ImportError:
     logger.getLogger().setLevel(logger.INFO)
 
 
+def _nearPowerOfTwo(val1, val2, tolerance=0.02):
+    """
+    Check if two values are different by nearly a power of two.
+
+    :param val1: the first value to check.
+    :param val2: the second value to check.
+    :param tolerance: the maximum difference in the log2 ratio's mantissa.
+    :return: True if the valeus are nearly a power of two different from each
+        other; false otherwise.
+    """
+    # If one or more of the values is zero or they have different signs, then
+    # return False
+    if val1 * val2 <= 0:
+        return False
+    log2ratio = math.log(float(val1) / float(val2)) / math.log(2)
+    # Use modf()[0] to get the mantissa of the ratio's log2 value.
+    return abs(math.modf(log2ratio)[0]) < tolerance
+
+
 @six.add_metaclass(LruCacheMetaclass)
 class SVSFileTileSource(FileTileSource):
     """
@@ -183,6 +202,11 @@ class SVSFileTileSource(FileTileSource):
                 self._openslide = openslide.OpenSlide(path)
         # sort highest resolution first.
         levels = [entry[-1] for entry in sorted(levels, reverse=True)]
+        # Discard levels that are not a power-of-two compared to the highest
+        # resolution level.
+        levels = [entry for entry in levels if
+                  _nearPowerOfTwo(levels[0]['width'], entry['width']) and
+                  _nearPowerOfTwo(levels[0]['height'], entry['height'])]
         return levels
 
     def getNativeMagnification(self):
