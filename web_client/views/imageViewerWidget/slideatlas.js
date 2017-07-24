@@ -4,8 +4,6 @@ import ImageViewerWidget from './base';
 
 var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
         if (!$('head #large_image-slideatlas-css').length) {
             $('head').prepend(
                 $('<link>', {
@@ -16,21 +14,30 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
             );
         }
 
-        $.getScript(
-            staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
-            () => this.render()
-        );
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => this.render());
     },
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.SA || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.SA || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
+        }
+
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
         }
 
         if (this.tileWidth !== this.tileHeight) {
             console.error('The SlideAtlas viewer only supports square tiles.');
-            return;
+            return this;
         }
 
         // TODO: if a viewer already exists, do we render again?
@@ -63,9 +70,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
             window.$(this.el).saViewer('destroy');
             this.viewer = null;
         }
-        if (window.SA) {
-            delete window.SA;
-        }
+        this.deleted = true;
         ImageViewerWidget.prototype.destroy.call(this);
     }
 });

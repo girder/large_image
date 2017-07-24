@@ -2,8 +2,6 @@ import ImageViewerWidget from './base';
 
 var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
         if (!$('head #large_image-openlayers-css').length) {
             $('head').prepend(
                 $('<link>', {
@@ -14,19 +12,26 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
             );
         }
 
-        $.getScript(
-            'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.js',
-            () => this.render()
-        );
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: 'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => this.render());
     },
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.ol || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.ol || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
         }
 
-        // TODO: if a viewer already exists, do we render again?
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
+        }
 
         var ol = window.ol; // this makes the style checker happy
 
@@ -66,9 +71,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
             this.viewer.setTarget(null);
             this.viewer = null;
         }
-        if (window.ol) {
-            delete window.ol;
-        }
+        this.deleted = true;
         // TODO: delete CSS
         ImageViewerWidget.prototype.destroy.call(this);
     }

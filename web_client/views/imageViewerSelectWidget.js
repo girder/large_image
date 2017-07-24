@@ -1,6 +1,7 @@
 import _ from 'underscore';
 
 import { wrap } from 'girder/utilities/PluginUtils';
+import eventStream from 'girder/utilities/EventStream';
 import ItemView from 'girder/views/body/ItemView';
 import View from 'girder/views/View';
 
@@ -61,6 +62,9 @@ var ImageViewerSelectWidget = View.extend({
     },
 
     _selectViewer: function (viewerName) {
+        if (this.currentViewer && this.currentViewer.name === viewerName) {
+            return;
+        }
         if (this.currentViewer) {
             this.currentViewer.destroy();
             this.currentViewer = null;
@@ -80,7 +84,15 @@ var ImageViewerSelectWidget = View.extend({
             itemId: this.itemId,
             model: this.model
         });
+        this.currentViewer.name = viewerName;
     }
+});
+
+wrap(ItemView, 'initialize', function (initialize) {
+    this.listenTo(eventStream, 'g:event.large_image.finished_image_item', () => {
+        this.model.fetch();
+    });
+    initialize.apply(this, _.rest(arguments));
 });
 
 export default ImageViewerSelectWidget;

@@ -512,7 +512,6 @@ $(function () {
         it('destroy the viewer', function () {
             viewer.destroy();
             expect($('.geojs-layer').length).toBe(0);
-            expect(window.geo).toBe(undefined);
         });
     });
 });

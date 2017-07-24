@@ -2,8 +2,6 @@ import ImageViewerWidget from './base';
 
 var LeafletImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
         if (!$('head #large_image-leaflet-css').length) {
             $('head').prepend(
                 $('<link>', {
@@ -14,21 +12,30 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
             );
         }
 
-        $.getScript(
-            'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
-            () => this.render()
-        );
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => this.render());
     },
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.L || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.L || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
+        }
+
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
         }
 
         if (this.tileWidth !== this.tileHeight) {
             console.error('The Leaflet viewer only supports square tiles.');
-            return;
+            return this;
         }
 
         // TODO: if a viewer already exists, do we render again?
@@ -65,9 +72,7 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
             this.viewer.remove();
             this.viewer = null;
         }
-        if (window.L) {
-            delete window.L;
-        }
+        this.deleted = true;
         // TODO: delete CSS
         ImageViewerWidget.prototype.destroy.call(this);
     }

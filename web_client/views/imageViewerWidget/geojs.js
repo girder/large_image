@@ -25,29 +25,35 @@ function guid() {
 
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
         this._layers = {};
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
 
-        $.getScript(
-            staticRoot + '/built/plugins/large_image/extra/geojs.js',
-            () => {
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: staticRoot + '/built/plugins/large_image/extra/geojs.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => {
                 this.trigger('g:beforeFirstRender', this);
                 this.render();
-            }
-        );
+            });
     },
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.geo || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.geo || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
         }
 
-        this._destroyViewer();
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
+        }
+
         var geo = window.geo; // this makes the style checker happy
 
         var w = this.sizeX, h = this.sizeY;
@@ -66,18 +72,12 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     destroy: function () {
-        this._destroyViewer();
-        if (window.geo) {
-            delete window.geo;
-        }
-        ImageViewerWidget.prototype.destroy.call(this);
-    },
-
-    _destroyViewer: function () {
         if (this.viewer) {
             this.viewer.exit();
             this.viewer = null;
         }
+        this.deleted = true;
+        ImageViewerWidget.prototype.destroy.call(this);
     },
 
     /**
