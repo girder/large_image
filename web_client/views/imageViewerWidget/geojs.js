@@ -30,14 +30,17 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
 
-        $.ajax({  // like $.getScript, but allow caching
-            url: staticRoot + '/built/plugins/large_image/extra/geojs.js',
-            dataType: 'script',
-            cache: true
-        }).done(() => {
-            this.trigger('g:beforeFirstRender', this);
-            ImageViewerWidget.prototype.initialize.call(this, settings);
-        });
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: staticRoot + '/built/plugins/large_image/extra/geojs.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => {
+                this.trigger('g:beforeFirstRender', this);
+                this.render();
+            });
     },
 
     render: function () {

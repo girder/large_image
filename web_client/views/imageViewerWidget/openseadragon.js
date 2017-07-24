@@ -4,13 +4,14 @@ import ImageViewerWidget from './base';
 
 var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        $.ajax({  // like $.getScript, but allow caching
-            url: 'https://openseadragon.github.io/openseadragon/openseadragon.min.js',
-            dataType: 'script',
-            cache: true
-        }).done(() => {
-            ImageViewerWidget.prototype.initialize.call(this, settings);
-        });
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: 'https://openseadragon.github.io/openseadragon/openseadragon.min.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => this.render());
     },
 
     render: function () {

@@ -12,13 +12,14 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
             );
         }
 
-        $.ajax({  // like $.getScript, but allow caching
-            url: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
-            dataType: 'script',
-            cache: true
-        }).done(() => {
-            ImageViewerWidget.prototype.initialize.call(this, settings);
-        });
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => this.render());
     },
 
     render: function () {

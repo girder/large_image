@@ -92,7 +92,7 @@ wrap(ItemView, 'initialize', function (initialize) {
     this.listenTo(eventStream, 'g:event.large_image.finished_image_item', () => {
         this.model.fetch();
     });
-    initialize.apply(this, Array.prototype.slice.call(arguments, 1));
+    initialize.apply(this, _.rest(arguments));
 });
 
 export default ImageViewerSelectWidget;

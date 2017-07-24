@@ -13,7 +13,7 @@ $(function () {
                 this.once('g:beforeFirstRender', function () {
                     window.geo.util.mockVGLRenderer();
                 });
-                initialize.apply(this, Array.prototype.slice.call(arguments, 1));
+                initialize.apply(this, _.rest(arguments));
             });
         });
         it('create the admin user', function () {

@@ -14,13 +14,14 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
             );
         }
 
-        $.ajax({  // like $.getScript, but allow caching
-            url: staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
-            dataType: 'script',
-            cache: true
-        }).done(() => {
-            ImageViewerWidget.prototype.initialize.call(this, settings);
-        });
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => this.render());
     },
 
     render: function () {
