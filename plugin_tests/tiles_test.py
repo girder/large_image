@@ -799,6 +799,42 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(width, 180)
         self.assertEqual(height, int(width * origHeight / origWidth))
 
+        # Test asking for fill values
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG',
+                                    'width': 180, 'height': 180,
+                                    'fill': 'none'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 180)
+        self.assertEqual(height, int(width * origHeight / origWidth))
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG',
+                                    'width': 180, 'height': 180,
+                                    'fill': 'pink'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 180)
+        self.assertEqual(height, 180)
+        resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
+                            user=self.admin, isJson=False,
+                            params={'encoding': 'PNG',
+                                    'width': 180, 'height': 180,
+                                    'fill': '#ffff00'})
+        self.assertStatusOk(resp)
+        nextimage = self.getBody(resp, text=False)
+        self.assertEqual(nextimage[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', nextimage[16:24])
+        self.assertEqual(width, 180)
+        self.assertEqual(height, 180)
+        self.assertNotEqual(image, nextimage)
+
         # Test bad parameters
         badParams = [
             ({'encoding': 'invalid'}, 400, 'Invalid encoding'),
@@ -810,6 +846,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             ({'height': -5}, 400, 'Invalid width or height'),
             ({'jpegQuality': 'invalid'}, 400, 'incorrect type'),
             ({'jpegSubsampling': 'invalid'}, 400, 'incorrect type'),
+            ({'fill': 'not a color'}, 400, 'unknown color'),
         ]
         for entry in badParams:
             resp = self.request(path='/item/%s/tiles/thumbnail' % itemId,
@@ -826,7 +863,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
         self.assertEqual(len(image), defaultLength)
 
-        # We should report one thumbnail
+        # We should report some thumbnails
         item = self.model('item').load(itemId, user=self.admin)
         present, removed = self.model(
             'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
@@ -946,6 +983,36 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(width, 500)
         self.assertEqual(height, 375)
 
+        # Test fill
+        params['fill'] = 'none'
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 500)
+        self.assertEqual(height, 375)
+        params['fill'] = '#ff00ff'
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 500)
+        self.assertEqual(height, 500)
+        params['regionWidth'] = 1500
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        nextimage = self.getBody(resp, text=False)
+        self.assertEqual(nextimage[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 500)
+        self.assertEqual(height, 500)
+        self.assertNotEqual(image, nextimage)
+
         # test svs image
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_svs_image.TCGA-DU-6399-'
@@ -1013,6 +1080,14 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             user=self.admin, encoding='PNG')
         image, mime = source.getThumbnail(encoding='JPEG', width=200)
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+
+        # Test the level0 thumbnail code path
+        image, mime = source.getThumbnail(
+            encoding='PNG', width=200, height=100, levelZero=True, fill='blue')
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 200)
+        self.assertEqual(height, 100)
 
     def testTilesLoadModelCache(self):
         from girder.plugins.large_image import loadmodelcache
