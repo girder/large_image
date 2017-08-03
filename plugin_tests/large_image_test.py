@@ -294,10 +294,18 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         self.assertEqual(results['removed'], 1)
 
         def preventCancel(evt):
-            evt.preventDefault()
+            from girder.plugins.jobs.constants import JobStatus
+            from girder.plugins.worker import CustomJobStatus
+
+            job = evt.info['job']
+            params = evt.info['params']
+            if (params.get('status') and
+                    params.get('status') != job['status'] and
+                    params['status'] in (JobStatus.CANCELED, CustomJobStatus.CANCELING)):
+                evt.preventDefault()
 
         # Prevent a job from cancelling
-        events.bind('jobs.cancel', 'testDeleteIncompleteTile', preventCancel)
+        events.bind('jobs.job.update', 'testDeleteIncompleteTile', preventCancel)
         resp = self.request(
             method='POST', path='/item/%s/tiles' % itemId, user=self.admin)
         resp = self.request(
@@ -307,7 +315,7 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         results = resp.json
         self.assertEqual(results['removed'], 0)
         self.assertIn('could not be canceled', results['message'])
-        events.unbind('jobs.cancel', 'testDeleteIncompleteTile')
+        events.unbind('jobs.job.update', 'testDeleteIncompleteTile')
         # Now we should be able to cancel the job
         resp = self.request(
             method='DELETE', path='/large_image/tiles/incomplete',
