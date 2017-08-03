@@ -75,7 +75,9 @@ $(function () {
                     return null;
                 });
             });
-
+            waitsFor(function () {
+                return annotationId !== undefined;
+            });
             girderTest.waitForLoad();
             runs(function () {
                 expect(annotationId).toBeDefined();

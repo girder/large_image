@@ -1603,7 +1603,7 @@ if girder:
                 raise
             except (KeyError, ValidationException, TileSourceException) as e:
                 raise TileSourceException(
-                    'No large image file in this item: %s' % e.message)
+                    'No large image file in this item: %s' % e.args[0])
 
 
 def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,

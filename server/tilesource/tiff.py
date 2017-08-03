@@ -65,7 +65,8 @@ class TiffFileTileSource(FileTileSource):
         for directoryNum in itertools.count():
             try:
                 td = TiledTiffDirectory(largeImagePath, directoryNum)
-            except ValidationTiffException as lastException:
+            except ValidationTiffException as exc:
+                lastException = exc
                 continue
             except TiffException as exc:
                 if not lastException:
@@ -149,7 +150,7 @@ class TiffFileTileSource(FileTileSource):
         except IndexError:
             raise TileSourceException('z layer does not exist')
         except InvalidOperationTiffException as e:
-            raise TileSourceException(e.message)
+            raise TileSourceException(e.args[0])
         except IOTiffException as e:
             if sparseFallback and z and PIL:
                 image = self.getTile(x / 2, y / 2, z - 1, pilImageAllowed=True,
@@ -164,7 +165,7 @@ class TiffFileTileSource(FileTileSource):
                 image = image.resize((self.tileWidth, self.tileHeight))
                 return self._outputTile(image, 'PIL', x, y, z, pilImageAllowed,
                                         **kwargs)
-            raise TileSourceException('Internal I/O failure: %s' % e.message)
+            raise TileSourceException('Internal I/O failure: %s' % e.args[0])
 
     def getTileFromEmptyDirectory(self, x, y, z):
         """

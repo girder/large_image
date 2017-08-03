@@ -1028,8 +1028,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         tileMetadata = resp.json
         tileMetadata['sparse'] = 5
         self._testTilesZXY(itemId, tileMetadata, token=token)
-        self.assertGreater(loadmodelcache.LoadModelCache[
-            loadmodelcache.LoadModelCache.keys()[0]]['hits'], 70)
+        self.assertGreater(six.next(six.itervalues(
+            loadmodelcache.LoadModelCache))['hits'], 70)
 
     def testTilesAutoSetOption(self):
         from girder.plugins.large_image import constants
