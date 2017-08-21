@@ -18,10 +18,22 @@
 #############################################################################
 
 import json
+import math
 import six
 
-
 import PIL.Image
+
+try:
+    from girder import logger
+except ImportError:
+    import logging as logger
+    logger.getLogger().setLevel(logger.INFO)
+
+try:
+    import numpy
+except ImportError:
+    logger.warning('Error: Could not import numpy')
+    numpy = None
 
 from .base import FileTileSource, TileSourceException
 from ..cache_util import LruCacheMetaclass, strhash, methodcache
@@ -96,6 +108,15 @@ class PILFileTileSource(FileTileSource):
             self._pilImage = PIL.Image.open(largeImagePath)
         except IOError:
             raise TileSourceException('File cannot be opened via PIL.')
+        # If this is encoded as a 32-bit integer or a 32-bit float, convert it
+        # to an 8-bit integer.  This expects the source value to either have a
+        # maximum of 1, 2^8-1, 2^16-1, 2^24-1, or 2^32-1, and scales it to
+        # [0, 255]
+        if self._pilImage.mode in ('I', 'F') and numpy:
+            imgdata = numpy.asarray(self._pilImage)
+            maxval = 256 ** math.ceil(math.log(numpy.max(imgdata) + 1, 256)) - 1
+            self._pilImage = PIL.Image.fromarray(numpy.uint8(numpy.multiply(
+                imgdata, 255.0 / maxval)))
         self.sizeX = self._pilImage.width
         self.sizeY = self._pilImage.height
         # We have just one tile which is the entire image.
