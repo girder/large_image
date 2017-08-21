@@ -52,7 +52,7 @@ $(function () {
             });
             waitsFor(function () {
                 var resp = girder.rest.restRequest({
-                    path: 'large_image/settings',
+                    url: 'large_image/settings',
                     type: 'GET',
                     async: false
                 });

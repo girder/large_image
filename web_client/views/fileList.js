@@ -34,7 +34,7 @@ wrap(FileListWidget, 'render', function (render) {
     this.$('.g-large-image-remove').on('click', () => {
         restRequest({
             type: 'DELETE',
-            path: 'item/' + this.parentItem.id + '/tiles',
+            url: 'item/' + this.parentItem.id + '/tiles',
             error: null
         }).done(() => {
             this.parentItem.unset('largeImage');
@@ -46,7 +46,7 @@ wrap(FileListWidget, 'render', function (render) {
         var fileId = this.collection.get(cid).id;
         restRequest({
             type: 'POST',
-            path: 'item/' + this.parentItem.id + '/tiles',
+            url: 'item/' + this.parentItem.id + '/tiles',
             data: {fileId: fileId, notify: true},
             error: function (error) {
                 if (error.status !== 0) {
