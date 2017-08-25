@@ -4,21 +4,26 @@ import ImageViewerWidget from './base';
 
 var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        ImageViewerWidget.prototype.initialize.call(this, settings);
-
-        $.getScript(
-            'https://openseadragon.github.io/openseadragon/openseadragon.min.js',
-            () => this.render()
-        );
+        $.when(
+            ImageViewerWidget.prototype.initialize.call(this, settings),
+            $.ajax({  // like $.getScript, but allow caching
+                url: 'https://openseadragon.github.io/openseadragon/openseadragon.min.js',
+                dataType: 'script',
+                cache: true
+            }))
+            .done(() => this.render());
     },
 
     render: function () {
         // If script or metadata isn't loaded, then abort
-        if (!window.OpenSeadragon || !this.tileWidth || !this.tileHeight) {
-            return;
+        if (!window.OpenSeadragon || !this.tileWidth || !this.tileHeight || this.deleted) {
+            return this;
         }
 
-        // TODO: if a viewer already exists, do we render again?
+        if (this.viewer) {
+            // don't rerender the viewer
+            return this;
+        }
 
         var OpenSeadragon = window.OpenSeadragon; // this makes the style checker happy
 
@@ -50,9 +55,7 @@ var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
             this.viewer.destroy();
             this.viewer = null;
         }
-        if (window.OpenSeadragon) {
-            delete window.OpenSeadragon;
-        }
+        this.deleted = true;
         ImageViewerWidget.prototype.destroy.call(this);
     }
 });

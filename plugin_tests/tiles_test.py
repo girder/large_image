@@ -85,6 +85,39 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         image = self.getBody(resp, text=False)
         self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
 
+        # test content disposition
+        if not tileMetadata:
+            params['contentDisposition'] = 'inline'
+            resp = self.request(path=path % itemId, user=self.admin,
+                                isJson=False, params=params)
+            self.assertStatusOk(resp)
+            self.assertTrue(resp.headers['Content-Disposition'].startswith('inline'))
+            self.assertTrue(
+                resp.headers['Content-Disposition'].endswith('.png') or
+                'largeImageThumbnail' in resp.headers['Content-Disposition'])
+            params['contentDisposition'] = 'attachment'
+            resp = self.request(path=path % itemId, user=self.admin,
+                                isJson=False, params=params)
+            self.assertStatusOk(resp)
+            self.assertTrue(resp.headers['Content-Disposition'].startswith('attachment'))
+            self.assertTrue(
+                resp.headers['Content-Disposition'].endswith('.png') or
+                'largeImageThumbnail' in resp.headers['Content-Disposition'])
+            params['contentDisposition'] = 'other'
+            resp = self.request(path=path % itemId, user=self.admin,
+                                isJson=False, params=params)
+            self.assertStatusOk(resp)
+            self.assertTrue(
+                resp.headers.get('Content-Disposition') is None or
+                'largeImageThumbnail' in resp.headers['Content-Disposition'])
+            del params['contentDisposition']
+            resp = self.request(path=path % itemId, user=self.admin,
+                                isJson=False, params=params)
+            self.assertStatusOk(resp)
+            self.assertTrue(
+                resp.headers.get('Content-Disposition') is None or
+                'largeImageThumbnail' in resp.headers['Content-Disposition'])
+
         # Check that JPEG options are honored.
         # JPEG is the default encoding
         del params['encoding']
@@ -572,6 +605,24 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         image = self.getBody(resp, text=False)
         self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
         self.assertNotEqual(greyImage, image)
+
+    def testTilesFromPowerOf3Tiles(self):
+        from girder.plugins.large_image.tilesource import getTileSource
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'G10-3_pelvis_crop-powers-of-3.tif'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 128)
+        self.assertEqual(tileMetadata['tileHeight'], 128)
+        self.assertEqual(tileMetadata['sizeX'], 3000)
+        self.assertEqual(tileMetadata['sizeY'], 5000)
+        self.assertEqual(tileMetadata['levels'], 7)
+        self._testTilesZXY(itemId, tileMetadata)
+        source = getTileSource('girder_item://' + itemId, user=self.admin)
+        self.assertEqual(len(source._svslevels), 7)
+        self.assertTrue(all([level['svslevel'] == 0 for level in source._svslevels]))
 
     def testTilesFromPTIFJpeg2K(self):
         file = self._uploadFile(os.path.join(
