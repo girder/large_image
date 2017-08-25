@@ -638,7 +638,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(tileMetadata['sizeX'], 9158)
         self.assertEqual(tileMetadata['sizeY'], 11273)
         self.assertEqual(tileMetadata['levels'], 7)
-        self.assertEqual(tileMetadata['magnification'], None)
+        self.assertEqual(tileMetadata['magnification'], 20)
         self._testTilesZXY(itemId, tileMetadata)
 
     def testTilesFromPIL(self):
@@ -1100,6 +1100,23 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         resp = self.request(path='/item/%s/tiles/images' % itemId, user=self.admin)
         self.assertStatusOk(resp)
         self.assertEqual(resp.json, ['label', 'macro', 'thumbnail'])
+        resp = self.request(path='/item/%s/tiles/images/macro' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
+                            user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, None)
+
+        # Test with the Huron image
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'huron.image2_jpeg2k.tif'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles/images' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, ['label', 'macro'])
         resp = self.request(path='/item/%s/tiles/images/macro' % itemId,
                             user=self.admin, isJson=False)
         self.assertStatusOk(resp)

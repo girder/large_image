@@ -183,17 +183,17 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         self.delCount = 0
         source = self.model('image_item', 'large_image').tileSource(item)
         self.assertIsNotNone(source)
-        self.assertEqual(self.initCount, 12)
+        self.assertEqual(self.initCount, 14)
         # Create another source; we shouldn't init it again, as it should be
         # cached.
         source = self.model('image_item', 'large_image').tileSource(item)
         self.assertIsNotNone(source)
-        self.assertEqual(self.initCount, 12)
+        self.assertEqual(self.initCount, 14)
         source = None
         # Clear the cache to free references and force garbage collection
         LruCacheMetaclass.classCaches[TiffGirderTileSource].clear()
         gc.collect(2)
-        self.assertEqual(self.delCount, 12)
+        self.assertEqual(self.delCount, 14)
 
 
 class MemcachedCache(LargeImageCachedTilesTest):

@@ -58,6 +58,13 @@ class TiffFileTileSource(FileTileSource):
 
         largeImagePath = self._getLargeImagePath()
         lastException = None
+        # Associated images are smallish TIFF images that have an image
+        # description and are not tiled.  They have their own TIFF directory.
+        # Individual TIFF images can also have images embedded into their
+        # directory as tags (this is a vendor-specific method of adding more
+        # images into a file) -- those are stored in the individual
+        # directories' _embeddedImages field.
+        self._associatedImages = {}
 
         # Query all know directories in the tif file.  Only keep track of
         # directories that contain tiled images.
@@ -65,7 +72,9 @@ class TiffFileTileSource(FileTileSource):
         for directoryNum in itertools.count():
             try:
                 td = TiledTiffDirectory(largeImagePath, directoryNum)
-            except ValidationTiffException as lastException:
+            except ValidationTiffException as exc:
+                lastException = exc
+                self._addAssociatedImage(largeImagePath, directoryNum)
                 continue
             except TiffException as exc:
                 if not lastException:
@@ -94,9 +103,9 @@ class TiffFileTileSource(FileTileSource):
         directories = {}
         # Discard any images that use a different tiling scheme than our
         # preferred image
-        for dir in alldir:
-            td = dir[-1]
-            level = dir[-2]
+        for tdir in alldir:
+            td = tdir[-1]
+            level = tdir[-2]
             if (td.tileWidth != highest.tileWidth or
                     td.tileHeight != highest.tileHeight):
                 continue
@@ -112,6 +121,36 @@ class TiffFileTileSource(FileTileSource):
         self.levels = len(self._tiffDirectories)
         self.sizeX = highest.imageWidth
         self.sizeY = highest.imageHeight
+
+    def _addAssociatedImage(self, largeImagePath, directoryNum):
+        """
+        Check if the specfied TIFF directory contains a non-tiled image with a
+        sensible image description that can be used as an ID.  If so, and if
+        the image isn't too large, add this image as an associated image.
+
+        :param largeImagePath: path to the TIFF file.
+        :param directoryNum: libtiff directory number of the image.
+        """
+        try:
+            associated = TiledTiffDirectory(largeImagePath, directoryNum, False)
+            id = associated._tiffInfo.get(
+                'imagedescription').strip().split(None, 1)[0].lower()
+            # Only use this as an associated image if the parsed id is
+            # a reasonable length, alphanumeric characters, and the
+            # image isn't too large.
+            if (id.isalnum() and len(id) > 3 and len(id) <= 20 and
+                    associated._pixelInfo['width'] <= 8192 and
+                    associated._pixelInfo['height'] <= 8192):
+                self._associatedImages[id] = associated._tiffFile.read_image()
+        except (TiffException, AttributeError):
+            # If we can't validate or read an associated image or it has no
+            # useful imagedescription, fail quietly without adding an
+            # associated image.
+            pass
+        except Exception:
+            # If we fail for other reasons, don't raise an exception, but log
+            # what happened.
+            logger.exception('Could not use non-tiled TIFF image as an associated image.')
 
     def getNativeMagnification(self):
         """
@@ -219,9 +258,10 @@ class TiffFileTileSource(FileTileSource):
 
         :return: the list of image keys.
         """
-        imageList = set()
+        imageList = set(self._associatedImages)
         for td in self._tiffDirectories:
-            imageList |= set(td._embeddedImages)
+            if td is not None:
+                imageList |= set(td._embeddedImages)
         return sorted(imageList)
 
     def _getAssociatedImage(self, imageKey):
@@ -231,10 +271,19 @@ class TiffFileTileSource(FileTileSource):
         :param imageKey: the key of the associated image.
         :return: the image in PIL format or None.
         """
+        # The values in _embeddedImages are sometimes duplicated with the
+        # _associatedImages.  There are some sample files where libtiff's
+        # read_image fails to read the _associatedImage properly because of
+        # separated jpeg information.  For the samples we currently have,
+        # preferring the _embeddedImages is sufficient, but if find other files
+        # with seemingly bad associated images, we may need to read them with a
+        # more complex process than read_image.
         for td in self._tiffDirectories:
-            if imageKey in td._embeddedImages:
+            if td is not None and imageKey in td._embeddedImages:
                 image = PIL.Image.open(BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
                 return image
+        if imageKey in self._associatedImages:
+            return PIL.Image.fromarray(self._associatedImages[imageKey])
         return None
 
 
