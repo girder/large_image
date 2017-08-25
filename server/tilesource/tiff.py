@@ -58,6 +58,12 @@ class TiffFileTileSource(FileTileSource):
 
         largeImagePath = self._getLargeImagePath()
         lastException = None
+        # Associated images are smallish TIFF images that have an image
+        # description and are not tiled.  They have their own TIFF directory.
+        # Individual TIFF images can also have images embedded into their
+        # directory as tags (this is a vendor-specific method of adding more
+        # images into a file) -- those are stored in the individual
+        # directories' _embeddedImages field.
         self._associatedImages = {}
 
         # Query all know directories in the tif file.  Only keep track of
@@ -66,20 +72,9 @@ class TiffFileTileSource(FileTileSource):
         for directoryNum in itertools.count():
             try:
                 td = TiledTiffDirectory(largeImagePath, directoryNum)
-            except ValidationTiffException as lastException:
-                try:
-                    associated = TiledTiffDirectory(largeImagePath, directoryNum, False)
-                    id = associated._tiffInfo.get(
-                        'imagedescription').strip().split(None, 1)[0].lower()
-                    # Only use this as an associated image if the parsed id is
-                    # a reasonable length, alphanumeric characters, and the
-                    # image isn't too large.
-                    if (id.isalnum() and len(id) > 3 and len(id) <= 20 and
-                            associated._pixelInfo['width'] <= 8192 and
-                            associated._pixelInfo['height'] <= 8192):
-                        self._associatedImages[id] = associated._tiffFile.read_image()
-                except Exception:
-                    pass
+            except ValidationTiffException as exc:
+                lastException = exc
+                self._addAssociatedImage(largeImagePath, directoryNum)
                 continue
             except TiffException as exc:
                 if not lastException:
@@ -126,6 +121,36 @@ class TiffFileTileSource(FileTileSource):
         self.levels = len(self._tiffDirectories)
         self.sizeX = highest.imageWidth
         self.sizeY = highest.imageHeight
+
+    def _addAssociatedImage(self, largeImagePath, directoryNum):
+        """
+        Check if the specfied TIFF directory contains a non-tiled image with a
+        sensible image description that can be used as an ID.  If so, and if
+        the image isn't too large, add this image as an associated image.
+
+        :param largeImagePath: path to the TIFF file.
+        :param directoryNum: libtiff directory number of the image.
+        """
+        try:
+            associated = TiledTiffDirectory(largeImagePath, directoryNum, False)
+            id = associated._tiffInfo.get(
+                'imagedescription').strip().split(None, 1)[0].lower()
+            # Only use this as an associated image if the parsed id is
+            # a reasonable length, alphanumeric characters, and the
+            # image isn't too large.
+            if (id.isalnum() and len(id) > 3 and len(id) <= 20 and
+                    associated._pixelInfo['width'] <= 8192 and
+                    associated._pixelInfo['height'] <= 8192):
+                self._associatedImages[id] = associated._tiffFile.read_image()
+        except (TiffException, AttributeError):
+            # If we can't validate or read an associated image or it has no
+            # useful imagedescription, fail quietly without adding an
+            # associated image.
+            pass
+        except Exception:
+            # If we fail for other reasons, don't raise an exception, but log
+            # what happened.
+            logger.exception('Could not use non-tiled TIFF image as an associated image.')
 
     def getNativeMagnification(self):
         """

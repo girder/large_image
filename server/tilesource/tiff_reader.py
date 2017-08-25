@@ -174,7 +174,7 @@ class TiledTiffDirectory(object):
         :raises: ValidationTiffException
         """
         if not self._mustBeTiled:
-            if self._tiffInfo.get('istiled'):
+            if self._mustBeTiled is not None and self._tiffInfo.get('istiled'):
                 raise ValidationTiffException('Expected a non-tiled TIFF file')
             return
         # For any non-supported file, we probably can add a conversion task in
@@ -254,6 +254,7 @@ class TiledTiffDirectory(object):
         self._imageWidth = info.get('imagewidth')
         self._imageHeight = info.get('imagelength')
         self.parse_image_description(info.get('imagedescription', ''))
+        # From TIFF specification, tag 0x128, 2 is inches, 3 is centimeters.
         units = {2: 25.4, 3: 10}
         # If the resolution value is less than a threshold (100), don't use it,
         # as it is probably just an inaccurate default.  Values like 72dpi and
