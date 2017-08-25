@@ -89,7 +89,7 @@ class TiledTiffDirectory(object):
         'IsByteSwapped', 'IsUpSampled', 'IsMSB2LSB', 'NumberOfStrips'
     ]
 
-    def __init__(self, filePath, directoryNum):
+    def __init__(self, filePath, directoryNum, mustBeTiled=True):
         """
         Create a new reader for a tiled image file directory in a TIFF file.
 
@@ -98,6 +98,8 @@ class TiledTiffDirectory(object):
         :param directoryNum: The number of the TIFF image file directory to
         open.
         :type directoryNum: int
+        :param mustBeTiled: if True, only tiled images validate.  If False,
+            only non-tiled images validate.  None validates both.
         :raises: InvalidOperationTiffException or IOTiffException or
         ValidationTiffException
         """
@@ -106,6 +108,7 @@ class TiledTiffDirectory(object):
         # getTileByteCountsType
 
         self.cache = LRUCache(10)
+        self._mustBeTiled = mustBeTiled
 
         self._tiffFile = None
 
@@ -170,6 +173,10 @@ class TiledTiffDirectory(object):
 
         :raises: ValidationTiffException
         """
+        if not self._mustBeTiled:
+            if self._mustBeTiled is not None and self._tiffInfo.get('istiled'):
+                raise ValidationTiffException('Expected a non-tiled TIFF file')
+            return
         # For any non-supported file, we probably can add a conversion task in
         # the create_image.py script, such as flatten or colourspace.  These
         # should only be done if necessary, which would require the conversion
@@ -209,7 +216,6 @@ class TiledTiffDirectory(object):
                 libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005):
             raise ValidationTiffException(
                 'Only JPEG compression TIFF files are supported')
-
         if (not self._tiffInfo.get('istiled') or
                 not self._tiffInfo.get('tilewidth') or
                 not self._tiffInfo.get('tilelength')):
@@ -248,6 +254,23 @@ class TiledTiffDirectory(object):
         self._imageWidth = info.get('imagewidth')
         self._imageHeight = info.get('imagelength')
         self.parse_image_description(info.get('imagedescription', ''))
+        # From TIFF specification, tag 0x128, 2 is inches, 3 is centimeters.
+        units = {2: 25.4, 3: 10}
+        # If the resolution value is less than a threshold (100), don't use it,
+        # as it is probably just an inaccurate default.  Values like 72dpi and
+        # 96dpi are common defaults, but so are small metric values, too.
+        if (not self._pixelInfo.get('mm_x') and info.get('xresolution') and
+                units.get(info.get('resolutionunit')) and
+                info.get('xresolution') >= 100):
+            self._pixelInfo['mm_x'] = units[info['resolutionunit']] / info['xresolution']
+        if (not self._pixelInfo.get('mm_y') and info.get('yresolution') and
+                units.get(info.get('resolutionunit')) and
+                info.get('yresolution') >= 100):
+            self._pixelInfo['mm_y'] = units[info['resolutionunit']] / info['yresolution']
+        if not self._pixelInfo.get('width') and info.get('imagewidth'):
+            self._pixelInfo['width'] = info['imagewidth']
+        if not self._pixelInfo.get('height') and info.get('imagelength'):
+            self._pixelInfo['height'] = info['imagelength']
 
     @methodcache(key=partial(strhash, '_getJpegTables'))
     def _getJpegTables(self):
