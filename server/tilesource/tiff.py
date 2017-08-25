@@ -135,6 +135,8 @@ class TiffFileTileSource(FileTileSource):
             associated = TiledTiffDirectory(largeImagePath, directoryNum, False)
             id = associated._tiffInfo.get(
                 'imagedescription').strip().split(None, 1)[0].lower()
+            if not isinstance(id, six.text_type):
+                id = id.decode('utf8')
             # Only use this as an associated image if the parsed id is
             # a reasonable length, alphanumeric characters, and the
             # image isn't too large.
