@@ -39,6 +39,7 @@ MimeTypeExtensions = {
     'image/png': 'png',
     'image/tiff': 'tiff',
 }
+ImageMimeTypes = list(MimeTypeExtensions)
 
 
 def _adjustParams(params):
@@ -280,6 +281,7 @@ class TilesItemResource(Item):
                paramType='path')
         .param('y', 'The Y coordinate of the tile (0 is the top).',
                paramType='path')
+        .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -310,6 +312,7 @@ class TilesItemResource(Item):
                paramType='path')
         .param('y', 'The Y coordinate of the tile (0 is the top).',
                paramType='path')
+        .produces(ImageMimeTypes)
     )
     @access.cookie
     @access.public
@@ -350,6 +353,7 @@ class TilesItemResource(Item):
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -446,6 +450,7 @@ class TilesItemResource(Item):
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
         .errorResponse('Insufficient memory.')
@@ -517,6 +522,7 @@ class TilesItemResource(Item):
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
