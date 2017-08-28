@@ -7,7 +7,7 @@ var ImageViewerWidget = View.extend({
 
         return restRequest({
             type: 'GET',
-            path: 'item/' + this.itemId + '/tiles'
+            url: 'item/' + this.itemId + '/tiles'
         }).done((resp) => {
             this.levels = resp.levels;
             this.tileWidth = resp.tileWidth;

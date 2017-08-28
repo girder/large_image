@@ -63,12 +63,12 @@ export default Model.extend({
 
         opts = opts || {};
         var restOpts = {
-            path: (this.altUrl || this.resourceName) + '/' + this.get('_id'),
+            url: (this.altUrl || this.resourceName) + '/' + this.get('_id'),
             /* Add out region request into the query */
             data: this._region
         };
         if (opts.extraPath) {
-            restOpts.path += '/' + opts.extraPath;
+            restOpts.url += '/' + opts.extraPath;
         }
         if (opts.ignoreError) {
             restOpts.error = null;

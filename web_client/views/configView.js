@@ -69,7 +69,7 @@ var ConfigView = View.extend({
         /* Now save the settings */
         return restRequest({
             type: 'PUT',
-            path: 'system/setting',
+            url: 'system/setting',
             data: {
                 list: JSON.stringify(settings)
             },
@@ -130,7 +130,7 @@ var ConfigView = View.extend({
         if (!ConfigView.settings) {
             restRequest({
                 type: 'GET',
-                path: 'large_image/settings'
+                url: 'large_image/settings'
             }).done((resp) => {
                 ConfigView.settings = resp;
                 if (callback) {
