@@ -348,6 +348,11 @@ class TilesItemResource(Item):
                required=False, dataType='int')
         .param('height', 'The maximum height of the thumbnail in pixels.',
                required=False, dataType='int')
+        .param('fill', 'A fill color.  If width and height are both specified '
+               'and fill is specified and not "none", the output image is '
+               'padded on either the sides or the top and bottom to the '
+               'requested output size.  Most css colors are accepted.',
+               required=False)
         .param('encoding', 'Thumbnail output encoding', required=False,
                enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
         .param('contentDisposition', 'Specify the Content-Disposition response '
@@ -365,6 +370,7 @@ class TilesItemResource(Item):
         params = self._parseParams(params, True, [
             ('width', int),
             ('height', int),
+            ('fill', str),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
             ('tiffCompression', str),
@@ -425,6 +431,10 @@ class TilesItemResource(Item):
                required=False, dataType='int')
         .param('height', 'The maximum height of the output image in pixels.',
                required=False, dataType='int')
+        .param('fill', 'A fill color.  If output dimensions are specified and '
+               'fill is specified and not "none", the output image is padded '
+               'on either the sides or the top and bottom to the requested '
+               'output size.  Most css colors are accepted.', required=False)
         .param('magnification', 'Magnification of the output image.  If '
                'neither width for height is specified, the magnification, '
                'mm_x, and mm_y parameters are used to select the output size.',
@@ -470,6 +480,7 @@ class TilesItemResource(Item):
             ('units', str, 'region', 'units'),
             ('width', int, 'output', 'maxWidth'),
             ('height', int, 'output', 'maxHeight'),
+            ('fill', str),
             ('magnification', float, 'scale', 'magnification'),
             ('mm_x', float, 'scale', 'mm_x'),
             ('mm_y', float, 'scale', 'mm_y'),

@@ -264,13 +264,15 @@ class ImageItem(Item):
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
         :param **kwargs: optional arguments.  Some options are encoding,
-            jpegQuality, jpegSubsampling, and tiffCompression.  This is also
+            jpegQuality, jpegSubsampling, tiffCompression, fill.  This is also
             passed to the tile source.
         :returns: thumbData, thumbMime: the image data and the mime type OR
             a generator which will yield a file.
         """
         # check if a thumbnail file exists with a particular key
         keydict = dict(kwargs, width=width, height=height)
+        if 'fill' in keydict and (keydict['fill']).lower() == 'none':
+            del keydict['fill']
         keydict = {k: v for k, v in six.viewitems(keydict) if v is not None}
         key = json.dumps(keydict, sort_keys=True, separators=(',', ':'))
         fileModel = self.model('file')
