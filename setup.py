@@ -20,14 +20,20 @@ with open('LICENSE') as f:
     license_str = f.read()
 
 try:
-    with open('requirements.txt') as f:
-        ireqs = pkg_resources.parse_requirements(f.read())
+    lines = open('requirements.txt').readlines()
+    ireqs = pkg_resources.parse_requirements([line for line in lines if not line.startswith('-e ')])
 except pkg_resources.RequirementParseError:
     raise
 # Don't include pylibmc for Windows
 if 'win' in sys.platform:
     ireqs = [req for req in ireqs if req.key not in ('pylibmc', )]
 requirements = [str(req) for req in ireqs]
+
+# For lines in requirements.txt that start with -e, store the URL in the
+# dependencies (used in dependency_links), and the referenced package in the
+# requirements.
+dependencies = [line[3:].strip() for line in lines if line.startswith('-e ')]
+requirements.extend(['=='.join(entry.split('#egg=')[1].split('-', 1)) for entry in dependencies])
 
 
 test_requirements = [
@@ -75,6 +81,7 @@ setup(
 
     include_package_data=True,
     install_requires=requirements,
+    dependency_links=dependencies,
     license=license_str,
     # zip_safe=False,  # Comment out to let setuptools decide
     keywords='large_image',

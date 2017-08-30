@@ -187,7 +187,8 @@ before_install:
 
   - pip install --no-cache-dir numpy==1.11.3  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
-  - if [ ${LIBTIFF_VERSION} == "4.0.6" ]; then pip install "git+https://github.com/pearu/pylibtiff@33735eb7197eb33ed1a50bbc4bc5a47ce4305e92" --force-reinstall --ignore-installed --upgrade --no-cache-dir; fi
+  # Make sure we are using an appropriate pylibtiff.
+  - pip install "git+https://github.com/pearu/pylibtiff@33735eb7197eb33ed1a50bbc4bc5a47ce4305e92" --force-reinstall --ignore-installed --upgrade --no-cache-dir
 
 
 install:
