@@ -141,6 +141,6 @@ class MemCache(cachetools.Cache):
         except pylibmc.Error as exc:
             # memcached won't cache items larger than 1 Mb, but this returns a
             # 'SUCCESS' error.  Raise other errors.
-            if 'SUCCESS' not in exc.message:
+            if 'SUCCESS' not in repr(exc.args):
                 self.logError(pylibmc.Error, logprint.exception,
                               'pylibmc exception')

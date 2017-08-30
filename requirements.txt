@@ -1,4 +1,4 @@
-cachetools>=1.1.6,<2.0.0
+cachetools>=2.0.0
 enum34>=1.1.6
 jsonschema>=2.5.1
 psutil>=4.2.0
@@ -12,8 +12,10 @@ Pillow>=3.2.0
 # https://github.com/girder/large_image/issues/30
 numpy>=1.10.2
 
-libtiff>=0.4.0
-# If you have OpenJPEG 2.1.1 or later or need libtiff 4.0.6 support, instead use
-# -e git+https://github.com/pearu/pylibtiff@33735eb7197eb33ed1a50bbc4bc5a47ce4305e92
+# If you are using OpenJPEG < 2.1.1, libtiff <= 4.0.3, and Python 2.x, you can
+# use the packaged version of libtiff
+#   libtiff>=0.4.0
+# otherwise, we need a newer version:
+-e git+https://github.com/pearu/pylibtiff@33735eb7197eb33ed1a50bbc4bc5a47ce4305e92#egg=libtiff-0.4.1.dev0
 
 openslide-python>=1.1.0

@@ -28,7 +28,7 @@ import mpl_toolkits.mplot3d.axes3d  # noqa
 
 
 def main(file_list, units):
-    print file_list, units
+    print(file_list, units)
     data = {}
     for file in file_list:
         elapsed_time = np.loadtxt(file)
@@ -60,8 +60,8 @@ def plot_data(data):
         elapsed_time = data[server_name]
         max_val = np.amax(elapsed_time)
         mean_val = np.mean(elapsed_time)
-        print 'server %s  data has a mean value of %f milliseconds and a max ' \
-              'value of %f milliseconds' % (server_name, mean_val, max_val)
+        print('server %s  data has a mean value of %f milliseconds and a max '
+              'value of %f milliseconds' % (server_name, mean_val, max_val))
         num, bins, patch = ax.hist(
             elapsed_time,
             interval,

@@ -135,6 +135,8 @@ class TiffFileTileSource(FileTileSource):
             associated = TiledTiffDirectory(largeImagePath, directoryNum, False)
             id = associated._tiffInfo.get(
                 'imagedescription').strip().split(None, 1)[0].lower()
+            if not isinstance(id, six.text_type):
+                id = id.decode('utf8')
             # Only use this as an associated image if the parsed id is
             # a reasonable length, alphanumeric characters, and the
             # image isn't too large.
@@ -188,7 +190,7 @@ class TiffFileTileSource(FileTileSource):
         except IndexError:
             raise TileSourceException('z layer does not exist')
         except InvalidOperationTiffException as e:
-            raise TileSourceException(e.message)
+            raise TileSourceException(e.args[0])
         except IOTiffException as e:
             if sparseFallback and z and PIL:
                 image = self.getTile(x / 2, y / 2, z - 1, pilImageAllowed=True,
@@ -203,7 +205,7 @@ class TiffFileTileSource(FileTileSource):
                 image = image.resize((self.tileWidth, self.tileHeight))
                 return self._outputTile(image, 'PIL', x, y, z, pilImageAllowed,
                                         **kwargs)
-            raise TileSourceException('Internal I/O failure: %s' % e.message)
+            raise TileSourceException('Internal I/O failure: %s' % e.args[0])
 
     def getTileFromEmptyDirectory(self, x, y, z):
         """

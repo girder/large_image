@@ -337,8 +337,8 @@ class TiledTiffDirectory(object):
         :raises: InvalidOperationTiffException
         """
         # TIFFCheckTile and TIFFComputeTile require pixel coordinates
-        pixelX = x * self._tileWidth
-        pixelY = y * self._tileHeight
+        pixelX = int(x * self._tileWidth)
+        pixelY = int(y * self._tileHeight)
 
         if pixelX >= self._imageWidth or pixelY >= self._imageHeight:
             raise InvalidOperationTiffException(
@@ -550,6 +550,8 @@ class TiledTiffDirectory(object):
 
         if not meta:
             return
+        if not isinstance(meta, six.string_types):
+            meta = meta.decode('utf8', 'ignore')
         try:
             xml = cElementTree.fromstring(meta)
         except Exception:

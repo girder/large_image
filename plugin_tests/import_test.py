@@ -51,19 +51,19 @@ class LargeImageTilesTest(base.TestCase):
         try:
             reload_module(girder.plugins.large_image.tilesource.test)
         except ImportError as exc:
-            self.assertIn('No module named PIL', exc.args[0])
+            self.assertIn('PIL', exc.args[0])
         else:
             self.fail()
         try:
             reload_module(girder.plugins.large_image.tilesource.tiff_reader)
         except ImportError as exc:
-            self.assertIn('No module named libtiff', exc.args[0])
+            self.assertIn('libtiff', exc.args[0])
         else:
             self.fail()
         try:
             reload_module(girder.plugins.large_image.tilesource.svs)
         except ImportError as exc:
-            self.assertIn('No module named openslide', exc.args[0])
+            self.assertIn('openslide', exc.args[0])
         else:
             self.fail()
 

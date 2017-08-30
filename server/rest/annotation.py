@@ -155,8 +155,8 @@ class AnnotationResource(Resource):
         except ValidationException as exc:
             logger.exception('Failed to validate annotation')
             raise RestException(
-                'Validation Error: JSON doesn\'t follow schema (%s).' % (
-                    exc.message, ))
+                'Validation Error: JSON doesn\'t follow schema (%r).' % (
+                    exc.args, ))
 
     @describeRoute(
         Description('Update an annotation or move it to a different item.')
@@ -192,8 +192,8 @@ class AnnotationResource(Resource):
         except ValidationException as exc:
             logger.exception('Failed to validate annotation')
             raise RestException(
-                'Validation Error: JSON doesn\'t follow schema (%s).' % (
-                    exc.message, ))
+                'Validation Error: JSON doesn\'t follow schema (%r).' % (
+                    exc.args, ))
         return annotation
 
     @describeRoute(
