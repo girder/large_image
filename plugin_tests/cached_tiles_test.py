@@ -194,10 +194,59 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         gc.collect(2)
         self.assertEqual(self.delCount, 14)
 
+    # This test is more general that tiles, but by including it here, the
+    # test is run for both memcached and python tile caches.
+    def testCachesClearAndInfo(self):
+        from girder.plugins.large_image import cache_util
+        from girder.plugins.large_image.models.image_item import ImageItem
+
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        item = Item().load(itemId, user=self.admin)
+        # The source is in the cache since we just loaded it
+        self.assertEqual(cache_util.cachesInfo()['tilesource']['used'], 1)
+        self.assertEqual(cache_util.cachesInfo()['LoadModelCache']['used'], 0)
+        cache_util.cachesClear()
+        self.assertEqual(cache_util.cachesInfo()['tilesource']['used'], 0)
+        self.assertEqual(cache_util.cachesInfo()['LoadModelCache']['used'], 0)
+        # Accessing this will add it to the cache
+        ImageItem().tileSource(item)
+        self.assertEqual(cache_util.cachesInfo()['tilesource']['used'], 1)
+        self.assertEqual(cache_util.cachesInfo()['LoadModelCache']['used'], 0)
+        if self.tileCacheIsReported:
+            self.assertEqual(cache_util.cachesInfo()['tileCache']['used'], 0)
+        else:
+            self.assertNotIn('tileCache', cache_util.cachesInfo())
+        # Accessing this will add it to the loadmodelcache and the tile cache
+        self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                     user=self.admin, isJson=False)
+        self.assertEqual(cache_util.cachesInfo()['tilesource']['used'], 1)
+        self.assertEqual(cache_util.cachesInfo()['LoadModelCache']['used'], 1)
+        if self.tileCacheIsReported:
+            self.assertEqual(cache_util.cachesInfo()['tileCache']['used'], 1)
+        cache_util.cachesClear()
+        self.assertEqual(cache_util.cachesInfo()['tilesource']['used'], 0)
+        self.assertEqual(cache_util.cachesInfo()['LoadModelCache']['used'], 0)
+        if self.tileCacheIsReported:
+            self.assertEqual(cache_util.cachesInfo()['tileCache']['used'], 0)
+        # This will also work via a rest call
+        ImageItem().tileSource(item)
+        self.assertEqual(cache_util.cachesInfo()['tilesource']['used'], 1)
+        resp = self.request(path='/large_image/cache/clear', method='PUT', user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(cache_util.cachesInfo()['tilesource']['used'], 0)
+        self.assertEqual(resp.json['before']['tilesource']['used'], 1)
+        self.assertEqual(resp.json['after']['tilesource']['used'], 0)
+        # We can also get the cache info via a rest call
+        resp = self.request(path='/large_image/cache', method='GET', user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['tilesource']['used'], 0)
+
 
 class MemcachedCache(LargeImageCachedTilesTest):
-    pass
+    tileCacheIsReported = False
 
 
 class PythonCache(LargeImageCachedTilesTest):
-    pass
+    tileCacheIsReported = True

@@ -17,6 +17,7 @@
 #  limitations under the License.
 ##############################################################################
 
+import datetime
 import json
 import time
 
@@ -32,6 +33,7 @@ from girder.plugins.jobs.constants import JobStatus
 from girder.plugins.jobs.models.job import Job
 
 from .. import constants
+from .. import cache_util
 from ..models.base import TileGeneralException
 from ..models.image_item import ImageItem
 
@@ -111,12 +113,31 @@ class LargeImageResource(Resource):
         super(LargeImageResource, self).__init__()
 
         self.resourceName = 'large_image'
+        self.route('GET', ('cache', ), self.cacheInfo)
+        self.route('PUT', ('cache', 'clear'), self.cacheClear)
         self.route('GET', ('settings',), self.getPublicSettings)
         self.route('GET', ('thumbnails',), self.countThumbnails)
         self.route('PUT', ('thumbnails',), self.createThumbnails)
         self.route('DELETE', ('thumbnails',), self.deleteThumbnails)
         self.route('DELETE', ('tiles', 'incomplete'),
                    self.deleteIncompleteTiles)
+
+    @describeRoute(
+        Description('Clear tile source caches to release resources and file handles.')
+    )
+    @access.admin
+    def cacheClear(self, params):
+        before = cache_util.cachesInfo()
+        cache_util.cachesClear()
+        after = cache_util.cachesInfo()
+        return {'cacheCleared': datetime.datetime.utcnow(), 'before': before, 'after': after}
+
+    @describeRoute(
+        Description('Get information on caches.')
+    )
+    @access.admin
+    def cacheInfo(self, params):
+        return cache_util.cachesInfo()
 
     @describeRoute(
         Description('Get public settings for large image display.')

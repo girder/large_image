@@ -81,6 +81,13 @@ class LargeImageCommonTest(base.TestCase):
                     }])})
         self.assertStatusOk(resp)
 
+    def tearDown(self):
+        from girder.plugins.large_image import cache_util
+
+        # Clear the cache so tests can't affect each other.
+        cache_util.cachesClear()
+        base.TestCase.tearDown(self)
+
     def _uploadFile(self, path, name=None, private=False):
         """
         Upload the specified path to the admin user's public or private folder
