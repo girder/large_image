@@ -20,7 +20,6 @@ cache:
     - $HOME/build/girder_testing_build/store
     - $HOME/build/girder_testing_build/data
 
-# sudo: false
 sudo: required
 
 dist: trusty
@@ -170,7 +169,14 @@ before_install:
   - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
   # - python $girder_worker_path/scripts/install_requirements.py # --mode=dev
   # - pip install --no-cache-dir -U -e $girder_worker_path'[girder_io]'
-  - pip2 install --no-cache-dir -U $girder_worker_path'[girder_io]'
+  # Change in travis in 2017-09 require sudo for pip2 when in the python3 main
+  # environment
+  - if [ -n "${PY3}" ]; then
+    sudo pip2 install --no-cache-dir -U setuptools &&
+    sudo pip2 install --no-cache-dir -U $girder_worker_path'[girder_io]' ;
+    else 
+    pip install --no-cache-dir -U $girder_worker_path'[girder_io]' ;
+    fi
 
   - export MONGO_VERSION=3.0.7
   - export PY_COVG="ON"
