@@ -81,6 +81,9 @@ describe('geojs-annotations', function () {
             },
             coordinates: function () {
                 return coordinates;
+            },
+            style: function (key) {
+                return style[key];
             }
         };
 

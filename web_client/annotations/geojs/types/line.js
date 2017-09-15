@@ -13,7 +13,7 @@ function line(annotation) {
 
     return _.extend(element, {
         type: 'polyline',
-        closed: false,
+        closed: !!annotation.style('closed'),
         points: coordinates
     });
 }
