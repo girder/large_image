@@ -93,7 +93,8 @@ class AnnotationSchema:
             'lineWidth': {
                 'type': 'number',
                 'minimum': 0
-            }
+            },
+            'group': {'type': 'string'}
         },
         'required': ['type'],
         'additionalProperties': True
