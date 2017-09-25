@@ -12,10 +12,6 @@ Pillow>=3.2.0
 # https://github.com/girder/large_image/issues/30
 numpy>=1.10.2
 
-# If you are using OpenJPEG < 2.1.1, libtiff <= 4.0.3, and Python 2.x, you can
-# use the packaged version of libtiff
-#   libtiff>=0.4.0
-# otherwise, we need a newer version:
--e git+https://github.com/pearu/pylibtiff@33735eb7197eb33ed1a50bbc4bc5a47ce4305e92#egg=libtiff-0.4.1.dev0
+libtiff>=0.4.1
 
 openslide-python>=1.1.0
