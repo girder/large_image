@@ -245,7 +245,7 @@ class TilesItemResource(Item):
         imageArgs = self._parseTestParams(params)
         return self._getTilesInfo(item, imageArgs)
 
-    def _getTile(self, item, z, x, y, imageArgs):
+    def _getTile(self, item, z, x, y, imageArgs, mayRedirect=False):
         """
         Get an large image tile.
 
@@ -254,6 +254,8 @@ class TilesItemResource(Item):
         .param x: the X coordinate of the tile (0 is the left side).
         .param y: the Y coordinate of the tile (0 is the top).
         :param imageArgs: additional arguments to use when fetching image data.
+        :param mayRedirect: if True, allow return a response whcih may be a
+            redirect.
         :return: a function that returns the raw image data.
         """
         try:
@@ -265,7 +267,7 @@ class TilesItemResource(Item):
                                 code=400)
         try:
             tileData, tileMime = self.imageItemModel.getTile(
-                item, x, y, z, **imageArgs)
+                item, x, y, z, mayRedirect=mayRedirect, **imageArgs)
         except TileGeneralException as e:
             raise RestException(e.args[0], code=404)
         setResponseHeader('Content-Type', tileMime)
@@ -292,7 +294,7 @@ class TilesItemResource(Item):
     #   @access.public
     #   @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     #   def getTile(self, item, z, x, y, params):
-    #       return self._getTile(item, z, x, y, params)
+    #       return self._getTile(item, z, x, y, params, True)
     @access.public
     def getTile(self, itemId, z, x, y, params):
         _adjustParams(params)
@@ -302,7 +304,7 @@ class TilesItemResource(Item):
         # a while.
         setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
             cherrypy.serving.response.time + 600))
-        return self._getTile(item, z, x, y, params)
+        return self._getTile(item, z, x, y, params, True)
 
     @describeRoute(
         Description('Get a test large image tile.')

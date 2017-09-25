@@ -17,6 +17,7 @@
 #  limitations under the License.
 #############################################################################
 
+import cherrypy
 import json
 import math
 import six
@@ -142,7 +143,7 @@ class PILFileTileSource(FileTileSource):
             self.maxSize)
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
         if z != 0:
             raise TileSourceException('z layer does not exist')
         if x != 0:
@@ -173,3 +174,19 @@ if girder:
         def getState(self):
             return super(PILGirderTileSource, self).getState() + ',' + str(
                 self.maxSize)
+
+        @methodcache()
+        def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
+            if z != 0:
+                raise TileSourceException('z layer does not exist')
+            if x != 0:
+                raise TileSourceException('x is outside layer')
+            if y != 0:
+                raise TileSourceException('y is outside layer')
+            if (mayRedirect and not pilImageAllowed and
+                    self._pilFormatMatches(self._pilImage, **kwargs)):
+                url = '%s/api/v1/file/%s/download' % (
+                    cherrypy.request.base, self.item['largeImage']['fileId'])
+                raise cherrypy.HTTPRedirect(url)
+            return self._outputTile(self._pilImage, 'PIL', x, y, z,
+                                    pilImageAllowed, **kwargs)

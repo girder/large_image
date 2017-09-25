@@ -913,6 +913,34 @@ class TileSource(object):
                 tile['gheight'] = tile['height'] * scale
                 yield tile
 
+    def _pilFormatMatches(self, image, **kwargs):
+        """
+        Determine if the specified PIL image matches the format of the tile
+        source with the specified arguments.
+
+        :param image: the PIL image to check.
+        :param **kwargs: additional parameters to use in determining format.
+        """
+        encoding = TileOutputPILFormat.get(self.encoding, self.encoding)
+        if image.format != encoding:
+            return False
+        if encoding == 'PNG':
+            return True
+        if encoding == 'JPEG':
+            originalQuality = None
+            try:
+                if image.format == 'JPEG' and hasattr(image, 'quantization'):
+                    if image.quantization[0][58] <= 100:
+                        originalQuality = int(100 - image.quantization[0][58] / 2)
+                    else:
+                        originalQuality = int(5000.0 / 2.5 / image.quantization[0][15])
+            except Exception:
+                return False
+            return abs(originalQuality - self.jpegQuality) <= 1
+        # We fail for the TTIFF file format; it is general enough that ensuring
+        # compatibility could be an issue.
+        return False
+
     def _outputTile(self, tile, tileEncoding, x, y, z, pilImageAllowed=False,
                     **kwargs):
         """
@@ -957,10 +985,10 @@ class TileSource(object):
                         fill=color, outline=None)
         if pilImageAllowed:
             return tile
-        output = BytesIO()
         encoding = TileOutputPILFormat.get(self.encoding, self.encoding)
         if encoding == 'JPEG' and tile.mode not in ('L', 'RGB'):
             tile = tile.convert('RGB')
+        output = BytesIO()
         tile.save(
             output, encoding, quality=self.jpegQuality,
             subsampling=self.jpegSubsampling, compression=self.tiffCompression)
