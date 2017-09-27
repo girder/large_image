@@ -72,7 +72,7 @@ for source in sourceList:
         if getattr(sourceClass, 'name', None):
             AvailableTileSources[sourceClass.name] = sourceClass
     except ImportError:
-        logprint.exception('Error: Could not import %s' % className)
+        logprint.info('Notice: Could not import %s' % className)
 
 # Create a partial function that will work through the known functions to get a
 # tile source.
