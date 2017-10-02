@@ -177,7 +177,7 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         itemId = str(file['itemId'])
         item = self.model('item').load(itemId, user=self.admin)
         # Clear the cache to free references and force garbage collection
-        LruCacheMetaclass.classCaches[TiffGirderTileSource].clear()
+        LruCacheMetaclass.classCaches[TiffGirderTileSource][0].clear()
         gc.collect(2)
         self.initCount = 0
         self.delCount = 0
@@ -191,7 +191,7 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         self.assertEqual(self.initCount, 14)
         source = None
         # Clear the cache to free references and force garbage collection
-        LruCacheMetaclass.classCaches[TiffGirderTileSource].clear()
+        LruCacheMetaclass.classCaches[TiffGirderTileSource][0].clear()
         gc.collect(2)
         self.assertEqual(self.delCount, 14)
 
