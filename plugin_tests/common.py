@@ -167,7 +167,7 @@ class LargeImageCommonTest(base.TestCase):
                 resp = self.request(path='/item/%s/tiles/zxy/%d/%d/%d' % (
                     itemId, z, x, y), params=tileParams, isJson=False,
                     **kwargs)
-                if (resp.output_status[:3] != '200' and
+                if (resp.output_status[:3] != b'200' and
                         metadata.get('sparse') and z > metadata['sparse']):
                     self.assertStatus(resp, 404)
                     continue

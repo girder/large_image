@@ -148,6 +148,28 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
     return imageData, imageFormatOrMimeType
 
 
+def _letterboxImage(image, width, height, fill):
+    """
+    Given a PIL image, width, height, and fill color, letterbox or pillarbox
+    the image to make it the specified dimensions.  The image is never
+    cropped.  The original image will be returned if no action is needed.
+
+    :param image: the source image.
+    :param width: the desired width in pixels.
+    :param height: the desired height in pixels.
+    :param fill: a fill color.
+    """
+    if ((image.width >= width and image.height >= height) or
+            not fill or str(fill).lower() == 'none'):
+        return image
+    color = PIL.ImageColor.getcolor(fill, image.mode)
+    width = max(width, image.width)
+    height = max(height, image.height)
+    result = PIL.Image.new(image.mode, (width, height), color)
+    result.paste(image, (int((width - image.width) / 2), int((height - image.height) / 2)))
+    return result
+
+
 class LazyTileDict(dict):
     """
     Tiles returned from the tile iterator and dictioaries of information with
@@ -1023,12 +1045,15 @@ class TileSource(object):
         image = image.crop((0, 0, imageWidth, imageHeight))
 
         if width or height:
+            maxWidth, maxHeight = width, height
             width, height, calcScale = self._calculateWidthHeight(
                 width, height, imageWidth, imageHeight)
 
             image = image.resize(
                 (width, height),
                 PIL.Image.BICUBIC if width > imageWidth else PIL.Image.LANCZOS)
+            if kwargs.get('fill') and maxWidth and maxHeight:
+                image = _letterboxImage(image, maxWidth, maxHeight, kwargs['fill'])
         return _encodeImage(image, **kwargs)
 
     def getPreferredLevel(self, level):
@@ -1157,7 +1182,7 @@ class TileSource(object):
             TILE_FORMAT_IMAGE).  If TILE_FORMAT_IMAGE, encoding may be
             specified.
         :param **kwargs: optional arguments.  Some options are region, output,
-            encoding, jpegQuality, jpegSubsampling, tiffCompression.  See
+            encoding, jpegQuality, jpegSubsampling, tiffCompression, fill.  See
             tileIterator.
         :returns: regionData, formatOrRegionMime: the image data and either the
             mime type, if the format is TILE_FORMAT_IMAGE, or the format.
@@ -1209,6 +1234,10 @@ class TileSource(object):
                 (outWidth, outHeight),
                 PIL.Image.BICUBIC if outWidth > regionWidth else
                 PIL.Image.LANCZOS)
+        maxWidth = kwargs.get('output', {}).get('maxWidth')
+        maxHeight = kwargs.get('output', {}).get('maxHeight')
+        if kwargs.get('fill') and maxWidth and maxHeight:
+            image = _letterboxImage(image, maxWidth, maxHeight, kwargs['fill'])
         return _encodeImage(image, format=format, **kwargs)
 
     def getRegionAtAnotherScale(self, sourceRegion, sourceScale=None,
@@ -1603,7 +1632,7 @@ if girder:
                 raise
             except (KeyError, ValidationException, TileSourceException) as e:
                 raise TileSourceException(
-                    'No large image file in this item: %s' % e.message)
+                    'No large image file in this item: %s' % e.args[0])
 
 
 def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,

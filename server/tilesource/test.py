@@ -82,8 +82,8 @@ class TestTileSource(TileSource):
         y *= self.tileHeight
         sq = widthCount * self.tileWidth
         while sq >= 4:
-            sq1 = sq / 4
-            sq2 = sq1 + sq / 2
+            sq1 = sq // 4
+            sq2 = sq1 + sq // 2
             for t in range(-(y % sq), self.tileWidth, sq):
                 if t + sq1 < self.tileWidth and t + sq2 >= 0:
                     for l in range(-(x % sq), self.tileWidth, sq):
@@ -93,7 +93,7 @@ class TestTileSource(TileSource):
                                 min(self.tileWidth, l + sq2 - 1),
                                 min(self.tileWidth, t + sq2 - 1),
                             ], color, None)
-            sq /= 2
+            sq //= 2
 
     @methodcache()
     def getTile(self, x, y, z, *args, **kwargs):

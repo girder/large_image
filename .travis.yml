@@ -2,10 +2,16 @@ language: python
 
 python:
   - "2.7"
+  - "3.5"
 
 env:
   - LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1" 
-  - LIBTIFF_VERSION=4.0.6 LIBTIFF_DIR=     OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
+  - LIBTIFF_VERSION=4.0.8 LIBTIFF_DIR=     OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
+
+matrix:
+  exclude:
+  - python: "3.5"
+    env: LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1" 
 
 cache:
   directories:
@@ -14,7 +20,6 @@ cache:
     - $HOME/build/girder_testing_build/store
     - $HOME/build/girder_testing_build/data
 
-# sudo: false
 sudo: required
 
 dist: trusty
@@ -162,8 +167,16 @@ before_install:
   - girder_worker_path=$build_path/girder_worker
   - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
   - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
-  - python $girder_worker_path/scripts/install_requirements.py # --mode=dev
-  - pip install --no-cache-dir -U -e $girder_worker_path'[girder_io]'
+  # - python $girder_worker_path/scripts/install_requirements.py # --mode=dev
+  # - pip install --no-cache-dir -U -e $girder_worker_path'[girder_io]'
+  # Change in travis in 2017-09 require sudo for pip2 when in the python3 main
+  # environment
+  - if [ -n "${PY3}" ]; then
+    sudo pip2 install --no-cache-dir -U setuptools &&
+    sudo pip2 install --no-cache-dir -U $girder_worker_path'[girder_io]' ;
+    else 
+    pip install --no-cache-dir -U $girder_worker_path'[girder_io]' ;
+    fi
 
   - export MONGO_VERSION=3.0.7
   - export PY_COVG="ON"
@@ -178,9 +191,7 @@ before_install:
 
   - pip install --no-cache-dir -U pip virtualenv
 
-  - pip install --no-cache-dir numpy==1.10.2  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
-
-  - if [ ${LIBTIFF_VERSION} == "4.0.6" ]; then pip install "git+https://github.com/pearu/pylibtiff@33735eb7197eb33ed1a50bbc4bc5a47ce4305e92" --force-reinstall --ignore-installed --upgrade; fi
+  - pip install --no-cache-dir numpy==1.11.3  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
 
 install:
@@ -189,9 +200,9 @@ install:
   - pip install -r $main_path/requirements.txt -e .
   # Make sure we have a prefered version of celery for Girder Worker
   - pip install -U 'celery>=4'
-  # Make sure we have a prefered version of cryptography for Girder Worker
-  - pip install -U 'cryptography>=1.7'
-  - python -c "import openslide;print openslide.__version__"
+  # # Make sure we have a prefered version of cryptography for Girder Worker
+  # - pip install -U 'cryptography>=1.7'
+  - python -c "import openslide;print(openslide.__version__)"
   # This was
   # - npm install
   # but since there are often connection failures, use the retry package.
@@ -200,8 +211,7 @@ install:
 
 script:
   - cd $girder_worker_path
-  - python -m girder_worker >/tmp/worker.out 2>&1 &
-  # - python -m girder_worker 2>&1 | tee /tmp/worker.out &
+  - python2 -m girder_worker >/tmp/worker.out 2>&1 &
   - mkdir -p $build_path/girder_testing_build
   - cd $build_path/girder_testing_build
   - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DCOVERAGE_MINIMUM_PASS=80 -DJS_COVERAGE_MINIMUM_PASS=9 -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path

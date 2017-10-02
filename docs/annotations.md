@@ -12,9 +12,9 @@ Partial annotations are shown below with some example values.  Note that the com
   "description": "This is a description",  # String.  Optional
   "attributes": {                          # Object.  Optional
     "key1": "value1",
-    "key2": ["any", {"value": "can"}, "go", "here"] 
+    "key2": ["any", {"value": "can"}, "go", "here"]
   },
-  "elements": []                           # A list.  Optional.  
+  "elements": []                           # A list.  Optional.
                                            # See below for valid elements.
 }
 ```
@@ -39,6 +39,7 @@ All shapes have the following properties.  If a property is not listed, it is no
     },
     "lineColor": "#000000",           # String.  See note about colors.  Optional
     "lineWidth": 1,                   # Number >= 0.  Optional
+    "group": "group name",            # String. Optional
     <shape specific properties>
 }
 ```
@@ -168,7 +169,7 @@ A sample that shows off a valid annotation:
   "description": "This is a description",
   "attributes": {
     "key1": "value1",
-    "key2": ["any", {"value": "can"}, "go", "here"] 
+    "key2": ["any", {"value": "can"}, "go", "here"]
   },
   "elements": [{
     "type": "point",

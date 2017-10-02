@@ -64,7 +64,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this.viewer = geo.map(params.map);
         this.viewer.createLayer('osm', params.layer);
         this.annotationLayer = this.viewer.createLayer('annotation', {
-            annotations: ['point', 'line', 'rectangle', 'polygon']
+            annotations: ['point', 'line', 'rectangle', 'polygon'],
+            showLabels: false
         });
 
         this.trigger('g:imageRendered', this);
@@ -108,7 +109,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             layer.clear();
         } else {
             layer = this.viewer.createLayer('feature', {
-                features: ['point', 'line', 'polygon']
+                features: ['point', 'line', 'polygon'],
+                showLabels: false
             });
             this._layers[annotation.id] = layer;
 
@@ -221,7 +223,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     /**
      * Set the image interaction mode to draw the given type of annotation.
      *
-     * @param {string} type An annotation type
+     * @param {string} type An annotation type, or null to turn off drawing.
      * @param {object} [options]
      * @param {boolean} [options.trigger=true]
      *      Trigger a global event after creating each annotation element.
@@ -243,6 +245,9 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             layer.geoOn(
                 window.geo.event.annotation.state,
                 (evt) => {
+                    if (evt.annotation.state() !== window.geo.annotation.state.done) {
+                        return;
+                    }
                     element = convertAnnotation(evt.annotation);
                     if (!element.id) {
                         element.id = guid();

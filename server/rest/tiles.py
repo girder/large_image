@@ -39,6 +39,7 @@ MimeTypeExtensions = {
     'image/png': 'png',
     'image/tiff': 'tiff',
 }
+ImageMimeTypes = list(MimeTypeExtensions)
 
 
 def _adjustParams(params):
@@ -125,7 +126,7 @@ class TilesItemResource(Item):
                 item, largeImageFile, user, token,
                 notify=self.boolParam('notify', params, default=True))
         except TileGeneralException as e:
-            raise RestException(e.message)
+            raise RestException(e.args[0])
 
     @classmethod
     def _parseTestParams(cls, params):
@@ -193,7 +194,7 @@ class TilesItemResource(Item):
         try:
             return self.imageItemModel.getMetadata(item, **imageArgs)
         except TileGeneralException as e:
-            raise RestException(e.message, code=400)
+            raise RestException(e.args[0], code=400)
 
     def _setContentDisposition(self, item, contentDisposition, mime, subname):
         """
@@ -216,7 +217,7 @@ class TilesItemResource(Item):
         filename += '.' + MimeTypeExtensions[mime]
         if not isinstance(filename, six.text_type):
             filename = filename.decode('utf8', 'ignore')
-        safeFilename = filename.encode('ascii', 'ignore').replace('"', '')
+        safeFilename = filename.encode('ascii', 'ignore').replace(b'"', b'')
         encodedFilename = six.moves.urllib.parse.quote(filename.encode('utf8', 'ignore'))
         setResponseHeader(
             'Content-Disposition',
@@ -266,7 +267,7 @@ class TilesItemResource(Item):
             tileData, tileMime = self.imageItemModel.getTile(
                 item, x, y, z, **imageArgs)
         except TileGeneralException as e:
-            raise RestException(e.message, code=404)
+            raise RestException(e.args[0], code=404)
         setResponseHeader('Content-Type', tileMime)
         setRawResponse()
         return tileData
@@ -280,6 +281,7 @@ class TilesItemResource(Item):
                paramType='path')
         .param('y', 'The Y coordinate of the tile (0 is the top).',
                paramType='path')
+        .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -310,6 +312,7 @@ class TilesItemResource(Item):
                paramType='path')
         .param('y', 'The Y coordinate of the tile (0 is the top).',
                paramType='path')
+        .produces(ImageMimeTypes)
     )
     @access.cookie
     @access.public
@@ -345,11 +348,17 @@ class TilesItemResource(Item):
                required=False, dataType='int')
         .param('height', 'The maximum height of the thumbnail in pixels.',
                required=False, dataType='int')
+        .param('fill', 'A fill color.  If width and height are both specified '
+               'and fill is specified and not "none", the output image is '
+               'padded on either the sides or the top and bottom to the '
+               'requested output size.  Most css colors are accepted.',
+               required=False)
         .param('encoding', 'Thumbnail output encoding', required=False,
                enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -361,6 +370,7 @@ class TilesItemResource(Item):
         params = self._parseParams(params, True, [
             ('width', int),
             ('height', int),
+            ('fill', str),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
             ('tiffCompression', str),
@@ -370,9 +380,9 @@ class TilesItemResource(Item):
         try:
             result = self.imageItemModel.getThumbnail(item, **params)
         except TileGeneralException as e:
-            raise RestException(e.message)
+            raise RestException(e.args[0])
         except ValueError as e:
-            raise RestException('Value Error: %s' % e.message)
+            raise RestException('Value Error: %s' % e.args[0])
         if not isinstance(result, tuple):
             return result
         thumbData, thumbMime = result
@@ -421,6 +431,10 @@ class TilesItemResource(Item):
                required=False, dataType='int')
         .param('height', 'The maximum height of the output image in pixels.',
                required=False, dataType='int')
+        .param('fill', 'A fill color.  If output dimensions are specified and '
+               'fill is specified and not "none", the output image is padded '
+               'on either the sides or the top and bottom to the requested '
+               'output size.  Most css colors are accepted.', required=False)
         .param('magnification', 'Magnification of the output image.  If '
                'neither width for height is specified, the magnification, '
                'mm_x, and mm_y parameters are used to select the output size.',
@@ -446,6 +460,7 @@ class TilesItemResource(Item):
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
         .errorResponse('Insufficient memory.')
@@ -465,6 +480,7 @@ class TilesItemResource(Item):
             ('units', str, 'region', 'units'),
             ('width', int, 'output', 'maxWidth'),
             ('height', int, 'output', 'maxHeight'),
+            ('fill', str),
             ('magnification', float, 'scale', 'magnification'),
             ('mm_x', float, 'scale', 'mm_x'),
             ('mm_y', float, 'scale', 'mm_y'),
@@ -479,9 +495,9 @@ class TilesItemResource(Item):
             regionData, regionMime = self.imageItemModel.getRegion(
                 item, **params)
         except TileGeneralException as e:
-            raise RestException(e.message)
+            raise RestException(e.args[0])
         except ValueError as e:
-            raise RestException('Value Error: %s' % e.message)
+            raise RestException('Value Error: %s' % e.args[0])
         self._setContentDisposition(
             item, params.get('contentDisposition'), regionMime, 'region')
         setResponseHeader('Content-Type', regionMime)
@@ -500,7 +516,7 @@ class TilesItemResource(Item):
         try:
             return self.imageItemModel.getAssociatedImagesList(item)
         except TileGeneralException as e:
-            raise RestException(e.message, code=400)
+            raise RestException(e.args[0], code=400)
 
     @describeRoute(
         Description('Get an image associated with a large image.')
@@ -517,6 +533,7 @@ class TilesItemResource(Item):
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -538,7 +555,7 @@ class TilesItemResource(Item):
         try:
             result = self.imageItemModel.getAssociatedImage(item, image, **params)
         except TileGeneralException as e:
-            raise RestException(e.message, code=400)
+            raise RestException(e.args[0], code=400)
         if not isinstance(result, tuple):
             return result
         imageData, imageMime = result

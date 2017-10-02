@@ -24,7 +24,7 @@ except ImportError as exc:
     # unavailable, log it and start anyway (we may be running in a girder-less
     # environment).  Otherwise, reraise the exception -- something else went
     # wrong.
-    if 'plugins' not in exc.message and 'girder' not in exc.message:
+    if 'plugins' not in repr(exc.args) and 'girder' not in repr(exc.args):
         raise
     import logging as logger
     logger.getLogger().setLevel(logger.INFO)

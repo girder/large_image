@@ -56,7 +56,7 @@ $(function () {
         it('upload test annotation', function () {
             runs(function () {
                 girder.rest.restRequest({
-                    path: 'annotation?itemId=' + itemId,
+                    url: 'annotation?itemId=' + itemId,
                     contentType: 'application/json',
                     processData: false,
                     type: 'POST',
@@ -75,7 +75,9 @@ $(function () {
                     return null;
                 });
             });
-
+            waitsFor(function () {
+                return annotationId !== undefined;
+            });
             girderTest.waitForLoad();
             runs(function () {
                 expect(annotationId).toBeDefined();

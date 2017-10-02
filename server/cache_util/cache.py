@@ -150,36 +150,36 @@ class LruCacheMetaclass(type):
 
         if LruCacheMetaclass.namedCaches.get(cacheName) is None:
             cache, cacheLock = CacheFactory().getCache(maxSize)
-            LruCacheMetaclass.namedCaches[cacheName] = cache
+            LruCacheMetaclass.namedCaches[cacheName] = (cache, cacheLock)
             logger.info('Created LRU Cache for %r with %d maximum size' % (
                 cacheName, maxSize))
         else:
-            cache = LruCacheMetaclass.namedCaches[cacheName]
+            (cache, cacheLock) = LruCacheMetaclass.namedCaches[cacheName]
 
         # Don't store the cache in cls.__dict__, because we don't want it to be
         # part of the attribute lookup hierarchy
         # TODO: consider putting it in cls.__dict__, to inspect statistics
         # cls is hashable though, so use it to lookup the cache, in case an
         # identically-named class gets redefined
-        LruCacheMetaclass.classCaches[cls] = cache
+        LruCacheMetaclass.classCaches[cls] = (cache, cacheLock)
 
         return cls
 
     def __call__(cls, *args, **kwargs):  # noqa - N805
 
-        cache = LruCacheMetaclass.classCaches[cls]
+        cache, cacheLock = LruCacheMetaclass.classCaches[cls]
 
         if hasattr(cls, 'getLRUHash'):
             key = cls.getLRUHash(*args, **kwargs)
         else:
             key = strhash(args[0], kwargs)
         key = cls.__name__ + ' ' + key
-        try:
-            instance = cache[key]
-        except KeyError:
-
-            instance = super(LruCacheMetaclass, cls).__call__(*args, **kwargs)
-            cache[key] = instance
+        with cacheLock:
+            try:
+                instance = cache[key]
+            except KeyError:
+                instance = super(LruCacheMetaclass, cls).__call__(*args, **kwargs)
+                cache[key] = instance
 
         return instance
 

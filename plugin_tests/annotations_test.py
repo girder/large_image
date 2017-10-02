@@ -334,6 +334,34 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
         elemModel.removeElements(annot)
         self.assertEqual(len(annotModel.load(annot['_id'])['annotation']['elements']), 0)
 
+    def testAnnotationGroup(self):
+        annotModel = self.model('annotation', 'large_image')
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        item = self.model('item').load(file['itemId'], level=AccessType.READ,
+                                       user=self.admin)
+
+        elements = [{
+            'type': 'rectangle',
+            'center': [20.0, 25.0, 0],
+            'width': 14.0,
+            'height': 15.0,
+            'group': 'a'
+        }, {
+            'type': 'rectangle',
+            'center': [40.0, 15.0, 0],
+            'width': 5.0,
+            'height': 5.0
+        }]
+        annotationWithGroup = {
+            'name': 'groups',
+            'elements': elements
+        }
+
+        annot = annotModel.createAnnotation(item, self.admin, annotationWithGroup)
+        result = annotModel.load(annot['_id'])
+        self.assertEqual(result['annotation']['elements'][0]['group'], 'a')
+
     #  Add tests for:
     # removeOldElements
     # updateElements

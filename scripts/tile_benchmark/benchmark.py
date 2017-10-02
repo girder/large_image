@@ -46,7 +46,7 @@ def main(file_name):
     with open(file_name, 'r') as params:
         for line in params:
             if '#' not in line:
-                print line
+                print(line)
                 args = line.split()
                 # second item in source/config file is the server name
                 run_params[args[1]] = args
@@ -61,7 +61,7 @@ def main(file_name):
                 int(run_params[server_name][2]),
                 int(run_params[server_name][3]))
         elif host == 'iip':
-            print ('Getting images from iip')
+            print('Getting images from iip')
             elapsed_time = get_data(
                 host,
                 int(run_params[server_name][2]),
@@ -223,8 +223,8 @@ def girder_init(host, image_id):
                   'request \n %s' % (image_summary_url))
             sys.exit()
     else:
-        print'Could not receive meta data using the following request\n %s' \
-             % (image_summary_url)
+        print('Could not receive meta data using the following request\n %s' %
+              image_summary_url)
         sys.exit()
 
     return data
@@ -248,13 +248,13 @@ def girder_request(data, z, x, y):
         return elapsed_time
 
     elif tile_req.status_code == 404:
-        print ' 404 error to get tile from layer %d x %d y %d error code %d' \
-              % (z, x, y, tile_req.status_code)
+        print('404 error to get tile from layer %d x %d y %d error code %d' % (
+              z, x, y, tile_req.status_code))
         return -1
 
     elif tile_req.status_code != 404:
-        print ' error to get tile from layer %d x %d y %d error code %d' \
-              % (z, x, y, tile_req.status_code)
+        print('error to get tile from layer %d x %d y %d error code %d' % (
+              z, x, y, tile_req.status_code))
         return -1
 
 
@@ -271,8 +271,8 @@ def atlas_request(data, z, x, y):
         return -1
 
     elif tile_req.status_code != 404:
-        print ' error to get tile from layer %d x %d y %d error code %d' \
-              % (z, x, y, tile_req.status_code)
+        print('error to get tile from layer %d x %d y %d error code %d' % (
+              z, x, y, tile_req.status_code))
         return -1
 
 
