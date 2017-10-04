@@ -86,7 +86,7 @@ $(function () {
     });
 
     describe('Geojs viewer', function () {
-        var girder, large_image, $el, GeojsViewer, viewer, annotation, layerSpy;
+        var girder, large_image, $el, GeojsViewer, viewer, annotation, featureSpy;
 
         beforeEach(function () {
             girder = window.girder;
@@ -138,11 +138,11 @@ $(function () {
 
             girderTest.waitForLoad();
             runs(function () {
-                expect(viewer._layers[annotationId]).toBeDefined();
+                expect(viewer._annotations[annotationId]).toBeDefined();
                 // geojs makes two features for a polygon
-                expect(viewer._layers[annotationId].features().length >= 1).toBe(true);
+                expect(viewer._annotations[annotationId].features.length >= 1).toBe(true);
 
-                layerSpy = sinon.spy(viewer._layers[annotationId], '_exit');
+                featureSpy = sinon.spy(viewer._annotations[annotationId].features[0], '_exit');
 
                 sinon.assert.called(annotation.setView);
                 viewer.viewer.zoom(1);
@@ -256,8 +256,8 @@ $(function () {
 
         it('removeAnnotation', function () {
             viewer.removeAnnotation(annotation);
-            expect(viewer._layers).toEqual({});
-            sinon.assert.calledOnce(layerSpy);
+            expect(viewer._annotations).toEqual({});
+            sinon.assert.calledOnce(featureSpy);
         });
 
         it('drawAnnotation without fetching', function () {
