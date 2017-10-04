@@ -25,7 +25,7 @@ function guid() {
 
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
-        this._layers = {};
+        this._annotations = {};
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
@@ -63,6 +63,12 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
         this.viewer = geo.map(params.map);
         this.viewer.createLayer('osm', params.layer);
+        // the feature layer is for annotations that are loaded
+        this.featureLayer = this.viewer.createLayer('feature', {
+            features: ['point', 'line', 'polygon']
+        });
+        this.featureLayer.geoOn(window.geo.event.pan, () => { this.setBounds(); });
+        // the annotation layer is for annotations that are actively drawn
         this.annotationLayer = this.viewer.createLayer('annotation', {
             annotations: ['point', 'line', 'rectangle', 'polygon'],
             showLabels: false
@@ -103,47 +109,35 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         var geo = window.geo;
         options = _.defaults(options || {}, {fetch: true});
         var geojson = annotation.geojson();
-        var layer;
-        if (_.has(this._layers, annotation.id)) {
-            layer = this._layers[annotation.id];
-            layer.clear();
-        } else {
-            layer = this.viewer.createLayer('feature', {
-                features: ['point', 'line', 'polygon'],
-                showLabels: false
+        var present = _.has(this._annotations, annotation.id);
+        if (present) {
+            _.each(this._annotations[annotation.id].features, (feature) => {
+                this.featureLayer.deleteFeature(feature);
             });
-            this._layers[annotation.id] = layer;
-
-            var setBounds = () => {
-                var zoom = this.viewer.zoom(),
-                    bounds = this.viewer.bounds(),
-                    zoomRange = this.viewer.zoomRange();
-                if (annotation.setView) {
-                    annotation.setView(bounds, zoom, zoomRange.max);
-                }
-            };
-
-            if (options.fetch) {
-                if (layer.geoOn) {
-                    layer.geoOn(window.geo.event.pan, setBounds);
-                }
-
-                annotation.off('g:fetched', null, this).on('g:fetched', () => {
-                    // Trigger an event indicating to the listener that
-                    // mouseover states should reset.
-                    this.trigger(
-                        'g:mouseResetAnnotation',
-                        annotation
-                    );
-                    this.drawAnnotation(annotation);
-                }, this);
-                setBounds();
-            }
         }
-        window.geo.createFileReader('jsonReader', {layer})
+        this._annotations[annotation.id] = {
+            features: [],
+            options: options,
+            annotation: annotation
+        };
+        if (options.fetch && !present) {
+            annotation.off('g:fetched', null, this).on('g:fetched', () => {
+                // Trigger an event indicating to the listener that
+                // mouseover states should reset.
+                this.trigger(
+                    'g:mouseResetAnnotation',
+                    annotation
+                );
+                this.drawAnnotation(annotation);
+            }, this);
+            this.setBounds({[annotation.id]: this._annotations[annotation.id]});
+        }
+        var featureList = this._annotations[annotation.id].features;
+        window.geo.createFileReader('jsonReader', {layer: this.featureLayer})
             .read(geojson, (features) => {
                 _.each(features || [], (feature) => {
                     var events = geo.event.feature;
+                    featureList.push(feature);
 
                     feature.selectionAPI(this._hoverEvents);
 
@@ -163,6 +157,27 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     /**
+     * When the image visible bounds change, or an annotation is first created,
+     * set the view information for any annotation which requires it.
+     *
+     * @param {object} [annotations] If set, a dictionary where the keys are
+     *      annotation ids and the values are an object which includes the
+     *      annotation options and a reference to the annotation.  If not
+     *      specified, use `this._annotations` and update the view for all
+     *      relevant annotatioins.
+     */
+    setBounds: function (annotations) {
+        var zoom = this.viewer.zoom(),
+            bounds = this.viewer.bounds(),
+            zoomRange = this.viewer.zoomRange();
+        _.each(annotations || this._annotations, (annotation) => {
+            if (annotation.options.fetch && annotation.annotation.setView) {
+                annotation.annotation.setView(bounds, zoom, zoomRange.max);
+            }
+        });
+    },
+
+    /**
      * Remove an annotation from the image.  This simply
      * finds a layer with the given id and removes it because
      * each annotation is contained in its own layer.  If
@@ -178,10 +193,12 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             'g:mouseResetAnnotation',
             annotation
         );
-        var layer = this._layers[annotation.id];
-        if (layer) {
-            delete this._layers[annotation.id];
-            this.viewer.deleteLayer(layer);
+        if (_.has(this._annotations, annotation.id)) {
+            _.each(this._annotations[annotation.id].features, (feature) => {
+                this.featureLayer.deleteFeature(feature);
+            });
+            delete this._annotations[annotation.id];
+            this.featureLayer.draw();
         }
     },
 
