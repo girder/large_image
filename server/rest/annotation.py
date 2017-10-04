@@ -122,6 +122,7 @@ class AnnotationResource(Resource):
         .errorResponse('Read access was denied for the annotation.', 403)
         .notes('Use "size" or "details" as possible sort keys.')
     )
+    @access.cookie
     @access.public
     @filtermodel(model='annotation', plugin='large_image')
     def getAnnotation(self, id, params):
