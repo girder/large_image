@@ -71,7 +71,7 @@ for source in sourceList:
         # add it to our dictionary of available sources if it has a name
         if getattr(sourceClass, 'name', None):
             AvailableTileSources[sourceClass.name] = sourceClass
-    except ImportError:
+    except (ImportError, OSError):
         logprint.info('Notice: Could not import %s' % className)
 
 # Create a partial function that will work through the known functions to get a
