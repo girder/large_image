@@ -17,8 +17,11 @@
 #  limitations under the License.
 #############################################################################
 
+import itertools
 import json
+import numpy
 import os
+import PIL.Image
 import shutil
 import six
 import struct
@@ -701,6 +704,33 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             params={'maxSize': json.dumps({'width': 1100, 'height': 1800})})
         self.assertStatus(resp, 400)
         self.assertIn('tile size is too large', resp.json['message'])
+
+    def testTilesFromPNGs(self):
+        # A PNG in L, LA, RGB, RGBA should work in both 8 and 16 bits-per-pixel
+        for mode, bits in itertools.product(('L', 'LA', 'RGB', 'RGBA'), (8, 16)):
+            file = self._uploadFile(os.path.join(
+                os.path.dirname(__file__), 'test_files', 'test_%s_%d.png' % (mode, bits)))
+            itemId = str(file['itemId'])
+            fileId = str(file['_id'])
+            # Ask to make this a tile-based item
+            resp = self.request(path='/item/%s/tiles' % itemId, method='POST',
+                                user=self.admin, params={'fileId': fileId})
+            self.assertStatusOk(resp)
+            # Get the tile and check that it is what we expect
+            resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                                user=self.admin, isJson=False,
+                                params={'encoding': 'PNG'})
+            self.assertStatusOk(resp)
+            image = self.getBody(resp, text=False)
+            self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+            (width, height) = struct.unpack('!LL', image[16:24])
+            self.assertEqual(width, 64)
+            self.assertEqual(height, 64)
+            data = numpy.ndarray.flatten(numpy.asarray(PIL.Image.open(six.BytesIO(image))))
+            self.assertGreaterEqual(len(data), len(mode) * width * height)
+            self.assertEqual(data[0], 0)
+            self.assertEqual(data[len(data) / width / height], 2)
+            self.assertEqual(data[-len(data) / width / height], 255)
 
     def testDummyTileSource(self):
         # We can't actually load the dummy source via the endpoints if we have
