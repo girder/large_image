@@ -459,11 +459,10 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         def create_annotation(item, user):
             return str(annotModel.createAnnotation(item, user, sampleAnnotation)['_id'])
 
-        def upload(name, user=self.user):
+        def upload(name, user=self.user, private=False):
             file = self._uploadFile(os.path.join(
-                os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'), name)
-            item = self.model('item').load(file['itemId'], level=AccessType.READ,
-                                           user=self.admin)
+                os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'), name, private=private)
+            item = self.model('item').load(file['itemId'], level=AccessType.READ, user=self.admin)
 
             create_annotation(item, user)
             create_annotation(item, user)
@@ -474,6 +473,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         item1 = upload('image1.ptif', self.admin)
         item2 = upload('image2.ptif')
         item3 = upload('image3.ptif')
+        item4 = upload('image3.ptif', self.user, True)
 
         # test default search
         resp = self.request('/annotation/images', user=self.admin, params={
@@ -481,7 +481,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         })
         self.assertStatusOk(resp)
         ids = [image['_id'] for image in resp.json]
-        self.assertEqual(ids, [item3, item2, item1])
+        self.assertEqual(ids, [item4, item3, item2, item1])
 
         # test filtering by user
         resp = self.request('/annotation/images', user=self.admin, params={
@@ -490,7 +490,15 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         })
         self.assertStatusOk(resp)
         ids = [image['_id'] for image in resp.json]
-        self.assertEqual(ids, [item3, item2])
+        self.assertEqual(ids, [item4, item3, item2])
+
+        # test getting annotations without admin access
+        resp = self.request('/annotation/images', user=self.user, params={
+            'limit': 100
+        })
+        self.assertStatusOk(resp)
+        ids = [image['_id'] for image in resp.json]
+        self.assertEqual(ids, [item3, item2, item1])
 
         # test sort direction
         resp = self.request('/annotation/images', user=self.admin, params={
@@ -499,18 +507,18 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         })
         self.assertStatusOk(resp)
         ids = [image['_id'] for image in resp.json]
-        self.assertEqual(ids, [item1, item2, item3])
+        self.assertEqual(ids, [item1, item2, item3, item4])
 
         # test pagination
         resp = self.request('/annotation/images', user=self.admin, params={
             'limit': 1
         })
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json[0]['_id'], item3)
+        self.assertEqual(resp.json[0]['_id'], item4)
 
         resp = self.request('/annotation/images', user=self.admin, params={
             'limit': 1,
-            'offset': 2
+            'offset': 3
         })
         self.assertStatusOk(resp)
         self.assertEqual(resp.json[0]['_id'], item1)

@@ -74,13 +74,14 @@ class LargeImageCommonTest(base.TestCase):
                     }])})
         self.assertStatusOk(resp)
 
-    def _uploadFile(self, path, name=None):
+    def _uploadFile(self, path, name=None, private=False):
         """
-        Upload the specified path to the admin user's public folder and return
-        the resulting item.
+        Upload the specified path to the admin user's public or private folder
+        and return the resulting item.
 
         :param path: path to upload.
         :param name: optional name for the file.
+        :param private: True to upload to the private folder, False for public.
         :returns: file: the created file.
         """
         if not name:
@@ -90,7 +91,7 @@ class LargeImageCommonTest(base.TestCase):
         resp = self.request(
             path='/file', method='POST', user=self.admin, params={
                 'parentType': 'folder',
-                'parentId': self.publicFolder['_id'],
+                'parentId': self.privateFolder['_id'] if private else self.publicFolder['_id'],
                 'name': name,
                 'size': len(data)
             })

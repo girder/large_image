@@ -24,7 +24,7 @@ from girder.api import access
 from girder.api.describe import describeRoute, Description
 from girder.api.rest import Resource, loadmodel, filtermodel, RestException
 from girder.constants import AccessType, SortDir
-from girder.models.model_base import ValidationException
+from girder.models.model_base import AccessException, ValidationException
 from ..models.annotation import AnnotationSchema
 
 
@@ -242,10 +242,13 @@ class AnnotationResource(Resource):
             if annotation['itemId'] in imageIds:
                 continue
 
-            item = self.model('image_item', 'large_image').load(
-                annotation['itemId'], level=AccessType.READ,
-                user=user
-            )
+            try:
+                item = self.model('image_item', 'large_image').load(
+                    annotation['itemId'], level=AccessType.READ,
+                    user=user
+                )
+            except AccessException:
+                item = None
 
             # ignore if no such item exists
             if not item:
