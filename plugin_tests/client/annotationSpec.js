@@ -1,6 +1,6 @@
 /* globals girder, girderTest, describe, it, expect, waitsFor, runs */
 
-girderTest.addCoveredScripts([
+girderTest.addScripts([
     '/clients/web/static/built/plugins/jobs/plugin.min.js',
     '/clients/web/static/built/plugins/worker/plugin.min.js',
     '/clients/web/static/built/plugins/large_image/plugin.min.js'
@@ -222,6 +222,136 @@ describe('Annotations', function () {
             expect(properties.strokeColor).toBe('#000000');
             expect(properties.strokeOpacity).toBe(1);
             expect(properties.element).toEqual(element);
+        });
+    });
+
+    describe('CRUD', function () {
+        var item, user, annotationId, annotation;
+
+        it('setup', function () {
+            girder.auth.login('admin', 'adminpassword!').done(function (resp) {
+                user = resp;
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+            waitsFor(function () {
+                return user;
+            }, 'admin to login');
+
+            runs(function () {
+                girder.rest.restRequest({
+                    url: 'item?text=empty'
+                }).done(function (l) {
+                    expect(l.length).toBeGreaterThan(0);
+                    item = l[0];
+                });
+            });
+            waitsFor(function () {
+                return item;
+            }, 'Get an item id');
+        });
+
+        it('create a new empty annotation', function () {
+            var model = new largeImage.models.AnnotationModel({itemId: item._id});
+            var done;
+
+            model.save().done(function () {
+                expect(model.id).toBeDefined();
+                annotationId = model.id;
+                done = true;
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+
+            waitsFor(function () {
+                return done;
+            });
+        });
+
+        it('fetch an existing annotation', function () {
+            var done;
+            annotation = new largeImage.models.AnnotationModel({_id: annotationId});
+            annotation.fetch().done(function () {
+                expect(annotation.get('itemId')).toBeDefined();
+                done = true;
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+            waitsFor(function () {
+                return done;
+            }, 'fetch to complete');
+        });
+
+        it('update an existing annotation', function () {
+            var done;
+            var elements = annotation.elements();
+            elements.add({
+                center: [10, 10, 0],
+                height: 2,
+                rotation: 0,
+                type: 'rectangle',
+                width: 2,
+                label: {}
+            });
+
+            annotation.save().done(function (resp) {
+                expect(resp.annotation).toBeDefined();
+                expect(resp.annotation.elements).toBeDefined();
+                expect(resp.annotation.elements.length).toBe(1);
+                done = true;
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+
+            waitsFor(function () {
+                return done;
+            }, 'annotation to save');
+        });
+
+        it('destroy an existing annotation', function () {
+            var done, consoleError = console.error;
+
+            annotation.destroy().done(function () {
+                done = true;
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+            waitsFor(function () {
+                return done;
+            }, 'annotation to destroy');
+
+            runs(function () {
+                // silence rest request error message
+                console.error = function () {};
+
+                done = false;
+                annotation = new largeImage.models.AnnotationModel({_id: annotationId});
+                annotation.fetch().done(function () {
+                    console.error = consoleError;
+                    console.error('Expected fetch on deleted annotation to fail');
+                }).fail(function () {
+                    console.error = consoleError;
+                    done = true;
+                });
+            });
+            waitsFor(function () {
+                return done;
+            }, 'fetch to fail');
+        });
+
+        it('cannot save paged annotation', function () {
+            var model = new largeImage.models.AnnotationModel({_id: annotationId});
+            model._pageElements = true;
+            expect(function () {
+                model.save();
+            }).toThrow();
+        });
+
+        it('cannot create an annotation without an itemId', function () {
+            var model = new largeImage.models.AnnotationModel();
+            expect(function () {
+                model.save();
+            }).toThrow();
         });
     });
 });
