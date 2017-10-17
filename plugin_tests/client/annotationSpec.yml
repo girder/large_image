@@ -1,0 +1,11 @@
+users:
+  - login: 'admin'
+    email: 'admin@email.com'
+    firstName: 'Admin'
+    lastName: 'Admin'
+    password: 'adminpassword!'
+    folders:
+      - name: 'Public'
+        public: true
+        items:
+          - name: 'Empty'
