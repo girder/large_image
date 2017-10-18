@@ -157,17 +157,25 @@ export default Model.extend({
      * girder's base model either.
      */
     destroy(options) {
-        let xhr = false;
-
         this.stopListening();
         this.trigger('destroy', this, this.collection, options);
+        return this.delete(options);
+    },
 
+    /**
+     * Perform a DELETE request on the annotation model and reset the id
+     * attribute, but don't remove event listeners.
+     */
+    delete(options) {
+        this.trigger('g:delete', this, this.collection, options);
+        let xhr = false;
         if (!this.isNew()) {
             xhr = restRequest({
                 url: `annotation/${this.id}`,
                 method: 'DELETE'
             });
         }
+        this.unset('_id');
         return xhr;
     },
 
