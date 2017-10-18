@@ -251,13 +251,24 @@ describe('Annotations', function () {
             }, 'Get an item id');
         });
 
-        it('create a new empty annotation', function () {
+        it('create a new annotation', function () {
             var model = new largeImage.models.AnnotationModel({itemId: item._id});
             var done;
 
-            model.save().done(function () {
+            model.elements().add({
+                center: [5, 5, 0],
+                height: 1,
+                rotation: 0,
+                type: 'rectangle',
+                width: 1
+            });
+
+            model.save().done(function (resp) {
                 expect(model.id).toBeDefined();
                 annotationId = model.id;
+                expect(resp.annotation).toBeDefined();
+                expect(resp.annotation.elements).toBeDefined();
+                expect(resp.annotation.elements.length).toBe(1);
                 done = true;
             }).fail(function (resp) {
                 console.error(resp);
@@ -297,7 +308,7 @@ describe('Annotations', function () {
             annotation.save().done(function (resp) {
                 expect(resp.annotation).toBeDefined();
                 expect(resp.annotation.elements).toBeDefined();
-                expect(resp.annotation.elements.length).toBe(1);
+                expect(resp.annotation.elements.length).toBe(2);
                 done = true;
             }).fail(function (resp) {
                 console.error(resp);

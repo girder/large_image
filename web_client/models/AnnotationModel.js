@@ -143,6 +143,8 @@ export default Model.extend({
             processData: false,
             data: JSON.stringify(data)
         }).done((annotation) => {
+            // the elements array does not come back with this request
+            annotation.elements = (this.get('annotation') || {}).elements || [];
             this.set(annotation);
             this.trigger('sync', this, annotation, options);
         });
