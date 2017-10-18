@@ -88,7 +88,7 @@ export default Model.extend({
                 this.trigger('g:fetched');
             }
 
-            this._elements.reset(elements);
+            this._elements.reset(elements, _.extend({sync: true}, opts));
         }).fail((err) => {
             this.trigger('g:error', err);
         }).always(() => {
