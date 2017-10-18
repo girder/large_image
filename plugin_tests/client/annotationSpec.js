@@ -350,6 +350,60 @@ describe('Annotations', function () {
             }, 'fetch to fail');
         });
 
+        it('delete an annotation without unbinding events', function () {
+            var model = new largeImage.models.AnnotationModel({itemId: item._id});
+            var id;
+            var done, consoleError = console.error;
+            var eventCalled;
+
+            model.listenTo(model, 'change', function () { eventCalled = true; });
+            model.save().done(function (resp) {
+                done = true;
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+
+            waitsFor(function () {
+                return done;
+            }, 'annotation to save');
+            runs(function () {
+                id = model.id;
+                done = false;
+                model.delete().done(function () {
+                    done = true;
+                });
+            });
+
+            waitsFor(function () {
+                return done;
+            }, 'annotation to delete');
+            runs(function () {
+                var model2;
+
+                // silence rest request error message
+                console.error = function () {};
+
+                done = false;
+                model2 = new largeImage.models.AnnotationModel({_id: id});
+                model2.fetch().done(function () {
+                    console.error = consoleError;
+                    console.error('Expected fetch on deleted annotation to fail');
+                }).fail(function () {
+                    console.error = consoleError;
+                    done = true;
+                });
+            });
+
+            waitsFor(function () {
+                return done;
+            }, 'fetch to fail');
+            runs(function () {
+                eventCalled = false;
+                model.trigger('change');
+                expect(eventCalled).toBe(true);
+            });
+        });
+
         it('cannot save paged annotation', function () {
             var model = new largeImage.models.AnnotationModel({_id: annotationId});
             model._pageElements = true;
