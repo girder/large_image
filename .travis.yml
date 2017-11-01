@@ -102,8 +102,6 @@ before_install:
   - girder_path=$build_path/girder
   - rm -fr $girder_path
   - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout $GIRDER_VERSION
-  - ln -sf $main_path $girder_path/plugins/
-  - ls -l $girder_path/plugins
 
   - CACHE=$HOME/.cache CMAKE_VERSION=3.4.3 CMAKE_SHORT_VERSION=3.4 source $girder_path/scripts/install_cmake.sh
   - cmake --version
@@ -195,9 +193,11 @@ before_install:
 
 
 install:
-  - cd $girder_path
-  - pip install --no-cache-dir -U -r requirements-dev.txt -e .
+  - pip install --no-cache-dir -U -r $girder_path/requirements-dev.txt -e $girder_path
+  - girder-install plugin --symlink $main_path
+  # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them
   - pip install -e $main_path[memcached,openslide]
+  - ls -l $girder_path/plugins
   # Make sure we have a prefered version of celery for Girder Worker
   - pip install -U 'celery>=4'
   # # Make sure we have a prefered version of cryptography for Girder Worker
