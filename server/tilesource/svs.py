@@ -228,6 +228,9 @@ class SVSFileTileSource(FileTileSource):
                 openslide.PROPERTY_NAME_MPP_Y]) * 0.001
         except Exception:
             mm_x = mm_y = None
+        # Estimate the magnification if we don't have a direct value
+        if mag is None and mm_x is not None:
+            mag = 0.01 / mm_x
         return {
             'magnification': mag,
             'mm_x': mm_x,
