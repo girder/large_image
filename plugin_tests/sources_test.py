@@ -153,9 +153,9 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                 scale={'magnification': 2}, resample=True):
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
-            self.assertEqual(tile['width'], 102 if tile['level_x'] < 11 else 24)
-            self.assertEqual(tile['height'], 102 if tile['level_y'] < 11 else 31)
-        self.assertEqual(tileCount, 144)
+            self.assertEqual(tile['width'], 256 if tile['level_x'] < 4 else 126)
+            self.assertEqual(tile['height'], 256 if tile['level_y'] < 4 else 134)
+        self.assertEqual(tileCount, 25)
 
         # Ask for numpy array as results
         tileCount = 0
