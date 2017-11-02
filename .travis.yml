@@ -148,18 +148,18 @@ before_install:
 
   # Build vips to use our libraries
   - if [ "$BUILD_VIPS" = "yes" ]; then
-    cd $lib_build_path &&
-    if [ ! -f vips-8.4.5/config.status ]; then
-    wget -O vips-8.4.5.tar.gz http://www.vips.ecs.soton.ac.uk/supported/current/vips-8.4.5.tar.gz &&
-    tar -zxpf vips-8.4.5.tar.gz &&
-    cd vips-8.4.5 &&
-    ./configure &&
-    make -j 3 >/tmp/vips_build.txt ;
-    else
-    cd vips-8.4.5 ;
-    fi &&
-    sudo make install &&
-    sudo ldconfig ;
+      cd $lib_build_path &&
+      if [ ! -f vips-8.5.9/config.status ]; then
+        wget -O vips-8.5.9.tar.gz https://github.com/jcupitt/libvips/releases/download/v8.5.9/vips-8.5.9.tar.gz &&
+        tar -zxpf vips-8.5.9.tar.gz &&
+        cd vips-8.5.9 &&
+        ./configure &&
+        make -j 3 >/tmp/vips_build.txt ;
+      else
+        cd vips-8.5.9 ;
+      fi &&
+      sudo make install &&
+      sudo ldconfig ;
     fi
   - cd $large_image_path
   - vips --version
