@@ -40,9 +40,6 @@ setup(
         'large_image': 'large_image',
         'large_image.server': 'server',
     },
-    entry_points={
-        'girder.plugin': 'large_image = large_image.server:load'
-    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
