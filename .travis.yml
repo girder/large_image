@@ -16,9 +16,9 @@ matrix:
 cache:
   directories:
     - $HOME/.cache
-    - $HOME/build/libs
-    - $HOME/build/girder_testing_build/store
-    - $HOME/build/girder_testing_build/data
+    - $HOME/lib_build
+    - $HOME/build/girder_build/store
+    - $HOME/build/girder_build/data
 
 sudo: required
 
@@ -90,21 +90,23 @@ before_install:
   - if [ -n "${PY3}" ]; then export MONGO_VERSION=3.0.7; export PY_COVG="OFF"; else export MONGO_VERSION=2.6.11; export PY_COVG="ON"; export DEPLOY=true; fi
   - GIRDER_VERSION=2.x-maintenance
   - GIRDER_WORKER_VERSION=master
-  - main_path=$PWD
-  - build_path=$PWD/build
-  - mkdir -p $build_path
-  - lib_build_path=$HOME/build/libs
-  - mkdir -p $lib_build_path
+
+  # Define installation paths
+  - large_image_path=$TRAVIS_BUILD_DIR
+  - girder_path=$HOME/girder/girder
+  - girder_worker_path=$HOME/girder/girder_worker
+  - lib_build_path=$HOME/lib_build
+  - girder_build_path=$HOME/girder_build
 
   - nvm install v6
   - npm install -g npm
 
-  - girder_path=$build_path/girder
-  - rm -fr $girder_path
   - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout $GIRDER_VERSION
 
   - CACHE=$HOME/.cache CMAKE_VERSION=3.4.3 CMAKE_SHORT_VERSION=3.4 source $girder_path/scripts/install_cmake.sh
   - cmake --version
+
+  - mkdir -p $lib_build_path
 
   # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
   # so install it from source.
@@ -119,7 +121,7 @@ before_install:
   - make -j 3
   - sudo make install
   - sudo ldconfig
-  - cd $main_path
+  - cd $large_image_path
 
   # Build libtiff so it will use our openjpeg
   - cd $lib_build_path
@@ -130,7 +132,7 @@ before_install:
   - make -j 3
   - sudo make install
   - sudo ldconfig
-  - cd $main_path
+  - cd $large_image_path
 
   # Build OpenSlide ourselves so that it will use our libtiff
   - cd $lib_build_path
@@ -142,7 +144,7 @@ before_install:
   - make -j 3
   - sudo make install
   - sudo ldconfig
-  - cd $main_path
+  - cd $large_image_path
 
   # Build vips to use our libraries
   - if [ "$BUILD_VIPS" = "yes" ]; then
@@ -159,12 +161,11 @@ before_install:
     sudo make install &&
     sudo ldconfig ;
     fi
-  - cd $main_path
+  - cd $large_image_path
   - vips --version
 
-  - girder_worker_path=$build_path/girder_worker
   - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
-  - cp $PWD/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
+  - cp $large_image_path/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
   # - python $girder_worker_path/scripts/install_requirements.py # --mode=dev
   # - pip install --no-cache-dir -U -e $girder_worker_path'[girder_io]'
   # Change in travis in 2017-09 require sudo for pip2 when in the python3 main
@@ -194,9 +195,9 @@ before_install:
 
 install:
   - pip install --no-cache-dir -U -r $girder_path/requirements-dev.txt -e $girder_path
-  - girder-install plugin --symlink $main_path
+  - girder-install plugin --symlink $large_image_path
   # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them
-  - pip install -e $main_path[memcached,openslide]
+  - pip install -e $large_image_path[memcached,openslide]
   - ls -l $girder_path/plugins
   # Make sure we have a prefered version of celery for Girder Worker
   - pip install -U 'celery>=4'
@@ -207,13 +208,13 @@ install:
   # - npm install
   # but since there are often connection failures, use the retry package.
   - npm-install-retry
-  - BABEL_ENV=cover NYC_CWD=$main_path girder-install web --plugins=jobs,worker,large_image --dev
+  - BABEL_ENV=cover NYC_CWD=$large_image_path girder-install web --plugins=jobs,worker,large_image --dev
 
 script:
+  - mkdir -p $girder_build_path
   - cd $girder_worker_path
   - python2 -m girder_worker >/tmp/worker.out 2>&1 &
-  - mkdir -p $build_path/girder_testing_build
-  - cd $build_path/girder_testing_build
+  - cd $girder_build_path
   - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DCOVERAGE_MINIMUM_PASS=80 -DJS_COVERAGE_MINIMUM_PASS=9 -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path
   - make -j 3
   - JASMINE_TIMEOUT=15000 ctest -VV
@@ -224,4 +225,4 @@ after_failure:
   - cat /tmp/worker.out
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash) -R $main_path -s $build_path/girder_testing_build
+  - bash <(curl -s https://codecov.io/bash) -R $large_image_path -s $girder_build_path
