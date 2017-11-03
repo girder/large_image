@@ -212,6 +212,8 @@ class LazyTileDict(dict):
         # native dictionary methods
         self['tile'] = None
         self['format'] = None
+        self.width = self['width']
+        self.height = self['height']
         return result
 
     def setFormat(self, format, resample=False, imageKwargs=None):
@@ -240,13 +242,20 @@ class LazyTileDict(dict):
             self['scaled'] = 1.0 / self.requestedScale
             self['tile_x'] = self.get('tile_x', self['x'])
             self['tile_y'] = self.get('tile_y', self['y'])
-            self['tile_width'] = self.get('tile_width', self['width'])
-            self['tile_height'] = self.get('tile_width', self['height'])
+            self['tile_width'] = self.get('tile_width', self.width)
+            self['tile_height'] = self.get('tile_width', self.height)
             self['x'] = float(self['tile_x'])
             self['y'] = float(self['tile_y'])
-            # If we can resample the tile, many parameters may change
-            # once the image is loaded.
-            self.deferredKeys = ('tile', 'format', 'width', 'height')
+            # Add provisional width and height
+            if self.resample not in (False, None) and self.requestedScale:
+                self['width'] = max(1, int(
+                    self['tile_width'] / self.requestedScale))
+                self['height'] = max(1, int(
+                    self['tile_height'] / self.requestedScale))
+            # If we can resample the tile, many parameters may change once the
+            # image is loaded.  Don't include width and height in this list;
+            # the provisional values are sufficient.
+            self.deferredKeys = ('tile', 'format')
             self.loaded = False
         if imageKwargs is not None:
             self.imageKwargs = imageKwargs
@@ -259,9 +268,9 @@ class LazyTileDict(dict):
         """
         retile = None
         xmin = int(max(0, self['x'] // self.metadata['tileWidth']))
-        xmax = int((self['x'] + self['width'] - 1) // self.metadata['tileWidth'] + 1)
+        xmax = int((self['x'] + self.width - 1) // self.metadata['tileWidth'] + 1)
         ymin = int(max(0, self['y'] // self.metadata['tileHeight']))
-        ymax = int((self['y'] + self['height'] - 1) // self.metadata['tileHeight'] + 1)
+        ymax = int((self['y'] + self.height - 1) // self.metadata['tileHeight'] + 1)
         for x in range(xmin, xmax):
             for y in range(ymin, ymax):
                 tileData = self.source.getTile(
@@ -271,7 +280,7 @@ class LazyTileDict(dict):
                     tileData = PIL.Image.open(BytesIO(tileData))
                 if retile is None:
                     retile = PIL.Image.new(
-                        tileData.mode, (self['width'], self['height']))
+                        tileData.mode, (self.width, self.height))
                 retile.paste(tileData, (
                     int(x * self.metadata['tileWidth'] - self['x']),
                     int(y * self.metadata['tileHeight'] - self['y'])))
@@ -314,7 +323,7 @@ class LazyTileDict(dict):
                 tileFormat = TILE_FORMAT_PIL
 
             # resample if needed
-            if self.resample and self.requestedScale:
+            if self.resample not in (False, None) and self.requestedScale:
                 self['width'] = max(1, int(
                     tileData.size[0] / self.requestedScale))
                 self['height'] = max(1, int(
