@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import json
-import pkg_resources
-import sys
 
 try:
     from setuptools import setup
@@ -18,27 +16,6 @@ with open('plugin.json') as f:
 
 with open('LICENSE') as f:
     license_str = f.read()
-
-try:
-    lines = open('requirements.txt').readlines()
-    ireqs = pkg_resources.parse_requirements([line for line in lines if not line.startswith('-e ')])
-except pkg_resources.RequirementParseError:
-    raise
-# Don't include pylibmc for Windows
-if 'win' in sys.platform:
-    ireqs = [req for req in ireqs if req.key not in ('pylibmc', )]
-requirements = [str(req) for req in ireqs]
-
-# For lines in requirements.txt that start with -e, store the URL in the
-# dependencies (used in dependency_links), and the referenced package in the
-# requirements.
-dependencies = [line[3:].strip() for line in lines if line.startswith('-e ')]
-requirements.extend(['=='.join(entry.split('#egg=')[1].split('-', 1)) for entry in dependencies])
-
-
-test_requirements = [
-    # TODO: Should we list Girder here?
-]
 
 setup(
     name='large_image',
@@ -63,9 +40,6 @@ setup(
         'large_image': 'large_image',
         'large_image.server': 'server',
     },
-    entry_points={
-        'girder.plugin': 'large_image = large_image.server:load'
-    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -78,12 +52,26 @@ setup(
         'Programming Language :: Python :: 3.4'
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-
     include_package_data=True,
-    install_requires=requirements,
-    dependency_links=dependencies,
+    install_requires=[
+        'cachetools>=2.0.0',
+        'enum34>=1.1.6',
+        'jsonschema>=2.5.1',
+        'libtiff>=0.4.1',
+        'numpy>=1.10.2',
+        'Pillow>=3.2.0',
+        'psutil>=4.2.0',
+        'six>=1.10.0'
+    ],
+    extras_require={
+        'memcached': [
+            'pylibmc>=1.5.1;platform_system!="Windows"'
+        ],
+        'openslide': [
+            'openslide-python>=1.1.0'
+        ]
+    },
     license=license_str,
     # zip_safe=False,  # Comment out to let setuptools decide
     keywords='large_image',
-    test_suite='plugin_tests',
-    tests_require=test_requirements)
+    test_suite='plugin_tests')
