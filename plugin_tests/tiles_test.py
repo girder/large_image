@@ -705,6 +705,58 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatus(resp, 400)
         self.assertIn('tile size is too large', resp.json['message'])
 
+        # Test redirects, use a JPEG
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_Easy1.jpeg'))
+        itemId2 = str(file['itemId'])
+        fileId2 = str(file['_id'])
+        # Ask to make this a tile-based item
+        resp = self.request(path='/item/%s/tiles' % itemId2, method='POST',
+                            user=self.admin, params={'fileId': fileId2})
+        self.assertStatusOk(resp)
+        # No encoding or redirect should just get a JPEG
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId2,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        # quality 75 should work
+        resp = self.request(
+            path='/item/%s/tiles/zxy/0/0/0' % itemId2, user=self.admin,
+            isJson=False, params={'jpegQuality': 75})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        # redirect without other parameters should
+        resp = self.request(
+            path='/item/%s/tiles/zxy/0/0/0' % itemId2, user=self.admin,
+            isJson=False, params={'redirect': 'exact'})
+        self.assertStatus(resp, 303)
+        # redirect with a different quality shouldn't
+        resp = self.request(
+            path='/item/%s/tiles/zxy/0/0/0' % itemId2, user=self.admin,
+            isJson=False, params={'redirect': 'exact', 'jpegQuality': 75})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
+        # redirect with a different quality and 'encoding' should
+        resp = self.request(
+            path='/item/%s/tiles/zxy/0/0/0' % itemId2, user=self.admin,
+            isJson=False, params={'redirect': 'encoding', 'jpegQuality': 75})
+        self.assertStatus(resp, 303)
+        # redirect with a different encoding shouldn't
+        resp = self.request(
+            path='/item/%s/tiles/zxy/0/0/0' % itemId2, user=self.admin,
+            isJson=False, params={'redirect': 'encoding', 'encoding': 'PNG'})
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        # redirect with a different encoding and 'any' should
+        resp = self.request(
+            path='/item/%s/tiles/zxy/0/0/0' % itemId2, user=self.admin,
+            isJson=False, params={'redirect': 'any', 'encoding': 'PNG'})
+        self.assertStatus(resp, 303)
+
     def testTilesFromPNGs(self):
         # A PNG in L, LA, RGB, RGBA should work in both 8 and 16 bits-per-pixel
         for mode, bits in itertools.product(('L', 'LA', 'RGB', 'RGBA'), (8, 16)):

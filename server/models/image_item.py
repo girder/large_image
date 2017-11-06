@@ -198,9 +198,9 @@ class ImageItem(Item):
         tileSource = self._loadTileSource(item, **kwargs)
         return tileSource.getMetadata()
 
-    def getTile(self, item, x, y, z, **kwargs):
+    def getTile(self, item, x, y, z, mayRedirect=False, **kwargs):
         tileSource = self._loadTileSource(item, **kwargs)
-        tileData = tileSource.getTile(x, y, z)
+        tileData = tileSource.getTile(x, y, z, mayRedirect=mayRedirect)
         tileMimeType = tileSource.getTileMimeType()
         return tileData, tileMimeType
 
