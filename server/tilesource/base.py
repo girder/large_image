@@ -212,19 +212,21 @@ class LazyTileDict(dict):
         # native dictionary methods
         self['tile'] = None
         self['format'] = None
+        self.width = self['width']
+        self.height = self['height']
         return result
 
     def setFormat(self, format, resample=False, imageKwargs=None):
         """
-        Set a more restrictuve output format for a tile, possibly also resizing
-        it via resampling.  If this is not called, the tile may either as one
-        of the specified formats or as a PIL image.
+        Set a more restrictive output format for a tile, possibly also resizing
+        it via resampling.  If this is not called, the tile may either be
+        returned as one of the specified formats or as a PIL image.
 
         :param format: a tuple or list of allowed formats.  Formats are members
             of TILE_FORMAT_*.  This will avoid converting images if they are
             in the desired output encoding (regardless of subparameters).
-        :param resample: if true, allow resampling.  Once turned on, this
-            cannot be turned off on the tile.
+        :param resample: if not False or None, allow resampling.  Once turned
+            on, this cannot be turned off on the tile.
         :param imageKwargs: additional parameters taht should be passed to
             _encodeImage.
         """
@@ -234,19 +236,26 @@ class LazyTileDict(dict):
         if format is not None and format != self.format:
             self.format = format
             self.loaded = False
-        if (resample and not self.resample and self.requestedScale and
-                round(self.requestedScale, 2) != 1.0):
+        if (resample not in (False, None) and not self.resample and
+                self.requestedScale and round(self.requestedScale, 2) != 1.0):
             self.resample = resample
             self['scaled'] = 1.0 / self.requestedScale
             self['tile_x'] = self.get('tile_x', self['x'])
             self['tile_y'] = self.get('tile_y', self['y'])
-            self['tile_width'] = self.get('tile_width', self['width'])
-            self['tile_height'] = self.get('tile_width', self['height'])
-            self['x'] = float(self['tile_x']) / self.requestedScale
-            self['y'] = float(self['tile_y']) / self.requestedScale
-            # If we can resample the tile, many parameters may change
-            # once the image is loaded.
-            self.deferredKeys = ('tile', 'format', 'width', 'height')
+            self['tile_width'] = self.get('tile_width', self.width)
+            self['tile_height'] = self.get('tile_width', self.height)
+            self['x'] = float(self['tile_x'])
+            self['y'] = float(self['tile_y'])
+            # Add provisional width and height
+            if self.resample not in (False, None) and self.requestedScale:
+                self['width'] = max(1, int(
+                    self['tile_width'] / self.requestedScale))
+                self['height'] = max(1, int(
+                    self['tile_height'] / self.requestedScale))
+            # If we can resample the tile, many parameters may change once the
+            # image is loaded.  Don't include width and height in this list;
+            # the provisional values are sufficient.
+            self.deferredKeys = ('tile', 'format')
             self.loaded = False
         if imageKwargs is not None:
             self.imageKwargs = imageKwargs
@@ -258,10 +267,10 @@ class LazyTileDict(dict):
         together to form a tile of a different size.
         """
         retile = None
-        xmin = max(0, self['x'] // self.metadata['tileWidth'])
-        xmax = (self['x'] + self['width'] - 1) // self.metadata['tileWidth'] + 1
-        ymin = max(0, self['y'] // self.metadata['tileHeight'])
-        ymax = (self['y'] + self['height'] - 1) // self.metadata['tileHeight'] + 1
+        xmin = int(max(0, self['x'] // self.metadata['tileWidth']))
+        xmax = int((self['x'] + self.width - 1) // self.metadata['tileWidth'] + 1)
+        ymin = int(max(0, self['y'] // self.metadata['tileHeight']))
+        ymax = int((self['y'] + self.height - 1) // self.metadata['tileHeight'] + 1)
         for x in range(xmin, xmax):
             for y in range(ymin, ymax):
                 tileData = self.source.getTile(
@@ -271,10 +280,10 @@ class LazyTileDict(dict):
                     tileData = PIL.Image.open(BytesIO(tileData))
                 if retile is None:
                     retile = PIL.Image.new(
-                        tileData.mode, (self['width'], self['height']))
+                        tileData.mode, (self.width, self.height))
                 retile.paste(tileData, (
-                    x * self.metadata['tileWidth'] - self['x'],
-                    y * self.metadata['tileHeight'] - self['y']))
+                    int(x * self.metadata['tileWidth'] - self['x']),
+                    int(y * self.metadata['tileHeight'] - self['y'])))
         return retile
 
     def __getitem__(self, key, *args, **kwargs):
@@ -314,13 +323,14 @@ class LazyTileDict(dict):
                 tileFormat = TILE_FORMAT_PIL
 
             # resample if needed
-            if self.resample and self.requestedScale:
+            if self.resample not in (False, None) and self.requestedScale:
                 self['width'] = max(1, int(
                     tileData.size[0] / self.requestedScale))
                 self['height'] = max(1, int(
                     tileData.size[1] / self.requestedScale))
                 tileData = tileData.resize(
-                    (self['width'], self['height']), resample=self.resample)
+                    (self['width'], self['height']),
+                    resample=PIL.Image.LANCZOS if self.resample is True else self.resample)
 
             # Reformat the image if required
             if not self.alwaysAllowPIL:
@@ -641,8 +651,7 @@ class TileSource(object):
                 requestedScale = mag['scale']
         outWidth, outHeight, calcScale = self._calculateWidthHeight(
             maxWidth, maxHeight, regionWidth, regionHeight)
-        if requestedScale is None:
-            requestedScale = calcScale
+        requestedScale = calcScale if requestedScale is None else requestedScale
         if (regionWidth == 0 or regionHeight == 0 or outWidth == 0 or
                 outHeight == 0):
             return None
@@ -699,6 +708,17 @@ class TileSource(object):
         if tile_size['width'] <= 0 or tile_size['height'] <= 0:
             raise ValueError('Invalid tile_size or tile_overlap.')
 
+        resample = (
+            False if round(requestedScale, 2) == 1.0 or
+            kwargs.get('resample') in (None, False) else kwargs.get('resample'))
+        # If we need to resample to make tiles at a non-native resolution,
+        # adjust the tile size and tile overlap paramters appropriately.
+        if resample is not False:
+            tile_size['width'] = int(round(tile_size['width'] * requestedScale))
+            tile_size['height'] = int(round(tile_size['height'] * requestedScale))
+            tile_overlap['x'] = int(round(tile_overlap['x'] * requestedScale))
+            tile_overlap['y'] = int(round(tile_overlap['y'] * requestedScale))
+
         # If the overlapped tiles don't run over the edge, then the functional
         # size of the region is reduced by the overlap.  This factor is stored
         # in the overlap offset_*.
@@ -737,6 +757,7 @@ class TileSource(object):
             'format': kwargs.get('format', (TILE_FORMAT_PIL, )),
             'encoding': kwargs.get('encoding'),
             'requestedScale': requestedScale,
+            'resample': resample,
             'tile_overlap': tile_overlap,
             'tile_position': kwargs.get('tile_position'),
             'tile_size': tile_size,
@@ -1361,8 +1382,7 @@ class TileSource(object):
         If a region that includes partial tiles is requested, those tiles are
         cropped appropriately.  Most images will have tiles that get cropped
         along the right and bottom egdes in any case.  If an exact
-        magnification or scale is requested, no tiles will be returned unless
-        allowInterpolation is true.
+        magnification or scale is requested, no tiles will be returned.
 
         :param format: the desired format or a tuple of allowed formats.
             Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
@@ -1401,7 +1421,7 @@ class TileSource(object):
         :param scale: a dictionary of optional values which specify the scale
                 of the region and / or output.  This applies to region if
                 pixels or mm are used for inits.  It applies to output if
-                neither output maxWidth nor maxHeight is specified.  It
+                neither output maxWidth nor maxHeight is specified.
             magnification: the magnification ratio.  Only used is maxWidth and
                 maxHeight are not specified or None.
             mm_x: the horizontal size of a pixel in millimeters.
@@ -1459,14 +1479,15 @@ class TileSource(object):
                 raise ValueError('Invalid encoding "%s"' % encoding)
         iterFormat = format if resample in (False, None) else (
             TILE_FORMAT_PIL, )
-        iterInfo = self._tileIteratorInfo(format=iterFormat, **kwargs)
+        iterInfo = self._tileIteratorInfo(format=iterFormat, resample=resample,
+                                          **kwargs)
         if not iterInfo:
             return
         # check if the desired scale is different from the actual scale and
         # resampling is needed.  Ignore small scale differences.
         if (resample in (False, None) or
                 round(iterInfo['requestedScale'], 2) == 1.0):
-            resample = None
+            resample = False
         for tile in self._tileIterator(iterInfo):
             tile.setFormat(format, resample, kwargs)
             yield tile
