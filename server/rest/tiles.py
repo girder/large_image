@@ -254,8 +254,8 @@ class TilesItemResource(Item):
         .param x: the X coordinate of the tile (0 is the left side).
         .param y: the Y coordinate of the tile (0 is the top).
         :param imageArgs: additional arguments to use when fetching image data.
-        :param mayRedirect: if True, allow return a response whcih may be a
-            redirect.
+        :param mayRedirect: if True or one of 'any', 'encoding', or 'exact',
+            allow return a response whcih may be a redirect.
         :return: a function that returns the raw image data.
         """
         try:
@@ -283,6 +283,13 @@ class TilesItemResource(Item):
                paramType='path')
         .param('y', 'The Y coordinate of the tile (0 is the top).',
                paramType='path')
+        .param('redirect', 'If the tile exists as a complete file, allow an '
+               'HTTP redirect instead of returning the data directly.  The '
+               'redirect might not have the correct mime type.  "exact" must '
+               'match the image encoding and quality parameters, "encoding" '
+               'must match the image encoding but disregards quality, and '
+               '"any" will redirect to any image if possible.', required=False,
+               enum=['false', 'exact', 'encoding', 'any'], default='false')
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
@@ -304,7 +311,10 @@ class TilesItemResource(Item):
         # a while.
         setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
             cherrypy.serving.response.time + 600))
-        return self._getTile(item, z, x, y, params, True)
+        redirect = params.get('redirect', False)
+        if redirect not in ('any', 'exact', 'encoding'):
+            redirect = False
+        return self._getTile(item, z, x, y, params, mayRedirect=redirect)
 
     @describeRoute(
         Description('Get a test large image tile.')

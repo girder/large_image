@@ -184,7 +184,7 @@ if girder:
             if y != 0:
                 raise TileSourceException('y is outside layer')
             if (mayRedirect and not pilImageAllowed and
-                    self._pilFormatMatches(self._pilImage, **kwargs)):
+                    self._pilFormatMatches(self._pilImage, mayRedirect, **kwargs)):
                 url = '%s/api/v1/file/%s/download' % (
                     cherrypy.request.base, self.item['largeImage']['fileId'])
                 raise cherrypy.HTTPRedirect(url)

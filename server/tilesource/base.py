@@ -913,20 +913,28 @@ class TileSource(object):
                 tile['gheight'] = tile['height'] * scale
                 yield tile
 
-    def _pilFormatMatches(self, image, **kwargs):
+    def _pilFormatMatches(self, image, match=True, **kwargs):
         """
         Determine if the specified PIL image matches the format of the tile
         source with the specified arguments.
 
         :param image: the PIL image to check.
+        :param match: if 'any', all image encodings are considered matching,
+            if 'encoding', then a matching encoding matches regardless of
+            quality options, otherwise, only match if the encoding and quality
+            options match.
         :param **kwargs: additional parameters to use in determining format.
         """
         encoding = TileOutputPILFormat.get(self.encoding, self.encoding)
+        if match == 'any' and encoding in ('PNG', 'JPEG'):
+            return True
         if image.format != encoding:
             return False
         if encoding == 'PNG':
             return True
         if encoding == 'JPEG':
+            if match == 'encoding':
+                return True
             originalQuality = None
             try:
                 if image.format == 'JPEG' and hasattr(image, 'quantization'):
@@ -937,7 +945,7 @@ class TileSource(object):
             except Exception:
                 return False
             return abs(originalQuality - self.jpegQuality) <= 1
-        # We fail for the TTIFF file format; it is general enough that ensuring
+        # We fail for the TIFF file format; it is general enough that ensuring
         # compatibility could be an issue.
         return False
 
@@ -988,6 +996,11 @@ class TileSource(object):
         encoding = TileOutputPILFormat.get(self.encoding, self.encoding)
         if encoding == 'JPEG' and tile.mode not in ('L', 'RGB'):
             tile = tile.convert('RGB')
+        # If we can't redirect, but the tile is read from a file in the desired
+        # output format, just read the file
+        if hasattr(tile, 'fp') and self._pilFormatMatches(tile):
+            tile.fp.seek(0)
+            return tile.fp.read()
         output = BytesIO()
         tile.save(
             output, encoding, quality=self.jpegQuality,
