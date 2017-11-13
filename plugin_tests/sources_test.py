@@ -550,6 +550,24 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                     format=tilesource.TILE_FORMAT_NUMPY):
                 tileCount += 1
 
+    def testConvertPointScale(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
+            '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
+        itemId = str(file['itemId'])
+        item = self.model('item').load(itemId, user=self.admin)
+        source = self.model('image_item', 'large_image').tileSource(item)
+        point = source.getPointAtAnotherScale((500, 800), {'magnification': 5}, 'mag_pixels')
+        self.assertEqual(point, (4000.0, 6400.0))
+        point = source.getPointAtAnotherScale(
+            (500, 800), targetScale={'magnification': 5}, targetUnits='mag_pixels')
+        self.assertEqual(point, (62.5, 100.0))
+        point = source.getPointAtAnotherScale(
+            (500000, 800), {'magnification': 5}, 'mag_pixels',
+            {'magnification': 20}, 'mag_pixels')
+        self.assertEqual(point, (2000000.0, 3200.0))
+        # ##DWM::
+
     def testGetSingleTile(self):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
