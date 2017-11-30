@@ -25,7 +25,9 @@ from girder.api.describe import describeRoute, Description
 from girder.api.rest import Resource, loadmodel, filtermodel, RestException
 from girder.constants import AccessType, SortDir
 from girder.models.model_base import AccessException, ValidationException
-from ..models.annotation import AnnotationSchema
+from girder.models.item import Item
+from girder.models.user import User
+from ..models.annotation import AnnotationSchema, Annotation
 
 
 class AnnotationResource(Resource):
@@ -39,6 +41,7 @@ class AnnotationResource(Resource):
         self.route('GET', ('images',), self.findAnnotatedImages)
         self.route('GET', (':id',), self.getAnnotation)
         self.route('POST', (), self.createAnnotation)
+        self.route('POST', (':id', 'copy'), self.copyAnnotation)
         self.route('PUT', (':id',), self.updateAnnotation)
         self.route('DELETE', (':id',), self.deleteAnnotation)
 
@@ -62,12 +65,12 @@ class AnnotationResource(Resource):
         limit, offset, sort = self.getPagingParameters(params, 'lowerName')
         query = {}
         if 'itemId' in params:
-            item = self.model('item').load(params.get('itemId'), force=True)
-            self.model('item').requireAccess(
+            item = Item().load(params.get('itemId'), force=True)
+            Item().requireAccess(
                 item, user=self.getCurrentUser(), level=AccessType.READ)
             query['itemId'] = item['_id']
         if 'userId' in params:
-            user = self.model('user').load(
+            user = User().load(
                 params.get('userId'), user=self.getCurrentUser(),
                 level=AccessType.READ)
             query['creatorId'] = user['_id']
@@ -76,8 +79,8 @@ class AnnotationResource(Resource):
         if params.get('name'):
             query['annotation.name'] = params['name']
         fields = list(('annotation.name', 'annotation.description') +
-                      self.model('annotation', 'large_image').baseFields)
-        return list(self.model('annotation', 'large_image').find(
+                      Annotation().baseFields)
+        return list(Annotation().find(
             query, limit=limit, offset=offset, sort=sort, fields=fields))
 
     @describeRoute(
@@ -126,12 +129,12 @@ class AnnotationResource(Resource):
     @access.public
     @filtermodel(model='annotation', plugin='large_image')
     def getAnnotation(self, id, params):
-        annotation = self.model('annotation', 'large_image').load(id, region=params)
+        annotation = Annotation().load(id, region=params)
         # Ensure that we have read access to the parent item.  We could fail
         # faster when there are permissions issues if we didn't load the
         # annotation elements before checking the item access permissions.
-        item = self.model('item').load(annotation.get('itemId'), force=True)
-        self.model('item').requireAccess(
+        item = Item().load(annotation.get('itemId'), force=True)
+        Item().requireAccess(
             item, user=self.getCurrentUser(), level=AccessType.READ)
         return annotation
 
@@ -151,13 +154,35 @@ class AnnotationResource(Resource):
     @filtermodel(model='annotation', plugin='large_image')
     def createAnnotation(self, item, params):
         try:
-            return self.model('annotation', 'large_image').createAnnotation(
+            return Annotation().createAnnotation(
                 item, self.getCurrentUser(), self.getBodyJson())
         except ValidationException as exc:
             logger.exception('Failed to validate annotation')
             raise RestException(
                 'Validation Error: JSON doesn\'t follow schema (%r).' % (
                     exc.args, ))
+
+    @describeRoute(
+        Description('Copy an annotation from one item to an other.')
+        .param('id', 'The ID of the annotation.', paramType='path',
+               required=True)
+        .param('itemId', 'The ID of the destination item.',
+               required=True)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Write access was denied for the item.', 403)
+    )
+    @access.user
+    @loadmodel(model='annotation', plugin='large_image')
+    @filtermodel(model='annotation', plugin='large_image')
+    def copyAnnotation(self, annotation, params):
+        itemId = params['itemId']
+        user = self.getCurrentUser()
+        Item().load(annotation.get('itemId'),
+                    user=user,
+                    level=AccessType.READ)
+        item = Item().load(itemId, user=user, level=AccessType.WRITE)
+        return Annotation().createAnnotation(
+            item, user, annotation['annotation'])
 
     @describeRoute(
         Description('Update an annotation or move it to a different item.')
@@ -175,20 +200,20 @@ class AnnotationResource(Resource):
     @filtermodel(model='annotation', plugin='large_image')
     def updateAnnotation(self, annotation, params):
         user = self.getCurrentUser()
-        item = self.model('item').load(annotation.get('itemId'), force=True)
+        item = Item().load(annotation.get('itemId'), force=True)
         if item is not None:
-            self.model('item').requireAccess(
+            Item().requireAccess(
                 item, user=user, level=AccessType.WRITE)
         # If we have a content length, then we have replacement JSON.
         if cherrypy.request.body.length:
             annotation['annotation'] = self.getBodyJson()
         if params.get('itemId'):
-            newitem = self.model('item').load(params['itemId'], force=True)
-            self.model('item').requireAccess(
+            newitem = Item().load(params['itemId'], force=True)
+            Item().requireAccess(
                 newitem, user=user, level=AccessType.WRITE)
             annotation['itemId'] = newitem['_id']
         try:
-            self.model('annotation', 'large_image').updateAnnotation(
+            Annotation().updateAnnotation(
                 annotation, updateUser=user)
         except ValidationException as exc:
             logger.exception('Failed to validate annotation')
@@ -208,11 +233,11 @@ class AnnotationResource(Resource):
     @loadmodel(model='annotation', plugin='large_image', getElements=False)
     def deleteAnnotation(self, annotation, params):
         # Ensure that we have write access to the parent item
-        item = self.model('item').load(annotation.get('itemId'), force=True)
+        item = Item().load(annotation.get('itemId'), force=True)
         if item is not None:
-            self.model('item').requireAccess(
+            Item().requireAccess(
                 item, user=self.getCurrentUser(), level=AccessType.WRITE)
-        self.model('annotation', 'large_image').remove(annotation)
+        Annotation().remove(annotation)
 
     @describeRoute(
         Description('Search for annotated images.')
@@ -228,10 +253,10 @@ class AnnotationResource(Resource):
         query = {}
 
         if 'creatorId' in params:
-            creator = self.model('user').load(params['creatorId'], force=True)
+            creator = User().load(params['creatorId'], force=True)
             query = {'creatorId': creator['_id']}
 
-        annotations = self.model('annotation', 'large_image').find(
+        annotations = Annotation().find(
             query, sort=sort, fields=['itemId']
         )
 
