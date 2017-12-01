@@ -17,7 +17,6 @@
 #  limitations under the License.
 #############################################################################
 
-import cherrypy
 import json
 import math
 import six
@@ -46,6 +45,8 @@ try:
     from .. import constants
 except ImportError:
     girder = None
+if girder:
+    import cherrypy
 
 
 def getMaxSize(size=None):
