@@ -194,7 +194,9 @@ before_install:
 
 
 install:
-  - pip install --no-cache-dir -U -r $girder_path/requirements-dev.txt -e $girder_path
+  - pushd $girder_path
+  - pip install --no-cache-dir -U -r requirements-dev.txt -e .
+  - popd
   - girder-install plugin --symlink $large_image_path
   # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them
   - pip install -e $large_image_path[memcached,openslide]
