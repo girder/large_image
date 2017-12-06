@@ -17,7 +17,6 @@
 #  limitations under the License.
 #############################################################################
 
-import cherrypy
 import json
 import math
 import six
@@ -44,6 +43,7 @@ try:
     from .base import GirderTileSource
     from girder.utility.model_importer import ModelImporter
     from .. import constants
+    import cherrypy
 except ImportError:
     girder = None
 
