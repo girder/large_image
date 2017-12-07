@@ -17,6 +17,7 @@
 #  limitations under the License.
 ##############################################################################
 
+from bson import ObjectId
 import datetime
 import enum
 import jsonschema
@@ -631,6 +632,8 @@ class Annotation(Model):
             self.validatorAnnotation.validate(annot)
             lastValidatedElement = None
             for element in elements:
+                if isinstance(element.get('id'), ObjectId):
+                    element['id'] = str(element['id'])
                 if not self._similarElementStructure(element, lastValidatedElement):
                     self.validatorAnnotationElement.validate(element)
                     lastValidatedElement = element

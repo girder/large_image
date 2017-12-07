@@ -319,6 +319,23 @@ describe('Annotations', function () {
             }, 'annotation to save');
         });
 
+        it('update a paged annotation', function () {
+            var done;
+
+            annotation._pageElements = true;
+            annotation.save().done(function (resp) {
+                expect(resp.annotation).toBeDefined();
+                expect(resp.annotation.elements).not.toBeDefined();
+                done = true;
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+
+            waitsFor(function () {
+                return done;
+            }, 'annotation to save');
+        });
+
         it('destroy an existing annotation', function () {
             var done, consoleError = console.error;
 
@@ -402,14 +419,6 @@ describe('Annotations', function () {
                 model.trigger('change');
                 expect(eventCalled).toBe(true);
             });
-        });
-
-        it('cannot save paged annotation', function () {
-            var model = new largeImage.models.AnnotationModel({_id: annotationId});
-            model._pageElements = true;
-            expect(function () {
-                model.save();
-            }).toThrow();
         });
 
         it('cannot create an annotation without an itemId', function () {
