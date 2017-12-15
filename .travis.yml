@@ -219,7 +219,7 @@ install:
   # - npm install
   # but since there are often connection failures, use the retry package.
   - npm-install-retry
-  - BABEL_ENV=cover NYC_CWD=$large_image_path girder-install web --plugins=jobs,worker,large_image --dev
+  - NYC_CWD=$large_image_path girder-install web --plugins=jobs,worker,large_image --dev
 
 script:
   - mkdir -p $girder_build_path
@@ -236,4 +236,8 @@ after_failure:
   - cat /tmp/worker.out
 
 after_success:
+  # Copy coverage files to where codecov will find them
+  - cp $girder_path/build/test/coverage/server.xml $girder_build_path/coverage.xml
+  - cp $girder_path/build/test/coverage/web/js_coverage.xml $girder_build_path/js_coverage.xml
+  - cp $girder_path/build/test/coverage/web/lcov.info $girder_build_path/lcov.info
   - bash <(curl -s https://codecov.io/bash) -R $large_image_path -s $girder_build_path
