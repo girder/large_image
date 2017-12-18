@@ -20,11 +20,12 @@
 import gdal
 import osr
 import mapnik
+from pyproj import Proj, transform
 from PIL import Image
 import math
 import six
 
-from .base import FileTileSource, TILE_FORMAT_PIL
+from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL
 from ..cache_util import LruCacheMetaclass, methodcache
 
 try:
@@ -49,16 +50,20 @@ class MapnikTileSource(FileTileSource):
     def __init__(self, path, **kwargs):
         super(MapnikTileSource, self).__init__(path, **kwargs)
         self.dataset = gdal.Open(self._getLargeImagePath())
-
-        self.sizeX = self.dataset.RasterXSize
-        self.sizeY = self.dataset.RasterYSize
+        # Earth circumference for web mercator
+        self.circumference = 40075016.68557849
+        try:
+            self.sizeX = self.dataset.RasterXSize
+            self.sizeY = self.dataset.RasterYSize
+        except AttributeError:
+            raise TileSourceException('File cannot be opened via Mapnik.')
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
-        # TODO: Dynamically compute sensible levels
-        self.levels = 20
-        # Earth circumference for web mercator
-        self.circumference = 40075016.68557849
+        try:
+            self.levels = self.getMaximumZoomLevel(self.getPixelSizeInMeters())
+        except RuntimeError:
+            raise TileSourceException('File cannot be opened via Mapnik.')
 
     def getProj4String(self):
         """Returns proj4 string for the given dataset"""
@@ -67,6 +72,59 @@ class MapnikTileSource(FileTileSource):
         proj.ImportFromWkt(wkt)
 
         return proj.ExportToProj4()
+
+    def getMaximumZoomLevel(self, pixelSize):
+        """Returns appropriate max zoom level for a layer"""
+        for i in range(1, 30):
+            mercatorPixelSize = self.getPixelSize(i)
+            if mercatorPixelSize <= pixelSize:
+                maxZoom = i + 1
+                break
+
+        return maxZoom
+
+    def getPixelSizeInMeters(self):
+        """Returns pixel size in meters"""
+        xmin, ymin, xmax, ymax = self.getBounds()
+        inProj = Proj(self.getProj4String())
+        outProj = Proj(self.getMercatorProjection())
+        xmin, ymin = transform(inProj, outProj, xmin, ymin)
+        xmax, ymax = transform(inProj, outProj, xmax, ymax)
+
+        xres = abs((xmax-xmin)/self.sizeX)
+        yres = abs((ymax-ymin)/self.sizeY)
+
+        return min(xres, yres)
+
+    def getBounds(self):
+        """Returns bounds of an image"""
+        geotransform = self.dataset.GetGeoTransform()
+        xmax = geotransform[0] + (self.dataset.RasterXSize * geotransform[1])
+        ymin = geotransform[3] + (self.dataset.RasterYSize * geotransform[5])
+        xmin = geotransform[0]
+        ymax = geotransform[3]
+        return xmin, ymin, xmax, ymax
+
+    def getMetadata(self):
+        geospatial = False
+        if self.dataset.GetProjection():
+            geospatial = True
+        xmin, xmax, ymin, ymax = self.getBounds()
+        return {
+            'geospatial': geospatial,
+            'levels': self.levels,
+            'sizeX': self.sizeX,
+            'sizeY': self.sizeY,
+            'tileWidth': self.tileWidth,
+            'tileHeight': self.tileHeight,
+            'srs': self.getProj4String(),
+            'bounds': {
+                'xmin': xmin,
+                'xmax': xmax,
+                'ymin': ymin,
+                'ymax': ymax
+            }
+        }
 
     def getPixelSize(self, zoom):
         """Returns an approximate pixel size for a given zoom level"""
