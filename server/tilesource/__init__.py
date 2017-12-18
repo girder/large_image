@@ -46,11 +46,14 @@ sourceList = [
      'girder': True},
     {'moduleName': '.svs', 'className': 'SVSFileTileSource'},
     {'moduleName': '.svs', 'className': 'SVSGirderTileSource', 'girder': True},
+    {'moduleName': '.mapniksource', 'className': 'MapnikTileSource'},
+    {'moduleName': '.mapniksource', 'className': 'MapnikGirderTileSource', 'girder': True},
     {'moduleName': '.pil', 'className': 'PILFileTileSource'},
     {'moduleName': '.pil', 'className': 'PILGirderTileSource', 'girder': True},
     {'moduleName': '.test', 'className': 'TestTileSource'},
-    {'moduleName': '.dummy', 'className': 'DummyTileSource'},
+    {'moduleName': '.dummy', 'className': 'DummyTileSource'}
 ]
+
 for source in sourceList:
     try:
         # Don't try to load girder sources if we couldn't import girder
