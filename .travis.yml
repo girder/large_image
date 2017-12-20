@@ -75,6 +75,12 @@ addons:
       - libxml2-dev
       - pkg-config
       - python-gi-dev
+      # mapnik
+      - libgdal-dev
+      - gdal-bin
+      - python-gdal
+      - libmapnik-dev
+      - python-mapnik
       # girder worker - not needed; included in travis
       # - rabbitmq-server
 
@@ -82,6 +88,9 @@ services:
   - rabbitmq
 
 before_install:
+
+  - export CPLUS_INCLUDE_PATH=/usr/include/gdal
+  - export C_INCLUDE_PATH=/usr/include/gdal
   # Fix a travis/boto issue.  See
   # https://github.com/travis-ci/travis-ci/issues/7940
   - sudo rm -f /etc/boto.cfg
@@ -198,8 +207,10 @@ install:
   - pip install --no-cache-dir -U -r requirements-dev.txt -e .
   - popd
   - girder-install plugin --symlink $large_image_path
+  # Trusty supports gdal 1.10.0.
+  - pip install gdal==1.10.0
   # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them
-  - pip install -e $large_image_path[memcached,openslide]
+  - pip install -e $large_image_path[memcached,openslide,mapnik]
   - ls -l $girder_path/plugins
   # Make sure we have a prefered version of celery for Girder Worker
   - pip install -U 'celery>=4'
