@@ -5,8 +5,9 @@ python:
   - "3.5"
 
 env:
-  - LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
-  - LIBTIFF_VERSION=4.0.8 LIBTIFF_DIR=     OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
+  matrix:
+    - LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
+    - LIBTIFF_VERSION=4.0.8 LIBTIFF_DIR=     OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
 
 matrix:
   exclude:
@@ -17,8 +18,8 @@ cache:
   directories:
     - $HOME/.cache
     - $HOME/lib_build
-    - $HOME/build/girder_build/store
-    - $HOME/build/girder_build/data
+    - $HOME/girder_build/store
+    - $HOME/girder_build/data
 
 sudo: required
 
@@ -111,8 +112,10 @@ before_install:
   # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
   # so install it from source.
   - cd $lib_build_path
-  - wget -O "openjpeg-$OPENJPEG_VERSION.tar.gz" "https://github.com/uclouvain/openjpeg/archive/$OPENJPEG_FILE"
-  - tar -zxpf "openjpeg-$OPENJPEG_VERSION.tar.gz"
+  - if [[ ! -d $OPENJPEG_DIR ]]; then
+      wget -O "openjpeg-$OPENJPEG_VERSION.tar.gz" "https://github.com/uclouvain/openjpeg/archive/$OPENJPEG_FILE" &&
+      tar -zxpf "openjpeg-$OPENJPEG_VERSION.tar.gz" ;
+    fi
   - cd "$OPENJPEG_DIR"
   # - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
   # - tar -zxf openjpeg-1.5.2.tar.gz
@@ -125,8 +128,10 @@ before_install:
 
   # Build libtiff so it will use our openjpeg
   - cd $lib_build_path
-  - wget -O "tiff-$LIBTIFF_VERSION.tar.gz" "http://download.osgeo.org/libtiff$LIBTIFF_DIR/tiff-$LIBTIFF_VERSION.tar.gz"
-  - tar -zxpf "tiff-$LIBTIFF_VERSION.tar.gz"
+  - if [[ ! -d "tiff-$LIBTIFF_VERSION" ]]; then
+      wget -O "tiff-$LIBTIFF_VERSION.tar.gz" "http://download.osgeo.org/libtiff$LIBTIFF_DIR/tiff-$LIBTIFF_VERSION.tar.gz" &&
+      tar -zxpf "tiff-$LIBTIFF_VERSION.tar.gz" ;
+    fi
   - cd "tiff-$LIBTIFF_VERSION"
   - ./configure
   - make -j 3
@@ -136,8 +141,10 @@ before_install:
 
   # Build OpenSlide ourselves so that it will use our libtiff
   - cd $lib_build_path
-  - wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz
-  - tar -zxpf openslide-3.4.1.tar.gz
+  - if [[ ! -d openslide-3.4.1 ]]; then
+      wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz &&
+      tar -zxpf openslide-3.4.1.tar.gz ;
+    fi
   - cd openslide-3.4.1
   - autoreconf -i
   - ./configure
@@ -150,8 +157,10 @@ before_install:
   - if [ "$BUILD_VIPS" = "yes" ]; then
       cd $lib_build_path &&
       if [ ! -f vips-8.5.9/config.status ]; then
-        wget -O vips-8.5.9.tar.gz https://github.com/jcupitt/libvips/releases/download/v8.5.9/vips-8.5.9.tar.gz &&
-        tar -zxpf vips-8.5.9.tar.gz &&
+        if [[ ! -d vips-8.5.9 ]]; then
+          wget -O vips-8.5.9.tar.gz https://github.com/jcupitt/libvips/releases/download/v8.5.9/vips-8.5.9.tar.gz &&
+          tar -zxpf vips-8.5.9.tar.gz ;
+        fi &&
         cd vips-8.5.9 &&
         ./configure &&
         make -j 3 >/tmp/vips_build.txt ;
@@ -210,7 +219,7 @@ install:
   # - npm install
   # but since there are often connection failures, use the retry package.
   - npm-install-retry
-  - BABEL_ENV=cover NYC_CWD=$large_image_path girder-install web --plugins=jobs,worker,large_image --dev
+  - NYC_CWD=$large_image_path girder-install web --plugins=jobs,worker,large_image --dev
 
 script:
   - mkdir -p $girder_build_path
@@ -227,4 +236,8 @@ after_failure:
   - cat /tmp/worker.out
 
 after_success:
+  # Copy coverage files to where codecov will find them
+  - cp $girder_path/build/test/coverage/server.xml $girder_build_path/coverage.xml
+  - cp $girder_path/build/test/coverage/web/js_coverage.xml $girder_build_path/js_coverage.xml
+  - cp $girder_path/build/test/coverage/web/lcov.info $girder_build_path/lcov.info
   - bash <(curl -s https://codecov.io/bash) -R $large_image_path -s $girder_build_path
