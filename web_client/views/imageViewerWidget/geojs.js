@@ -279,6 +279,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 this.featureLayer.deleteFeature(feature);
             });
             delete this._annotations[annotation.id];
+            delete this._featureOpacity[annotation.id];
             this.featureLayer.draw();
         }
     },
