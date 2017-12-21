@@ -26,6 +26,8 @@ function guid() {
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         this._annotations = {};
+        this._featureOpacity = {};
+        this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
@@ -133,6 +135,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this.setBounds({[annotation.id]: this._annotations[annotation.id]});
         }
         var featureList = this._annotations[annotation.id].features;
+        this._featureOpacity[annotation.id] = {};
         window.geo.createFileReader('jsonReader', {layer: this.featureLayer})
             .read(geojson, (features) => {
                 _.each(features || [], (feature) => {
@@ -151,9 +154,87 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                         ],
                         (evt) => this._onMouseFeature(evt)
                     );
+
+                    // store the original opacities for the elements in each feature
+                    const data = feature.data();
+                    if (data.length <= this._highlightFeatureSizeLimit) {
+                        this._featureOpacity[annotation.id][feature.featureType] = feature.data()
+                            .map(({id, properties}) => {
+                                return {
+                                    id,
+                                    fillOpacity: properties.fillOpacity,
+                                    strokeOpacity: properties.strokeOpacity
+                                };
+                            });
+                    }
                 });
+                this._mutateFeaturePropertiesForHighlight(annotation.id, features);
                 this.viewer.draw();
             });
+    },
+
+    /**
+     * Highlight the given annotation/element by reducing the opacity of all
+     * other elements by 75%.  For performance reasons, features with a large
+     * number of elements are not modified.  The limit for this behavior is
+     * configurable via the constructor option `highlightFeatureSizeLimit`.
+     *
+     * Both arguments are optional.  If no element is provided, then all
+     * elements in the given annotation are highlighted.  If no annotation
+     * is provided, then highlighting state is reset and the original
+     * opacities are used for all elements.
+     *
+     * @param {string?} annotation The id of the annotation to highlight
+     * @param {string?} element The id of the element to highlight
+     */
+    highlightAnnotation: function (annotation, element) {
+        this._highlightAnnotation = annotation;
+        this._highlightElement = element;
+        _.each(this._annotations, (layer, annotationId) => {
+            const features = layer.features;
+            this._mutateFeaturePropertiesForHighlight(annotationId, features);
+        });
+        this.viewer.draw();
+        return this;
+    },
+
+    /**
+     * Use geojs's `updateStyleFromArray` to modify the opacities of all elements
+     * in a feature.  This method uses the private attributes `_highlightAnntotation`
+     * and `_highlightElement` to determine which element to modify.
+     */
+    _mutateFeaturePropertiesForHighlight: function (annotationId, features) {
+        _.each(features, (feature) => {
+            const data = this._featureOpacity[annotationId][feature.featureType];
+            if (!data) {
+                // skip highlighting code on features with a lot of entities because
+                // this slows down interactivity considerably.
+                return;
+            }
+            const fillOpacityArray = [];
+            const strokeOpacityArray = [];
+
+            // pre-allocate arrays for performance
+            fillOpacityArray.length = data.length;
+            strokeOpacityArray.length = data.length;
+            for (let i = 0; i < data.length; i += 1) {
+                const id = data[i].id;
+                const fillOpacity = data[i].fillOpacity;
+                const strokeOpacity = data[i].strokeOpacity;
+                if (!this._highlightAnnotation ||
+                    (!this._highlightElement && annotationId === this._highlightAnnotation) ||
+                    this._highlightElement === id) {
+                    fillOpacityArray[i] = fillOpacity;
+                    strokeOpacityArray[i] = strokeOpacity;
+                } else {
+                    fillOpacityArray[i] = fillOpacity * 0.25;
+                    strokeOpacityArray[i] = strokeOpacity * 0.25;
+                }
+            }
+
+            feature.updateStyleFromArray('fillOpacity', fillOpacityArray);
+            feature.updateStyleFromArray('strokeOpacity', strokeOpacityArray);
+        });
     },
 
     /**
@@ -198,6 +279,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 this.featureLayer.deleteFeature(feature);
             });
             delete this._annotations[annotation.id];
+            delete this._featureOpacity[annotation.id];
             this.featureLayer.draw();
         }
     },

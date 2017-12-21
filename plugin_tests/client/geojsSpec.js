@@ -1,4 +1,4 @@
-/* globals beforeEach, afterEach, describe, it, expect, sinon, girder, Backbone */
+/* globals beforeEach, afterEach, describe, it, expect, sinon, girder, Backbone, _ */
 /* eslint-disable camelcase, no-new */
 
 girderTest.addScripts([
@@ -508,6 +508,123 @@ $(function () {
 
             waitsFor(function () {
                 return created;
+            });
+        });
+
+        describe('highlight annotations', function () {
+            var annotation1, annotation2;
+            var element11 = '111111111111111111111111';
+            var element12 = '222222222222222222222222';
+            var element21 = '333333333333333333333333';
+            var element22 = '444444444444444444444444';
+
+            it('generate test annotations', function () {
+                girder.rest.restRequest({
+                    url: 'annotation?itemId=' + itemId,
+                    contentType: 'application/json',
+                    processData: false,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        name: 'annotation1',
+                        elements: [{
+                            id: element11,
+                            type: 'rectangle',
+                            center: [200, 200, 0],
+                            width: 400,
+                            height: 400,
+                            rotation: 0,
+                            fillColor: 'rgba(0, 0, 0, 0.5)'
+                        }, {
+                            id: element12,
+                            type: 'rectangle',
+                            center: [300, 300, 0],
+                            width: 100,
+                            height: 100,
+                            rotation: 0,
+                            fillColor: 'rgba(0, 0, 0, 0.5)'
+                        }]
+                    })
+                }).done(function (resp) {
+                    annotation1 = new large_image.models.AnnotationModel({
+                        _id: resp._id
+                    });
+                });
+                girder.rest.restRequest({
+                    url: 'annotation?itemId=' + itemId,
+                    contentType: 'application/json',
+                    processData: false,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        name: 'annotation2',
+                        elements: [{
+                            id: element21,
+                            type: 'rectangle',
+                            center: [200, 200, 0],
+                            width: 400,
+                            height: 400,
+                            rotation: 0,
+                            fillColor: 'rgba(0, 0, 0, 0.5)'
+                        }, {
+                            id: element22,
+                            type: 'point',
+                            center: [300, 300, 0],
+                            fillColor: 'rgba(0, 0, 0, 0.5)'
+                        }]
+                    })
+                }).done(function (resp) {
+                    annotation2 = new large_image.models.AnnotationModel({
+                        _id: resp._id
+                    });
+                });
+
+                waitsFor(function () {
+                    return annotation1 && annotation2;
+                }, 'annotations to be created');
+                runs(function () {
+                    viewer.drawAnnotation(annotation1);
+                    viewer.drawAnnotation(annotation2);
+                });
+
+                girderTest.waitForLoad();
+            });
+
+            function checkFeatureOpacity(annotationId, fillOpacity, strokeOpacity, filter) {
+                filter = filter || _.constant(true);
+                _.each(viewer._annotations[annotationId].features, function (feature, findex) {
+                    var fillOpacityFunction = feature.style.get('fillOpacity');
+                    var strokeOpacityFunction = feature.style.get('strokeOpacity');
+                    var allData = feature.data();
+                    _.each(_.filter(allData, filter), function (data, index) {
+                        expect(fillOpacityFunction(allData, findex, data, index)).toBe(fillOpacity);
+                        expect(strokeOpacityFunction(allData, findex, data, index)).toBe(strokeOpacity);
+                    });
+                });
+            }
+
+            it('highlight a full annotation', function () {
+                viewer.highlightAnnotation(annotation1.id);
+
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.5 * 0.25, 0.25);
+            });
+
+            it('highlight a single element', function () {
+                viewer.highlightAnnotation(annotation2.id, element21);
+
+                checkFeatureOpacity(annotation1.id, 0.5 * 0.25, 0.25);
+                checkFeatureOpacity(annotation2.id, 0.5 * 0.25, 0.25, function (data) {
+                    return data.id !== element21;
+                });
+                checkFeatureOpacity(annotation2.id, 0.5, 1, function (data) {
+                    return data.id === element21;
+                });
+            });
+
+            it('reset opacities', function () {
+                viewer.highlightAnnotation();
+
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.5, 1);
             });
         });
 
