@@ -119,6 +119,10 @@ var ConfigView = View.extend({
             name: 'mapnikopenlayers',
             label: 'MapnikOpenlayers',
             type: 'mapnikopenlayers'
+        }, {
+            name: 'mapnikgeojs',
+            label: 'MapnikGeojs',
+            type: 'mapnikgeojs'
         }
     ],
 

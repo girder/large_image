@@ -78,7 +78,7 @@ $(function () {
                 $('.g-item-image-viewer-select .g-item-info-header select option').each(function () {
                     viewers.push($(this).val());
                 });
-                expect(viewers.length).toBe(6);
+                expect(viewers.length).toBe(7);
                 jQuery = $;
             }, 'get list of viewers');
         });
