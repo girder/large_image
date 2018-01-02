@@ -53,8 +53,8 @@ class MapnikTileSource(FileTileSource):
         # Earth circumference for web mercator
         self.circumference = 40075016.68557849
         try:
-            self.sizeX = self.dataset.RasterXSize
-            self.sizeY = self.dataset.RasterYSize
+            self.imageSizeX = self.dataset.RasterXSize
+            self.imageSizeY = self.dataset.RasterYSize
         except AttributeError:
             raise TileSourceException('File cannot be opened via Mapnik.')
         self.tileSize = 256
@@ -64,6 +64,9 @@ class MapnikTileSource(FileTileSource):
             self.levels = self.getMaximumZoomLevel(self.getPixelSizeInMeters())
         except RuntimeError:
             raise TileSourceException('File cannot be opened via Mapnik.')
+        # Report sizeX and sizeY as the whole world
+        self.sizeX = 2 ** (self.levels - 1) * self.tileWidth
+        self.sizeY = 2 ** (self.levels - 1) * self.tileHeight
 
     def getProj4String(self):
         """Returns proj4 string for the given dataset"""
@@ -75,9 +78,10 @@ class MapnikTileSource(FileTileSource):
 
     def getMaximumZoomLevel(self, pixelSize):
         """Returns appropriate max zoom level for a layer"""
+        maxZoom = 0
         for i in range(1, 30):
             mercatorPixelSize = self.getPixelSize(i)
-            if mercatorPixelSize <= pixelSize:
+            if mercatorPixelSize < pixelSize:
                 maxZoom = i + 1
                 break
 
@@ -91,10 +95,23 @@ class MapnikTileSource(FileTileSource):
         xmin, ymin = transform(inProj, outProj, xmin, ymin)
         xmax, ymax = transform(inProj, outProj, xmax, ymax)
 
-        xres = abs((xmax-xmin)/self.sizeX)
-        yres = abs((ymax-ymin)/self.sizeY)
+        xres = abs((xmax-xmin)/self.imageSizeX)
+        yres = abs((ymax-ymin)/self.imageSizeY)
 
         return min(xres, yres)
+
+    def getNativeMagnification(self):
+        """
+        Get the magnification at the base level.
+
+        :return: width of a pixel in mm, height of a pixel in mm.
+        """
+        scale = self.getPixelSize(self.levels - 1) * 100  # convert to mm
+        return {
+            'magnification': None,
+            'mm_x': scale,
+            'mm_y': scale
+        }
 
     def getBounds(self):
         """Returns bounds of an image"""
@@ -110,6 +127,7 @@ class MapnikTileSource(FileTileSource):
         if self.dataset.GetProjection():
             geospatial = True
         xmin, xmax, ymin, ymax = self.getBounds()
+        mag = self.getNativeMagnification()
         return {
             'geospatial': geospatial,
             'levels': self.levels,
@@ -118,12 +136,19 @@ class MapnikTileSource(FileTileSource):
             'tileWidth': self.tileWidth,
             'tileHeight': self.tileHeight,
             'srs': self.getProj4String(),
+            'imageSize': {
+                'x': self.imageSizeX,
+                'y': self.imageSizeY
+            },
             'bounds': {
                 'xmin': xmin,
                 'xmax': xmax,
                 'ymin': ymin,
                 'ymax': ymax
-            }
+            },
+            'mm_x': mag['mm_x'],
+            'mm_y': mag['mm_y'],
+            'circumference': self.circumference,
         }
 
     def getPixelSize(self, zoom):
