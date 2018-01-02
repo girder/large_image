@@ -151,6 +151,7 @@ def removeThumbnails(event):
     constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
     constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
     constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
+    constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY,
 })
 def validateBoolean(doc):
     val = doc['value']
@@ -212,6 +213,7 @@ SettingDefault.defaults.update({
     constants.PluginSettings.LARGE_IMAGE_AUTO_SET: True,
     constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES: 10,
     constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE: 4096,
+    constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY: True,
 })
 
 
@@ -231,7 +233,7 @@ def load(info):
     info['apiRoot'].annotation = AnnotationResource()
 
     Item().exposeFields(level=AccessType.READ, fields='largeImage')
-    # Ask for the annotation model to make sure it is initialized.
+    # Ask for some models to make sure their singletons are initialized.
     Annotation()
 
     events.bind('data.process', 'large_image', _postUpload)

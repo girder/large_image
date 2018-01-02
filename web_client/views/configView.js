@@ -39,6 +39,9 @@ var ConfigView = View.extend({
             }, {
                 key: 'large_image.show_extra_admin',
                 value: this.$('.g-large-image-show-extra-admin').val()
+            }, {
+                key: 'large_image.annotation_history',
+                value: this.$('.g-large-image-annotation-history-show').prop('checked')
             }]);
         }
     },
@@ -130,7 +133,20 @@ var ConfigView = View.extend({
         if (!ConfigView.settings) {
             restRequest({
                 type: 'GET',
-                url: 'large_image/settings'
+                // use the system/settings endpoints, because we need some
+                // admin-only settings
+                url: 'system/setting',
+                data: {list: JSON.stringify([
+                    'large_image.show_thumbnails',
+                    'large_image.show_extra',
+                    'large_image.show_extra_admin',
+                    'large_image.show_viewer',
+                    'large_image.default_viewer',
+                    'large_image.auto_set',
+                    'large_image.max_thumbnail_files',
+                    'large_image.max_small_image_size',
+                    'large_image.annotation_history'
+                ])}
             }).done((resp) => {
                 ConfigView.settings = resp;
                 if (callback) {

@@ -28,14 +28,16 @@ from six.moves import range
 
 from girder import events
 from girder import logger
-from girder.constants import AccessType
-from girder.exceptions import ValidationException
+from girder.constants import AccessType, SortDir
+from girder.exceptions import ValidationException, AccessException
+from girder.models.model_base import AccessControlledModel
 from girder.models.folder import Folder
 from girder.models.item import Item
-from girder.models.model_base import AccessControlledModel
+from girder.models.setting import Setting
 from girder.models.user import User
 
 from .annotationelement import Annotationelement
+from .. import constants
 
 
 class AnnotationSchema:
@@ -397,16 +399,34 @@ class Annotation(AccessControlledModel):
 
     def initialize(self):
         self.name = 'annotation'
-        self.ensureIndices(['itemId', 'created', 'creatorId'])
+        self.ensureIndices([
+            'itemId',
+            'created',
+            'creatorId',
+            ([
+                ('itemId', SortDir.ASCENDING),
+                ('_active', SortDir.ASCENDING),
+            ], {}),
+            ([
+                ('_annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+            ], {})
+        ])
         self.ensureTextIndex({
             'annotation.name': 10,
             'annotation.description': 1,
         })
 
         self.exposeFields(AccessType.READ, (
-            'annotation', '_version', '_elementQuery'
+            'annotation', '_version', '_elementQuery', '_active',
         ) + self.baseFields)
         events.bind('model.item.remove', 'large_image', self._onItemRemove)
+
+        self._historyEnabled = Setting().get(
+            constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY)
+        # Listen for changes to our relevant settings
+        events.bind('model.setting.save.after', 'large_image', self._onSettingChange)
+        events.bind('model.setting.remove', 'large_image', self._onSettingChange)
 
     def _onItemRemove(self, event):
         """
@@ -415,9 +435,20 @@ class Annotation(AccessControlledModel):
         :param event: the event with the item information.
         """
         item = event.info
-        annotations = Annotationelement().find({'itemId': item['_id']})
+        annotations = Annotation().find({'itemId': item['_id']})
         for annotation in annotations:
-            Annotation().remove(annotation)
+            if self._historyEnabled:
+                # just mark the annotations as inactive
+                self.update({'_id': annotation['_id']}, {'$set': {'_active': False}})
+            else:
+                Annotation().remove(annotation)
+
+    def _onSettingChange(self, event):
+        settingDoc = event.info
+        if settingDoc['key'] in (
+                constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, ):
+            self._historyEnabled = Setting().get(
+                constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY)
 
     def _loadAndMigrateAnnotation(self, id, *args, **kwargs):
         """
@@ -555,16 +586,20 @@ class Annotation(AccessControlledModel):
 
         :param annotation: the annotation document to remove.
         """
-        delete_one = self.collection.delete_one
+        if self._historyEnabled:
+            # just mark the annotations as inactive
+            result = self.update({'_id': annotation['_id']}, {'$set': {'_active': False}})
+        else:
+            delete_one = self.collection.delete_one
 
-        def deleteElements(query, *args, **kwargs):
-            ret = delete_one(query, *args, **kwargs)
-            Annotationelement().removeElements(annotation)
-            return ret
+            def deleteElements(query, *args, **kwargs):
+                ret = delete_one(query, *args, **kwargs)
+                Annotationelement().removeElements(annotation)
+                return ret
 
-        self.collection.delete_one = deleteElements
-        result = super(Annotation, self).remove(annotation, *args, **kwargs)
-        self.collection.delete_one = delete_one
+            self.collection.delete_one = deleteElements
+            result = super(Annotation, self).remove(annotation, *args, **kwargs)
+            self.collection.delete_one = delete_one
         return result
 
     def save(self, annotation, *args, **kwargs):
@@ -592,6 +627,8 @@ class Annotation(AccessControlledModel):
         if '_id' not in annotation:
             oldversion = None
         else:
+            if '_annotationId' in annotation:
+                annotation['_id'] = annotation['_annotationId']
             # We read the old version from the existing record, because we
             # don't want to trust that the input _version has not been altered
             # or is present.
@@ -599,14 +636,23 @@ class Annotation(AccessControlledModel):
                 {'_id': annotation['_id']}).get('_version')
         annotation['_version'] = version
         _elementQuery = annotation.pop('_elementQuery', None)
+        annotation.pop('_active', None)
+        annotation.pop('_annotationId', None)
 
         def replaceElements(query, doc, *args, **kwargs):
             Annotationelement().updateElements(doc)
             elements = doc['annotation'].pop('elements', None)
+            if self._historyEnabled:
+                oldAnnotation = self.collection.find_one(query)
+                if oldAnnotation:
+                    oldAnnotation['_annotationId'] = oldAnnotation.pop('_id')
+                    oldAnnotation['_active'] = False
+                    insert_one(oldAnnotation)
             ret = replace_one(query, doc, *args, **kwargs)
             if elements:
                 doc['annotation']['elements'] = elements
-            Annotationelement().removeOldElements(doc, oldversion)
+            if not self._historyEnabled:
+                Annotationelement().removeOldElements(doc, oldversion)
             return ret
 
         def insertElements(doc, *args, **kwargs):
@@ -631,6 +677,9 @@ class Annotation(AccessControlledModel):
         if _elementQuery:
             result['_elementQuery'] = _elementQuery
         logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
+        events.trigger('large_image.annotations.save_history', {
+            'annotation': annotation
+        }, async=True)
         return result
 
     def updateAnnotation(self, annotation, updateUser=None):
@@ -642,7 +691,7 @@ class Annotation(AccessControlledModel):
         :returns: the annotation document that was updated.
         """
         annotation['updated'] = datetime.datetime.utcnow()
-        annotation['updatedId'] = updateUser['_id']
+        annotation['updatedId'] = updateUser['_id'] if updateUser else None
         return self.save(annotation)
 
     def _similarElementStructure(self, a, b, parentKey=None):  # noqa
@@ -727,3 +776,109 @@ class Annotation(AccessControlledModel):
         if len(set(elementIds)) != len(elementIds):
             raise ValidationException('Annotation Element IDs are not unique')
         return doc
+
+    def versionList(self, annotationId, user=None, limit=0, offset=0,
+                    sort=[('_version', -1)], force=False):
+        """
+        List annotation history entries for a specific annotationId.  Only
+        annotations that belong to an existing item that the user is allowed to
+        view are included.  If the user is an admin, all annotations will be
+        included.
+
+        :param annotationId: the annotation to get history for.
+        :param user: the Girder user.
+        :param limit: maximum number of history entries to return.
+        :param offset: skip this many entries.
+        :param sort: the sort method used.  Defaults to reverse _id.
+        :param force: if True, don't authenticate the user.
+        :yields: the entries in the list
+        """
+        _versions = set()
+
+        if annotationId and not isinstance(annotationId, ObjectId):
+            annotationId = ObjectId(annotationId)
+        # Don't apply limit and offset here, as they are subject to access
+        # control and other effects
+        entries = self.find(
+            {'$or': [{'_id': annotationId}, {'_annotationId': annotationId}]},
+            sort=sort)
+        isAdmin = force or (user is not None and user['admin'])
+        for entry in entries:
+            # Disregard duplicates caused by concurrent saves.  If an
+            # annotation is updated from two different calls concurrently, it
+            # is possible that there will be two identical versions in the list
+            # (or a set of elements that have no corresponding version) in the
+            # annotation list.  In both these cases, the data will be
+            # self-consistent.
+            if '_version' not in entry or entry['_version'] in _versions:
+                continue
+            _versions.add(entry['_version'])
+            # test the itemId versus the user
+            if not isAdmin:
+                try:
+                    self.requireAccess(entry, user, AccessType.READ)
+                except AccessException:
+                    continue
+            if offset:
+                offset -= 1
+                continue
+            yield entry
+            if limit:
+                limit -= 1
+                if not limit:
+                    break
+
+    def getVersion(self, annotationId, version, user=None, force=False, *args, **kwargs):
+        """
+        Get an annotation history version.  This reconstructs the original
+        annotation.
+
+        :param annotationId: the annotation to get history for.
+        :param version: the specific version to get.
+        :param user: the Girder user.  If the user is not an admin, they must
+            have read access on the item and the item must exist.
+        :param force: if True, don't get the user access.
+        """
+        if annotationId and not isinstance(annotationId, ObjectId):
+            annotationId = ObjectId(annotationId)
+        entry = self.findOne({
+            '$or': [{'_id': annotationId}, {'_annotationId': annotationId}],
+            '_version': int(version)
+        })
+        if not entry:
+            return None
+        result = self.load(entry['_id'], user=user, force=force, *args, **kwargs)
+        result['_versionId'] = result['_id']
+        result['_id'] = result.pop('annotationId', result['_id'])
+        return result
+
+    def revertVersion(self, id, version=None, user=None, force=False):
+        """
+        Revert to a previous version of an annotation.
+
+        :param id: the annotation id.
+        :param version: the version to revert to.  None reverts to the previous
+            version.  If the annotation was deleted, this is the most recent
+            version.
+        :param user: the user doing the reversion.
+        :param force: if True don't authenticate the user with the associated
+            item access.
+        """
+        if version is None:
+            oldVersions = list(Annotation().versionList(id, limit=2, force=True))
+            if len(oldVersions) >= 1 and oldVersions[0].get('_active') is False:
+                version = oldVersions[0]['_version']
+            elif len(oldVersions) >= 2:
+                version = oldVersions[1]['_version']
+        annotation = Annotation().getVersion(id, version, user, force=force)
+        if annotation is None:
+            return
+        # If this is the most recent (active) annotation, don't do anything.
+        # Otherwise, revent it.
+        if not annotation.get('_active', True):
+            item = Item().load(annotation.get('itemId'), force=True)
+            if item is not None and not force:
+                Item().requireAccess(
+                    item, user=user, level=AccessType.WRITE)
+            annotation = Annotation().updateAnnotation(annotation, updateUser=user)
+        return annotation

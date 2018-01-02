@@ -117,7 +117,7 @@ class Annotationelement(Model):
         """
         region = region or {}
         query = {
-            'annotationId': annotation['_id'],
+            'annotationId': annotation.get('_annotationId', annotation['_id']),
             '_version': annotation['_version']
         }
         for key in region:
