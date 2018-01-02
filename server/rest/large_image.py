@@ -23,12 +23,17 @@ import time
 from girder import logger
 from girder.api import access
 from girder.api.describe import describeRoute, Description
-from girder.api.rest import Resource, RestException
+from girder.api.rest import Resource
+from girder.exceptions import RestException
+from girder.models.setting import Setting
+from girder.models.file import File
+from girder.models.item import Item
 from girder.plugins.jobs.constants import JobStatus
-from girder.utility.model_importer import ModelImporter
+from girder.plugins.jobs.models.job import Job
 
 from .. import constants
 from ..models.base import TileGeneralException
+from ..models.image_item import ImageItem
 
 
 def createThumbnailsJob(job):
@@ -38,8 +43,7 @@ def createThumbnailsJob(job):
     :param spec: an array, each entry of which is the parameter dictionary for
         the model getThumbnail function.
     """
-    jobModel = ModelImporter.model('job', 'jobs')
-    job = jobModel.updateJob(
+    job = Job().updateJob(
         job, log='Started creating large image thumbnails\n',
         status=JobStatus.RUNNING)
     checkedOrCreated = 0
@@ -47,16 +51,14 @@ def createThumbnailsJob(job):
     try:
         spec = job['kwargs']['spec']
         logInterval = float(job['kwargs'].get('logInterval', 10))
-        itemModel = ModelImporter.model('item')
-        imageItemModel = ModelImporter.model('image_item', 'large_image')
         for entry in spec:
-            job = jobModel.updateJob(
+            job = Job().updateJob(
                 job, log='Creating thumbnails for %r\n' % entry)
             lastLogTime = time.time()
-            items = itemModel.find({'largeImage.fileId': {'$exists': True}})
+            items = Item().find({'largeImage.fileId': {'$exists': True}})
             for item in items:
                 try:
-                    imageItemModel.getThumbnail(item, **entry)
+                    ImageItem().getThumbnail(item, **entry)
                     checkedOrCreated += 1
                 except TileGeneralException as exc:
                     failedImages += 1
@@ -66,19 +68,19 @@ def createThumbnailsJob(job):
                 # Periodically, log the state of the job and check if it was
                 # deleted or canceled.
                 if time.time() - lastLogTime > logInterval:
-                    job = jobModel.updateJob(
+                    job = Job().updateJob(
                         job, log='Checked or created %d thumbnail file%s\n' % (
                             checkedOrCreated,
                             's' if checkedOrCreated != 1 else ''))
                     if failedImages:
-                        job = jobModel.updateJob(
+                        job = Job().updateJob(
                             job, log='Failed on %d thumbnail file%s (last '
                             'failure on item %s)\n' % (
                                 failedImages,
                                 's' if failedImages != 1 else '', lastFailed))
                     lastLogTime = time.time()
                     # Check if the job was deleted or canceled; if so, quit
-                    job = jobModel.load(id=job['_id'], force=True)
+                    job = Job().load(id=job['_id'], force=True)
                     if (not job or job['status'] in (
                             JobStatus.CANCELED, JobStatus.ERROR)):
                         cause = {
@@ -90,7 +92,7 @@ def createThumbnailsJob(job):
                         return
     except Exception:
         logger.exception('Error with large image create thumbnails job')
-        job = jobModel.updateJob(
+        job = Job().updateJob(
             job, log='Error creating large image thumbnails\n',
             status=JobStatus.ERROR)
         return
@@ -100,7 +102,7 @@ def createThumbnailsJob(job):
         msg += ' (%d failed, last failure on item %s)' % (
             failedImages, lastFailed)
     logger.info(msg)
-    job = jobModel.updateJob(job, log=msg + '\n', status=JobStatus.SUCCESS)
+    job = Job().updateJob(job, log=msg + '\n', status=JobStatus.SUCCESS)
 
 
 class LargeImageResource(Resource):
@@ -131,7 +133,7 @@ class LargeImageResource(Resource):
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
             constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE,
         ]
-        return {k: self.model('setting').get(k) for k in keys}
+        return {k: Setting().get(k) for k in keys}
 
     @describeRoute(
         Description('Count the number of cached thumbnail files for '
@@ -160,7 +162,7 @@ class LargeImageResource(Resource):
             query = {'isLargeImageThumbnail': True, 'attachedToType': 'item'}
             if entry is not None:
                 query['thumbnailKey'] = entry
-            count += self.model('file').find(query).count()
+            count += File().find(query).count()
         return count
 
     @describeRoute(
@@ -184,15 +186,14 @@ class LargeImageResource(Resource):
                 raise ValueError()
         except ValueError:
             raise RestException('The spec parameter must be a JSON list.')
-        maxThumbnailFiles = int(self.model('setting').get(
+        maxThumbnailFiles = int(Setting().get(
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
         if maxThumbnailFiles <= 0:
             raise RestException('Thumbnail files are not enabled.')
-        jobModel = self.model('job', 'jobs')
         jobKwargs = {'spec': spec}
         if params.get('logInterval') is not None:
             jobKwargs['logInterval'] = float(params['logInterval'])
-        job = jobModel.createLocalJob(
+        job = Job().createLocalJob(
             module='girder.plugins.large_image.rest.large_image',
             function='createThumbnailsJob',
             kwargs=jobKwargs,
@@ -202,7 +203,7 @@ class LargeImageResource(Resource):
             public=True,
             async=True,
         )
-        jobModel.scheduleJob(job)
+        Job().scheduleJob(job)
         return job
 
     @describeRoute(
@@ -231,8 +232,8 @@ class LargeImageResource(Resource):
             query = {'isLargeImageThumbnail': True, 'attachedToType': 'item'}
             if entry is not None:
                 query['thumbnailKey'] = entry
-            for file in self.model('file').find(query):
-                self.model('file').remove(file)
+            for file in File().find(query):
+                File().remove(file)
                 removed += 1
         return removed
 
@@ -246,23 +247,20 @@ class LargeImageResource(Resource):
     )
     @access.admin
     def deleteIncompleteTiles(self, params):
-        itemModel = self.model('item')
-        imageItemModel = self.model('image_item', 'large_image')
-        jobModel = self.model('job', 'jobs')
         result = {'removed': 0}
         while True:
-            item = itemModel.findOne({'largeImage.expected': True})
+            item = Item().findOne({'largeImage.expected': True})
             if not item:
                 break
-            job = jobModel.load(item['largeImage']['jobId'], force=True)
+            job = Job().load(item['largeImage']['jobId'], force=True)
             if job and job.get('status') in (
                     JobStatus.QUEUED, JobStatus.RUNNING):
-                job = jobModel.cancelJob(job)
+                job = Job().cancelJob(job)
             if job and job.get('status') in (
                     JobStatus.QUEUED, JobStatus.RUNNING):
                 result['message'] = ('The job for item %s could not be '
                                      'canceled' % (str(item['_id'])))
                 break
-            imageItemModel.delete(item)
+            ImageItem().delete(item)
             result['removed'] += 1
         return result

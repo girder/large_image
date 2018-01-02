@@ -22,10 +22,17 @@ import json
 
 from girder import events, plugin, logger
 from girder.constants import AccessType, SettingDefault
-from girder.models.model_base import ModelImporter, ValidationException
+from girder.exceptions import ValidationException
+from girder.models.file import File
+from girder.models.item import Item
+from girder.models.notification import Notification
+from girder.models.setting import Setting
 from girder.utility import setting_utilities
+from girder.plugins.jobs.models.job import Job
 
 from . import constants
+from .models.annotation import Annotation
+from .models.image_item import ImageItem
 from .loadmodelcache import invalidateLoadModelCache
 
 # This is imported from girder.plugins.jobs.constants, but cannot be done
@@ -45,19 +52,18 @@ def _postUpload(event):
     if not fileObj.get('itemId'):
         return
 
-    Item = ModelImporter.model('item')
-    item = Item.load(fileObj['itemId'], force=True, exc=True)
+    item = Item().load(fileObj['itemId'], force=True, exc=True)
 
     if item.get('largeImage', {}).get('expected') and (
             fileObj['name'].endswith('.tiff') or
             fileObj.get('mimeType') == 'image/tiff'):
         if fileObj.get('mimeType') != 'image/tiff':
             fileObj['mimeType'] = 'image/tiff'
-            ModelImporter.model('file').save(fileObj)
+            File().save(fileObj)
         del item['largeImage']['expected']
         item['largeImage']['fileId'] = fileObj['_id']
         item['largeImage']['sourceName'] = 'tiff'
-        Item.save(item)
+        Item().save(item)
 
 
 def _updateJob(event):
@@ -80,7 +86,7 @@ def _updateJob(event):
         status = JobStatus.CANCELED
     if status not in (JobStatus.ERROR, JobStatus.CANCELED, JobStatus.SUCCESS):
         return
-    item = ModelImporter.model('item').load(meta['itemId'], force=True)
+    item = Item().load(meta['itemId'], force=True)
     if not item or 'largeImage' not in item:
         return
     if item.get('largeImage', {}).get('expected'):
@@ -102,11 +108,11 @@ def _updateJob(event):
     if (status in (JobStatus.ERROR, JobStatus.CANCELED) and
             'largeImage' in item):
         del item['largeImage']
-    ModelImporter.model('item').save(item)
+    Item().save(item)
     if msg and event.name != 'model.job.remove':
-        ModelImporter.model('job', 'jobs').updateJob(job, progressMessage=msg)
+        Job().updateJob(job, progressMessage=msg)
     if notify:
-        ModelImporter.model('notification').createNotification(
+        Notification().createNotification(
             type='large_image.finished_image_item',
             data={
                 'job_id': job['_id'],
@@ -129,16 +135,13 @@ def checkForLargeImageFiles(event):
         possible = True
     if not file.get('itemId') or not possible:
         return
-    if not ModelImporter.model('setting').get(
-            constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
+    if not Setting().get(constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
         return
-    item = ModelImporter.model('item').load(
-        file['itemId'], force=True, exc=False)
+    item = Item().load(file['itemId'], force=True, exc=False)
     if not item or item.get('largeImage'):
         return
-    imageItemModel = ModelImporter.model('image_item', 'large_image')
     try:
-        imageItemModel.createImageItem(item, file, createJob=False)
+        ImageItem().createImageItem(item, file, createJob=False)
     except Exception:
         # We couldn't automatically set this as a large image
         logger.info('Saved file %s cannot be automatically used as a '
@@ -146,8 +149,7 @@ def checkForLargeImageFiles(event):
 
 
 def removeThumbnails(event):
-    ModelImporter.model('image_item', 'large_image').removeThumbnailFiles(
-        event.info)
+    ImageItem().removeThumbnailFiles(event.info)
 
 
 # Validators
@@ -235,10 +237,9 @@ def load(info):
     info['apiRoot'].large_image = LargeImageResource()
     info['apiRoot'].annotation = AnnotationResource()
 
-    ModelImporter.model('item').exposeFields(
-        level=AccessType.READ, fields='largeImage')
+    Item().exposeFields(level=AccessType.READ, fields='largeImage')
     # Ask for the annotation model to make sure it is initialized.
-    ModelImporter.model('annotation', plugin='large_image')
+    Annotation()
 
     events.bind('data.process', 'large_image', _postUpload)
     events.bind('jobs.job.update.after', 'large_image', _updateJob)
