@@ -126,7 +126,7 @@ class MapnikTileSource(FileTileSource):
         geospatial = False
         if self.dataset.GetProjection():
             geospatial = True
-        xmin, xmax, ymin, ymax = self.getBounds()
+        xmin, ymin, xmax, ymax = self.getBounds()
         mag = self.getNativeMagnification()
         return {
             'geospatial': geospatial,
