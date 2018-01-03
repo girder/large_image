@@ -207,46 +207,49 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
 
 class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
     def testInitialize(self):
+        from girder.plugins.large_image.models.annotationelement import Annotationelement
+
         # initialize should be called as we fetch the model
-        elemModel = self.model('annotationelement', 'large_image')
-        self.assertEqual(elemModel.name, 'annotationelement')
+        self.assertEqual(Annotationelement().name, 'annotationelement')
 
     def testGetNextVersionValue(self):
-        elemModel = self.model('annotationelement', 'large_image')
-        val1 = elemModel.getNextVersionValue()
-        val2 = elemModel.getNextVersionValue()
+        from girder.plugins.large_image.models.annotationelement import Annotationelement
+
+        val1 = Annotationelement().getNextVersionValue()
+        val2 = Annotationelement().getNextVersionValue()
         self.assertGreater(val2, val1)
-        elemModel.versionId = None
-        val3 = elemModel.getNextVersionValue()
+        Annotationelement().versionId = None
+        val3 = Annotationelement().getNextVersionValue()
         self.assertGreater(val3, val2)
 
     def testBoundingBox(self):
-        elemModel = self.model('annotationelement', 'large_image')
-        bbox = elemModel._boundingBox({'points': [[1, -2, 3], [-4, 5, -6], [7, -8, 9]]})
+        from girder.plugins.large_image.models.annotationelement import Annotationelement
+
+        bbox = Annotationelement()._boundingBox({'points': [[1, -2, 3], [-4, 5, -6], [7, -8, 9]]})
         self.assertEqual(bbox, {
             'lowx': -4, 'lowy': -8, 'lowz': -6,
             'highx': 7, 'highy': 5, 'highz': 9,
             'details': 3,
             'size': ((7+4)**2 + (8+5)**2)**0.5})
-        bbox = elemModel._boundingBox({'center': [1, -2, 3]})
+        bbox = Annotationelement()._boundingBox({'center': [1, -2, 3]})
         self.assertEqual(bbox, {
             'lowx': 0.5, 'lowy': -2.5, 'lowz': 3,
             'highx': 1.5, 'highy': -1.5, 'highz': 3,
             'details': 1,
             'size': 2**0.5})
-        bbox = elemModel._boundingBox({'center': [1, -2, 3], 'radius': 4})
+        bbox = Annotationelement()._boundingBox({'center': [1, -2, 3], 'radius': 4})
         self.assertEqual(bbox, {
             'lowx': -3, 'lowy': -6, 'lowz': 3,
             'highx': 5, 'highy': 2, 'highz': 3,
             'details': 4,
             'size': 8 * 2**0.5})
-        bbox = elemModel._boundingBox({'center': [1, -2, 3], 'width': 2, 'height': 4})
+        bbox = Annotationelement()._boundingBox({'center': [1, -2, 3], 'width': 2, 'height': 4})
         self.assertEqual(bbox, {
             'lowx': 0, 'lowy': -4, 'lowz': 3,
             'highx': 2, 'highy': 0, 'highz': 3,
             'details': 4,
             'size': (2**2 + 4**2)**0.5})
-        bbox = elemModel._boundingBox({
+        bbox = Annotationelement()._boundingBox({
             'center': [1, -2, 3],
             'width': 2, 'height': 4,
             'rotation': math.pi * 0.25})
@@ -254,8 +257,8 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
 
     def testGetElements(self):
         from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image.models.annotationelement import Annotationelement
 
-        elemModel = self.model('annotationelement', 'large_image')
         item = Item().createItem('sample', self.admin, self.publicFolder)
         largeSample = makeLargeSampleAnnotation()
         # Use a copy of largeSample so we don't just have a referecne to it
@@ -263,42 +266,42 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
         # Clear existing element data, the get elements
         annot.pop('elements', None)
         annot.pop('_elementQuery', None)
-        elemModel.getElements(annot)
+        Annotationelement().getElements(annot)
         self.assertIn('_elementQuery', annot)
         self.assertEqual(len(annot['annotation']['elements']),
                          len(largeSample['elements']))  # 7707
         annot.pop('elements', None)
         annot.pop('_elementQuery', None)
-        elemModel.getElements(annot, {'limit': 100})
+        Annotationelement().getElements(annot, {'limit': 100})
         self.assertIn('_elementQuery', annot)
         self.assertEqual(annot['_elementQuery']['count'], len(largeSample['elements']))
         self.assertEqual(annot['_elementQuery']['returned'], 100)
         self.assertEqual(len(annot['annotation']['elements']), 100)
         annot.pop('elements', None)
         annot.pop('_elementQuery', None)
-        elemModel.getElements(annot, {
+        Annotationelement().getElements(annot, {
             'left': 3000, 'right': 4000, 'top': 4500, 'bottom': 6500})
         self.assertEqual(len(annot['annotation']['elements']), 157)
         annot.pop('elements', None)
         annot.pop('_elementQuery', None)
-        elemModel.getElements(annot, {
+        Annotationelement().getElements(annot, {
             'left': 3000, 'right': 4000, 'top': 4500, 'bottom': 6500,
             'minimumSize': 16})
         self.assertEqual(len(annot['annotation']['elements']), 39)
         annot.pop('elements', None)
         annot.pop('_elementQuery', None)
-        elemModel.getElements(annot, {'maxDetails': 300})
+        Annotationelement().getElements(annot, {'maxDetails': 300})
         self.assertEqual(len(annot['annotation']['elements']), 75)
         annot.pop('elements', None)
         annot.pop('_elementQuery', None)
-        elemModel.getElements(annot, {
+        Annotationelement().getElements(annot, {
             'maxDetails': 300, 'sort': 'size', 'sortdir': -1})
         elements = annot['annotation']['elements']
         self.assertGreater(elements[0]['width'] * elements[0]['height'],
                            elements[-1]['width'] * elements[-1]['height'])
         annot.pop('elements', None)
         annot.pop('_elementQuery', None)
-        elemModel.getElements(annot, {
+        Annotationelement().getElements(annot, {
             'maxDetails': 300, 'sort': 'size', 'sortdir': 1})
         elements = annot['annotation']['elements']
         elements = annot['annotation']['elements']
@@ -307,22 +310,22 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
 
     def testRemoveWithQuery(self):
         from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image.models.annotationelement import Annotationelement
 
-        elemModel = self.model('annotationelement', 'large_image')
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
         self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 1)
-        elemModel.removeWithQuery({'annotationId': annot['_id']})
+        Annotationelement().removeWithQuery({'annotationId': annot['_id']})
         self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 0)
 
     def testRemoveElements(self):
         from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image.models.annotationelement import Annotationelement
 
-        elemModel = self.model('annotationelement', 'large_image')
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
         self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 1)
-        elemModel.removeElements(annot)
+        Annotationelement().removeElements(annot)
         self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 0)
 
     def testAnnotationGroup(self):
