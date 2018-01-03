@@ -796,13 +796,13 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         tileMetadata = resp.json
         self.assertEqual(tileMetadata['tileWidth'], 256)
         self.assertEqual(tileMetadata['tileHeight'], 256)
-        self.assertEqual(tileMetadata['sizeX'], 256)
-        self.assertEqual(tileMetadata['sizeY'], 256)
+        self.assertEqual(tileMetadata['sizeX'], 65536)
+        self.assertEqual(tileMetadata['sizeY'], 65536)
         self.assertEqual(tileMetadata['levels'], 9)
-        self.assertEqual(tileMetadata['bounds']['xmax'], 3552885)
+        self.assertEqual(tileMetadata['bounds']['xmax'], 597915)
         self.assertEqual(tileMetadata['bounds']['xmin'], 367185)
         self.assertEqual(tileMetadata['bounds']['ymax'], 3788115)
-        self.assertEqual(tileMetadata['bounds']['ymin'], 597915)
+        self.assertEqual(tileMetadata['bounds']['ymin'], 3552885)
         self.assertEqual(tileMetadata['srs'],
                          "+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs ")
         self.assertTrue(tileMetadata['geospatial'])
