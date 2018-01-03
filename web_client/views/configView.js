@@ -115,14 +115,6 @@ var ConfigView = View.extend({
             name: 'slideatlas',
             label: 'SlideAtlas',
             type: 'slideatlas'
-        }, {
-            name: 'mapnikopenlayers',
-            label: 'MapnikOpenlayers',
-            type: 'mapnikopenlayers'
-        }, {
-            name: 'mapnikgeojs',
-            label: 'MapnikGeojs',
-            type: 'mapnikgeojs'
         }
     ],
 

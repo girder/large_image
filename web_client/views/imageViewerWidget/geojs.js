@@ -56,13 +56,32 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         var geo = window.geo; // this makes the style checker happy
 
-        var w = this.sizeX, h = this.sizeY;
-        var params = geo.util.pixelCoordinateParams(
-            this.el, w, h, this.tileWidth, this.tileHeight);
-        params.layer.useCredentials = true;
-        params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
-        this.viewer = geo.map(params.map);
-        this.viewer.createLayer('osm', params.layer);
+        var params;
+        if (!this.geospatial || !this.bounds) {
+            var w = this.sizeX, h = this.sizeY;
+            params = geo.util.pixelCoordinateParams(
+                this.el, w, h, this.tileWidth, this.tileHeight);
+            params.layer.useCredentials = true;
+            params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
+            this.viewer = geo.map(params.map);
+            this.viewer.createLayer('osm', params.layer);
+        } else {
+            params = {
+                keepLower: false,
+                attribution: null,
+                url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG'}),
+                useCredentials: true
+            };
+            this.viewer = geo.map({node: this.el});
+            this.viewer.bounds({
+                left: this.bounds.xmin,
+                right: this.bounds.xmax,
+                top: this.bounds.ymax,
+                bottom: this.bounds.ymin
+            }, 'EPSG:3857');
+            this.viewer.createLayer('osm');
+            this.viewer.createLayer('osm', params);
+        }
         // the feature layer is for annotations that are loaded
         this.featureLayer = this.viewer.createLayer('feature', {
             features: ['point', 'line', 'polygon']

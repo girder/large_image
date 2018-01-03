@@ -14,6 +14,8 @@ var ImageViewerWidget = View.extend({
             this.tileHeight = resp.tileHeight;
             this.sizeX = resp.sizeX;
             this.sizeY = resp.sizeY;
+            this.geospatial = resp.geospatial;
+            this.bounds = resp.bounds;
         });
     },
 

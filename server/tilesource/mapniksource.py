@@ -113,20 +113,31 @@ class MapnikTileSource(FileTileSource):
             'mm_y': scale
         }
 
-    def getBounds(self):
+    def getBounds(self, mercator=False):
         """Returns bounds of an image"""
         geotransform = self.dataset.GetGeoTransform()
         xmax = geotransform[0] + (self.dataset.RasterXSize * geotransform[1])
         ymin = geotransform[3] + (self.dataset.RasterYSize * geotransform[5])
         xmin = geotransform[0]
         ymax = geotransform[3]
+        if mercator:
+            inProj = Proj(self.getProj4String())
+            outProj = Proj(self.getMercatorProjection())
+            p0 = transform(inProj, outProj, xmin, ymin)
+            p1 = transform(inProj, outProj, xmin, ymax)
+            p2 = transform(inProj, outProj, xmax, ymin)
+            p3 = transform(inProj, outProj, xmax, ymax)
+            xmin = min(p0[0], p1[0], p2[0], p3[0])
+            ymin = min(p0[1], p1[1], p2[1], p3[1])
+            xmax = max(p0[0], p1[0], p2[0], p3[0])
+            ymax = max(p0[1], p1[1], p2[1], p3[1])
         return xmin, ymin, xmax, ymax
 
     def getMetadata(self):
         geospatial = False
         if self.dataset.GetProjection():
             geospatial = True
-        xmin, ymin, xmax, ymax = self.getBounds()
+        xmin, ymin, xmax, ymax = self.getBounds(True)
         mag = self.getNativeMagnification()
         return {
             'geospatial': geospatial,
@@ -140,7 +151,7 @@ class MapnikTileSource(FileTileSource):
                 'x': self.imageSizeX,
                 'y': self.imageSizeY
             },
-            'bounds': {
+            'bounds': {  # web Mercator
                 'xmin': xmin,
                 'xmax': xmax,
                 'ymin': ymin,

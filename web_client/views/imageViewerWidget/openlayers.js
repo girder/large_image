@@ -7,7 +7,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
                 $('<link>', {
                     id: 'large_image-openlayers-css',
                     rel: 'stylesheet',
-                    href: 'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.css'
+                    href: 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol.css'
                 })
             );
         }
@@ -15,7 +15,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
             $.ajax({  // like $.getScript, but allow caching
-                url: 'https://cdnjs.cloudflare.com/ajax/libs/ol3/3.15.0/ol.js',
+                url: 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol.js',
                 dataType: 'script',
                 cache: true
             }))
@@ -35,33 +35,63 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
 
         var ol = window.ol; // this makes the style checker happy
 
-        this.viewer = new ol.Map({
-            target: this.el,
-            layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.XYZ({
-                        tileSize: [this.tileWidth, this.tileHeight],
-                        url: this._getTileUrl('{z}', '{x}', '{y}', {edge: 'white'}),
-                        crossOrigin: 'use-credentials',
-                        maxZoom: this.levels,
-                        wrapX: false
-                    }),
-                    preload: 1
-                })
-            ],
-            view: new ol.View({
-                minZoom: 0,
-                maxZoom: this.levels,
-                center: [0.0, 0.0],
-                zoom: 0
-                // projection: new ol.proj.Projection({
-                //     code: 'rect',
-                //     units: 'pixels',
-                //     extent: [0, 0, this.sizeX, this.sizeY],
-                // })
-            }),
-            logo: false
-        });
+        if (!this.geospatial || !this.bounds) {
+            this.viewer = new ol.Map({
+                target: this.el,
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.XYZ({
+                            tileSize: [this.tileWidth, this.tileHeight],
+                            url: this._getTileUrl('{z}', '{x}', '{y}', {edge: 'white'}),
+                            crossOrigin: 'use-credentials',
+                    // projection: new ol.proj.Projection({
+                    //     code: 'rect',
+                    //     units: 'pixels',
+                    //     extent: [0, 0, this.sizeX, this.sizeY],
+                    // })
+                            maxZoom: this.levels,
+                            wrapX: false
+                        }),
+                        preload: 1
+                    })
+                ],
+                view: new ol.View({
+                    minZoom: 0,
+                    maxZoom: this.levels,
+                    center: [0.0, 0.0],
+                    zoom: 0
+                    // projection: new ol.proj.Projection({
+                    //     code: 'rect',
+                    //     units: 'pixels',
+                    //     extent: [0, 0, this.sizeX, this.sizeY],
+                    // })
+                }),
+                logo: false
+            });
+        } else {
+            this.viewer = new ol.Map({
+                target: this.el,
+                layers: [
+                    new ol.layer.Tile({source: new ol.source.OSM()}),
+                    new ol.layer.Tile({
+                        source: new ol.source.XYZ({
+                            tileSize: [this.tileWidth, this.tileHeight],
+                            url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG'}),
+                            crossOrigin: 'use-credentials',
+                            maxZoom: this.levels,
+                            wrapX: true
+                        }),
+                        preload: 1
+                    })
+                ],
+                view: new ol.View({
+                    minZoom: 0,
+                    maxZoom: this.levels
+                }),
+                logo: false
+            });
+            this.viewer.getView().fit([this.bounds.xmin, this.bounds.ymin, this.bounds.xmax, this.bounds.ymax], {constrainResolution: false});
+        }
         this.trigger('g:imageRendered', this);
         return this;
     },
