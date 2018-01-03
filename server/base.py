@@ -28,16 +28,16 @@ from girder.models.item import Item
 from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.utility import setting_utilities
-from girder.plugins.jobs.models.job import Job
 
 from . import constants
 from .models.annotation import Annotation
 from .models.image_item import ImageItem
 from .loadmodelcache import invalidateLoadModelCache
 
-# This is imported from girder.plugins.jobs.constants, but cannot be done
-# until after the plugin has been found and imported.  If using from an
-# entrypoint, the load of this value must be deferred.
+# These are imported from girder.plugins.jobs, but cannot be done until after
+# the plugin has been found and imported.  If using from an entrypoint, the
+# load of this value must be deferred.
+Job = None
 JobStatus = None
 
 
@@ -71,9 +71,10 @@ def _updateJob(event):
     Called when a job is saved, updated, or removed.  If this is a large image
     job and it is ended, clean up after it.
     """
-    global JobStatus
+    global JobStatus, Job
     if not JobStatus:
         from girder.plugins.jobs.constants import JobStatus
+        from girder.plugins.jobs.models.job import Job
 
     job = event.info['job'] if event.name == 'jobs.job.update.after' else event.info
     meta = job.get('meta', {})
