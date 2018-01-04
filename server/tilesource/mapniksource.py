@@ -20,9 +20,9 @@
 import gdal
 import osr
 import mapnik
-from pyproj import Proj, transform
-from PIL import Image
 import math
+import PIL.Image
+import pyproj
 import six
 
 from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL
@@ -90,10 +90,10 @@ class MapnikTileSource(FileTileSource):
     def getPixelSizeInMeters(self):
         """Returns pixel size in meters"""
         xmin, ymin, xmax, ymax = self.getBounds()
-        inProj = Proj(self.getProj4String())
-        outProj = Proj(self.getMercatorProjection())
-        xmin, ymin = transform(inProj, outProj, xmin, ymin)
-        xmax, ymax = transform(inProj, outProj, xmax, ymax)
+        inProj = pyproj.Proj(self.getProj4String())
+        outProj = pyproj.Proj(self.getMercatorProjection())
+        xmin, ymin = pyproj.transform(inProj, outProj, xmin, ymin)
+        xmax, ymax = pyproj.transform(inProj, outProj, xmax, ymax)
 
         xres = abs((xmax-xmin)/self.imageSizeX)
         yres = abs((ymax-ymin)/self.imageSizeY)
@@ -121,12 +121,12 @@ class MapnikTileSource(FileTileSource):
         xmin = geotransform[0]
         ymax = geotransform[3]
         if mercator:
-            inProj = Proj(self.getProj4String())
-            outProj = Proj(self.getMercatorProjection())
-            p0 = transform(inProj, outProj, xmin, ymin)
-            p1 = transform(inProj, outProj, xmin, ymax)
-            p2 = transform(inProj, outProj, xmax, ymin)
-            p3 = transform(inProj, outProj, xmax, ymax)
+            inProj = pyproj.Proj(self.getProj4String())
+            outProj = pyproj.Proj(self.getMercatorProjection())
+            p0 = pyproj.transform(inProj, outProj, xmin, ymin)
+            p1 = pyproj.transform(inProj, outProj, xmin, ymax)
+            p2 = pyproj.transform(inProj, outProj, xmax, ymin)
+            p3 = pyproj.transform(inProj, outProj, xmax, ymax)
             xmin = min(p0[0], p1[0], p2[0], p3[0])
             ymin = min(p0[1], p1[1], p2[1], p3[1])
             xmax = max(p0[0], p1[0], p2[0], p3[0])
@@ -218,8 +218,44 @@ class MapnikTileSource(FileTileSource):
         img = mapnik.Image(self.tileWidth, self.tileHeight)
         self.addStyle(m)
         mapnik.render(m, img)
-        png = Image.frombytes('RGBA', (self.tileWidth, self.tileHeight), img.tostring())
-        return self._outputTile(png, TILE_FORMAT_PIL, x, y, z, **kwargs)
+        pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
+        return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
+
+    @methodcache()
+    def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
+        """
+        Get a basic thumbnail from the current tile source.  Aspect ratio is
+        preserved.  If neither width nor height is given, a default value is
+        used.  If both are given, the thumbnail will be no larger than either
+        size.
+
+        :param width: maximum width in pixels.
+        :param height: maximum height in pixels.
+        :param levelZero: Ignored.
+        :param **kwargs: optional arguments.  Some options are encoding,
+            jpegQuality, jpegSubsampling, and tiffCompression.
+        :returns: thumbData, thumbMime: the image data and the mime type.
+        """
+        if ((width is not None and width < 2) or
+                (height is not None and height < 2)):
+            raise ValueError('Invalid width or height.  Minimum value is 2.')
+        if width is None and height is None:
+            width = height = 256
+        params = dict(kwargs)
+        params['output'] = {'maxWidth': width, 'maxHeight': height}
+        xmin, ymin, xmax, ymax = self.getBounds(True)
+        mag = self.getNativeMagnification()
+        params['region'] = {
+            'left': (self.circumference / 2 + xmin) / mag['mm_x'] * 100,
+            'right': (self.circumference / 2 + xmax) / mag['mm_x'] * 100,
+            'top': (self.circumference / 2 - ymax) / mag['mm_y'] * 100,
+            'bottom': (self.circumference / 2 - ymin) / mag['mm_y'] * 100,
+        }
+        try:
+            self.getRegion(**params)
+        except Exception:
+            logger.exception()
+        return self.getRegion(**params)
 
 
 if girder:
