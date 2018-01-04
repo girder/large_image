@@ -22,7 +22,6 @@ import json
 import numpy
 import os
 import PIL.Image
-import PIL.ImageChops
 import shutil
 import six
 import struct
@@ -784,43 +783,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             data = numpy.ndarray.flatten(numpy.asarray(PIL.Image.open(six.BytesIO(image))))
             self.assertGreaterEqual(len(data), len(mode) * width * height)
             self.assertEqual(data[0], 0)
-            self.assertEqual(data[len(data) / width / height], 2)
-            self.assertEqual(data[-len(data) / width / height], 255)
-
-    def testTileFromGeotiffs(self):
-        file = self._uploadFile(os.path.join(
-            os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff'))
-
-        itemId = str(file['itemId'])
-
-        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
-        self.assertStatusOk(resp)
-        tileMetadata = resp.json
-        self.assertEqual(tileMetadata['tileWidth'], 256)
-        self.assertEqual(tileMetadata['tileHeight'], 256)
-        self.assertEqual(tileMetadata['sizeX'], 65536)
-        self.assertEqual(tileMetadata['sizeY'], 65536)
-        self.assertEqual(tileMetadata['levels'], 9)
-        self.assertAlmostEqual(tileMetadata['bounds']['xmax'], -12906033, places=0)
-        self.assertAlmostEqual(tileMetadata['bounds']['xmin'], -13184900, places=0)
-        self.assertAlmostEqual(tileMetadata['bounds']['ymax'], 4059661, places=0)
-        self.assertAlmostEqual(tileMetadata['bounds']['ymin'], 3777034, places=0)
-        self.assertEqual(tileMetadata['srs'],
-                         "+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs ")
-        self.assertTrue(tileMetadata['geospatial'])
-
-        resp = self.request(path='/item/%s/tiles/zxy/9/89/207' % itemId,
-                            user=self.admin, isJson=False,
-                            params={'encoding': 'PNG'})
-
-        self.assertStatusOk(resp)
-        image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
-        testImage = os.path.join(
-            os.path.dirname(__file__), 'test_files', 'geotiff_9_89_207.png')
-
-        testImage = PIL.Image.open(testImage)
-        # https://stackoverflow.com/questions/35176639/compare-images-python-pil
-        self.assertIsNone(PIL.ImageChops.difference(image, testImage).getbbox())
+            self.assertEqual(data[int(len(data) / width / height)], 2)
+            self.assertEqual(data[-int(len(data) / width / height)], 255)
 
     def testDummyTileSource(self):
         # We can't actually load the dummy source via the endpoints if we have

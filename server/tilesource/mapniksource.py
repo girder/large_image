@@ -25,8 +25,8 @@ import PIL.Image
 import pyproj
 import six
 
-from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL
-from ..cache_util import LruCacheMetaclass, methodcache
+from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL, TileInputUnits
+from ..cache_util import LruCacheMetaclass, methodcache, strhash
 
 try:
     import girder
@@ -47,58 +47,95 @@ class MapnikTileSource(FileTileSource):
     cacheName = 'tilesource'
     name = 'mapnikfile'
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, projection=None, **kwargs):
         super(MapnikTileSource, self).__init__(path, **kwargs)
+        self._bounds = {}
         self.dataset = gdal.Open(self._getLargeImagePath())
-        # Earth circumference for web mercator
-        self.circumference = 40075016.68557849
-        try:
-            self.imageSizeX = self.dataset.RasterXSize
-            self.imageSizeY = self.dataset.RasterYSize
-        except AttributeError:
-            raise TileSourceException('File cannot be opened via Mapnik.')
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
+        if projection and projection.lower().startswith('epsg:'):
+            projection = '+init=' + projection.lower()
+        if projection and not isinstance(projection, six.binary_type):
+            projection = projection.encode('utf8')
+        self.projection = projection
         try:
-            self.levels = self.getMaximumZoomLevel(self.getPixelSizeInMeters())
+            self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
+            self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
+        except AttributeError:
+            raise TileSourceException('File cannot be opened via Mapnik.')
+        try:
+            scale = self.getPixelSizeInMeters()
         except RuntimeError:
             raise TileSourceException('File cannot be opened via Mapnik.')
-        # Report sizeX and sizeY as the whole world
-        self.sizeX = 2 ** (self.levels - 1) * self.tileWidth
-        self.sizeY = 2 ** (self.levels - 1) * self.tileHeight
+        if not scale:
+            raise TileSourceException(
+                'File does not have a projected scale, so will not be '
+                'opened via Mapnik.')
+        self.sourceLevels = self.levels = int(max(0, math.ceil(max(
+            math.log(self.sizeX / self.tileWidth),
+            math.log(self.sizeY / self.tileHeight)) / math.log(2))) + 1)
+        if self.projection:
+            # Note: this needs to change for projections that aren't spanning
+            # -180 to +180 degrees horizontally.  We should accept this as a
+            # parameter eventually.
+            inProj = pyproj.Proj('+init=epsg:4326')
+            outProj = pyproj.Proj(self.projection)
+            if outProj.is_latlong():
+                raise TileSourceException(
+                    'Projection must not be geographic (it needs to use '
+                    'linear units, not longitude/latitude).')
+            equator = pyproj.transform(inProj, outProj, [-180, 180, 0], [0, 0, 0])
+            self.unitsAcrossLevel0 = equator[0][1] - equator[0][0]
+            self.projectionOrigin = (equator[0][2], equator[1][2])
+            # Calculate values for this projection
+            self.levels = int(max(int(math.ceil(
+                math.log(self.unitsAcrossLevel0 / self.getPixelSizeInMeters() / self.tileWidth) /
+                math.log(2))) + 1, 1))
+            # Report sizeX and sizeY as the whole world
+            self.sizeX = 2 ** (self.levels - 1) * self.tileWidth
+            self.sizeY = 2 ** (self.levels - 1) * self.tileHeight
+
+    @staticmethod
+    def getLRUHash(*args, **kwargs):
+        return strhash(
+            super(MapnikTileSource, MapnikTileSource).getLRUHash(
+                *args, **kwargs),
+            kwargs.get('projection'))
 
     def getProj4String(self):
-        """Returns proj4 string for the given dataset"""
+        """
+        Returns proj4 string for the given dataset
+
+        :returns: The proj4 string or None.
+        """
         wkt = self.dataset.GetProjection()
+        if not wkt:
+            return
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
-
         return proj.ExportToProj4()
 
-    def getMaximumZoomLevel(self, pixelSize):
-        """Returns appropriate max zoom level for a layer"""
-        maxZoom = 0
-        for i in range(1, 30):
-            mercatorPixelSize = self.getPixelSize(i)
-            if mercatorPixelSize < pixelSize:
-                maxZoom = i + 1
-                break
-
-        return maxZoom
-
     def getPixelSizeInMeters(self):
-        """Returns pixel size in meters"""
-        xmin, ymin, xmax, ymax = self.getBounds()
-        inProj = pyproj.Proj(self.getProj4String())
-        outProj = pyproj.Proj(self.getMercatorProjection())
-        xmin, ymin = pyproj.transform(inProj, outProj, xmin, ymin)
-        xmax, ymax = pyproj.transform(inProj, outProj, xmax, ymax)
+        """
+        Get the approximate base pixel size in meters.  This is calculated as
+        the average scale of the four edges in the WGS84 ellipsoid.
 
-        xres = abs((xmax-xmin)/self.imageSizeX)
-        yres = abs((ymax-ymin)/self.imageSizeY)
-
-        return min(xres, yres)
+        :returns: the pixel size in meters or None.
+        """
+        bounds = self.getBounds('+init=epsg:4326')
+        if not bounds:
+            return
+        geod = pyproj.Geod(ellps='WGS84')
+        az12, az21, s1 = geod.inv(bounds['ul']['x'], bounds['ul']['y'],
+                                  bounds['ur']['x'], bounds['ur']['y'])
+        az12, az21, s2 = geod.inv(bounds['ur']['x'], bounds['ur']['y'],
+                                  bounds['lr']['x'], bounds['lr']['y'])
+        az12, az21, s3 = geod.inv(bounds['lr']['x'], bounds['lr']['y'],
+                                  bounds['ll']['x'], bounds['ll']['y'])
+        az12, az21, s4 = geod.inv(bounds['ll']['x'], bounds['ll']['y'],
+                                  bounds['ul']['x'], bounds['ul']['y'])
+        return (s1 + s2 + s3 + s4) / (self.sourceSizeX * 2 + self.sourceSizeY * 2)
 
     def getNativeMagnification(self):
         """
@@ -106,120 +143,212 @@ class MapnikTileSource(FileTileSource):
 
         :return: width of a pixel in mm, height of a pixel in mm.
         """
-        scale = self.getPixelSize(self.levels - 1) * 100  # convert to mm
+        scale = self.getPixelSizeInMeters()
+        if not scale:
+            return {
+                'magnification': None,
+                'mm_x': None,
+                'mm_y': None
+            }
         return {
             'magnification': None,
-            'mm_x': scale,
-            'mm_y': scale
+            'mm_x': scale * 100,
+            'mm_y': scale * 100
         }
 
-    def getBounds(self, mercator=False):
-        """Returns bounds of an image"""
-        geotransform = self.dataset.GetGeoTransform()
-        xmax = geotransform[0] + (self.dataset.RasterXSize * geotransform[1])
-        ymin = geotransform[3] + (self.dataset.RasterYSize * geotransform[5])
-        xmin = geotransform[0]
-        ymax = geotransform[3]
-        if mercator:
-            inProj = pyproj.Proj(self.getProj4String())
-            outProj = pyproj.Proj(self.getMercatorProjection())
-            p0 = pyproj.transform(inProj, outProj, xmin, ymin)
-            p1 = pyproj.transform(inProj, outProj, xmin, ymax)
-            p2 = pyproj.transform(inProj, outProj, xmax, ymin)
-            p3 = pyproj.transform(inProj, outProj, xmax, ymax)
-            xmin = min(p0[0], p1[0], p2[0], p3[0])
-            ymin = min(p0[1], p1[1], p2[1], p3[1])
-            xmax = max(p0[0], p1[0], p2[0], p3[0])
-            ymax = max(p0[1], p1[1], p2[1], p3[1])
-        return xmin, ymin, xmax, ymax
+    def getBounds(self, srs=None):
+        """
+        Returns bounds of the image.
+
+        :param srs: the projection for the bounds.  None for the default.
+        :returns: an object with the four corners and the projection that was
+            used.  None if we don't know the original projection.
+        """
+        if srs not in self._bounds:
+            gt = self.dataset.GetGeoTransform()
+            nativeSrs = self.getProj4String()
+            if not nativeSrs:
+                self._bounds[srs] = None
+                return
+            bounds = {
+                'll': {
+                    'x': gt[0] + self.sourceSizeY * gt[2],
+                    'y': gt[3] + self.sourceSizeY * gt[5]
+                },
+                'ul': {
+                    'x': gt[0],
+                    'y': gt[3],
+                },
+                'lr': {
+                    'x': gt[0] + self.sourceSizeX * gt[1] + self.sourceSizeY * gt[2],
+                    'y': gt[3] + self.sourceSizeX * gt[4] + self.sourceSizeY * gt[5]
+                },
+                'ur': {
+                    'x': gt[0] + self.sourceSizeX * gt[1],
+                    'y': gt[3] + self.sourceSizeX * gt[4]
+                },
+                'srs': nativeSrs,
+            }
+            if srs and srs != nativeSrs:
+                inProj = pyproj.Proj(nativeSrs)
+                outProj = pyproj.Proj(srs)
+                for key in ('ll', 'ul', 'lr', 'ur'):
+                    pt = pyproj.transform(inProj, outProj, bounds[key]['x'], bounds[key]['y'])
+                    bounds[key]['x'] = pt[0]
+                    bounds[key]['y'] = pt[1]
+                bounds['srs'] = srs
+            bounds['xmin'] = min(bounds['ll']['x'], bounds['ul']['x'],
+                                 bounds['lr']['x'], bounds['ur']['x'])
+            bounds['xmax'] = max(bounds['ll']['x'], bounds['ul']['x'],
+                                 bounds['lr']['x'], bounds['ur']['x'])
+            bounds['ymin'] = min(bounds['ll']['y'], bounds['ul']['y'],
+                                 bounds['lr']['y'], bounds['ur']['y'])
+            bounds['ymax'] = max(bounds['ll']['y'], bounds['ul']['y'],
+                                 bounds['lr']['y'], bounds['ur']['y'])
+            self._bounds[srs] = bounds
+        return self._bounds[srs]
 
     def getMetadata(self):
-        geospatial = False
-        if self.dataset.GetProjection():
-            geospatial = True
-        xmin, ymin, xmax, ymax = self.getBounds(True)
-        mag = self.getNativeMagnification()
-        return {
-            'geospatial': geospatial,
+        metadata = {
+            'geospatial': bool(self.dataset.GetProjection()),
             'levels': self.levels,
             'sizeX': self.sizeX,
             'sizeY': self.sizeY,
+            'sourceLevels': self.sourceLevels,
+            'sourceSizeX': self.sourceSizeX,
+            'sourceSizeY': self.sourceSizeY,
             'tileWidth': self.tileWidth,
             'tileHeight': self.tileHeight,
-            'srs': self.getProj4String(),
-            'imageSize': {
-                'x': self.imageSizeX,
-                'y': self.imageSizeY
-            },
-            'bounds': {  # web Mercator
-                'xmin': xmin,
-                'xmax': xmax,
-                'ymin': ymin,
-                'ymax': ymax
-            },
-            'mm_x': mag['mm_x'],
-            'mm_y': mag['mm_y'],
-            'circumference': self.circumference,
+            'bounds': self.getBounds(self.projection),
+            'sourceBounds': self.getBounds(),
         }
+        metadata.update(self.getNativeMagnification())
+        return metadata
 
-    def getPixelSize(self, zoom):
-        """Returns an approximate pixel size for a given zoom level"""
+    def getTileCorners(self, z, x, y):
+        """
+        Returns bounds of a tile for a given x,y,z index.
 
-        equatorLatitude = 0
-        # For simplification we assume everything is equator latitude
-        pixelSize = self.circumference * math.cos(equatorLatitude) / 2 ** zoom / self.tileWidth
-        return pixelSize
-
-    def getTileCorners(self, z, x, y, tileSize=None):
-        """Returns bounds of a tile for a given x,y,z index"""
-
-        numberOfTiles = 2.0 ** (z * 2)
-        pixelSize = self.getPixelSize(z)
-        circumference = self.circumference
-        xmin = x / numberOfTiles * (circumference * 2 ** z) - circumference / 2
-        ymin = y / numberOfTiles * (circumference * 2 ** z) - circumference / 2
-        xmax = xmin + pixelSize * tileSize
-        ymax = ymin + pixelSize * tileSize
-
+        :param z: tile level
+        :param x: tile offset from left.
+        :param y: tile offset from right
+        :returns: (xmin, ymin, xmax, ymax) in the current projection or base
+            pixels.
+        """
+        if self.projection:
+            # Scale tile into the range [-0.5, 0.5], [-0.5, 0.5]
+            xmin = -0.5 + float(x) / 2.0 ** z
+            xmax = -0.5 + float(x + 1) / 2.0 ** z
+            ymin = 0.5 - float(y + 1) / 2.0 ** z
+            ymax = 0.5 - float(y) / 2.0 ** z
+            # Convert to projection coordinates
+            xmin = self.projectionOrigin[0] + xmin * self.unitsAcrossLevel0
+            xmax = self.projectionOrigin[0] + xmax * self.unitsAcrossLevel0
+            ymin = self.projectionOrigin[1] + ymin * self.unitsAcrossLevel0
+            ymax = self.projectionOrigin[1] + ymax * self.unitsAcrossLevel0
+        else:
+            xmin = 2 ** (self.sourceLevels - 1 - z) * x * self.tileWidth
+            ymin = 2 ** (self.sourceLevels - 1 - z) * y * self.tileHeight
+            xmax = xmin + 2 ** (self.sourceLevels - 1 - z) * self.tileWidth
+            ymax = ymin + 2 ** (self.sourceLevels - 1 - z) * self.tileHeight
+            ymin, ymax = self.sourceSizeY - ymax, self.sourceSizeY - ymin
         return xmin, ymin, xmax, ymax
 
     def addStyle(self, m):
-        """Attaches raster style option to mapnik raster layer"""
+        """
+        Attaches raster style option to mapnik raster layer.
+
+        :param m: mapnik map.
+        """
         style = mapnik.Style()
         rule = mapnik.Rule()
         sym = mapnik.RasterSymbolizer()
         rule.symbols.append(sym)
         style.rules.append(rule)
         m.append_style('Raster Style', style)
-        lyr = mapnik.Layer('layer')
-        lyr.srs = self.getProj4String()
-        lyr.datasource = mapnik.Gdal(base='',
-                                     file=self._getLargeImagePath(),
-                                     band=-1)
-        lyr.styles.append('Raster Style')
-        m.layers.append(lyr)
-
-    @staticmethod
-    def getMercatorProjection():
-        """Returns proj4 string for mercator projection"""
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-
-        return srs.ExportToProj4()
 
     @methodcache()
     def getTile(self, x, y, z, **kwargs):
-        # xyz to tms conversion formula for y
-        y = (2 ** z) - y - 1
-        mapSrs = self.getMercatorProjection()
+        if self.projection:
+            mapSrs = self.projection
+            layerSrs = self.getProj4String()
+            extent = None
+        else:
+            mapSrs = '+proj=longlat +axis=esu'
+            layerSrs = '+proj=longlat +axis=esu'
+            extent = '0 0 %d %d' % (self.sourceSizeX, self.sourceSizeY)
         m = mapnik.Map(self.tileWidth, self.tileHeight, mapSrs)
-        xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y, tileSize=self.tileSize)
+        xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
         m.zoom_to_box(mapnik.Box2d(xmin, ymin, xmax, ymax))
         img = mapnik.Image(self.tileWidth, self.tileHeight)
         self.addStyle(m)
+        lyr = mapnik.Layer('layer')
+        lyr.srs = layerSrs
+        if extent:
+            lyr.datasource = mapnik.Gdal(
+                base='', file=self._getLargeImagePath(), band=-1, extent=extent)
+        else:
+            lyr.datasource = mapnik.Gdal(
+                base='', file=self._getLargeImagePath(), band=-1)
+        lyr.styles.append('Raster Style')
+        m.layers.append(lyr)
         mapnik.render(m, img)
         pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
+
+    def _getRegionBounds(self, metadata, left=None, top=None, right=None,
+                         bottom=None, width=None, height=None, units=None,
+                         **kwargs):
+        """
+        Given a set of arguments that can include left, right, top, bottom,
+        width, height, and units, generate actual pixel values for left, top,
+        right, and bottom.  If units is `'projection'`, use the source's
+        projection.  Otherwise, just use the super function.
+
+        :param metadata: the metadata associated with this source.
+        :param left: the left edge (inclusive) of the region to process.
+        :param top: the top edge (inclusive) of the region to process.
+        :param right: the right edge (exclusive) of the region to process.
+        :param bottom: the bottom edge (exclusive) of the region to process.
+        :param width: the width of the region to process.  Ignored if both
+            left and right are specified.
+        :param height: the height of the region to process.  Ignores if both
+            top and bottom are specified.
+        :param units: either 'projection' or one of the super's values.
+        :param **kwargs: optional parameters.  See above.
+        :returns: left, top, right, bottom bounds in pixels.
+        """
+        units = TileInputUnits[units]
+        if units == 'projection' and self.projection:
+            bounds = self.getBounds(self.projection)
+            # Fill in missing values
+            if left is None:
+                left = bounds['xmin'] if right is None or width is None else right - width
+            if right is None:
+                right = bounds['xmax'] if width is None else left + width
+            if top is None:
+                top = bounds['ymax'] if bottom is None or width is None else bottom - width
+            if bottom is None:
+                bottom = bounds['ymin'] if width is None else top + width
+            width = height = None
+            # Convert to [-0.5, 0.5], [-0.5, 0.5] coordinate range
+            left = (left - self.projectionOrigin[0]) / self.unitsAcrossLevel0
+            right = (right - self.projectionOrigin[0]) / self.unitsAcrossLevel0
+            top = (top - self.projectionOrigin[1]) / self.unitsAcrossLevel0
+            bottom = (bottom - self.projectionOrigin[1]) / self.unitsAcrossLevel0
+            # Convert to world=wide 'base pixels' and crop to the world
+            xScale = 2 ** (self.levels - 1) * self.tileWidth
+            yScale = 2 ** (self.levels - 1) * self.tileHeight
+            left = max(0, min(xScale, (0.5 + left) * xScale))
+            right = max(0, min(xScale, (0.5 + right) * xScale))
+            top = max(0, min(yScale, (0.5 - top) * yScale))
+            bottom = max(0, min(yScale, (0.5 - bottom) * yScale))
+            # Ensire correct ordering
+            left, right = min(left, right), max(left, right)
+            top, bottom = min(top, bottom), max(top, bottom)
+            units = 'base_pixels'
+        return super(MapnikTileSource, self)._getRegionBounds(
+            metadata, left, top, right, bottom, width, height, units, **kwargs)
 
     @methodcache()
     def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
@@ -231,31 +360,23 @@ class MapnikTileSource(FileTileSource):
 
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
-        :param levelZero: Ignored.
+        :param levelZero: if true, always use the level zero tile.  Otherwise,
+            the thumbnail is generated so that it is never upsampled.
         :param **kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: thumbData, thumbMime: the image data and the mime type.
         """
-        if ((width is not None and width < 2) or
-                (height is not None and height < 2)):
-            raise ValueError('Invalid width or height.  Minimum value is 2.')
-        if width is None and height is None:
-            width = height = 256
-        params = dict(kwargs)
-        params['output'] = {'maxWidth': width, 'maxHeight': height}
-        xmin, ymin, xmax, ymax = self.getBounds(True)
-        mag = self.getNativeMagnification()
-        params['region'] = {
-            'left': (self.circumference / 2 + xmin) / mag['mm_x'] * 100,
-            'right': (self.circumference / 2 + xmax) / mag['mm_x'] * 100,
-            'top': (self.circumference / 2 - ymax) / mag['mm_y'] * 100,
-            'bottom': (self.circumference / 2 - ymin) / mag['mm_y'] * 100,
-        }
-        try:
-            self.getRegion(**params)
-        except Exception:
-            logger.exception()
-        return self.getRegion(**params)
+        if self.projection:
+            if ((width is not None and width < 2) or
+                    (height is not None and height < 2)):
+                raise ValueError('Invalid width or height.  Minimum value is 2.')
+            if width is None and height is None:
+                width = height = 256
+            params = dict(kwargs)
+            params['output'] = {'maxWidth': width, 'maxHeight': height}
+            params['region'] = {'units': 'projection'}
+            return self.getRegion(**params)
+        return super(MapnikTileSource, self).getThumbnail(width, height, levelZero, **kwargs)
 
 
 if girder:
@@ -265,3 +386,7 @@ if girder:
         """
         name = 'mapnik'
         cacheName = 'tilesource'
+
+
+TileInputUnits['projection'] = 'projection'
+TileInputUnits['proj'] = 'projection'

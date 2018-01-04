@@ -1,3 +1,5 @@
+import { restRequest } from 'girder/rest';
+
 import ImageViewerWidget from './base';
 
 var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
@@ -13,7 +15,24 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
         }
 
         $.when(
-            ImageViewerWidget.prototype.initialize.call(this, settings),
+            ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
+                if (this.metadata.geospatial) {
+                    this.tileWidth = this.tileHeight = null;
+                    return restRequest({
+                        type: 'GET',
+                        url: 'item/' + this.itemId + '/tiles',
+                        data: {projection: 'EPSG:3857'}
+                    }).done((resp) => {
+                        this.levels = resp.levels;
+                        this.tileWidth = resp.tileWidth;
+                        this.tileHeight = resp.tileHeight;
+                        this.sizeX = resp.sizeX;
+                        this.sizeY = resp.sizeY;
+                        this.metadata = resp;
+                    });
+                }
+                return this;
+            }),
             $.ajax({ // like $.getScript, but allow caching
                 url: 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol.js',
                 dataType: 'script',
@@ -35,7 +54,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
 
         var ol = window.ol; // this makes the style checker happy
 
-        if (!this.geospatial || !this.bounds) {
+        if (!this.metadata.geospatial || !this.metadata.bounds) {
             this.viewer = new ol.Map({
                 target: this.el,
                 layers: [
@@ -44,11 +63,6 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
                             tileSize: [this.tileWidth, this.tileHeight],
                             url: this._getTileUrl('{z}', '{x}', '{y}', {edge: 'white'}),
                             crossOrigin: 'use-credentials',
-                    // projection: new ol.proj.Projection({
-                    //     code: 'rect',
-                    //     units: 'pixels',
-                    //     extent: [0, 0, this.sizeX, this.sizeY],
-                    // })
                             maxZoom: this.levels,
                             wrapX: false
                         }),
@@ -60,11 +74,6 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
                     maxZoom: this.levels,
                     center: [0.0, 0.0],
                     zoom: 0
-                    // projection: new ol.proj.Projection({
-                    //     code: 'rect',
-                    //     units: 'pixels',
-                    //     extent: [0, 0, this.sizeX, this.sizeY],
-                    // })
                 }),
                 logo: false
             });
@@ -76,9 +85,9 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
                     new ol.layer.Tile({
                         source: new ol.source.XYZ({
                             tileSize: [this.tileWidth, this.tileHeight],
-                            url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG'}),
+                            url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG', 'projection': 'EPSG:3857'}),
                             crossOrigin: 'use-credentials',
-                            maxZoom: this.levels,
+                            maxZoom: this.levels - 1,
                             wrapX: true
                         }),
                         preload: 1
@@ -86,11 +95,16 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
                 ],
                 view: new ol.View({
                     minZoom: 0,
-                    maxZoom: this.levels
+                    maxZoom: this.levels - 1
                 }),
                 logo: false
             });
-            this.viewer.getView().fit([this.bounds.xmin, this.bounds.ymin, this.bounds.xmax, this.bounds.ymax], {constrainResolution: false});
+            this.viewer.getView().fit([
+                this.metadata.bounds.xmin,
+                this.metadata.bounds.ymin,
+                this.metadata.bounds.xmax,
+                this.metadata.bounds.ymax
+            ], {constrainResolution: false});
         }
         this.trigger('g:imageRendered', this);
         return this;

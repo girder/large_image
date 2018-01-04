@@ -3,7 +3,7 @@ import Backbone from 'backbone';
 // Import hammerjs for geojs touch events
 import Hammer from 'hammerjs';
 
-import { staticRoot } from 'girder/rest';
+import { staticRoot, restRequest } from 'girder/rest';
 import events from 'girder/events';
 
 import ImageViewerWidget from './base';
@@ -33,7 +33,24 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this._hoverEvents = settings.hoverEvents;
 
         $.when(
-            ImageViewerWidget.prototype.initialize.call(this, settings),
+            ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
+                if (this.metadata.geospatial) {
+                    this.tileWidth = this.tileHeight = null;
+                    return restRequest({
+                        type: 'GET',
+                        url: 'item/' + this.itemId + '/tiles',
+                        data: {projection: 'EPSG:3857'}
+                    }).done((resp) => {
+                        this.levels = resp.levels;
+                        this.tileWidth = resp.tileWidth;
+                        this.tileHeight = resp.tileHeight;
+                        this.sizeX = resp.sizeX;
+                        this.sizeY = resp.sizeY;
+                        this.metadata = resp;
+                    });
+                }
+                return this;
+            }),
             $.ajax({ // like $.getScript, but allow caching
                 url: staticRoot + '/built/plugins/large_image/extra/geojs.js',
                 dataType: 'script',
@@ -59,7 +76,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         var geo = window.geo; // this makes the style checker happy
 
         var params;
-        if (!this.geospatial || !this.bounds) {
+        if (!this.metadata.geospatial || !this.metadata.bounds) {
             var w = this.sizeX, h = this.sizeY;
             params = geo.util.pixelCoordinateParams(
                 this.el, w, h, this.tileWidth, this.tileHeight);
@@ -71,15 +88,17 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             params = {
                 keepLower: false,
                 attribution: null,
-                url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG'}),
+                url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG', 'projection': 'EPSG:3857'}),
                 useCredentials: true
             };
-            this.viewer = geo.map({node: this.el});
+            // the metadata levels is the count including level 0, so use one
+            // less than the value specified
+            this.viewer = geo.map({node: this.el, max: this.levels - 1});
             this.viewer.bounds({
-                left: this.bounds.xmin,
-                right: this.bounds.xmax,
-                top: this.bounds.ymax,
-                bottom: this.bounds.ymin
+                left: this.metadata.bounds.xmin,
+                right: this.metadata.bounds.xmax,
+                top: this.metadata.bounds.ymax,
+                bottom: this.metadata.bounds.ymin
             }, 'EPSG:3857');
             this.viewer.createLayer('osm');
             this.viewer.createLayer('osm', params);
