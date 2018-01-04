@@ -14,7 +14,7 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
 
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
-            $.ajax({  // like $.getScript, but allow caching
+            $.ajax({ // like $.getScript, but allow caching
                 url: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js',
                 dataType: 'script',
                 cache: true
@@ -43,8 +43,8 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
         var L = window.L; // this makes the style checker happy
 
         this.viewer = L.map(this.el, {
-            center: [0.0, 0.0],  // initial position, must be set
-            zoom: 0,  // initial zoom, must be set
+            center: [0.0, 0.0], // initial position, must be set
+            zoom: 0, // initial zoom, must be set
             minZoom: 0,
             maxZoom: this.levels - 1,
             maxBounds: [

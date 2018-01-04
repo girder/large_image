@@ -6,7 +6,7 @@ var OpenseadragonImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
-            $.ajax({  // like $.getScript, but allow caching
+            $.ajax({ // like $.getScript, but allow caching
                 url: 'https://openseadragon.github.io/openseadragon/openseadragon.min.js',
                 dataType: 'script',
                 cache: true

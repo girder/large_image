@@ -66,7 +66,7 @@ $(function () {
     });
 
     describe('Image Viewer selection', function () {
-        var viewers = [], jQuery;  // use the original jQuery
+        var viewers = [], jQuery; // use the original jQuery
         it('One viewer is loaded', function () {
             waitsFor(function () {
                 return $('.image-viewer').not('.hidden').not(':empty').length !== 0;

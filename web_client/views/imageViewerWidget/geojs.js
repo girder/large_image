@@ -34,7 +34,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
-            $.ajax({  // like $.getScript, but allow caching
+            $.ajax({ // like $.getScript, but allow caching
                 url: staticRoot + '/built/plugins/large_image/extra/geojs.js',
                 dataType: 'script',
                 cache: true
@@ -292,7 +292,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      *   [ left, top, width, height ]
      *
      * @param {Backbone.Model} [model] A model to set the region to
-     * @returns {Promise}
+     * @returns {$.Promise}
      */
     drawRegion: function (model) {
         model = model || new Backbone.Model();
@@ -326,45 +326,45 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * @param {object} [options]
      * @param {boolean} [options.trigger=true]
      *      Trigger a global event after creating each annotation element.
-     * @returns {Promise}
+     * @returns {$.Promise}
      *      Resolves to an array of generated annotation elements.
      */
     startDrawMode: function (type, options) {
         var layer = this.annotationLayer;
         var elements = [];
         var annotations = [];
+        var defer = $.Deferred();
+        var element;
 
         layer.mode(null);
         layer.geoOff(window.geo.event.annotation.state);
         layer.removeAllAnnotations();
-        return new Promise((resolve) => {
-            var element;
 
-            options = _.defaults(options || {}, {trigger: true});
-            layer.geoOn(
-                window.geo.event.annotation.state,
-                (evt) => {
-                    if (evt.annotation.state() !== window.geo.annotation.state.done) {
-                        return;
-                    }
-                    element = convertAnnotation(evt.annotation);
-                    if (!element.id) {
-                        element.id = guid();
-                    }
-                    elements.push(element);
-                    annotations.push(evt.annotation);
-
-                    if (options.trigger) {
-                        events.trigger('g:annotationCreated', element, evt.annotation);
-                    }
-
-                    layer.removeAllAnnotations();
-                    layer.geoOff(window.geo.event.annotation.state);
-                    resolve(elements, annotations);
+        options = _.defaults(options || {}, {trigger: true});
+        layer.geoOn(
+            window.geo.event.annotation.state,
+            (evt) => {
+                if (evt.annotation.state() !== window.geo.annotation.state.done) {
+                    return;
                 }
-            );
-            layer.mode(type);
-        });
+                element = convertAnnotation(evt.annotation);
+                if (!element.id) {
+                    element.id = guid();
+                }
+                elements.push(element);
+                annotations.push(evt.annotation);
+
+                if (options.trigger) {
+                    events.trigger('g:annotationCreated', element, evt.annotation);
+                }
+
+                layer.removeAllAnnotations();
+                layer.geoOff(window.geo.event.annotation.state);
+                defer.resolve(elements, annotations);
+            }
+        );
+        layer.mode(type);
+        return defer.promise();
     },
 
     _setEventTypes: function () {

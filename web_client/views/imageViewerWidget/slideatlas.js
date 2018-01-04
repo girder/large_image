@@ -16,7 +16,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
 
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
-            $.ajax({  // like $.getScript, but allow caching
+            $.ajax({ // like $.getScript, but allow caching
                 url: staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
                 dataType: 'script',
                 cache: true
