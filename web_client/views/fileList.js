@@ -21,7 +21,7 @@ wrap(FileListWidget, 'render', function (render) {
     var files = this.collection.toArray();
     _.each(files, (file) => {
         var actions = this.$('.g-file-list-link[cid="' + file.cid + '"]')
-          .closest('.g-file-list-entry').children('.g-file-actions-container');
+            .closest('.g-file-list-entry').children('.g-file-actions-container');
         if (!actions.length) {
             return;
         }
