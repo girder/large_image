@@ -69,6 +69,11 @@ setup(
         ],
         'openslide': [
             'openslide-python>=1.1.0'
+        ],
+        'mapnik': [
+            'mapnik',
+            'pyproj',
+            'gdal'
         ]
     },
     license=license_str,

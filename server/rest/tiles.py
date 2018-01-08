@@ -33,6 +33,7 @@ from girder.models.item import Item
 
 from ..models import TileGeneralException
 from ..models.image_item import ImageItem
+from ..tilesource.base import TileInputUnits
 
 from .. import loadmodelcache
 
@@ -437,7 +438,7 @@ class TilesItemResource(ItemResource):
                'regionWidth, and regionHeight.  base_pixels are pixels at the '
                'maximum resolution, pixels and mm are at the specified '
                'magnfication, fraction is a scale of [0-1].', required=False,
-               enum=['base_pixels', 'pixels', 'mm', 'fraction'],
+               enum=sorted(set(TileInputUnits.values())),
                default='base_pixels')
 
         .param('width', 'The maximum width of the output image in pixels.',

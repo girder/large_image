@@ -436,10 +436,45 @@ class TileSource(object):
             height = max(1, int(regionHeight * width / regionWidth))
         return width, height, scale
 
+    def _scaleFromUnits(self, metadata, units, desiredMagnification, **kwargs):
+        """
+        Get scaling parameters based on the source metadata and specified
+        units.
+
+        :param metadata: the metadata associated with this source.
+        :param units: the units used for the scale.
+        :param desiredMagnification: the output from getMagnificationForLevel
+            for the desired magnfication used to convert mag_pixels and mm.
+        :param **kwargs: optional parameters.
+        :returns: (scaleX, scaleY) scaling parmeters in the horizontal and
+            vertical directions.
+        """
+        scaleX = scaleY = 1
+        if units == 'fraction':
+            scaleX = metadata['sizeX']
+            scaleY = metadata['sizeY']
+        elif units == 'mag_pixels':
+            if not (desiredMagnification or {}).get('scale'):
+                raise ValueError('No magnification to use for units')
+            scaleX = scaleY = desiredMagnification['scale']
+        elif units == 'mm':
+            if (not (desiredMagnification or {}).get('scale') or
+                    not (desiredMagnification or {}).get('mm_x') or
+                    not (desiredMagnification or {}).get('mm_y')):
+                raise ValueError('No mm_x or mm_y to use for units')
+            scaleX = (desiredMagnification['scale'] /
+                      desiredMagnification['mm_x'])
+            scaleY = (desiredMagnification['scale'] /
+                      desiredMagnification['mm_y'])
+        elif units in ('base_pixels', None):
+            pass
+        else:
+            raise ValueError('Invalid units %r' % units)
+        return scaleX, scaleY
+
     def _getRegionBounds(self, metadata, left=None, top=None, right=None,
-                         bottom=None, width=None, height=None,
-                         units='base_pixels', desiredMagnification=None,
-                         **kwargs):
+                         bottom=None, width=None, height=None, units=None,
+                         desiredMagnification=None, **kwargs):
         """
         Given a set of arguments that can include left, right, top, bottom,
         width, height, and units, generate actual pixel values for left, top,
@@ -468,26 +503,10 @@ class TileSource(object):
         :returns: left, top, right, bottom bounds in pixels.
         """
         if units not in TileInputUnits:
-            raise ValueError('Invalid units "%s"' % units)
+            raise ValueError('Invalid units %r' % units)
         # Convert units to max-resolution pixels
         units = TileInputUnits[units]
-        scaleX = scaleY = 1
-        if units == 'fraction':
-            scaleX = metadata['sizeX']
-            scaleY = metadata['sizeY']
-        elif units == 'mag_pixels':
-            if not (desiredMagnification or {}).get('scale'):
-                raise ValueError('No magnification to use for units')
-            scaleX = scaleY = desiredMagnification['scale']
-        elif units == 'mm':
-            if (not (desiredMagnification or {}).get('scale') or
-                    not (desiredMagnification or {}).get('mm_x') or
-                    not (desiredMagnification or {}).get('mm_y')):
-                raise ValueError('No mm_x or mm_y to use for units')
-            scaleX = (desiredMagnification['scale'] /
-                      desiredMagnification['mm_x'])
-            scaleY = (desiredMagnification['scale'] /
-                      desiredMagnification['mm_y'])
+        scaleX, scaleY = self._scaleFromUnits(metadata, units, desiredMagnification, **kwargs)
         region = {'left': left, 'top': top, 'right': right,
                   'bottom': bottom, 'width': width, 'height': height}
         region = {key: region[key] for key in region if region[key] is not None}
@@ -641,7 +660,6 @@ class TileSource(object):
             metadata, desiredMagnification=mag, **kwargs.get('region', {}))
         regionWidth = right - left
         regionHeight = bottom - top
-
         requestedScale = None
         if maxWidth is None and maxHeight is None:
             if mag.get('scale') in (1.0, None):
@@ -1175,11 +1193,11 @@ class TileSource(object):
         """
         units = sourceRegion.get('units')
         if units not in TileInputUnits:
-            raise ValueError('Invalid units "%s"' % units)
+            raise ValueError('Invalid units %r' % units)
         units = TileInputUnits[units]
         if targetUnits is not None:
             if targetUnits not in TileInputUnits:
-                raise ValueError('Invalid units "%s"' % targetUnits)
+                raise ValueError('Invalid units %r' % targetUnits)
             targetUnits = TileInputUnits[targetUnits]
         if (units != 'mag_pixels' and (
                 targetUnits is None or targetUnits == units)):
@@ -1197,24 +1215,7 @@ class TileSource(object):
         magArgs['rounding'] = None
         magLevel = self.getLevelForMagnification(**magArgs)
         desiredMagnification = self.getMagnificationForLevel(magLevel)
-
-        scaleX = scaleY = 1
-        if targetUnits == 'fraction':
-            scaleX = metadata['sizeX']
-            scaleY = metadata['sizeY']
-        elif targetUnits == 'mag_pixels':
-            if not (desiredMagnification or {}).get('scale'):
-                raise ValueError('No magnification to use for units')
-            scaleX = scaleY = desiredMagnification['scale']
-        elif targetUnits == 'mm':
-            if (not (desiredMagnification or {}).get('scale') or
-                    not (desiredMagnification or {}).get('mm_x') or
-                    not (desiredMagnification or {}).get('mm_y')):
-                raise ValueError('No mm_x or mm_y to use for units')
-            scaleX = (desiredMagnification['scale'] /
-                      desiredMagnification['mm_x'])
-            scaleY = (desiredMagnification['scale'] /
-                      desiredMagnification['mm_y'])
+        scaleX, scaleY = self._scaleFromUnits(metadata, targetUnits, desiredMagnification)
         left = float(left) / scaleX
         right = float(right) / scaleX
         top = float(top) / scaleY

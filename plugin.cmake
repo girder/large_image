@@ -57,6 +57,8 @@ add_python_test(tiles PLUGIN large_image BIND_SERVER EXTERNAL_DATA
 set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
 
+add_python_test(source_mapnik PLUGIN large_image BIND_SERVER PY2_ONLY)
+
 add_python_test(cached_tiles PLUGIN large_image SUBMODULE MemcachedCache
   BIND_SERVER EXTERNAL_DATA
   "plugins/large_image/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs"

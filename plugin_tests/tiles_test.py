@@ -783,8 +783,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             data = numpy.ndarray.flatten(numpy.asarray(PIL.Image.open(six.BytesIO(image))))
             self.assertGreaterEqual(len(data), len(mode) * width * height)
             self.assertEqual(data[0], 0)
-            self.assertEqual(data[len(data) / width / height], 2)
-            self.assertEqual(data[-len(data) / width / height], 255)
+            self.assertEqual(data[int(len(data) / width / height)], 2)
+            self.assertEqual(data[-int(len(data) / width / height)], 255)
 
     def testDummyTileSource(self):
         # We can't actually load the dummy source via the endpoints if we have
