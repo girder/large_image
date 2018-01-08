@@ -25,9 +25,11 @@ from ..cache_util import getTileCache, strhash, methodcache
 try:
     import girder
     from girder import logger
-    from girder.models.model_base import ValidationException
+    from girder.exceptions import ValidationException
+    from girder.models.assetstore import Assetstore
+    from girder.models.file import File
+    from girder.models.item import Item
     from girder.utility import assetstore_utilities
-    from girder.utility.model_importer import ModelImporter
     from ..models.base import TileGeneralException
     from girder.models.model_base import AccessType
 except ImportError:
@@ -1673,12 +1675,10 @@ if girder:
                 # item, so don't repeat.
                 # TODO: is it possible that the file is on a different item, so
                 # do we want to repeat the access check?
-                largeImageFile = ModelImporter.model('file').load(
-                    largeImageFileId, force=True)
+                largeImageFile = File().load(largeImageFileId, force=True)
 
                 # TODO: can we move some of this logic into Girder core?
-                assetstore = ModelImporter.model('assetstore').load(
-                    largeImageFile['assetstoreId'])
+                assetstore = Assetstore().load(largeImageFile['assetstoreId'])
                 adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
 
                 if not isinstance(
@@ -1714,8 +1714,7 @@ def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,
     uriWithoutProtocol = pathOrUri.split('://', 1)[-1]
     isGirder = pathOrUri.startswith('girder_item://')
     if isGirder and girder:
-        sourceObj = ModelImporter.model('item').load(
-            uriWithoutProtocol, user=user, level=AccessType.READ)
+        sourceObj = Item().load(uriWithoutProtocol, user=user, level=AccessType.READ)
     isLargeImageUri = pathOrUri.startswith('large_image://')
     for sourceName in availableSources:
         useSource = False

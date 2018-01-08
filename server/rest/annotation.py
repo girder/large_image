@@ -22,12 +22,13 @@ import cherrypy
 from girder import logger
 from girder.api import access
 from girder.api.describe import describeRoute, Description
-from girder.api.rest import Resource, loadmodel, filtermodel, RestException
+from girder.api.rest import Resource, loadmodel, filtermodel
 from girder.constants import AccessType, SortDir
-from girder.models.model_base import AccessException, ValidationException
+from girder.exceptions import AccessException, ValidationException, RestException
 from girder.models.item import Item
 from girder.models.user import User
 from ..models.annotation import AnnotationSchema, Annotation
+from ..models.image_item import ImageItem
 
 
 class AnnotationResource(Resource):
@@ -278,10 +279,7 @@ class AnnotationResource(Resource):
                 continue
 
             try:
-                item = self.model('image_item', 'large_image').load(
-                    annotation['itemId'], level=AccessType.READ,
-                    user=user
-                )
+                item = ImageItem().load(annotation['itemId'], level=AccessType.READ, user=user)
             except AccessException:
                 item = None
 

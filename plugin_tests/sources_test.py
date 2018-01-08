@@ -23,6 +23,7 @@ import PIL.Image
 import six
 
 from girder import config
+from girder.models.item import Item
 from tests import base
 
 from . import common
@@ -45,12 +46,14 @@ def tearDownModule():
 
 class LargeImageSourcesTest(common.LargeImageCommonTest):
     def testMagnification(self):
+        from girder.plugins.large_image.models.image_item import ImageItem
+
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
             '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
-        source = self.model('image_item', 'large_image').tileSource(item)
+        item = Item().load(itemId, user=self.admin)
+        source = ImageItem().tileSource(item)
         mag = source.getNativeMagnification()
         self.assertEqual(mag['magnification'], 40.0)
         self.assertEqual(mag['mm_x'], 0.000252)
@@ -101,13 +104,14 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
 
     def testTileIterator(self):
         from girder.plugins.large_image import tilesource
+        from girder.plugins.large_image.models.image_item import ImageItem
 
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
             '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
-        source = self.model('image_item', 'large_image').tileSource(item)
+        item = Item().load(itemId, user=self.admin)
+        source = ImageItem().tileSource(item)
         tileCount = 0
         visited = {}
         for tile in source.tileIterator(scale={'magnification': 5}):
@@ -196,8 +200,8 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
-        source = self.model('image_item', 'large_image').tileSource(item)
+        item = Item().load(itemId, user=self.admin)
+        source = ImageItem().tileSource(item)
         # Ask for either PIL or IMAGE data, we should get image data
         tileCount = 0
         jpegTileCount = 0
@@ -253,12 +257,13 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
 
     def testTileIteratorRetiling(self):
         from girder.plugins.large_image import tilesource
+        from girder.plugins.large_image.models.image_item import ImageItem
 
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
-        source = self.model('image_item', 'large_image').tileSource(item)
+        item = Item().load(itemId, user=self.admin)
+        source = ImageItem().tileSource(item)
 
         # Test retiling to 500 x 400
         tileCount = 0
@@ -373,11 +378,13 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(tileCount, 60)
 
     def testTileIteratorSingleTile(self):
+        from girder.plugins.large_image.models.image_item import ImageItem
+
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
-        source = self.model('image_item', 'large_image').tileSource(item)
+        item = Item().load(itemId, user=self.admin)
+        source = ImageItem().tileSource(item)
 
         # Test getting a single tile
         sourceRegion = {
@@ -425,13 +432,14 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
 
     def testGetRegion(self):
         from girder.plugins.large_image import tilesource
+        from girder.plugins.large_image.models.image_item import ImageItem
 
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
             '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
-        source = self.model('image_item', 'large_image').tileSource(item)
+        item = Item().load(itemId, user=self.admin)
+        source = ImageItem().tileSource(item)
 
         # By default, getRegion gets an image
         image, mimeType = source.getRegion(scale={'magnification': 2.5})
@@ -461,13 +469,14 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
 
     def testConvertRegionScale(self):
         from girder.plugins.large_image import tilesource
+        from girder.plugins.large_image.models.image_item import ImageItem
 
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_jp2k_33003_TCGA-CV-7242-'
             '11A-01-TS1.1838afb1-9eee-4a70-9ae3-50e3ab45e242.svs'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
-        source = self.model('image_item', 'large_image').tileSource(item)
+        item = Item().load(itemId, user=self.admin)
+        source = ImageItem().tileSource(item)
 
         # If we aren't using pixels as our units and don't specify a target
         # unit, this should do nothing.  This source image is 23021 x 23162
@@ -551,11 +560,13 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
                 tileCount += 1
 
     def testGetSingleTile(self):
+        from girder.plugins.large_image.models.image_item import ImageItem
+
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
-        source = self.model('image_item', 'large_image').tileSource(item)
+        item = Item().load(itemId, user=self.admin)
+        source = ImageItem().tileSource(item)
 
         sourceRegion = {
             'width': 0.7, 'height': 0.6,

@@ -57,7 +57,7 @@ export default Model.extend({
      */
     fetch: function (opts) {
         if (this.altUrl === null && this.resourceName === null) {
-            alert('Error: You must set an altUrl or a resourceName on your model.');
+            alert('Error: You must set an altUrl or a resourceName on your model.'); // eslint-disable-line no-alert
             return;
         }
 

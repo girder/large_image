@@ -32,10 +32,15 @@ except ImportError:
 
 
 AvailableTileSources = collections.OrderedDict()
+# Create a partial function that will work through the known functions to get a
+# tile source.
+getTileSource = functools.partial(getTileSourceFromDict,
+                                  AvailableTileSources)
+
 __all__ = [
     'TileSource', 'TileSourceException', 'TileSourceAssetstoreException',
     'AvailableTileSources', 'TileOutputMimeTypes', 'TILE_FORMAT_IMAGE',
-    'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY']  # noqa
+    'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY', 'getTileSource']
 
 if girder:
     __all__.append('GirderTileSource')
@@ -76,9 +81,3 @@ for source in sourceList:
             AvailableTileSources[sourceClass.name] = sourceClass
     except (ImportError, OSError):
         logprint.info('Notice: Could not import %s' % className)
-
-# Create a partial function that will work through the known functions to get a
-# tile source.
-getTileSource = functools.partial(getTileSourceFromDict,
-                                  AvailableTileSources)
-__all__.append('getTileSource')

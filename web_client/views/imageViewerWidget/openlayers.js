@@ -14,7 +14,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
 
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
-            $.ajax({  // like $.getScript, but allow caching
+            $.ajax({ // like $.getScript, but allow caching
                 url: 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol.js',
                 dataType: 'script',
                 cache: true

@@ -42,7 +42,7 @@ wrap(ItemListWidget, 'render', function (render) {
         /* We store the desired src attribute in deferred-src until we actually
          * load the image. */
         elem.append($('<img class="waiting"/>').attr(
-                'deferred-src', apiRoot + '/item/' +
+            'deferred-src', apiRoot + '/item/' +
                 item.id + '/tiles/thumbnail?width=160&height=100'));
         var access = item.getAccessLevel();
         var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};

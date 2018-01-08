@@ -23,6 +23,9 @@ import six
 import time
 
 from girder import config, events
+from girder.exceptions import ValidationException
+from girder.models.item import Item
+from girder.models.setting import Setting
 from tests import base
 
 from . import common
@@ -47,6 +50,7 @@ def tearDownModule():
 class LargeImageLargeImageTest(common.LargeImageCommonTest):
     def _createThumbnails(self, spec, cancel=False):
         from girder.plugins.jobs.constants import JobStatus
+        from girder.plugins.jobs.models.job import Job
 
         params = {'spec': json.dumps(spec)}
         if cancel:
@@ -57,12 +61,11 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         job = resp.json
         if cancel:
-            jobModel = self.model('job', 'jobs')
-            job = jobModel.load(id=job['_id'], force=True)
+            job = Job().load(id=job['_id'], force=True)
             while job['status'] != JobStatus.RUNNING:
                 time.sleep(0.01)
-                job = jobModel.load(id=job['_id'], force=True)
-            job = jobModel.cancelJob(job)
+                job = Job().load(id=job['_id'], force=True)
+            job = Job().cancelJob(job)
 
         starttime = time.time()
         while True:
@@ -79,50 +82,49 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
 
     def testSettings(self):
         from girder.plugins.large_image import constants
-        from girder.models.model_base import ValidationException
 
         for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
                     constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
                     constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
-            self.model('setting').set(key, 'false')
-            self.assertFalse(self.model('setting').get(key))
-            self.model('setting').set(key, 'true')
-            self.assertTrue(self.model('setting').get(key))
+            Setting().set(key, 'false')
+            self.assertFalse(Setting().get(key))
+            Setting().set(key, 'true')
+            self.assertTrue(Setting().get(key))
             with six.assertRaisesRegex(self, ValidationException,
                                        'must be a boolean'):
-                self.model('setting').set(key, 'not valid')
+                Setting().set(key, 'not valid')
         testExtraVal = json.dumps({'images': ['label']})
         for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
                     constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN):
-            self.model('setting').set(key, '')
-            self.assertEqual(self.model('setting').get(key), '')
-            self.model('setting').set(key, testExtraVal)
-            self.assertEqual(self.model('setting').get(key), testExtraVal)
+            Setting().set(key, '')
+            self.assertEqual(Setting().get(key), '')
+            Setting().set(key, testExtraVal)
+            self.assertEqual(Setting().get(key), testExtraVal)
             with six.assertRaisesRegex(self, ValidationException,
                                        'must be a JSON'):
-                self.model('setting').set(key, 'not valid')
+                Setting().set(key, 'not valid')
             with six.assertRaisesRegex(self, ValidationException,
                                        'must be a JSON'):
-                self.model('setting').set(key, '[1]')
-        self.model('setting').set(
+                Setting().set(key, '[1]')
+        Setting().set(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
-        self.assertEqual(self.model('setting').get(
+        self.assertEqual(Setting().get(
             constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER), 'geojs')
         with six.assertRaisesRegex(self, ValidationException,
                                    'must be a non-negative integer'):
-            self.model('setting').set(
+            Setting().set(
                 constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, -1)
-        self.model('setting').set(
+        Setting().set(
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 5)
-        self.assertEqual(self.model('setting').get(
+        self.assertEqual(Setting().get(
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES), 5)
         with six.assertRaisesRegex(self, ValidationException,
                                    'must be a non-negative integer'):
-            self.model('setting').set(
+            Setting().set(
                 constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, -1)
-        self.model('setting').set(
+        Setting().set(
             constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 1024)
-        self.assertEqual(self.model('setting').get(
+        self.assertEqual(Setting().get(
             constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE), 1024)
         # Test the large_image/settings end point
         resp = self.request(path='/large_image/settings', user=None)
@@ -147,15 +149,16 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE], 1024)
 
     def testThumbnailFileJob(self):
+        from girder.plugins.large_image.models.image_item import ImageItem
+
         # Create files via a job
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
 
         # We should report zero thumbnails
-        item = self.model('item').load(itemId, user=self.admin)
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        item = Item().load(itemId, user=self.admin)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 0)
 
         # Test PUT thumbnails
@@ -179,8 +182,7 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             {'encoding': 'PNG'}
         ]))
         # We should report two thumbnails
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 2)
 
         # Run a job to create two sizes of thumbnails, one different than
@@ -190,14 +192,12 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             {'width': 160, 'height': 160},
         ]))
         # We should report three thumbnails
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 3)
 
         # Asking for a bad thumbnail specification should just do nothing
         self.assertFalse(self._createThumbnails(['not a dictionary']))
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 3)
 
         # Test GET thumbnails
@@ -232,8 +232,7 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             method='DELETE', path='/large_image/thumbnails', user=self.admin,
             params={'spec': json.dumps([{'encoding': 'PNG'}])})
         self.assertStatusOk(resp)
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 2)
 
         # Try to delete some that don't exist
@@ -241,16 +240,14 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             method='DELETE', path='/large_image/thumbnails', user=self.admin,
             params={'spec': json.dumps([{'width': 200, 'height': 200}])})
         self.assertStatusOk(resp)
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 2)
 
         # Delete them all
         resp = self.request(
             method='DELETE', path='/large_image/thumbnails', user=self.admin)
         self.assertStatusOk(resp)
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 0)
 
         # We should be able to cancel a job
@@ -263,8 +260,7 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         ]
         self.assertEqual(self._createThumbnails(slowList, cancel=True),
                          'canceled')
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertLess(present, 3 + len(slowList))
 
     def testDeleteIncompleteTile(self):
