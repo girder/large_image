@@ -22,7 +22,6 @@ import os
 import six
 
 from functools import partial
-from libtiff import libtiff_ctypes
 from xml.etree import cElementTree
 
 from ..cache_util import LRUCache, strhash, methodcache
@@ -32,6 +31,11 @@ try:
 except ImportError:
     import logging as logger
     logger.getLogger().setLevel(logger.INFO)
+try:
+    from libtiff import libtiff_ctypes
+except ValueError as exc:
+    logger.warn('Failed to import libtiff; try upgrading the python module (%r)' % exc.message)
+    raise ImportError(exc.message)
 try:
     import PIL.Image
 except ImportError:
