@@ -34,8 +34,8 @@ except ImportError:
 try:
     from libtiff import libtiff_ctypes
 except ValueError as exc:
-    logger.warn('Failed to import libtiff; try upgrading the python module (%r)' % exc.message)
-    raise ImportError(exc.message)
+    logger.warn('Failed to import libtiff; try upgrading the python module (%s)' % exc)
+    raise ImportError(str(exc))
 try:
     import PIL.Image
 except ImportError:
