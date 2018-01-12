@@ -64,6 +64,9 @@ class LargeImageTilesTest(base.TestCase):
         else:
             self.fail()
 
+        # Test that we handle a missing libtiff header module and file in a
+        # graceful manner.  This makes it appear that no such module is
+        # available, and checks that we get the expected ImportError.
         del sys.modules['libtiff']
         del sys.modules['libtiff.libtiff_ctypes']
         sys.modules['libtiff.' + tiff_h_name] = None
