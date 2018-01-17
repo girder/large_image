@@ -138,6 +138,8 @@ class AnnotationResource(Resource):
     def getAnnotation(self, id, params):
         user = self.getCurrentUser()
         annotation = Annotation().load(id, region=params, user=user, level=AccessType.READ)
+        if annotation is None:
+            raise RestException('Annotation not found', 404)
         # Ensure that we have read access to the parent item.  We could fail
         # faster when there are permissions issues if we didn't load the
         # annotation elements before checking the item access permissions.

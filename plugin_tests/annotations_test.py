@@ -97,7 +97,6 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
     def testAnnotationCreate(self):
         from girder.plugins.large_image.models.annotation import Annotation
         item = Item().createItem('sample', self.admin, self.publicFolder)
-        itemId = str(item['_id'])
         annotation = {
             'name': 'testAnnotation',
             'elements': [{
@@ -107,10 +106,10 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
                 'height': 10,
             }]
         }
-        result = Annotation().createAnnotation({'_id': itemId}, self.admin, annotation)
+        result = Annotation().createAnnotation(item, self.admin, annotation)
         self.assertIn('_id', result)
         annotId = result['_id']
-        result = Annotation().load(annotId)
+        result = Annotation().load(annotId, user=self.admin)
         self.assertEqual(len(result['annotation']['elements']), 1)
 
     def testSimilarElementStructure(self):
@@ -159,14 +158,14 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
         item = Item().createItem('sample', self.admin, self.publicFolder)
         with six.assertRaisesRegex(self, Exception, 'Invalid ObjectId'):
             Annotation().load('nosuchid')
-        self.assertIsNone(Annotation().load('012345678901234567890123'))
+        self.assertIsNone(Annotation().load('012345678901234567890123', user=self.admin))
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        loaded = Annotation().load(annot['_id'])
+        loaded = Annotation().load(annot['_id'], user=self.admin)
         self.assertEqual(loaded['annotation']['elements'][0]['center'],
                          annot['annotation']['elements'][0]['center'])
 
         annot0 = Annotation().createAnnotation(item, self.admin, sampleAnnotationEmpty)
-        loaded = Annotation().load(annot0['_id'])
+        loaded = Annotation().load(annot0['_id'], user=self.admin)
         self.assertEqual(len(loaded['annotation']['elements']), 0)
 
     def testSave(self):
@@ -174,14 +173,14 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        annot = Annotation().load(annot['_id'], region={'sort': 'size'})
+        annot = Annotation().load(annot['_id'], region={'sort': 'size'}, user=self.admin)
         annot['annotation']['elements'].extend([
             {'type': 'point', 'center': [20.0, 25.0, 0]},
             {'type': 'point', 'center': [10.0, 24.0, 0]},
             {'type': 'point', 'center': [25.5, 23.0, 0]},
         ])
         saved = Annotation().save(annot)
-        loaded = Annotation().load(annot['_id'], region={'sort': 'size'})
+        loaded = Annotation().load(annot['_id'], region={'sort': 'size'}, user=self.admin)
         self.assertEqual(len(saved['annotation']['elements']), 4)
         self.assertEqual(len(loaded['annotation']['elements']), 4)
         self.assertEqual(saved['annotation']['elements'][0]['type'], 'rectangle')
@@ -194,10 +193,10 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        self.assertIsNotNone(Annotation().load(annot['_id']))
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
         result = Annotation().remove(annot)
         self.assertEqual(result.deleted_count, 1)
-        self.assertIsNone(Annotation().load(annot['_id']))
+        self.assertIsNone(Annotation().load(annot['_id'], user=self.admin))
 
     # Add tests for:
     # updateAnnotaton
@@ -314,9 +313,11 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 1)
+        self.assertEqual(len(Annotation().load(
+            annot['_id'], user=self.admin)['annotation']['elements']), 1)
         Annotationelement().removeWithQuery({'annotationId': annot['_id']})
-        self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 0)
+        self.assertEqual(len(Annotation().load(
+            annot['_id'], user=self.admin)['annotation']['elements']), 0)
 
     def testRemoveElements(self):
         from girder.plugins.large_image.models.annotation import Annotation
@@ -324,9 +325,11 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 1)
+        self.assertEqual(len(Annotation().load(
+            annot['_id'], user=self.admin)['annotation']['elements']), 1)
         Annotationelement().removeElements(annot)
-        self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 0)
+        self.assertEqual(len(Annotation().load(
+            annot['_id'], user=self.admin)['annotation']['elements']), 0)
 
     def testAnnotationGroup(self):
         from girder.plugins.large_image.models.annotation import Annotation
@@ -350,7 +353,7 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
         }
 
         annot = Annotation().createAnnotation(item, self.admin, annotationWithGroup)
-        result = Annotation().load(annot['_id'])
+        result = Annotation().load(annot['_id'], user=self.admin)
         self.assertEqual(result['annotation']['elements'][0]['group'], 'a')
 
     #  Add tests for:
@@ -439,7 +442,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         # create annotation on an item
         itemSrc = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(itemSrc, self.admin, sampleAnnotation)
-        self.assertIsNotNone(Annotation().load(annot['_id']))
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
 
         # Create a new item
         itemDest = Item().createItem('sample', self.admin, self.publicFolder)
@@ -475,7 +478,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
         annotId = str(annot['_id'])
-        self.assertIsNotNone(Annotation().load(annot['_id']))
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
         resp = self.request(path='/annotation/%s' % annotId, user=self.admin, method='DELETE')
         self.assertStatusOk(resp)
         self.assertIsNone(Annotation().load(annot['_id']))
