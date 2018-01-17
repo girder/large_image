@@ -30,7 +30,10 @@ from girder import events
 from girder import logger
 from girder.constants import AccessType
 from girder.exceptions import ValidationException
-from girder.models.model_base import Model
+from girder.models.folder import Folder
+from girder.models.item import Item
+from girder.models.model_base import AccessControlledModel
+from girder.models.user import User
 
 from .annotationelement import Annotationelement
 
@@ -355,7 +358,7 @@ class AnnotationSchema:
     }
 
 
-class Annotation(Model):
+class Annotation(AccessControlledModel):
     """
     This model is used to represent an annotation that is associated with an
     item.  The annotation can contain any number of annotationelements, which
@@ -385,6 +388,8 @@ class Annotation(Model):
         'created',
         'updated',
         'updatedId',
+        'public',
+        'publicFlags'
         # 'skill',
         # 'startTime'
         # 'stopTime'
@@ -399,7 +404,7 @@ class Annotation(Model):
         })
 
         self.exposeFields(AccessType.READ, (
-            'annotation', '_version', '_elementQuery',
+            'annotation', '_version', '_elementQuery'
         ) + self.baseFields)
         events.bind('model.item.remove', 'large_image', self._onItemRemove)
 
@@ -414,7 +419,45 @@ class Annotation(Model):
         for annotation in annotations:
             Annotation().remove(annotation)
 
-    def createAnnotation(self, item, creator, annotation):
+    def _migrateACL(self, annotation):
+        """
+        Add access control information to an annotation model.
+
+        Originally annotation models were not access controlled.  This function performs
+        the migration for annotations created before this change was made.  The access
+        object is copied from the folder containing the image the annotation is attached
+        to.   In addition, the creator is given admin access.
+        """
+        if 'access' in annotation:
+            return
+
+        item = Item().load(annotation['itemId'], force=True)
+        if item is None:
+            logger.warning(
+                'Could not generate annotation ACL due to missing item %s', annotation['_id'])
+            return
+
+        folder = Folder().load(item['folderId'], force=True)
+        if folder is None:
+            logger.warning(
+                'Could not generate annotation ACL due to missing folder %s', annotation['_id'])
+            return
+
+        user = User().load(annotation['creatorId'], force=True)
+        if user is None:
+            logger.warning(
+                'Could not generate annotation ACL %s due to missing user %s', annotation['_id'])
+            return
+
+        self.copyAccessPolicies(item, annotation, save=False)
+        self.setUserAccess(annotation, user, AccessType.ADMIN, force=True, save=False)
+        self.setPublic(annotation, folder.get('public'), save=False)
+
+        # call the super class save method to avoid messing with elements
+        super(Annotation, self).save(annotation)
+        logger.info('Generated annotation ACL for %s', annotation['_id'])
+
+    def createAnnotation(self, item, creator, annotation, public=None):
         now = datetime.datetime.utcnow()
         doc = {
             'itemId': item['_id'],
@@ -424,6 +467,18 @@ class Annotation(Model):
             'updated': now,
             'annotation': annotation,
         }
+
+        # copy access control from the folder containing the image
+        folder = Folder().load(item['folderId'], force=True)
+        self.copyAccessPolicies(src=folder, dest=doc, save=False)
+
+        if public is None:
+            public = folder.get('public', False)
+        self.setPublic(doc, public, save=False)
+
+        # give the current user admin access
+        self.setUserAccess(doc, user=creator, level=AccessType.ADMIN, save=False)
+
         return self.save(doc)
 
     def load(self, id, region=None, getElements=True, *args, **kwargs):
@@ -436,8 +491,21 @@ class Annotation(Model):
             annotation.
         :returns: the matching annotation or none.
         """
+        force = kwargs.pop('force', False)
+        kwargs['force'] = True
         annotation = super(Annotation, self).load(id, *args, **kwargs)
-        if annotation is not None and getElements:
+
+        if annotation is None:
+            return
+
+        self._migrateACL(annotation)
+
+        if not force:
+            self.requireAccess(
+                annotation, kwargs.get('user'), kwargs.get('level', AccessType.ADMIN)
+            )
+
+        if getElements:
             # It is possible that we are trying to read the elements of an
             # annotation as another thread is updating them.  In this case,
             # there is a chance, that between when we get the annotation and
