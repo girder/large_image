@@ -22,11 +22,15 @@ import json
 import math
 import os
 import random
+
+from bson import ObjectId
+import mock
 import six
 from six.moves import range
 
 from girder import config
 from girder.constants import AccessType
+from girder.exceptions import AccessException
 from girder.models.item import Item
 
 from tests import base
@@ -610,6 +614,88 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
             body=json.dumps(annot['annotation']))
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['itemId'], str(item2['_id']))
+
+    def testMigrateAnnotationAccessControl(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # assert ACL's work
+        with self.assertRaises(AccessException):
+            Annotation().load(annot['_id'], user=self.user, level=AccessType.WRITE)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        Annotation().save(annot)
+
+        # load the annotation and assert access properties were added
+        annot = Annotation().load(annot['_id'], force=True)
+
+        self.assertEqual(annot['access'], self.publicFolder['access'])
+        self.assertEqual(annot['public'], True)
+
+    def testMigrateAnnotationAccessControlNoItemError(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        annot['itemId'] = ObjectId()
+
+        Annotation().save(annot)
+        with mock.patch('girder.plugins.large_image.models.annotation.logger') as logger:
+            annot = Annotation().load(annot['_id'], force=True)
+            logger.warning.assert_called_once()
+
+        self.assertNotIn('access', annot)
+
+    def testMigrateAnnotationAccessControlNoFolderError(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        Annotation().save(annot)
+
+        # save an invalid folder id to the item
+        item['folderId'] = ObjectId()
+        Item().save(item)
+
+        with mock.patch('girder.plugins.large_image.models.annotation.logger') as logger:
+            annot = Annotation().load(annot['_id'], force=True)
+            logger.warning.assert_called_once()
+
+        self.assertNotIn('access', annot)
+
+    def testMigrateAnnotationAccessControlNoUserError(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        annot['creatorId'] = ObjectId()
+        Annotation().save(annot)
+
+        with mock.patch('girder.plugins.large_image.models.annotation.logger') as logger:
+            annot = Annotation().load(annot['_id'], force=True)
+            logger.warning.assert_called_once()
+
+        self.assertNotIn('access', annot)
 
     #  Add tests for:
     # find
