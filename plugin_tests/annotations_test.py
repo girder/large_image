@@ -615,6 +615,49 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['itemId'], str(item2['_id']))
 
+    def testAnnotationAccessControlEndpoints(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # Try to get ACL's as a user
+        resp = self.request('/annotation/%s/access' % annot['_id'], user=self.user)
+        self.assertStatus(resp, 403)
+
+        # Get the ACL's as an admin
+        resp = self.request('/annotation/%s/access' % annot['_id'], user=self.admin)
+        self.assertStatusOk(resp)
+
+        # Give the user admin access
+        access = dict(**resp.json)
+        access['users'].append({
+            'login': self.user['login'],
+            'flags': [],
+            'id': str(self.user['_id']),
+            'level': AccessType.ADMIN
+        })
+        resp = self.request(
+            '/annotation/%s/access' % annot['_id'],
+            method='PUT',
+            user=self.admin,
+            params={
+                'access': json.dumps(access)
+            }
+        )
+        self.assertStatusOk(resp)
+
+        # Get the ACL's as a user
+        resp = self.request('/annotation/%s/access' % annot['_id'], user=self.user)
+        self.assertStatusOk(resp)
+
+    #  Add tests for:
+    # find
+
+
+class LargeImageAnnotationAccessMigrationTest(common.LargeImageCommonTest):
+
     def testMigrateAnnotationAccessControl(self):
         from girder.plugins.large_image.models.annotation import Annotation
 
@@ -696,6 +739,3 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
             logger.warning.assert_called_once()
 
         self.assertNotIn('access', annot)
-
-    #  Add tests for:
-    # find
