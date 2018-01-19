@@ -491,16 +491,14 @@ class Annotation(AccessControlledModel):
             annotation.
         :returns: the matching annotation or none.
         """
-        force = kwargs.pop('force', False)
-        kwargs['force'] = True
-        annotation = super(Annotation, self).load(id, *args, **kwargs)
+        annotation = super(Annotation, self).load(id, force=True)
 
         if annotation is None:
             return
 
         self._migrateACL(annotation)
 
-        if not force:
+        if not kwargs.get('force'):
             self.requireAccess(
                 annotation, kwargs.get('user'), kwargs.get('level', AccessType.ADMIN)
             )
