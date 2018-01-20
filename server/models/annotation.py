@@ -419,6 +419,29 @@ class Annotation(AccessControlledModel):
         for annotation in annotations:
             Annotation().remove(annotation)
 
+    def _loadAndMigrateAnnotation(self, id, *args, **kwargs):
+        """
+        Load the annotation and add access control information if necessary.
+        """
+        # We first need to load the full annotation document to perform the
+        # migration.
+        annotation = self._migrateACL(super(Annotation, self).load(id, force=True))
+
+        # If force is not provided, we can do an access control check without
+        # reloading the model.
+        if annotation is not None and not kwargs.get('force'):
+            self.requireAccess(
+                annotation, kwargs.get('user'), kwargs.get('level', AccessType.ADMIN)
+            )
+
+        # If any other keyword arguments were provided, we reload the model to avoid
+        # having to duplicate code from super class methods.  Since these flags are
+        # rarely used the performance implications should be minimal.
+        if kwargs.get('objectId') or kwargs.get('fields') or kwargs.get('exc'):
+            annotation = super(Annotation, self).load(id, *args, **kwargs)
+
+        return annotation
+
     def _migrateACL(self, annotation):
         """
         Add access control information to an annotation model.
@@ -428,26 +451,26 @@ class Annotation(AccessControlledModel):
         object is copied from the folder containing the image the annotation is attached
         to.   In addition, the creator is given admin access.
         """
-        if 'access' in annotation:
-            return
+        if annotation is None or 'access' in annotation:
+            return annotation
 
         item = Item().load(annotation['itemId'], force=True)
         if item is None:
             logger.warning(
                 'Could not generate annotation ACL due to missing item %s', annotation['_id'])
-            return
+            return annotation
 
         folder = Folder().load(item['folderId'], force=True)
         if folder is None:
             logger.warning(
                 'Could not generate annotation ACL due to missing folder %s', annotation['_id'])
-            return
+            return annotation
 
         user = User().load(annotation['creatorId'], force=True)
         if user is None:
             logger.warning(
                 'Could not generate annotation ACL %s due to missing user %s', annotation['_id'])
-            return
+            return annotation
 
         self.copyAccessPolicies(item, annotation, save=False)
         self.setUserAccess(annotation, user, AccessType.ADMIN, force=True, save=False)
@@ -456,6 +479,7 @@ class Annotation(AccessControlledModel):
         # call the super class save method to avoid messing with elements
         super(Annotation, self).save(annotation)
         logger.info('Generated annotation ACL for %s', annotation['_id'])
+        return annotation
 
     def createAnnotation(self, item, creator, annotation, public=None):
         now = datetime.datetime.utcnow()
@@ -491,17 +515,12 @@ class Annotation(AccessControlledModel):
             annotation.
         :returns: the matching annotation or none.
         """
-        annotation = super(Annotation, self).load(id, force=True)
+        # This call can be replaced with the superclass load method if migrations
+        # are no longer necessary.
+        annotation = self._loadAndMigrateAnnotation(id, *args, **kwargs)
 
         if annotation is None:
             return
-
-        self._migrateACL(annotation)
-
-        if not kwargs.get('force'):
-            self.requireAccess(
-                annotation, kwargs.get('user'), kwargs.get('level', AccessType.ADMIN)
-            )
 
         if getElements:
             # It is possible that we are trying to read the elements of an

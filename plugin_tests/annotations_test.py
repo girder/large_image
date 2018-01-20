@@ -30,7 +30,7 @@ from six.moves import range
 
 from girder import config
 from girder.constants import AccessType
-from girder.exceptions import AccessException
+from girder.exceptions import AccessException, ValidationException
 from girder.models.item import Item
 
 from tests import base
@@ -679,6 +679,13 @@ class LargeImageAnnotationAccessMigrationTest(common.LargeImageCommonTest):
 
         self.assertEqual(annot['access'], self.publicFolder['access'])
         self.assertEqual(annot['public'], True)
+
+    def testLoadAnnotationWithCoreKWArgs(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # try to load a non-existing annotation
+        with self.assertRaises(ValidationException):
+            Annotation().load(ObjectId(), user=self.admin, exc=True)
 
     def testMigrateAnnotationAccessControlNoItemError(self):
         from girder.plugins.large_image.models.annotation import Annotation
