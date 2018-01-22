@@ -17,6 +17,8 @@
 #  limitations under the License.
 ##############################################################################
 
+import json
+
 import cherrypy
 
 from girder import logger
@@ -45,6 +47,8 @@ class AnnotationResource(Resource):
         self.route('POST', (':id', 'copy'), self.copyAnnotation)
         self.route('PUT', (':id',), self.updateAnnotation)
         self.route('DELETE', (':id',), self.deleteAnnotation)
+        self.route('GET', (':id', 'access'), self.getAnnotationAccess)
+        self.route('PUT', (':id', 'access'), self.updateAnnotationAccess)
 
     @describeRoute(
         Description('Search for annotations.')
@@ -79,10 +83,12 @@ class AnnotationResource(Resource):
             query['$text'] = {'$search': params['text']}
         if params.get('name'):
             query['annotation.name'] = params['name']
-        fields = list(('annotation.name', 'annotation.description') +
+        fields = list(('annotation.name', 'annotation.description', 'access') +
                       Annotation().baseFields)
-        return list(Annotation().find(
-            query, limit=limit, offset=offset, sort=sort, fields=fields))
+        return list(Annotation().filterResultsByPermission(
+            cursor=Annotation().find(query, sort=sort, fields=fields),
+            user=self.getCurrentUser(), level=AccessType.READ, limit=limit, offset=offset
+        ))
 
     @describeRoute(
         Description('Get the official Annotation schema')
@@ -130,13 +136,13 @@ class AnnotationResource(Resource):
     @access.public
     @filtermodel(model='annotation', plugin='large_image')
     def getAnnotation(self, id, params):
-        annotation = Annotation().load(id, region=params)
+        user = self.getCurrentUser()
+        annotation = Annotation().load(id, region=params, user=user, level=AccessType.READ)
+        if annotation is None:
+            raise RestException('Annotation not found', 404)
         # Ensure that we have read access to the parent item.  We could fail
         # faster when there are permissions issues if we didn't load the
         # annotation elements before checking the item access permissions.
-        item = Item().load(annotation.get('itemId'), force=True)
-        Item().requireAccess(
-            item, user=self.getCurrentUser(), level=AccessType.READ)
         return annotation
 
     @describeRoute(
@@ -173,7 +179,7 @@ class AnnotationResource(Resource):
         .errorResponse('Write access was denied for the item.', 403)
     )
     @access.user
-    @loadmodel(model='annotation', plugin='large_image')
+    @loadmodel(model='annotation', plugin='large_image', level=AccessType.READ)
     @filtermodel(model='annotation', plugin='large_image')
     def copyAnnotation(self, annotation, params):
         itemId = params['itemId']
@@ -199,7 +205,7 @@ class AnnotationResource(Resource):
         .errorResponse('Validation Error: JSON doesn\'t follow schema.')
     )
     @access.user
-    @loadmodel(model='annotation', plugin='large_image')
+    @loadmodel(model='annotation', plugin='large_image', level=AccessType.WRITE)
     @filtermodel(model='annotation', plugin='large_image')
     def updateAnnotation(self, annotation, params):
         user = self.getCurrentUser()
@@ -241,7 +247,7 @@ class AnnotationResource(Resource):
     )
     @access.user
     # Load with a limit of 1 so that we don't bother getting most annotations
-    @loadmodel(model='annotation', plugin='large_image', getElements=False)
+    @loadmodel(model='annotation', plugin='large_image', getElements=False, level=AccessType.WRITE)
     def deleteAnnotation(self, annotation, params):
         # Ensure that we have write access to the parent item
         item = Item().load(annotation.get('itemId'), force=True)
@@ -295,3 +301,29 @@ class AnnotationResource(Resource):
                 break
 
         return response
+
+    @describeRoute(
+        Description('Get the access control list for an annotation.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Admin access was denied for the annotation.', 403)
+    )
+    @access.user
+    @loadmodel(model='annotation', plugin='large_image', level=AccessType.ADMIN)
+    def getAnnotationAccess(self, annotation, params):
+        return Annotation().getFullAccessList(annotation)
+
+    @describeRoute(
+        Description('Update the access control list for an annotation.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .param('access', 'THe JSON-encoded access control list.')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Admin access was denied for the annotation.', 403)
+    )
+    @access.user
+    @loadmodel(model='annotation', plugin='large_image', level=AccessType.ADMIN)
+    @filtermodel(model=Annotation, addFields={'access'})
+    def updateAnnotationAccess(self, annotation, params):
+        access = json.loads(params['access'])
+        return Annotation().setAccessList(
+            annotation, access, save=True, user=self.getCurrentUser())

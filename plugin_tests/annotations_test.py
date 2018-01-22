@@ -22,11 +22,15 @@ import json
 import math
 import os
 import random
+
+from bson import ObjectId
+import mock
 import six
 from six.moves import range
 
 from girder import config
 from girder.constants import AccessType
+from girder.exceptions import AccessException, ValidationException
 from girder.models.item import Item
 
 from tests import base
@@ -97,7 +101,6 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
     def testAnnotationCreate(self):
         from girder.plugins.large_image.models.annotation import Annotation
         item = Item().createItem('sample', self.admin, self.publicFolder)
-        itemId = str(item['_id'])
         annotation = {
             'name': 'testAnnotation',
             'elements': [{
@@ -107,10 +110,10 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
                 'height': 10,
             }]
         }
-        result = Annotation().createAnnotation({'_id': itemId}, self.admin, annotation)
+        result = Annotation().createAnnotation(item, self.admin, annotation)
         self.assertIn('_id', result)
         annotId = result['_id']
-        result = Annotation().load(annotId)
+        result = Annotation().load(annotId, user=self.admin)
         self.assertEqual(len(result['annotation']['elements']), 1)
 
     def testSimilarElementStructure(self):
@@ -159,14 +162,14 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
         item = Item().createItem('sample', self.admin, self.publicFolder)
         with six.assertRaisesRegex(self, Exception, 'Invalid ObjectId'):
             Annotation().load('nosuchid')
-        self.assertIsNone(Annotation().load('012345678901234567890123'))
+        self.assertIsNone(Annotation().load('012345678901234567890123', user=self.admin))
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        loaded = Annotation().load(annot['_id'])
+        loaded = Annotation().load(annot['_id'], user=self.admin)
         self.assertEqual(loaded['annotation']['elements'][0]['center'],
                          annot['annotation']['elements'][0]['center'])
 
         annot0 = Annotation().createAnnotation(item, self.admin, sampleAnnotationEmpty)
-        loaded = Annotation().load(annot0['_id'])
+        loaded = Annotation().load(annot0['_id'], user=self.admin)
         self.assertEqual(len(loaded['annotation']['elements']), 0)
 
     def testSave(self):
@@ -174,14 +177,14 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        annot = Annotation().load(annot['_id'], region={'sort': 'size'})
+        annot = Annotation().load(annot['_id'], region={'sort': 'size'}, user=self.admin)
         annot['annotation']['elements'].extend([
             {'type': 'point', 'center': [20.0, 25.0, 0]},
             {'type': 'point', 'center': [10.0, 24.0, 0]},
             {'type': 'point', 'center': [25.5, 23.0, 0]},
         ])
         saved = Annotation().save(annot)
-        loaded = Annotation().load(annot['_id'], region={'sort': 'size'})
+        loaded = Annotation().load(annot['_id'], region={'sort': 'size'}, user=self.admin)
         self.assertEqual(len(saved['annotation']['elements']), 4)
         self.assertEqual(len(loaded['annotation']['elements']), 4)
         self.assertEqual(saved['annotation']['elements'][0]['type'], 'rectangle')
@@ -194,10 +197,10 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        self.assertIsNotNone(Annotation().load(annot['_id']))
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
         result = Annotation().remove(annot)
         self.assertEqual(result.deleted_count, 1)
-        self.assertIsNone(Annotation().load(annot['_id']))
+        self.assertIsNone(Annotation().load(annot['_id'], user=self.admin))
 
     # Add tests for:
     # updateAnnotaton
@@ -314,9 +317,11 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 1)
+        self.assertEqual(len(Annotation().load(
+            annot['_id'], user=self.admin)['annotation']['elements']), 1)
         Annotationelement().removeWithQuery({'annotationId': annot['_id']})
-        self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 0)
+        self.assertEqual(len(Annotation().load(
+            annot['_id'], user=self.admin)['annotation']['elements']), 0)
 
     def testRemoveElements(self):
         from girder.plugins.large_image.models.annotation import Annotation
@@ -324,9 +329,11 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
-        self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 1)
+        self.assertEqual(len(Annotation().load(
+            annot['_id'], user=self.admin)['annotation']['elements']), 1)
         Annotationelement().removeElements(annot)
-        self.assertEqual(len(Annotation().load(annot['_id'])['annotation']['elements']), 0)
+        self.assertEqual(len(Annotation().load(
+            annot['_id'], user=self.admin)['annotation']['elements']), 0)
 
     def testAnnotationGroup(self):
         from girder.plugins.large_image.models.annotation import Annotation
@@ -350,7 +357,7 @@ class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
         }
 
         annot = Annotation().createAnnotation(item, self.admin, annotationWithGroup)
-        result = Annotation().load(annot['_id'])
+        result = Annotation().load(annot['_id'], user=self.admin)
         self.assertEqual(result['annotation']['elements'][0]['group'], 'a')
 
     #  Add tests for:
@@ -439,7 +446,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         # create annotation on an item
         itemSrc = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(itemSrc, self.admin, sampleAnnotation)
-        self.assertIsNotNone(Annotation().load(annot['_id']))
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
 
         # Create a new item
         itemDest = Item().createItem('sample', self.admin, self.publicFolder)
@@ -475,7 +482,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
         annotId = str(annot['_id'])
-        self.assertIsNotNone(Annotation().load(annot['_id']))
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
         resp = self.request(path='/annotation/%s' % annotId, user=self.admin, method='DELETE')
         self.assertStatusOk(resp)
         self.assertIsNone(Annotation().load(annot['_id']))
@@ -608,5 +615,134 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json['itemId'], str(item2['_id']))
 
+    def testAnnotationAccessControlEndpoints(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # Try to get ACL's as a user
+        resp = self.request('/annotation/%s/access' % annot['_id'], user=self.user)
+        self.assertStatus(resp, 403)
+
+        # Get the ACL's as an admin
+        resp = self.request('/annotation/%s/access' % annot['_id'], user=self.admin)
+        self.assertStatusOk(resp)
+
+        # Give the user admin access
+        access = dict(**resp.json)
+        access['users'].append({
+            'login': self.user['login'],
+            'flags': [],
+            'id': str(self.user['_id']),
+            'level': AccessType.ADMIN
+        })
+        resp = self.request(
+            '/annotation/%s/access' % annot['_id'],
+            method='PUT',
+            user=self.admin,
+            params={
+                'access': json.dumps(access)
+            }
+        )
+        self.assertStatusOk(resp)
+
+        # Get the ACL's as a user
+        resp = self.request('/annotation/%s/access' % annot['_id'], user=self.user)
+        self.assertStatusOk(resp)
+
     #  Add tests for:
     # find
+
+
+class LargeImageAnnotationAccessMigrationTest(common.LargeImageCommonTest):
+
+    def testMigrateAnnotationAccessControl(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # assert ACL's work
+        with self.assertRaises(AccessException):
+            Annotation().load(annot['_id'], user=self.user, level=AccessType.WRITE)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        Annotation().save(annot)
+
+        # load the annotation and assert access properties were added
+        annot = Annotation().load(annot['_id'], force=True)
+
+        self.assertEqual(annot['access'], self.publicFolder['access'])
+        self.assertEqual(annot['public'], True)
+
+    def testLoadAnnotationWithCoreKWArgs(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # try to load a non-existing annotation
+        with self.assertRaises(ValidationException):
+            Annotation().load(ObjectId(), user=self.admin, exc=True)
+
+    def testMigrateAnnotationAccessControlNoItemError(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        annot['itemId'] = ObjectId()
+
+        Annotation().save(annot)
+        with mock.patch('girder.plugins.large_image.models.annotation.logger') as logger:
+            annot = Annotation().load(annot['_id'], force=True)
+            logger.warning.assert_called_once()
+
+        self.assertNotIn('access', annot)
+
+    def testMigrateAnnotationAccessControlNoFolderError(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        Annotation().save(annot)
+
+        # save an invalid folder id to the item
+        item['folderId'] = ObjectId()
+        Item().save(item)
+
+        with mock.patch('girder.plugins.large_image.models.annotation.logger') as logger:
+            annot = Annotation().load(annot['_id'], force=True)
+            logger.warning.assert_called_once()
+
+        self.assertNotIn('access', annot)
+
+    def testMigrateAnnotationAccessControlNoUserError(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        # create an annotation
+        item = Item().createItem('userItem', self.user, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        annot['creatorId'] = ObjectId()
+        Annotation().save(annot)
+
+        with mock.patch('girder.plugins.large_image.models.annotation.logger') as logger:
+            annot = Annotation().load(annot['_id'], force=True)
+            logger.warning.assert_called_once()
+
+        self.assertNotIn('access', annot)
