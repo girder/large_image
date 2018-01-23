@@ -24,6 +24,9 @@ import math
 import PIL.Image
 import pyproj
 import six
+import palettable
+from operator import attrgetter
+import json
 
 from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL, TileInputUnits
 from ..cache_util import LruCacheMetaclass, methodcache, strhash
@@ -47,7 +50,7 @@ class MapnikTileSource(FileTileSource):
     cacheName = 'tilesource'
     name = 'mapnikfile'
 
-    def __init__(self, path, projection=None, **kwargs):
+    def __init__(self, path, projection=None, style=None, **kwargs):
         super(MapnikTileSource, self).__init__(path, **kwargs)
         self._bounds = {}
         self.dataset = gdal.Open(self._getLargeImagePath())
@@ -59,6 +62,12 @@ class MapnikTileSource(FileTileSource):
         if projection and not isinstance(projection, six.binary_type):
             projection = projection.encode('utf8')
         self.projection = projection
+        if style:
+            try:
+                self.style = json.loads(style)
+            except TypeError:
+                raise TileSourceException('Style is not a valid json.')
+
         try:
             self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
             self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
@@ -101,7 +110,8 @@ class MapnikTileSource(FileTileSource):
         return strhash(
             super(MapnikTileSource, MapnikTileSource).getLRUHash(
                 *args, **kwargs),
-            kwargs.get('projection'))
+            kwargs.get('projection'),
+            kwargs.get('style'))
 
     def getProj4String(self):
         """
@@ -115,6 +125,35 @@ class MapnikTileSource(FileTileSource):
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
         return proj.ExportToProj4()
+
+    @staticmethod
+    def interpolateMinMax(start, stop, count):
+        """
+        Returns interpolated values for a given
+        start, stop and count
+
+        :returns: List of interpolated values
+        """
+        try:
+            step = (float(stop) - float(start)) / (float(count) - 1)
+        except ValueError:
+            raise TileSourceException('Minimum and maximum values should be numbers.')
+        sequence = [float(start + i * step) for i in range(count)]
+
+        return sequence
+
+    @staticmethod
+    def getHexColors(palette):
+        """
+        Returns list of hex colors for a given
+        color palette
+
+        :returns: List of colors
+        """
+        try:
+            return attrgetter(palette)(palettable).hex_colors
+        except AttributeError:
+            raise TileSourceException('Palette is not a valid palettable path.')
 
     def getPixelSizeInMeters(self):
         """
@@ -254,7 +293,7 @@ class MapnikTileSource(FileTileSource):
             ymin, ymax = self.sourceSizeY - ymax, self.sourceSizeY - ymin
         return xmin, ymin, xmax, ymax
 
-    def addStyle(self, m):
+    def addStyle(self, m, layerSrs, extent):
         """
         Attaches raster style option to mapnik raster layer.
 
@@ -263,9 +302,43 @@ class MapnikTileSource(FileTileSource):
         style = mapnik.Style()
         rule = mapnik.Rule()
         sym = mapnik.RasterSymbolizer()
+        band = -1
+        if hasattr(self, 'style'):
+            band = self.style.get('band', -1)
+            if band != -1 and isinstance(band, int):
+                minimum = self.style.get('min', 0)
+                maximum = self.style.get('max', 256)
+                palette = self.style.get('palette',
+                                         'cmocean.diverging.Curl_10')
+                colors = self.getHexColors(palette)
+                values = self.interpolateMinMax(minimum,
+                                                maximum,
+                                                len(colors))
+                colorizer = mapnik.RasterColorizer(
+                    mapnik.COLORIZER_DISCRETE,
+                    mapnik.Color('white')
+                )
+                for color, value in zip(colors, values):
+                    colorizer.add_stop(value, mapnik.Color(color))
+                sym.colorizer = colorizer
+            else:
+                raise TileSourceException('Band has to be an integer.')
+
         rule.symbols.append(sym)
         style.rules.append(rule)
         m.append_style('Raster Style', style)
+        lyr = mapnik.Layer('layer')
+        lyr.srs = layerSrs
+        if extent:
+            lyr.datasource = mapnik.Gdal(
+                base='', file=self._getLargeImagePath(),
+                band=band, extent=extent)
+        else:
+            lyr.datasource = mapnik.Gdal(
+                base='', file=self._getLargeImagePath(),
+                band=band)
+        lyr.styles.append('Raster Style')
+        m.layers.append(lyr)
 
     @methodcache()
     def getTile(self, x, y, z, **kwargs):
@@ -281,17 +354,7 @@ class MapnikTileSource(FileTileSource):
         xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
         m.zoom_to_box(mapnik.Box2d(xmin, ymin, xmax, ymax))
         img = mapnik.Image(self.tileWidth, self.tileHeight)
-        self.addStyle(m)
-        lyr = mapnik.Layer('layer')
-        lyr.srs = layerSrs
-        if extent:
-            lyr.datasource = mapnik.Gdal(
-                base='', file=self._getLargeImagePath(), band=-1, extent=extent)
-        else:
-            lyr.datasource = mapnik.Gdal(
-                base='', file=self._getLargeImagePath(), band=-1)
-        lyr.styles.append('Raster Style')
-        m.layers.append(lyr)
+        self.addStyle(m, layerSrs, extent)
         mapnik.render(m, img)
         pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
