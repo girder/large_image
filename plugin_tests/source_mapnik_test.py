@@ -21,6 +21,7 @@ import os
 import PIL.Image
 import PIL.ImageChops
 import six
+import json
 
 from girder import config
 from tests import base
@@ -96,6 +97,27 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         testImage = PIL.Image.open(testImage)
         # https://stackoverflow.com/questions/35176639/compare-images-python-pil
+        self.assertIsNone(PIL.ImageChops.difference(image, testImage).getbbox())
+
+    def testTileStyleFromGeotiffs(self):
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff'))
+
+        style = json.dumps({'band': 1, 'min': 0, 'max': 100,
+                            'palette': 'matplotlib.Plasma_6'})
+
+        itemId = str(file['itemId'])
+        resp = self.request(
+            path='/item/%s/tiles/zxy/7/22/51' % itemId, user=self.admin,
+            isJson=False, params={'encoding': 'PNG', 'projection': 'EPSG:3857',
+                                  'style': style})
+
+        self.assertStatusOk(resp)
+        image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
+        testImage = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'geotiff_style_7_22_51.png')
+
+        testImage = PIL.Image.open(testImage)
         self.assertIsNone(PIL.ImageChops.difference(image, testImage).getbbox())
 
     def testThumbnailFromGeotiffs(self):
