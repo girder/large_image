@@ -120,6 +120,52 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         testImage = PIL.Image.open(testImage)
         self.assertIsNone(PIL.ImageChops.difference(image, testImage).getbbox())
 
+    def _assertStyleResponse(self, itemId, style, message):
+        style = json.dumps(style)
+        resp = self.request(
+            path='/item/%s/tiles/zxy/7/22/51' % itemId, user=self.admin,
+            isJson=False, params={'encoding': 'PNG', 'projection': 'EPSG:3857',
+                                  'style': style})
+
+        self.assertEquals(json.loads(resp.body[0])['message'], message)
+
+    def testTileStyleBadInput(self):
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff'))
+
+        itemId = str(file['itemId'])
+
+        self._assertStyleResponse(itemId, {
+            'band': 1.0,
+            'min': 0,
+            'max': 100,
+            'palette': 'matplotlib.Plasma_6'
+        }, 'Band has to be an integer.')
+
+        self._assertStyleResponse(itemId, {
+            'band': 1,
+            'min': 'min',
+            'max': 100,
+            'palette': 'matplotlib.Plasma_6'
+        }, 'Minimum and maximum values should be numbers.')
+
+        self._assertStyleResponse(itemId, {
+            'band': 1,
+            'min': 0,
+            'max': 'max',
+            'palette': 'matplotlib.Plasma_6'
+        }, 'Minimum and maximum values should be numbers.')
+
+        self._assertStyleResponse(itemId, {
+            'band': 1,
+            'min': 0,
+            'max': 100,
+            'palette': 'nonexistent.palette'
+        }, 'Palette is not a valid palettable path.')
+
+        self._assertStyleResponse(itemId, ['style'],
+                                  'Style is not a valid json object.')
+
     def testThumbnailFromGeotiffs(self):
         file = self._uploadFile(os.path.join(
             os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff'))

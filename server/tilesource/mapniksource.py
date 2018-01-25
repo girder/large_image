@@ -65,8 +65,10 @@ class MapnikTileSource(FileTileSource):
         if style:
             try:
                 self.style = json.loads(style)
+                if not isinstance(self.style, dict):
+                    raise TypeError
             except TypeError:
-                raise TileSourceException('Style is not a valid json.')
+                raise TileSourceException('Style is not a valid json object.')
 
         try:
             self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
