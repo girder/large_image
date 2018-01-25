@@ -155,7 +155,7 @@ def prepareCopyItem(event):
         li = newItem['largeImage']
         for pos, file in enumerate(Item().childFiles(item=srcItem)):
             for key in ('fileId', 'originalId'):
-                if li[key] == file['_id']:
+                if li.get(key) == file['_id']:
                     li['_index_' + key] = pos
         Item().save(newItem, triggerEvents=False)
 
