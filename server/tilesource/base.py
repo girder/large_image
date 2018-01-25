@@ -50,6 +50,8 @@ try:
     import PIL.Image
     import PIL.ImageColor
     import PIL.ImageDraw
+    # Turn off decompression warning check
+    PIL.Image.MAX_IMAGE_PIXELS = None
 except ImportError:
     logger.warning('Error: Could not import PIL')
     PIL = None
