@@ -17,7 +17,6 @@
 #  limitations under the License.
 #############################################################################
 
-import cherrypy
 import json
 import math
 import six
@@ -41,9 +40,10 @@ from ..cache_util import LruCacheMetaclass, strhash, methodcache
 
 try:
     import girder
+    from girder.models.setting import Setting
     from .base import GirderTileSource
-    from girder.utility.model_importer import ModelImporter
     from .. import constants
+    import cherrypy
 except ImportError:
     girder = None
 
@@ -62,7 +62,7 @@ def getMaxSize(size=None):
     # default value from girder settings or config.
     maxWidth = maxHeight = 4096
     if girder:
-        maxWidth = maxHeight = int(ModelImporter.model('setting').get(
+        maxWidth = maxHeight = int(Setting().get(
             constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE))
     if size is not None:
         if isinstance(size, dict):
@@ -113,7 +113,8 @@ class PILFileTileSource(FileTileSource):
         # to an 8-bit integer.  This expects the source value to either have a
         # maximum of 1, 2^8-1, 2^16-1, 2^24-1, or 2^32-1, and scales it to
         # [0, 255]
-        if self._pilImage.mode in ('I', 'F') and numpy:
+        pilImageMode = self._pilImage.mode.split(';')[0]
+        if pilImageMode in ('I', 'F') and numpy:
             imgdata = numpy.asarray(self._pilImage)
             maxval = 256 ** math.ceil(math.log(numpy.max(imgdata) + 1, 256)) - 1
             self._pilImage = PIL.Image.fromarray(numpy.uint8(numpy.multiply(

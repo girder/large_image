@@ -22,10 +22,7 @@ try:
 except ImportError as exc:
     # If our import failed because either girder or a girder plugin is
     # unavailable, log it and start anyway (we may be running in a girder-less
-    # environment).  Otherwise, reraise the exception -- something else went
-    # wrong.
-    if 'plugins' not in repr(exc.args) and 'girder' not in repr(exc.args):
-        raise
+    # environment).
     import logging as logger
     logger.getLogger().setLevel(logger.INFO)
     logger.debug('Girder is unavailable.  Run as a girder plugin for girder '

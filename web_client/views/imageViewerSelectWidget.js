@@ -72,7 +72,7 @@ var ImageViewerSelectWidget = View.extend({
         this.$('.image-viewer').toggleClass('hidden', true);
 
         var viewer = _.findWhere(largeImageConfig.viewers,
-                                 {name: viewerName});
+            {name: viewerName});
         var ViewerType = viewers[viewer.type];
         // use dedicated elements for each viewer for now in case they aren't
         // fully cleaned up

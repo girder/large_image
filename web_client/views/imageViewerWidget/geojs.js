@@ -3,7 +3,7 @@ import Backbone from 'backbone';
 // Import hammerjs for geojs touch events
 import Hammer from 'hammerjs';
 
-import { staticRoot } from 'girder/rest';
+import { staticRoot, restRequest } from 'girder/rest';
 import events from 'girder/events';
 
 import ImageViewerWidget from './base';
@@ -26,13 +26,32 @@ function guid() {
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         this._annotations = {};
+        this._featureOpacity = {};
+        this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
 
         $.when(
-            ImageViewerWidget.prototype.initialize.call(this, settings),
-            $.ajax({  // like $.getScript, but allow caching
+            ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
+                if (this.metadata.geospatial) {
+                    this.tileWidth = this.tileHeight = null;
+                    return restRequest({
+                        type: 'GET',
+                        url: 'item/' + this.itemId + '/tiles',
+                        data: {projection: 'EPSG:3857'}
+                    }).done((resp) => {
+                        this.levels = resp.levels;
+                        this.tileWidth = resp.tileWidth;
+                        this.tileHeight = resp.tileHeight;
+                        this.sizeX = resp.sizeX;
+                        this.sizeY = resp.sizeY;
+                        this.metadata = resp;
+                    });
+                }
+                return this;
+            }),
+            $.ajax({ // like $.getScript, but allow caching
                 url: staticRoot + '/built/plugins/large_image/extra/geojs.js',
                 dataType: 'script',
                 cache: true
@@ -56,13 +75,34 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         var geo = window.geo; // this makes the style checker happy
 
-        var w = this.sizeX, h = this.sizeY;
-        var params = geo.util.pixelCoordinateParams(
-            this.el, w, h, this.tileWidth, this.tileHeight);
-        params.layer.useCredentials = true;
-        params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
-        this.viewer = geo.map(params.map);
-        this.viewer.createLayer('osm', params.layer);
+        var params;
+        if (!this.metadata.geospatial || !this.metadata.bounds) {
+            var w = this.sizeX, h = this.sizeY;
+            params = geo.util.pixelCoordinateParams(
+                this.el, w, h, this.tileWidth, this.tileHeight);
+            params.layer.useCredentials = true;
+            params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
+            this.viewer = geo.map(params.map);
+            this.viewer.createLayer('osm', params.layer);
+        } else {
+            params = {
+                keepLower: false,
+                attribution: null,
+                url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG', 'projection': 'EPSG:3857'}),
+                useCredentials: true
+            };
+            // the metadata levels is the count including level 0, so use one
+            // less than the value specified
+            this.viewer = geo.map({node: this.el, max: this.levels - 1});
+            this.viewer.bounds({
+                left: this.metadata.bounds.xmin,
+                right: this.metadata.bounds.xmax,
+                top: this.metadata.bounds.ymax,
+                bottom: this.metadata.bounds.ymin
+            }, 'EPSG:3857');
+            this.viewer.createLayer('osm');
+            this.viewer.createLayer('osm', params);
+        }
         // the feature layer is for annotations that are loaded
         this.featureLayer = this.viewer.createLayer('feature', {
             features: ['point', 'line', 'polygon']
@@ -133,6 +173,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this.setBounds({[annotation.id]: this._annotations[annotation.id]});
         }
         var featureList = this._annotations[annotation.id].features;
+        this._featureOpacity[annotation.id] = {};
         window.geo.createFileReader('jsonReader', {layer: this.featureLayer})
             .read(geojson, (features) => {
                 _.each(features || [], (feature) => {
@@ -151,9 +192,87 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                         ],
                         (evt) => this._onMouseFeature(evt)
                     );
+
+                    // store the original opacities for the elements in each feature
+                    const data = feature.data();
+                    if (data.length <= this._highlightFeatureSizeLimit) {
+                        this._featureOpacity[annotation.id][feature.featureType] = feature.data()
+                            .map(({id, properties}) => {
+                                return {
+                                    id,
+                                    fillOpacity: properties.fillOpacity,
+                                    strokeOpacity: properties.strokeOpacity
+                                };
+                            });
+                    }
                 });
+                this._mutateFeaturePropertiesForHighlight(annotation.id, features);
                 this.viewer.draw();
             });
+    },
+
+    /**
+     * Highlight the given annotation/element by reducing the opacity of all
+     * other elements by 75%.  For performance reasons, features with a large
+     * number of elements are not modified.  The limit for this behavior is
+     * configurable via the constructor option `highlightFeatureSizeLimit`.
+     *
+     * Both arguments are optional.  If no element is provided, then all
+     * elements in the given annotation are highlighted.  If no annotation
+     * is provided, then highlighting state is reset and the original
+     * opacities are used for all elements.
+     *
+     * @param {string?} annotation The id of the annotation to highlight
+     * @param {string?} element The id of the element to highlight
+     */
+    highlightAnnotation: function (annotation, element) {
+        this._highlightAnnotation = annotation;
+        this._highlightElement = element;
+        _.each(this._annotations, (layer, annotationId) => {
+            const features = layer.features;
+            this._mutateFeaturePropertiesForHighlight(annotationId, features);
+        });
+        this.viewer.draw();
+        return this;
+    },
+
+    /**
+     * Use geojs's `updateStyleFromArray` to modify the opacities of all elements
+     * in a feature.  This method uses the private attributes `_highlightAnntotation`
+     * and `_highlightElement` to determine which element to modify.
+     */
+    _mutateFeaturePropertiesForHighlight: function (annotationId, features) {
+        _.each(features, (feature) => {
+            const data = this._featureOpacity[annotationId][feature.featureType];
+            if (!data) {
+                // skip highlighting code on features with a lot of entities because
+                // this slows down interactivity considerably.
+                return;
+            }
+            const fillOpacityArray = [];
+            const strokeOpacityArray = [];
+
+            // pre-allocate arrays for performance
+            fillOpacityArray.length = data.length;
+            strokeOpacityArray.length = data.length;
+            for (let i = 0; i < data.length; i += 1) {
+                const id = data[i].id;
+                const fillOpacity = data[i].fillOpacity;
+                const strokeOpacity = data[i].strokeOpacity;
+                if (!this._highlightAnnotation ||
+                    (!this._highlightElement && annotationId === this._highlightAnnotation) ||
+                    this._highlightElement === id) {
+                    fillOpacityArray[i] = fillOpacity;
+                    strokeOpacityArray[i] = strokeOpacity;
+                } else {
+                    fillOpacityArray[i] = fillOpacity * 0.25;
+                    strokeOpacityArray[i] = strokeOpacity * 0.25;
+                }
+            }
+
+            feature.updateStyleFromArray('fillOpacity', fillOpacityArray);
+            feature.updateStyleFromArray('strokeOpacity', strokeOpacityArray);
+        });
     },
 
     /**
@@ -198,6 +317,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 this.featureLayer.deleteFeature(feature);
             });
             delete this._annotations[annotation.id];
+            delete this._featureOpacity[annotation.id];
             this.featureLayer.draw();
         }
     },
@@ -210,7 +330,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      *   [ left, top, width, height ]
      *
      * @param {Backbone.Model} [model] A model to set the region to
-     * @returns {Promise}
+     * @returns {$.Promise}
      */
     drawRegion: function (model) {
         model = model || new Backbone.Model();
@@ -244,45 +364,45 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
      * @param {object} [options]
      * @param {boolean} [options.trigger=true]
      *      Trigger a global event after creating each annotation element.
-     * @returns {Promise}
+     * @returns {$.Promise}
      *      Resolves to an array of generated annotation elements.
      */
     startDrawMode: function (type, options) {
         var layer = this.annotationLayer;
         var elements = [];
         var annotations = [];
+        var defer = $.Deferred();
+        var element;
 
         layer.mode(null);
         layer.geoOff(window.geo.event.annotation.state);
         layer.removeAllAnnotations();
-        return new Promise((resolve) => {
-            var element;
 
-            options = _.defaults(options || {}, {trigger: true});
-            layer.geoOn(
-                window.geo.event.annotation.state,
-                (evt) => {
-                    if (evt.annotation.state() !== window.geo.annotation.state.done) {
-                        return;
-                    }
-                    element = convertAnnotation(evt.annotation);
-                    if (!element.id) {
-                        element.id = guid();
-                    }
-                    elements.push(element);
-                    annotations.push(evt.annotation);
-
-                    if (options.trigger) {
-                        events.trigger('g:annotationCreated', element, evt.annotation);
-                    }
-
-                    layer.removeAllAnnotations();
-                    layer.geoOff(window.geo.event.annotation.state);
-                    resolve(elements, annotations);
+        options = _.defaults(options || {}, {trigger: true});
+        layer.geoOn(
+            window.geo.event.annotation.state,
+            (evt) => {
+                if (evt.annotation.state() !== window.geo.annotation.state.done) {
+                    return;
                 }
-            );
-            layer.mode(type);
-        });
+                element = convertAnnotation(evt.annotation);
+                if (!element.id) {
+                    element.id = guid();
+                }
+                elements.push(element);
+                annotations.push(evt.annotation);
+
+                if (options.trigger) {
+                    events.trigger('g:annotationCreated', element, evt.annotation);
+                }
+
+                layer.removeAllAnnotations();
+                layer.geoOff(window.geo.event.annotation.state);
+                defer.resolve(elements, annotations);
+            }
+        );
+        layer.mode(type);
+        return defer.promise();
     },
 
     _setEventTypes: function () {

@@ -23,13 +23,17 @@ import re
 import six
 
 from girder.api import access, filter_logging
-from girder.api.v1.item import Item
+from girder.api.v1.item import Item as ItemResource
 from girder.api.describe import describeRoute, Description
-from girder.api.rest import filtermodel, loadmodel, RestException, \
-    setRawResponse, setResponseHeader
+from girder.api.rest import filtermodel, loadmodel, setRawResponse, setResponseHeader
+from girder.exceptions import RestException
 from girder.models.model_base import AccessType
+from girder.models.file import File
+from girder.models.item import Item
 
 from ..models import TileGeneralException
+from ..models.image_item import ImageItem
+from ..tilesource.base import TileInputUnits
 
 from .. import loadmodelcache
 
@@ -65,12 +69,12 @@ def _adjustParams(params):
             params['encoding'] = 'JFIF'
 
 
-class TilesItemResource(Item):
+class TilesItemResource(ItemResource):
 
     def __init__(self, apiRoot):
         # Don't call the parent (Item) constructor, to avoid redefining routes,
         # but do call the grandparent (Resource) constructor
-        super(Item, self).__init__()
+        super(ItemResource, self).__init__()
 
         self.resourceName = 'item'
         apiRoot.item.route('POST', (':itemId', 'tiles'), self.createTiles)
@@ -93,7 +97,7 @@ class TilesItemResource(Item):
             'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}',
             frequency=250)
         # Cache the model singleton
-        self.imageItemModel = self.model('image_item', 'large_image')
+        self.imageItemModel = ImageItem()
 
     @describeRoute(
         Description('Create a large image for this item.')
@@ -111,14 +115,12 @@ class TilesItemResource(Item):
     def createTiles(self, item, params):
         largeImageFileId = params.get('fileId')
         if largeImageFileId is None:
-            files = list(self.model('item').childFiles(
-                item=item, limit=2))
+            files = list(Item().childFiles(item=item, limit=2))
             if len(files) == 1:
                 largeImageFileId = str(files[0]['_id'])
         if not largeImageFileId:
             raise RestException('Missing "fileId" parameter.')
-        largeImageFile = self.model('file').load(
-            largeImageFileId, force=True, exc=True)
+        largeImageFile = File().load(largeImageFileId, force=True, exc=True)
         user = self.getCurrentUser()
         token = self.getCurrentToken()
         try:
@@ -436,7 +438,7 @@ class TilesItemResource(Item):
                'regionWidth, and regionHeight.  base_pixels are pixels at the '
                'maximum resolution, pixels and mm are at the specified '
                'magnfication, fraction is a scale of [0-1].', required=False,
-               enum=['base_pixels', 'pixels', 'mm', 'fraction'],
+               enum=sorted(set(TileInputUnits.values())),
                default='base_pixels')
 
         .param('width', 'The maximum width of the output image in pixels.',

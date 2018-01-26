@@ -27,6 +27,9 @@ import six
 import struct
 
 from girder import config
+from girder.models.file import File
+from girder.models.item import Item
+from girder.models.setting import Setting
 from girder.utility import assetstore_utilities
 from tests import base
 
@@ -452,15 +455,15 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
         # Our normal testing method doesn't pass through the unicode name
         # properly, so just change it after upload.
-        file = self.model('file').load(file['_id'], force=True)
+        file = File().load(file['_id'], force=True)
         file['name'] = u'\u0441\u043b\u0430\u0439\u0434'
-        file = self.model('file').save(file)
+        file = File().save(file)
         fileId = str(file['_id'])
 
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, force=True)
+        item = Item().load(itemId, force=True)
         item['name'] = u'item \u0441\u043b\u0430\u0439\u0434'
-        item = self.model('item').save(item)
+        item = Item().save(item)
 
         tileMetadata = self._postTileViaHttp(itemId, fileId)
         self.assertEqual(tileMetadata['tileWidth'], 256)
@@ -483,7 +486,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         if os.path.exists(altpath):
             os.unlink(altpath)
         shutil.copy(origpath, altpath)
-        item = self.model('item').createItem(
+        item = Item().createItem(
             name=name, creator=self.admin, folder=self.publicFolder,
             reuseExisting=True)
         adapter = assetstore_utilities.getAssetstoreAdapter(self.assetstore)
@@ -647,8 +650,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
     def testTilesFromPIL(self):
         # Allow images bigger than our test
         from girder.plugins.large_image import constants
-        self.model('setting').set(
-            constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 2048)
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 2048)
 
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_Easy1.png'))
@@ -781,8 +783,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             data = numpy.ndarray.flatten(numpy.asarray(PIL.Image.open(six.BytesIO(image))))
             self.assertGreaterEqual(len(data), len(mode) * width * height)
             self.assertEqual(data[0], 0)
-            self.assertEqual(data[len(data) / width / height], 2)
-            self.assertEqual(data[-len(data) / width / height], 255)
+            self.assertEqual(data[int(len(data) / width / height)], 2)
+            self.assertEqual(data[-int(len(data) / width / height)], 255)
 
     def testDummyTileSource(self):
         # We can't actually load the dummy source via the endpoints if we have
@@ -802,6 +804,8 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(tileMetadata['mm_y'], None)
 
     def testThumbnails(self):
+        from girder.plugins.large_image.models.image_item import ImageItem
+
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
@@ -946,15 +950,13 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(len(image), defaultLength)
 
         # We should report some thumbnails
-        item = self.model('item').load(itemId, user=self.admin)
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        item = Item().load(itemId, user=self.admin)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertGreater(present, 5)
 
         # Remove the item, and then there should be zero files.
-        self.model('item').remove(item)
-        present, removed = self.model(
-            'image_item', 'large_image').removeThumbnailFiles(item, keep=10)
+        Item().remove(item)
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
         self.assertEqual(present, 0)
 
     def testRegions(self):
@@ -1199,8 +1201,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
         self.assertStatusOk(resp)
         # Turn off auto-set and try again
-        self.model('setting').set(
-            constants.PluginSettings.LARGE_IMAGE_AUTO_SET, 'false')
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_AUTO_SET, 'false')
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
@@ -1208,8 +1209,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatus(resp, 400)
         self.assertIn('No large image file', resp.json['message'])
         # Turn it back on
-        self.model('setting').set(
-            constants.PluginSettings.LARGE_IMAGE_AUTO_SET, 'true')
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_AUTO_SET, 'true')
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])

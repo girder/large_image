@@ -27,6 +27,8 @@ from six.moves import range
 from tests import base
 
 from girder.constants import SortDir
+from girder.models.folder import Folder
+from girder.models.user import User
 
 
 JFIFHeader = b'\xff\xd8\xff\xe0\x00\x10JFIF'
@@ -46,7 +48,7 @@ class LargeImageCommonTest(base.TestCase):
             'password': 'adminpassword',
             'admin': True
         }
-        self.admin = self.model('user').createUser(**admin)
+        self.admin = User().createUser(**admin)
         user = {
             'email': 'user@email.com',
             'login': 'userlogin',
@@ -54,9 +56,8 @@ class LargeImageCommonTest(base.TestCase):
             'lastName': 'User',
             'password': 'userpassword'
         }
-        self.user = self.model('user').createUser(**user)
-        folders = self.model('folder').childFolders(
-            self.admin, 'user', user=self.admin)
+        self.user = User().createUser(**user)
+        folders = Folder().childFolders(self.admin, 'user', user=self.admin)
         for folder in folders:
             if folder['name'] == 'Public':
                 self.publicFolder = folder
@@ -223,6 +224,8 @@ class LargeImageCommonTest(base.TestCase):
                   False if it converted but didn't result in useable tiles, and
                   None if it failed.
         """
+        from girder.plugins.jobs.models.job import Job
+
         headers = [('Accept', 'application/json')]
         self._buildHeaders(headers, None, self.admin, None, None, None)
         headers = {header[0]: header[1] for header in headers}
@@ -241,9 +244,7 @@ class LargeImageCommonTest(base.TestCase):
                         'Item is scheduled' in req.json()['message'])
 
         if jobAction == 'delete':
-            jobModel = self.model('job', 'jobs')
-            jobModel.remove(jobModel.find(
-                {}, sort=[('_id', SortDir.DESCENDING)])[0])
+            Job().remove(Job().find({}, sort=[('_id', SortDir.DESCENDING)])[0])
 
         starttime = time.time()
         resp = None

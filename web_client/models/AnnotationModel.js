@@ -57,7 +57,7 @@ export default Model.extend({
      */
     fetch: function (opts) {
         if (this.altUrl === null && this.resourceName === null) {
-            alert('Error: You must set an altUrl or a resourceName on your model.');
+            alert('Error: You must set an altUrl or a resourceName on your model.'); // eslint-disable-line no-alert
             return;
         }
 
@@ -112,11 +112,6 @@ export default Model.extend({
         let url;
         let method;
 
-        // we don't want to override an annotation with a partial response
-        if (this._pageElements) {
-            throw new Error('Cannot save a paged annotation');
-        }
-
         if (this.isNew()) {
             if (!this.get('itemId')) {
                 throw new Error('itemId is required to save new annotations');
@@ -128,13 +123,22 @@ export default Model.extend({
             method = 'PUT';
         }
 
-        data.elements = _.map(data.elements, (element) => {
-            element = _.extend({}, element);
-            if (element.label && !element.label.value) {
-                delete element.label;
+        if (this._pageElements === false || this.isNew()) {
+            this._pageElements = false;
+            data.elements = _.map(data.elements, (element) => {
+                element = _.extend({}, element);
+                if (element.label && !element.label.value) {
+                    delete element.label;
+                }
+                return element;
+            });
+        } else {
+            delete data.elements;
+            // we don't want to override an annotation with a partial response
+            if (this._pageElements === true) {
+                console.warn('Cannot save elements of a paged annotation');
             }
-            return element;
-        });
+        }
 
         return restRequest({
             url,
@@ -202,7 +206,7 @@ export default Model.extend({
      * @param {number} maxZoom: the maximum zoom factor.
      */
     setView(bounds, zoom, maxZoom) {
-        if (this._pageElements === false || !this.get('_id')) {
+        if (this._pageElements === false || this.isNew()) {
             return;
         }
         var width = bounds.right - bounds.left,

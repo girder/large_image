@@ -5,8 +5,9 @@ python:
   - "3.5"
 
 env:
-  - LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
-  - LIBTIFF_VERSION=4.0.8 LIBTIFF_DIR=     OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
+  matrix:
+    - LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
+    - LIBTIFF_VERSION=4.0.8 LIBTIFF_DIR=     OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
 
 matrix:
   exclude:
@@ -17,8 +18,8 @@ cache:
   directories:
     - $HOME/.cache
     - $HOME/lib_build
-    - $HOME/build/girder_build/store
-    - $HOME/build/girder_build/data
+    - $HOME/girder_build/store
+    - $HOME/girder_build/data
 
 sudo: required
 
@@ -75,6 +76,12 @@ addons:
       - libxml2-dev
       - pkg-config
       - python-gi-dev
+      # mapnik
+      - libgdal-dev
+      - gdal-bin
+      - python-gdal
+      - libmapnik-dev
+      - python-mapnik
       # girder worker - not needed; included in travis
       # - rabbitmq-server
 
@@ -82,12 +89,15 @@ services:
   - rabbitmq
 
 before_install:
+
+  - export CPLUS_INCLUDE_PATH=/usr/include/gdal
+  - export C_INCLUDE_PATH=/usr/include/gdal
   # Fix a travis/boto issue.  See
   # https://github.com/travis-ci/travis-ci/issues/7940
   - sudo rm -f /etc/boto.cfg
 
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "3" ]; then export PY3="true"; else export PY2="true"; fi
-  - if [ -n "${PY3}" ]; then export MONGO_VERSION=3.0.7; export PY_COVG="OFF"; else export MONGO_VERSION=2.6.11; export PY_COVG="ON"; export DEPLOY=true; fi
+  - if [ -n "${PY3}" ]; then export MONGO_VERSION=3.6.1; export PY_COVG="OFF"; else export MONGO_VERSION=3.2.18; export PY_COVG="ON"; export DEPLOY=true; fi
   - GIRDER_VERSION=2.x-maintenance
   - GIRDER_WORKER_VERSION=master
 
@@ -111,8 +121,10 @@ before_install:
   # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
   # so install it from source.
   - cd $lib_build_path
-  - wget -O "openjpeg-$OPENJPEG_VERSION.tar.gz" "https://github.com/uclouvain/openjpeg/archive/$OPENJPEG_FILE"
-  - tar -zxpf "openjpeg-$OPENJPEG_VERSION.tar.gz"
+  - if [[ ! -d $OPENJPEG_DIR ]]; then
+      wget -O "openjpeg-$OPENJPEG_VERSION.tar.gz" "https://github.com/uclouvain/openjpeg/archive/$OPENJPEG_FILE" &&
+      tar -zxpf "openjpeg-$OPENJPEG_VERSION.tar.gz" ;
+    fi
   - cd "$OPENJPEG_DIR"
   # - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
   # - tar -zxf openjpeg-1.5.2.tar.gz
@@ -125,8 +137,10 @@ before_install:
 
   # Build libtiff so it will use our openjpeg
   - cd $lib_build_path
-  - wget -O "tiff-$LIBTIFF_VERSION.tar.gz" "http://download.osgeo.org/libtiff$LIBTIFF_DIR/tiff-$LIBTIFF_VERSION.tar.gz"
-  - tar -zxpf "tiff-$LIBTIFF_VERSION.tar.gz"
+  - if [[ ! -d "tiff-$LIBTIFF_VERSION" ]]; then
+      wget -O "tiff-$LIBTIFF_VERSION.tar.gz" "http://download.osgeo.org/libtiff$LIBTIFF_DIR/tiff-$LIBTIFF_VERSION.tar.gz" &&
+      tar -zxpf "tiff-$LIBTIFF_VERSION.tar.gz" ;
+    fi
   - cd "tiff-$LIBTIFF_VERSION"
   - ./configure
   - make -j 3
@@ -136,8 +150,10 @@ before_install:
 
   # Build OpenSlide ourselves so that it will use our libtiff
   - cd $lib_build_path
-  - wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz
-  - tar -zxpf openslide-3.4.1.tar.gz
+  - if [[ ! -d openslide-3.4.1 ]]; then
+      wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz &&
+      tar -zxpf openslide-3.4.1.tar.gz ;
+    fi
   - cd openslide-3.4.1
   - autoreconf -i
   - ./configure
@@ -150,8 +166,10 @@ before_install:
   - if [ "$BUILD_VIPS" = "yes" ]; then
       cd $lib_build_path &&
       if [ ! -f vips-8.5.9/config.status ]; then
-        wget -O vips-8.5.9.tar.gz https://github.com/jcupitt/libvips/releases/download/v8.5.9/vips-8.5.9.tar.gz &&
-        tar -zxpf vips-8.5.9.tar.gz &&
+        if [[ ! -d vips-8.5.9 ]]; then
+          wget -O vips-8.5.9.tar.gz https://github.com/jcupitt/libvips/releases/download/v8.5.9/vips-8.5.9.tar.gz &&
+          tar -zxpf vips-8.5.9.tar.gz ;
+        fi &&
         cd vips-8.5.9 &&
         ./configure &&
         make -j 3 >/tmp/vips_build.txt ;
@@ -190,14 +208,22 @@ before_install:
 
   - pip install --no-cache-dir -U pip virtualenv
 
-  - pip install --no-cache-dir numpy==1.11.3  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
+  - pip install --no-cache-dir numpy>=1.11.3  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
 
 install:
-  - pip install --no-cache-dir -U -r $girder_path/requirements-dev.txt -e $girder_path
+  - pushd $girder_path
+  - pip install --no-cache-dir -U -r requirements-dev.txt -e .
+  - popd
   - girder-install plugin --symlink $large_image_path
   # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them
-  - pip install -e $large_image_path[memcached,openslide]
+  # Trusty supports gdal 1.10.0; don't test mapnik on Python 3 (for now)
+  - if [ -n "${PY3}" ]; then
+      pip install -e $large_image_path[memcached,openslide] ;
+    else
+      pip install gdal==1.10.0 &&
+      pip install -e $large_image_path[memcached,openslide,mapnik] ;
+    fi
   - ls -l $girder_path/plugins
   # Make sure we have a prefered version of celery for Girder Worker
   - pip install -U 'celery>=4'
@@ -208,14 +234,14 @@ install:
   # - npm install
   # but since there are often connection failures, use the retry package.
   - npm-install-retry
-  - BABEL_ENV=cover NYC_CWD=$large_image_path girder-install web --plugins=jobs,worker,large_image --dev
+  - NYC_CWD=$large_image_path girder-install web --plugins=jobs,worker,large_image --dev
 
 script:
   - mkdir -p $girder_build_path
   - cd $girder_worker_path
   - python2 -m girder_worker >/tmp/worker.out 2>&1 &
   - cd $girder_build_path
-  - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DCOVERAGE_MINIMUM_PASS=80 -DJS_COVERAGE_MINIMUM_PASS=9 -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path
+  - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path
   - make -j 3
   - JASMINE_TIMEOUT=15000 ctest -VV
 
@@ -225,4 +251,4 @@ after_failure:
   - cat /tmp/worker.out
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash) -R $large_image_path -s $girder_build_path
+  - bash <(curl -s https://codecov.io/bash) -R $large_image_path -s $girder_path

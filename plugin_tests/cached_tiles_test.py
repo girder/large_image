@@ -22,6 +22,7 @@ import os
 import time
 
 from girder import config
+from girder.models.item import Item
 from tests import base
 
 from . import common
@@ -149,12 +150,10 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
 
     def testTiffClosed(self):
         # test the Tiff files are properly closed.
-        from girder.plugins.large_image.tilesource.tiff import \
-            TiffGirderTileSource
-        from girder.plugins.large_image.tilesource.tiff_reader import \
-            TiledTiffDirectory
-        from girder.plugins.large_image.cache_util.cache import \
-            LruCacheMetaclass
+        from girder.plugins.large_image.models.image_item import ImageItem
+        from girder.plugins.large_image.tilesource.tiff import TiffGirderTileSource
+        from girder.plugins.large_image.tilesource.tiff_reader import TiledTiffDirectory
+        from girder.plugins.large_image.cache_util.cache import LruCacheMetaclass
 
         orig_del = TiledTiffDirectory.__del__
         orig_init = TiledTiffDirectory.__init__
@@ -175,18 +174,18 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
-        item = self.model('item').load(itemId, user=self.admin)
+        item = Item().load(itemId, user=self.admin)
         # Clear the cache to free references and force garbage collection
         LruCacheMetaclass.classCaches[TiffGirderTileSource][0].clear()
         gc.collect(2)
         self.initCount = 0
         self.delCount = 0
-        source = self.model('image_item', 'large_image').tileSource(item)
+        source = ImageItem().tileSource(item)
         self.assertIsNotNone(source)
         self.assertEqual(self.initCount, 14)
         # Create another source; we shouldn't init it again, as it should be
         # cached.
-        source = self.model('image_item', 'large_image').tileSource(item)
+        source = ImageItem().tileSource(item)
         self.assertIsNotNone(source)
         self.assertEqual(self.initCount, 14)
         source = None
