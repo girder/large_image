@@ -145,6 +145,37 @@ def removeThumbnails(event):
     ImageItem().removeThumbnailFiles(event.info)
 
 
+def prepareCopyItem(event):
+    """
+    When copying an item, adjust the largeImage fileId reference so it can be
+    matched to the to-be-copied file.
+    """
+    srcItem, newItem = event.info
+    if 'largeImage' in newItem:
+        li = newItem['largeImage']
+        for pos, file in enumerate(Item().childFiles(item=srcItem)):
+            for key in ('fileId', 'originalId'):
+                if li.get(key) == file['_id']:
+                    li['_index_' + key] = pos
+        Item().save(newItem, triggerEvents=False)
+
+
+def handleCopyItem(event):
+    """
+    When copying an item, finish adjusting the largeImage fileId reference to
+    the copied file.
+    """
+    newItem = event.info
+    if 'largeImage' in newItem:
+        li = newItem['largeImage']
+        files = list(Item().childFiles(item=newItem))
+        for key in ('fileId', 'originalId'):
+            pos = li.pop('_index_' + key, None)
+            if pos is not None and 0 <= pos < len(files):
+                li[key] = files[pos]['_id']
+        Item().save(newItem, triggerEvents=False)
+
+
 # Validators
 
 @setting_utilities.validator({
@@ -243,6 +274,8 @@ def load(info):
     events.bind('model.group.save.after', 'large_image',
                 invalidateLoadModelCache)
     events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
+    events.bind('model.item.copy.prepare', 'large_image', prepareCopyItem)
+    events.bind('model.item.copy.after', 'large_image', handleCopyItem)
     events.bind('model.item.save.after', 'large_image',
                 invalidateLoadModelCache)
     events.bind('model.file.save.after', 'large_image',

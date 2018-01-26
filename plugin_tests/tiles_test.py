@@ -1300,3 +1300,16 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
                             user=self.admin)
         self.assertStatusOk(resp)
         self.assertEqual(resp.json, None)
+
+    def testTilesAfterCopyItem(self):
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5k.png'))
+        itemId = str(file['itemId'])
+        fileId = str(file['_id'])
+        tileMetadata = self._postTileViaHttp(itemId, fileId)
+        self._testTilesZXY(itemId, tileMetadata)
+        item = Item().load(itemId, force=True)
+        newItem = Item().copyItem(item, self.admin)
+        self.assertNotEqual(item['largeImage']['fileId'], newItem['largeImage']['fileId'])
+        Item().remove(item)
+        self._testTilesZXY(str(newItem['_id']), tileMetadata)
