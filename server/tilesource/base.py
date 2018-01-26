@@ -81,6 +81,7 @@ TileOutputPILFormat = {
 }
 TileInputUnits = {
     None: 'base_pixels',
+    'base': 'base_pixels',
     'base_pixel': 'base_pixels',
     'base_pixels': 'base_pixels',
     'pixel': 'mag_pixels',
@@ -476,7 +477,8 @@ class TileSource(object):
 
     def _getRegionBounds(self, metadata, left=None, top=None, right=None,
                          bottom=None, width=None, height=None, units=None,
-                         desiredMagnification=None, **kwargs):
+                         desiredMagnification=None, cropToImage=True,
+                         **kwargs):
         """
         Given a set of arguments that can include left, right, top, bottom,
         width, height, and units, generate actual pixel values for left, top,
@@ -501,6 +503,8 @@ class TileSource(object):
             per pixel are defined for the image.
         :param desiredMagnification: the output from getMagnificationForLevel
             for the desired magnfication used to convert mag_pixels and mm.
+        :param cropToImage: if True, don't return region coordinates outside of
+            the image.
         :param **kwargs: optional parameters.  See above.
         :returns: left, top, right, bottom bounds in pixels.
         """
@@ -538,11 +542,12 @@ class TileSource(object):
         bottom = region.get(
             'bottom', top + region.get('height')
             if 'height' in region else metadata['sizeY'])
-        # Crop the bounds to integer pixels within the actual source data
-        left = min(metadata['sizeX'], max(0, int(round(left))))
-        right = min(metadata['sizeX'], max(left, int(round(right))))
-        top = min(metadata['sizeY'], max(0, int(round(top))))
-        bottom = min(metadata['sizeY'], max(top, int(round(bottom))))
+        if cropToImage:
+            # Crop the bounds to integer pixels within the actual source data
+            left = min(metadata['sizeX'], max(0, int(round(left))))
+            right = min(metadata['sizeX'], max(left, int(round(right))))
+            top = min(metadata['sizeY'], max(0, int(round(top))))
+            bottom = min(metadata['sizeY'], max(top, int(round(bottom))))
 
         return left, top, right, bottom
 
@@ -1154,8 +1159,9 @@ class TileSource(object):
             return level
         return max(0, min(level, metadata['levels'] - 1))
 
-    def convertRegionScale(self, sourceRegion, sourceScale=None,
-                           targetScale=None, targetUnits=None):
+    def convertRegionScale(
+            self, sourceRegion, sourceScale=None, targetScale=None,
+            targetUnits=None, cropToImage=True):
         """
         Convert a region from one scale to another.  If the source region's
         units are anything other than pixels, this does nothing.  Otherwise,
@@ -1192,6 +1198,8 @@ class TileSource(object):
             Otherwise, the units are will either be the sourceRegion units if
             those are not "mag_pixels" or base_pixels.  If "mag_pixels", the
             targetScale must be specified.
+        :param cropToImage: if True, don't return region coordinates outside of
+            the image.
         """
         units = sourceRegion.get('units')
         if units not in TileInputUnits:
@@ -1211,7 +1219,8 @@ class TileSource(object):
         metadata = self.getMetadata()
         # Get region in base pixels
         left, top, right, bottom = self._getRegionBounds(
-            metadata, desiredMagnification=mag, **sourceRegion)
+            metadata, desiredMagnification=mag, cropToImage=cropToImage,
+            **sourceRegion)
         # If requested, convert region to targetUnits
         magArgs = (targetScale or {}).copy()
         magArgs['rounding'] = None
@@ -1323,6 +1332,26 @@ class TileSource(object):
         region = self.convertRegionScale(sourceRegion, sourceScale,
                                          targetScale, targetUnits)
         return self.getRegion(region=region, scale=targetScale, **kwargs)
+
+    def getPointAtAnotherScale(self, point, sourceScale=None, sourceUnits=None,
+                               targetScale=None, targetUnits=None, **kwargs):
+        """
+        Given a point as a (x, y) tuple, convert it from one scale to another.
+        The sourceScale, sourceUnits, targetScale, and targetUnits parameters
+        are the same as convertRegionScale, where sourceUnits are the units
+        used with sourceScale.
+        """
+        sourceRegion = {
+            'units': 'base_pixels' if sourceUnits is None else sourceUnits,
+            'left': point[0],
+            'top': point[1],
+            'right': point[0],
+            'bottom': point[1],
+        }
+        region = self.convertRegionScale(
+            sourceRegion, sourceScale, targetScale, targetUnits,
+            cropToImage=False)
+        return (region['left'], region['top'])
 
     def getNativeMagnification(self):
         """
