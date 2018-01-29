@@ -9,6 +9,9 @@ A Girder plugin to create, serve, and display large multiresolution images.
 Upload image files to Girder. If they are not already in a tiled-format, they can be converted to
 tiled images. The plugin has a variety of viewers to examine the images.
 
+Note that some features will not be available unless MongoDB version 3.4 or 
+later is used for Girder's database.
+
 
 As a stand-alone Python module
 ------------------------------
