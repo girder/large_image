@@ -601,14 +601,10 @@ class Annotation(AccessControlledModel):
 
             with self._writeLock:
                 self.collection.delete_one = deleteElements
-                exc = None
                 try:
                     result = super(Annotation, self).remove(annotation, *args, **kwargs)
-                except Exception as e:
-                    exc = e
-                self.collection.delete_one = delete_one
-                if exc:
-                    raise exc
+                finally:
+                    self.collection.delete_one = delete_one
         return result
 
     def save(self, annotation, *args, **kwargs):
@@ -682,15 +678,11 @@ class Annotation(AccessControlledModel):
         with self._writeLock:
             self.collection.replace_one = replaceElements
             self.collection.insert_one = insertElements
-            exc = None
             try:
                 result = super(Annotation, self).save(annotation, *args, **kwargs)
-            except Exception as e:
-                exc = e
-            self.collection.replace_one = replace_one
-            self.collection.insert_one = insert_one
-            if exc:
-                raise exc
+            finally:
+                self.collection.replace_one = replace_one
+                self.collection.insert_one = insert_one
         if _elementQuery:
             result['_elementQuery'] = _elementQuery
         logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
