@@ -68,7 +68,7 @@ form#g-large-image-form(role="form")
   .form-group
     label Store annotation history
     p.g-large-image-description
-      | Whenever annotations are saved, a record of the annotation can be stored in a separate database collection.
+      | Whenever annotations are saved, a record of the annotation's previous state can be kept.
     .g-large-image-annotation-history-container
       label.radio-inline
         input.g-large-image-annotation-history-show(type="radio", name="g-large-image-annotation-history", checked=settings['large_image.annotation_history'] !== false ? 'checked': undefined)

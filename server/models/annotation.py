@@ -23,13 +23,14 @@ import enum
 import jsonschema
 import six
 import re
+import threading
 import time
 from six.moves import range
 
 from girder import events
 from girder import logger
 from girder.constants import AccessType, SortDir
-from girder.exceptions import ValidationException, AccessException
+from girder.exceptions import ValidationException
 from girder.models.model_base import AccessControlledModel
 from girder.models.folder import Folder
 from girder.models.item import Item
@@ -398,6 +399,7 @@ class Annotation(AccessControlledModel):
     )
 
     def initialize(self):
+        self._writeLock = threading.Lock()
         self.name = 'annotation'
         self.ensureIndices([
             'itemId',
@@ -597,9 +599,16 @@ class Annotation(AccessControlledModel):
                 Annotationelement().removeElements(annotation)
                 return ret
 
-            self.collection.delete_one = deleteElements
-            result = super(Annotation, self).remove(annotation, *args, **kwargs)
-            self.collection.delete_one = delete_one
+            with self._writeLock:
+                self.collection.delete_one = deleteElements
+                exc = None
+                try:
+                    result = super(Annotation, self).remove(annotation, *args, **kwargs)
+                except Exception as e:
+                    exc = e
+                self.collection.delete_one = delete_one
+                if exc:
+                    raise exc
         return result
 
     def save(self, annotation, *args, **kwargs):
@@ -621,8 +630,9 @@ class Annotation(AccessControlledModel):
                   been added.
         """
         starttime = time.time()
-        replace_one = self.collection.replace_one
-        insert_one = self.collection.insert_one
+        with self._writeLock:
+            replace_one = self.collection.replace_one
+            insert_one = self.collection.insert_one
         version = Annotationelement().getNextVersionValue()
         if '_id' not in annotation:
             oldversion = None
@@ -669,11 +679,18 @@ class Annotation(AccessControlledModel):
             # bother removing them.
             return ret
 
-        self.collection.replace_one = replaceElements
-        self.collection.insert_one = insertElements
-        result = super(Annotation, self).save(annotation, *args, **kwargs)
-        self.collection.replace_one = replace_one
-        self.collection.insert_one = insert_one
+        with self._writeLock:
+            self.collection.replace_one = replaceElements
+            self.collection.insert_one = insertElements
+            exc = None
+            try:
+                result = super(Annotation, self).save(annotation, *args, **kwargs)
+            except Exception as e:
+                exc = e
+            self.collection.replace_one = replace_one
+            self.collection.insert_one = insert_one
+            if exc:
+                raise exc
         if _elementQuery:
             result['_elementQuery'] = _elementQuery
         logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
@@ -793,40 +810,21 @@ class Annotation(AccessControlledModel):
         :param force: if True, don't authenticate the user.
         :yields: the entries in the list
         """
-        _versions = set()
-
         if annotationId and not isinstance(annotationId, ObjectId):
             annotationId = ObjectId(annotationId)
-        # Don't apply limit and offset here, as they are subject to access
-        # control and other effects
-        entries = self.find(
-            {'$or': [{'_id': annotationId}, {'_annotationId': annotationId}]},
-            sort=sort)
-        isAdmin = force or (user is not None and user['admin'])
-        for entry in entries:
-            # Disregard duplicates caused by concurrent saves.  If an
-            # annotation is updated from two different calls concurrently, it
-            # is possible that there will be two identical versions in the list
-            # (or a set of elements that have no corresponding version) in the
-            # annotation list.  In both these cases, the data will be
-            # self-consistent.
-            if '_version' not in entry or entry['_version'] in _versions:
-                continue
-            _versions.add(entry['_version'])
-            # test the itemId versus the user
-            if not isAdmin:
-                try:
-                    self.requireAccess(entry, user, AccessType.READ)
-                except AccessException:
-                    continue
-            if offset:
-                offset -= 1
-                continue
-            yield entry
-            if limit:
-                limit -= 1
-                if not limit:
-                    break
+        # Make sure we have only one of each version, plus apply our filter and
+        # sort.  Don't apply limit and offset here, as they are subject to
+        # access control and other effects
+        entries = self.collection.aggregate([
+            {'$match': {'$or': [{'_id': annotationId}, {'_annotationId': annotationId}]}},
+            {'$group': {'_id': '$_version', '_doc': {'$first': '$$ROOT'}}},
+            {'$replaceRoot': {'newRoot': '$_doc'}},
+            {'$sort': {s[0]: s[1] for s in sort}}])
+        if not force:
+            entries = self.filterResultsByPermission(
+                cursor=entries, user=user, level=AccessType.READ,
+                limit=limit, offset=offset)
+        return entries
 
     def getVersion(self, annotationId, version, user=None, force=False, *args, **kwargs):
         """
@@ -844,7 +842,7 @@ class Annotation(AccessControlledModel):
         entry = self.findOne({
             '$or': [{'_id': annotationId}, {'_annotationId': annotationId}],
             '_version': int(version)
-        })
+        }, fields=['_id'])
         if not entry:
             return None
         result = self.load(entry['_id'], user=user, force=force, *args, **kwargs)
@@ -874,11 +872,9 @@ class Annotation(AccessControlledModel):
         if annotation is None:
             return
         # If this is the most recent (active) annotation, don't do anything.
-        # Otherwise, revent it.
+        # Otherwise, revert it.
         if not annotation.get('_active', True):
-            item = Item().load(annotation.get('itemId'), force=True)
-            if item is not None and not force:
-                Item().requireAccess(
-                    item, user=user, level=AccessType.WRITE)
+            if not force:
+                self.requireAccess(annotation, user=user, level=AccessType.WRITE)
             annotation = Annotation().updateAnnotation(annotation, updateUser=user)
         return annotation
