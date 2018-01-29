@@ -337,7 +337,7 @@ describe('Annotations', function () {
         });
 
         it('destroy an existing annotation', function () {
-            var done, consoleError = console.error;
+            var done;
 
             annotation.destroy().done(function () {
                 done = true;
@@ -350,27 +350,24 @@ describe('Annotations', function () {
 
             runs(function () {
                 // silence rest request error message
-                console.error = function () {};
-
                 done = false;
                 annotation = new largeImage.models.AnnotationModel({_id: annotationId});
                 annotation.fetch().done(function () {
-                    console.error = consoleError;
-                    console.error('Expected fetch on deleted annotation to fail');
-                }).fail(function () {
-                    console.error = consoleError;
+                    expect(annotation.get('_active')).toBe(false);
                     done = true;
+                }).fail(function (resp) {
+                    console.error(resp);
                 });
             });
             waitsFor(function () {
                 return done;
-            }, 'fetch to fail');
+            }, 'fetch to get an inactive annotation');
         });
 
         it('delete an annotation without unbinding events', function () {
             var model = new largeImage.models.AnnotationModel({itemId: item._id});
             var id;
-            var done, consoleError = console.error;
+            var done;
             var eventCalled;
 
             model.listenTo(model, 'change', function () { eventCalled = true; });
@@ -397,23 +394,19 @@ describe('Annotations', function () {
             runs(function () {
                 var model2;
 
-                // silence rest request error message
-                console.error = function () {};
-
                 done = false;
                 model2 = new largeImage.models.AnnotationModel({_id: id});
                 model2.fetch().done(function () {
-                    console.error = consoleError;
-                    console.error('Expected fetch on deleted annotation to fail');
-                }).fail(function () {
-                    console.error = consoleError;
+                    expect(annotation.get('_active')).toBe(false);
                     done = true;
+                }).fail(function (resp) {
+                    console.error(resp);
                 });
             });
 
             waitsFor(function () {
                 return done;
-            }, 'fetch to fail');
+            }, 'fetch to return an inactive annotation');
             runs(function () {
                 eventCalled = false;
                 model.trigger('change');

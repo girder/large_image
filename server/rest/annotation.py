@@ -23,7 +23,7 @@ import cherrypy
 
 from girder import logger
 from girder.api import access
-from girder.api.describe import describeRoute, Description
+from girder.api.describe import describeRoute, autoDescribeRoute, Description
 from girder.api.rest import Resource, loadmodel, filtermodel
 from girder.constants import AccessType, SortDir
 from girder.exceptions import AccessException, ValidationException, RestException
@@ -43,6 +43,9 @@ class AnnotationResource(Resource):
         self.route('GET', ('schema',), self.getAnnotationSchema)
         self.route('GET', ('images',), self.findAnnotatedImages)
         self.route('GET', (':id',), self.getAnnotation)
+        self.route('GET', (':id', 'history'), self.getAnnotationHistoryList)
+        self.route('GET', (':id', 'history', ':version'), self.getAnnotationHistory)
+        self.route('PUT', (':id', 'history', 'revert'), self.revertAnnotationHistory)
         self.route('POST', (), self.createAnnotation)
         self.route('POST', (':id', 'copy'), self.copyAnnotation)
         self.route('PUT', (':id',), self.updateAnnotation)
@@ -68,7 +71,7 @@ class AnnotationResource(Resource):
     @filtermodel(model='annotation', plugin='large_image')
     def find(self, params):
         limit, offset, sort = self.getPagingParameters(params, 'lowerName')
-        query = {}
+        query = {'_active': {'$ne': False}}
         if 'itemId' in params:
             item = Item().load(params.get('itemId'), force=True)
             Item().requireAccess(
@@ -228,8 +231,7 @@ class AnnotationResource(Resource):
                 newitem, user=user, level=AccessType.WRITE)
             annotation['itemId'] = newitem['_id']
         try:
-            Annotation().updateAnnotation(
-                annotation, updateUser=user)
+            annotation = Annotation().updateAnnotation(annotation, updateUser=user)
         except ValidationException as exc:
             logger.exception('Failed to validate annotation')
             raise RestException(
@@ -267,7 +269,7 @@ class AnnotationResource(Resource):
         limit, offset, sort = self.getPagingParameters(
             params, 'updated', SortDir.DESCENDING)
         user = self.getCurrentUser()
-        query = {}
+        query = {'_active': {'$ne': False}}
 
         if 'creatorId' in params:
             creator = User().load(params['creatorId'], force=True)
@@ -327,3 +329,52 @@ class AnnotationResource(Resource):
         access = json.loads(params['access'])
         return Annotation().setAccessList(
             annotation, access, save=True, user=self.getCurrentUser())
+
+    @autoDescribeRoute(
+        Description('Get a list of an annotation\'s history.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .pagingParams(defaultSort='_version', defaultLimit=0,
+                      defaultSortDir=SortDir.DESCENDING)
+        .errorResponse('Read access was denied for the annotation.', 403)
+    )
+    @access.cookie
+    @access.public
+    def getAnnotationHistoryList(self, id, limit, offset, sort):
+        return list(Annotation().versionList(id, self.getCurrentUser(), limit, offset, sort))
+
+    @autoDescribeRoute(
+        Description('Get a specific version of an annotation\'s history.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .param('version', 'The version of the annotation.', paramType='path',
+               dataType='integer')
+        .errorResponse('Annotation history version not found.')
+        .errorResponse('Read access was denied for the annotation.', 403)
+    )
+    @access.cookie
+    @access.public
+    def getAnnotationHistory(self, id, version):
+        result = Annotation().getVersion(id, version, self.getCurrentUser())
+        if result is None:
+            raise RestException('Annotation history version not found.')
+        return result
+
+    @autoDescribeRoute(
+        Description('Revert an annotation to a specific version.')
+        .notes('This can be used to undelete an annotation by reverting to '
+               'the most recent version.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .param('version', 'The version of the annotation.  If not specified, '
+               'if the annotation was deleted this undeletes it.  If it was '
+               'not deleted, this reverts to the previous version.',
+               required=False, dataType='integer')
+        .errorResponse('Annotation history version not found.')
+        .errorResponse('Read access was denied for the annotation.', 403)
+    )
+    @access.public
+    def revertAnnotationHistory(self, id, version):
+        annotation = Annotation().revertVersion(id, version, self.getCurrentUser())
+        if not annotation:
+            raise RestException('Annotation history version not found.')
+        # Don't return the elements -- it can be too verbose
+        del annotation['annotation']['elements']
+        return annotation

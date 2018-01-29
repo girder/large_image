@@ -32,6 +32,7 @@ from girder import config
 from girder.constants import AccessType
 from girder.exceptions import AccessException, ValidationException
 from girder.models.item import Item
+from girder.models.setting import Setting
 
 from tests import base
 
@@ -174,6 +175,7 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
 
     def testSave(self):
         from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image import constants
 
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
@@ -183,6 +185,8 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
             {'type': 'point', 'center': [10.0, 24.0, 0]},
             {'type': 'point', 'center': [25.5, 23.0, 0]},
         ])
+        # Test without history
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
         saved = Annotation().save(annot)
         loaded = Annotation().load(annot['_id'], region={'sort': 'size'}, user=self.admin)
         self.assertEqual(len(saved['annotation']['elements']), 4)
@@ -191,10 +195,34 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
         self.assertEqual(loaded['annotation']['elements'][0]['type'], 'point')
         self.assertEqual(saved['annotation']['elements'][-1]['type'], 'point')
         self.assertEqual(loaded['annotation']['elements'][-1]['type'], 'rectangle')
+        self.assertEqual(len(list(Annotation().versionList(saved['_id']))), 1)
+
+        # Test with history
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        saved['annotation']['name'] = 'New name'
+        saved2 = Annotation().save(saved)
+        versions = list(Annotation().versionList(saved2['_id']))
+        self.assertEqual(len(versions), 2)
+        # If we save with an old version, we should get the original id back
+        self.assertNotEqual(versions[1]['_id'], loaded['_id'])
+        saved3 = Annotation().save(versions[1])
+        self.assertEqual(saved3['_id'], loaded['_id'])
+
+    def testUpdateAnnotaton(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        item = Item().createItem('sample', self.admin, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+        annot = Annotation().load(annot['_id'], region={'sort': 'size'}, user=self.admin)
+        saved = Annotation().updateAnnotation(annot, updateUser=self.user)
+        self.assertEqual(saved['updatedId'], self.user['_id'])
 
     def testRemove(self):
         from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image import constants
 
+        # Test without history
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
         self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
@@ -202,10 +230,167 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
         self.assertEqual(result.deleted_count, 1)
         self.assertIsNone(Annotation().load(annot['_id'], user=self.admin))
 
-    # Add tests for:
-    # updateAnnotaton
-    # validate
-    # _onItemRemove
+        # Test with history
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        item = Item().createItem('sample', self.admin, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
+        result = Annotation().remove(annot)
+        self.assertEqual(result.modified_count, 1)
+        self.assertFalse(Annotation().load(annot['_id'], user=self.admin)['_active'])
+
+    def testOnItemRemove(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image import constants
+
+        # Test without history
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
+        item = Item().createItem('sample', self.admin, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
+        Item().remove(item)
+        self.assertIsNone(Annotation().load(annot['_id'], user=self.admin))
+
+        # Test with history
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        item = Item().createItem('sample', self.admin, self.publicFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+        self.assertIsNotNone(Annotation().load(annot['_id'], user=self.admin))
+        Item().remove(item)
+        loaded = Annotation().load(annot['_id'], user=self.admin)
+        self.assertIsNotNone(loaded)
+        self.assertFalse(loaded['_active'])
+
+    def testValidate(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        annot = copy.deepcopy(sampleAnnotation)
+        doc = {'annotation': annot}
+        self.assertIsNotNone(Annotation().validate(doc))
+        annot['elements'][0]['id'] = ObjectId('012345678901234567890123')
+        annot['elements'].append(annot['elements'][0])
+        with six.assertRaisesRegex(self, ValidationException, 'not unique'):
+            Annotation().validate(doc)
+        annot['elements'][1] = copy.deepcopy(annot['elements'][0])
+        annot['elements'][1]['id'] = ObjectId('012345678901234567890124')
+        self.assertIsNotNone(Annotation().validate(doc))
+
+    def testVersionList(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image import constants
+
+        # Test without history
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
+        item = Item().createItem('sample', self.admin, self.privateFolder)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+        annot['annotation']['name'] = 'First Change'
+        annot = Annotation().save(annot)
+        annot['annotation']['name'] = 'Second Change'
+        annot = Annotation().save(annot)
+        self.assertEqual(len(list(Annotation().versionList(
+            annot['_id'], user=self.admin))), 1)
+        self.assertEqual(len(list(Annotation().versionList(
+            str(annot['_id']), user=self.admin))), 1)
+        self.assertEqual(len(list(Annotation().versionList(
+            str(annot['_id']), force=True))), 1)
+        self.assertEqual(len(list(Annotation().versionList(
+            annot['_id'], user=self.user))), 0)
+
+        # Test with history
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+        annot['annotation']['name'] = 'First Change'
+        annot = Annotation().save(annot)
+        # simulate a concurrent save
+        dup = Annotation().findOne({'_id': annot['_id']})
+        dup['_annotationId'] = dup.pop('_id')
+        dup['_active'] = False
+        Annotation().collection.insert_one(dup)
+        # Save again
+        annot['annotation']['name'] = 'Second Change'
+        annot = Annotation().save(annot)
+        self.assertEqual(len(list(Annotation().versionList(
+            annot['_id'], user=self.admin))), 3)
+        self.assertEqual(len(list(Annotation().versionList(
+            annot['_id'], user=self.user))), 0)
+        self.assertEqual(len(list(Annotation().versionList(
+            annot['_id'], user=self.admin, offset=1))), 2)
+        self.assertEqual(len(list(Annotation().versionList(
+            annot['_id'], user=self.admin, offset=1, limit=1))), 1)
+
+    def testGetVersion(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image import constants
+
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        item = Item().createItem('sample', self.admin, self.privateFolder)
+        annot = Annotation().createAnnotation(item, self.admin, copy.deepcopy(sampleAnnotation))
+        annot['annotation']['name'] = 'First Change'
+        annot['annotation']['elements'].extend([
+            {'type': 'point', 'center': [20.0, 25.0, 0]},
+            {'type': 'point', 'center': [10.0, 24.0, 0]},
+            {'type': 'point', 'center': [25.5, 23.0, 0]},
+        ])
+        annot = Annotation().save(annot)
+        annot['annotation']['name'] = 'Second Change'
+        annot['annotation']['elements'].pop(2)
+        annot = Annotation().save(annot)
+        versions = list(Annotation().versionList(annot['_id'], user=self.admin))
+
+        with self.assertRaises(AccessException):
+            Annotation().getVersion(annot['_id'], versions[0]['_version'], user=self.user)
+        self.assertEqual(len(Annotation().getVersion(
+            annot['_id'],
+            versions[0]['_version'],
+            user=self.admin)['annotation']['elements']), 3)
+        self.assertEqual(len(Annotation().getVersion(
+            annot['_id'],
+            versions[1]['_version'],
+            user=self.admin)['annotation']['elements']), 4)
+        self.assertEqual(len(Annotation().getVersion(
+            annot['_id'],
+            versions[2]['_version'],
+            user=self.admin)['annotation']['elements']), 1)
+        # We can get a version by its own id
+        self.assertEqual(len(Annotation().getVersion(
+            str(versions[1]['_id']),
+            versions[1]['_version'],
+            user=self.admin)['annotation']['elements']), 4)
+        # Asking for an invalid version gets us None
+        self.assertIsNone(Annotation().getVersion(
+            annot['_id'],
+            versions[0]['_version'] + 1,
+            user=self.admin))
+
+    def testRevertVersion(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image import constants
+
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        item = Item().createItem('sample', self.admin, self.privateFolder)
+        annot = Annotation().createAnnotation(item, self.admin, copy.deepcopy(sampleAnnotation))
+        annot['annotation']['name'] = 'First Change'
+        annot['annotation']['elements'].extend([
+            {'type': 'point', 'center': [20.0, 25.0, 0]},
+            {'type': 'point', 'center': [10.0, 24.0, 0]},
+            {'type': 'point', 'center': [25.5, 23.0, 0]},
+        ])
+        annot = Annotation().save(annot)
+        annot['annotation']['name'] = 'Second Change'
+        annot['annotation']['elements'].pop(2)
+        annot = Annotation().save(annot)
+        versions = list(Annotation().versionList(annot['_id'], user=self.admin))
+        self.assertIsNone(Annotation().revertVersion(
+            annot['_id'], versions[0]['_version'] + 1, user=self.admin))
+        self.assertEqual(len(Annotation().revertVersion(
+            annot['_id'], force=True)['annotation']['elements']), 4)
+        self.assertEqual(len(Annotation().revertVersion(
+            annot['_id'], force=True)['annotation']['elements']), 3)
+        self.assertEqual(len(Annotation().revertVersion(
+            annot['_id'], versions[2]['_version'], force=True)['annotation']['elements']), 1)
+        Annotation().remove(annot)
+        self.assertEqual(len(Annotation().revertVersion(
+            annot['_id'], user=self.admin)['annotation']['elements']), 1)
 
 
 class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
@@ -478,7 +663,9 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
 
     def testDeleteAnnotation(self):
         from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image import constants
 
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
         item = Item().createItem('sample', self.admin, self.publicFolder)
         annot = Annotation().createAnnotation(item, self.admin, sampleAnnotation)
         annotId = str(annot['_id'])
@@ -651,6 +838,70 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         # Get the ACL's as a user
         resp = self.request('/annotation/%s/access' % annot['_id'], user=self.user)
         self.assertStatusOk(resp)
+
+    def testAnnotationHistoryEndpoints(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+        from girder.plugins.large_image import constants
+
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        item = Item().createItem('sample', self.admin, self.privateFolder)
+        # Create an annotation with some history
+        annot = Annotation().createAnnotation(item, self.admin, copy.deepcopy(sampleAnnotation))
+        annot['annotation']['name'] = 'First Change'
+        annot['annotation']['elements'].extend([
+            {'type': 'point', 'center': [20.0, 25.0, 0]},
+            {'type': 'point', 'center': [10.0, 24.0, 0]},
+            {'type': 'point', 'center': [25.5, 23.0, 0]},
+        ])
+        annot = Annotation().save(annot)
+        # simulate a concurrent save
+        dup = Annotation().findOne({'_id': annot['_id']})
+        dup['_annotationId'] = dup.pop('_id')
+        dup['_active'] = False
+        Annotation().collection.insert_one(dup)
+        # Save again
+        annot['annotation']['name'] = 'Second Change'
+        annot['annotation']['elements'].pop(2)
+        annot = Annotation().save(annot)
+
+        # Test the list of versions
+        resp = self.request('/annotation/%s/history' % annot['_id'], user=self.user)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, [])
+        resp = self.request('/annotation/%s/history' % annot['_id'], user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(len(resp.json), 3)
+        versions = resp.json
+
+        # Test getting a specific version
+        resp = self.request('/annotation/%s/history/%s' % (
+            annot['_id'], versions[1]['_version']), user=self.user)
+        self.assertStatus(resp, 403)
+        resp = self.request('/annotation/%s/history/%s' % (
+            annot['_id'], versions[1]['_version']), user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['_annotationId'], str(annot['_id']))
+        self.assertEqual(len(resp.json['annotation']['elements']), 4)
+        resp = self.request('/annotation/%s/history/%s' % (
+            annot['_id'], versions[0]['_version'] + 1), user=self.admin)
+        self.assertStatus(resp, 400)
+
+        # Test revert
+        resp = self.request('/annotation/%s/history/revert' % (
+            annot['_id']), method='PUT', user=self.user)
+        self.assertStatus(resp, 403)
+        resp = self.request('/annotation/%s/history/revert' % (
+            annot['_id']), method='PUT', user=self.admin, params={
+                'version': versions[0]['_version'] + 1
+            })
+        self.assertStatus(resp, 400)
+        resp = self.request('/annotation/%s/history/revert' % (
+            annot['_id']), method='PUT', user=self.admin, params={
+                'version': versions[1]['_version']
+            })
+        self.assertStatusOk(resp)
+        loaded = Annotation().load(annot['_id'], user=self.admin)
+        self.assertEqual(len(loaded['annotation']['elements']), 4)
 
     #  Add tests for:
     # find

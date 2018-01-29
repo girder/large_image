@@ -28,3 +28,4 @@ class PluginSettings:
     LARGE_IMAGE_AUTO_SET = 'large_image.auto_set'
     LARGE_IMAGE_MAX_THUMBNAIL_FILES = 'large_image.max_thumbnail_files'
     LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE = 'large_image.max_small_image_size'
+    LARGE_IMAGE_ANNOTATION_HISTORY = 'large_image.annotation_history'
