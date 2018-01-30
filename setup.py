@@ -73,7 +73,8 @@ setup(
         'mapnik': [
             'mapnik',
             'pyproj',
-            'gdal'
+            'gdal',
+            'palettable'
         ]
     },
     license=license_str,
