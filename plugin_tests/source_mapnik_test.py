@@ -67,6 +67,11 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         self.assertEqual(tileMetadata['bounds']['srs'],
                          '+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs ')
         self.assertTrue(tileMetadata['geospatial'])
+        # Check that we read some band data, too
+        self.assertEqual(len(tileMetadata['bands']), 3)
+        self.assertEqual(tileMetadata['bands']['2']['interpretation'], 'green')
+        self.assertEqual(tileMetadata['bands']['2']['max'], 212.0)
+        self.assertEqual(tileMetadata['bands']['2']['min'], 0.0)
 
         # Getting the metadata with a specified projection will be different
         resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin,

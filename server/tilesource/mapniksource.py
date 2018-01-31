@@ -251,6 +251,50 @@ class MapnikTileSource(FileTileSource):
             self._bounds[srs] = bounds
         return self._bounds[srs]
 
+    def getBandInformation(self):
+        if not getattr(self, '_bandInfo', None):
+            infoSet = {}
+            for i in range(self.dataset.RasterCount):
+                band = self.dataset.GetRasterBand(i + 1)
+                info = {}
+                stats = band.GetStatistics(True, True)
+                # The statistics provie a min and max, so we don't fetch those
+                # separately
+                info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
+                info['nodata'] = band.GetNoDataValue()
+                info['scale'] = band.GetScale()
+                info['offset'] = band.GetOffset()
+                info['units'] = band.GetUnitType()
+                info['catgeories'] = band.GetCategoryNames()
+                interp = band.GetColorInterpretation()
+                info['interpretation'] = {
+                    1: 'gray',
+                    2: 'palette',
+                    3: 'red',
+                    4: 'green',
+                    5: 'blue',
+                    6: 'alpha',
+                    7: 'hue',
+                    8: 'saturation',
+                    9: 'lightness',
+                    10: 'cyan',
+                    11: 'magenta',
+                    12: 'yellow',
+                    13: 'black',
+                    14: 'Y',
+                    15: 'Cb',
+                    16: 'Cr',
+                }.get(interp, interp)
+                if band.GetColorTable():
+                    info['colortable'] = [band.GetColorTable().GetColorEntry(pos)
+                                          for pos in range(band.GetColorTable().GetCount())]
+                if band.GetMaskBand():
+                    info['maskband'] = band.GetMaskBand().GetBand() or None
+                # Only keep values that aren't None or the empty string
+                infoSet[i + 1] = {k: v for k, v in six.iteritems(info) if v not in (None, '')}
+            self._bandInfo = infoSet
+        return self._bandInfo
+
     def getMetadata(self):
         metadata = {
             'geospatial': bool(self.dataset.GetProjection()),
@@ -264,6 +308,7 @@ class MapnikTileSource(FileTileSource):
             'tileHeight': self.tileHeight,
             'bounds': self.getBounds(self.projection),
             'sourceBounds': self.getBounds(),
+            'bands': self.getBandInformation(),
         }
         metadata.update(self.getNativeMagnification())
         return metadata
