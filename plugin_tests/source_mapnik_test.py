@@ -209,3 +209,75 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         image2 = self.getBody(resp, text=False)
         self.assertEqual(image2[:len(common.PNGHeader)], common.PNGHeader)
         self.assertNotEqual(image, image2)
+
+    def testPixel(self):
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff'))
+        itemId = str(file['itemId'])
+
+        # Test in pixel coordinates
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={'left': 212, 'top': 198})
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {
+            'r': 62, 'g': 65, 'b': 66, 'a': 255, 'bands': {'1': 62.0, '2': 65.0, '3': 66.0}})
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={'left': 2120, 'top': 198})
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {})
+
+        # Test with a projection
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={
+                'left': -13132910,
+                'top': 4010586,
+                'projection': 'EPSG:3857',
+                'units': 'projection',
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {
+            'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {'1': 74.0, '2': 80.0, '3': 84.0}})
+        # Check if the point is outside of the image
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={
+                'left': 10000000,
+                'top': 4000000,
+                'projection': 'EPSG:3857',
+                'units': 'projection',
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {
+            'r': 0, 'g': 0, 'b': 0, 'a': 0})
+
+        # Test with styles
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={
+                'left': -13132910,
+                'top': 4010586,
+                'projection': 'EPSG:3857',
+                'units': 'projection',
+                'style': json.dumps('notanobject'),
+            })
+        self.assertStatus(resp, 400)
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={
+                'left': -13132910,
+                'top': 4010586,
+                'projection': 'EPSG:3857',
+                'units': 'projection',
+                'style': json.dumps({
+                    'band': 1,
+                    'min': 0,
+                    'max': 100,
+                    'palette': 'matplotlib.Plasma_6',
+                }),
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {
+            'r': 225, 'g': 100, 'b': 98, 'a': 255, 'bands': {'1': 74.0, '2': 80.0, '3': 84.0}})
