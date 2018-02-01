@@ -93,28 +93,30 @@ def methodcache(key=None):
             k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
             if hasattr(self, '_classkey'):
                 k = self._classkey + ' ' + k
+            # hash the key to make sure it isn't particularly long.
+            hashed_k = str(hash(k)) if len(k) > 200 else k
             lock = getattr(self, 'cache_lock', None)
             try:
                 if lock:
                     with self.cache_lock:
-                        return self.cache[k]
+                        return self.cache[hashed_k]
                 else:
-                    return self.cache[k]
+                    return self.cache[hashed_k]
             except KeyError:
                 pass  # key not found
             v = func(self, *args, **kwargs)
             try:
                 if lock:
                     with self.cache_lock:
-                        self.cache[k] = v
+                        self.cache[hashed_k] = v
                 else:
-                    self.cache[k] = v
+                    self.cache[hashed_k] = v
             except ValueError:
                 pass  # value too large
             except KeyError:
                 # the key was refused for some reason
                 logger.debug('Had a cache KeyError while trying to store a '
-                             'value to key %r' % k)
+                             'value to key %r (%r)' % (hashed_k, k))
             return v
         return wrapper
     return decorator

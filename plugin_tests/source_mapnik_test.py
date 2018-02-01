@@ -93,7 +93,11 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         resp = self.request(
             path='/item/%s/tiles/zxy/9/89/207' % itemId, user=self.admin,
-            isJson=False, params={'encoding': 'PNG', 'projection': 'EPSG:3857'})
+            isJson=False, params={
+                'encoding': 'PNG',
+                'projection': 'EPSG:3857',
+                'style': json.dumps({'band': -1}),
+            })
 
         self.assertStatusOk(resp)
         image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
@@ -184,7 +188,7 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         body = resp.body[0]
         if isinstance(body, six.binary_type):
             body = body.decode('utf8')
-        self.assertEquals(json.loads(body)['message'], message)
+        self.assertIn(message, json.loads(body)['message'])
 
     def testTileStyleBadInput(self):
         file = self._uploadFile(os.path.join(
@@ -193,37 +197,42 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         itemId = str(file['itemId'])
 
         self._assertStyleResponse(itemId, {
-            'band': 1.0,
-            'min': 0,
-            'max': 100,
-            'palette': 'matplotlib.Plasma_6'
-        }, 'Band has to be an integer.')
+            'band': 1.1,
+        }, 'Band has to be a positive integer, -1, or a band interpretation found in the source.')
+
+        self._assertStyleResponse(itemId, {
+            'band': 500,
+        }, 'Band has to be a positive integer, -1, or a band interpretation found in the source.')
 
         self._assertStyleResponse(itemId, {
             'band': 1,
             'min': 'min',
             'max': 100,
-            'palette': 'matplotlib.Plasma_6'
-        }, 'Minimum and maximum values should be numbers.')
+        }, 'Minimum and maximum values should be numbers or "auto".')
 
         self._assertStyleResponse(itemId, {
             'band': 1,
             'min': 0,
             'max': 'max',
-            'palette': 'matplotlib.Plasma_6'
-        }, 'Minimum and maximum values should be numbers.')
+        }, 'Minimum and maximum values should be numbers or "auto".')
 
         self._assertStyleResponse(itemId, {
             'band': 1,
-            'min': 0,
-            'max': 100,
             'palette': 'nonexistent.palette'
         }, 'Palette is not a valid palettable path.')
 
         self._assertStyleResponse(itemId, {
             'band': 1,
-            'min': 0,
-            'max': 100,
+            'palette': ['notacolor', '#00ffff']
+        }, 'Mapnik failed to parse color')
+
+        self._assertStyleResponse(itemId, {
+            'band': 1,
+            'palette': ['#00ffff']
+        }, 'A palette must have at least 2 colors.')
+
+        self._assertStyleResponse(itemId, {
+            'band': 1,
             'palette': 'matplotlib.Plasma_6',
             'scheme': 'some_invalid_scheme'
         }, 'Scheme has to be either "discrete" or "linear".')
