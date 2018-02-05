@@ -91,7 +91,8 @@ class MapnikTileSource(FileTileSource):
             # -180 to +180 degrees horizontally.  We should accept this as a
             # parameter eventually.
             inProj = pyproj.Proj('+init=epsg:4326')
-            outProj = pyproj.Proj(self.projection)
+            # Since we already converted to bytes decoding is safe here
+            outProj = pyproj.Proj(self.projection.decode('utf8'))
             if outProj.is_latlong():
                 raise TileSourceException(
                     'Projection must not be geographic (it needs to use '
@@ -232,12 +233,13 @@ class MapnikTileSource(FileTileSource):
             }
             if srs and srs != nativeSrs:
                 inProj = pyproj.Proj(nativeSrs)
-                outProj = pyproj.Proj(srs)
+                formattedSrs = srs.decode('utf8') if isinstance(srs, six.binary_type) else srs
+                outProj = pyproj.Proj(formattedSrs)
                 for key in ('ll', 'ul', 'lr', 'ur'):
                     pt = pyproj.transform(inProj, outProj, bounds[key]['x'], bounds[key]['y'])
                     bounds[key]['x'] = pt[0]
                     bounds[key]['y'] = pt[1]
-                bounds['srs'] = srs
+                bounds['srs'] = formattedSrs
             bounds['xmin'] = min(bounds['ll']['x'], bounds['ul']['x'],
                                  bounds['lr']['x'], bounds['ur']['x'])
             bounds['xmax'] = max(bounds['ll']['x'], bounds['ul']['x'],

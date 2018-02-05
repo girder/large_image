@@ -127,7 +127,10 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
             isJson=False, params={'encoding': 'PNG', 'projection': 'EPSG:3857',
                                   'style': style})
 
-        self.assertEquals(json.loads(resp.body[0])['message'], message)
+        body = resp.body[0]
+        if isinstance(body, six.binary_type):
+            body = body.decode('utf8')
+        self.assertEquals(json.loads(body)['message'], message)
 
     def testTileStyleBadInput(self):
         file = self._uploadFile(os.path.join(
