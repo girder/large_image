@@ -4,14 +4,13 @@ services:
     image: "mongo:3.4"
     ports:
       - "27017"
-  broker:
-    image: "rabbitmq:3"
   large_image:
     volumes:
       - ../../:/large_image
     build:
       context: ./
       dockerfile: Dockerfile
-    links:
-      - "mongodb:mongodb"
-      - "broker:broker"
+    ports:
+      - "8080"
+    depends_on:
+      - mongodb
