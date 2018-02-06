@@ -95,9 +95,20 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         testImage = os.path.join(
             os.path.dirname(__file__), 'test_files', 'geotiff_9_89_207.png')
 
+        testImagePy3 = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'geotiff_9_89_207_py3.png')
+
         testImage = PIL.Image.open(testImage)
+        testImagePy3 = PIL.Image.open(testImagePy3)
+
         # https://stackoverflow.com/questions/35176639/compare-images-python-pil
-        self.assertIsNone(PIL.ImageChops.difference(image, testImage).getbbox())
+        diffs = [
+            PIL.ImageChops.difference(image, testImage).getbbox(),
+            PIL.ImageChops.difference(image, testImagePy3).getbbox()
+        ]
+
+        # If one of the diffs is None (means the images are same)
+        self.assertIn(None, diffs)
 
     def testTileStyleFromGeotiffs(self):
         file = self._uploadFile(os.path.join(
@@ -117,8 +128,18 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         testImage = os.path.join(
             os.path.dirname(__file__), 'test_files', 'geotiff_style_7_22_51.png')
 
+        testImagePy3 = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'geotiff_style_7_22_51_py3.png')
+
         testImage = PIL.Image.open(testImage)
-        self.assertIsNone(PIL.ImageChops.difference(image, testImage).getbbox())
+        testImagePy3 = PIL.Image.open(testImagePy3)
+
+        diffs = [
+            PIL.ImageChops.difference(image, testImage).getbbox(),
+            PIL.ImageChops.difference(image, testImagePy3).getbbox()
+        ]
+
+        self.assertIn(None, diffs)
 
     def _assertStyleResponse(self, itemId, style, message):
         style = json.dumps(style)
