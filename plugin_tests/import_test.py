@@ -43,6 +43,9 @@ def tearDownModule():
 
 class LargeImageTilesTest(base.TestCase):
     def testImportErrors(self):
+        from libtiff import libtiff_ctypes
+        tiff_h_name = libtiff_ctypes.tiff_h_name
+
         # Temporarily remove third-party dependencies
         for key in ['openslide', 'PIL', 'libtiff']:
             sys.modules[key] = None
@@ -60,6 +63,22 @@ class LargeImageTilesTest(base.TestCase):
             self.assertIn('libtiff', exc.args[0])
         else:
             self.fail()
+
+        # Test that we handle a missing libtiff header module and file in a
+        # graceful manner.  This makes it appear that no such module is
+        # available, and checks that we get the expected ImportError.
+        del sys.modules['libtiff']
+        del sys.modules['libtiff.libtiff_ctypes']
+        sys.modules['libtiff.' + tiff_h_name] = None
+        try:
+            reload_module(girder.plugins.large_image.tilesource.tiff_reader)
+        except ImportError as exc:
+            self.assertIn('libtiff', exc.args[0])
+        else:
+            self.fail()
+        del sys.modules['libtiff.' + tiff_h_name]
+        reload_module(girder.plugins.large_image.tilesource.tiff_reader)
+
         try:
             reload_module(girder.plugins.large_image.tilesource.svs)
         except ImportError as exc:

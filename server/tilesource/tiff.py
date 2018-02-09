@@ -69,7 +69,7 @@ class TiffFileTileSource(FileTileSource):
         # Query all know directories in the tif file.  Only keep track of
         # directories that contain tiled images.
         alldir = []
-        for directoryNum in itertools.count():
+        for directoryNum in itertools.count():  # pragma: no branch
             try:
                 td = TiledTiffDirectory(largeImagePath, directoryNum)
             except ValidationTiffException as exc:

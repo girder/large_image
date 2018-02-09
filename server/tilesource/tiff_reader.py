@@ -22,7 +22,6 @@ import os
 import six
 
 from functools import partial
-from libtiff import libtiff_ctypes
 from xml.etree import cElementTree
 
 from ..cache_util import LRUCache, strhash, methodcache
@@ -32,6 +31,18 @@ try:
 except ImportError:
     import logging as logger
     logger.getLogger().setLevel(logger.INFO)
+try:
+    from libtiff import libtiff_ctypes
+except ValueError as exc:
+    # If the python libtiff module doesn't contain a pregenerated module for
+    # the appropriate version of libtiff, it tries to generate a module from
+    # the libtiff header file.  If it can't find this file (possibly because it
+    # is in a virtual environment), it raises a ValueError instead of an
+    # ImportError.  We convert this to an ImportError, so that we will print a
+    # more lucid error message and just fail to load this one tile source
+    # instead of failing to load the whole plugin.
+    logger.warn('Failed to import libtiff; try upgrading the python module (%s)' % exc)
+    raise ImportError(str(exc))
 try:
     import PIL.Image
 except ImportError:
