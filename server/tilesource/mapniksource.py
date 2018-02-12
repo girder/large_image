@@ -258,7 +258,7 @@ class MapnikTileSource(FileTileSource):
                 band = self.dataset.GetRasterBand(i + 1)
                 info = {}
                 stats = band.GetStatistics(True, True)
-                # The statistics provie a min and max, so we don't fetch those
+                # The statistics provide a min and max, so we don't fetch those
                 # separately
                 info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
                 info['nodata'] = band.GetNoDataValue()
