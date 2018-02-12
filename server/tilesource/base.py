@@ -464,6 +464,11 @@ class TileSource(object):
             if (not (desiredMagnification or {}).get('scale') or
                     not (desiredMagnification or {}).get('mm_x') or
                     not (desiredMagnification or {}).get('mm_y')):
+                desiredMagnification = self.getNativeMagnification().copy()
+                desiredMagnification['scale'] = 1.0
+            if (not (desiredMagnification or {}).get('scale') or
+                    not (desiredMagnification or {}).get('mm_x') or
+                    not (desiredMagnification or {}).get('mm_y')):
                 raise ValueError('No mm_x or mm_y to use for units')
             scaleX = (desiredMagnification['scale'] /
                       desiredMagnification['mm_x'])
@@ -505,7 +510,8 @@ class TileSource(object):
             for the desired magnfication used to convert mag_pixels and mm.
         :param cropToImage: if True, don't return region coordinates outside of
             the image.
-        :param **kwargs: optional parameters.  See above.
+        :param **kwargs: optional parameters.  These are passed to
+            _scaleFromUnits and may include unitsWH.
         :returns: left, top, right, bottom bounds in pixels.
         """
         if units not in TileInputUnits:
@@ -513,15 +519,27 @@ class TileSource(object):
         # Convert units to max-resolution pixels
         units = TileInputUnits[units]
         scaleX, scaleY = self._scaleFromUnits(metadata, units, desiredMagnification, **kwargs)
+        if kwargs.get('unitsWH'):
+            if kwargs['unitsWH'] not in TileInputUnits:
+                raise ValueError('Invalid units %r' % kwargs['unitsWH'])
+            scaleW, scaleH = self._scaleFromUnits(
+                metadata, TileInputUnits[kwargs['unitsWH']], desiredMagnification, **kwargs)
+            # if unitsWH is specified, prefer width and height to right and
+            # bottom
+            if left is not None and right is not None and width is not None:
+                right = None
+            if top is not None and bottom is not None and height is not None:
+                bottom = None
+        else:
+            scaleW, scaleH = scaleX, scaleY
         region = {'left': left, 'top': top, 'right': right,
                   'bottom': bottom, 'width': width, 'height': height}
         region = {key: region[key] for key in region if region[key] is not None}
-        for key in ('left', 'right', 'width'):
-            if key in region and scaleX and scaleX != 1:
-                region[key] = region[key] * scaleX
-        for key in ('top', 'bottom', 'height'):
-            if key in region and scaleY and scaleY != 1:
-                region[key] = region[key] * scaleY
+        for key, scale in (
+                ('left', scaleX), ('right', scaleX), ('width', scaleW),
+                ('top', scaleY), ('bottom', scaleY), ('height', scaleH)):
+            if key in region and scale and scale != 1:
+                region[key] = region[key] * scale
         # convert negative references to right or bottom offsets
         for key in ('left', 'right', 'top', 'bottom'):
             if key in region and region.get(key) < 0:
@@ -579,6 +597,8 @@ class TileSource(object):
                 specified magnification scale.  fraction is a scale of 0 to 1.
                 pixels and mm are only available if the magnification and mm
                 per pixel are defined for the image.
+            unitsWH: if not specified, this is the same as `units`.  Otherwise,
+                these units will be used for the width and height if specified.
         :param output: a dictionary of optional values which specify the size
                 of the output.
             maxWidth: maximum width in pixels.
@@ -661,7 +681,6 @@ class TileSource(object):
             if magLevel is None and kwargs.get('scale', {}).get('exact'):
                 return None
             mag = self.getMagnificationForLevel(magLevel)
-
         metadata = self.getMetadata()
         left, top, right, bottom = self._getRegionBounds(
             metadata, desiredMagnification=mag, **kwargs.get('region', {}))
@@ -1163,10 +1182,7 @@ class TileSource(object):
             self, sourceRegion, sourceScale=None, targetScale=None,
             targetUnits=None, cropToImage=True):
         """
-        Convert a region from one scale to another.  If the source region's
-        units are anything other than pixels, this does nothing.  Otherwise,
-        sourceScale must be specified, an a new region is created in the
-        targetScale's pixel coordinates.
+        Convert a region from one scale to another.
 
         :param sourceRegion: a dictionary of optional values which specify the
                 part of an image to process.
@@ -1636,6 +1652,37 @@ class TileSource(object):
                 (width, height),
                 PIL.Image.BICUBIC if width > imageWidth else PIL.Image.LANCZOS)
         return _encodeImage(image, **kwargs)
+
+    def getPixel(self, includeTileRecord=False, **kwargs):
+        """
+        Get a single pixel from the current tile source.
+        :param includeTileRecord: if True, include the tile used for computing
+            the pixel in the response.
+        :param **kwargs: optional arguments.  Some options are region, output,
+            encoding, jpegQuality, jpegSubsampling, tiffCompression, fill.  See
+            tileIterator.
+        :returns: a dictionary with the value of the pixel for each channel on
+            a scale of [0-255], including alpha, if available.  This may
+            contain additional information.
+        """
+        regionArgs = kwargs.copy()
+        regionArgs['region'] = regionArgs.get('region', {}).copy()
+        regionArgs['region']['width'] = regionArgs['region']['height'] = 1
+        regionArgs['region']['unitsWH'] = 'base_pixels'
+        pixel = {}
+        # This could be
+        #  img, format = self.getRegion(format=TILE_FORMAT_PIL, **regionArgs)
+        # where img is the PIL image (rather than tile['tile'], but using
+        # _tileIteratorInfo and the _tileIterator is slightly more efficient.
+        iterInfo = self._tileIteratorInfo(format=TILE_FORMAT_PIL, **regionArgs)
+        if iterInfo is not None:
+            tile = next(self._tileIterator(iterInfo), None)
+            if includeTileRecord:
+                pixel['tile'] = tile
+            img = tile['tile']
+            if img.size[0] >= 1 and img.size[1] >= 1:
+                pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0])))
+        return pixel
 
 
 class FileTileSource(TileSource):

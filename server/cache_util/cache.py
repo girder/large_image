@@ -91,6 +91,8 @@ def methodcache(key=None):
         @six.wraps(func)
         def wrapper(self, *args, **kwargs):
             k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
+            if hasattr(self, '_classkey'):
+                k = self._classkey + ' ' + k
             lock = getattr(self, 'cache_lock', None)
             try:
                 if lock:
@@ -180,6 +182,7 @@ class LruCacheMetaclass(type):
             except KeyError:
                 instance = super(LruCacheMetaclass, cls).__call__(*args, **kwargs)
                 cache[key] = instance
+                instance._classkey = key
 
         return instance
 

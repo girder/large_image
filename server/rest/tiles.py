@@ -84,6 +84,8 @@ class TilesItemResource(ItemResource):
                            self.getTilesThumbnail)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'region'),
                            self.getTilesRegion)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'pixel'),
+                           self.getTilesPixel)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'images'),
@@ -492,6 +494,7 @@ class TilesItemResource(ItemResource):
             ('regionWidth', float, 'region', 'width'),
             ('regionHeight', float, 'region', 'height'),
             ('units', str, 'region', 'units'),
+            ('unitsWH', str, 'region', 'unitsWH'),
             ('width', int, 'output', 'maxWidth'),
             ('height', int, 'output', 'maxHeight'),
             ('fill', str),
@@ -517,6 +520,40 @@ class TilesItemResource(ItemResource):
         setResponseHeader('Content-Type', regionMime)
         setRawResponse()
         return regionData
+
+    @describeRoute(
+        Description('Get a single pixel of a large image item.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('left', 'The left column (0-based) of the pixel.',
+               required=False, dataType='float')
+        .param('top', 'The top row (0-based) of the pixel.',
+               required=False, dataType='float')
+        .param('units', 'Units used for left and top.  base_pixels are pixels '
+               'at the maximum resolution, pixels and mm are at the specified '
+               'magnfication, fraction is a scale of [0-1].', required=False,
+               enum=sorted(set(TileInputUnits.values())),
+               default='base_pixels')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.cookie
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getTilesPixel(self, item, params):
+        params = self._parseParams(params, True, [
+            ('left', float, 'region', 'left'),
+            ('top', float, 'region', 'top'),
+            ('right', float, 'region', 'right'),
+            ('bottom', float, 'region', 'bottom'),
+            ('units', str, 'region', 'units'),
+        ])
+        try:
+            pixel = self.imageItemModel.getPixel(item, **params)
+        except TileGeneralException as e:
+            raise RestException(e.args[0])
+        except ValueError as e:
+            raise RestException('Value Error: %s' % e.args[0])
+        return pixel
 
     @describeRoute(
         Description('Get a list of additional images associated with a large image.')

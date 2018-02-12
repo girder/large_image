@@ -18,15 +18,16 @@
 #############################################################################
 
 import gdal
-import osr
+import json
 import mapnik
 import math
+import osr
 import PIL.Image
+import palettable
 import pyproj
 import six
-import palettable
+import struct
 from operator import attrgetter
-import json
 
 from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL, TileInputUnits
 from ..cache_util import LruCacheMetaclass, methodcache, strhash
@@ -84,8 +85,8 @@ class MapnikTileSource(FileTileSource):
                 'File does not have a projected scale, so will not be '
                 'opened via Mapnik.')
         self.sourceLevels = self.levels = int(max(0, math.ceil(max(
-            math.log(self.sizeX / self.tileWidth),
-            math.log(self.sizeY / self.tileHeight)) / math.log(2))) + 1)
+            math.log(float(self.sizeX) / self.tileWidth),
+            math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1)
         if self.projection:
             # Note: this needs to change for projections that aren't spanning
             # -180 to +180 degrees horizontally.  We should accept this as a
@@ -397,7 +398,8 @@ class MapnikTileSource(FileTileSource):
                 top = bounds['ymax'] if bottom is None or width is None else bottom - width
             if bottom is None:
                 bottom = bounds['ymin'] if width is None else top + width
-            width = height = None
+            if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
+                width = height = None
             # Convert to [-0.5, 0.5], [-0.5, 0.5] coordinate range
             left = (left - self.projectionOrigin[0]) / self.unitsAcrossLevel0
             right = (right - self.projectionOrigin[0]) / self.unitsAcrossLevel0
@@ -444,6 +446,47 @@ class MapnikTileSource(FileTileSource):
             params['region'] = {'units': 'projection'}
             return self.getRegion(**params)
         return super(MapnikTileSource, self).getThumbnail(width, height, levelZero, **kwargs)
+
+    def getPixel(self, **kwargs):
+        """
+        Get a single pixel from the current tile source.
+        :param **kwargs: optional arguments.  Some options are region, output,
+            encoding, jpegQuality, jpegSubsampling, tiffCompression, fill.  See
+            tileIterator.
+        :returns: a dictionary with the value of the pixel for each channel on
+            a scale of [0-255], including alpha, if available.  This may
+            contain additional information.
+        """
+        pixel = super(MapnikTileSource, self).getPixel(includeTileRecord=True, **kwargs)
+        tile = pixel.pop('tile', None)
+        if tile:
+            # Coordinates in the max level tile
+            x, y = tile['gx'], tile['gy']
+            if self.projection:
+                gt = self.dataset.GetGeoTransform()
+                # convert to a scale of [-0.5, 0.5]
+                x = 0.5 + x / 2 ** (self.levels - 1) / self.tileWidth
+                y = 0.5 - y / 2 ** (self.levels - 1) / self.tileHeight
+                # convert to projection coordinates
+                x = self.projectionOrigin[0] + x * self.unitsAcrossLevel0
+                y = self.projectionOrigin[1] + y * self.unitsAcrossLevel0
+                # convert to the native projection
+                inProj = pyproj.Proj(self.projection.decode('utf8'))
+                outProj = pyproj.Proj(self.getProj4String())
+                px, py = pyproj.transform(inProj, outProj, x, y)
+                # convert to native pixel coordinates
+                d = gt[2] * gt[4] - gt[1] * gt[5]
+                x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
+                y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
+            for i in range(self.dataset.RasterCount):
+                band = self.dataset.GetRasterBand(i + 1)
+                try:
+                    value = band.ReadRaster(int(x), int(y), 1, 1, buf_type=gdal.GDT_Float32)
+                    if value:
+                        pixel.setdefault('bands', {})[i + 1] = struct.unpack('f', value)[0]
+                except RuntimeError:
+                    pass
+        return pixel
 
 
 if girder:

@@ -361,6 +361,18 @@ class ImageItem(Item):
         regionData, regionMime = tileSource.getRegion(**kwargs)
         return regionData, regionMime
 
+    def getPixel(self, item, **kwargs):
+        """
+        Using a tile source, get a single pixel from the image.
+
+        :param item: the item with the tile source.
+        :param **kwargs: optional arguments.  Some options are left, top.
+        :returns: a dictionary of the color channel values, possibly with
+            additional information
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        return tileSource.getPixel(**kwargs)
+
     def tileSource(self, item, **kwargs):
         """
         Get a tile source for an item.

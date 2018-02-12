@@ -985,6 +985,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             ({'regionWidth': 'invalid'}, 400, 'incorrect type'),
             ({'regionHeight': 'invalid'}, 400, 'incorrect type'),
             ({'units': 'invalid'}, 400, 'Invalid units'),
+            ({'unitsWH': 'invalid'}, 400, 'Invalid units'),
         ]
         for entry in badParams:
             resp = self.request(path='/item/%s/tiles/region' % itemId,
@@ -1040,6 +1041,21 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             'left': 48000.0 / tileMetadata['sizeX'],
             'top': 3000.0 / tileMetadata['sizeY'],
             'units': 'fraction'}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, origImage)
+
+        # We can use base_pixels for width and height and fractions for top and
+        # left
+        params = {
+            'regionWidth': 1000,
+            'regionHeight': 1000,
+            'left': 48000.0 / tileMetadata['sizeX'],
+            'top': 3000.0 / tileMetadata['sizeY'],
+            'units': 'fraction',
+            'unitsWH': 'base'}
         resp = self.request(path='/item/%s/tiles/region' % itemId,
                             user=self.admin, isJson=False, params=params)
         self.assertStatusOk(resp)
@@ -1144,6 +1160,38 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         (width, height) = struct.unpack('!LL', image[16:24])
         self.assertEqual(width, 500)
         self.assertEqual(height, 375)
+
+    def testPixel(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+
+        # Test bad parameters
+        badParams = [
+            ({'left': 'invalid'}, 400, 'incorrect type'),
+            ({'top': 'invalid'}, 400, 'incorrect type'),
+            ({'units': 'invalid'}, 400, 'Invalid units'),
+        ]
+        for entry in badParams:
+            resp = self.request(path='/item/%s/tiles/pixel' % itemId,
+                                user=self.admin,
+                                params=entry[0])
+            self.assertStatus(resp, entry[1])
+            self.assertIn(entry[2], resp.json['message'])
+
+        # Test a good query
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={'left': 48000, 'top': 3000})
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {'r': 237, 'g': 248, 'b': 242})
+
+        # If it is outside of the image, we get an empty result
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={'left': 148000, 'top': 3000})
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {})
 
     def testGetTileSource(self):
         from girder.plugins.large_image.tilesource import getTileSource
