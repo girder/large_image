@@ -132,6 +132,7 @@ class LargeImageResource(Resource):
             constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES,
             constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE,
+            constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY,
         ]
         return {k: Setting().get(k) for k in keys}
 
