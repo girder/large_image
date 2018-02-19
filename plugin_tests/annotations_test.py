@@ -692,10 +692,10 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
 
             return str(item['_id'])
 
-        item1 = upload('image1.ptif', self.admin)
-        item2 = upload('image2.ptif')
-        item3 = upload('image3.ptif')
-        item4 = upload('image3.ptif', self.user, True)
+        item1 = upload('image1-abcd.ptif', self.admin)
+        item2 = upload('image2-efgh.ptif')
+        item3 = upload('image3-abcd.ptif')
+        item4 = upload('image3-ijkl.ptif', self.user, True)
 
         # test default search
         resp = self.request('/annotation/images', user=self.admin, params={
@@ -744,6 +744,24 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         })
         self.assertStatusOk(resp)
         self.assertEqual(resp.json[0]['_id'], item1)
+
+        # test filtering by image name
+        resp = self.request('/annotation/images', user=self.admin, params={
+            'limit': 100,
+            'imageName': 'image3-abcd.ptif'
+        })
+        self.assertStatusOk(resp)
+        ids = [image['_id'] for image in resp.json]
+        self.assertEqual(ids, [item3])
+
+        # test filtering by image name substring
+        resp = self.request('/annotation/images', user=self.admin, params={
+            'limit': 100,
+            'imageName': 'abc'
+        })
+        self.assertStatusOk(resp)
+        ids = [image['_id'] for image in resp.json]
+        self.assertEqual(ids, [item3, item1])
 
     def testCreateAnnotation(self):
         item = Item().createItem('sample', self.admin, self.publicFolder)

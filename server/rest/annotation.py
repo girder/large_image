@@ -26,11 +26,10 @@ from girder.api import access
 from girder.api.describe import describeRoute, autoDescribeRoute, Description
 from girder.api.rest import Resource, loadmodel, filtermodel
 from girder.constants import AccessType, SortDir
-from girder.exceptions import AccessException, ValidationException, RestException
+from girder.exceptions import ValidationException, RestException
 from girder.models.item import Item
 from girder.models.user import User
 from ..models.annotation import AnnotationSchema, Annotation
-from ..models.image_item import ImageItem
 
 
 class AnnotationResource(Resource):
@@ -260,7 +259,14 @@ class AnnotationResource(Resource):
 
     @describeRoute(
         Description('Search for annotated images.')
+        .notes(
+            'By default, this endpoint will return a list of recently annotated images.  '
+            'This list can be further filtered by passing the creatorId and/or imageName '
+            'parameters.  The creatorId parameter will limit results to annotations '
+            'created by the given user.  The imageName parameter will only include '
+            'images whose name (or a token in the name) begins with the given string.')
         .param('creatorId', 'Limit to annotations created by this user', required=False)
+        .param('imageName', 'Filter results by image name', required=False)
         .pagingParams(defaultSort='updated', defaultSortDir=-1)
         .errorResponse()
     )
@@ -269,40 +275,15 @@ class AnnotationResource(Resource):
         limit, offset, sort = self.getPagingParameters(
             params, 'updated', SortDir.DESCENDING)
         user = self.getCurrentUser()
-        query = {'_active': {'$ne': False}}
 
+        creator = None
         if 'creatorId' in params:
-            creator = User().load(params['creatorId'], force=True)
-            query = {'creatorId': creator['_id']}
+            creator = User().load(params.get('creatorId'), force=True)
 
-        annotations = Annotation().find(
-            query, sort=sort, fields=['itemId']
-        )
-
-        response = []
-        imageIds = set()
-        for annotation in annotations:
-            # short cut if the image has already been added to the results
-            if annotation['itemId'] in imageIds:
-                continue
-
-            try:
-                item = ImageItem().load(annotation['itemId'], level=AccessType.READ, user=user)
-            except AccessException:
-                item = None
-
-            # ignore if no such item exists
-            if not item:
-                continue
-
-            if len(imageIds) >= offset:
-                response.append(item)
-
-            imageIds.add(item['_id'])
-            if len(response) == limit:
-                break
-
-        return response
+        return Annotation().findAnnotatedImages(
+            creator=creator, imageNameFilter=params.get('imageName'),
+            user=user, level=AccessType.READ,
+            offset=offset, limit=limit, sort=sort)
 
     @describeRoute(
         Description('Get the access control list for an annotation.')
