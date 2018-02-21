@@ -925,7 +925,7 @@ class Annotation(AccessControlledModel):
         imageName = imageName.lower()
         if imageName.startswith(matchString):
             return True
-        tokens = re.split(r'[\W_]+', imageName)
+        tokens = re.split(r'[\W_]+', imageName, flags=re.UNICODE)
         for token in tokens:
             if token.startswith(matchString):
                 return True
