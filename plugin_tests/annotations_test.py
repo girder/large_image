@@ -694,7 +694,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
 
         item1 = upload('image1-abcd.ptif', self.admin)
         item2 = upload('image2-efgh.ptif')
-        item3 = upload('image3-abcd.ptif')
+        item3 = upload('image3-ABCD.ptif')
         item4 = upload('image3-ijkl.ptif', self.user, True)
 
         # test default search
@@ -748,7 +748,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         # test filtering by image name
         resp = self.request('/annotation/images', user=self.admin, params={
             'limit': 100,
-            'imageName': 'image3-abcd.ptif'
+            'imageName': 'image3-aBcd.ptif'
         })
         self.assertStatusOk(resp)
         ids = [image['_id'] for image in resp.json]
@@ -757,7 +757,7 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         # test filtering by image name substring
         resp = self.request('/annotation/images', user=self.admin, params={
             'limit': 100,
-            'imageName': 'abc'
+            'imageName': 'aBc'
         })
         self.assertStatusOk(resp)
         ids = [image['_id'] for image in resp.json]
