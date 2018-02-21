@@ -91,9 +91,9 @@ class MapnikTileSource(FileTileSource):
             # Note: this needs to change for projections that aren't spanning
             # -180 to +180 degrees horizontally.  We should accept this as a
             # parameter eventually.
-            inProj = pyproj.Proj('+init=epsg:4326')
+            inProj = self._proj4Proj('+init=epsg:4326')
             # Since we already converted to bytes decoding is safe here
-            outProj = pyproj.Proj(self.projection.decode('utf8'))
+            outProj = self._proj4Proj(self.projection)
             if outProj.is_latlong():
                 raise TileSourceException(
                     'Projection must not be geographic (it needs to use '
@@ -114,8 +114,8 @@ class MapnikTileSource(FileTileSource):
         return strhash(
             super(MapnikTileSource, MapnikTileSource).getLRUHash(
                 *args, **kwargs),
-            kwargs.get('projection'),
-            kwargs.get('style'))
+            kwargs.get('projection', args[1] if len(args) >= 2 else None),
+            kwargs.get('style', args[2] if len(args) >= 3 else None))
 
     def getProj4String(self):
         """
@@ -233,14 +233,13 @@ class MapnikTileSource(FileTileSource):
                 'srs': nativeSrs,
             }
             if srs and srs != nativeSrs:
-                inProj = pyproj.Proj(nativeSrs)
-                formattedSrs = srs.decode('utf8') if isinstance(srs, six.binary_type) else srs
-                outProj = pyproj.Proj(formattedSrs)
+                inProj = self._proj4Proj(nativeSrs)
+                outProj = self._proj4Proj(srs)
                 for key in ('ll', 'ul', 'lr', 'ur'):
                     pt = pyproj.transform(inProj, outProj, bounds[key]['x'], bounds[key]['y'])
                     bounds[key]['x'] = pt[0]
                     bounds[key]['y'] = pt[1]
-                bounds['srs'] = formattedSrs
+                bounds['srs'] = srs.decode('utf8') if isinstance(srs, six.binary_type) else srs
             bounds['xmin'] = min(bounds['ll']['x'], bounds['ul']['x'],
                                  bounds['lr']['x'], bounds['ur']['x'])
             bounds['xmax'] = max(bounds['ll']['x'], bounds['ul']['x'],
@@ -409,6 +408,90 @@ class MapnikTileSource(FileTileSource):
         pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
 
+    @staticmethod
+    def _proj4Proj(proj):
+        """
+        Return a pyproj.Proj based on either a binary or unicode string.
+
+        :param proj: a binary or unicode projection string.
+        :returns: a proj4 projection object.  None if the specified projection
+            cannot be created.
+        """
+        if isinstance(proj, six.binary_type):
+            proj = proj.decode('utf8')
+        if not isinstance(proj, six.text_type):
+            return
+        if proj.lower().startswith('proj4:'):
+            proj = proj.split(':', 1)[1]
+        if proj.lower().startswith('epsg:'):
+            proj = '+init=' + proj.lower()
+        return pyproj.Proj(proj)
+
+    def _convertProjectionUnits(self, left, top, right, bottom, width, height,
+                                units, **kwargs):
+        """
+        Given bound information and a units string that consists of a proj4
+        projection (starts with `'proj4:'`, `'epsg:'`, `'+proj='` or is an
+        enumerated value like `'wgs84'`), convert the bounds to either pixel or
+        the class projection coordinates.
+
+        :param left: the left edge (inclusive) of the region to process.
+        :param top: the top edge (inclusive) of the region to process.
+        :param right: the right edge (exclusive) of the region to process.
+        :param bottom: the bottom edge (exclusive) of the region to process.
+        :param width: the width of the region to process.  Ignored if both
+            left and right are specified.
+        :param height: the height of the region to process.  Ignores if both
+            top and bottom are specified.
+        :param units: either 'projection', a string starting with 'proj4:',
+            'epsg:', or '+proj=' or a enumerated value like 'wgs84', or one of
+            the super's values.
+        :param **kwargs: optional parameters.
+        :returns: left, top, right, bottom, units.  The new bounds in the
+            either pixel or class projection units.
+        """
+        if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
+            if left is None and right is not None and width is not None:
+                left = right - width
+            if right is None and left is not None and width is not None:
+                right = left + width
+            if top is None and bottom is not None and height is not None:
+                top = bottom - height
+            if bottom is None and top is not None and height is not None:
+                bottom = top + height
+        if (left is None and right is None) or (top is None and bottom is None):
+            raise TileSourceException(
+                'Cannot convert from projection unless at least one of '
+                'left and right and at least one of top and bottom is '
+                'specified.')
+        if not self.projection:
+            pleft, ptop = self.toNativePixelCoordinates(
+                right if left is None else left,
+                bottom if top is None else top,
+                units)
+            pright, pbottom = self.toNativePixelCoordinates(
+                left if right is None else right,
+                top if bottom is None else bottom,
+                units)
+            units = 'base_pixels'
+        else:
+            inProj = self._proj4Proj(units)
+            outProj = self._proj4Proj(self.projection)
+            pleft, ptop = pyproj.transform(
+                inProj, outProj,
+                right if left is None else left,
+                bottom if top is None else top)
+            pright, pbottom = pyproj.transform(
+                inProj, outProj,
+                left if right is None else right,
+                top if bottom is None else bottom)
+            units = 'projection'
+        left = pleft if left is not None else None
+        top = ptop if top is not None else None
+        right = pright if right is not None else None
+        bottom = pbottom if bottom is not None else None
+        return left, top, right, bottom, units
+
     def _getRegionBounds(self, metadata, left=None, top=None, right=None,
                          bottom=None, width=None, height=None, units=None,
                          **kwargs):
@@ -416,7 +499,9 @@ class MapnikTileSource(FileTileSource):
         Given a set of arguments that can include left, right, top, bottom,
         width, height, and units, generate actual pixel values for left, top,
         right, and bottom.  If units is `'projection'`, use the source's
-        projection.  Otherwise, just use the super function.
+        projection.  If units starts with `'proj4:'` or `'epsg:'` or a
+        custom units value, use that projection.  Otherwise, just use the super
+        function.
 
         :param metadata: the metadata associated with this source.
         :param left: the left edge (inclusive) of the region to process.
@@ -427,11 +512,22 @@ class MapnikTileSource(FileTileSource):
             left and right are specified.
         :param height: the height of the region to process.  Ignores if both
             top and bottom are specified.
-        :param units: either 'projection' or one of the super's values.
+        :param units: either 'projection', a string starting with 'proj4:',
+            'epsg:' or a enumarted value like 'wgs84', or one of the super's
+            values.
         :param **kwargs: optional parameters.  See above.
         :returns: left, top, right, bottom bounds in pixels.
         """
-        units = TileInputUnits[units]
+        units = TileInputUnits.get(units.lower() if units else units, units)
+        # If a proj4 projection is specified, convert the left, right, top, and
+        # bottom to the current projection or to pixel space if no projection
+        # is used.
+        if (units and (units.lower().startswith('proj4:') or
+                       units.lower().startswith('epsg:') or
+                       units.lower().startswith('+proj='))):
+            left, top, right, bottom, units = self._convertProjectionUnits(
+                left, top, right, bottom, width, height, units, **kwargs)
+
         if units == 'projection' and self.projection:
             bounds = self.getBounds(self.projection)
             # Fill in missing values
@@ -457,7 +553,7 @@ class MapnikTileSource(FileTileSource):
             right = max(0, min(xScale, (0.5 + right) * xScale))
             top = max(0, min(yScale, (0.5 - top) * yScale))
             bottom = max(0, min(yScale, (0.5 - bottom) * yScale))
-            # Ensire correct ordering
+            # Ensure correct ordering
             left, right = min(left, right), max(left, right)
             top, bottom = min(top, bottom), max(top, bottom)
             units = 'base_pixels'
@@ -492,6 +588,33 @@ class MapnikTileSource(FileTileSource):
             return self.getRegion(**params)
         return super(MapnikTileSource, self).getThumbnail(width, height, levelZero, **kwargs)
 
+    def toNativePixelCoordinates(self, x, y, proj=None, roundResults=True):
+        """
+        Convert a coordinate in the native projection (self.getProj4String) to
+        pixel coordinates.
+
+        :param x: the x coordinate it the native projection.
+        :param y: the y coordinate it the native projection.
+        :param proj: input projection.  None to use the sources's projection.
+        :param roundResults: if True, round the results to the nearest pixel.
+        :return: (x, y) the pixel coordinate.
+        """
+        if proj is None:
+            proj = self.projection
+        # convert to the native projection
+        inProj = self._proj4Proj(proj)
+        outProj = self._proj4Proj(self.getProj4String())
+        px, py = pyproj.transform(inProj, outProj, x, y)
+        # convert to native pixel coordinates
+        gt = self.dataset.GetGeoTransform()
+        d = gt[2] * gt[4] - gt[1] * gt[5]
+        x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
+        y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
+        if roundResults:
+            x = int(round(x))
+            y = int(round(y))
+        return x, y
+
     def getPixel(self, **kwargs):
         """
         Get a single pixel from the current tile source.
@@ -508,21 +631,14 @@ class MapnikTileSource(FileTileSource):
             # Coordinates in the max level tile
             x, y = tile['gx'], tile['gy']
             if self.projection:
-                gt = self.dataset.GetGeoTransform()
                 # convert to a scale of [-0.5, 0.5]
                 x = 0.5 + x / 2 ** (self.levels - 1) / self.tileWidth
                 y = 0.5 - y / 2 ** (self.levels - 1) / self.tileHeight
                 # convert to projection coordinates
                 x = self.projectionOrigin[0] + x * self.unitsAcrossLevel0
                 y = self.projectionOrigin[1] + y * self.unitsAcrossLevel0
-                # convert to the native projection
-                inProj = pyproj.Proj(self.projection.decode('utf8'))
-                outProj = pyproj.Proj(self.getProj4String())
-                px, py = pyproj.transform(inProj, outProj, x, y)
                 # convert to native pixel coordinates
-                d = gt[2] * gt[4] - gt[1] * gt[5]
-                x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
-                y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
+                x, y = self.toNativePixelCoordinates(x, y)
             for i in range(self.dataset.RasterCount):
                 band = self.dataset.GetRasterBand(i + 1)
                 try:
@@ -545,3 +661,5 @@ if girder:
 
 TileInputUnits['projection'] = 'projection'
 TileInputUnits['proj'] = 'projection'
+TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
+TileInputUnits['4326'] = 'proj4:EPSG:4326'

@@ -244,7 +244,7 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
             })
         self.assertStatusOk(resp)
         self.assertEqual(resp.json, {
-            'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {'1': 74.0, '2': 80.0, '3': 84.0}})
+            'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {'1': 77.0, '2': 82.0, '3': 84.0}})
         # Check if the point is outside of the image
         resp = self.request(
             path='/item/%s/tiles/pixel' % itemId, user=self.admin,
@@ -285,4 +285,111 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
             })
         self.assertStatusOk(resp)
         self.assertEqual(resp.json, {
-            'r': 225, 'g': 100, 'b': 98, 'a': 255, 'bands': {'1': 74.0, '2': 80.0, '3': 84.0}})
+            'r': 225, 'g': 100, 'b': 98, 'a': 255, 'bands': {'1': 77.0, '2': 82.0, '3': 84.0}})
+        # Test with projection units
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={
+                'left': -13132910,
+                'top': 4010586,
+                'projection': 'EPSG:3857',
+                'units': 'EPSG:3857',
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {
+            'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {'1': 77.0, '2': 82.0, '3': 84.0}})
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={
+                'left': -117.975,
+                'top': 33.865,
+                'projection': 'EPSG:3857',
+                'units': 'WGS84',
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {
+            'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {'1': 77.0, '2': 82.0, '3': 84.0}})
+        # When the tile has a different projection, the pixel is the same as
+        # the band values.
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={
+                'left': -13132910,
+                'top': 4010586,
+                'units': 'EPSG:3857',
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {
+            'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {'1': 77.0, '2': 82.0, '3': 84.0}})
+
+    def testSourceErrors(self):
+        from girder.plugins.large_image.tilesource import TileSourceException
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        filepath = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff')
+        with six.assertRaisesRegex(self, TileSourceException, 'must not be geographic'):
+            MapnikTileSource(filepath, 'EPSG:4326')
+        filepath = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'zero_gi.tif')
+        with six.assertRaisesRegex(self, TileSourceException, 'cannot be opened via Mapnik'):
+            MapnikTileSource(filepath)
+        filepath = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'yb10kx5k.png')
+        with six.assertRaisesRegex(self, TileSourceException, 'does not have a projected scale'):
+            MapnikTileSource(filepath)
+
+    def testProj4Proj(self):
+        # Test obtaining pyproj.Proj projection values
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+
+        proj = MapnikTileSource._proj4Proj(b'epsg:4326')
+        self.assertEqual(MapnikTileSource._proj4Proj(u'epsg:4326').srs, proj.srs)
+        self.assertEqual(MapnikTileSource._proj4Proj('proj4:EPSG:4326').srs, proj.srs)
+        self.assertIsNone(MapnikTileSource._proj4Proj(4326))
+
+    def testConvertProjectionUnits(self):
+        from girder.plugins.large_image.tilesource import TileSourceException
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        filepath = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff')
+        tsNoProj = MapnikTileSource(filepath)
+
+        result = tsNoProj._convertProjectionUnits(
+            -13024380, 3895303, None, None, None, None, 'EPSG:3857')
+        self.assertAlmostEqual(result[0], 147, 0)
+        self.assertAlmostEqual(result[1], 149, 0)
+        self.assertEqual(result[2:], (None, None, 'base_pixels'))
+
+        result = tsNoProj._convertProjectionUnits(
+            None, None, -13080040, 3961860, None, None, 'EPSG:3857')
+        self.assertAlmostEqual(result[2], 96, 0)
+        self.assertAlmostEqual(result[3], 88, 0)
+        self.assertEqual(result[:2], (None, None))
+        result = tsNoProj._convertProjectionUnits(
+            -117.5, 33, None, None, 0.5, 0.5, 'EPSG:4326')
+        self.assertAlmostEqual(result[0], 96, 0)
+        self.assertAlmostEqual(result[1], 149, 0)
+        self.assertAlmostEqual(result[2], 147, 0)
+        self.assertAlmostEqual(result[3], 89, 0)
+        result = tsNoProj._convertProjectionUnits(
+            None, None, -117, 33.5, 0.5, 0.5, 'EPSG:4326')
+        self.assertAlmostEqual(result[0], 96, 0)
+        self.assertAlmostEqual(result[1], 149, 0)
+        self.assertAlmostEqual(result[2], 147, 0)
+        self.assertAlmostEqual(result[3], 89, 0)
+        result = tsNoProj._convertProjectionUnits(
+            -117.5, 33, None, None, 0.5, 0.5, 'EPSG:4326', unitsWH='base_pixels')
+        self.assertAlmostEqual(result[0], 96, 0)
+        self.assertAlmostEqual(result[1], 149, 0)
+        self.assertEqual(result[2:], (None, None, 'base_pixels'))
+
+        with six.assertRaisesRegex(self, TileSourceException, 'Cannot convert'):
+            tsNoProj._convertProjectionUnits(
+                -117.5, None, -117, None, None, None, 'EPSG:4326')
+
+        tsProj = MapnikTileSource(filepath, 'EPSG:3857')
+        result = tsProj._convertProjectionUnits(
+            -13024380, 3895303, None, None, None, None, 'EPSG:3857')
+        self.assertAlmostEqual(result[0], -13024380, 0)
+        self.assertAlmostEqual(result[1], 3895303, 0)
+        self.assertEqual(result[2:], (None, None, 'projection'))
