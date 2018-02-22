@@ -232,7 +232,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             const features = layer.features;
             this._mutateFeaturePropertiesForHighlight(annotationId, features);
         });
-        this.viewer.draw();
+        this.viewer.scheduleAnimationFrame(this.viewer.draw);
         return this;
     },
 
@@ -249,12 +249,10 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 // this slows down interactivity considerably.
                 return;
             }
-            const fillOpacityArray = [];
-            const strokeOpacityArray = [];
-
             // pre-allocate arrays for performance
-            fillOpacityArray.length = data.length;
-            strokeOpacityArray.length = data.length;
+            const fillOpacityArray = new Array(data.length);
+            const strokeOpacityArray = new Array(data.length);
+
             for (let i = 0; i < data.length; i += 1) {
                 const id = data[i].id;
                 const fillOpacity = data[i].fillOpacity;
