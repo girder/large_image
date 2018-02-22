@@ -266,7 +266,7 @@ class AnnotationResource(Resource):
             'created by the given user.  The imageName parameter will only include '
             'images whose name (or a token in the name) begins with the given string.')
         .param('creatorId', 'Limit to annotations created by this user', required=False)
-        .param('imageName', 'Filter results by image name', required=False)
+        .param('imageName', 'Filter results by image name (case-insensitive)', required=False)
         .pagingParams(defaultSort='updated', defaultSortDir=-1)
         .errorResponse()
     )
