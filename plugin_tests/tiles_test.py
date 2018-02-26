@@ -19,6 +19,7 @@
 
 import itertools
 import json
+import mock
 import numpy
 import os
 import PIL.Image
@@ -30,6 +31,7 @@ from girder import config
 from girder.models.file import File
 from girder.models.item import Item
 from girder.models.setting import Setting
+from girder.models.user import User
 from girder.utility import assetstore_utilities
 from tests import base
 
@@ -1361,3 +1363,20 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertNotEqual(item['largeImage']['fileId'], newItem['largeImage']['fileId'])
         Item().remove(item)
         self._testTilesZXY(str(newItem['_id']), tileMetadata)
+
+    def testTilesModelLookupCache(self):
+        User().load = mock.Mock(wraps=User().load)
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        token = self._genToken(self.user)
+        lastCount = User().load.call_count
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            token=token, isJson=False)
+        self.assertStatusOk(resp)
+        self.assertEqual(User().load.call_count, lastCount + 1)
+        lastCount = User().load.call_count
+        resp = self.request(path='/item/%s/tiles/zxy/1/0/0' % itemId,
+                            token=token, isJson=False)
+        self.assertStatusOk(resp)
+        self.assertEqual(User().load.call_count, lastCount)

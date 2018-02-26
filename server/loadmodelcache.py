@@ -68,6 +68,7 @@ def loadModel(resource, model, plugin='_core', id=None, allowCookie=False,
         # cookies.
         if allowCookie:
             getCurrentToken(allowCookie)
+            setattr(cherrypy.request, 'girderAllowCookie', True)
         entry = resource.model(model, plugin).load(
             id=id, level=level, user=resource.getCurrentUser())
         if key:
