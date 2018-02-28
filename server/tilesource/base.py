@@ -1400,6 +1400,8 @@ class TileSource(object):
                 mag['mm_y'] *= mag['scale']
         if self.levels:
             mag['level'] = level if level is not None else self.levels - 1
+        if mag.get('level') == self.levels - 1:
+            mag['scale'] = 1.0
         return mag
 
     def getLevelForMagnification(self, magnification=None, exact=False,

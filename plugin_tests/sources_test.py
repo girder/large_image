@@ -63,11 +63,13 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(mag['mm_x'], 0.000252)
         self.assertEqual(mag['mm_y'], 0.000252)
         self.assertEqual(mag['level'], 7)
+        self.assertEqual(mag['scale'], 1.0)
         mag = source.getMagnificationForLevel(0)
         self.assertEqual(mag['magnification'], 0.3125)
         self.assertEqual(mag['mm_x'], 0.032256)
         self.assertEqual(mag['mm_y'], 0.032256)
         self.assertEqual(mag['level'], 0)
+        self.assertEqual(mag['scale'], 128.0)
         self.assertEqual(source.getLevelForMagnification(), 7)
         self.assertEqual(source.getLevelForMagnification(exact=True), 7)
         self.assertEqual(source.getLevelForMagnification(40), 7)
@@ -536,9 +538,6 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(int(targetRegion['width']), 575)
         self.assertEqual(int(targetRegion['height']), 506)
         self.assertEqual(targetRegion['units'], 'mag_pixels')
-        with six.assertRaisesRegex(self, ValueError, 'No magnification'):
-            source.convertRegionScale(
-                sourceRegion, sourceScale, None, targetUnits='pixels')
 
         # test getRegionAtAnotherScale
         image, imageFormat = source.getRegionAtAnotherScale(

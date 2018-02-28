@@ -164,7 +164,7 @@ class TiffFileTileSource(FileTileSource):
         mm_x = pixelInfo.get('mm_x')
         mm_y = pixelInfo.get('mm_y')
         # Estimate the magnification if we don't have a direct value
-        mag = pixelInfo.get('magnification', 0.01 / mm_x if mm_x else None)
+        mag = pixelInfo.get('magnification') or 0.01 / mm_x if mm_x else None
         return {
             'magnification': mag,
             'mm_x': mm_x,
