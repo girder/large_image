@@ -27,6 +27,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         this._annotations = {};
         this._featureOpacity = {};
+        this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
@@ -107,6 +108,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this.featureLayer = this.viewer.createLayer('feature', {
             features: ['point', 'line', 'polygon']
         });
+        this.setGlobalAnnotationOpacity(this._globalAnnotationOpacity);
         this.featureLayer.geoOn(window.geo.event.pan, () => { this.setBounds(); });
         // the annotation layer is for annotations that are actively drawn
         this.annotationLayer = this.viewer.createLayer('annotation', {
@@ -401,6 +403,14 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         );
         layer.mode(type);
         return defer.promise();
+    },
+
+    setGlobalAnnotationOpacity: function (opacity) {
+        this._globalAnnotationOpacity = opacity;
+        if (this.featureLayer) {
+            this.featureLayer.opacity(opacity);
+        }
+        return this;
     },
 
     _setEventTypes: function () {
