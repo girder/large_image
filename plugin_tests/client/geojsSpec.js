@@ -511,6 +511,24 @@ $(function () {
             });
         });
 
+        describe('global annotation opacity', function () {
+            var opacity, opacityFunction;
+            beforeEach(function () {
+                opacity = null;
+                opacityFunction = viewer.featureLayer.opacity;
+                viewer.featureLayer.opacity = function (_opacity) {
+                    opacity = _opacity;
+                };
+            });
+            afterEach(function () {
+                viewer.featureLayer.opacity = opacityFunction;
+            });
+            it('set global annotation opacity', function () {
+                viewer.setGlobalAnnotationOpacity(0.5);
+                expect(opacity).toBe(0.5);
+            });
+        });
+
         describe('highlight annotations', function () {
             var annotation1, annotation2;
             var element11 = '111111111111111111111111';
