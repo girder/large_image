@@ -232,6 +232,13 @@ class MapnikTileSource(FileTileSource):
                 },
                 'srs': nativeSrs,
             }
+
+            # Make sure geographic coordinates do not exceed their limits
+            if pyproj.Proj(nativeSrs).is_latlong():
+                for key in ('ll', 'ul', 'lr', 'ur'):
+                    bounds[key]['x'] = max(min(bounds[key]['x'], 180.0), -180.0)
+                    # Web mercator is valid between +-85.0511
+                    bounds[key]['y'] = max(min(bounds[key]['y'], 85.0511), -85.0511)
             if srs and srs != nativeSrs:
                 inProj = self._proj4Proj(nativeSrs)
                 outProj = self._proj4Proj(srs)
