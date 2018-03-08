@@ -395,23 +395,13 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         self.assertEqual(result[2:], (None, None, 'projection'))
 
     def testGuardAgainstBadLatLong(self):
-        file = self._uploadFile(os.path.join(
-            os.path.dirname(__file__), 'test_files', 'global_dem.tif'))
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        filepath = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'global_dem.tif')
+        source = MapnikTileSource(filepath)
+        bounds = source.getBounds(srs='EPSG:4326')
 
-        itemId = str(file['itemId'])
-
-        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
-        self.assertStatusOk(resp)
-        tileMetadata = resp.json
-
-        # Original values before coordinate correction
-        # {
-        #     'xmax': 179.9958333,
-        #     'xmin': -180.0041667,
-        #     'ymax':  90.0041667,
-        #     'ymin': -89.9958333
-        # }
-        self.assertEqual(tileMetadata['bounds']['xmax'], 179.99583333)
-        self.assertEqual(tileMetadata['bounds']['xmin'], -180.0)
-        self.assertEqual(tileMetadata['bounds']['ymax'], 85.0511)
-        self.assertEqual(tileMetadata['bounds']['ymin'], -85.0511)
+        self.assertEqual(bounds['xmin'], -180.00416667)
+        self.assertEqual(bounds['xmax'], 179.99583333)
+        self.assertEqual(bounds['ymin'], -89.99583333)
+        self.assertEqual(bounds['ymax'], 89.999999)
