@@ -51,7 +51,7 @@ class MapnikTileSource(FileTileSource):
     cacheName = 'tilesource'
     name = 'mapnikfile'
 
-    def __init__(self, path, projection=None, style=None, **kwargs):
+    def __init__(self, path, projection=None, style=None, unitsPerPixel=None, **kwargs):
         super(MapnikTileSource, self).__init__(path, **kwargs)
         self._bounds = {}
         self.dataset = gdal.Open(self._getLargeImagePath())
@@ -88,26 +88,43 @@ class MapnikTileSource(FileTileSource):
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1)
         if self.projection:
-            # Note: this needs to change for projections that aren't spanning
-            # -180 to +180 degrees horizontally.  We should accept this as a
-            # parameter eventually.
-            inProj = self._proj4Proj('+init=epsg:4326')
-            # Since we already converted to bytes decoding is safe here
-            outProj = self._proj4Proj(self.projection)
-            if outProj.is_latlong():
+            self._initWithProjection(unitsPerPixel)
+
+    def _initWithProjection(self, unitsPerPixel=None):
+        """
+        Initialize aspects of the class when a projection is set.
+        """
+        inProj = self._proj4Proj('+init=epsg:4326')
+        # Since we already converted to bytes decoding is safe here
+        outProj = self._proj4Proj(self.projection)
+        if outProj.is_latlong():
+            raise TileSourceException(
+                'Projection must not be geographic (it needs to use linear '
+                'units, not longitude/latitude).')
+        # If unitsPerPixel is not specified, the horizontal distance
+        # between -180,0 and +180,0 is used.  Some projections (such as
+        # stereographic) will fail in this case; they must have a
+        # unitsPerPixel specified.
+        if unitsPerPixel:
+            self.unitsAcrossLevel0 = float(unitsPerPixel) * self.tileSize
+        else:
+            equator = pyproj.transform(inProj, outProj, [-180, 180], [0, 0])
+            self.unitsAcrossLevel0 = abs(equator[0][1] - equator[0][0])
+            if not self.unitsAcrossLevel0:
                 raise TileSourceException(
-                    'Projection must not be geographic (it needs to use '
-                    'linear units, not longitude/latitude).')
-            equator = pyproj.transform(inProj, outProj, [-180, 180, 0], [0, 0, 0])
-            self.unitsAcrossLevel0 = equator[0][1] - equator[0][0]
-            self.projectionOrigin = (equator[0][2], equator[1][2])
-            # Calculate values for this projection
-            self.levels = int(max(int(math.ceil(
-                math.log(self.unitsAcrossLevel0 / self.getPixelSizeInMeters() / self.tileWidth) /
-                math.log(2))) + 1, 1))
-            # Report sizeX and sizeY as the whole world
-            self.sizeX = 2 ** (self.levels - 1) * self.tileWidth
-            self.sizeY = 2 ** (self.levels - 1) * self.tileHeight
+                    'unitsPerPixel must be specified for this projection')
+        # This was
+        #   self.projectionOrigin = pyproj.transform(inProj, outProj, 0, 0)
+        # but for consistency, it should probably always be (0, 0).  Whatever
+        # renders the map would need the same offset as used here.
+        self.projectionOrigin = (0, 0)
+        # Calculate values for this projection
+        self.levels = int(max(int(math.ceil(
+            math.log(self.unitsAcrossLevel0 / self.getPixelSizeInMeters() / self.tileWidth) /
+            math.log(2))) + 1, 1))
+        # Report sizeX and sizeY as the whole world
+        self.sizeX = 2 ** (self.levels - 1) * self.tileWidth
+        self.sizeY = 2 ** (self.levels - 1) * self.tileHeight
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -115,7 +132,8 @@ class MapnikTileSource(FileTileSource):
             super(MapnikTileSource, MapnikTileSource).getLRUHash(
                 *args, **kwargs),
             kwargs.get('projection', args[1] if len(args) >= 2 else None),
-            kwargs.get('style', args[2] if len(args) >= 3 else None))
+            kwargs.get('style', args[2] if len(args) >= 3 else None),
+            kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
 
     def getProj4String(self):
         """
