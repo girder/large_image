@@ -19,7 +19,7 @@
 
 
 # Constants representing the setting keys for this plugin
-class PluginSettings:
+class PluginSettings(object):
     LARGE_IMAGE_SHOW_THUMBNAILS = 'large_image.show_thumbnails'
     LARGE_IMAGE_SHOW_EXTRA = 'large_image.show_extra'
     LARGE_IMAGE_SHOW_EXTRA_ADMIN = 'large_image.show_extra_admin'
