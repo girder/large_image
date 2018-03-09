@@ -97,7 +97,7 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None):
     return numItems
 
 
-class CacheFactory():
+class CacheFactory(object):
     logged = False
 
     def getCacheSize(self, numItems):

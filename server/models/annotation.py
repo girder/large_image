@@ -42,7 +42,7 @@ from .image_item import ImageItem
 from .. import constants
 
 
-class AnnotationSchema:
+class AnnotationSchema(object):
     coordSchema = {
         'type': 'array',
         # TODO: validate that z==0 for now
