@@ -18,8 +18,10 @@
 ###############################################################################
 
 try:
-    from .base import *  # noqa
-except ImportError as exc:
+    import girder
+    # This should include all of the explicitly required Girder plugins.
+    import girder.plugins.worker
+except ImportError:
     # If our import failed because either girder or a girder plugin is
     # unavailable, log it and start anyway (we may be running in a girder-less
     # environment).
@@ -28,3 +30,7 @@ except ImportError as exc:
     logger.debug('Girder is unavailable.  Run as a girder plugin for girder '
                  'access.')
     girder = None
+else:
+    # if girder is available, and we fail to import anything else, girder will
+    # show the failure
+    from .base import load  # noqa
