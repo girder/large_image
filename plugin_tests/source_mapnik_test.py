@@ -393,3 +393,15 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         self.assertAlmostEqual(result[0], -13024380, 0)
         self.assertAlmostEqual(result[1], 3895303, 0)
         self.assertEqual(result[2:], (None, None, 'projection'))
+
+    def testGuardAgainstBadLatLong(self):
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        filepath = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'global_dem.tif')
+        source = MapnikTileSource(filepath)
+        bounds = source.getBounds(srs='EPSG:4326')
+
+        self.assertEqual(bounds['xmin'], -180.00416667)
+        self.assertEqual(bounds['xmax'], 179.99583333)
+        self.assertEqual(bounds['ymin'], -89.99583333)
+        self.assertEqual(bounds['ymax'], 89.999999)

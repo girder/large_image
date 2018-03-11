@@ -232,6 +232,15 @@ class MapnikTileSource(FileTileSource):
                 },
                 'srs': nativeSrs,
             }
+            # Make sure geographic coordinates do not exceed their limits
+            if pyproj.Proj(nativeSrs).is_latlong() and srs:
+                try:
+                    pyproj.Proj(srs)(0, 90, errcheck=True)
+                    yBound = 90.0
+                except RuntimeError:
+                    yBound = 89.999999
+                for key in ('ll', 'ul', 'lr', 'ur'):
+                    bounds[key]['y'] = max(min(bounds[key]['y'], yBound), -yBound)
             if srs and srs != nativeSrs:
                 inProj = self._proj4Proj(nativeSrs)
                 outProj = self._proj4Proj(srs)
