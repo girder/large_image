@@ -1,0 +1,35 @@
+{
+    "variables": {
+        "tile_sources": ""
+    },
+    "builders": [
+        {
+            "type": "docker",
+            "image": "ubuntu:16.04",
+            "pull": false,
+            "commit": true
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell-local",
+            "command": "ansible-galaxy install -p ../ansible/roles  -r ../ansible/requirements.yml"
+        },
+        {
+            "type": "ansible",
+            "playbook_file": "../ansible/playbook.yml",
+            "groups": "{{user `tile_sources`}}",
+            "extra_arguments": [
+                "-vv"
+            ]
+        }
+    ],
+    "post-processors": [
+        {
+            "type": "docker-tag",
+            "repository": "girder/large_image",
+            "tag": "dev",
+            "only": ["docker"]
+        }
+    ]
+}

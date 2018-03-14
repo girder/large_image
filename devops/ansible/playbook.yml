@@ -1,0 +1,34 @@
+---
+- hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install Python
+      raw: test -e /usr/bin/python || (apt-get update && apt-get install -y python python-pip)
+
+- hosts: all
+  pre_tasks:
+    - name: Install sudo
+      apt:
+        name:
+          - sudo
+
+    - name: Create root directory
+      file:
+        path: "{{ root_dir }}"
+        state: directory
+        mode: 0755
+
+  roles:
+    - role: girder.girder
+      girder_path: "{{ root_dir }}/girder"
+      girder_version: "2.x-maintenance"
+      girder_daemonize: false
+      # We build the girder web assets in girder-histomicstk
+      girder_web: no
+      become: true
+      become_user: "{{ girder_exec_user }}"
+
+
+- hosts: openslide
+  roles:
+    - openslide
