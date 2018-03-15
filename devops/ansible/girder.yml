@@ -21,6 +21,7 @@
         mode: 0755
 
   roles:
+    - role: DigitalSlideArchive.vips
     - role: girder.girder
       girder_version: "2.x-maintenance"
       girder_daemonize: false

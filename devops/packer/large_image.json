@@ -5,6 +5,7 @@
     "builders": [
         {
             "type": "docker",
+            "name": "girder",
             "image": "ubuntu:16.04",
             "pull": false,
             "commit": true,
@@ -21,7 +22,7 @@
         },
         {
             "type": "ansible",
-            "playbook_file": "../ansible/playbook.yml",
+            "playbook_file": "../ansible/girder.yml",
             "groups": "{{user `tile_sources`}}",
             "extra_arguments": [
                 "-vv"
@@ -31,9 +32,9 @@
     "post-processors": [
         {
             "type": "docker-tag",
-            "repository": "girder/large_image",
-            "tag": "dev",
-            "only": ["docker"]
+            "repository": "large_image/large_image",
+            "tag": "latest",
+            "only": ["girder"]
         }
     ]
 }
