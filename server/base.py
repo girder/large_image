@@ -33,6 +33,7 @@ from . import constants
 from .models.annotation import Annotation
 from .models.image_item import ImageItem
 from .loadmodelcache import invalidateLoadModelCache
+from . import cache_util
 
 
 def _postUpload(event):
@@ -283,3 +284,4 @@ def load(info):
     events.bind('model.file.save.after', 'large_image',
                 checkForLargeImageFiles)
     events.bind('model.item.remove', 'large_image', removeThumbnails)
+    events.bind('server_fuse.unmount', 'large_image', cache_util.cachesClear)

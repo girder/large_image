@@ -84,6 +84,8 @@ addons:
       - python-mapnik
       # girder worker - not needed; included in travis
       # - rabbitmq-server
+      # fuse plugin tests - not needed; included in travis
+      # - fuse
 
 services:
   - rabbitmq
@@ -209,10 +211,13 @@ before_install:
 
   - pip install --no-cache-dir numpy>=1.11.3  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
 
+  # Allow access to /etc/fuse.conf by all users
+  - sudo chmod a+r /etc/fuse.conf
+
 
 install:
   - pushd $girder_path
-  - pip install --no-cache-dir -U -r requirements-dev.txt -e .
+  - pip install --no-cache-dir -U -r requirements-dev.txt -e .[mount]
   - popd
   - girder-install plugin --symlink $large_image_path
   # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them

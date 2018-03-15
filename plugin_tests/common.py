@@ -38,8 +38,8 @@ TIFFHeader = b'II\x2a\x00'
 
 
 class LargeImageCommonTest(base.TestCase):
-    def setUp(self):
-        base.TestCase.setUp(self)
+    def setUp(self, *args, **kwargs):
+        base.TestCase.setUp(self, *args, **kwargs)
         admin = {
             'email': 'admin@email.com',
             'login': 'adminlogin',
