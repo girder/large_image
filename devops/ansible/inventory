@@ -1,0 +1,2 @@
+[docker]
+large_image ansible_connection=docker

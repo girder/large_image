@@ -1,0 +1,33 @@
+---
+
+- name: Install build dependencies
+  apt:
+    name: "{{ item }}"
+  become: yes
+  with_items:
+    - libmemcached-dev
+
+- name: Work around a bug in PyLibTiff
+  file:
+    path: "/usr/include/tiff.h"
+    state: link
+    src: "/usr/local/include/tiff.h"
+    force: yes
+  become: yes
+
+- name: Copy Large Image files
+  synchronize:
+    src: "../../../../../"
+    dest: "{{ large_image_path }}"
+    mode: push
+    recursive: yes
+    rsync_opts:
+      - "--exclude=devops"
+
+- name: Install Large Image
+  block:
+    - pip:
+        name: numpy
+
+    - command: "girder-install plugin -s --force {{ large_image_path }}"
+  become: yes

@@ -1,11 +1,13 @@
 ---
-- hosts: all
+- name: Intial Setup
+  hosts: all
   gather_facts: false
   tasks:
     - name: Install Python
       raw: test -e /usr/bin/python || (apt-get update && apt-get install -y python python-pip)
 
-- hosts: all
+- name: Install Girder
+  hosts: all
   pre_tasks:
     - name: Install sudo
       apt:
@@ -20,7 +22,6 @@
 
   roles:
     - role: girder.girder
-      girder_path: "{{ root_dir }}/girder"
       girder_version: "2.x-maintenance"
       girder_daemonize: false
       # We build the girder web assets in girder-histomicstk
@@ -29,6 +30,18 @@
       become_user: "{{ girder_exec_user }}"
 
 
-- hosts: openslide
+# - name: Install Openslide dependencies
+#   hosts: openslide
+#   roles:
+#     - openslide
+
+
+- name: Install Large Image and Wrapup
+  hosts: all
   roles:
-    - openslide
+    - large_image
+    - npm
+
+  post_tasks:
+    - name: Rebuild Girder web
+      command: "girder-install web --dev --plugins large_image,worker,jobs"
