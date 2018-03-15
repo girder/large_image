@@ -21,7 +21,7 @@
         mode: 0755
 
   roles:
-    - role: DigitalSlideArchive.vips
+
     - role: girder.girder
       girder_version: "2.x-maintenance"
       girder_daemonize: false
@@ -30,15 +30,13 @@
       become: true
       become_user: "{{ girder_exec_user }}"
 
-
-# - name: Install Openslide dependencies
-#   hosts: openslide
-#   roles:
-#     - openslide
-
-
-- name: Install Large Image and Wrapup
+- name: Install Large Image
   hosts: all
+  pre_tasks:
+    - name: Install libtiff
+      apt:
+        name: libtiff5-dev
+
   roles:
     - large_image
     - npm
@@ -46,3 +44,9 @@
   post_tasks:
     - name: Rebuild Girder web
       command: "girder-install web --dev --plugins large_image,worker,jobs"
+
+
+# - name: Install Openslide dependencies
+#  hosts: openslide
+#  roles:
+#    - role: DigitalSlideArchive.vips
