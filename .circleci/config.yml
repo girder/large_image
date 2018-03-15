@@ -13,7 +13,7 @@ jobs:
       - run:
           name: Get the environment up and running
           command: |
-            cd devops/mapnik_py35 && docker-compose build && docker-compose up -d
+            cd devops/docker/mapnik_py35 && docker-compose build && docker-compose up -d
 
       - run:
           name: Install large image plugin

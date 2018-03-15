@@ -6,7 +6,7 @@ services:
       - "27017"
   large_image:
     volumes:
-      - ../../:/large_image
+      - ../../../:/large_image
     build:
       context: ./
       dockerfile: Dockerfile
