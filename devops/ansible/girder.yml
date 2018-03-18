@@ -6,6 +6,7 @@
     - name: Install Python
       raw: test -e /usr/bin/python || (apt-get update && apt-get install -y python python-pip)
 
+
 - name: Install Girder
   hosts: all
   pre_tasks:
@@ -36,7 +37,7 @@
     - name: Install libtiff
       apt:
         name: libtiff5-dev
-
+        autoremove: yes
   roles:
     - large_image
     - npm
@@ -46,7 +47,38 @@
       command: "girder-install web --dev --plugins large_image,worker,jobs"
 
 
-# - name: Install Openslide dependencies
-#  hosts: openslide
-#  roles:
-#    - role: DigitalSlideArchive.vips
+- name: Install Mapnik dependencies
+  hosts: mapnik
+  tasks:
+    - name: Install system packages
+      apt:
+        name:
+          - libgdal-dev
+          - gdal-bin
+          - libmapnik-dev
+          - python-mapnik
+
+    - name: Install GDAL 1 python package
+      pip:
+        name: gdal==1.10.0
+        chdir: "{{ large_image_path }}"
+
+    - name: Install mapnik extras
+      pip:
+        name: ".[mapnik]"
+        chdir: "{{ large_image_path }}"
+  environment:
+    CPLUS_INCLUDE_PATH: /usr/include/gdal
+    C_INCLUDE_PATH: /usr/include/gdal
+
+
+- name: Install Openslide dependencies
+  hosts: openslide
+  pre_tasks:
+    - name: Remove Stock libtiff
+      apt:
+        name: libtiff5-dev
+        state: absent
+
+  roles:
+    - role: DigitalSlideArchive.vips

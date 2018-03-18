@@ -8,11 +8,7 @@
             "name": "girder",
             "image": "ubuntu:16.04",
             "pull": false,
-            "commit": true,
-            "changes": [
-                "ENTRYPOINT [\"girder\", \"serve\"]",
-                "CMD [\"-H\", \"0.0.0.0\"]"
-            ]
+            "commit": true
         }
     ],
     "provisioners": [

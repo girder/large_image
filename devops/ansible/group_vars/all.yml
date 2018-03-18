@@ -3,3 +3,5 @@ root_dir: /opt/girder
 girder_path: "{{ root_dir }}/girder"
 girder_exec_user: root
 girder_exec_group: root
+
+large_image_path: /opt/large_image
