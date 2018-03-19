@@ -1,11 +1,13 @@
 {
     "variables": {
-        "tile_sources": ""
+        "tile_sources": "",
+        "docker_repo": "large_image/large_image",
+        "docker_tag": "latest"
     },
     "builders": [
         {
             "type": "docker",
-            "name": "girder",
+            "name": "docker",
             "image": "ubuntu:16.04",
             "pull": false,
             "commit": true
@@ -28,9 +30,9 @@
     "post-processors": [
         {
             "type": "docker-tag",
-            "repository": "large_image/large_image",
-            "tag": "latest",
-            "only": ["girder"]
+            "repository": "{{user `docker_repo`}}",
+            "tag": "{{user `docker_tag`}}",
+            "only": ["docker"]
         }
     ]
 }
