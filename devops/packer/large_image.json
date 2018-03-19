@@ -10,7 +10,11 @@
             "name": "docker",
             "image": "ubuntu:16.04",
             "pull": false,
-            "commit": true
+            "commit": true,
+            "changes": [
+                "ENTRYPOINT [\"girder\", \"serve\"]",
+                "CMD [\"-H\", \"0.0.0.0\"]"
+            ]
         }
     ],
     "provisioners": [

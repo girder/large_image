@@ -29,5 +29,11 @@
     - pip:
         name: numpy
 
+    - name: Install Large Image package and applicable extras requirements
+      pip:
+        name:
+          - ".{{large_image_extras_require}}"
+        chdir: "{{ large_image_path }}"
+
     - command: "girder-install plugin -s --force {{ large_image_path }}"
   become: yes

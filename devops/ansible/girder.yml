@@ -37,15 +37,26 @@
     - name: Install libtiff
       apt:
         name: libtiff5-dev
-        autoremove: yes
+
   roles:
-    - large_image
-    - npm
+    - role: large_image
+      # Note: Take the groups this host is in, do a set intersection
+      # with the list of valid extras_require and join them as a comma
+      # seperated list.
+      large_image_extras_require: "[{{ group_names | intersect(['memcached', 'openslide', 'mapnik' ]) | join(',') }}]"
+    - role: npm
 
   post_tasks:
     - name: Rebuild Girder web
       command: "girder-install web --dev --plugins large_image,worker,jobs"
 
+
+- name: Install Mapnik dependencies
+  hosts: memcached
+  tasks:
+    - name: Install memcached
+      apt:
+        name: memcached
 
 - name: Install Mapnik dependencies
   hosts: mapnik
@@ -80,5 +91,8 @@
         name: libtiff5-dev
         state: absent
 
+    - name: Remove Stock libtiff
+      apt:
+        autoremove: yes
   roles:
     - role: DigitalSlideArchive.vips
