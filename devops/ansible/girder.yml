@@ -54,10 +54,6 @@
         name: gdal==1.10.0
         chdir: "{{ large_image_path }}"
 
-    - name: Install mapnik extras
-      pip:
-        name: ".[mapnik]"
-        chdir: "{{ large_image_path }}"
   environment:
     CPLUS_INCLUDE_PATH: /usr/include/gdal
     C_INCLUDE_PATH: /usr/include/gdal
