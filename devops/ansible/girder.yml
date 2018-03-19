@@ -6,7 +6,6 @@
     - name: Install Python
       raw: test -e /usr/bin/python || (apt-get update && apt-get install -y python python-pip)
 
-
 - name: Install Girder
   hosts: all
   pre_tasks:
@@ -30,25 +29,6 @@
       girder_web: no
       become: true
       become_user: "{{ girder_exec_user }}"
-
-- name: Install Large Image
-  hosts: all
-  pre_tasks:
-    - name: Install libtiff
-      apt:
-        name: libtiff5-dev
-
-  roles:
-    - role: large_image
-      # Note: Take the groups this host is in, do a set intersection
-      # with the list of valid extras_require and join them as a comma
-      # seperated list.
-      large_image_extras_require: "[{{ group_names | intersect(['memcached', 'openslide', 'mapnik' ]) | join(',') }}]"
-    - role: npm
-
-  post_tasks:
-    - name: Rebuild Girder web
-      command: "girder-install web --dev --plugins large_image,worker,jobs"
 
 
 - name: Install Mapnik dependencies
@@ -96,3 +76,23 @@
         autoremove: yes
   roles:
     - role: DigitalSlideArchive.vips
+
+
+- name: Install Large Image
+  hosts: all
+  pre_tasks:
+    - name: Install libtiff
+      apt:
+        name: libtiff5-dev
+
+  roles:
+    - role: large_image
+      # Note: Take the groups this host is in, do a set intersection
+      # with the list of valid extras_require and join them as a comma
+      # seperated list.
+      large_image_extras_require: "[{{ group_names | intersect(['memcached', 'openslide', 'mapnik' ]) | join(',') }}]"
+    - role: npm
+
+  post_tasks:
+    - name: Rebuild Girder web
+      command: "girder-install web --dev --plugins large_image,worker,jobs"
