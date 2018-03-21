@@ -1,25 +1,11 @@
 {
     "variables": {
         "tile_sources": "",
-        "docker_repo": "large_image/large_image",
-        "docker_tag": "latest",
         "vbox_memory": "1024",
         "vbox_cpus": "1",
         "vbox_disk_size": "65536"
     },
     "builders": [
-        {
-            "type": "docker",
-            "name": "docker",
-            "image": "ubuntu:16.04",
-            "pull": false,
-            "commit": true,
-            "changes": [
-                "ENTRYPOINT [\"girder\", \"serve\"]",
-                "CMD [\"-H\", \"0.0.0.0\"]"
-            ]
-        },
-
         {
             "type": "virtualbox-iso",
             "name": "vbox",
@@ -95,16 +81,11 @@
             "playbook_file": "../ansible/girder.yml",
             "groups": "{{user `tile_sources`}}",
             "extra_arguments": [
-                "-vvvv"
+                "-vv",
+                "-e girder_user=vagrant"
             ]
         }
     ],
     "post-processors": [
-        {
-            "type": "docker-tag",
-            "repository": "{{user `docker_repo`}}",
-            "tag": "{{user `docker_tag`}}",
-            "only": ["docker"]
-        }
     ]
 }

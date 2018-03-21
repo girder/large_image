@@ -1,0 +1,43 @@
+{
+    "variables": {
+        "tile_sources": "",
+        "docker_repo": "large_image/large_image",
+        "docker_tag": "latest"
+    },
+    "builders": [
+        {
+            "type": "docker",
+            "name": "docker",
+            "image": "ubuntu:16.04",
+            "pull": false,
+            "commit": true,
+            "changes": [
+                "ENTRYPOINT [\"girder\", \"serve\"]",
+                "CMD [\"-H\", \"0.0.0.0\"]"
+            ]
+        }
+    ],
+
+    "provisioners": [
+        {
+            "type": "shell-local",
+            "command": "ansible-galaxy install -p ../ansible/roles  -r ../ansible/requirements.yml"
+        },
+        {
+            "type": "ansible",
+            "playbook_file": "../ansible/girder.yml",
+            "groups": "{{user `tile_sources`}}",
+            "extra_arguments": [
+                "-vv"
+            ]
+        }
+    ],
+    "post-processors": [
+        {
+            "type": "docker-tag",
+            "repository": "{{user `docker_repo`}}",
+            "tag": "{{user `docker_tag`}}",
+            "only": ["docker"]
+        }
+    ]
+}
