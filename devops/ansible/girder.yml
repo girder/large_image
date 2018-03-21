@@ -6,33 +6,52 @@
     - name: Install Python
       raw: test -e /usr/bin/python || (apt-get update && apt-get install -y python python-pip)
 
+    - name: Install Sudo
+      raw: test -e /usr/bin/sudo || (apt-get update && apt-get install -y sudo)
+
+    - name: Passwordless sudo for vagrant user
+      raw: >-
+        test -e /etc/sudoers.d/99_vagrant ||
+        echo 'vagrant' | sudo -S bash -c
+        'echo "vagrant ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/99_vagrant &&
+        chmod 440 /etc/sudoers.d/99_vagrant'
+      when: packer_builder_type == "virtualbox-iso"
+
 - name: Install Girder
   hosts: all
   pre_tasks:
-    - name: Install sudo
-      apt:
-        name:
-          - sudo
-
     - name: Create root directory
       file:
         path: "{{ root_dir }}"
+        group: "{{ girder_user|default(ansible_user_id) }}"
+        owner: "{{ girder_user|default(ansible_user_id) }}"
         state: directory
         mode: 0755
+      become: yes
+      become_user: root
 
   roles:
 
     - role: girder.girder
       girder_version: "2.x-maintenance"
       girder_daemonize: false
-      # We build the girder web assets in girder-histomicstk
+      # We build the girder web assets in a later playbook
       girder_web: no
       become: true
-      become_user: "{{ girder_exec_user }}"
+      become_user: "{{ girder_user | default(ansible_user_id) }}"
+
+  post_tasks:
+    - name: Install libtiff
+      apt:
+        name: libtiff5-dev
+      become: yes
+      become_user: root
 
 
 - name: Install Mapnik dependencies
   hosts: memcached
+  become: yes
+  become_user: root
   tasks:
     - name: Install memcached
       apt:
@@ -40,6 +59,8 @@
 
 - name: Install Mapnik dependencies
   hosts: mapnik
+  become: yes
+  become_user: root
   tasks:
     - name: Install system packages
       apt:
@@ -66,27 +87,27 @@
       apt:
         name: libtiff5-dev
         state: absent
+      become: yes
+      become_user: root
 
     - name: Remove Stock libtiff
       apt:
         autoremove: yes
+      become: yes
+      become_user: root
+
   roles:
     - role: DigitalSlideArchive.vips
 
 
 - name: Install Large Image
   hosts: all
-  pre_tasks:
-    - name: Install libtiff
-      apt:
-        name: libtiff5-dev
-
   roles:
     - role: large_image
       # Note: Take the groups this host is in, do a set intersection
       # with the list of valid extras_require and join them as a comma
       # seperated list.
-      large_image_extras_require: "[{{ group_names | intersect(['memcached', 'openslide', 'mapnik' ]) | join(',') }}]"
+      large_image_extras_require: "{{ group_names | intersect(['memcached', 'openslide', 'mapnik' ]) }}"
     - role: npm
 
   post_tasks:

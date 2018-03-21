@@ -15,25 +15,43 @@
     force: yes
   become: yes
 
+
+- name: Make Large Image directory
+  file:
+    path: "{{ large_image_path }}"
+    state: directory
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  become: yes
+
 - name: Copy Large Image files
-  synchronize:
-    src: "../../../../../"
-    dest: "{{ large_image_path }}"
-    mode: push
-    recursive: yes
-    rsync_opts:
-      - "--exclude=devops"
+  local_action: >
+    shell
+    rsync -avz
+    -e "ssh -i {{ansible_ssh_private_key_file}} -o Port={{ansible_port}} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    --exclude=devops/
+    ../../ {{ansible_user}}@{{ansible_host}}:{{ large_image_path }}
+
 
 - name: Install Large Image
   block:
     - pip:
         name: numpy
 
+    - name: Install Large Image package
+      pip:
+        name:
+          - "."
+        chdir: "{{ large_image_path }}"
+      when: not (large_image_extras_require | default([]) | length)
+
     - name: Install Large Image package and applicable extras requirements
       pip:
         name:
-          - ".{{large_image_extras_require}}"
+          - ".[{{ large_image_extras_require | join(',') }}]"
         chdir: "{{ large_image_path }}"
+      when: (large_image_extras_require | default([]) | length)
+
 
     - command: "girder-install plugin -s --force {{ large_image_path }}"
   become: yes
