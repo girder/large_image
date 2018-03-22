@@ -94,8 +94,15 @@
                 "-e girder_user=vagrant",
                 "-e girder_daemonize=true"
             ]
+        },
+        {
+            "type": "ansible",
+            "playbook_file": "../ansible/mongo.yml",
+            "extra_arguments": [
+                "-vv"
             ]
         }
+
     ],
     "post-processors": [
         {

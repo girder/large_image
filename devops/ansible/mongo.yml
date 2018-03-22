@@ -1,0 +1,30 @@
+- hosts: all
+  tasks:
+    - name: Add Mongo apt key
+      apt_key:
+        keyserver: hkp://keyserver.ubuntu.com:80
+        id: 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5
+      become: yes
+      become_user: root
+
+    - name: Add mongo repository to sources list
+      apt_repository:
+        repo: "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.6 multiverse"
+        state: present
+      become: yes
+      become_user: root
+
+    - name: Update Apt and install mongodb-org
+      apt:
+        name: mongodb-org
+        update_cache: yes
+      become: yes
+      become_user: root
+
+    - name: Enable the Mongo service
+      service:
+        name: mongod
+        state: started
+        enabled: yes
+      become: yes
+      become_user: root
