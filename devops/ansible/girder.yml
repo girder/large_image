@@ -16,13 +16,28 @@
 
     - role: girder.girder
       girder_version: "2.x-maintenance"
-      girder_daemonize: false
       # We build the girder web assets in a later playbook
       girder_web: no
       become: true
       become_user: "{{ girder_user | default(ansible_user_id) }}"
 
   post_tasks:
+    - name: Ensures service override dir exists
+      file:
+        path: /etc/systemd/system/girder.service.d/
+        state: directory
+      when: girder_daemonize
+      become: yes
+      become_user: root
+
+    - name: Install Girder Service override
+      template:
+        src: girder.service.override
+        dest: /etc/systemd/system/girder.service.d/override.conf
+      when: girder_daemonize
+      become: yes
+      become_user: root
+
     - name: Install libtiff
       apt:
         name: libtiff5-dev

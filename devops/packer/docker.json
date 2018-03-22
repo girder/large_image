@@ -36,7 +36,8 @@
             "playbook_file": "../ansible/girder.yml",
             "groups": "{{user `tile_sources`}}",
             "extra_arguments": [
-                "-vv"
+                "-vv",
+                "-e girder_daemonize=false"
             ]
         }
 

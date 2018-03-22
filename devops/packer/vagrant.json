@@ -91,7 +91,9 @@
             "groups": "{{user `tile_sources`}}",
             "extra_arguments": [
                 "-vv",
-                "-e girder_user=vagrant"
+                "-e girder_user=vagrant",
+                "-e girder_daemonize=true"
+            ]
             ]
         }
     ],
