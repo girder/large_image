@@ -25,12 +25,22 @@
         },
         {
             "type": "ansible",
+            "playbook_file": "../ansible/setup.yml",
+            "groups": "{{user `tile_sources`}}",
+            "extra_arguments": [
+                "-vv"
+            ]
+        },
+        {
+            "type": "ansible",
             "playbook_file": "../ansible/girder.yml",
             "groups": "{{user `tile_sources`}}",
             "extra_arguments": [
                 "-vv"
             ]
         }
+
+
     ],
     "post-processors": [
         {

@@ -3,3 +3,6 @@ root_dir: /opt/girder
 girder_path: "{{ root_dir }}/girder"
 
 large_image_path: /opt/large_image
+large_image_extras_require: []
+
+packer_builder_type: ""

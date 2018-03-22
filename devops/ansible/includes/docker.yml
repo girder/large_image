@@ -1,0 +1,5 @@
+- name: Install Python
+  raw: test -e /usr/bin/python || (apt-get update && apt-get install -y python python-pip)
+
+- name: Install Sudo
+  raw: test -e /usr/bin/sudo || (apt-get update && apt-get install -y sudo)

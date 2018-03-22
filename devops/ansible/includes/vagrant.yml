@@ -1,0 +1,39 @@
+- name: Passwordless sudo for vagrant user
+  raw: >-
+    test -e /etc/sudoers.d/99_vagrant ||
+    echo 'vagrant' | sudo -S bash -c
+    'echo "vagrant ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/99_vagrant &&
+    chmod 440 /etc/sudoers.d/99_vagrant'
+
+
+# See: https://github.com/chef/bento/blob/master/_common/vagrant.sh
+- name: Setup public key for vagrant passwordless SSH
+  raw: >-
+    pubkey_url="https://raw.githubusercontent.com/mitchellh/vagrant/master/keys/vagrant.pub";
+    mkdir -p /home/vagrant/.ssh;
+    if command -v wget >/dev/null 2>&1; then
+        wget --no-check-certificate "$pubkey_url" -O /home/vagrant/.ssh/authorized_keys;
+    elif command -v curl >/dev/null 2>&1; then
+        curl --insecure --location "$pubkey_url" > /home/vagrant/.ssh/authorized_keys;
+    elif command -v fetch >/dev/null 2>&1; then
+        fetch -am -o /home/vagrant/.ssh/authorized_keys "$pubkey_url";
+    else
+        echo "Cannot download vagrant public key";
+        exit 1;
+    fi;
+    chown -R vagrant /home/vagrant/.ssh;
+    chmod -R go-rwsx /home/vagrant/.ssh;
+
+
+- name: Setup Guest Additions
+  raw: >-
+    sudo groupadd vboxsf;
+    sudo usermod -aG vboxsf vagrant;
+    sudo apt-get update;
+    sudo apt-get install -y dkms build-essential linux-headers-generic linux-headers-$(uname -r);
+    sudo mkdir -p /tmp/vbox;
+    sudo mount -o loop /home/vagrant/VBoxGuestAdditions_$(cat /home/vagrant/.vbox_version).iso /tmp/vbox;
+    sudo sh /tmp/vbox/VBoxLinuxAdditions.run;
+    sudo umount /tmp/vbox;
+    sudo rm -rf /tmp/vbox;
+    sudo rm -f $HOME_DIR/*.iso;

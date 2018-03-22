@@ -1,0 +1,10 @@
+---
+- name: Run Builder specific provisioning
+  hosts: all
+  gather_facts: false
+  tasks:
+    - include: includes/docker.yml
+      when: packer_builder_type == "docker"
+
+    - include: includes/vagrant.yml
+      when: packer_builder_type == "virtualbox-iso"

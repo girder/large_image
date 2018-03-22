@@ -1,22 +1,4 @@
 ---
-- name: Intial Setup
-  hosts: all
-  gather_facts: false
-  tasks:
-    - name: Install Python
-      raw: test -e /usr/bin/python || (apt-get update && apt-get install -y python python-pip)
-
-    - name: Install Sudo
-      raw: test -e /usr/bin/sudo || (apt-get update && apt-get install -y sudo)
-
-    - name: Passwordless sudo for vagrant user
-      raw: >-
-        test -e /etc/sudoers.d/99_vagrant ||
-        echo 'vagrant' | sudo -S bash -c
-        'echo "vagrant ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/99_vagrant &&
-        chmod 440 /etc/sudoers.d/99_vagrant'
-      when: packer_builder_type == "virtualbox-iso"
-
 - name: Install Girder
   hosts: all
   pre_tasks:

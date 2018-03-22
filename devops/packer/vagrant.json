@@ -3,7 +3,8 @@
         "tile_sources": "",
         "vbox_memory": "1024",
         "vbox_cpus": "1",
-        "vbox_disk_size": "65536"
+        "vbox_disk_size": "65536",
+        "vagrant_box_name": "large_image.box"
     },
     "builders": [
         {
@@ -78,6 +79,14 @@
         },
         {
             "type": "ansible",
+            "playbook_file": "../ansible/setup.yml",
+            "groups": "{{user `tile_sources`}}",
+            "extra_arguments": [
+                "-vv"
+            ]
+        },
+        {
+            "type": "ansible",
             "playbook_file": "../ansible/girder.yml",
             "groups": "{{user `tile_sources`}}",
             "extra_arguments": [
@@ -87,5 +96,9 @@
         }
     ],
     "post-processors": [
+        {
+            "type": "vagrant",
+            "output": "builds/{{user `vagrant_box_name`}}"
+        }
     ]
 }
