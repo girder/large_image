@@ -2,6 +2,13 @@
 - name: Install Girder
   hosts: all
   pre_tasks:
+
+    # Create a root directory to install things in. Note that we use
+    # ansible_user_id as a default because with VirtualBox
+    # provisioning the ansible_user will be the user running packer,
+    # however inside the container the user they take on is "vagrant"
+    # ansible_user_id captures the actual user executing the command
+    # (rather than the user who ssh'd into the machine).
     - name: Create root directory
       file:
         path: "{{ root_dir }}"
@@ -13,6 +20,7 @@
       become_user: root
 
   roles:
+    # Install Girder with the Girder Role
 
     - role: girder.girder
       girder_version: "2.x-maintenance"
@@ -22,6 +30,11 @@
       become_user: "{{ girder_user | default(ansible_user_id) }}"
 
   post_tasks:
+    # By default the Girder systemd service file does not permit
+    # passing command line arguments to the ExecStart command. This is
+    # problematic because inside the container we need to listen on
+    # 0.0.0.0 so port forwarding from the host machine to the guest
+    # machine works correctly
     - name: Ensures service override dir exists
       file:
         path: /etc/systemd/system/girder.service.d/
@@ -38,12 +51,15 @@
       become: yes
       become_user: root
 
+    # Install the default libtiff to provide basic support for Tiff files
     - name: Install libtiff
       apt:
         name: libtiff5-dev
       become: yes
       become_user: root
 
+
+# If the host is in the 'memcached' group install memcached
 
 - name: Install Mapnik dependencies
   hosts: memcached
@@ -54,6 +70,7 @@
       apt:
         name: memcached
 
+# If the host is in the 'mapnik' group install mapnik dependencies
 - name: Install Mapnik dependencies
   hosts: mapnik
   become: yes
@@ -76,24 +93,30 @@
     CPLUS_INCLUDE_PATH: /usr/include/gdal
     C_INCLUDE_PATH: /usr/include/gdal
 
+# If the host is in the 'openslide' group install openslide dependencies
 
 - name: Install Openslide dependencies
   hosts: openslide
   pre_tasks:
-    - name: Remove Stock libtiff
+    # First remove the stock libtiff
+    - name: Remove Stock libtiff [1/2]
       apt:
         name: libtiff5-dev
         state: absent
       become: yes
-      become_user: root
+      become_user:
 
-    - name: Remove Stock libtiff
+    # Running autoremove in the same command didn't seem to be working.
+    - name: Remove Stock libtiff [2/2]
       apt:
         autoremove: yes
       become: yes
       become_user: root
 
   roles:
+    # Install the nessisary dependencies for openslide.  Note that
+    # this will also install vips even though we won't use vips inside
+    # the container.
     - role: DigitalSlideArchive.vips
 
 
@@ -101,9 +124,12 @@
   hosts: all
   roles:
     - role: large_image
+
       # Note: Take the groups this host is in, do a set intersection
-      # with the list of valid extras_require and join them as a comma
-      # seperated list.
+      # with the list of valid extras_require. Note that we use this
+      # list to install the large_image python package's
+      # extras_requires. This means the names of the groups the host
+      # is in is tightly coupled with the names of the extra_requires.
       large_image_extras_require: "{{ group_names | intersect(['memcached', 'openslide', 'mapnik' ]) }}"
     - role: npm
 

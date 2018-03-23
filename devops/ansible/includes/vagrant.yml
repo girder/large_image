@@ -1,3 +1,6 @@
+# The 'vagrant' user should have passwordless SUDO based on vagrant
+# common practices This also ensures 'become' statements work as
+# expected.
 - name: Passwordless sudo for vagrant user
   raw: >-
     test -e /etc/sudoers.d/99_vagrant ||
@@ -5,7 +8,9 @@
     'echo "vagrant ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/99_vagrant &&
     chmod 440 /etc/sudoers.d/99_vagrant'
 
-
+# Install the public key 'vagrant.pub' into the vagrant users
+# ~/.ssh/authorized_keys. This ensures 'vagrant ssh' works as expected
+# when the box is launched.
 # See: https://github.com/chef/bento/blob/master/_common/vagrant.sh
 - name: Setup public key for vagrant passwordless SSH
   raw: >-
@@ -25,6 +30,12 @@
     chmod -R go-rwsx /home/vagrant/.ssh;
 
 
+# By default Vagrant will mount the host directory where the
+# Vagrantfile is located at /vagrant inside the box. To accomplish
+# this VirtualBox's Guest Additions must be installed inside the
+# machine. The VBoxGuestAddtions_<VERSION>.iso is put in the machine
+# as apart of the setup process orchistrated by the builder.
+
 - name: Setup Guest Additions
   raw: >-
     sudo groupadd vboxsf;
@@ -36,4 +47,4 @@
     sudo sh /tmp/vbox/VBoxLinuxAdditions.run;
     sudo umount /tmp/vbox;
     sudo rm -rf /tmp/vbox;
-    sudo rm -f $HOME_DIR/*.iso;
+    sudo rm -f /home/vagrant/*.iso;

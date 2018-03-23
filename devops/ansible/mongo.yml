@@ -1,3 +1,9 @@
+# This is run against builder machines where the common expectation is
+# that mongo will be installed on the instance (e.g. Vagrant).
+
+# Note: Stouts.mongodb was being problematic, it was easier/faster to
+# just write the tasks needed then to try and fiddle with Stouts to
+# get it to work.
 - hosts: all
   tasks:
     - name: Add Mongo apt key

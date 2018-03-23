@@ -3,8 +3,19 @@
   hosts: all
   gather_facts: false
   tasks:
+
+    # Run docker specific provisioning.  Docker's ubuntu 16.04 is
+    # missing several key pieces of software nessisary for Ansible to
+    # function correctly, e.g. Python & Sudo.
     - include: includes/docker.yml
       when: packer_builder_type == "docker"
 
+    # Run Vagrant specific provisioning. For strictly Virtualbox
+    # builds this is not nessisary, however for Vagrant there are some
+    # configurations that are required to function properly
+    # (e.g. Setting up the expected public key in the vagrant user's
+    # authorized_keys and installing the VirtualBox guest additions so
+    # the host directory with the Vagrantfile can be mounted at
+    # /vagrant inside the guest.
     - include: includes/vagrant.yml
       when: packer_builder_type == "virtualbox-iso"
