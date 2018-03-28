@@ -48,6 +48,9 @@ try:
 except ImportError:
     PIL = None
 
+# This suppress warnings about unknown tags
+libtiff_ctypes.suppress_warnings()
+
 
 def patchLibtiff():
     libtiff_ctypes.libtiff.TIFFFieldWithTag.restype = \
