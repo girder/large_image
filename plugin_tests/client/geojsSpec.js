@@ -645,10 +645,28 @@ $(function () {
                 checkFeatureOpacity(annotation2.id, 0.5, 1);
             });
         });
-
         it('destroy the viewer', function () {
             viewer.destroy();
             expect($('.geojs-layer').length).toBe(0);
+        });
+
+        it('scale', function () {
+            viewer = new GeojsViewer({
+                el: $el,
+                itemId: itemId,
+                parentView: null,
+                scale: {position: {bottom: 20, right: 10}, scale: 0.0005}
+            });
+            viewer.once('g:beforeFirstRender', function () {
+                window.geo.util.mockVGLRenderer();
+            });
+            waitsFor(function () {
+                return $('.geojs-layer.active').length >= 1 && viewer.scaleWidget;
+            }, 'viewer and scale to load');
+            runs(function () {
+                expect(viewer.scaleWidget instanceof window.geo.gui.scaleWidget).toBe(true);
+                viewer.destroy();
+            });
         });
     });
 });

@@ -2,6 +2,7 @@ import _ from 'underscore';
 import Backbone from 'backbone';
 // Import hammerjs for geojs touch events
 import Hammer from 'hammerjs';
+import d3 from 'd3';
 
 import { staticRoot, restRequest } from 'girder/rest';
 import events from 'girder/events';
@@ -10,6 +11,7 @@ import ImageViewerWidget from './base';
 import convertAnnotation from '../../annotations/geojs/convert';
 
 window.hammerjs = Hammer;
+window.d3 = d3;
 
 /**
  * Generate a new "random" element id (24 random 16 digits).
@@ -32,6 +34,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
+        this._scale = settings.scale;
 
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
@@ -104,6 +107,13 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this.viewer.createLayer('osm');
             this.viewer.createLayer('osm', params);
         }
+        if (this._scale && (this.metadata.mm_x || this.metadata.geospatial || this._scale.scale)) {
+            if (!this._scale.scale && !this.metadata.geospatial) {
+                this._scale.scale = this.metadata.mm_x / 100;
+            }
+            this.uiLayer = this.viewer.createLayer('ui');
+            this.scaleWidget = this.uiLayer.createWidget('scale', this._scale);
+        }
         // the feature layer is for annotations that are loaded
         this.featureLayer = this.viewer.createLayer('feature', {
             features: ['point', 'line', 'polygon']
@@ -122,6 +132,10 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
     destroy: function () {
         if (this.viewer) {
+            // make sure there is nothing left in the animation queue
+            var queue = [];
+            this.viewer.animationQueue(queue);
+            queue.splice(0, queue.length);
             this.viewer.exit();
             this.viewer = null;
         }
