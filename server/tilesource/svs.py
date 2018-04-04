@@ -154,12 +154,12 @@ class SVSFileTileSource(FileTileSource):
         try:
             width = int(self._openslide.properties[
                 'openslide.level[0].tile-width'])
-        except ValueError:
+        except (ValueError, KeyError):
             pass
         try:
             height = int(self._openslide.properties[
                 'openslide.level[0].tile-height'])
-        except ValueError:
+        except (ValueError, KeyError):
             pass
         # If the tile size is too small (<4) or wrong (<=0), use a default value
         if width < 4:
