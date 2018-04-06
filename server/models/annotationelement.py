@@ -296,3 +296,10 @@ class Annotationelement(Model):
         if time.time() - startTime > 10:
             logger.info('inserted %d elements in %4.2fs' % (
                 len(elements), time.time() - startTime))
+
+    def getElementGroupSet(self, annotation):
+        query = {
+            'annotationId': annotation.get('_annotationId', annotation['_id']),
+            '_version': annotation['_version']
+        }
+        return self.collection.distinct('element.group', filter=query)
