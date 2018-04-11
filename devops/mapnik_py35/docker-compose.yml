@@ -14,3 +14,4 @@ services:
       - "8080"
     depends_on:
       - mongodb
+    container_name: large-image-mapnik-python35
