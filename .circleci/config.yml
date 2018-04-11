@@ -18,13 +18,13 @@ jobs:
       - run:
           name: Install large image plugin
           command: |
-            docker exec mapnikpy35_large_image_1 sed -i 's/PY2_ONLY/PY3_ONLY/g' /large_image/plugin.cmake
-            docker exec mapnikpy35_large_image_1 pip3 install -e /large_image[mapnik]
-            docker exec mapnikpy35_large_image_1 girder-install plugin -s /large_image
+            docker exec large-image-mapnik-python35 sed -i 's/PY2_ONLY/PY3_ONLY/g' /large_image/plugin.cmake
+            docker exec large-image-mapnik-python35 pip3 install -e /large_image[mapnik]
+            docker exec large-image-mapnik-python35 girder-install plugin -s /large_image
 
       - run:
           name: Run the tests
           command: |
-            docker exec mapnikpy35_large_image_1 cmake -DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3 girder
-            docker exec mapnikpy35_large_image_1 make -j 5
-            docker exec mapnikpy35_large_image_1 ctest -R mapnik -V
+            docker exec large-image-mapnik-python35 cmake -DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3 girder
+            docker exec large-image-mapnik-python35 make -j 5
+            docker exec large-image-mapnik-python35 ctest -R mapnik -V
