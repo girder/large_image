@@ -372,8 +372,14 @@ class MapnikTileSource(FileTileSource):
                 values = self.interpolateMinMax(minimum,
                                                 maximum,
                                                 len(colors))
+                try:
+                    scheme = self.style.get('scheme', 'discrete')
+                    mapnik_scheme = getattr(mapnik, 'COLORIZER_{}'.format(scheme.upper()))
+                except AttributeError:
+                    mapnik_scheme = mapnik.COLORIZER_DISCRETE
+                    raise TileSourceException('Scheme has to be either "discrete" or "linear"')
                 colorizer = mapnik.RasterColorizer(
-                    mapnik.COLORIZER_DISCRETE,
+                    mapnik_scheme,
                     mapnik.Color('white')
                 )
                 for color, value in zip(colors, values):
