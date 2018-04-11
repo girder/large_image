@@ -146,6 +146,38 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         self.assertIn(None, diffs)
 
+    def testTileLinearStyleFromGeotiffs(self):
+        file = self._uploadFile(os.path.join(
+            os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff'))
+
+        style = json.dumps({'band': 1, 'min': 0, 'max': 100,
+                            'palette': 'matplotlib.Plasma_6',
+                            'scheme': 'linear'})
+
+        itemId = str(file['itemId'])
+        resp = self.request(
+            path='/item/%s/tiles/zxy/7/22/51' % itemId, user=self.admin,
+            isJson=False, params={'encoding': 'PNG', 'projection': 'EPSG:3857',
+                                  'style': style})
+
+        self.assertStatusOk(resp)
+        image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
+        testImage = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'geotiff_style_linear_7_22_51.png')
+
+        testImagePy3 = os.path.join(
+            os.path.dirname(__file__), 'test_files', 'geotiff_style_linear_7_22_51_py3.png')
+
+        testImage = PIL.Image.open(testImage)
+        testImagePy3 = PIL.Image.open(testImagePy3)
+
+        diffs = [
+            PIL.ImageChops.difference(image, testImage).getbbox(),
+            PIL.ImageChops.difference(image, testImagePy3).getbbox()
+        ]
+
+        self.assertIn(None, diffs)
+
     def _assertStyleResponse(self, itemId, style, message):
         style = json.dumps(style)
         resp = self.request(
@@ -191,6 +223,14 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
             'max': 100,
             'palette': 'nonexistent.palette'
         }, 'Palette is not a valid palettable path.')
+
+        self._assertStyleResponse(itemId, {
+            'band': 1,
+            'min': 0,
+            'max': 100,
+            'palette': 'matplotlib.Plasma_6',
+            'scheme': 'some_invalid_scheme'
+        }, 'Scheme has to be either "discrete" or "linear".')
 
         self._assertStyleResponse(itemId, ['style'],
                                   'Style is not a valid json object.')

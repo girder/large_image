@@ -377,7 +377,7 @@ class MapnikTileSource(FileTileSource):
                     mapnik_scheme = getattr(mapnik, 'COLORIZER_{}'.format(scheme.upper()))
                 except AttributeError:
                     mapnik_scheme = mapnik.COLORIZER_DISCRETE
-                    raise TileSourceException('Scheme has to be either "discrete" or "linear"')
+                    raise TileSourceException('Scheme has to be either "discrete" or "linear".')
                 colorizer = mapnik.RasterColorizer(
                     mapnik_scheme,
                     mapnik.Color('white')
