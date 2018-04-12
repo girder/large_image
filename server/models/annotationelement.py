@@ -20,6 +20,7 @@
 import datetime
 import math
 import time
+import six
 from six.moves import range
 
 from girder.constants import AccessType, SortDir
@@ -307,7 +308,10 @@ class Annotationelement(Model):
             'annotationId': annotation.get('_annotationId', annotation['_id']),
             '_version': annotation['_version']
         }
-        groups = sorted(self.collection.distinct('element.group', filter=query))
+        groups = sorted([
+            group for group in self.collection.distinct('element.group', filter=query)
+            if isinstance(group, six.string_types)
+        ])
         query['element.group'] = None
         if self.collection.find_one(query):
             groups.append(None)
