@@ -54,7 +54,12 @@ class Annotationelement(Model):
             ([
                 ('annotationId', SortDir.ASCENDING),
                 ('bbox.size', SortDir.DESCENDING),
-            ], {})
+            ], {}),
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('element.group', SortDir.ASCENDING),
+            ], {}),
         ])
 
         self.exposeFields(AccessType.READ, (
