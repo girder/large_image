@@ -939,8 +939,7 @@ class Annotation(AccessControlledModel):
 
     def injectAnnotationGroupSet(self, annotation):
         if 'groups' not in annotation:
-            annotation['groups'] = sorted(
-                Annotationelement().getElementGroupSet(annotation))
+            annotation['groups'] = Annotationelement().getElementGroupSet(annotation)
             query = {
                 '_id': ObjectId(annotation['_id'])
             }

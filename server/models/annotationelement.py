@@ -302,4 +302,8 @@ class Annotationelement(Model):
             'annotationId': annotation.get('_annotationId', annotation['_id']),
             '_version': annotation['_version']
         }
-        return self.collection.distinct('element.group', filter=query)
+        groups = sorted(self.collection.distinct('element.group', filter=query))
+        query['element.group'] = None
+        if self.collection.find_one(query):
+            groups.append(None)
+        return groups

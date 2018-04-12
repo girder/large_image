@@ -1016,18 +1016,18 @@ class LargeImageAnnotationElementGroups(common.LargeImageCommonTest):
         self.assertEqual(len(resp.json), 3)
         for annotation in resp.json:
             if annotation['_id'] == str(self.noGroups['_id']):
-                self.assertEqual(annotation['groups'], [])
+                self.assertEqual(annotation['groups'], [None])
             elif annotation['_id'] == str(self.notMigrated['_id']):
                 self.assertEqual(annotation['groups'], ['a', 'b'])
             elif annotation['_id'] == str(self.hasGroups['_id']):
-                self.assertEqual(annotation['groups'], ['a', 'c'])
+                self.assertEqual(annotation['groups'], ['a', 'c', None])
             else:
                 raise Exception('Unexpected annotation id')
 
     def testLoadAnnotation(self):
         resp = self.request('/annotation/%s' % str(self.hasGroups['_id']), user=self.admin)
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json['groups'], ['a', 'c'])
+        self.assertEqual(resp.json['groups'], ['a', 'c', None])
 
     def testCreateAnnotation(self):
         annotation = {
