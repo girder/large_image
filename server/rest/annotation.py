@@ -85,12 +85,17 @@ class AnnotationResource(Resource):
             query['$text'] = {'$search': params['text']}
         if params.get('name'):
             query['annotation.name'] = params['name']
-        fields = list(('annotation.name', 'annotation.description', 'access') +
-                      Annotation().baseFields)
-        return list(Annotation().filterResultsByPermission(
+        fields = list(
+            (
+                'annotation.name', 'annotation.description', 'access', 'groups', '_version'
+            ) + Annotation().baseFields)
+        annotations = list(Annotation().filterResultsByPermission(
             cursor=Annotation().find(query, sort=sort, fields=fields),
             user=self.getCurrentUser(), level=AccessType.READ, limit=limit, offset=offset
         ))
+        for annotation in annotations:
+            Annotation().injectAnnotationGroupSet(annotation)
+        return annotations
 
     @describeRoute(
         Description('Get the official Annotation schema')

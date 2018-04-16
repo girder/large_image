@@ -20,6 +20,7 @@
 import datetime
 import math
 import time
+import six
 from six.moves import range
 
 from girder.constants import AccessType, SortDir
@@ -54,7 +55,12 @@ class Annotationelement(Model):
             ([
                 ('annotationId', SortDir.ASCENDING),
                 ('bbox.size', SortDir.DESCENDING),
-            ], {})
+            ], {}),
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('element.group', SortDir.ASCENDING),
+            ], {}),
         ])
 
         self.exposeFields(AccessType.READ, (
@@ -296,3 +302,17 @@ class Annotationelement(Model):
         if time.time() - startTime > 10:
             logger.info('inserted %d elements in %4.2fs' % (
                 len(elements), time.time() - startTime))
+
+    def getElementGroupSet(self, annotation):
+        query = {
+            'annotationId': annotation.get('_annotationId', annotation['_id']),
+            '_version': annotation['_version']
+        }
+        groups = sorted([
+            group for group in self.collection.distinct('element.group', filter=query)
+            if isinstance(group, six.string_types)
+        ])
+        query['element.group'] = None
+        if self.collection.find_one(query):
+            groups.append(None)
+        return groups

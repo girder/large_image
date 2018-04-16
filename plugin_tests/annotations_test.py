@@ -934,6 +934,151 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
     # find
 
 
+class LargeImageAnnotationElementGroups(common.LargeImageCommonTest):
+    def setUp(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+
+        super(LargeImageAnnotationElementGroups, self).setUp()
+
+        self.item = Item().createItem('sample', self.admin, self.publicFolder)
+        annotationModel = Annotation()
+
+        self.noGroups = annotationModel.createAnnotation(
+            self.item, self.admin,
+            {
+                'name': 'nogroups',
+                'elements': [{
+                    'type': 'rectangle',
+                    'center': [20.0, 25.0, 0],
+                    'width': 14.0,
+                    'height': 15.0,
+                }, {
+                    'type': 'rectangle',
+                    'center': [40.0, 15.0, 0],
+                    'width': 5.0,
+                    'height': 5.0
+                }]
+            }
+        )
+
+        self.notMigrated = annotationModel.createAnnotation(
+            self.item, self.admin,
+            {
+                'name': 'notmigrated',
+                'elements': [{
+                    'type': 'rectangle',
+                    'center': [20.0, 25.0, 0],
+                    'width': 14.0,
+                    'height': 15.0,
+                    'group': 'b'
+                }, {
+                    'type': 'rectangle',
+                    'center': [40.0, 15.0, 0],
+                    'width': 5.0,
+                    'height': 5.0,
+                    'group': 'a'
+                }]
+            }
+        )
+        annotationModel.collection.update_one(
+            {'_id': self.notMigrated['_id']},
+            {'$unset': {'groups': ''}}
+        )
+
+        self.hasGroups = annotationModel.createAnnotation(
+            self.item, self.admin,
+            {
+                'name': 'hasgroups',
+                'elements': [{
+                    'type': 'rectangle',
+                    'center': [20.0, 25.0, 0],
+                    'width': 14.0,
+                    'height': 15.0,
+                    'group': 'a'
+                }, {
+                    'type': 'rectangle',
+                    'center': [40.0, 15.0, 0],
+                    'width': 5.0,
+                    'height': 5.0,
+                    'group': 'c'
+                }, {
+                    'type': 'rectangle',
+                    'center': [50.0, 10.0, 0],
+                    'width': 5.0,
+                    'height': 5.0
+                }]
+            }
+        )
+
+    def testFindAnnotations(self):
+        resp = self.request('/annotation', user=self.admin, params={'itemId': self.item['_id']})
+        self.assertStatusOk(resp)
+        self.assertEqual(len(resp.json), 3)
+        for annotation in resp.json:
+            if annotation['_id'] == str(self.noGroups['_id']):
+                self.assertEqual(annotation['groups'], [None])
+            elif annotation['_id'] == str(self.notMigrated['_id']):
+                self.assertEqual(annotation['groups'], ['a', 'b'])
+            elif annotation['_id'] == str(self.hasGroups['_id']):
+                self.assertEqual(annotation['groups'], ['a', 'c', None])
+            else:
+                raise Exception('Unexpected annotation id')
+
+    def testLoadAnnotation(self):
+        resp = self.request('/annotation/%s' % str(self.hasGroups['_id']), user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['groups'], ['a', 'c', None])
+
+    def testCreateAnnotation(self):
+        annotation = {
+            'name': 'created',
+            'elements': [{
+                'type': 'rectangle',
+                'center': [20.0, 25.0, 0],
+                'width': 14.0,
+                'height': 15.0,
+                'group': 'a'
+            }]
+        }
+        resp = self.request(
+            '/annotation',
+            user=self.admin,
+            method='POST',
+            params={'itemId': str(self.item['_id'])},
+            type='application/json',
+            body=json.dumps(annotation)
+        )
+        self.assertStatusOk(resp)
+
+        resp = self.request('/annotation/%s' % resp.json['_id'], user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['groups'], ['a'])
+
+    def testUpdateAnnotation(self):
+        annotation = {
+            'name': 'created',
+            'elements': [{
+                'type': 'rectangle',
+                'center': [20.0, 25.0, 0],
+                'width': 14.0,
+                'height': 15.0,
+                'group': 'd'
+            }]
+        }
+        resp = self.request(
+            '/annotation/%s' % str(self.hasGroups['_id']),
+            user=self.admin,
+            method='PUT',
+            type='application/json',
+            body=json.dumps(annotation)
+        )
+        self.assertStatusOk(resp)
+
+        resp = self.request('/annotation/%s' % resp.json['_id'], user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json['groups'], ['d'])
+
+
 class LargeImageAnnotationAccessMigrationTest(common.LargeImageCommonTest):
 
     def testMigrateAnnotationAccessControl(self):
