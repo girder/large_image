@@ -144,6 +144,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         ImageViewerWidget.prototype.destroy.call(this);
     },
 
+    annotationAPI: _.constant(true),
+
     /**
      * Render an annotation model on the image.  Currently,
      * this is limited to annotation types that can be directly

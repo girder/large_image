@@ -1,5 +1,5 @@
 import _ from 'underscore';
-import Model from 'girder/models/Model';
+import AccessControlledModel from 'girder/models/AccessControlledModel';
 import { restRequest } from 'girder/rest';
 
 import ElementCollection from '../collections/ElementCollection';
@@ -17,7 +17,7 @@ import convert from '../annotations/convert';
  * and updates its own attribute in response.  Users
  * should not modify the "elements" attribute directly.
  */
-export default Model.extend({
+export default AccessControlledModel.extend({
     resourceName: 'annotation',
 
     defaults: {
