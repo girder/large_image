@@ -670,12 +670,13 @@ class Annotation(AccessControlledModel):
             # elements aren't set (this is unavoidable without database
             # transactions, as we need the annotation's id to set the
             # elements).
-            ret = insert_one(doc, *args, **kwargs)
+            doc.setdefault('_id', ObjectId())
             if elements is not None:
                 doc['annotation']['elements'] = elements
                 Annotationelement().updateElements(doc)
             # If we are inserting, we shouldn't have any old elements, so don't
             # bother removing them.
+            ret = insert_one(doc, *args, **kwargs)
             return ret
 
         with self._writeLock:
