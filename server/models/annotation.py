@@ -665,18 +665,17 @@ class Annotation(AccessControlledModel):
             return ret
 
         def insertElements(doc, *args, **kwargs):
-            elements = doc['annotation'].pop('elements', None)
-            # When creating an annotation, there is a window of time where the
-            # elements aren't set (this is unavoidable without database
-            # transactions, as we need the annotation's id to set the
-            # elements).
+            # When creating an annotation, store the elements first, then store
+            # the annotation without elements, then restore the elements.
             doc.setdefault('_id', ObjectId())
-            if elements is not None:
-                doc['annotation']['elements'] = elements
+            if doc['annotation'].get('elements') is not None:
                 Annotationelement().updateElements(doc)
             # If we are inserting, we shouldn't have any old elements, so don't
             # bother removing them.
+            elements = doc['annotation'].pop('elements', None)
             ret = insert_one(doc, *args, **kwargs)
+            if elements is not None:
+                doc['annotation']['elements'] = elements
             return ret
 
         with self._writeLock:
