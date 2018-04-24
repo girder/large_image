@@ -93,7 +93,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 keepLower: false,
                 attribution: null,
                 url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG', 'projection': 'EPSG:3857'}),
-                useCredentials: true
+                useCredentials: true,
+                maxLevel: this.levels - 1
             };
             // the metadata levels is the count including level 0, so use one
             // less than the value specified
