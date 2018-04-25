@@ -122,6 +122,10 @@ describe('AnnotationListWidget', function () {
                 return $('.g-item-image-viewer-select').length !== 0;
             }, 15000);
             girderTest.waitForLoad();
+            runs(function () {
+                expect($('.g-annotation-list-container p').text()).toBe(
+                    'This image does not contain any annotations.');
+            });
         });
         it('get item model', function () {
             item = new girder.models.ItemModel();
