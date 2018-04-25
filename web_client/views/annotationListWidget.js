@@ -35,7 +35,7 @@ const AnnotationListWidget = View.extend({
             'direction': 1
         };
 
-        this.collection = this.collection || new AnnotationCollection();
+        this.collection = this.collection || new AnnotationCollection({comparator: null});
         this.users = new UserCollection();
 
         this.listenTo(this.collection, 'all', this.render);
