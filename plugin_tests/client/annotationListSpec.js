@@ -163,6 +163,7 @@ describe('AnnotationListWidget', function () {
                 girder.router.navigate('item/' + item.id, {trigger: true});
             });
             girderTest.waitForLoad();
+            waitForLargeImageViewer('openseadragon');
         });
     });
 
@@ -227,6 +228,7 @@ describe('AnnotationListWidget', function () {
                 girder.router.navigate('item/' + item.id, {trigger: true});
             });
             girderTest.waitForLoad();
+            waitForLargeImageViewer('openseadragon');
             runs(function () {
                 $('.g-item-image-viewer-select select').val('geojs').trigger('change');
             });
