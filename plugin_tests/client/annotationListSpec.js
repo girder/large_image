@@ -263,6 +263,10 @@ describe('AnnotationListWidget', function () {
             var $el = $('.g-annotation-list .g-annotation-row:first');
             expect($el.find('.g-annotation-permissions').length).toBe(0);
         });
+        it('check visibility checkbox tooltip', function () {
+            expect($('.g-annotation-list .g-annotation-toggle input:first').prop('title')).toBe(
+                'Show annotation');
+        });
         it('toggle annotation visibility', function () {
             var id = $('.g-annotation-list .g-annotation-row:first').data('annotationId');
             $('.g-annotation-list .g-annotation-row:first').click();

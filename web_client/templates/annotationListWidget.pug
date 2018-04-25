@@ -17,7 +17,7 @@ if annotations.length
         - var creator = creatorModel ? creatorModel.get('login') : annotation.get('creatorId');
         tr.g-annotation-row(data-annotation-id=annotation.id)
           td.g-annotation-toggle
-            input(type='checkbox', disabled=!canDraw, checked=drawn.has(annotation.id))
+            input(type='checkbox', disabled=!canDraw, checked=drawn.has(annotation.id), title='Show annotation')
           td.g-annotation-name(title=name)
             = name
 
