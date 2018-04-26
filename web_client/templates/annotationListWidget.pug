@@ -1,8 +1,8 @@
-.g-annotation-list-header
-  i.icon-pencil
-  | Annotations
-
 if annotations.length
+  .g-annotation-list-header
+    i.icon-pencil
+    | Annotations
+
   table.g-annotation-list.table.table-hover.table-condensed
     thead
       th.g-annotation-toggle
@@ -36,5 +36,3 @@ if annotations.length
             if annotation.get('_accessLevel') >= AccessType.WRITE
               a.g-annotation-delete(title='Delete')
                 i.icon-cancel
-else
-  p This image does not contain any annotations.
