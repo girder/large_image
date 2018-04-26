@@ -1,0 +1,38 @@
+if annotations.length
+  .g-annotation-list-header
+    i.icon-pencil
+    | Annotations
+
+  table.g-annotation-list.table.table-hover.table-condensed
+    thead
+      th.g-annotation-toggle
+      th.g-annotation-name Name
+      th.g-annotation-user Creator
+      th.g-annotation-date Date
+      th.g-annotation-actions
+    tbody
+      for annotation in annotations.models
+        - var name = annotation.get('annotation').name;
+        - var creatorModel = users.get(annotation.get('creatorId'));
+        - var creator = creatorModel ? creatorModel.get('login') : annotation.get('creatorId');
+        tr.g-annotation-row(data-annotation-id=annotation.id)
+          td.g-annotation-toggle
+            input(type='checkbox', disabled=!canDraw, checked=drawn.has(annotation.id), title='Show annotation')
+          td.g-annotation-name(title=name)
+            = name
+
+          td.g-annotation-user
+            a(href=`#user/${annotation.get('creatorId')}`)
+              = creator
+
+          td.g-annotation-date
+            = (new Date(annotation.get('created'))).toLocaleString()
+          td.g-annotation-actions
+            a.g-annotation-download(href=`${apiRoot}/annotation/${annotation.id}`, title='Download', download=`${name}.json`)
+              i.icon-download
+            if annotation.get('_accessLevel') >= AccessType.ADMIN
+              a.g-annotation-permissions(title='Adjust permissions')
+                i.icon-lock
+            if annotation.get('_accessLevel') >= AccessType.WRITE
+              a.g-annotation-delete(title='Delete')
+                i.icon-cancel

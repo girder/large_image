@@ -8,6 +8,8 @@ import View from 'girder/views/View';
 import largeImageConfig from './configView';
 import * as viewers from './imageViewerWidget';
 
+import AnnotationListWidget from './annotationListWidget';
+
 import imageViewerSelectWidget from '../templates/imageViewerSelectWidget.pug';
 import '../stylesheets/imageViewerSelectWidget.styl';
 
@@ -42,6 +44,10 @@ var ImageViewerSelectWidget = View.extend({
         this.itemId = settings.imageModel.id;
         this.model = settings.imageModel;
         this.currentViewer = null;
+        this._annotationList = new AnnotationListWidget({
+            model: this.model,
+            parentView: this
+        });
         largeImageConfig.getSettings(() => this.render());
     },
 
@@ -58,6 +64,11 @@ var ImageViewerSelectWidget = View.extend({
         }
         this.$('select.form-control').val(name);
         this._selectViewer(name);
+
+        this._annotationList
+            .setViewer(this.currentViewer)
+            .setElement(this.$('.g-annotation-list-container'))
+            .render();
         return this;
     },
 
@@ -85,6 +96,9 @@ var ImageViewerSelectWidget = View.extend({
             model: this.model
         });
         this.currentViewer.name = viewerName;
+        this._annotationList
+            .setViewer(this.currentViewer)
+            .render();
     }
 });
 

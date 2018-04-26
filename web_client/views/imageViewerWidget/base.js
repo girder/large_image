@@ -1,3 +1,5 @@
+import _ from 'underscore';
+
 import { apiRoot, restRequest } from 'girder/rest';
 import View from 'girder/views/View';
 
@@ -36,6 +38,12 @@ var ImageViewerWidget = View.extend({
         }
         return url;
     },
+
+    /**
+     * Returns whether or not the view supports drawing and rendering
+     * annotations.
+     */
+    annotationAPI: _.constant(false),
 
     /**
      * Render an annotation model on the image.
