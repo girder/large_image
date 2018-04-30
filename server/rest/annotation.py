@@ -304,7 +304,9 @@ class AnnotationResource(Resource):
     @describeRoute(
         Description('Update the access control list for an annotation.')
         .param('id', 'The ID of the annotation.', paramType='path')
-        .param('access', 'THe JSON-encoded access control list.')
+        .param('access', 'The JSON-encoded access control list.')
+        .param('public', 'Whether the annotation should be publicly visible.',
+               dataType='boolean', required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Admin access was denied for the annotation.', 403)
     )
@@ -313,6 +315,8 @@ class AnnotationResource(Resource):
     @filtermodel(model=Annotation, addFields={'access'})
     def updateAnnotationAccess(self, annotation, params):
         access = json.loads(params['access'])
+        public = self.boolParam('public', params, False)
+        annotation = Annotation().setPublic(annotation, public)
         return Annotation().setAccessList(
             annotation, access, save=True, user=self.getCurrentUser())
 
