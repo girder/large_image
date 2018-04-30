@@ -843,9 +843,26 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         # Get the ACL's as an admin
         resp = self.request('/annotation/%s/access' % annot['_id'], user=self.admin)
         self.assertStatusOk(resp)
+        access = dict(**resp.json)
+
+        # Set the public flag to false and try to read as a user
+        resp = self.request(
+            '/annotation/%s/access' % annot['_id'],
+            method='PUT',
+            user=self.admin,
+            params={
+                'access': json.dumps(access),
+                'public': False
+            }
+        )
+        self.assertStatusOk(resp)
+        resp = self.request(
+            '/annotation/%s' % annot['_id'],
+            user=self.user
+        )
+        self.assertStatus(resp, 403)
 
         # Give the user admin access
-        access = dict(**resp.json)
         access['users'].append({
             'login': self.user['login'],
             'flags': [],
