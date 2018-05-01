@@ -297,7 +297,7 @@ class AnnotationResource(Resource):
         .errorResponse('Admin access was denied for the annotation.', 403)
     )
     @access.user
-    @loadmodel(model='annotation', plugin='large_image', level=AccessType.ADMIN)
+    @loadmodel(model='annotation', plugin='large_image', getElements=False, level=AccessType.ADMIN)
     def getAnnotationAccess(self, annotation, params):
         return Annotation().getFullAccessList(annotation)
 
@@ -311,7 +311,7 @@ class AnnotationResource(Resource):
         .errorResponse('Admin access was denied for the annotation.', 403)
     )
     @access.user
-    @loadmodel(model='annotation', plugin='large_image', level=AccessType.ADMIN)
+    @loadmodel(model='annotation', plugin='large_image', getElements=False, level=AccessType.ADMIN)
     @filtermodel(model=Annotation, addFields={'access'})
     def updateAnnotationAccess(self, annotation, params):
         access = json.loads(params['access'])
