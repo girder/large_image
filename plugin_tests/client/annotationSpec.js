@@ -420,5 +420,15 @@ describe('Annotations', function () {
                 model.save();
             }).toThrow();
         });
+
+        it('get an annotation name', function () {
+            var model = new largeImage.models.AnnotationModel({
+                itemId: item._id,
+                annotation: {
+                    name: 'test annotation'
+                }
+            });
+            expect(model.name()).toBe('test annotation');
+        });
     });
 });

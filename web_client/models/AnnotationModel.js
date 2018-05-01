@@ -166,6 +166,10 @@ export default AccessControlledModel.extend({
         return this.delete(options);
     },
 
+    name() {
+        return (this.get('annotation') || {}).name;
+    },
+
     /**
      * Perform a DELETE request on the annotation model and reset the id
      * attribute, but don't remove event listeners.
