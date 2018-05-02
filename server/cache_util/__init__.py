@@ -17,6 +17,12 @@
 #  limitations under the License.
 ###############################################################################
 
+import atexit
+
+try:
+    from .. import loadmodelcache
+except ImportError:
+    loadmodelcache = None
 from .cache import LruCacheMetaclass, strhash, methodcache, getTileCache
 try:
     from .memcache import MemCache
@@ -24,6 +30,65 @@ except ImportError:
     MemCache = None
 from .cachefactory import CacheFactory, pickAvailableCache, setConfig, getConfig
 from cachetools import cached, Cache, LRUCache
+
+
+@atexit.register
+def cachesClear(*args, **kwargs):
+    """
+    Clear the tilesource caches and the load model cache.  Note that this does
+    not clear memcached (which could be done with tileCache._client.flush_all,
+    but that can affect programs other than this one).
+    """
+    if loadmodelcache:
+        loadmodelcache.invalidateLoadModelCache()
+    for name in LruCacheMetaclass.namedCaches:
+        with LruCacheMetaclass.namedCaches[name][1]:
+            LruCacheMetaclass.namedCaches[name][0].clear()
+    tileCache, tileLock = getTileCache()
+    if isinstance(tileCache, LRUCache):
+        try:
+            with tileLock:
+                tileCache.clear()
+        except Exception:
+            pass
+
+
+def cachesInfo(*args, **kwargs):
+    """
+    Report on each cache.
+
+    :returns: a dictionary with the cache names as the keys and values that
+        include 'maxsize' and 'used', if known.
+    """
+    info = {}
+    if loadmodelcache:
+        try:
+            info['LoadModelCache'] = {
+                'maxsize': loadmodelcache.LoadModelCacheMaxEntries,
+                'used': len(loadmodelcache.LoadModelCache)
+            }
+        except Exception:
+            pass
+    for name in LruCacheMetaclass.namedCaches:
+        with LruCacheMetaclass.namedCaches[name][1]:
+            cache = LruCacheMetaclass.namedCaches[name][0]
+            info[name] = {
+                'maxsize': cache.maxsize,
+                'used': cache.currsize
+            }
+    tileCache, tileLock = getTileCache()
+    if isinstance(tileCache, LRUCache):
+        try:
+            with tileLock:
+                info['tileCache'] = {
+                    'maxsize': tileCache.maxsize,
+                    'used': tileCache.currsize
+                }
+        except Exception:
+            pass
+    # It would be nice to include memcached, but pylibmc's client.get_stats()
+    # doesn't seem to work.
+    return info
 
 
 __all__ = ('CacheFactory', 'getTileCache', 'MemCache', 'strhash',

@@ -56,7 +56,7 @@ CacheProperties = {
         # Cache size is based on what the class needs, which does not include
         # individual tiles
         'cacheMaxSize': pickAvailableCache(
-            1024 ** 2, maxItems=MaximumTileSources),
+            24 * 1024 ** 2, maxItems=MaximumTileSources),
         # The cache timeout is not currently being used, but it is set here in
         # case we ever choose to implement it.
         'cacheTimeout': 300,
