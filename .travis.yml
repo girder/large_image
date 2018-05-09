@@ -108,7 +108,7 @@ before_install:
   - lib_build_path=$HOME/lib_build
   - girder_build_path=$HOME/girder_build
 
-  - nvm install v6
+  - nvm install v8
   - npm install -g npm
 
   - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout $GIRDER_VERSION
