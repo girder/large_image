@@ -65,6 +65,15 @@ class LargeImageGirderMountTest(common.LargeImageCommonTest):
 
     def tearDown(self):
         super(LargeImageGirderMountTest, self).tearDown()
+        # Even if we close all of our references, we aren't guaranteed that
+        # all files are released immediately.  At this point, the data.process
+        # thread (regardless of whether it is synchronous or asynchronous)
+        # still has a reference to the source that was tested with canRead.
+        # This seems to only be a testing artifact.  If we do a garbage
+        # collection, it will properly release those references and we can
+        # unmount immediately.
+        import gc
+        gc.collect()
         # unmount
         subprocess.check_call(['girder', 'mount', self.mountPath, '-u'])
         # Wait until finished
