@@ -25,11 +25,9 @@ from ..cache_util import getTileCache, strhash, methodcache
 try:
     import girder
     from girder import logger
-    from girder.exceptions import ValidationException
-    from girder.models.assetstore import Assetstore
+    from girder.exceptions import ValidationException, FilePathException
     from girder.models.file import File
     from girder.models.item import Item
-    from girder.utility import assetstore_utilities
     from ..models.base import TileGeneralException
     from girder.models.model_base import AccessType
 except ImportError:
@@ -1726,8 +1724,7 @@ class FileTileSource(TileSource):
 
 # Girder specific classes
 
-if girder:
-
+if girder:  # noqa - the whole class is allowed to exceed complexity rules
     class GirderTileSource(FileTileSource):
         girderSource = True
 
@@ -1750,28 +1747,34 @@ if girder:
                 ',' + str(self.tiffCompression) + ',' + str(self.edge)
 
         def _getLargeImagePath(self):
+            # If self.mayHaveadjacentFiles is True, we try to use the girder
+            # mount where companion files appear next to each other.
             try:
                 largeImageFileId = self.item['largeImage']['fileId']
-                # Access control checking should already have been done on
-                # item, so don't repeat.
-                # TODO: is it possible that the file is on a different item, so
-                # do we want to repeat the access check?
+                if not hasattr(self, 'mayHaveAdjacentFiles'):
+                    # The item has adjacent files if there are any files that
+                    # are not the large image file or an original file it
+                    # was derived from.  This is always the case if there are 3
+                    # or more files.
+                    fileIds = [str(file['_id']) for file in Item().childFiles(self.item, limit=3)]
+                    knownIds = [largeImageFileId]
+                    if 'originalId' in self.item['largeImage']:
+                        knownIds.append(self.item['largeImage']['originalId'])
+                    self.mayHaveAdjacentFiles = (
+                        len(fileIds) >= 3 or
+                        fileIds[0] not in knownIds or
+                        fileIds[-1] not in knownIds)
                 largeImageFile = File().load(largeImageFileId, force=True)
-
-                # TODO: can we move some of this logic into Girder core?
-                assetstore = Assetstore().load(largeImageFile['assetstoreId'])
-                adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
-
-                if not isinstance(
-                        adapter,
-                        assetstore_utilities.FilesystemAssetstoreAdapter):
-                    raise TileSourceAssetstoreException(
-                        'Non-filesystem assetstores are not supported')
-
-                largeImagePath = adapter.fullPath(largeImageFile)
+                largeImagePath = None
+                if self.mayHaveAdjacentFiles and hasattr(File(), 'getGirderMountFilePath'):
+                    try:
+                        largeImagePath = File().getGirderMountFilePath(largeImageFile)
+                    except FilePathException:
+                        pass
+                if not largeImagePath:
+                    largeImagePath = File().getLocalFilePath(largeImageFile)
                 return largeImagePath
-
-            except TileSourceAssetstoreException:
+            except (TileSourceAssetstoreException, FilePathException):
                 raise
             except (KeyError, ValidationException, TileSourceException) as e:
                 raise TileSourceException(
