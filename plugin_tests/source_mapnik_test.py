@@ -378,6 +378,26 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         with six.assertRaisesRegex(self, TileSourceException, 'does not have a projected scale'):
             MapnikTileSource(filepath)
 
+    def testStereographicProjection(self):
+        from girder.plugins.large_image.tilesource import TileSourceException
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+
+        filepath = os.path.join(os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff')
+        # We will fail if we ask for a stereographic projection and don't
+        # specify unitsPerPixel
+        with six.assertRaisesRegex(self, TileSourceException, 'unitsPerPixel must be specified'):
+            MapnikTileSource(filepath, projection='EPSG:3411')
+        # But will pass if unitsPerPixel is specified
+        MapnikTileSource(filepath, projection='EPSG:3411', unitsPerPixel=150000)
+
+        # We can also upload and access this via a rest call
+        file = self._uploadFile(filepath)
+        itemId = str(file['itemId'])
+        resp = self.request(
+            path='/item/%s/tiles' % itemId, user=self.admin,
+            params={'projection': 'EPSG:3411', 'unitsPerPixel': 150000})
+        self.assertStatusOk(resp)
+
     def testProj4Proj(self):
         # Test obtaining pyproj.Proj projection values
         from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
