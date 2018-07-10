@@ -118,6 +118,24 @@ describe('geojs-annotations', function () {
                 lineWidth: lineWidth,
                 normal: [0, 0, 1]
             });
+
+            coordinates = [
+                {x: 3, y: 2},
+                {x: 3, y: 4},
+                {x: 1, y: 4},
+                {x: 1, y: 2}
+            ];
+            expect(geojs.types.rectangle(annotation)).toEqual({
+                type: 'rectangle',
+                center: [2, 3, 0],
+                width: 2,
+                height: 2,
+                rotation: 0,
+                fillColor: fillColor,
+                lineColor: lineColor,
+                lineWidth: lineWidth,
+                normal: [0, 0, 1]
+            });
         });
 
         it('rotated rectangle', function () {
@@ -133,12 +151,20 @@ describe('geojs-annotations', function () {
                 center: [0, 0, 0],
                 width: Math.sqrt(2),
                 height: Math.sqrt(2),
-                rotation: Math.PI / 4,
+                rotation: -Math.PI / 4,
                 fillColor: fillColor,
                 lineColor: lineColor,
                 lineWidth: lineWidth,
                 normal: [0, 0, 1]
             });
+
+            coordinates = [
+                {x: 1, y: 2},
+                {x: 9, y: 8},
+                {x: 5, y: 11},
+                {x: -3, y: 5}
+            ];
+            expect(geojs.types.rectangle(annotation).rotation).toBeCloseTo(Math.atan2(3, 4));
         });
 
         it('polygon', function () {
