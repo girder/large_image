@@ -168,9 +168,6 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
             self.initCount += 1
             orig_init(*args, **kwargs)
 
-        TiledTiffDirectory.__del__ = countDelete
-        TiledTiffDirectory.__init__ = countInit
-
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
         itemId = str(file['itemId'])
@@ -178,6 +175,8 @@ class LargeImageCachedTilesTest(common.LargeImageCommonTest):
         # Clear the cache to free references and force garbage collection
         LruCacheMetaclass.classCaches[TiffGirderTileSource][0].clear()
         gc.collect(2)
+        TiledTiffDirectory.__del__ = countDelete
+        TiledTiffDirectory.__init__ = countInit
         self.initCount = 0
         self.delCount = 0
         source = ImageItem().tileSource(item)
