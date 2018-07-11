@@ -230,7 +230,7 @@ install:
     fi
   - ls -l $girder_path/plugins
   # Make sure we have a prefered version of celery for Girder Worker
-  - pip install -U 'celery>=4'
+  - pip install -U 'celery>=4,<4.2'
   # # Make sure we have a prefered version of cryptography for Girder Worker
   # - pip install -U 'cryptography>=1.7'
   - python -c "import openslide;print(openslide.__version__)"
