@@ -456,7 +456,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 this.trigger(
                     eventType,
                     properties.element,
-                    properties.annotation
+                    properties.annotation,
+                    evt
                 );
             }
         }
