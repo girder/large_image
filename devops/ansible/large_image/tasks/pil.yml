@@ -6,6 +6,8 @@
     packages:
       - libjpeg8-dev
       - zlib1g-dev
+  become: true
+  become_user: root
 
 - name: Install Pillow
   pip:

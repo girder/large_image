@@ -18,9 +18,14 @@
 - name: Install git
   apt:
     name: git
+  become: true
+  become_user: root
 
 - include_tasks: pil.yml
   when: '"pil" in large_image_tile_sources'
+
+- include_tasks: tiff.yml
+  when: '"tiff" in large_image_tile_sources'
 
 - name: Install large_image
   pip:
