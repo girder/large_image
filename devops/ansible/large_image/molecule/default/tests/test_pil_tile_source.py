@@ -22,5 +22,7 @@ def test_pil_tile_source():
     test_png = '/tmp/Easy1.png'
     urllib.urlretrieve(test_url, test_png)
     image = large_image.getTileSource(test_png)
+    # Make sure it is the pil tile source
+    assert isinstance(image, large_image.tilesource.PILFileTileSource)
     # Make sure we can get a tile without an exception
     assert type(image.getTile(0, 0, 0)) == str
