@@ -1,4 +1,4 @@
 ---
 # Default tile sources
 large_image_tile_sources:
-  - pillow
+  - pil

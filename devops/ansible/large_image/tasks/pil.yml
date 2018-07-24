@@ -1,5 +1,5 @@
 ---
-- name: Install Pillow tile source system dependencies
+- name: Install pil tile source system dependencies
   apt:
     name: "{{ packages }}"
   vars:

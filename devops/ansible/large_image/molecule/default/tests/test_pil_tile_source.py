@@ -1,4 +1,4 @@
-"""Test the default Pillow based tile source."""
+"""Test the default pil based tile source."""
 
 import os
 import large_image
@@ -10,14 +10,14 @@ testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
 
 
 def test_pip_packages(host):
-    """Check python dependencies for pillow tile source."""
+    """Check python dependencies for pil tile source."""
     virtualenv = '~/.virtualenvs/large_image/bin/pip'
     packages = host.pip_package.get_packages(pip_path=virtualenv).keys()
     assert 'Pillow' in packages
 
 
-def test_pillow_tile_source():
-    """Check whether large_image can return a tile with Pillow source."""
+def test_pil_tile_source():
+    """Check whether large_image can return a tile with pil source."""
     test_url = 'https://data.kitware.com/api/v1/item/590346fe8d777f16d01e0546/download'  # noqa: E501
     test_png = '/tmp/Easy1.png'
     urllib.urlretrieve(test_url, test_png)
