@@ -1,2 +1,4 @@
 ---
-# defaults file for large_image
+# Default tile sources
+large_image_tile_sources:
+  - pillow
