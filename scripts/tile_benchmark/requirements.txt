@@ -1,5 +1,0 @@
-matplotlib==1.5.1
-numpy==1.11.0
-Pillow==3.2.0
-requests==2.10.0
-
