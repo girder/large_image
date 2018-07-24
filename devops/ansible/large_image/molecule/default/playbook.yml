@@ -8,9 +8,7 @@
 
     - name: Install python, pip and virtualenv
       apt:
-        name: "{{ packages }}"
-      vars:
-        packages:
+        name:
           - python-dev
           - python-pip
           - python-virtualenv

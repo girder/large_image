@@ -1,9 +1,7 @@
 ---
 - name: Install pil tile source system dependencies
   apt:
-    name: "{{ packages }}"
-  vars:
-    packages:
+    name:
       - libjpeg8-dev
       - zlib1g-dev
   become: true
