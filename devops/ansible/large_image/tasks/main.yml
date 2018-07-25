@@ -27,6 +27,9 @@
 - include_tasks: tiff.yml
   when: '"tiff" in large_image_tile_sources'
 
+- include_tasks: svs.yml
+  when: '"svs" in large_image_tile_sources'
+
 - name: Install large_image
   pip:
     name: git+https://github.com/girder/large_image
