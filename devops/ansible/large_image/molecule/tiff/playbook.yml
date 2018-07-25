@@ -21,10 +21,15 @@
         creates: "{{ large_image_virtualenv }}"
         removes: "{{ large_image_virtualenv }}"
 
+    # Only needed for molecule testing.
+    - name: Install pytest to run the tests
+      pip:
+        name: pytest
+        virtualenv: "{{ large_image_virtualenv }}"
     - name: Copy test file to the container
       copy:
-        src: tests
-        dest: /tests
+        src: tests/tiff_docker.py
+        dest: test_tiff_tile_source.py
 
   roles:
     - role: large_image
