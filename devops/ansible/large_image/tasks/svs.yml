@@ -1,0 +1,28 @@
+---
+- name: Install svs tile source system dependencies
+  apt:
+    name:
+      - autoconf
+      - automake
+      - libtool
+      - pkg-config
+      - libcairo2-dev
+      - libgdk-pixbuf2.0-dev
+      - libxml2-dev
+      - libsqlite3-dev
+      - openslide-tools
+      - libjpeg8-dev
+      - zlib1g-dev
+  become: true
+  become_user: root
+
+- name: Install python dependencies
+  pip:
+    name: "{{ item.name }}"
+    version: "{{ item.version }}"
+    virtualenv: "{{ large_image_virtualenv }}"
+  with_items:
+    - name: Pillow
+      version: 3.2.0
+    - name: openslide-python
+      version: 1.1.1
