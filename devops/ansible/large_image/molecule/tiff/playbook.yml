@@ -21,5 +21,10 @@
         creates: "{{ large_image_virtualenv }}"
         removes: "{{ large_image_virtualenv }}"
 
+    - name: Copy test file to the container
+      copy:
+        src: tests
+        dest: /tests
+
   roles:
     - role: large_image

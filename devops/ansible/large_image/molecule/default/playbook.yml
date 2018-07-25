@@ -19,5 +19,15 @@
         creates: "{{ large_image_virtualenv }}"
         removes: "{{ large_image_virtualenv }}"
 
+    # Only needed for molecule testing.
+    - name: Install pytest to run the tests
+      pip:
+        name: pytest
+        virtualenv: "{{ large_image_virtualenv }}"
+    - name: Copy test file to the container
+      copy:
+        src: tests/pil_docker.py
+        dest: test_pil_tile_source.py
+
   roles:
     - role: large_image
