@@ -1,5 +1,0 @@
-# server_type(girder slide_atlas IIP) server_name requested_levels
-#requested_images url image_id
-atlas slide_atlas1 10 3000
-iip IIP_server1 10 3000
-girder emory 10 3000 https://girder.neuro.emory.edu/ 570633aab0e9574e5269433e
