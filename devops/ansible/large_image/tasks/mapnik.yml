@@ -1,0 +1,39 @@
+---
+- name: Install gdal system package
+  apt:
+    name:
+      - libgdal-dev
+      - gdal-bin
+      - python-gdal
+      - libmapnik-dev
+      - python-mapnik
+  become: true
+  become_user: root
+
+- name: Install gdal python bindings
+  environment:
+    CPLUS_INCLUDE_PATH: /usr/include/gdal
+    C_INCLUDE_PATH: /usr/include/gdal
+  pip:
+    name: gdal
+    virtualenv: "{{ large_image_virtualenv }}"
+    version: 1.11.2
+  when: ansible_distribution_version == "16.04"
+
+- name: Install gdal python bindings
+  environment:
+    CPLUS_INCLUDE_PATH: /usr/include/gdal
+    C_INCLUDE_PATH: /usr/include/gdal
+  pip:
+    name: gdal
+    virtualenv: "{{ large_image_virtualenv }}"
+    version: 2.2.3
+  when: ansible_distribution_version == "18.04"
+
+- name: Install python dependencies for mapnik tile source
+  pip:
+    name:
+      - mapnik
+      - palettable
+      - pyproj
+    virtualenv: "{{ large_image_virtualenv }}"

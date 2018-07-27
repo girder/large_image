@@ -1,13 +1,13 @@
 ---
 - name: Check for supported operating systems
   fail:
-    msg="large_image role only supports ubuntu 16.04 and 18.04"
+    msg: "large_image role only supports ubuntu 16.04 and 18.04"
   when: (ansible_distribution_version != "16.04") and
         (ansible_distribution_version != "18.04")
 
 - name: Check if the virtualenv is specified
   fail:
-    msg="large_image role requires large_image_virtualenv variable"
+    msg: "large_image role requires large_image_virtualenv variable"
   when: large_image_virtualenv is not defined
 
 - name: Install numpy
@@ -29,6 +29,9 @@
 
 - include_tasks: svs.yml
   when: '"svs" in large_image_tile_sources'
+
+- include_tasks: mapnik.yml
+  when: '"mapnik" in large_image_tile_sources'
 
 - name: Install large_image
   pip:

@@ -1,0 +1,35 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    - large_image_tile_sources:
+        - mapnik
+    - large_image_virtualenv: "~/.virtualenvs/large_image"
+
+  pre_tasks:
+
+    - name: Install python, pip and virtualenv
+      apt:
+        name:
+          - python-dev
+          - python-pip
+          - python-virtualenv
+
+    - name: Create virtuelenv for large_image
+      command: virtualenv "{{ large_image_virtualenv }}"
+      args:
+        creates: "{{ large_image_virtualenv }}"
+        removes: "{{ large_image_virtualenv }}"
+
+    # Only needed for molecule testing.
+    - name: Install pytest to run the tests
+      pip:
+        name: pytest
+        virtualenv: "{{ large_image_virtualenv }}"
+    - name: Copy test file to the container
+      copy:
+        src: tests/mapnik_docker.py
+        dest: test_mapnik_tile_source.py
+
+  roles:
+    - role: large_image
