@@ -33,6 +33,9 @@
 - include_tasks: mapnik.yml
   when: '"mapnik" in large_image_tile_sources'
 
+- include_tasks: vips.yml
+  when: large_image_include_vips
+
 - name: Install large_image
   pip:
     name: git+https://github.com/girder/large_image

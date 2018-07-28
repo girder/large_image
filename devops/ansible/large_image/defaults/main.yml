@@ -2,3 +2,5 @@
 # Default tile sources
 large_image_tile_sources:
   - pil
+# To install vips or not
+large_image_include_vips: false
