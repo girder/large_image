@@ -1,48 +1,81 @@
-Role Name
-=========
+girder.large_image
+==========================
 
-A brief description of the role goes here.
+An ansible role to install large_image.
 
 Requirements
-------------
-
-Any pre-requisites that may not be covered by Ansible itself or the role should
-be mentioned here. For instance, if the role uses the EC2 module, it may be a
-good idea to mention in this section that the boto package is required.
-
-Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including
-any variables that are in defaults/main.yml, vars/main.yml, and any variables
-that can/should be set via parameters to the role. Any variables that are read
-from other roles and/or the global scope (ie. hostvars, group vars, etc.) should
-be mentioned here as well.
+Currently the role supports Ubuntu 16.04(xenial) and Ubuntu 18.04(bionic) and
+requires a virtualenv path to be defined.
 
-Dependencies
-------------
-
-A list of other roles hosted on Galaxy should go here, plus any details in
-regards to parameters that may need to be set for other roles, or variables that
-are used from other roles.
-
-Example Playbook
+Role Variables
 ----------------
 
-Including an example of how to use your role (for instance, with variables
-passed in as parameters) is always nice for users too:
+See the table below for a summary of variables.
 
-    - hosts: servers
-      roles:
-         - { role: large_image, x: 42 }
+|         parameter        | required | default |            comments            |
+|:------------------------:|:--------:|:-------:|:------------------------------:|
+|  large_image_virtualenv  |    yes   |   none  |      Path to a virtualenv      |
+| large_image_tile_sources |    no    |  [pil]  |      List of tile sources      |
+| large_image_include_vips |    no    |  false  | Whether to include vips or not |
 
-License
--------
+#### large_image_virtualenv
+This is a required variable. Provide a path to a virtual environment.
 
-BSD
+#### large_image_tile_sources
+This is not a required variable. If not provided only the pil tile source will be installed.
+Possible tile sources are:
+  - pil
+  - mapnik
+  - tiff
+  - svs
 
-Author Information
+#### large_image_include_vips
+This is not a required variable. Default behavior is not to install vips.
+Vips is needed if large_image will convert files using girder_worker.
+
+Dependencies
+--------------
+
+None.
+
+Example Playbook
 ------------------
 
-An optional section for the role authors to include contact information, or a
-website (HTML is not allowed).
+Here is a playbook which installs svs and tiff tile sources
+and includes vips so that we can run conversion tasks with girder_worker.
+
+    - hosts: server
+      vars:
+        - large_image_virtualenv: "/path/to/a/virtualenv"
+        - large_image_tile_sources:
+          - svs
+          - tiff
+        - large_image_include_vips: true
+      roles:
+         - large_image
+
+
+Running Tests
+---------------
+
+We use [molecule](https://molecule.readthedocs.io/en/latest/) with [testinfra](https://testinfra.readthedocs.io/en/latest/) to test different tile sources.
+In order to run a specific test scenario first install molecule.
+
+```sh
+pip install molecule
+```
+
+Then run a scenario in this directory:
+
+```sh
+molecule test -s mapnik
+```
+
+To run all the scenarios:
+```sh
+molecule test --all
+```
+
+For more information check [molecule's API](https://molecule.readthedocs.io/en/latest/usage.html).
