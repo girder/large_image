@@ -38,5 +38,5 @@
 
 - name: Install large_image
   pip:
-    name: git+https://github.com/girder/large_image
+    name: "{{ large_image_url }}"
     virtualenv: "{{ large_image_virtualenv }}"

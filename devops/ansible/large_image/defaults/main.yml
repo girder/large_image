@@ -1,4 +1,6 @@
 ---
+# Default large image url
+large_image_url: 'git+https://github.com/girder/large_image'
 # Default tile sources
 large_image_tile_sources:
   - pil

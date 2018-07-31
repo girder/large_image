@@ -19,6 +19,7 @@ See the table below for a summary of variables.
 |  large_image_virtualenv  |    yes   |   none  |      Path to a virtualenv      |
 | large_image_tile_sources |    no    |  [pil]  |      List of tile sources      |
 | large_image_include_vips |    no    |  false  | Whether to include vips or not |
+|      large_image_url     |    no    | git+https://github.com/girder/large_image |       Url to large image       |
 
 #### large_image_virtualenv
 This is a required variable. Provide a path to a virtual environment.
