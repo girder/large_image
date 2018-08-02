@@ -10,8 +10,8 @@ testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
 
 def test_pip_packages(host):
     """Check python dependencies for svs tile source."""
-    virtualenv = '~/.virtualenvs/large_image/bin/pip'
-    packages = host.pip_package.get_packages(pip_path=virtualenv).keys()
+    pipPath = '~/.virtualenvs/large_image/bin/pip'
+    packages = host.pip_package.get_packages(pip_path=pipPath)
     assert 'openslide-python' in packages
 
 

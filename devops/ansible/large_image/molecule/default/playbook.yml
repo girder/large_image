@@ -18,7 +18,6 @@
       command: virtualenv "{{ large_image_virtualenv }}"
       args:
         creates: "{{ large_image_virtualenv }}"
-        removes: "{{ large_image_virtualenv }}"
 
     - name: Install pytest to run the tests
       pip:

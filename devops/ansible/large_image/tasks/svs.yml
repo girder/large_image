@@ -4,14 +4,14 @@
     name:
       - autoconf
       - automake
-      - libtool
-      - pkg-config
       - libcairo2-dev
       - libgdk-pixbuf2.0-dev
-      - libxml2-dev
-      - libsqlite3-dev
-      - openslide-tools
       - libjpeg8-dev
+      - libsqlite3-dev
+      - libtool
+      - libxml2-dev
+      - openslide-tools
+      - pkg-config
       - zlib1g-dev
   become: true
   become_user: root

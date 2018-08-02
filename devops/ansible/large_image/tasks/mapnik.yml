@@ -2,10 +2,10 @@
 - name: Install gdal system package
   apt:
     name:
-      - libgdal-dev
       - gdal-bin
-      - python-gdal
+      - libgdal-dev
       - libmapnik-dev
+      - python-gdal
       - python-mapnik
   become: true
   become_user: root

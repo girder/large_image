@@ -16,18 +16,18 @@
 - name: Install tiff tile source system dependencies
   apt:
     name:
-      - libtiff5-dev
-      - libjpeg8-dev
-      - zlib1g-dev
       - libfreetype6-dev
-      - liblcms2-dev
-      - libwebp-dev
-      - tcl8.6-dev
-      - tk8.6-dev
-      - python-tk
       - libglib2.0-dev
       - libjpeg-dev
+      - libjpeg8-dev
+      - liblcms2-dev
+      - libtiff5-dev
+      - libwebp-dev
       - libxml2-dev
+      - python-tk
+      - tcl8.6-dev
+      - tk8.6-dev
+      - zlib1g-dev
   become: true
   become_user: root
 
