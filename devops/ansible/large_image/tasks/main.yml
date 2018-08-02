@@ -36,7 +36,23 @@
 - include_tasks: vips.yml
   when: large_image_include_vips
 
+- name: Set large image path as a fact
+  set_fact:
+    large_image_path: /large_image
+
+- name: Clone large image repository
+  git:
+    repo: "{{ large_image_url }}"
+    version: "{{ large_image_version }}"
+    dest: "{{ large_image_path }}"
+
+- name: Check if large_image package exists in virtualenv
+  stat:
+    path: "{{ large_image_virtualenv }}/large_image"
+  register: stat_results
+
 - name: Install large_image
   pip:
-    name: "{{ large_image_url }}"
+    name: "{{ large_image_path }}"
     virtualenv: "{{ large_image_virtualenv }}"
+  changed_when: not stat_results.stat.exists
