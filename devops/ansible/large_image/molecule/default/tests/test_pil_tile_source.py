@@ -19,4 +19,4 @@ def test_large_image_pil_source(host):
     activate = "source /root/.virtualenvs/large_image/bin/activate"
     run = "pytest /run_only_in_remote.py"
     cmd = host.run("bash -c '{} && {}'".format(activate, run))
-    assert cmd.stderr == ''
+    assert cmd.rc == 0
