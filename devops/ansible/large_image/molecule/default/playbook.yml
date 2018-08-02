@@ -1,10 +1,11 @@
 ---
 - name: Converge
   hosts: all
-  vars:
-    - large_image_virtualenv: "~/.virtualenvs/large_image"
 
   pre_tasks:
+
+    - name: Include scenario specific variables
+      include_vars: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/vars.yml"
 
     - name: Install python, pip and virtualenv
       apt:
@@ -19,15 +20,18 @@
         creates: "{{ large_image_virtualenv }}"
         removes: "{{ large_image_virtualenv }}"
 
-    # Only needed for molecule testing.
     - name: Install pytest to run the tests
       pip:
         name: pytest
         virtualenv: "{{ large_image_virtualenv }}"
+      when: not large_image_include_vips
+
     - name: Copy test file to the container
       copy:
-        src: tests/pil_docker.py
-        dest: test_pil_tile_source.py
+        src: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/tests/run_only_in_remote.py"
+        dest: "run_only_in_remote.py"
+      when: not large_image_include_vips
 
-  roles:
-    - role: large_image
+  tasks:
+    - include_role:
+        name: large_image

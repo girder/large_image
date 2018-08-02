@@ -9,10 +9,10 @@ galaxy_info:
   min_ansible_version: 2.2
 
   platforms:
-  - name: Ubuntu
-    versions:
-    - xenial
-    - bionic
+    - name: Ubuntu
+      versions:
+        - xenial
+        - bionic
 
   galaxy_tags:
     - large_image

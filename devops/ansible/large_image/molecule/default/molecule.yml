@@ -12,6 +12,8 @@ platforms:
     image: ubuntu:18.04
 provisioner:
   name: ansible
+  playbooks:
+    converge: playbook.yml
   lint:
     name: ansible-lint
 scenario:

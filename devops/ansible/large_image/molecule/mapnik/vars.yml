@@ -1,0 +1,5 @@
+---
+large_image_tile_sources:
+  - mapnik
+large_image_virtualenv: "~/.virtualenvs/large_image"
+large_image_include_vips: false

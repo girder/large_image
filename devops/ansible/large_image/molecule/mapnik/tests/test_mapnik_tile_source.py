@@ -19,6 +19,6 @@ def test_pip_packages(host):
 def test_large_image_tiff_source(host):
     """Run large image mapnik tests."""
     activate = "source /root/.virtualenvs/large_image/bin/activate"
-    run = "pytest /test_mapnik_tile_source.py"
+    run = "pytest /run_only_in_remote.py"
     cmd = host.run("bash -c '{} && {}'".format(activate, run))
     assert cmd.stderr == ''
