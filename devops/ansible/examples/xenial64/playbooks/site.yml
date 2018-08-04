@@ -1,0 +1,75 @@
+- hosts: all
+  vars:
+    girder_worker_user: "worker"
+
+    large_image_virtualenv: "/home/vagrant/.virtualenvs/large_image"
+    ansible_python_interpreter: /usr/bin/python3
+
+    girder_path: "{{ ansible_env.HOME }}/girder"
+
+  pre_tasks:
+
+    - name: Install python virtualenv
+      apt:
+        name:
+          - python-pip
+          - python3-pip
+          - python-virtualenv
+      become: true
+      become_user: root
+
+    - name: Create worker user
+      user:
+        name: "{{ girder_worker_user }}"
+      become: true
+      become_user: root
+
+    - name: Create virtuelenv for large_image
+      command: virtualenv "{{ large_image_virtualenv }}" --python=python2
+      args:
+        creates: "{{ large_image_virtualenv }}"
+
+    - name: Install mongodb
+      apt:
+        name: mongodb
+      become: true
+      become_user: root
+
+    - name: Install rabbitmq
+      apt:
+        name: rabbitmq-server
+      become: true
+      become_user: root
+
+  tasks:
+
+    - name: Include large image role
+      include_role:
+        name: large_image
+      vars:
+        large_image_tile_sources:
+          - pil
+          - mapnik
+          - tiff
+          - svs
+        large_image_include_vips: true
+
+    - name: Include girder role
+      include_role:
+        name: girder.girder
+      vars:
+        girder_plugins:
+          - path: "{{ large_image_path }}"
+            args: "-f"
+        girder_virtualenv: "{{ large_image_virtualenv }}"
+
+    - name: Include girder_worker role
+      include_role:
+        name: girder.girder-worker
+      vars:
+        girder_worker_virtualenv: "{{ large_image_virtualenv }}"
+        girder_worker_install_source: "git"
+        girder_worker_path: "{{ ansible_env.HOME }}/girder_worker"
+
+  post_tasks:
+    - include_tasks: "post-tasks/girder.yml"

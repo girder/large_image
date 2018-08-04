@@ -29,6 +29,14 @@ Dependencies
 
 None.
 
+Generated Facts
+---------------
+
+|     parameter    |     value     |     description     |
+|:----------------:|:-------------:|:-------------------:|
+| large_image_path | ~/large_image | Path to large image |
+
+
 Example Playbook
 ------------------
 

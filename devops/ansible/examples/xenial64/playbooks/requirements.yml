@@ -1,0 +1,2 @@
+- src: girder.girder
+- src: girder.girder-worker

@@ -21,24 +21,24 @@
   become: true
   become_user: root
 
-- include_tasks: pil.yml
+- import_tasks: pil.yml
   when: '"pil" in large_image_tile_sources'
 
-- include_tasks: tiff.yml
+- import_tasks: tiff.yml
   when: '"tiff" in large_image_tile_sources'
 
-- include_tasks: svs.yml
+- import_tasks: svs.yml
   when: '"svs" in large_image_tile_sources'
 
-- include_tasks: mapnik.yml
+- import_tasks: mapnik.yml
   when: '"mapnik" in large_image_tile_sources'
 
-- include_tasks: vips.yml
+- import_tasks: vips.yml
   when: large_image_include_vips
 
 - name: Set large image path as a fact
   set_fact:
-    large_image_path: /large_image
+    large_image_path: "{{ ansible_env.HOME }}/large_image"
 
 - name: Clone large image repository
   git:
