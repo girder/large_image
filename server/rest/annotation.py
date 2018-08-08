@@ -24,12 +24,14 @@ import cherrypy
 from girder import logger
 from girder.api import access
 from girder.api.describe import describeRoute, autoDescribeRoute, Description
-from girder.api.rest import Resource, loadmodel, filtermodel
+from girder.api.rest import Resource, loadmodel, filtermodel, setResponseHeader
 from girder.constants import AccessType, SortDir
 from girder.exceptions import ValidationException, RestException
 from girder.models.item import Item
 from girder.models.user import User
+from girder.utility import JsonEncoder
 from ..models.annotation import AnnotationSchema, Annotation
+from ..models.annotationelement import Annotationelement
 
 
 class AnnotationResource(Resource):
@@ -141,16 +143,44 @@ class AnnotationResource(Resource):
     )
     @access.cookie
     @access.public
-    @filtermodel(model='annotation', plugin='large_image')
+    # @filtermodel(model='annotation', plugin='large_image')
     def getAnnotation(self, id, params):
         user = self.getCurrentUser()
-        annotation = Annotation().load(id, region=params, user=user, level=AccessType.READ)
+        annotation = Annotation().load(
+            id, region=params, user=user, level=AccessType.READ, getElements=False)
         if annotation is None:
             raise RestException('Annotation not found', 404)
         # Ensure that we have read access to the parent item.  We could fail
         # faster when there are permissions issues if we didn't load the
         # annotation elements before checking the item access permissions.
-        return annotation
+        #  This had been done via the filtermodel decorator, but that doesn't
+        # work with yielding the elements one at a time.
+        annotation = Annotation().filter(annotation, self.getCurrentUser())
+
+        annotation['annotation']['elements'] = []
+        breakStr = b'"elements": ['
+        base = json.dumps(annotation, sort_keys=True, allow_nan=False,
+                          cls=JsonEncoder).encode('utf8').split(breakStr)
+
+        def generateResult():
+            info = {}
+            idx = 0
+            yield base[0]
+            yield breakStr
+            for element in Annotationelement().yieldElements(annotation, params, info):
+                if idx:
+                    yield b','
+                yield json.dumps(element, sort_keys=False, allow_nan=False,
+                                 cls=JsonEncoder, separators=(',', ':')).encode('utf8')
+                idx += 1
+            yield base[1].rstrip().rstrip(b'}')
+            yield b', "_elementQuery": '
+            yield json.dumps(
+                info, sort_keys=True, allow_nan=False, cls=JsonEncoder).encode('utf8')
+            yield b'}'
+
+        setResponseHeader('Content-Type', 'application/json')
+        return generateResult
 
     @describeRoute(
         Description('Create an annotation.')
