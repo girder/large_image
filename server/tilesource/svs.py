@@ -295,7 +295,10 @@ class SVSFileTileSource(FileTileSource):
 
         :return: the list of image keys.
         """
-        return sorted(self._openslide.associated_images)
+        try:
+            return sorted(self._openslide.associated_images)
+        except openslide.lowlevel.OpenSlideError:
+            return []
 
     def _getAssociatedImage(self, imageKey):
         """
@@ -304,8 +307,11 @@ class SVSFileTileSource(FileTileSource):
         :param imageKey: the key of the associated image.
         :return: the image in PIL format or None.
         """
-        if imageKey in self._openslide.associated_images:
-            return self._openslide.associated_images[imageKey]
+        try:
+            if imageKey in self._openslide.associated_images:
+                return self._openslide.associated_images[imageKey]
+        except openslide.lowlevel.OpenSlideError:
+            pass
         return None
 
 
