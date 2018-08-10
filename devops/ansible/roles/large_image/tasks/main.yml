@@ -21,17 +21,16 @@
   become: true
   become_user: root
 
-- import_tasks: pil.yml
-  when: '"pil" in large_image_tile_sources'
-
-- import_tasks: tiff.yml
-  when: '"tiff" in large_image_tile_sources'
-
-- import_tasks: svs.yml
-  when: '"svs" in large_image_tile_sources'
-
-- import_tasks: mapnik.yml
-  when: '"mapnik" in large_image_tile_sources'
+- name: Import tile sources
+  include_tasks: "{{ tile_source }}.yml"
+  when: tile_source in large_image_tile_sources
+  loop:
+    - pil
+    - tiff
+    - svs
+    - mapnik
+  loop_control:
+    loop_var: tile_source
 
 - import_tasks: vips.yml
   when: large_image_include_vips
