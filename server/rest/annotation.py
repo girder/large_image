@@ -18,6 +18,7 @@
 ##############################################################################
 
 import json
+import ujson
 
 import cherrypy
 
@@ -168,10 +169,29 @@ class AnnotationResource(Resource):
             yield base[0]
             yield breakStr
             for element in Annotationelement().yieldElements(annotation, params, info):
-                if idx:
-                    yield b','
-                yield json.dumps(element, sort_keys=False, allow_nan=False,
-                                 cls=JsonEncoder, separators=(',', ':')).encode('utf8')
+                # The json conversion is fastest if we use defaults as much as
+                # possible.  The only value in an annotation element that needs
+                # special handling is the id, so cast that ourselves and then
+                # use a json encoder in the most compact form.
+                element['id'] = str(element['id'])
+                # Use ujson; it is much faster.  The standard json library
+                # could be used in its most default mode instead like so:
+                #   result = json.dumps(element, separators=(',', ':'))
+                result = ujson.dumps(element)
+                # By default, the json encoder outputs float values that happen
+                # to be integers as <value>.0.  This is a common occurrence.
+                # Javascript parses the json identically with and without the
+                # trailing '.0'.  If we can trivially do so, string these
+                # trailing values.  This splits the string on ", but only if it
+                # has no possibility of escaped quotes, then strips the
+                # trailing zeroes from the non-quoted sections, then puts the
+                # string back together.
+                if '.0' in result and '\\"' not in result:
+                    result = '"'.join([
+                        d if '.0' in d and di % 2 else d.replace('.0,', ',').replace('.0]', ']')
+                        for di, d in enumerate(result.split('"'))])
+                result = (b',' if idx else b'') + result.encode('utf8')
+                yield result
                 idx += 1
             yield base[1].rstrip().rstrip(b'}')
             yield b', "_elementQuery": '
