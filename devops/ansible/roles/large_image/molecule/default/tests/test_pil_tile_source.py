@@ -17,6 +17,6 @@ def test_pip_packages(host):
 def test_large_image_pil_source(host):
     """Run large image pil tests."""
     activate = "source /root/.virtualenvs/large_image/bin/activate"
-    run = "pytest /run_only_in_remote.py"
+    run = "pytest /request_tile_in_container.py"
     cmd = host.run("bash -c '{} && {}'".format(activate, run))
     assert cmd.rc == 0

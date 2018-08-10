@@ -27,8 +27,8 @@
 
     - name: Copy test file to the container
       copy:
-        src: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/tests/run_only_in_remote.py"
-        dest: "run_only_in_remote.py"
+        src: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/tests/request_tile_in_container.py"
+        dest: "request_tile_in_container.py"
       when: not large_image_include_vips
 
   tasks:
