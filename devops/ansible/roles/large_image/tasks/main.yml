@@ -37,7 +37,7 @@
 
 - name: Set large image path as a fact
   set_fact:
-    large_image_path: "{{ ansible_env.HOME }}/large_image"
+    large_image_path: "{{ large_image_path }}"
 
 - name: Clone large image repository
   git:
@@ -45,6 +45,9 @@
     version: "{{ large_image_version }}"
     dest: "{{ large_image_path }}"
 
+# When pip packages are installed from a path, pip module
+# does not do idempotency checks. That is why we have
+# check the path with stat module to make the task idempotent
 - name: Check if large_image package exists in virtualenv
   stat:
     path: "{{ large_image_virtualenv }}/large_image"

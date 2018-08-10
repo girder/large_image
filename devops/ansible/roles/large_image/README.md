@@ -16,11 +16,12 @@ See the table below for a summary of variables.
 
 |         parameter        | required |                  default                  |            comments            |
 |:------------------------:|:--------:|:-----------------------------------------:|:------------------------------:|
-|      large_image_url     |    no    | https://github.com/girder/large_image.git |       Url to large image       |
 |  large_image_virtualenv  |    yes   |                    none                   |      Path to a virtualenv      |
+|      large_image_url     |    no    | https://github.com/girder/large_image.git |       Url to large image       |
+|    large_image_version   |    no    |                   master                  |     Version of large_image     |
+|     large_image_path     |    no    |               ~/large_image               |    Path to clone large_image   |
 | large_image_tile_sources |    no    |                   [pil]                   |      List of tile sources      |
 | large_image_include_vips |    no    |                   false                   | Whether to include vips or not |
-|    large_image_version   |    no    |                   master                  |     Version of large_image     |
 
 * pil, tiff, svs and mapnik are possible large_image_tile_sources
 
@@ -32,9 +33,9 @@ None.
 Generated Facts
 ---------------
 
-|     parameter    |     value     |     description     |
-|:----------------:|:-------------:|:-------------------:|
-| large_image_path | ~/large_image | Path to large image |
+|     parameter    |     description     |
+|:----------------:|:-------------------:|
+| large_image_path | Path to large image |
 
 
 Example Playbook

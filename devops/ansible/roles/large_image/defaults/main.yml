@@ -8,3 +8,5 @@ large_image_tile_sources:
 large_image_include_vips: false
 # Version of large_image
 large_image_version: "master"
+# Path for large_image to be cloned
+large_image_path: "{{ ansible_env.HOME }}/large_image"
