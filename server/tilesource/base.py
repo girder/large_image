@@ -580,7 +580,7 @@ class TileSource(object):
         :param format: a tuple of allowed formats.  Formats are members of
             TILE_FORMAT_*.  This will avoid converting images if they are
             in the desired output encoding (regardless of subparameters).
-            Otherwise, TILE_FORMAT_PIL is returned.
+            Otherwise, TILE_FORMAT_NUMPY is returned.
         :param region: a dictionary of optional values which specify the part
                 of the image to process.
             left: the left edge (inclusive) of the region to process.
@@ -652,7 +652,7 @@ class TileSource(object):
             metadata: tile source metadata (from getMetadata)
             output: a dictionary of the output resolution information.
                 width, height: the requested output resolution in pixels.  If
-                    this is different that region width and regionH hight, then
+                    this is different that region width and region height, then
                     the original request was asking for a different scale than
                     is being delivered.
             format: a tuple of allowed output formats.
@@ -798,7 +798,7 @@ class TileSource(object):
                 'width': outWidth,
                 'height': outHeight,
             },
-            'format': kwargs.get('format', (TILE_FORMAT_PIL, )),
+            'format': kwargs.get('format', (TILE_FORMAT_NUMPY, )),
             'encoding': kwargs.get('encoding'),
             'requestedScale': requestedScale,
             'resample': resample,
@@ -1454,7 +1454,7 @@ class TileSource(object):
             level = max(0, min(mag['level'], level))
         return level
 
-    def tileIterator(self, format=(TILE_FORMAT_PIL, ), resample=False,
+    def tileIterator(self, format=(TILE_FORMAT_NUMPY, ), resample=False,
                      **kwargs):
         """
         Iterate on all tiles in the specifed region at the specified scale.

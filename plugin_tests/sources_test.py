@@ -116,7 +116,8 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         source = ImageItem().tileSource(item)
         tileCount = 0
         visited = {}
-        for tile in source.tileIterator(scale={'magnification': 5}):
+        for tile in source.tileIterator(
+                format=tilesource.TILE_FORMAT_PIL, scale={'magnification': 5}):
             # Check that we haven't loaded the tile's image yet
             self.assertFalse(getattr(tile, 'loaded', None))
             visited.setdefault(tile['level_x'], {})[tile['level_y']] = True
@@ -147,7 +148,8 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         self.assertEqual(tileCount, 144)
         # Check with a non-native magnfication without resampling
         tileCount = 0
-        for tile in source.tileIterator(scale={'magnification': 2}):
+        for tile in source.tileIterator(
+                format=tilesource.TILE_FORMAT_PIL, scale={'magnification': 2}):
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'], 256 if tile['level_x'] < 11 else 61)
@@ -156,7 +158,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         # Check with a non-native magnfication with resampling
         tileCount = 0
         for tile in source.tileIterator(
-                scale={'magnification': 2}, resample=True):
+                format=tilesource.TILE_FORMAT_PIL, scale={'magnification': 2}, resample=True):
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'], 256 if tile['level_x'] < 4 else 126)
@@ -165,9 +167,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
 
         # Ask for numpy array as results
         tileCount = 0
-        for tile in source.tileIterator(
-                scale={'magnification': 5},
-                format=tilesource.TILE_FORMAT_NUMPY):
+        for tile in source.tileIterator(scale={'magnification': 5}):
             tileCount += 1
             self.assertTrue(isinstance(tile['tile'], numpy.ndarray))
             self.assertEqual(tile['tile'].shape, (
