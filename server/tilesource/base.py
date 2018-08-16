@@ -813,7 +813,7 @@ class TileSource(object):
         Given tile iterator information, iterate through the tiles.
         Each tile is returned as part of a dictionary that includes
             x, y: (left, top) coordinate in current magnification pixels
-            height, width: size of current tile in pixels
+            width, height: size of current tile in current magnification pixels
             tile: cropped tile image
             format: format of the tile.  Always TILE_FORMAT_PIL or
                 TILE_FORMAT_IMAGE.  TILE_FORMAT_IMAGE is only returned if it
@@ -825,8 +825,8 @@ class TileSource(object):
                     iterator, containing:
                 level_x, level_y: the tile reference number within the level.
                 region_x, region_y: 0, 0 is the first tile in the full
-                    iteration (when not restrictioning the iteration to a
-                    single tile).
+                    iteration (when not restricting the iteration to a single
+                    tile).
                 position: a 0-based value for the tile within the full
                     iteration.
             iterator_range: a dictionary of the output range of the iterator:
@@ -840,8 +840,8 @@ class TileSource(object):
                     iteration.  This is region_x_max * region_y_max.
             magnification: magnification of the current tile
             mm_x, mm_y: size of the current tile pixel in millimeters.
-            gx, gy - (left, top) coordinate in maximum-resolution pixels
-            gwidth, gheight: size of of the current tile in maximum resolution
+            gx, gy: (left, top) coordinates in maximum-resolution pixels
+            gwidth, gheight: size of of the current tile in maximum-resolution
                 pixels.
             tile_overlap: the amount of overlap with neighboring tiles (left,
                 top, right, and bottom).  Overlap never extends outside of the
@@ -1460,16 +1460,36 @@ class TileSource(object):
         Iterate on all tiles in the specifed region at the specified scale.
         Each tile is returned as part of a dictionary that includes
             x, y: (left, top) coordinates in current magnification pixels
-            width, height: size of current tile incurrent magnification pixels
+            width, height: size of current tile in current magnification pixels
             tile: cropped tile image
             format: format of the tile
             level: level of the current tile
             level_x, level_y: the tile reference number within the level.
+            tile_position: a dictionary of the tile position within the
+                    iterator, containing:
+                level_x, level_y: the tile reference number within the level.
+                region_x, region_y: 0, 0 is the first tile in the full
+                    iteration (when not restricting the iteration to a single
+                    tile).
+                position: a 0-based value for the tile within the full
+                    iteration.
+            iterator_range: a dictionary of the output range of the iterator:
+                level_x_min, level_y_min, level_x_max, level_y_max: the tiles
+                    that are be included during the full iteration:
+                    [layer_x_min, layer_x_max) and [layer_y_min, layer_y_max).
+                region_x_max, region_y_max: the number of tiles included during
+                    the full iteration.   This is layer_x_max - layer_x_min,
+                    layer_y_max - layer_y_min.
+                position: the total number of tiles included in the full
+                    iteration.  This is region_x_max * region_y_max.
             magnification: magnification of the current tile
             mm_x, mm_y: size of the current tile pixel in millimeters.
-            gx, gy: (left, top) coordinate in maximum-resolution pixels
-            gwidth, gheight: size of of the current tile in maximum resolution
+            gx, gy: (left, top) coordinates in maximum-resolution pixels
+            gwidth, gheight: size of of the current tile in maximum-resolution
                 pixels.
+            tile_overlap: the amount of overlap with neighboring tiles (left,
+                top, right, and bottom).  Overlap never extends outside of the
+                requested region.
         If a region that includes partial tiles is requested, those tiles are
         cropped appropriately.  Most images will have tiles that get cropped
         along the right and bottom egdes in any case.  If an exact
