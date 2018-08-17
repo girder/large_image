@@ -821,6 +821,8 @@ class TileSource(object):
                 image encoding.
             level: level of the current tile
             level_x, level_y: the tile reference number within the level.
+                Tiles are numbered (0, 0), (1, 0), (2, 0), etc.  The 0th tile
+                yielded may not be (0, 0) if a region is specified.
             tile_position: a dictionary of the tile position within the
                     iterator, containing:
                 level_x, level_y: the tile reference number within the level.
@@ -1465,6 +1467,8 @@ class TileSource(object):
             format: format of the tile
             level: level of the current tile
             level_x, level_y: the tile reference number within the level.
+                Tiles are numbered (0, 0), (1, 0), (2, 0), etc.  The 0th tile
+                yielded may not be (0, 0) if a region is specified.
             tile_position: a dictionary of the tile position within the
                     iterator, containing:
                 level_x, level_y: the tile reference number within the level.
