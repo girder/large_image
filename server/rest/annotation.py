@@ -177,18 +177,6 @@ class AnnotationResource(Resource):
                 # could be used in its most default mode instead like so:
                 #   result = json.dumps(element, separators=(',', ':'))
                 result = ujson.dumps(element)
-                # By default, the json encoder outputs float values that happen
-                # to be integers as <value>.0.  This is a common occurrence.
-                # Javascript parses the json identically with and without the
-                # trailing '.0'.  If we can trivially do so, string these
-                # trailing values.  This splits the string on ", but only if it
-                # has no possibility of escaped quotes, then strips the
-                # trailing zeroes from the non-quoted sections, then puts the
-                # string back together.
-                if '.0' in result and '\\"' not in result:
-                    result = '"'.join([
-                        d if '.0' in d and di % 2 else d.replace('.0,', ',').replace('.0]', ']')
-                        for di, d in enumerate(result.split('"'))])
                 result = (b',' if idx else b'') + result.encode('utf8')
                 yield result
                 idx += 1
