@@ -144,7 +144,6 @@ class AnnotationResource(Resource):
     )
     @access.cookie
     @access.public
-    # @filtermodel(model='annotation', plugin='large_image')
     def getAnnotation(self, id, params):
         user = self.getCurrentUser()
         annotation = Annotation().load(
