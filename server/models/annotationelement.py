@@ -121,6 +121,40 @@ class Annotationelement(Model):
         :param region: if present, a dictionary restricting which annotations
             are returned.
         """
+        annotation['_elementQuery'] = {}
+        annotation['annotation']['elements'] = [
+            element for element in self.yieldElements(
+                annotation, region, annotation['_elementQuery'])]
+
+    def yieldElements(self, annotation, region=None, info=None):
+        """
+        Given an annotation, fetch the elements from the database and add them
+        to it.
+            When a region is used to request specific element, the following
+        keys can be specified:
+            left, right, top, bottom, low, high: the spatial area where
+        elements are located, all in pixels.  If an element's bounding box is
+        at least partially within the requested area, that element is included.
+            minimumSize: the minimum size of an element to return.
+            sort, sortdir: standard sort options.  The sort key can include
+        size and details.
+            limit: limit the total number of elements by this value.  Defaults
+        to no limit.
+            offset: the offset within the query to start returning values.  If
+        maxDetails is used, to get subsequent sets of elements, the offset
+        needs to be increased by the actual number of elements returned from a
+        previous query, which will vary based on the details of the elements.
+            maxDetails: if specified, limit the total number of elements by the
+        sum of their details values.  This is applied in addition to limit.
+        The sum of the details values of the elements may exceed maxDetails
+        slightly (the sum of all but the last element will be less than
+        maxDetails, but the last element may exceed the value).
+
+        :param annotation: the annotation to get elements for.  Modified.
+        :param region: if present, a dictionary restricting which annotations
+            are returned.
+        """
+        info = info if info is not None else {}
         region = region or {}
         query = {
             'annotationId': annotation.get('_annotationId', annotation['_id']),
@@ -128,6 +162,8 @@ class Annotationelement(Model):
         }
         for key in region:
             if key in self.bboxKeys and self.bboxKeys[key][1]:
+                if self.bboxKeys[key][1] == '$gte' and float(region[key]) <= 0:
+                    continue
                 query[self.bboxKeys[key][0]] = {
                     self.bboxKeys[key][1]: float(region[key])}
         if region.get('sort') in self.bboxKeys:
@@ -139,32 +175,32 @@ class Annotationelement(Model):
         maxDetails = int(region.get('maxDetails') or 0)
         queryLimit = maxDetails if maxDetails and (not limit or maxDetails < limit) else limit
         offset = int(region['offset']) if region.get('offset') else 0
+        logger.debug('element query %r for %r', query, region)
         elementCursor = self.find(
             query=query, sort=[(sortkey, sortdir)], limit=queryLimit, offset=offset,
             fields={'_id': True, 'element': True, 'bbox.details': True})
-        annotation['annotation']['elements'] = []
 
-        _elementQuery = {
+        info.update({
             'count': elementCursor.count(),
             'offset': offset,
             'filter': query,
             'sort': [sortkey, sortdir],
-        }
-        details = 0
+        })
+        details = count = 0
         if maxDetails:
-            _elementQuery['maxDetails'] = maxDetails
+            info['maxDetails'] = maxDetails
         if limit:
-            _elementQuery['limit'] = limit
+            info['limit'] = limit
         for entry in elementCursor:
             element = entry['element']
             element.setdefault('id', entry['_id'])
-            annotation['annotation']['elements'].append(element)
+            yield element
+            count += 1
             details += entry.get('bbox', {}).get('details', 1)
             if maxDetails and details >= maxDetails:
                 break
-        _elementQuery['returned'] = len(annotation['annotation']['elements'])
-        _elementQuery['details'] = details
-        annotation['_elementQuery'] = _elementQuery
+        info['returned'] = count
+        info['details'] = details
 
     def removeWithQuery(self, query):
         """

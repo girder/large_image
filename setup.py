@@ -61,7 +61,8 @@ setup(
         'numpy>=1.10.2',
         'Pillow>=3.2.0',
         'psutil>=4.2.0',
-        'six>=1.10.0'
+        'six>=1.10.0',
+        'ujson>=1.35',
     ],
     extras_require={
         'memcached': [

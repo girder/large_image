@@ -26,7 +26,7 @@ export default AccessControlledModel.extend({
 
     initialize() {
         this._region = {
-            maxDetails: 100000,
+            maxDetails: 250000,
             sort: 'size',
             sortdir: -1
         };
@@ -234,7 +234,7 @@ export default AccessControlledModel.extend({
         this._region.bottom = bounds.bottom + yoverlap;
         /* ask for items that will be at least 0.5 pixels, minus a bit */
         this._lastZoom = zoom;
-        this._region.minSize = Math.pow(2, maxZoom - zoom - 1) - 1;
+        this._region.minimumSize = Math.pow(2, maxZoom - zoom - 1) - 1;
         if (!this._nextFetch) {
             var nextFetch = () => {
                 this.fetch();
