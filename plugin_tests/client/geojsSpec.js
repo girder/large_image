@@ -122,6 +122,7 @@ $(function () {
         });
 
         it('drawAnnotation', function () {
+            var setViewSpy, firstCount;
             runs(function () {
                 annotation = new large_image.models.AnnotationModel({
                     _id: annotationId
@@ -131,7 +132,7 @@ $(function () {
 
             girderTest.waitForLoad();
             runs(function () {
-                sinon.spy(annotation, 'setView');
+                setViewSpy = sinon.spy(annotation, 'setView');
                 viewer.drawAnnotation(annotation);
                 viewer.viewer.zoom(5);
             });
@@ -145,7 +146,11 @@ $(function () {
                 featureSpy = sinon.spy(viewer._annotations[annotationId].features[0], '_exit');
 
                 sinon.assert.called(annotation.setView);
+                firstCount = setViewSpy.callCount;
+                viewer.viewer.zoomRange({max: 12});
+                viewer.viewer.zoom(12);
                 viewer.viewer.zoom(1);
+                expect(setViewSpy.callCount).toBe(firstCount + 2);
             });
         });
 
