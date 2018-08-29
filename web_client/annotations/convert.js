@@ -7,7 +7,7 @@ import style from './style';
 function convertOne(properties) {
     return function (annotation) {
         const type = annotation.type;
-        _.defaults(annotation, defaults[type] || {});
+        annotation = _.defaults({}, annotation, defaults[type] || {});
         if (!_.has(geometry, type)) {
             return;
         }
