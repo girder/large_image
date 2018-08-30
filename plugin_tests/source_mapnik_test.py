@@ -326,6 +326,24 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json, {
             'r': 225, 'g': 100, 'b': 98, 'a': 255, 'bands': {'1': 77.0, '2': 82.0, '3': 84.0}})
+        # Test with palette as an array of colors
+        resp = self.request(
+            path='/item/%s/tiles/pixel' % itemId, user=self.admin,
+            params={
+                'left': -13132910,
+                'top': 4010586,
+                'projection': 'EPSG:3857',
+                'units': 'projection',
+                'style': json.dumps({
+                    'band': 1,
+                    'min': 0,
+                    'max': 100,
+                    'palette': ['#0000ff', '#00ff00', '#ff0000']
+                }),
+            })
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, {
+            'r': 0, 'g': 255, 'b': 0, 'a': 255, 'bands': {'1': 77.0, '2': 82.0, '3': 84.0}})
         # Test with projection units
         resp = self.request(
             path='/item/%s/tiles/pixel' % itemId, user=self.admin,

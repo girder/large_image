@@ -384,9 +384,12 @@ class MapnikTileSource(FileTileSource):
             if band != -1 and isinstance(band, int):
                 minimum = self.style.get('min', 0)
                 maximum = self.style.get('max', 256)
-                palette = self.style.get('palette',
-                                         'cmocean.diverging.Curl_10')
-                colors = self.getHexColors(palette)
+                colors = self.style.get('palette', 'cmocean.diverging.Curl_10')
+                if not isinstance(colors, list):
+                    colors = self.getHexColors(colors)
+                else:
+                    colors = [color if isinstance(color, six.binary_type) else
+                              color.encode('utf8') for color in colors]
                 values = self.interpolateMinMax(minimum,
                                                 maximum,
                                                 len(colors))
