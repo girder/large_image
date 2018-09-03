@@ -196,7 +196,7 @@ describe('Annotations', function () {
             expect(properties.fillOpacity).toBe(0);
             expect(properties.strokeColor).toBe('#000000');
             expect(properties.strokeOpacity).toBe(1);
-            expect(properties.element).toEqual(element);
+            expect(properties.element.type).toEqual(element.type);
         });
 
         it('polyline', function () {
@@ -221,7 +221,7 @@ describe('Annotations', function () {
             expect(properties.fillOpacity).toBe(0);
             expect(properties.strokeColor).toBe('#000000');
             expect(properties.strokeOpacity).toBe(1);
-            expect(properties.element).toEqual(element);
+            expect(properties.element.type).toEqual(element.type);
         });
     });
 
