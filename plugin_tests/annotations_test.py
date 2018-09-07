@@ -861,6 +861,13 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
             user=self.user
         )
         self.assertStatus(resp, 403)
+        # The admin should still be able to get the annotation with elements
+        resp = self.request(
+            '/annotation/%s' % annot['_id'],
+            user=self.admin
+        )
+        self.assertStatusOk(resp)
+        self.assertEqual(len(resp.json['annotation']['elements']), 1)
 
         # Give the user admin access
         access['users'].append({
