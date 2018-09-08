@@ -13,7 +13,7 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.provision "ansible" do |ansible|
-    ansible.playbook = "playbooks/site.yml"
-    ansible.galaxy_role_file = "playbooks/requirements.yml"
+    ansible.playbook = "devops/ansible/examples/bionic64/playbooks/site.yml"
+    ansible.galaxy_role_file = "devops/ansible/examples/bionic64/playbooks/requirements.yml"
   end
 end
