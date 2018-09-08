@@ -9,6 +9,19 @@
 
   pre_tasks:
 
+    - name: Install aptitude on the instance
+      apt:
+        name: aptitude
+      become: true
+      become_user: root
+
+    - name: Update and upgrade apt packages
+      apt:
+        upgrade: true
+        update_cache: true
+      become: true
+      become_user: root
+
     - name: Install python virtualenv
       apt:
         name:
@@ -45,7 +58,7 @@
 
     - name: Include large image role
       include_role:
-        name: large_image
+        name: ../../../roles/large_image
       vars:
         large_image_tile_sources:
           - pil
@@ -56,7 +69,7 @@
 
     - name: Include girder role
       include_role:
-        name: girder.girder
+        name: ansible-role-girder
       vars:
         girder_plugins:
           - path: "{{ large_image_path }}"

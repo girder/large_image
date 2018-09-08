@@ -8,6 +8,6 @@ dist
 build
 large_image.egg-info
 *.retry
-devops/ansible/examples/xenial64/playbooks/roles/
+devops/ansible/examples/bionic64/playbooks/roles/
 *.vagrant*
 *.log
