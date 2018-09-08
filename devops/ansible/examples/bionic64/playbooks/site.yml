@@ -61,7 +61,6 @@
         name: ../../../roles/large_image
       vars:
         large_image_tile_sources:
-          - pil
           - mapnik
           - tiff
           - svs

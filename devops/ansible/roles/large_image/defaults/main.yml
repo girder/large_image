@@ -2,8 +2,7 @@
 # Default large image url
 large_image_url: "https://github.com/girder/large_image.git"
 # Default tile sources
-large_image_tile_sources:
-  - pil
+large_image_tile_sources: []
 # To install vips or not
 large_image_include_vips: false
 # Version of large_image
