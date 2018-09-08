@@ -8,16 +8,16 @@
   with_items:
     - { section: "global", option: "server.socket_host", value: '"0.0.0.0"' }
 
-- name: Wait for Girder to be available
-  wait_for:
-    port: 8080
-
 - name: Install Girder-Client
   pip:
     name: "girder-client"
     state: present
   become: true
   become_user: root
+
+- name: Wait for Girder to be available
+  wait_for:
+    port: 8080
 
 - name: Create Girder User
   girder:
@@ -49,19 +49,7 @@
     port: 8080
     plugins:
       - large_image
-      - worker
     state: present
-
-- name: Rebuild Client
-  girder:
-    username: "admin"
-    password: "letmein"
-    post:
-      path: "system/web_build"
-
-- name: Wait for Girder to be available
-  wait_for:
-    port: 8080
 
 - name: Restart Girder
   service:
@@ -82,3 +70,10 @@
     setting:
       key: "worker.api_url"
       value: "http://localhost:8080/api/v1"
+
+- name: Rebuild Client
+  girder:
+    username: "admin"
+    password: "letmein"
+    post:
+      path: "system/web_build"
