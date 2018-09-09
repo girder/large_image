@@ -14,6 +14,7 @@
     name:
       - libjpeg8-dev
       - zlib1g-dev
+      - libopenjp2-7
   become: true
   become_user: root
 
@@ -21,7 +22,6 @@
   pip:
     name: Pillow
     virtualenv: "{{ large_image_virtualenv }}"
-    version: 3.2.0
 
 - name: Install git
   apt:

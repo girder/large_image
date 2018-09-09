@@ -1,6 +1,6 @@
 ---
 - name: Install vips
   apt:
-    name: libvips-dev
+    name: libvips-tools
   become: true
   become_user: root

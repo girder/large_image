@@ -1,37 +1,7 @@
 ---
-- name: Install libpng12
-  apt:
-    name: libpng12-dev
-  when: ansible_distribution_version == "16.04"
-  become: true
-  become_user: root
-
-- name: Install libpng
-  apt:
-    name: libpng-dev
-  when: ansible_distribution_version == "18.04"
-  become: true
-  become_user: root
-
 - name: Install tiff tile source system dependencies
   apt:
     name:
-      - libfreetype6-dev
-      - libglib2.0-dev
-      - libjpeg-dev
-      - libjpeg8-dev
-      - liblcms2-dev
       - libtiff5-dev
-      - libwebp-dev
-      - libxml2-dev
-      - python-tk
-      - tcl8.6-dev
-      - tk8.6-dev
-      - zlib1g-dev
   become: true
   become_user: root
-
-- name: Install libtiff
-  pip:
-    name: libtiff
-    virtualenv: "{{ large_image_virtualenv }}"

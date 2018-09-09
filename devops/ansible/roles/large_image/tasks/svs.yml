@@ -2,17 +2,7 @@
 - name: Install svs tile source system dependencies
   apt:
     name:
-      - autoconf
-      - automake
-      - libcairo2-dev
-      - libgdk-pixbuf2.0-dev
-      - libjpeg8-dev
-      - libsqlite3-dev
-      - libtool
-      - libxml2-dev
-      - openslide-tools
-      - pkg-config
-      - zlib1g-dev
+      - libopenslide-dev
   become: true
   become_user: root
 
