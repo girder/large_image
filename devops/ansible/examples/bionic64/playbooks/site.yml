@@ -85,3 +85,4 @@
 
   post_tasks:
     - include_tasks: "post-tasks/girder.yml"
+    - include_tasks: "post-tasks/worker.yml"

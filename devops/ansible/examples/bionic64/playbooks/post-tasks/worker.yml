@@ -1,0 +1,10 @@
+- name: Enable girder_worker plugins
+  command:
+    "{{ large_image_virtualenv }}/bin/girder-worker-config set girder_worker plugins_enabled girder_io"
+
+- name: Restart Girder Worker
+  service:
+    name: girder_worker
+    state: restarted
+  become: yes
+  become_user: root
