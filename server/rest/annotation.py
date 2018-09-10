@@ -354,8 +354,13 @@ class AnnotationResource(Resource):
         access = json.loads(params['access'])
         public = self.boolParam('public', params, False)
         annotation = Annotation().setPublic(annotation, public)
-        return Annotation().setAccessList(
-            annotation, access, save=True, user=self.getCurrentUser())
+        annotation = Annotation().setAccessList(
+            annotation, access, save=False, user=self.getCurrentUser())
+        Annotation().update({'_id': annotation['_id']}, {'$set': {
+            key: annotation[key] for key in ('access', 'public', 'publicFlags')
+            if key in annotation
+        }})
+        return annotation
 
     @autoDescribeRoute(
         Description('Get a list of an annotation\'s history.')
