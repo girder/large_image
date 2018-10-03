@@ -54,7 +54,8 @@ class MapnikTileSource(FileTileSource):
     def __init__(self, path, projection=None, style=None, unitsPerPixel=None, **kwargs):
         super(MapnikTileSource, self).__init__(path, **kwargs)
         self._bounds = {}
-        self.dataset = gdal.Open(self._getLargeImagePath())
+        self._path = self._getLargeImagePath()
+        self.dataset = gdal.Open(self._path)
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
@@ -415,13 +416,9 @@ class MapnikTileSource(FileTileSource):
         lyr = mapnik.Layer('layer')
         lyr.srs = layerSrs
         if extent:
-            lyr.datasource = mapnik.Gdal(
-                base='', file=self._getLargeImagePath(),
-                band=band, extent=extent)
+            lyr.datasource = mapnik.Gdal(base=None, file=self._path, band=band, extent=extent)
         else:
-            lyr.datasource = mapnik.Gdal(
-                base='', file=self._getLargeImagePath(),
-                band=band)
+            lyr.datasource = mapnik.Gdal(base=None, file=self._path, band=band)
         lyr.styles.append('Raster Style')
         m.layers.append(lyr)
 
