@@ -167,16 +167,16 @@ before_install:
   # Build vips to use our libraries
   - if [ "$BUILD_VIPS" = "yes" ]; then
       cd $lib_build_path &&
-      if [ ! -f vips-8.5.9/config.status ]; then
-        if [[ ! -d vips-8.5.9 ]]; then
-          wget -O vips-8.5.9.tar.gz https://github.com/jcupitt/libvips/releases/download/v8.5.9/vips-8.5.9.tar.gz &&
-          tar -zxpf vips-8.5.9.tar.gz ;
+      if [ ! -f vips-8.7.0/config.status ]; then
+        if [[ ! -d vips-8.7.0 ]]; then
+          wget -O vips-8.7.0.tar.gz https://github.com/libvips/libvips/releases/download/v8.7.0/vips-8.7.0.tar.gz &&
+          tar -zxpf vips-8.7.0.tar.gz ;
         fi &&
-        cd vips-8.5.9 &&
+        cd vips-8.7.0 &&
         ./configure &&
         make -j 3 >/tmp/vips_build.txt ;
       else
-        cd vips-8.5.9 ;
+        cd vips-8.7.0 ;
       fi &&
       sudo make install &&
       sudo ldconfig ;
