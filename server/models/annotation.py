@@ -67,8 +67,8 @@ class AnnotationSchema(object):
         #                           alpha [0-1]
         # TODO: make rgb and rgba spec validate that rgb is [0-255] and a is
         # [0-1], rather than just checking if they are digits and such.
-        'pattern': '^(#[0-9a-fA-F]{3,6}|rgb\(\d+,\s*\d+,\s*\d+\)|'
-                   'rgba\(\d+,\s*\d+,\s*\d+,\s*(\d?\.|)\d+\))$'
+        'pattern': r'^(#[0-9a-fA-F]{3,6}|rgb\(\d+,\s*\d+,\s*\d+\)|'
+                   r'rgba\(\d+,\s*\d+,\s*\d+,\s*(\d?\.|)\d+\))$'
     }
 
     baseShapeSchema = {
