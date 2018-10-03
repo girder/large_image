@@ -675,14 +675,15 @@ class MapnikTileSource(FileTileSource):
                 y = self.projectionOrigin[1] + y * self.unitsAcrossLevel0
                 # convert to native pixel coordinates
                 x, y = self.toNativePixelCoordinates(x, y)
-            for i in range(self.dataset.RasterCount):
-                band = self.dataset.GetRasterBand(i + 1)
-                try:
-                    value = band.ReadRaster(int(x), int(y), 1, 1, buf_type=gdal.GDT_Float32)
-                    if value:
-                        pixel.setdefault('bands', {})[i + 1] = struct.unpack('f', value)[0]
-                except RuntimeError:
-                    pass
+            if 0 <= int(x) < self.sizeX and 0 <= int(y) < self.sizeY:
+                for i in range(self.dataset.RasterCount):
+                    band = self.dataset.GetRasterBand(i + 1)
+                    try:
+                        value = band.ReadRaster(int(x), int(y), 1, 1, buf_type=gdal.GDT_Float32)
+                        if value:
+                            pixel.setdefault('bands', {})[i + 1] = struct.unpack('f', value)[0]
+                    except RuntimeError:
+                        pass
         return pixel
 
 

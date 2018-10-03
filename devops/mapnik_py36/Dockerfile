@@ -1,4 +1,4 @@
-FROM geographica/gdal2:2.3.1
+FROM geographica/gdal2
 
 WORKDIR /build
 
