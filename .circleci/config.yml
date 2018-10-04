@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  py35:
     machine: true
     working_directory: /home/circleci/project
     steps:
@@ -28,3 +28,38 @@ jobs:
             docker exec large-image-mapnik-python35 cmake -DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3 girder
             docker exec large-image-mapnik-python35 make -j 5
             docker exec large-image-mapnik-python35 ctest -R mapnik -V
+  py36:
+    machine: true
+    working_directory: /home/circleci/project
+    steps:
+      - checkout
+      - run:
+          name: Install Docker Compose
+          command: |
+            pip install docker-compose
+
+      - run:
+          name: Get the environment up and running
+          command: |
+            cd devops/mapnik_py36 && docker-compose build && docker-compose up -d
+
+      - run:
+          name: Install large image plugin
+          command: |
+            docker exec large-image-mapnik-python36 sed -i 's/PY2_ONLY/PY3_ONLY/g' /large_image/plugin.cmake
+            docker exec large-image-mapnik-python36 pip3 install -e /large_image[mapnik]
+            docker exec large-image-mapnik-python36 girder-install plugin -s /large_image
+
+      - run:
+          name: Run the tests
+          command: |
+            docker exec large-image-mapnik-python36 cmake -DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3 girder
+            docker exec large-image-mapnik-python36 make -j 5
+            docker exec large-image-mapnik-python36 ctest -R mapnik -V
+
+workflows:
+  version: 2
+  test_all:
+    jobs:
+      - py35
+      - py36

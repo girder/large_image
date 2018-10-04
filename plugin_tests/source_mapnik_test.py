@@ -97,19 +97,18 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         self.assertStatusOk(resp)
         image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
-        testImage = os.path.join(
-            os.path.dirname(__file__), 'test_files', 'geotiff_9_89_207.png')
-
-        testImagePy3 = os.path.join(
-            os.path.dirname(__file__), 'test_files', 'geotiff_9_89_207_py3.png')
-
-        testImage = PIL.Image.open(testImage)
-        testImagePy3 = PIL.Image.open(testImagePy3)
 
         # https://stackoverflow.com/questions/35176639/compare-images-python-pil
+        testImages = [
+            PIL.Image.open(os.path.join(os.path.dirname(__file__), 'test_files', name))
+            for name in [
+                'geotiff_9_89_207.png',
+                'geotiff_9_89_207_py3.png',
+                'geotiff_9_89_207_py36.png',
+            ]]
         diffs = [
-            PIL.ImageChops.difference(image, testImage).getbbox(),
-            PIL.ImageChops.difference(image, testImagePy3).getbbox()
+            PIL.ImageChops.difference(image, testImage).getbbox()
+            for testImage in testImages
         ]
 
         # If one of the diffs is None (means the images are same)
@@ -130,18 +129,17 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         self.assertStatusOk(resp)
         image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
-        testImage = os.path.join(
-            os.path.dirname(__file__), 'test_files', 'geotiff_style_7_22_51.png')
 
-        testImagePy3 = os.path.join(
-            os.path.dirname(__file__), 'test_files', 'geotiff_style_7_22_51_py3.png')
-
-        testImage = PIL.Image.open(testImage)
-        testImagePy3 = PIL.Image.open(testImagePy3)
-
+        testImages = [
+            PIL.Image.open(os.path.join(os.path.dirname(__file__), 'test_files', name))
+            for name in [
+                'geotiff_style_7_22_51.png',
+                'geotiff_style_7_22_51_py3.png',
+                'geotiff_style_7_22_51_py36.png',
+            ]]
         diffs = [
-            PIL.ImageChops.difference(image, testImage).getbbox(),
-            PIL.ImageChops.difference(image, testImagePy3).getbbox()
+            PIL.ImageChops.difference(image, testImage).getbbox()
+            for testImage in testImages
         ]
 
         self.assertIn(None, diffs)
@@ -162,20 +160,18 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         self.assertStatusOk(resp)
         image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
-        testImage = os.path.join(
-            os.path.dirname(__file__), 'test_files', 'geotiff_style_linear_7_22_51.png')
 
-        testImagePy3 = os.path.join(
-            os.path.dirname(__file__), 'test_files', 'geotiff_style_linear_7_22_51_py3.png')
-
-        testImage = PIL.Image.open(testImage)
-        testImagePy3 = PIL.Image.open(testImagePy3)
-
+        testImages = [
+            PIL.Image.open(os.path.join(os.path.dirname(__file__), 'test_files', name))
+            for name in [
+                'geotiff_style_linear_7_22_51.png',
+                'geotiff_style_linear_7_22_51_py3.png',
+                'geotiff_style_linear_7_22_51_py36.png',
+            ]]
         diffs = [
-            PIL.ImageChops.difference(image, testImage).getbbox(),
-            PIL.ImageChops.difference(image, testImagePy3).getbbox()
+            PIL.ImageChops.difference(image, testImage).getbbox()
+            for testImage in testImages
         ]
-
         self.assertIn(None, diffs)
 
     def _assertStyleResponse(self, itemId, style, message):
