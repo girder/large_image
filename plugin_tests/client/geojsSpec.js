@@ -534,6 +534,52 @@ $(function () {
             });
         });
 
+        describe('global annotation fill opacity', function () {
+            // DWM::
+            var annotation1;
+            var element1 = '111111111111111111111111';
+
+            it('generate test annotations', function () {
+                girder.rest.restRequest({
+                    url: 'annotation?itemId=' + itemId,
+                    contentType: 'application/json',
+                    processData: false,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        name: 'annotation1',
+                        elements: [{
+                            id: element1,
+                            type: 'rectangle',
+                            center: [200, 200, 0],
+                            width: 400,
+                            height: 400,
+                            rotation: 0,
+                            fillColor: '#000'
+                        }]
+                    })
+                }).done(function (resp) {
+                    annotation1 = new large_image.models.AnnotationModel({
+                        _id: resp._id
+                    });
+                });
+                waitsFor(function () {
+                    return annotation1;
+                }, 'annotations to be created');
+                runs(function () {
+                    viewer.drawAnnotation(annotation1);
+                });
+                girderTest.waitForLoad();
+            });
+            it('set global fill annotation opacity', function () {
+                var polygonFeature = viewer.viewer.layers()[1].features()[2];
+                expect(polygonFeature.style.get('fillOpacity')(null, 0, null, 0)).toBe(1);
+                viewer.setGlobalAnnotationFillOpacity(0.5);
+                expect(polygonFeature.style.get('fillOpacity')(null, 0, null, 0)).toBe(0.5);
+                viewer.setGlobalAnnotationFillOpacity(1);
+                expect(polygonFeature.style.get('fillOpacity')(null, 0, null, 0)).toBe(1);
+            });
+        });
+
         describe('highlight annotations', function () {
             var annotation1, annotation2;
             var element11 = '111111111111111111111111';
