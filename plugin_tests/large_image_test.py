@@ -48,6 +48,15 @@ def tearDownModule():
 
 # Test large_image endpoints
 class LargeImageLargeImageTest(common.LargeImageCommonTest):
+    def _waitForJobToBeRunning(self, job):
+        from girder.plugins.jobs.constants import JobStatus
+        from girder.plugins.jobs.models.job import Job
+        job = Job().load(id=job['_id'], force=True)
+        while job['status'] != JobStatus.RUNNING:
+            time.sleep(0.01)
+            job = Job().load(id=job['_id'], force=True)
+        return job
+
     def _createThumbnails(self, spec, cancel=False):
         from girder.plugins.jobs.constants import JobStatus
         from girder.plugins.jobs.models.job import Job
@@ -61,10 +70,7 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         job = resp.json
         if cancel:
-            job = Job().load(id=job['_id'], force=True)
-            while job['status'] != JobStatus.RUNNING:
-                time.sleep(0.01)
-                job = Job().load(id=job['_id'], force=True)
+            job = self._waitForJobToBeRunning(job)
             job = Job().cancelJob(job)
 
         starttime = time.time()
@@ -264,6 +270,10 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         self.assertLess(present, 3 + len(slowList))
 
     def testDeleteIncompleteTile(self):
+        from girder.plugins.jobs.constants import JobStatus
+        from girder.plugins.jobs.models.job import Job
+        from girder.plugins.worker import CustomJobStatus
+
         # Test the large_image/settings end point
         resp = self.request(
             method='DELETE', path='/large_image/tiles/incomplete',
@@ -290,9 +300,6 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         self.assertEqual(results['removed'], 1)
 
         def preventCancel(evt):
-            from girder.plugins.jobs.constants import JobStatus
-            from girder.plugins.worker import CustomJobStatus
-
             job = evt.info['job']
             params = evt.info['params']
             if (params.get('status') and
@@ -302,16 +309,20 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
 
         # Prevent a job from cancelling
         events.bind('jobs.job.update', 'testDeleteIncompleteTile', preventCancel)
+        # Create a job and mark it as running
         resp = self.request(
             method='POST', path='/item/%s/tiles' % itemId, user=self.admin)
+        job = Job().load(id=resp.json['_id'], force=True)
+        Job().updateJob(job, status=JobStatus.RUNNING)
+
         resp = self.request(
             method='DELETE', path='/large_image/tiles/incomplete',
             user=self.admin)
+        events.unbind('jobs.job.update', 'testDeleteIncompleteTile')
         self.assertStatusOk(resp)
         results = resp.json
         self.assertEqual(results['removed'], 0)
         self.assertIn('could not be canceled', results['message'])
-        events.unbind('jobs.job.update', 'testDeleteIncompleteTile')
         # Now we should be able to cancel the job
         resp = self.request(
             method='DELETE', path='/large_image/tiles/incomplete',

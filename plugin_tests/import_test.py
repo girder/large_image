@@ -67,16 +67,19 @@ class LargeImageTilesTest(base.TestCase):
         # Test that we handle a missing libtiff header module and file in a
         # graceful manner.  This makes it appear that no such module is
         # available, and checks that we get the expected ImportError.
-        del sys.modules['libtiff']
-        del sys.modules['libtiff.libtiff_ctypes']
+        for key in list(sys.modules.keys()):
+            if key == 'libtiff' or key.startswith('libtiff.'):
+                del sys.modules[key]
         sys.modules['libtiff.' + tiff_h_name] = None
         try:
             reload_module(girder.plugins.large_image.tilesource.tiff_reader)
         except ImportError as exc:
-            self.assertIn('libtiff', exc.args[0])
+            self.assertIn('tiff', exc.args[0])
         else:
             self.fail()
-        del sys.modules['libtiff.' + tiff_h_name]
+        for key in list(sys.modules.keys()):
+            if key == 'libtiff' or key.startswith('libtiff.'):
+                del sys.modules[key]
         reload_module(girder.plugins.large_image.tilesource.tiff_reader)
 
         try:

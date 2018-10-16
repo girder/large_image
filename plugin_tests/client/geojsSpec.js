@@ -535,7 +535,6 @@ $(function () {
         });
 
         describe('global annotation fill opacity', function () {
-            // DWM::
             var annotation1;
             var element1 = '111111111111111111111111';
 
