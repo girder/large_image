@@ -1,9 +1,10 @@
 *.py[cod]
 node_modules
-_build
+_build*
 .*.swp
 .*.swo
 env
 dist
 build
-large_image.egg-info
+*.egg-info
+.pytest_cache

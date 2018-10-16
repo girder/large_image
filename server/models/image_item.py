@@ -24,12 +24,11 @@ import six
 import time
 
 from girder.constants import SortDir
-from girder.exceptions import ValidationException
+from girder.exceptions import FilePathException, ValidationException
 from girder.models.file import File
 from girder.models.item import Item
 from girder.models.setting import Setting
 from girder.models.upload import Upload
-from girder.plugins.worker import utils as workerUtils
 from girder.plugins.jobs.constants import JobStatus
 from girder.plugins.jobs.models.job import Job
 
@@ -91,98 +90,34 @@ class ImageItem(Item):
         return job
 
     def _createLargeImageJob(self, item, fileObj, user, token):
-        path = os.path.join(os.path.dirname(__file__), '..', 'create_tiff.py')
-        with open(path, 'r') as f:
-            script = f.read()
-
-        title = 'TIFF conversion: %s' % fileObj['name']
-        job = Job().createJob(
-            title=title, type='large_image_tiff', handler='worker_handler',
-            user=user)
-        jobToken = Job().createJobToken(job)
+        import large_image_tasks.tasks
+        from girder_worker_utils.transforms.girder_io import GirderUploadToItem
+        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
+        from girder_worker_utils.transforms.common import TemporaryDirectory
 
         outputName = os.path.splitext(fileObj['name'])[0] + '.tiff'
         if outputName == fileObj['name']:
             outputName = (os.path.splitext(fileObj['name'])[0] + '.' +
                           time.strftime('%Y%m%d-%H%M%S') + '.tiff')
-
-        task = {
-            'mode': 'python',
-            'script': script,
-            'name': title,
-            'inputs': [{
-                'id': 'in_path',
-                'target': 'filepath',
-                'type': 'string',
-                'format': 'text'
-            }, {
-                'id': 'out_filename',
-                'type': 'string',
-                'format': 'text'
-            }, {
-                'id': 'tile_size',
-                'type': 'number',
-                'format': 'number'
-            }, {
-                'id': 'quality',
-                'type': 'number',
-                'format': 'number'
-            }],
-            'outputs': [{
-                'id': 'out_path',
-                'target': 'filepath',
-                'type': 'string',
-                'format': 'text'
-            }]
-        }
-
-        inputs = {
-            'in_path': workerUtils.girderInputSpec(
-                fileObj, resourceType='file', token=token),
-            'quality': {
-                'mode': 'inline',
-                'type': 'number',
-                'format': 'number',
-                'data': 90
-            },
-            'tile_size': {
-                'mode': 'inline',
-                'type': 'number',
-                'format': 'number',
-                'data': 256
-            },
-            'out_filename': {
-                'mode': 'inline',
-                'type': 'string',
-                'format': 'text',
-                'data': outputName
-            }
-        }
-
-        outputs = {
-            'out_path': workerUtils.girderOutputSpec(
-                parent=item, token=token, parentType='item')
-        }
-
-        # TODO: Give the job an owner
-        job['kwargs'] = {
-            'task': task,
-            'inputs': inputs,
-            'outputs': outputs,
-            'jobInfo': workerUtils.jobInfoSpec(job, jobToken),
-            'auto_convert': False,
-            'validate': False
-        }
-        job['meta'] = {
-            'creator': 'large_image',
-            'itemId': str(item['_id']),
-            'task': 'createImageItem',
-        }
-
-        job = Job().save(job)
-        Job().scheduleJob(job)
-
-        return job
+        try:
+            localPath = File().getLocalFilePath(fileObj)
+        except (FilePathException, AttributeError):
+            localPath = None
+        job = large_image_tasks.tasks.create_tiff.delay(
+            girder_job_title=u'TIFF Conversion: %s' % fileObj['name'],
+            girder_job_other_fields={'meta': {
+                'creator': 'large_image',
+                'itemId': str(item['_id']),
+                'task': 'createImageItem',
+            }},
+            inputFile=GirderFileIdAllowDirect(str(fileObj['_id']), fileObj['name'], localPath),
+            outputName=outputName,
+            outputDir=TemporaryDirectory(),
+            girder_result_hooks=[
+                GirderUploadToItem(str(item['_id']), True),
+            ]
+        )
+        return job.job
 
     @classmethod
     def _loadTileSource(cls, item, **kwargs):
@@ -229,10 +164,9 @@ class ImageItem(Item):
 
             # If this file was created by the worker job, delete it
             if 'jobId' in item['largeImage']:
-                if job:
-                    # TODO: does this eliminate all traces of the job?
-                    # TODO: do we want to remove the original job?
-                    Job().remove(job)
+                # To eliminate all traces of the job, add
+                # if job:
+                #     Job().remove(job)
                 del item['largeImage']['jobId']
 
             if 'originalId' in item['largeImage']:

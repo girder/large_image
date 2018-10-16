@@ -53,7 +53,8 @@ Installation
 
     or all optional dependencies with:
 
-    ``pip install -e .[openslide,memcached]``
+    ``pip install -e .[openslide,memcached,mapnik]``
+
 
 Examples
 ++++++++
