@@ -67,9 +67,10 @@ class SVSFileTileSource(FileTileSource):
 
     def __init__(self, path, **kwargs):
         """
-        Initialize the tile class.
+        Initialize the tile class.  See the base class for other available
+        parameters.
 
-        :param path: the associated file path.
+        :param path: a filesystem path for the tile source.
         """
         super(SVSFileTileSource, self).__init__(path, **kwargs)
 

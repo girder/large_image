@@ -52,6 +52,41 @@ class MapnikTileSource(FileTileSource):
     name = 'mapnikfile'
 
     def __init__(self, path, projection=None, style=None, unitsPerPixel=None, **kwargs):
+        """
+        Initialize the tile class.  See the base class for other available
+        parameters.
+
+        :param path: a filesystem path for the tile source.
+        :param projection: None to use pixel space, otherwise a proj4
+            projection string or a case-insensitive string of the form
+            'EPSG:<epsg number>'.  If a string and case-insensitively prefixed
+            with 'proj4:', that prefix is removed.  For instance,
+            'proj4:EPSG:3857', 'PROJ4:+init=epsg:3857', and '+init=epsg:3857',
+            and 'EPSG:3857' are all equivilant.
+        :param style: if None, use the default style for the file.  Otherwise,
+            this is a string with a json-encoded dictionary.  The style can
+            contain the following keys:
+                band: a 1-based value for the band to use for styling.
+                min: the value of the band to map to the first palette value.
+                    Defaults to 0.
+                max: the value of the band to map to the last palette value.
+                    Defaults to 255.
+                scheme: one of the mapnik.COLORIZER_xxx values.  Case
+                    insensitive.  Defaults to 'discrete'.  Other values are
+                    'linear' and 'exact'.
+                palette: either a list of two or more color strings, or a
+                    string with a dotted class name from the python palettable
+                    package.  Defaults to 'cmocean.diverging.Curl_10'.  Color
+                    strings must be parsable by mapnik's Color class.  Many css
+                    strings work.
+            The style is ignored if it does not contain 'band'.
+        :param unitsPerPixel: The size of a pixel at the 0 tile size.  Ignored
+            if the projection is None.  For projections, None uses the default,
+            which is the distance between (-180,0) and (180,0) in EPSG:4326
+            converted to the projection divided by the tile size.  Proj4
+            projections that are not latlong (is_latlong() is False) must
+            specify unitsPerPixel.
+        """
         super(MapnikTileSource, self).__init__(path, **kwargs)
         self._bounds = {}
         self._path = self._getLargeImagePath()
@@ -168,8 +203,7 @@ class MapnikTileSource(FileTileSource):
     @staticmethod
     def getHexColors(palette):
         """
-        Returns list of hex colors for a given
-        color palette
+        Returns list of hex colors for a given color palette
 
         :returns: List of colors
         """

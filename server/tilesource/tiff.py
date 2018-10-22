@@ -53,8 +53,14 @@ class TiffFileTileSource(FileTileSource):
     cacheName = 'tilesource'
     name = 'tifffile'
 
-    def __init__(self, item, **kwargs):
-        super(TiffFileTileSource, self).__init__(item, **kwargs)
+    def __init__(self, path, **kwargs):
+        """
+        Initialize the tile class.  See the base class for other available
+        parameters.
+
+        :param path: a filesystem path for the tile source.
+        """
+        super(TiffFileTileSource, self).__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
         lastException = None
