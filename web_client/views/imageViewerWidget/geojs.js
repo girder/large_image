@@ -114,7 +114,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         });
         if (this._scale && (this.metadata.mm_x || this.metadata.geospatial || this._scale.scale)) {
             if (!this._scale.scale && !this.metadata.geospatial) {
-                this._scale.scale = this.metadata.mm_x / 100;
+                // convert mm to m.
+                this._scale.scale = this.metadata.mm_x / 1000;
             }
             this.uiLayer = this.viewer.createLayer('ui');
             this.scaleWidget = this.uiLayer.createWidget('scale', this._scale);
