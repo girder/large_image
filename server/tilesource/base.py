@@ -1712,6 +1712,12 @@ class TileSource(object):
 class FileTileSource(TileSource):
 
     def __init__(self, path, *args, **kwargs):
+        """
+        Initialize the tile class.  See the base class for other available
+        parameters.
+
+        :param path: a filesystem path for the tile source.
+        """
         super(FileTileSource, self).__init__(*args, **kwargs)
         self.largeImagePath = path
 
@@ -1753,6 +1759,14 @@ if girder:  # noqa - the whole class is allowed to exceed complexity rules
         girderSource = True
 
         def __init__(self, item, *args, **kwargs):
+            """
+            Initialize the tile class.  See the base class for other available
+            parameters.
+
+            :param item: a Girder item document which contains
+                ['largeImage']['fileId'] identifying the Girder file to be used
+                for the tile source.
+            """
             super(GirderTileSource, self).__init__(item, *args, **kwargs)
             self.item = item
 

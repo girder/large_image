@@ -85,7 +85,8 @@ class PILFileTileSource(FileTileSource):
 
     def __init__(self, path, maxSize=None, **kwargs):
         """
-        Initialize the tile class.
+        Initialize the tile class.  See the base class for other available
+        parameters.
 
         :param path: the associated file path.
         :param maxSize: either a number or an object with {'width': (width),

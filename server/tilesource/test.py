@@ -41,9 +41,11 @@ class TestTileSource(TileSource):
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
                  fractal=False, **kwargs):
         """
-        Initialize the tile class.  The optional params options can include:
+        Initialize the tile class.  See the base class for other available
+        parameters.
 
-        :param ignored_path: for compatibility with other sources.
+        :param ignored_path: for compatibility with FileTileSource and
+            GirderTileSource sources.
         :param minLevel: minimum tile level
         :param maxLevel: maximum tile level
         :param tileWidth: tile width in pixels
@@ -54,7 +56,6 @@ class TestTileSource(TileSource):
             maxLevel and tileHeight if None.
         :param fractal: if True, and the tile size is square and a power of
             two, draw a simple fractal on the tiles.
-        :param encoding: 'PNG', 'JPEG', or 'TIFF'.
         """
         if not kwargs.get('encoding'):
             kwargs = kwargs.copy()
