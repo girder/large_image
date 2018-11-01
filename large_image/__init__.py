@@ -17,9 +17,14 @@
 #  limitations under the License.
 ##############################################################################
 
-import server
-from server import tilesource
-from server import cache_util
+try:
+    from . import server   # Works in non-editable install
+    from .server import tilesource
+    from .server import cache_util
+except ImportError:
+    import server          # Works in editable install
+    from server import tilesource
+    from server import cache_util
 
 getTileSource = tilesource.getTileSource  # noqa
 
