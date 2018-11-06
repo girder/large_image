@@ -33,8 +33,8 @@ class MemCache(cachetools.Cache):
     """Use memcached as the backing cache."""
 
     def __init__(self, url='127.0.0.1', username=None, password=None,
-                 missing=None, getsizeof=None, mustBeAvailable=False):
-        super(MemCache, self).__init__(0, missing, getsizeof)
+                 getsizeof=None, mustBeAvailable=False):
+        super(MemCache, self).__init__(0, getsizeof=getsizeof)
         if isinstance(url, six.string_types):
             url = [url]
         # pylibmc used to connect to memcached client.  Set failover behavior.

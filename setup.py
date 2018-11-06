@@ -55,7 +55,7 @@ setup(
     ],
     include_package_data=True,
     install_requires=[
-        'cachetools>=2.0.0',
+        'cachetools>=3.0.0',
         'enum34>=1.1.6',
         'jsonschema>=2.5.1',
         'libtiff>=0.4.1',
