@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import platform
 
 try:
     from setuptools import setup
@@ -67,8 +68,8 @@ setup(
     ],
     extras_require={
         'memcached': [
-            'pylibmc>=1.5.1;platform_system!="Windows"'
-        ],
+            'pylibmc>=1.5.1'
+        ] if platform.system() != 'Windows' else [],
         'openslide': [
             'openslide-python>=1.1.0'
         ],
