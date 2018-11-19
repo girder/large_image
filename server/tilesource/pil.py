@@ -169,7 +169,7 @@ if girder:
         @staticmethod
         def getLRUHash(*args, **kwargs):
             return strhash(
-                super(PILGirderTileSource, PILGirderTileSource).getLRUHash(
+                GirderTileSource.getLRUHash(
                     *args, **kwargs),
                 kwargs.get('maxSize', args[1] if len(args) >= 2 else None))
 

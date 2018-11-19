@@ -64,22 +64,45 @@ class MapnikTileSource(FileTileSource):
             'proj4:EPSG:3857', 'PROJ4:+init=epsg:3857', and '+init=epsg:3857',
             and 'EPSG:3857' are all equivilant.
         :param style: if None, use the default style for the file.  Otherwise,
-            this is a string with a json-encoded dictionary.  The style can
+            this is a string with a json-encoded dictionary.  The style is
+            ignored if it does not contain 'band' or 'bands'.  The style can
             contain the following keys:
-                band: a 1-based value for the band to use for styling.
+                band: either -1 for the default band(s), a 1-based value for
+                    the band to use for styling, or a string that matches the
+                    interpretation of the band ('red', 'green', 'blue', gray',
+                    etc.).
                 min: the value of the band to map to the first palette value.
-                    Defaults to 0.
+                    Defaults to 0.  'auto' to use 0 if the reported minimum and
+                    maximum of the band are between [0, 255] or use the
+                    reported minimum otherwise.
                 max: the value of the band to map to the last palette value.
-                    Defaults to 255.
+                    Defaults to 255.  'auto' to use 0 if the reported minimum
+                    and maximum of the band are between [0, 255] or use the
+                    reported maximum otherwise.
                 scheme: one of the mapnik.COLORIZER_xxx values.  Case
-                    insensitive.  Defaults to 'discrete'.  Other values are
-                    'linear' and 'exact'.
-                palette: either a list of two or more color strings, or a
-                    string with a dotted class name from the python palettable
-                    package.  Defaults to 'cmocean.diverging.Curl_10'.  Color
-                    strings must be parsable by mapnik's Color class.  Many css
-                    strings work.
-            The style is ignored if it does not contain 'band'.
+                    insensitive.  Possible values are at least 'discrete',
+                    'linear', and 'exact'.  If palette is unspecified and the
+                    band was specified as a string, this defaults to 'linear'.
+                    Otherwise it defaults to 'discrete'.
+                palette: either a list of two or more color strings, a string
+                    with a dotted class name from the python palettable
+                    package, or 'colortable' to use the band's color table
+                    (palette).  Color strings must be parsable by mapnik's
+                    Color class.  Many css strings work.  If scheme is
+                    unspecified and the band is one of 'red', 'green', 'blue',
+                    gray', or 'alpha', this defaults to an appropriate band
+                    pair.  Otherwise, this defaults to the band's color table
+                    (palette) if it has one and 'cmocean.diverging.Curl_10' if
+                    it does not.
+                nodata: the value to use for missing data.  'auto' to use the
+                    band reported value, if any.  null or unset to not use a
+                    nodata value.
+                composite: this is a string containing one of the mapnik
+                    CompositeOp properties.  It defaults to 'lighten'.
+            Alternately, the style object can contain a single key of 'bands',
+            which has a value which is a list of style dictionaries as above,
+            excepting that each must have a band that is not -1.  Bands are
+            composited in the order listed.
         :param unitsPerPixel: The size of a pixel at the 0 tile size.  Ignored
             if the projection is None.  For projections, None uses the default,
             which is the distance between (-180,0) and (180,0) in EPSG:4326
@@ -195,9 +218,8 @@ class MapnikTileSource(FileTileSource):
         try:
             step = (float(stop) - float(start)) / (float(count) - 1)
         except ValueError:
-            raise TileSourceException('Minimum and maximum values should be numbers.')
+            raise TileSourceException('Minimum and maximum values should be numbers or "auto".')
         sequence = [float(start + i * step) for i in range(count)]
-
         return sequence
 
     @staticmethod
@@ -385,12 +407,13 @@ class MapnikTileSource(FileTileSource):
         :returns: (xmin, ymin, xmax, ymax) in the current projection or base
             pixels.
         """
+        x, y = float(x), float(y)
         if self.projection:
             # Scale tile into the range [-0.5, 0.5], [-0.5, 0.5]
-            xmin = -0.5 + float(x) / 2.0 ** z
-            xmax = -0.5 + float(x + 1) / 2.0 ** z
-            ymin = 0.5 - float(y + 1) / 2.0 ** z
-            ymax = 0.5 - float(y) / 2.0 ** z
+            xmin = -0.5 + x / 2.0 ** z
+            xmax = -0.5 + (x + 1) / 2.0 ** z
+            ymin = 0.5 - (y + 1) / 2.0 ** z
+            ymax = 0.5 - y / 2.0 ** z
             # Convert to projection coordinates
             xmin = self.projectionOrigin[0] + xmin * self.unitsAcrossLevel0
             xmax = self.projectionOrigin[0] + xmax * self.unitsAcrossLevel0
@@ -404,57 +427,181 @@ class MapnikTileSource(FileTileSource):
             ymin, ymax = self.sourceSizeY - ymax, self.sourceSizeY - ymin
         return xmin, ymin, xmax, ymax
 
-    def addStyle(self, m, layerSrs, extent):
+    def _colorizerFromStyle(self, style):
         """
-        Attaches raster style option to mapnik raster layer.
+        Add a specified style to a mapnik raster symbolizer.
+
+        :param style: a style object.
+        :returns: a mapnik raster colorizer.
+        """
+        try:
+            scheme = style.get('scheme', 'discrete')
+            mapnik_scheme = getattr(mapnik, 'COLORIZER_{}'.format(scheme.upper()))
+        except AttributeError:
+            mapnik_scheme = mapnik.COLORIZER_DISCRETE
+            raise TileSourceException('Scheme has to be either "discrete" or "linear".')
+        colorizer = mapnik.RasterColorizer(mapnik_scheme, mapnik.Color(0, 0, 0, 0))
+        bandInfo = self.getBandInformation()[style['band']]
+        minimum = style.get('min', 0)
+        maximum = style.get('max', 255)
+        if minimum == 'auto':
+            if not (0 <= bandInfo['min'] <= 255 and 0 <= bandInfo['max'] <= 255):
+                minimum = bandInfo['min']
+            else:
+                minimum = 0
+        if maximum == 'auto':
+            if not (0 <= bandInfo['min'] <= 255 and 0 <= bandInfo['max'] <= 255):
+                maximum = bandInfo['max']
+            else:
+                maximum = 255
+        if style.get('palette') == 'colortable':
+            for value, color in enumerate(bandInfo['colortable']):
+                colorizer.add_stop(value, mapnik.Color(*color))
+        else:
+            colors = style.get('palette', 'cmocean.diverging.Curl_10')
+            if not isinstance(colors, list):
+                colors = self.getHexColors(colors)
+            else:
+                colors = [color if isinstance(color, six.binary_type) else
+                          color.encode('utf8') for color in colors]
+            if len(colors) < 2:
+                raise TileSourceException('A palette must have at least 2 colors.')
+            values = self.interpolateMinMax(minimum, maximum, len(colors))
+            for value, color in zip(values, colors):
+                try:
+                    colorizer.add_stop(value, mapnik.Color(color))
+                except RuntimeError:
+                    raise TileSourceException('Mapnik failed to parse color %r.' % color)
+
+        return colorizer
+
+    def _addStyleToMap(self, m, layerSrs, colorizer=None, band=-1, extent=None,
+                       composite=None, nodata=None):
+        """
+        Add a mapik raster symbolizer to a map.
 
         :param m: mapnik map.
+        :param layerSrs: the layer projection
+        :param colorizer: a mapnik colorizer.
+        :param band: an integer band number.  -1 for default.
+        :param extent: the extent to use for the mapnik layer.
+        :param composite: the composite operation to use.  This is one of
+            mapnik.CompositeOp.xxx, typically lighten or multiply.
+        :param nodata: the value to use for missing data or None to use all
+            data.
         """
-        style = mapnik.Style()
+        styleName = 'Raster Style'
+        if band != -1:
+            styleName += ' ' + str(band)
         rule = mapnik.Rule()
         sym = mapnik.RasterSymbolizer()
-        band = -1
-        if hasattr(self, 'style'):
-            band = self.style.get('band', -1)
-            if band != -1 and isinstance(band, int):
-                minimum = self.style.get('min', 0)
-                maximum = self.style.get('max', 256)
-                colors = self.style.get('palette', 'cmocean.diverging.Curl_10')
-                if not isinstance(colors, list):
-                    colors = self.getHexColors(colors)
-                else:
-                    colors = [color if isinstance(color, six.binary_type) else
-                              color.encode('utf8') for color in colors]
-                values = self.interpolateMinMax(minimum,
-                                                maximum,
-                                                len(colors))
-                try:
-                    scheme = self.style.get('scheme', 'discrete')
-                    mapnik_scheme = getattr(mapnik, 'COLORIZER_{}'.format(scheme.upper()))
-                except AttributeError:
-                    mapnik_scheme = mapnik.COLORIZER_DISCRETE
-                    raise TileSourceException('Scheme has to be either "discrete" or "linear".')
-                colorizer = mapnik.RasterColorizer(
-                    mapnik_scheme,
-                    mapnik.Color('white')
-                )
-                for color, value in zip(colors, values):
-                    colorizer.add_stop(value, mapnik.Color(color))
-                sym.colorizer = colorizer
-            else:
-                raise TileSourceException('Band has to be an integer.')
-
+        if colorizer is not None:
+            sym.colorizer = colorizer
         rule.symbols.append(sym)
+        style = mapnik.Style()
         style.rules.append(rule)
-        m.append_style('Raster Style', style)
+        if composite is not None:
+            style.comp_op = composite
+        m.append_style(styleName, style)
         lyr = mapnik.Layer('layer')
         lyr.srs = layerSrs
-        if extent:
-            lyr.datasource = mapnik.Gdal(base=None, file=self._path, band=band, extent=extent)
-        else:
-            lyr.datasource = mapnik.Gdal(base=None, file=self._path, band=band)
-        lyr.styles.append('Raster Style')
+        lyr.datasource = mapnik.Gdal(
+            base=None, file=self._path, band=band, extent=extent, nodata=nodata)
+        lyr.styles.append(styleName)
         m.layers.append(lyr)
+
+    def _bandNumber(self, band, exc=True):
+        """
+        Given a band number or interpretation name, return a validated band
+        number.
+
+        :param band: either -1, a positive integer, or the name of a band
+            interpretation that is present in the tile source.
+        :param exc: if True, raise an exception if no band matches.
+        :returns: a validated band, either 1 or a positive integer, or None if
+            no matching band and exceptions are not enabled.
+        """
+        bands = self.getBandInformation()
+        if not isinstance(band, int):
+            try:
+                band = next(bandIdx for bandIdx in sorted(bands)
+                            if band == bands[bandIdx]['interpretation'])
+            except StopIteration:
+                pass
+        if hasattr(band, 'isdigit') and band.isdigit():
+            band = int(band)
+        if band != -1 and band not in bands:
+            if exc:
+                raise TileSourceException(
+                    'Band has to be a positive integer, -1, or a band '
+                    'interpretation found in the source.')
+            return None
+        return int(band)
+
+    def addStyle(self, m, layerSrs, extent=None):
+        """
+        Attaches raster style option to mapnik raster layer and adds the layer
+        to the mapnik map.
+
+        :param m: mapnik map.
+        :param layerSrs: the layer projection
+        :param extent: the extent to use for the mapnik layer.
+        """
+        interpColorTable = {
+            'red': ['#000000', '#ff0000'],
+            'green': ['#000000', '#00ff00'],
+            'blue': ['#000000', '#0000ff'],
+            'gray': ['#000000', '#ffffff'],
+            'alpha': ['#ffffff00', '#ffffffff'],
+        }
+        bands = self.getBandInformation()
+        style = []
+        if hasattr(self, 'style'):
+            styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
+            for styleBand in styleBands:
+
+                styleBand = styleBand.copy()
+                styleBand['band'] = self._bandNumber(styleBand.get('band'))
+                style.append(styleBand)
+        if not len(style):
+            for interp in ('red', 'green', 'blue', 'gray', 'palette', 'alpha'):
+                band = self._bandNumber(interp, False)
+                # If we don't have the requested band, or we only have alpha,
+                # or this is gray or palette and we already added another band,
+                # skip this interpretation.
+                if (band is None or
+                        (interp == 'alpha' and not len(style)) or
+                        (interp in ('gray', 'palette') and len(style))):
+                    continue
+                if interp == 'palette':
+                    style.append({'band': band, 'palette': 'colortable'})
+                else:
+                    style.append({
+                        'band': band,
+                        'palette': interpColorTable[interp],
+                        'min': 'auto',
+                        'max': 'auto',
+                        'nodata': 'auto',
+                        'scheme': 'linear',
+                        'composite': 'multiply' if interp == 'alpha' else 'lighten'
+                    })
+        if not len(style):
+            style.append({'band': -1})
+        logger.debug('mapnik addTile specified style: %r, used style %r',
+                     getattr(self, 'style', None), style)
+        for styleBand in style:
+            if styleBand['band'] != -1:
+                colorizer = self._colorizerFromStyle(styleBand)
+                composite = getattr(mapnik.CompositeOp, styleBand.get('composite', 'lighten'))
+                nodata = styleBand.get('nodata')
+                if nodata == 'auto':
+                    nodata = bands.get('nodata')
+            else:
+                colorizer = None
+                composite = None
+                nodata = None
+            self._addStyleToMap(
+                m, layerSrs, colorizer, styleBand['band'], extent, composite, nodata)
 
     @methodcache()
     def getTile(self, x, y, z, **kwargs):
@@ -462,17 +609,27 @@ class MapnikTileSource(FileTileSource):
             mapSrs = self.projection
             layerSrs = self.getProj4String()
             extent = None
+            overscan = 0
         else:
-            mapSrs = '+proj=longlat +axis=esu'
-            layerSrs = '+proj=longlat +axis=esu'
+            mapSrs = '+proj=longlat +axis=enu'
+            layerSrs = '+proj=longlat +axis=enu'
+            # There appears to be a bug in some versions of mapnik/gdal when
+            # requesting a tile with a bounding box that has a corner exactly
+            # at (0, extentMaxY), so make a slightly larger image and crop it.
             extent = '0 0 %d %d' % (self.sourceSizeX, self.sourceSizeY)
-        m = mapnik.Map(self.tileWidth, self.tileHeight, mapSrs)
+            overscan = 1
+        m = mapnik.Map(self.tileWidth + overscan * 2, self.tileHeight + overscan * 2, mapSrs)
         xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
+        if overscan:
+            xmin, xmax = xmin - overscan, xmax + overscan
+            ymin, ymax = ymin - overscan, ymax + overscan
         m.zoom_to_box(mapnik.Box2d(xmin, ymin, xmax, ymax))
-        img = mapnik.Image(self.tileWidth, self.tileHeight)
+        img = mapnik.Image(self.tileWidth + overscan * 2, self.tileHeight + overscan * 2)
         self.addStyle(m, layerSrs, extent)
         mapnik.render(m, img)
         pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
+        if overscan:
+            pilimg = pilimg.crop((1, 1, pilimg.width - overscan, pilimg.height - overscan))
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
 
     @staticmethod
@@ -725,6 +882,14 @@ if girder:
         """
         name = 'mapnik'
         cacheName = 'tilesource'
+
+        @staticmethod
+        def getLRUHash(*args, **kwargs):
+            return strhash(
+                GirderTileSource.getLRUHash(*args, **kwargs),
+                kwargs.get('projection', args[1] if len(args) >= 2 else None),
+                kwargs.get('style', args[2] if len(args) >= 3 else None),
+                kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
 
 
 TileInputUnits['projection'] = 'projection'
