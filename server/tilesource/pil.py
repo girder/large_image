@@ -19,6 +19,7 @@
 
 import json
 import math
+import os
 import six
 
 import PIL.Image
@@ -106,6 +107,11 @@ class PILFileTileSource(FileTileSource):
 
         largeImagePath = self._getLargeImagePath()
 
+        # Some formats shouldn't be read this way, even if they could.  For
+        # instances, mirax (mrxs) files look like JPEGs, but opening them as
+        # such misses most of the data.
+        if os.path.splitext(largeImagePath)[1] in ('.mrxs', ):
+            raise TileSourceException('File cannot be opened via PIL.')
         try:
             self._pilImage = PIL.Image.open(largeImagePath)
         except IOError:
