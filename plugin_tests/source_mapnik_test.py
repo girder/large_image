@@ -17,11 +17,12 @@
 #  limitations under the License.
 #############################################################################
 
+import glob
+import json
 import os
 import PIL.Image
 import PIL.ImageChops
 import six
-import json
 
 from girder import config
 from tests import base
@@ -45,6 +46,30 @@ def tearDownModule():
 
 
 class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
+
+    def _assertImageMatches(self, image, testRootName, saveTestImageFailurePath='/tmp'):
+        """
+        Check if an image matches any of a set of images.
+
+        Adapted from:
+        https://stackoverflow.com/questions/35176639/compare-images-python-pil
+
+        :param image: PIL image to compare.
+        :param testRootName: base name of the images to test.  These images are
+            globbed in test_files/<testRootName>*.png.
+        :param saveTestImageFailurePath: if the image doesn't match any of the
+            test images, if this value is set, save the image to make it easier
+            to determine why it failed.
+        """
+        testImagePaths = glob.glob(os.path.join(
+            os.path.dirname(__file__), 'test_files', testRootName + '*.png'))
+        testImages = [PIL.Image.open(testImagePath).convert('RGBA')
+                      for testImagePath in testImagePaths]
+        diffs = [PIL.ImageChops.difference(image, testImage).getbbox()
+                 for testImage in testImages]
+        if None not in diffs and saveTestImageFailurePath:
+            image.save(os.path.join(saveTestImageFailurePath, testRootName + '_test.png'))
+        self.assertIn(None, diffs)
 
     def testTileFromGeotiffs(self):
         file = self._uploadFile(os.path.join(
@@ -101,22 +126,7 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         self.assertStatusOk(resp)
         image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
-
-        # https://stackoverflow.com/questions/35176639/compare-images-python-pil
-        testImages = [
-            PIL.Image.open(os.path.join(os.path.dirname(__file__), 'test_files', name))
-            for name in [
-                'geotiff_9_89_207.png',
-                'geotiff_9_89_207_py3.png',
-                'geotiff_9_89_207_py36.png',
-            ]]
-        diffs = [
-            PIL.ImageChops.difference(image, testImage).getbbox()
-            for testImage in testImages
-        ]
-
-        # If one of the diffs is None (means the images are same)
-        self.assertIn(None, diffs)
+        self._assertImageMatches(image, 'geotiff_9_89_207')
 
     def testTileStyleFromGeotiffs(self):
         file = self._uploadFile(os.path.join(
@@ -133,20 +143,7 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         self.assertStatusOk(resp)
         image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
-
-        testImages = [
-            PIL.Image.open(os.path.join(os.path.dirname(__file__), 'test_files', name))
-            for name in [
-                'geotiff_style_7_22_51.png',
-                'geotiff_style_7_22_51_py3.png',
-                'geotiff_style_7_22_51_py36.png',
-            ]]
-        diffs = [
-            PIL.ImageChops.difference(image, testImage).getbbox()
-            for testImage in testImages
-        ]
-
-        self.assertIn(None, diffs)
+        self._assertImageMatches(image, 'geotiff_style_7_22_51')
 
     def testTileLinearStyleFromGeotiffs(self):
         file = self._uploadFile(os.path.join(
@@ -164,19 +161,7 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         self.assertStatusOk(resp)
         image = PIL.Image.open(six.BytesIO(self.getBody(resp, text=False)))
-
-        testImages = [
-            PIL.Image.open(os.path.join(os.path.dirname(__file__), 'test_files', name))
-            for name in [
-                'geotiff_style_linear_7_22_51.png',
-                'geotiff_style_linear_7_22_51_py3.png',
-                'geotiff_style_linear_7_22_51_py36.png',
-            ]]
-        diffs = [
-            PIL.ImageChops.difference(image, testImage).getbbox()
-            for testImage in testImages
-        ]
-        self.assertIn(None, diffs)
+        self._assertImageMatches(image, 'geotiff_style_linear_7_22_51')
 
     def _assertStyleResponse(self, itemId, style, message):
         style = json.dumps(style)
