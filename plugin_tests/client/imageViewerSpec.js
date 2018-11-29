@@ -65,6 +65,71 @@ $(function () {
         });
     });
 
+    describe('removal', function () {
+        it('unmake a large image', function () {
+            runs(function () {
+                $('.g-large-image-remove').click();
+            });
+            girderTest.waitForLoad();
+            waitsFor(function () {
+                return !$('.g-item-image-viewer-select').length;
+            }, 15000);
+            girderTest.waitForLoad();
+        });
+        it('remake a large image and then remove the image file', function () {
+            runs(function () {
+                $('.g-large-image-create').click();
+            });
+            girderTest.waitForLoad();
+            // wait for job to complete
+            waitsFor(function () {
+                return $('.g-item-image-viewer-select').length !== 0;
+            }, 15000);
+            girderTest.waitForLoad();
+            runs(function () {
+                $('.g-delete-file').click();
+            });
+            girderTest.waitForDialog();
+            runs(function () {
+                $('#g-confirm-button').click();
+            });
+            girderTest.waitForLoad();
+            waitsFor(function () {
+                return !$('.g-item-image-viewer-select').length;
+            }, 15000);
+            girderTest.waitForLoad();
+        });
+        it('upload test file', function () {
+            girderTest.waitForLoad();
+            runs(function () {
+                $('.g-item-breadcrumb-link[data-type="folder"]:last').click();
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                girderTest.binaryUpload('plugins/large_image/plugin_tests/test_files/yb10kx5k.png');
+            });
+            girderTest.waitForLoad();
+        });
+        it('navigate to item and make a large image', function () {
+            runs(function () {
+                $('a.g-item-list-link').click();
+            });
+            girderTest.waitForLoad();
+            waitsFor(function () {
+                return $('.g-large-image-create').length !== 0;
+            });
+            runs(function () {
+                $('.g-large-image-create').click();
+            });
+            girderTest.waitForLoad();
+            // wait for job to complete
+            waitsFor(function () {
+                return $('.g-item-image-viewer-select').length !== 0;
+            }, 15000);
+            girderTest.waitForLoad();
+        });
+    });
+
     describe('Image Viewer selection', function () {
         var viewers = [], jQuery; // use the original jQuery
         it('One viewer is loaded', function () {

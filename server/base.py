@@ -177,6 +177,18 @@ def handleCopyItem(event):
         Item().save(newItem, triggerEvents=False)
 
 
+def handleRemoveFile(event):
+    """
+    When a file is removed, check if it is a largeImage fileId.  If so, delete
+    the largeImage record.
+    """
+    fileObj = event.info
+    if fileObj.get('itemId'):
+        item = Item().load(fileObj['itemId'], force=True, exc=False)
+        if item and 'largeImage' in item and item['largeImage'].get('fileId') == fileObj['_id']:
+            ImageItem().delete(item, [fileObj['_id']])
+
+
 # Validators
 
 @setting_utilities.validator({
@@ -285,3 +297,4 @@ def load(info):
                 checkForLargeImageFiles)
     events.bind('model.item.remove', 'large_image', removeThumbnails)
     events.bind('server_fuse.unmount', 'large_image', cache_util.cachesClear)
+    events.bind('model.file.remove', 'large_image', handleRemoveFile)
