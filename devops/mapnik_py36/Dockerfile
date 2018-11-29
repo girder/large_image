@@ -6,6 +6,8 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y python3-mapnik \
     git python3-pip
 
+RUN rm /usr/lib/mapnik/3.0/input/ogr.input
+
 RUN git clone https://github.com/girder/girder.git /build/girder --single-branch -b 2.x-maintenance
 
 # Overwrite GIRDER_TEST_DB property
