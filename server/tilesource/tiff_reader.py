@@ -195,8 +195,9 @@ class TiledTiffDirectory(object):
         # the create_image.py script, such as flatten or colourspace.  These
         # should only be done if necessary, which would require the conversion
         # job to check output and perform subsequent processing as needed.
-        if (self._tiffInfo.get('samplesperpixel') != 1 and
-                self._tiffInfo.get('samplesperpixel') < 3):
+        if (not self._tiffInfo.get('samplesperpixel') or
+                (self._tiffInfo.get('samplesperpixel') != 1 and
+                 self._tiffInfo.get('samplesperpixel') < 3)):
             raise ValidationTiffException(
                 'Only RGB and greyscale TIFF files are supported')
 
