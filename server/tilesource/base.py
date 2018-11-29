@@ -1810,7 +1810,11 @@ if girder:  # noqa - the whole class is allowed to exceed complexity rules
                     except FilePathException:
                         pass
                 if not largeImagePath:
-                    largeImagePath = File().getLocalFilePath(largeImageFile)
+                    try:
+                        largeImagePath = File().getLocalFilePath(largeImageFile)
+                    except AttributeError as e:
+                        raise TileSourceException(
+                            'No local file path for this file: %s' % e.args[0])
                 return largeImagePath
             except (TileSourceAssetstoreException, FilePathException):
                 raise
