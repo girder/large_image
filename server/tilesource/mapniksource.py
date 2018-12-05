@@ -27,6 +27,7 @@ import pyproj
 import re
 import six
 import struct
+import threading
 from distutils.version import StrictVersion
 from operator import attrgetter
 from osgeo import gdal
@@ -79,11 +80,13 @@ class MapnikTileSource(FileTileSource):
                 min: the value of the band to map to the first palette value.
                     Defaults to 0.  'auto' to use 0 if the reported minimum and
                     maximum of the band are between [0, 255] or use the
-                    reported minimum otherwise.
+                    reported minimum otherwise.  'min' or 'max' to always uses
+                    the reported minimum or maximum.
                 max: the value of the band to map to the last palette value.
                     Defaults to 255.  'auto' to use 0 if the reported minimum
                     and maximum of the band are between [0, 255] or use the
-                    reported maximum otherwise.
+                    reported maximum otherwise.  'min' or 'max' to always uses
+                    the reported minimum or maximum.
                 scheme: one of the mapnik.COLORIZER_xxx values.  Case
                     insensitive.  Possible values are at least 'discrete',
                     'linear', and 'exact'.  If palette is unspecified and the
@@ -140,11 +143,12 @@ class MapnikTileSource(FileTileSource):
             self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
         except AttributeError:
             raise TileSourceException('File cannot be opened via Mapnik.')
+        is_netcdf = self._checkNetCDF()
         try:
             scale = self.getPixelSizeInMeters()
         except RuntimeError:
             raise TileSourceException('File cannot be opened via Mapnik.')
-        if not scale:
+        if not scale and not is_netcdf:
             raise TileSourceException(
                 'File does not have a projected scale, so will not be '
                 'opened via Mapnik.')
@@ -153,6 +157,73 @@ class MapnikTileSource(FileTileSource):
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1)
         if self.projection:
             self._initWithProjection(unitsPerPixel)
+        self._getTileLock = threading.Lock()
+
+    def _checkNetCDF(self):
+        """
+        Check if this file is a netCDF file.  If so, get some metadata about
+        available datasets.
+
+        This assumes things about the projection that may not be true for all
+        netCDF files.  It could also be extended to get better data about
+        time bounds and other series data and to prevent selecting subdatasets
+        that are not spatially appropriate.
+        """
+        if not self.dataset or not self.dataset.GetDriver():
+            return False
+        if self.dataset.GetDriver().ShortName != 'netCDF':
+            return False
+        datasets = {}
+        for name, desc in self.dataset.GetSubDatasets():
+            parts = desc.split(None, 2)
+            dataset = {
+                'name': name,
+                'desc': desc,
+                'dim': [int(val) for val in parts[0].strip('[]').split('x')],
+                'key': parts[1],
+                'format': parts[2],
+            }
+            dataset['values'] = six.moves.reduce(lambda x, y: x * y, dataset['dim'])
+            datasets[dataset['key']] = dataset
+        if not len(datasets) and (not self.dataset.RasterCount or self.dataset.GetProjection()):
+            return False
+        self._netcdf = {
+            'datasets': datasets,
+            'metadata': self.dataset.GetMetadata_Dict()
+        }
+        if not len(datasets):
+            try:
+                self.getBounds('+init=epsg:3857')
+            except RuntimeError:
+                self._bounds.clear()
+                del self._netcdf
+                return False
+        if not self.dataset.RasterCount:
+            self._netcdf['default'] = sorted([(
+                not ds['key'].endswith('_bnds'),
+                'character' not in ds['format'],
+                ds['values'],
+                len(ds['dim']),
+                ds['dim'],
+                ds['key']) for ds in six.itervalues(datasets)])[-1][-1]
+            # The base netCDF file reports different dimensions than the
+            # subdatasets.  For now, use the "best" subdataset's dimensions
+            dataset = self._netcdf['datasets'][self._netcdf['default']]
+            dataset['dataset'] = gdal.Open(dataset['name'])
+            self.sourceSizeX = self.sizeX = dataset['dataset'].RasterXSize
+            self.sourceSizeY = self.sizeY = dataset['dataset'].RasterYSize
+
+            self.dataset = dataset['dataset']  # use for projection information
+
+        if not hasattr(self, 'style'):
+            self.style = {
+                'band': self._netcdf['default'] + ':1' if self._netcdf.get('default') else 1,
+                'scheme': 'linear',
+                'palette': ['#000000', '#ffffff'],
+                'min': 'min',
+                'max': 'max'
+            }
+        return True
 
     def _initWithProjection(self, unitsPerPixel=None):
         """
@@ -207,6 +278,8 @@ class MapnikTileSource(FileTileSource):
         """
         wkt = self.dataset.GetProjection()
         if not wkt:
+            if hasattr(self, '_netcdf'):
+                return '+init=epsg:4326'
             return
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
@@ -223,7 +296,8 @@ class MapnikTileSource(FileTileSource):
         try:
             step = (float(stop) - float(start)) / (float(count) - 1)
         except ValueError:
-            raise TileSourceException('Minimum and maximum values should be numbers or "auto".')
+            raise TileSourceException(
+                'Minimum and maximum values should be numbers, "auto", "min", or "max".')
         sequence = [float(start + i * step) for i in range(count)]
         return sequence
 
@@ -340,11 +414,14 @@ class MapnikTileSource(FileTileSource):
             self._bounds[srs] = bounds
         return self._bounds[srs]
 
-    def getBandInformation(self):
-        if not getattr(self, '_bandInfo', None):
+    def getBandInformation(self, dataset=None):
+        if not getattr(self, '_bandInfo', None) or dataset:
+            cache = not dataset
+            if not dataset:
+                dataset = self.dataset
             infoSet = {}
-            for i in range(self.dataset.RasterCount):
-                band = self.dataset.GetRasterBand(i + 1)
+            for i in range(dataset.RasterCount):
+                band = dataset.GetRasterBand(i + 1)
                 info = {}
                 stats = band.GetStatistics(True, True)
                 # The statistics provide a min and max, so we don't fetch those
@@ -381,12 +458,26 @@ class MapnikTileSource(FileTileSource):
                     info['maskband'] = band.GetMaskBand().GetBand() or None
                 # Only keep values that aren't None or the empty string
                 infoSet[i + 1] = {k: v for k, v in six.iteritems(info) if v not in (None, '')}
+            if not cache:
+                return infoSet
             self._bandInfo = infoSet
         return self._bandInfo
 
+    def getOneBandInformation(self, band):
+        if type(band) is not tuple:
+            bandInfo = self.getBandInformation()[band]
+        else:  # netcdf
+            dataset = self._netcdf['datasets'][band[0]]
+            if not dataset.get('bands'):
+                if not dataset.get('dataset'):
+                    dataset['dataset'] = gdal.Open(dataset['name'])
+                dataset['bands'] = self.getBandInformation(dataset['dataset'])
+            bandInfo = dataset['bands'][band[1]]
+        return bandInfo
+
     def getMetadata(self):
         metadata = {
-            'geospatial': bool(self.dataset.GetProjection()),
+            'geospatial': bool(self.dataset.GetProjection() or hasattr(self, '_netcdf')),
             'levels': self.levels,
             'sizeX': self.sizeX,
             'sizeY': self.sizeY,
@@ -400,6 +491,17 @@ class MapnikTileSource(FileTileSource):
             'bands': self.getBandInformation(),
         }
         metadata.update(self.getNativeMagnification())
+        if hasattr(self, '_netcdf'):
+            # To ensure all band information from all subdatasets in netcdf,
+            # we could do the following:
+            # for key in self._netcdf['datasets']:
+            #     dataset = self._netcdf['datasets'][key]
+            #     if 'bands' not in dataset:
+            #         gdaldataset = gdal.Open(dataset['name'])
+            #         dataset['bands'] = self.getBandInformation(gdaldataset)
+            #         dataset['sizeX'] = gdaldataset.RasterXSize
+            #         dataset['sizeY'] = gdaldataset.RasterYSize
+            metadata['netcdf'] = self._netcdf
         return metadata
 
     def getTileCorners(self, z, x, y):
@@ -446,16 +548,18 @@ class MapnikTileSource(FileTileSource):
             mapnik_scheme = mapnik.COLORIZER_DISCRETE
             raise TileSourceException('Scheme has to be either "discrete" or "linear".')
         colorizer = mapnik.RasterColorizer(mapnik_scheme, mapnik.Color(0, 0, 0, 0))
-        bandInfo = self.getBandInformation()[style['band']]
+        bandInfo = self.getOneBandInformation(style['band'])
         minimum = style.get('min', 0)
         maximum = style.get('max', 255)
+        minimum = bandInfo[minimum] if minimum in ('min', 'max') else minimum
+        maximum = bandInfo[maximum] if maximum in ('min', 'max') else maximum
         if minimum == 'auto':
-            if not (0 <= bandInfo['min'] <= 255 and 0 <= bandInfo['max'] <= 255):
+            if not (0 <= bandInfo['min'] <= 255 and 1 <= bandInfo['max'] <= 255):
                 minimum = bandInfo['min']
             else:
                 minimum = 0
         if maximum == 'auto':
-            if not (0 <= bandInfo['min'] <= 255 and 0 <= bandInfo['max'] <= 255):
+            if not (0 <= bandInfo['min'] <= 255 and 1 <= bandInfo['max'] <= 255):
                 maximum = bandInfo['max']
             else:
                 maximum = 255
@@ -472,7 +576,7 @@ class MapnikTileSource(FileTileSource):
             if len(colors) < 2:
                 raise TileSourceException('A palette must have at least 2 colors.')
             values = self.interpolateMinMax(minimum, maximum, len(colors))
-            for value, color in zip(values, colors):
+            for value, color in sorted(zip(values, colors)):
                 try:
                     colorizer.add_stop(value, mapnik.Color(color))
                 except RuntimeError:
@@ -510,8 +614,13 @@ class MapnikTileSource(FileTileSource):
         m.append_style(styleName, style)
         lyr = mapnik.Layer('layer')
         lyr.srs = layerSrs
+        gdalpath = self._path
+        gdalband = band
+        if hasattr(self, '_netcdf') and type(band) is tuple:
+            gdalband = band[1]
+            gdalpath = self._netcdf['datasets'][band[0]]['name']
         lyr.datasource = mapnik.Gdal(
-            base=None, file=self._path, band=band, extent=extent, nodata=nodata)
+            base=None, file=gdalpath, band=gdalband, extent=extent, nodata=nodata)
         lyr.styles.append(styleName)
         m.layers.append(lyr)
 
@@ -526,6 +635,20 @@ class MapnikTileSource(FileTileSource):
         :returns: a validated band, either 1 or a positive integer, or None if
             no matching band and exceptions are not enabled.
         """
+        if hasattr(self, '_netcdf') and (':' in str(band) or str(band).isdigit()):
+            key = None
+            if ':' in str(band):
+                key, band = band.split(':', 1)
+            if str(band).isdigit():
+                band = int(band)
+            else:
+                band = 1
+            if not key or key == 'default':
+                key = self._netcdf.get('default', None)
+                if key is None:
+                    return band
+            if key in self._netcdf['datasets']:
+                return (key, band)
         bands = self.getBandInformation()
         if not isinstance(band, int):
             try:
@@ -615,6 +738,23 @@ class MapnikTileSource(FileTileSource):
             layerSrs = self.getProj4String()
             extent = None
             overscan = 0
+            if not hasattr(self, '_repeatLongitude'):
+                # If the original dataset is in a latitude/longitude
+                # projection, and does cover more than 360 degrees in longitude
+                # (with some slop), and is outside of the bounds of
+                # [-180, 180], we want to render it twice, once at the
+                # specified longitude and once offset to ensure that we cover
+                # [-180, 180].  This is done by altering the projection's
+                # prime meridian by 360 degrees.  If none of the dataset is in
+                # the range of [-180, 180], this does't apply the shift either.
+                self._repeatLongitude = None
+                if pyproj.Proj(layerSrs).is_latlong():
+                    bounds = self.getBounds()
+                    if bounds['xmax'] - bounds['xmin'] < 361:
+                        if bounds['xmin'] < -180 and bounds['xmax'] > -180:
+                            self._repeatLongitude = layerSrs + ' +pm=+360'
+                        elif bounds['xmax'] > 180 and bounds['xmin'] < 180:
+                            self._repeatLongitude = layerSrs + ' +pm=-360'
         else:
             mapSrs = '+proj=longlat +axis=enu'
             layerSrs = '+proj=longlat +axis=enu'
@@ -623,16 +763,28 @@ class MapnikTileSource(FileTileSource):
             # at (0, extentMaxY), so make a slightly larger image and crop it.
             extent = '0 0 %d %d' % (self.sourceSizeX, self.sourceSizeY)
             overscan = 1
-        m = mapnik.Map(self.tileWidth + overscan * 2, self.tileHeight + overscan * 2, mapSrs)
         xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
         if overscan:
-            xmin, xmax = xmin - overscan, xmax + overscan
-            ymin, ymax = ymin - overscan, ymax + overscan
-        m.zoom_to_box(mapnik.Box2d(xmin, ymin, xmax, ymax))
-        img = mapnik.Image(self.tileWidth + overscan * 2, self.tileHeight + overscan * 2)
-        self.addStyle(m, layerSrs, extent)
-        mapnik.render(m, img)
-        pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
+            pw = (xmax - xmin) / self.tileWidth
+            py = (ymax - ymin) / self.tileHeight
+            xmin, xmax = xmin - pw * overscan, xmax + pw * overscan
+            ymin, ymax = ymin - py * overscan, ymax + py * overscan
+        with self._getTileLock:
+            if not hasattr(self, '_mapnikMap'):
+                m = mapnik.Map(
+                    self.tileWidth + overscan * 2,
+                    self.tileHeight + overscan * 2,
+                    mapSrs)
+                self.addStyle(m, layerSrs, extent)
+                if getattr(self, '_repeatLongitude', None):
+                    self.addStyle(m, self._repeatLongitude, extent)
+                self._mapnikMap = m
+            else:
+                m = self._mapnikMap
+            m.zoom_to_box(mapnik.Box2d(xmin, ymin, xmax, ymax))
+            img = mapnik.Image(self.tileWidth + overscan * 2, self.tileHeight + overscan * 2)
+            mapnik.render(m, img)
+            pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
         if overscan:
             pilimg = pilimg.crop((1, 1, pilimg.width - overscan, pilimg.height - overscan))
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
@@ -854,6 +1006,10 @@ class MapnikTileSource(FileTileSource):
             a scale of [0-255], including alpha, if available.  This may
             contain additional information.
         """
+        # TODO: netCDF - currently this will read the values from the
+        # default subdatatset; we may want it to read values from all
+        # subdatasets and the main raster bands (if they exist), and label the
+        # bands better
         pixel = super(MapnikTileSource, self).getPixel(includeTileRecord=True, **kwargs)
         tile = pixel.pop('tile', None)
         if tile:

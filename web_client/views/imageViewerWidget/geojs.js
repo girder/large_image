@@ -100,12 +100,14 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             // the metadata levels is the count including level 0, so use one
             // less than the value specified
             this.viewer = geo.map({node: this.el, max: this.levels - 1});
-            this.viewer.bounds({
-                left: this.metadata.bounds.xmin,
-                right: this.metadata.bounds.xmax,
-                top: this.metadata.bounds.ymax,
-                bottom: this.metadata.bounds.ymin
-            }, 'EPSG:3857');
+            if (this.metadata.bounds.xmin !== this.metadata.bounds.xmax && this.metadata.bounds.ymin !== this.metadata.bounds.ymax) {
+                this.viewer.bounds({
+                    left: this.metadata.bounds.xmin,
+                    right: this.metadata.bounds.xmax,
+                    top: this.metadata.bounds.ymax,
+                    bottom: this.metadata.bounds.ymin
+                }, 'EPSG:3857');
+            }
             this.viewer.createLayer('osm');
             this.viewer.createLayer('osm', params);
         }

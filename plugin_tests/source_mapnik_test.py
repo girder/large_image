@@ -191,15 +191,15 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
         self._assertStyleResponse(itemId, {
             'band': 1,
-            'min': 'min',
+            'min': 'bad',
             'max': 100,
-        }, 'Minimum and maximum values should be numbers or "auto".')
+        }, 'Minimum and maximum values should be numbers, "auto", "min", or "max".')
 
         self._assertStyleResponse(itemId, {
             'band': 1,
             'min': 0,
-            'max': 'max',
-        }, 'Minimum and maximum values should be numbers or "auto".')
+            'max': 'bad',
+        }, 'Minimum and maximum values should be numbers, "auto", "min", or "max".')
 
         self._assertStyleResponse(itemId, {
             'band': 1,
