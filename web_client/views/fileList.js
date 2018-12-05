@@ -29,6 +29,12 @@ wrap(FileListWidget, 'render', function (render) {
             file: file, largeImage: largeImage});
         if (fileAction) {
             actions.prepend(fileAction);
+            if (actions.has('.g-large-image-remove').length) {
+                file.on('g:deleted', () => {
+                    this.parentItem.unset('largeImage');
+                    this.parentItem.fetch();
+                });
+            }
         }
     });
     this.$('.g-large-image-remove').on('click', () => {
