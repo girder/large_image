@@ -473,3 +473,32 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         self.assertEqual(bounds['xmax'], 179.99583333)
         self.assertEqual(bounds['ymin'], -89.99583333)
         self.assertEqual(bounds['ymax'], 89.999999)
+
+    def testVsiCurlAccess(self):
+        from osgeo import gdal
+        from distutils.version import StrictVersion
+        if StrictVersion(gdal.__version__) < StrictVersion('2.1.3'):
+            return
+        filepath = os.path.join(os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff')
+        basefile = self._uploadFile(filepath)
+        resp = self.request(
+            path='/item', method='POST', user=self.admin, params={
+                'folderId': self.publicFolder['_id'], 'name': 'Link File Item'
+            })
+        self.assertStatusOk(resp)
+        item = resp.json
+        itemId = item['_id']
+        resp = self.request(
+            path='/file', method='POST', user=self.admin, params={
+                'parentType': 'item',
+                'parentId': itemId,
+                'name': 'Link File.tiff',
+                'linkUrl': 'http://127.0.0.1:%s/api/v1/file/%s/download' % (
+                    os.environ['GIRDER_PORT'], basefile['_id'])
+            })
+        self.assertStatusOk(resp)
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 256)
+        self.assertEqual(tileMetadata['tileHeight'], 256)

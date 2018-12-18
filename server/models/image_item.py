@@ -142,7 +142,7 @@ class ImageItem(Item):
         tileMimeType = tileSource.getTileMimeType()
         return tileData, tileMimeType
 
-    def delete(self, item):
+    def delete(self, item, skipFileIds=None):
         deleted = False
         if 'largeImage' in item:
             job = None
@@ -174,7 +174,9 @@ class ImageItem(Item):
                 assert item['largeImage']['originalId'] != \
                     item['largeImage'].get('fileId')
 
-                if 'fileId' in item['largeImage']:
+                if ('fileId' in item['largeImage'] and (
+                        not skipFileIds or
+                        item['largeImage']['fileId'] not in skipFileIds)):
                     file = File().load(id=item['largeImage']['fileId'], force=True)
                     if file:
                         File().remove(file)

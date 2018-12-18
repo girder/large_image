@@ -17,17 +17,20 @@
 #  limitations under the License.
 #############################################################################
 
-import gdal
 import json
 import mapnik
 import math
-import osr
+import os
 import PIL.Image
 import palettable
 import pyproj
+import re
 import six
 import struct
+from distutils.version import StrictVersion
 from operator import attrgetter
+from osgeo import gdal
+from osgeo import osr
 
 from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL, TileInputUnits
 from ..cache_util import LruCacheMetaclass, methodcache, strhash
@@ -35,6 +38,8 @@ from ..cache_util import LruCacheMetaclass, methodcache, strhash
 try:
     import girder
     from girder import logger
+    # from girder.constants import AssetstoreType
+    from girder.models.file import File
     from .base import GirderTileSource
 except ImportError:
     girder = None
@@ -890,6 +895,29 @@ if girder:
                 kwargs.get('projection', args[1] if len(args) >= 2 else None),
                 kwargs.get('style', args[2] if len(args) >= 3 else None),
                 kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
+
+        def _getLargeImagePath(self):
+            """
+            GDAL can read directly from http/https/ftp via /vsicurl.  If this
+            is a link file, try to use it.
+            """
+            try:
+                largeImageFileId = self.item['largeImage']['fileId']
+                largeImageFile = File().load(largeImageFileId, force=True)
+                if (StrictVersion(gdal.__version__) >= StrictVersion('2.1.3') and
+                        largeImageFile.get('linkUrl') and
+                        not largeImageFile.get('assetstoreId') and
+                        re.match(r'(http(|s)|ftp)://', largeImageFile['linkUrl'])):
+                    largeImagePath = '/vsicurl/' + largeImageFile['linkUrl']
+                    # This is a common location for certificates
+                    caPath = '/etc/ssl/certs/ca-certificates.crt'
+                    if not os.environ.get('CURL_CA_BUNDLE') and os.path.exists(caPath):
+                        os.environ['CURL_CA_BUNDLE'] = caPath
+                    logger.info('Using %s' % largeImagePath)
+                    return largeImagePath
+            except Exception:
+                pass
+            return GirderTileSource._getLargeImagePath(self)
 
 
 TileInputUnits['projection'] = 'projection'
