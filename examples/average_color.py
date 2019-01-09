@@ -7,7 +7,7 @@ import numpy
 import large_image
 
 # Explicitly set the caching method before we request any data
-large_image.cache_util.setConfig('cache_backend', 'python')
+large_image.config.setConfig('cache_backend', 'python')
 
 
 def average_color(imagePath, magnification=None):
@@ -43,6 +43,7 @@ def average_color(imagePath, magnification=None):
             tile['magnification'], mean[0], mean[1], mean[2]))
     mean = numpy.average(tileMeans, axis=0, weights=tileWeights)
     print('Average color: %g %g %g' % (mean[0], mean[1], mean[2]))
+    return mean
 
 
 if __name__ == '__main__':

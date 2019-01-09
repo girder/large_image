@@ -1,0 +1,15 @@
+.g-config-breadcrumb-container
+form#g-large-image-form(role="form")
+  .form-group
+    label Store annotation history
+    p.g-large-image-description
+      | Whenever annotations are saved, a record of the annotation's previous state can be kept.
+    .g-large-image-annotation-history-container
+      label.radio-inline
+        input.g-large-image-annotation-history-show(type="radio", name="g-large-image-annotation-history", checked=settings['large_image.annotation_history'] !== false ? 'checked': undefined)
+        | Record annotation history
+      label.radio-inline
+        input.g-large-image-annotation-history-hide(type="radio", name="g-large-image-annotation-history", checked=settings['large_image.annotation_history'] !== false ? undefined : 'checked')
+        | Don't store history
+  p#g-large-image-error-message.g-validation-failed-message
+  input.btn.btn-sm.btn-primary(type="submit", value="Save")

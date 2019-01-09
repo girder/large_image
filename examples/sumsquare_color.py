@@ -28,9 +28,9 @@ def sum_squares(imagePath, magnification=None, **kwargs):
         # trim off any overlap so we don't include it in our calculations.
         data = data[
             tile['tile_overlap']['top']:
-                data.shape[0]-tile['tile_overlap']['bottom'],
+                data.shape[0] - tile['tile_overlap']['bottom'],
             tile['tile_overlap']['left']:
-                data.shape[1]-tile['tile_overlap']['right'],
+                data.shape[1] - tile['tile_overlap']['right'],
             :]
         sumsq = numpy.sum(data**2, axis=(0, 1))
         tileSumSquares.append(sumsq)
@@ -39,6 +39,7 @@ def sum_squares(imagePath, magnification=None, **kwargs):
             tile['magnification'], sumsq[0], sumsq[1], sumsq[2]))
     sumsq = numpy.sum(tileSumSquares, axis=0)
     print('Sum of squares: %d %d %d' % (sumsq[0], sumsq[1], sumsq[2]))
+    return sumsq
 
 
 if __name__ == '__main__':

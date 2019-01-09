@@ -1,0 +1,47 @@
+{
+    "name": "@girder/large_image_annotation",
+    "version": "1.0.0",
+    "description": "Support annotations in the large_image plugin.",
+    "homepage": "https://github.com/girder/large_image",
+    "bugs": {
+        "url": "https://github.com/girder/large_image/issues"
+    },
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/girder/large_image.git"
+    },
+    "peerDependencies": {
+        "@girder/large_image": "*"
+    },
+    "dependencies": {
+        "tinycolor2": "^1.4.1"
+    },
+    "main": "./index.js",
+    "girderPlugin": {
+        "name": "large_image_annotation",
+        "main": "./main.js",
+        "dependencies": ["large_image"]
+    },
+    "eslintConfig": {
+        "extends": "girder",
+        "rules": {
+            "for-direction": "error",
+            "getter-return": "error",
+            "multiline-ternary": [
+                "error",
+                "always-multiline"
+            ],
+            "no-alert": "error",
+            "switch-colon-spacing": "error",
+            "import/exports-last": "error",
+            "promise/no-native": "error",
+            "promise/no-return-in-finally": "error",
+            "promise/no-return-wrap": "error"
+        },
+        "root": true
+    },
+    "eslintIgnore": [
+        "**/node_modules/"
+    ]
+}

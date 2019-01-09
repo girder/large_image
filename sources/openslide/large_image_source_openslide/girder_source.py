@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-#############################################################################
+##############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -14,10 +14,19 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-#############################################################################
+##############################################################################
 
-from . import tilesource  # noqa
-from .tilesource import getTileSource  # noqa
+from girder_large_image.girder_tilesource import GirderTileSource
+from . import OpenslideFileTileSource
 
 
-__version__ = '1.0.0'
+class OpenslideGirderTileSource(OpenslideFileTileSource, GirderTileSource):
+    """
+    Provides tile access to Girder items with an SVS file or other files that
+    the openslide library can read.
+    """
+    cacheName = 'tilesource'
+    name = 'svs'
+
+    extensionsWithAdjacentFiles = {'mrxs'}
+    mimeTypesWithAdjacentFiles = {'image/mirax'}

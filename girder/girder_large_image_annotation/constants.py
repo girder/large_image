@@ -16,8 +16,8 @@
 #  limitations under the License.
 #############################################################################
 
-from . import tilesource  # noqa
-from .tilesource import getTileSource  # noqa
+
+from girder_large_image.constants import PluginSettings
 
 
-__version__ = '1.0.0'
+PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY = 'large_image.annotation_history'
