@@ -63,6 +63,7 @@ class LargeImageWithoutFuseGridFSTest(common.LargeImageCommonTest):
 class LargeImageWithoutFuseFSTest(common.LargeImageCommonTest):
     def testFilesystemAssetstore(self):
         from girder.plugins.large_image.models.image_item import ImageItem
+        from girder.plugins.large_image.cache_util import cachesClear
 
         file = self._uploadFile(os.path.join(
             os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
@@ -72,6 +73,7 @@ class LargeImageWithoutFuseFSTest(common.LargeImageCommonTest):
         # With a second file, large image would prefer to use the Girder mount,
         # if available
         File().createLinkFile('second', item, 'item', 'http://nourl.com', self.admin)
+        cachesClear()
         source = ImageItem().tileSource(item)
         # The file path should just be the local path
         self.assertEqual(source._getLargeImagePath(), File().getLocalFilePath(file))

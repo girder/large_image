@@ -57,8 +57,7 @@ def loadModel(resource, model, plugin='_core', id=None, allowCookie=False,
         tokenStr = cherrypy.request.headers['Girder-Token']
     elif 'girderToken' in cherrypy.request.cookie and allowCookie:
         tokenStr = cherrypy.request.cookie['girderToken'].value
-    if tokenStr:
-        key = (model, tokenStr, id)
+    key = (model, tokenStr, id)
     cacheEntry = LoadModelCache.get(key)
     if cacheEntry and cacheEntry['expiry'] > time.time():
         entry = cacheEntry['result']
@@ -71,17 +70,16 @@ def loadModel(resource, model, plugin='_core', id=None, allowCookie=False,
             setattr(cherrypy.request, 'girderAllowCookie', True)
         entry = resource.model(model, plugin).load(
             id=id, level=level, user=resource.getCurrentUser())
-        if key:
-            # If the cache becomes too large, just dump it -- this is simpler
-            # than dropping the oldest values and avoids having to add locking.
-            if len(LoadModelCache) > LoadModelCacheMaxEntries:
-                LoadModelCache.clear()
-            LoadModelCache[key] = {
-                'id': id,
-                'model': model,
-                'tokenId': tokenStr,
-                'expiry': time.time() + LoadModelCacheExpiryDuration,
-                'result': entry,
-                'hits': 0
-            }
+        # If the cache becomes too large, just dump it -- this is simpler
+        # than dropping the oldest values and avoids having to add locking.
+        if len(LoadModelCache) > LoadModelCacheMaxEntries:
+            LoadModelCache.clear()
+        LoadModelCache[key] = {
+            'id': id,
+            'model': model,
+            'tokenId': tokenStr,
+            'expiry': time.time() + LoadModelCacheExpiryDuration,
+            'result': entry,
+            'hits': 0
+        }
     return entry

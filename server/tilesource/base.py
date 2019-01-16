@@ -1795,9 +1795,9 @@ if girder:  # noqa - the whole class is allowed to exceed complexity rules
                     # was derived from.  This is always the case if there are 3
                     # or more files.
                     fileIds = [str(file['_id']) for file in Item().childFiles(self.item, limit=3)]
-                    knownIds = [largeImageFileId]
+                    knownIds = [str(largeImageFileId)]
                     if 'originalId' in self.item['largeImage']:
-                        knownIds.append(self.item['largeImage']['originalId'])
+                        knownIds.append(str(self.item['largeImage']['originalId']))
                     self.mayHaveAdjacentFiles = (
                         len(fileIds) >= 3 or
                         fileIds[0] not in knownIds or
