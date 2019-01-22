@@ -1803,6 +1803,8 @@ if girder:  # noqa - the whole class is allowed to exceed complexity rules
                         fileIds[0] not in knownIds or
                         fileIds[-1] not in knownIds)
                 largeImageFile = File().load(largeImageFileId, force=True)
+                if 'mrxs' in largeImageFile['exts']:
+                    self.mayHaveAdjacentFiles = True
                 largeImagePath = None
                 if self.mayHaveAdjacentFiles and hasattr(File(), 'getGirderMountFilePath'):
                     try:
