@@ -41,7 +41,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('plugins/large_image/plugin_tests/test_files/yb10kx5k.png');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.png');
             });
             girderTest.waitForLoad();
         });
@@ -106,7 +106,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('plugins/large_image/plugin_tests/test_files/yb10kx5k.png');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.png');
             });
             girderTest.waitForLoad();
         });

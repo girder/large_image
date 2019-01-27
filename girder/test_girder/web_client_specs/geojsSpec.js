@@ -46,7 +46,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('plugins/large_image/plugin_tests/test_files/small_la.tiff');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/small_la.tiff');
             });
             girderTest.waitForLoad();
             runs(function () {
