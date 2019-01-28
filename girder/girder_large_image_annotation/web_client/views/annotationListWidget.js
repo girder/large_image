@@ -1,11 +1,11 @@
 import _ from 'underscore';
 
-import { AccessType } from 'girder/constants';
-import { confirm } from 'girder/dialog';
-import { getApiRoot } from 'girder/rest';
-import AccessWidget from 'girder/views/widgets/AccessWidget';
-import UserCollection from 'girder/collections/UserCollection';
-import View from 'girder/views/View';
+import { AccessType } from '@girder/core/constants';
+import { confirm } from '@girder/core/dialog';
+import { getApiRoot } from '@girder/core/rest';
+import AccessWidget from '@girder/core/views/widgets/AccessWidget';
+import UserCollection from '@girder/core/collections/UserCollection';
+import View from '@girder/core/views/View';
 
 import AnnotationCollection from '../collections/AnnotationCollection';
 

@@ -1,5 +1,5 @@
-import Collection from 'girder/collections/Collection';
-import { SORT_DESC } from 'girder/constants';
+import Collection from '@girder/core/collections/Collection';
+import { SORT_DESC } from '@girder/core/constants';
 
 import AnnotationModel from '../models/AnnotationModel';
 

@@ -1,5 +1,3 @@
-import { staticRoot } from 'girder/rest';
-
 import ImageViewerWidget from './base';
 
 var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
@@ -9,7 +7,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
                 $('<link>', {
                     id: 'large_image-slideatlas-css',
                     rel: 'stylesheet',
-                    href: staticRoot + '/built/plugins/large_image/extra/slideatlas/sa.css'
+                    href: '/static/built/plugins/large_image/extra/slideatlas/sa.css'
                 })
             );
         }
@@ -17,7 +15,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
             $.ajax({ // like $.getScript, but allow caching
-                url: staticRoot + '/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
+                url: '/static/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
                 dataType: 'script',
                 cache: true
             }))
@@ -46,7 +44,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         window.$(this.el).saViewer({
             zoomWidget: true,
             drawWidget: true,
-            prefixUrl: staticRoot + '/built/plugins/large_image/extra/slideatlas/img/',
+            prefixUrl: '/static/built/plugins/large_image/extra/slideatlas/img/',
             tileSource: {
                 height: this.sizeY,
                 width: this.sizeX,

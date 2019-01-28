@@ -1,5 +1,5 @@
-import { apiRoot, restRequest } from 'girder/rest';
-import View from 'girder/views/View';
+import { apiRoot, restRequest } from '@girder/core/rest';
+import View from '@girder/core/views/View';
 
 var ImageViewerWidget = View.extend({
     initialize: function (settings) {

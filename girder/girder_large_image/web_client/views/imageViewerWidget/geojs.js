@@ -2,7 +2,7 @@
 import Hammer from 'hammerjs';
 import d3 from 'd3';
 
-import { staticRoot, restRequest } from 'girder/rest';
+import { restRequest } from '@girder/core/rest';
 
 import ImageViewerWidget from './base';
 
@@ -33,7 +33,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 return this;
             }),
             $.ajax({ // like $.getScript, but allow caching
-                url: staticRoot + '/built/plugins/large_image/extra/geojs.js',
+                url: '/static/built/plugins/large_image/extra/geojs.js',
                 dataType: 'script',
                 cache: true
             }))

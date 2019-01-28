@@ -1,6 +1,6 @@
 import _ from 'underscore';
-import AccessControlledModel from 'girder/models/AccessControlledModel';
-import { restRequest } from 'girder/rest';
+import AccessControlledModel from '@girder/core/models/AccessControlledModel';
+import { restRequest } from '@girder/core/rest';
 
 import ElementCollection from '../collections/ElementCollection';
 import convert from '../annotations/convert';

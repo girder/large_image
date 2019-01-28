@@ -1,4 +1,4 @@
-import { restRequest } from 'girder/rest';
+import { restRequest } from '@girder/core/rest';
 
 import ImageViewerWidget from './base';
 

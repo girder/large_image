@@ -1,9 +1,9 @@
 import _ from 'underscore';
 
-import { wrap } from 'girder/utilities/PluginUtils';
-import { apiRoot } from 'girder/rest';
-import { AccessType } from 'girder/constants';
-import ItemListWidget from 'girder/views/widgets/ItemListWidget';
+import { wrap } from '@girder/core/utilities/PluginUtils';
+import { apiRoot } from '@girder/core/rest';
+import { AccessType } from '@girder/core/constants';
+import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
 import '../stylesheets/itemList.styl';

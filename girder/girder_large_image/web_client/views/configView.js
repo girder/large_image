@@ -1,8 +1,8 @@
-import View from 'girder/views/View';
+import View from '@girder/core/views/View';
 
-import PluginConfigBreadcrumbWidget from 'girder/views/widgets/PluginConfigBreadcrumbWidget';
-import { restRequest } from 'girder/rest';
-import events from 'girder/events';
+import PluginConfigBreadcrumbWidget from '@girder/core/views/widgets/PluginConfigBreadcrumbWidget';
+import { restRequest } from '@girder/core/rest';
+import events from '@girder/core/events';
 
 import ConfigViewTemplate from '../templates/largeImageConfig.pug';
 import '../stylesheets/largeImageConfig.styl';

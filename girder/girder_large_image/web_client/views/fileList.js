@@ -1,10 +1,10 @@
 import _ from 'underscore';
 
-import { restRequest } from 'girder/rest';
-import events from 'girder/events';
-import FileListWidget from 'girder/views/widgets/FileListWidget';
-import { wrap } from 'girder/utilities/PluginUtils';
-import { AccessType } from 'girder/constants';
+import { restRequest } from '@girder/core/rest';
+import events from '@girder/core/events';
+import FileListWidget from '@girder/core/views/widgets/FileListWidget';
+import { wrap } from '@girder/core/utilities/PluginUtils';
+import { AccessType } from '@girder/core/constants';
 
 import largeImageFileAction from '../templates/largeImage_fileAction.pug';
 import '../stylesheets/fileList.styl';

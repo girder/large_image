@@ -1,9 +1,9 @@
 import _ from 'underscore';
 
-import { wrap } from 'girder/utilities/PluginUtils';
-import eventStream from 'girder/utilities/EventStream';
-import ItemView from 'girder/views/body/ItemView';
-import View from 'girder/views/View';
+import { wrap } from '@girder/core/utilities/PluginUtils';
+import eventStream from '@girder/core/utilities/EventStream';
+import ItemView from '@girder/core/views/body/ItemView';
+import View from '@girder/core/views/View';
 
 import largeImageConfig from './configView';
 import * as viewers from './imageViewerWidget';
