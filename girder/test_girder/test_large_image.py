@@ -283,3 +283,29 @@ def testCaches(server, admin):
     assert utilities.respStatus(resp) == 200
     results = resp.json
     assert 'cacheCleared' in results
+
+
+@pytest.mark.plugin('large_image')
+def testAssociateImageCaching(server, admin, user, fsAssetstore):
+    file = utilities.uploadExternalFile('data/sample_image.ptif.sha512', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    resp = server.request(path='/item/%s/tiles/images/label' % itemId,
+                          user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    # Test GET associated_images
+    resp = server.request(path='/large_image/associated_images', user=user)
+    assert utilities.respStatus(resp) == 403
+    resp = server.request(path='/large_image/associated_images', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 1
+    # Test DELETE associated_images
+    resp = server.request(
+        method='DELETE', path='/large_image/associated_images', user=user)
+    assert utilities.respStatus(resp) == 403
+    resp = server.request(
+        method='DELETE', path='/large_image/associated_images', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 1
+    resp = server.request(path='/large_image/associated_images', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 0

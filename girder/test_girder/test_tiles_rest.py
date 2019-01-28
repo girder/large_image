@@ -922,9 +922,10 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
 
     # Test missing associated image
     resp = server.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
-                          user=admin)
+                          user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
-    assert resp.json is None
+    image = utilities.getBody(resp, text=False)
+    assert image == b''
 
     # Test with an image that doesn't have associated images
     file = utilities.uploadExternalFile(
@@ -937,6 +938,7 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     assert resp.json == []
     resp = server.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
-                          user=admin)
+                          user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
-    assert resp.json is None
+    image = utilities.getBody(resp, text=False)
+    assert image == b''
