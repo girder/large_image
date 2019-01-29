@@ -298,7 +298,6 @@ class ImageItem(Item):
         result = getattr(tileSource, imageFunc)(**kwargs)
         if result is None:
             thumbData, thumbMime = b'', 'application/octet-stream'
-            # return result
         else:
             thumbData, thumbMime = result
         # The logic on which files to save could be more sophisticated.
