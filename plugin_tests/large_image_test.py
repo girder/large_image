@@ -331,4 +331,27 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
         results = resp.json
         self.assertEqual(results['removed'], 1)
 
-#
+    def testAssociateImageCaching(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles/images/label' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        # Test GET associated_images
+        resp = self.request(path='/large_image/associated_images', user=self.user)
+        self.assertStatus(resp, 403)
+        resp = self.request(path='/large_image/associated_images', user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, 1)
+        # Test DELETE associated_images
+        resp = self.request(
+            method='DELETE', path='/large_image/associated_images', user=self.user)
+        self.assertStatus(resp, 403)
+        resp = self.request(
+            method='DELETE', path='/large_image/associated_images', user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, 1)
+        resp = self.request(path='/large_image/associated_images', user=self.admin)
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, 0)

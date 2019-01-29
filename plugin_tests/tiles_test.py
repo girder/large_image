@@ -1295,9 +1295,10 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
 
         # Test missing associated image
         resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
-                            user=self.admin)
+                            user=self.admin, isJson=False)
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json, None)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, b'')
 
         # Test with an SVS image
         file = self._uploadFile(os.path.join(
@@ -1313,9 +1314,10 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         image = self.getBody(resp, text=False)
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
         resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
-                            user=self.admin)
+                            user=self.admin, isJson=False)
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json, None)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, b'')
 
         # Test with the Huron image
         file = self._uploadFile(os.path.join(
@@ -1330,9 +1332,10 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         image = self.getBody(resp, text=False)
         self.assertEqual(image[:len(common.JPEGHeader)], common.JPEGHeader)
         resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
-                            user=self.admin)
+                            user=self.admin, isJson=False)
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json, None)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, b'')
 
         # Test with an image that doesn't have associated images
         file = self._uploadFile(os.path.join(
@@ -1347,9 +1350,10 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(resp.json, [])
         resp = self.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
-                            user=self.admin)
+                            user=self.admin, isJson=False)
         self.assertStatusOk(resp)
-        self.assertEqual(resp.json, None)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image, b'')
 
     def testTilesAfterCopyItem(self):
         file = self._uploadFile(os.path.join(
