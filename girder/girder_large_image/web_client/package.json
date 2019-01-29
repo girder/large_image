@@ -11,6 +11,9 @@
         "type": "git",
         "url": "https://github.com/girder/large_image.git"
     },
+    "peerDependencies": {
+        "@girder/core": "*"
+    },
     "dependencies": {
         "copy-webpack-plugin": "^4.5.2",
         "d3": "^3.5.16",

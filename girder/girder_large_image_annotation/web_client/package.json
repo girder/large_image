@@ -12,6 +12,7 @@
         "url": "https://github.com/girder/large_image.git"
     },
     "peerDependencies": {
+        "@girder/core": "*",
         "@girder/large_image": "*"
     },
     "dependencies": {
