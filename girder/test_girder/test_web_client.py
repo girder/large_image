@@ -1,6 +1,6 @@
 import os
 import pytest
-from pytest_girder.utils import runWebClientTest
+from pytest_girder.web_client import runWebClientTest
 
 
 @pytest.mark.parametrize('spec', (
