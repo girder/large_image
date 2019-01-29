@@ -2,9 +2,9 @@
 /* eslint-disable camelcase */
 
 girderTest.addScripts([
-    '/clients/web/static/built/plugins/jobs/plugin.min.js',
-    '/clients/web/static/built/plugins/worker/plugin.min.js',
-    '/clients/web/static/built/plugins/large_image/plugin.min.js'
+    '/static/built/plugins/jobs/plugin.min.js',
+    '/static/built/plugins/worker/plugin.min.js',
+    '/static/built/plugins/large_image/plugin.min.js'
 ]);
 
 describe('geojs-annotations', function () {

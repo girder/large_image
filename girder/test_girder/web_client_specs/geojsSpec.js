@@ -2,8 +2,8 @@
 /* eslint-disable camelcase, no-new */
 
 girderTest.addScripts([
-    '/clients/web/static/built/plugins/large_image/extra/sinon.js',
-    '/clients/web/static/built/plugins/large_image/plugin.min.js'
+    '/static/built/plugins/large_image/extra/sinon.js',
+    '/static/built/plugins/large_image/plugin.min.js'
 ]);
 
 girderTest.startApp();
