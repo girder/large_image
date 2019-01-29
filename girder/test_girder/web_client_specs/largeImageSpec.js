@@ -1,6 +1,6 @@
 /* globals girder, girderTest, describe, it, expect, waitsFor, runs */
 
-girderTest.addCoveredScripts([
+girderTest.addScripts([
     '/static/built/plugins/jobs/plugin.min.js',
     '/static/built/plugins/worker/plugin.min.js',
     '/static/built/plugins/large_image/plugin.min.js'
