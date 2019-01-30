@@ -20,7 +20,7 @@ flake8-quotes
 pydocstyle
 pytest>=3.6
 pytest-cov==2.5
--e git://github.com/girder/girder.git@a42a28c5bed1aa7f0efc25655a4fbd21ef63cb86#egg=pytest-girder&subdirectory=pytest_girder
+-e git://github.com/girder/girder.git#egg=pytest-girder&subdirectory=pytest_girder
 pytest-xdist
 mock
 tox
