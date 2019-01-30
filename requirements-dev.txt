@@ -1,4 +1,5 @@
 # Top level dependencies
+-e git://github.com/girder/girder.git#egg=girder
 -e sources/dummy
 -e sources/mapnik
 -e sources/openslide
@@ -25,4 +26,3 @@ mock
 tox
 twine
 virtualenv
-
