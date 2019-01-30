@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: ~/project
     docker:
-      - image: themattrix/tox
+      - image: zachmullen/tox-and-node
       - image: memcached
       - image: circleci/mongo:4.0-ram
       - image: rabbitmq
