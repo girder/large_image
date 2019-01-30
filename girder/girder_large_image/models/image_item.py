@@ -22,6 +22,7 @@ import pymongo
 import six
 import time
 
+from girder import logger
 from girder.constants import SortDir
 from girder.exceptions import FilePathException, ValidationException
 from girder.models.assetstore import Assetstore
@@ -130,9 +131,12 @@ class ImageItem(Item):
             # This is faster than trying to find the best source each time.
             tileSource = girder_tilesource.AvailableGirderTileSources[sourceName](item, **kwargs)
         except TileSourceException:
-            # Then try any source
-            tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
-            # ##DWM:: perhaps record the new source name?
+            # We could try any source
+            # tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
+            # but, instead, log that the original source no longer works are
+            # reraise the exception
+            logger.warn('The original tile source for item %s is not working' % item['_id'])
+            raise
         return tileSource
 
     def getMetadata(self, item, **kwargs):

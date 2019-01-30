@@ -41,7 +41,7 @@ setup(
         'large_image>=1.0.0',
         'ujson>=1.35',
     ],
-    extra_requires={
+    extras_require={
         'tasks': [
             'large-image-tasks',
         ],

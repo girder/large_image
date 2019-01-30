@@ -2,6 +2,7 @@ import math
 import os
 import pytest
 import requests
+import six
 
 
 JFIFHeader = b'\xff\xd8\xff\xe0\x00\x10JFIF'
@@ -12,7 +13,9 @@ TIFFHeader = b'II\x2a\x00'
 
 def externaldata(
         hashpath=None, hashvalue=None, destdir='externaldata', destname=None,
-        sources=['https://data.kitware.com/api/v1/file/hashsum/sha512/{hashvalue}/download']):
+        sources='https://data.kitware.com/api/v1/file/hashsum/sha512/{hashvalue}/download'):
+    if isinstance(sources, six.string_types):
+        sources = [sources]
     curDir = os.path.dirname(os.path.realpath(__file__))
     if hashpath:
         hashvalue = open(os.path.join(curDir, hashpath)).read().strip()
@@ -39,7 +42,7 @@ def externaldata(
             if os.path.exists(destpath):
                 os.unlink(destpath)
     if not os.path.exists(destpath):
-        raise
+        raise Exception('Failed to get external data %s' % destpath)
     return destpath
 
 

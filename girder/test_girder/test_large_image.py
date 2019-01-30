@@ -218,7 +218,7 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
 
 @pytest.mark.usefixtures('unavailableWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):
+def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):  # noqa
     # Test the large_image/settings end point
     resp = server.request(
         method='DELETE', path='/large_image/tiles/incomplete', user=user)

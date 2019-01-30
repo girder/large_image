@@ -45,13 +45,17 @@ class GirderTileSource(tilesource.FileTileSource):
             kwargs.get('edge'))
 
     def getState(self):
-        return str(self.item['largeImage']['fileId']) + ',' + \
-            str(self.item['updated']) + ',' + str(self.encoding) + ',' + \
-            str(self.jpegQuality) + ',' + str(self.jpegSubsampling) + \
-            ',' + str(self.tiffCompression) + ',' + str(self.edge)
+        return '%s,%s,%s,%s,%s,%s,%s' % (
+            self.item['largeImage']['fileId'],
+            self.item['updated'],
+            self.encoding,
+            self.jpegQuality,
+            self.jpegSubsampling,
+            self.tiffCompression,
+            self.edge)
 
     def _getLargeImagePath(self):
-        # If self.mayHaveadjacentFiles is True, we try to use the girder
+        # If self.mayHaveAdjacentFiles is True, we try to use the girder
         # mount where companion files appear next to each other.
         try:
             largeImageFileId = self.item['largeImage']['fileId']
