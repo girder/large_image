@@ -290,6 +290,10 @@ def load(info):
                 invalidateLoadModelCache)
     events.bind('model.group.save.after', 'large_image',
                 invalidateLoadModelCache)
+    events.bind('model.user.save.after', 'large_image',
+                invalidateLoadModelCache)
+    events.bind('model.collection.save.after', 'large_image',
+                invalidateLoadModelCache)
     events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
     events.bind('model.item.copy.prepare', 'large_image', prepareCopyItem)
     events.bind('model.item.copy.after', 'large_image', handleCopyItem)
