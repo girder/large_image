@@ -32,15 +32,13 @@ setup(
         'large-image>=1.0.0',
         'openslide-python>=1.1.0',
     ],
-    extra_require={
+    extras_require={
         'girder': 'girder-large-image>=1.0.0',
     },
     license='Apache Software License 2.0',
-    include_package_data=True,
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    zip_safe=False,
     entry_points={
         'large_image.source': [
             'openslide = large_image_source_openslide:OpenslideFileTileSource'

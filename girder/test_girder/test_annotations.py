@@ -1045,9 +1045,9 @@ class TestLargeImageAnnotationElementGroups(object):
             if annot['_id'] == str(self.noGroups['_id']):
                 assert annot['groups'] == [None]
             elif annot['_id'] == str(self.notMigrated['_id']):
-                assert annot['groups'], ['a' == 'b']
+                assert annot['groups'] == ['a', 'b']
             elif annot['_id'] == str(self.hasGroups['_id']):
-                assert annot['groups'], ['a', 'c' is None]
+                assert annot['groups'] == ['a', 'c', None]
             else:
                 raise Exception('Unexpected annot id')
 
@@ -1055,7 +1055,7 @@ class TestLargeImageAnnotationElementGroups(object):
         self.makeAnnot(admin)
         resp = server.request('/annotation/%s' % str(self.hasGroups['_id']), user=admin)
         assert utilities.respStatus(resp) == 200
-        assert resp.json['groups'], ['a', 'c' is None]
+        assert resp.json['groups'] == ['a', 'c', None]
 
     def testCreateAnnotation(self, server, admin):
         self.makeAnnot(admin)

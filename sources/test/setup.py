@@ -32,11 +32,9 @@ setup(
         'large-image>=1.0.0',
     ],
     license='Apache Software License 2.0',
-    include_package_data=True,
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    zip_safe=False,
     entry_points={
         'large_image.source': [
             'test = large_image_source_test:TestTileSource'

@@ -22,8 +22,10 @@ import pymongo
 import six
 import time
 
+from girder import logger
 from girder.constants import SortDir
 from girder.exceptions import FilePathException, ValidationException
+from girder.models.assetstore import Assetstore
 from girder.models.file import File
 from girder.models.item import Item
 from girder.models.setting import Setting
@@ -129,9 +131,12 @@ class ImageItem(Item):
             # This is faster than trying to find the best source each time.
             tileSource = girder_tilesource.AvailableGirderTileSources[sourceName](item, **kwargs)
         except TileSourceException:
-            # Then try any source
-            tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
-            # ##DWM:: perhaps record the new source name?
+            # We could try any source
+            # tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
+            # but, instead, log that the original source no longer works are
+            # reraise the exception
+            logger.warn('The original tile source for item %s is not working' % item['_id'])
+            raise
         return tileSource
 
     def getMetadata(self, item, **kwargs):
@@ -209,6 +214,10 @@ class ImageItem(Item):
         """
         # check if a thumbnail file exists with a particular key
         keydict = dict(kwargs, width=width, height=height)
+        return self._getAndCacheImage(
+            item, 'getThumbnail', keydict, width=width, height=height, **kwargs)
+
+    def _getAndCacheImage(self, item, imageFunc, keydict, **kwargs):
         if 'fill' in keydict and (keydict['fill']).lower() == 'none':
             del keydict['fill']
         keydict = {k: v for k, v in six.viewitems(keydict) if v is not None}
@@ -226,8 +235,11 @@ class ImageItem(Item):
                 contentDisposition = kwargs['contentDisposition']
             return File().download(existing, contentDisposition=contentDisposition)
         tileSource = self._loadTileSource(item, **kwargs)
-        thumbData, thumbMime = tileSource.getThumbnail(
-            width, height, **kwargs)
+        result = getattr(tileSource, imageFunc)(**kwargs)
+        if result is None:
+            thumbData, thumbMime = b'', 'application/octet-stream'
+        else:
+            thumbData, thumbMime = result
         # The logic on which files to save could be more sophisticated.
         maxThumbnailFiles = int(Setting().get(
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
@@ -240,12 +252,15 @@ class ImageItem(Item):
                 six.BytesIO(thumbData), size=len(thumbData),
                 name='_largeImageThumbnail', parentType='item', parent=item,
                 user=None, mimeType=thumbMime, attachParent=True)
+            if not len(thumbData) and 'received' in thumbfile:
+                thumbfile = Upload().finalizeUpload(
+                    thumbfile, Assetstore().load(thumbfile['assetstoreId']))
             thumbfile.update({
                 'isLargeImageThumbnail': True,
                 'thumbnailKey': key,
             })
             # Ideally, we would check that the file is still wanted before we
-            # save it.  This is probably imposible without true transactions in
+            # save it.  This is probably impossible without true transactions in
             # Mongo.
             File().save(thumbfile)
         # Return the data
@@ -341,5 +356,6 @@ class ImageItem(Item):
         :returns: imageData, imageMime: the image data and the mime type, or
             None if the associated image doesn't exist.
         """
-        tileSource = self._loadTileSource(item, **kwargs)
-        return tileSource.getAssociatedImage(imageKey, *args, **kwargs)
+        keydict = dict(kwargs, imageKey=imageKey)
+        return self._getAndCacheImage(
+            item, 'getAssociatedImage', keydict, imageKey=imageKey, **kwargs)

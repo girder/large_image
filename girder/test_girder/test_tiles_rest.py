@@ -378,14 +378,14 @@ def testTilesFromTest(server, admin, fsAssetstore):
         'encoding': 2,
     }
     for key in badParams:
-        err = ('parameter is an incorrect' if key is not 'encoding' else
+        err = ('parameter is an incorrect' if key != 'encoding' else
                'Invalid encoding')
         _createTestTiles(server, admin, {key: badParams[key]}, error=err)
 
 
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):
+def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):  # noqa
     server = boundServer
     file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
     itemId = str(file['itemId'])
@@ -458,7 +458,7 @@ def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):
 
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):
+def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):  # noqa
     file = utilities.uploadTestFile('grey10kx5k.tif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
@@ -476,7 +476,7 @@ def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):
 
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):
+def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):  # noqa
     # Unicode file names shouldn't cause problems when generating tiles.
     file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
     # Our normal testing method doesn't pass through the unicode name
@@ -526,7 +526,7 @@ def testTilesWithUnicodeName(server, admin, fsAssetstore):
 
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):
+def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):  # noqa
     # As of vips 8.2.4, alpha and unusual channels are removed upon
     # conversion to a JPEG-compressed tif file.  Originally, we performed a
     # test to show that these files didn't work.  They now do (though if
@@ -858,7 +858,7 @@ def testTilesModelLookupCache(server, user, admin, fsAssetstore):
 
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesAfterCopyItem(boundServer, admin, fsAssetstore, girderWorker):
+def testTilesAfterCopyItem(boundServer, admin, fsAssetstore, girderWorker):  # noqa
     file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
@@ -922,9 +922,10 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
 
     # Test missing associated image
     resp = server.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
-                          user=admin)
+                          user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
-    assert resp.json is None
+    image = utilities.getBody(resp, text=False)
+    assert image == b''
 
     # Test with an image that doesn't have associated images
     file = utilities.uploadExternalFile(
@@ -937,6 +938,7 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     assert resp.json == []
     resp = server.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
-                          user=admin)
+                          user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
-    assert resp.json is None
+    image = utilities.getBody(resp, text=False)
+    assert image == b''

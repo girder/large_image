@@ -18,8 +18,9 @@
 
 import datetime
 import math
-import time
+import pymongo
 import six
+import time
 from six.moves import range
 
 from girder.constants import AccessType, SortDir
@@ -214,9 +215,7 @@ class Annotationelement(Model):
         """
         assert query
 
-        bulk = self.collection.initialize_unordered_bulk_op()
-        bulk.find(query).remove()
-        bulk.execute()
+        self.collection.bulk_write([pymongo.DeleteMany(query)], ordered=False)
 
     def removeElements(self, annotation):
         """

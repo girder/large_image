@@ -62,6 +62,7 @@ class PILGirderTileSource(PILFileTileSource, GirderTileSource):
         if y != 0:
             raise TileSourceException('y is outside layer')
         if (mayRedirect and not pilImageAllowed and
+                cherrypy.request and
                 self._pilFormatMatches(self._pilImage, mayRedirect, **kwargs)):
             url = '%s/api/v1/file/%s/download' % (
                 cherrypy.request.base, self.item['largeImage']['fileId'])

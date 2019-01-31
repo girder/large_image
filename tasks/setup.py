@@ -33,11 +33,10 @@ setup(name='large_image_tasks',
               'pyvips',
           ]
       },
-      include_package_data=True,
       entry_points={
           'girder_worker_plugins': [
               'large_image_tasks = large_image_tasks:LargeImageTasks',
           ]
       },
       packages=find_packages(),
-      zip_safe=False)
+      )

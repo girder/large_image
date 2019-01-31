@@ -16,7 +16,6 @@
 #  limitations under the License.
 #############################################################################
 
-import os
 import re
 from distutils.version import StrictVersion
 from osgeo import gdal
@@ -57,10 +56,6 @@ class MapnikGirderTileSource(MapnikFileTileSource, GirderTileSource):
                     not largeImageFile.get('assetstoreId') and
                     re.match(r'(http(|s)|ftp)://', largeImageFile['linkUrl'])):
                 largeImagePath = '/vsicurl/' + largeImageFile['linkUrl']
-                # This is a common location for certificates
-                caPath = '/etc/ssl/certs/ca-certificates.crt'
-                if not os.environ.get('CURL_CA_BUNDLE') and os.path.exists(caPath):
-                    os.environ['CURL_CA_BUNDLE'] = caPath
                 logger.info('Using %s' % largeImagePath)
                 return largeImagePath
         except Exception:

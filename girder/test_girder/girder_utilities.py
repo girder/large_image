@@ -94,7 +94,7 @@ def girderWorker():
     env = os.environ.copy()
     env['C_FORCE_ROOT'] = 'true'
     proc = subprocess.Popen([
-        'python', '-m', 'girder_worker', '--broker', broker, '--concurrency=1'],
+        'celery', '-A', 'girder_worker.app', 'worker', '--broker', broker, '--concurrency=1'],
         close_fds=True, env=env)
     yield True
     proc.terminate()
