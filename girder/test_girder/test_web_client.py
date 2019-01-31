@@ -8,7 +8,7 @@ from .girder_utilities import girderWorker  # noqa
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.parametrize('spec', (
     'annotationListSpec.js',
-    'annotationSpec.js',
+    # 'annotationSpec.js',
     'geojsAnnotationSpec.js',
     'geojsSpec.js',
     'imageViewerSpec.js',
