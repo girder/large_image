@@ -8,12 +8,14 @@ import imageViewerAnnotationList from '../templates/imageViewerAnnotationList.pu
 
 import AnnotationListWidget from './annotationListWidget';
 
-wrap(ImageViewerSelectWidget, 'initialize', function (initialize) {
-    initialize.apply(this, _.rest(arguments));
+wrap(ImageViewerSelectWidget, 'initialize', function (initialize, settings) {
+    this.itemId = settings.imageModel.id;
+    this.model = settings.imageModel;
     this._annotationList = new AnnotationListWidget({
         model: this.model,
         parentView: this
     });
+    initialize.apply(this, _.rest(arguments));
 });
 
 wrap(ImageViewerSelectWidget, 'render', function (render) {
