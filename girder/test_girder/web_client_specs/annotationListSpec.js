@@ -1,4 +1,4 @@
-girderTest.importPlugin('large_image');
+girderTest.importPlugin('large_image', 'large_image_annotation');
 girderTest.startApp();
 
 function waitForLargeImageViewer(viewerName) {
@@ -14,12 +14,14 @@ function waitForLargeImageViewer(viewerName) {
 describe('AnnotationListWidget', function () {
     var girder;
     var largeImage;
+    var largeImageAnnotation;
     var item;
     var drawnAnnotations;
 
     beforeEach(function () {
         girder = window.girder;
         largeImage = girder.plugins.large_image;
+        largeImageAnnotation = girder.plugins.large_image_annotation;
         drawnAnnotations = {};
     });
 
@@ -142,7 +144,7 @@ describe('AnnotationListWidget', function () {
             var done;
 
             for (index = 1; index < 11; index += 1) {
-                annotation = new largeImage.models.AnnotationModel({
+                annotation = new largeImageAnnotation.models.AnnotationModel({
                     itemId: item.id,
                     annotation: {
                         name: 'annotation ' + index
@@ -166,18 +168,27 @@ describe('AnnotationListWidget', function () {
                 girder.router.navigate('item/' + item.id, {trigger: true});
             });
             girderTest.waitForLoad();
-            waitForLargeImageViewer('openseadragon');
+            waitForLargeImageViewer('geojs');
         });
     });
 
     describe('Test annotation list widget as admin', function () {
+        it('select the openseadragon viewer', function () {
+            runs(function () {
+                $('.g-item-image-viewer-select select').val('openseadragon').trigger('change');
+            });
+            waitForLargeImageViewer('openseadragon');
+        });
         it('select the geojs viewer', function () {
-            $('.g-item-image-viewer-select select').val('geojs').trigger('change');
+            runs(function () {
+                $('.g-item-image-viewer-select select').val('geojs').trigger('change');
+            });
             waitForLargeImageViewer('geojs');
         });
         it('check that all annotations are displayed', function () {
-            var $el = $('.g-annotation-list .g-annotation-row');
+            var $el;
             waitsFor(function () {
+                $el = $('.g-annotation-list .g-annotation-row');
                 return $el.length > 0;
             }, 'annotations list to load');
             runs(function () {
@@ -225,16 +236,14 @@ describe('AnnotationListWidget', function () {
         it('login as a normal user', girderTest.createUser(
             'user', 'user@email.com', 'User', 'User', 'testpassword'));
         it('reload the item page', function () {
-            girder.router.navigate('', {trigger: true});
+            runs(function () {
+                girder.router.navigate('', {trigger: true});
+            });
             girderTest.waitForLoad();
             runs(function () {
                 girder.router.navigate('item/' + item.id, {trigger: true});
             });
             girderTest.waitForLoad();
-            waitForLargeImageViewer('openseadragon');
-            runs(function () {
-                $('.g-item-image-viewer-select select').val('geojs').trigger('change');
-            });
             waitForLargeImageViewer('geojs');
         });
         it('check that all annotations are displayed', function () {

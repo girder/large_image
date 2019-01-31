@@ -1,21 +1,17 @@
 /* globals girder, girderTest, describe, it, expect, waitsFor, runs */
 /* eslint-disable camelcase */
 
-girderTest.addScripts([
-    '/static/built/plugins/jobs/plugin.min.js',
-    '/static/built/plugins/worker/plugin.min.js',
-    '/static/built/plugins/large_image/plugin.min.js'
-]);
+girderTest.importPlugin('large_image', 'large_image_annotation');
 
 describe('geojs-annotations', function () {
-    var large_image, geojs;
+    var large_image_annotation, geojs;
     var fillColor = 'rgba(0,0,0,0)';
     var lineColor = 'rgb(0,0,0)';
     var lineWidth = 2;
 
     beforeEach(function () {
-        large_image = girder.plugins.large_image;
-        geojs = large_image.annotations.geojs;
+        large_image_annotation = girder.plugins.large_image_annotation;
+        geojs = large_image_annotation.annotations.geojs;
     });
 
     it('convert', function () {

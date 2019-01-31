@@ -3,7 +3,8 @@
 girderTest.addScripts([
     '/static/built/plugins/jobs/plugin.min.js',
     '/static/built/plugins/worker/plugin.min.js',
-    '/static/built/plugins/large_image/plugin.min.js'
+    '/static/built/plugins/large_image/plugin.min.js',
+    '/static/built/plugins/large_image_annotation/plugin.min.js'
 ]);
 
 describe('Annotations', function () {
@@ -38,9 +39,10 @@ describe('Annotations', function () {
         }
     }
 
-    var largeImage;
+    var largeImage, largeImageAnnotation;
     beforeEach(function () {
         largeImage = girder.plugins.large_image;
+        largeImageAnnotation = girder.plugins.large_image_annotation;
     });
     describe('geometry', function () {
         it('rectangle', function () {
@@ -252,7 +254,7 @@ describe('Annotations', function () {
         });
 
         it('create a new annotation', function () {
-            var model = new largeImage.models.AnnotationModel({itemId: item._id});
+            var model = new largeImageAnnotation.models.AnnotationModel({itemId: item._id});
             var done;
 
             model.elements().add({
@@ -281,7 +283,7 @@ describe('Annotations', function () {
 
         it('fetch an existing annotation', function () {
             var done;
-            annotation = new largeImage.models.AnnotationModel({_id: annotationId});
+            annotation = new largeImageAnnotation.models.AnnotationModel({_id: annotationId});
             annotation.fetch().done(function () {
                 expect(annotation.get('itemId')).toBeDefined();
                 done = true;
@@ -351,7 +353,7 @@ describe('Annotations', function () {
             runs(function () {
                 // silence rest request error message
                 done = false;
-                annotation = new largeImage.models.AnnotationModel({_id: annotationId});
+                annotation = new largeImageAnnotation.models.AnnotationModel({_id: annotationId});
                 annotation.fetch().done(function () {
                     expect(annotation.get('_active')).toBe(false);
                     done = true;
@@ -365,7 +367,7 @@ describe('Annotations', function () {
         });
 
         it('delete an annotation without unbinding events', function () {
-            var model = new largeImage.models.AnnotationModel({itemId: item._id});
+            var model = new largeImageAnnotation.models.AnnotationModel({itemId: item._id});
             var id;
             var done;
             var eventCalled;
@@ -395,7 +397,7 @@ describe('Annotations', function () {
                 var model2;
 
                 done = false;
-                model2 = new largeImage.models.AnnotationModel({_id: id});
+                model2 = new largeImageAnnotation.models.AnnotationModel({_id: id});
                 model2.fetch().done(function () {
                     expect(annotation.get('_active')).toBe(false);
                     done = true;
@@ -415,14 +417,14 @@ describe('Annotations', function () {
         });
 
         it('cannot create an annotation without an itemId', function () {
-            var model = new largeImage.models.AnnotationModel();
+            var model = new largeImageAnnotation.models.AnnotationModel();
             expect(function () {
                 model.save();
             }).toThrow();
         });
 
         it('get an annotation name', function () {
-            var model = new largeImage.models.AnnotationModel({
+            var model = new largeImageAnnotation.models.AnnotationModel({
                 itemId: item._id,
                 annotation: {
                     name: 'test annotation'

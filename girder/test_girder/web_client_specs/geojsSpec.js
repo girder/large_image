@@ -3,7 +3,8 @@
 
 girderTest.addScripts([
     '/static/built/plugins/large_image/extra/sinon.js',
-    '/static/built/plugins/large_image/plugin.min.js'
+    '/static/built/plugins/large_image/plugin.min.js',
+    '/static/built/plugins/large_image_annotation/plugin.min.js'
 ]);
 
 girderTest.startApp();
@@ -86,11 +87,12 @@ $(function () {
     });
 
     describe('Geojs viewer', function () {
-        var girder, large_image, $el, GeojsViewer, viewer, annotation, featureSpy;
+        var girder, large_image, $el, GeojsViewer, viewer, annotation, featureSpy, largeImageAnnotation;
 
         beforeEach(function () {
             girder = window.girder;
             large_image = girder.plugins.large_image;
+            largeImageAnnotation = girder.plugins.large_image_annotation;
             GeojsViewer = large_image.views.imageViewerWidget.geojs;
         });
 
@@ -124,7 +126,7 @@ $(function () {
         it('drawAnnotation', function () {
             var setViewSpy, firstCount;
             runs(function () {
-                annotation = new large_image.models.AnnotationModel({
+                annotation = new largeImageAnnotation.models.AnnotationModel({
                     _id: annotationId
                 });
                 annotation.fetch();
@@ -268,7 +270,7 @@ $(function () {
         it('drawAnnotation without fetching', function () {
             var model;
             runs(function () {
-                model = new large_image.models.AnnotationModel({
+                model = new largeImageAnnotation.models.AnnotationModel({
                     _id: 'invalid',
                     annotation: {
                         name: 'no fetch',
@@ -557,7 +559,7 @@ $(function () {
                         }]
                     })
                 }).done(function (resp) {
-                    annotation1 = new large_image.models.AnnotationModel({
+                    annotation1 = new largeImageAnnotation.models.AnnotationModel({
                         _id: resp._id
                     });
                 });
@@ -613,7 +615,7 @@ $(function () {
                         }]
                     })
                 }).done(function (resp) {
-                    annotation1 = new large_image.models.AnnotationModel({
+                    annotation1 = new largeImageAnnotation.models.AnnotationModel({
                         _id: resp._id
                     });
                 });
@@ -640,7 +642,7 @@ $(function () {
                         }]
                     })
                 }).done(function (resp) {
-                    annotation2 = new large_image.models.AnnotationModel({
+                    annotation2 = new largeImageAnnotation.models.AnnotationModel({
                         _id: resp._id
                     });
                 });
