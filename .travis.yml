@@ -10,4 +10,4 @@ services:
   - mongodb
   - rabbitmq
 install: pip install tox-travis
-script: tox
+script: tox | cat
