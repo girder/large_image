@@ -1,5 +1,6 @@
 # Top level dependencies
 -e git://github.com/girder/girder.git#egg=girder
+-e git://github.com/girder/girder.git#egg=girder-jobs&subdirectory=plugins/jobs
 -e sources/dummy
 -e sources/mapnik
 -e sources/openslide
@@ -27,7 +28,4 @@ tox
 twine
 virtualenv
 
-# Test with girder master
--e git://github.com/girder/girder.git#egg=girder
--e git://github.com/girder/girder.git#egg=girder-jobs&subdirectory=plugins/jobs
 
