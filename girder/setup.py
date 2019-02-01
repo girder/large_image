@@ -36,7 +36,7 @@ setup(
         'enum34>=1.1.6',
         'girder>=3.0.0a2',
         'girder-jobs>=3.0.0a2',
-        'girder-worker[girder]>=0.5.1.dev211',
+        'girder-worker[girder]>=0.5.1.dev213',
         'jsonschema>=2.5.1',
         'large_image>=1.0.0',
         'ujson>=1.35',

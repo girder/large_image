@@ -1,4 +1,6 @@
 # Top level dependencies
+-e git://github.com/girder/girder.git#egg=girder
+-e git://github.com/girder/girder.git#egg=girder-jobs&subdirectory=plugins/jobs
 -e sources/dummy
 -e sources/mapnik
 -e sources/openslide
@@ -19,10 +21,11 @@ flake8-quotes
 pydocstyle
 pytest>=3.6
 pytest-cov==2.5
-pytest-girder>=0.1.0a4
+-e git://github.com/girder/girder.git#egg=pytest-girder&subdirectory=pytest_girder
 pytest-xdist
 mock
 tox
 twine
 virtualenv
+
 
