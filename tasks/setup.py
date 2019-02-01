@@ -19,7 +19,7 @@ setup(name='large_image_tasks',
           'Programming Language :: Python'
       ],
       install_requires=[
-          'girder-worker>=0.5.1.dev211',
+          'girder-worker>=0.5.1.dev213',
           'girder_worker_utils>=0.8.5.dev23',
           # Packages required by both producer and consumer side installations
           'six>=1.10.0',

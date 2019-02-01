@@ -26,3 +26,8 @@ mock
 tox
 twine
 virtualenv
+
+# Test with girder master
+-e git://github.com/girder/girder.git#egg=girder
+-e git://github.com/girder/girder.git#egg=girder-jobs&subdirectory=plugins/jobs
+
