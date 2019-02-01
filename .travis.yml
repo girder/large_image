@@ -9,5 +9,10 @@ python:
 services:
   - mongodb
   - rabbitmq
-install: pip install tox-travis
-script: tox | cat
+install: 
+  - pip install tox-travis
+script: 
+  - tox | cat
+after_success:
+  - pip install codecov
+  - codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml
