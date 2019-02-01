@@ -1,11 +1,6 @@
 /* globals girder, girderTest, describe, it, expect, waitsFor, runs */
 
-girderTest.addScripts([
-    '/static/built/plugins/jobs/plugin.min.js',
-    '/static/built/plugins/worker/plugin.min.js',
-    '/static/built/plugins/large_image/plugin.min.js',
-    '/static/built/plugins/large_image_annotation/plugin.min.js'
-]);
+girderTest.importPlugin('jobs', 'worker', 'large_image', 'large_image_annotation');
 
 describe('Annotations', function () {
     /**
@@ -39,14 +34,13 @@ describe('Annotations', function () {
         }
     }
 
-    var largeImage, largeImageAnnotation;
+    var largeImageAnnotation;
     beforeEach(function () {
-        largeImage = girder.plugins.large_image;
         largeImageAnnotation = girder.plugins.large_image_annotation;
     });
     describe('geometry', function () {
         it('rectangle', function () {
-            var obj = largeImage.annotations.geometry.rectangle({
+            var obj = largeImageAnnotation.annotations.geometry.rectangle({
                 type: 'rectangle',
                 id: 'a',
                 center: [10, 20, 0],
@@ -63,7 +57,7 @@ describe('Annotations', function () {
                 ]
             );
 
-            obj = largeImage.annotations.geometry.rectangle({
+            obj = largeImageAnnotation.annotations.geometry.rectangle({
                 type: 'rectangle',
                 id: 'a',
                 center: [10, 10, 0],
@@ -82,7 +76,7 @@ describe('Annotations', function () {
         });
 
         it('open polyline', function () {
-            var obj = largeImage.annotations.geometry.polyline({
+            var obj = largeImageAnnotation.annotations.geometry.polyline({
                 type: 'polyline',
                 id: 'a',
                 points: [
@@ -102,7 +96,7 @@ describe('Annotations', function () {
         });
 
         it('closed polyline', function () {
-            var obj = largeImage.annotations.geometry.polyline({
+            var obj = largeImageAnnotation.annotations.geometry.polyline({
                 type: 'polyline',
                 id: 'a',
                 points: [
@@ -124,7 +118,7 @@ describe('Annotations', function () {
         });
 
         it('point', function () {
-            var obj = largeImage.annotations.geometry.point({
+            var obj = largeImageAnnotation.annotations.geometry.point({
                 type: 'point',
                 id: 'a',
                 center: [1, 2, 0]
@@ -136,7 +130,7 @@ describe('Annotations', function () {
 
     describe('style', function () {
         it('color names', function () {
-            var obj = largeImage.annotations.style({
+            var obj = largeImageAnnotation.annotations.style({
                 fillColor: 'red',
                 lineColor: 'black'
             });
@@ -146,7 +140,7 @@ describe('Annotations', function () {
             expect(obj.strokeOpacity).toBe(1);
         });
         it('hex colors', function () {
-            var obj = largeImage.annotations.style({
+            var obj = largeImageAnnotation.annotations.style({
                 fillColor: '#ff0000',
                 lineColor: '#00ff00'
             });
@@ -156,7 +150,7 @@ describe('Annotations', function () {
             expect(obj.strokeOpacity).toBe(1);
         });
         it('rgba colors', function () {
-            var obj = largeImage.annotations.style({
+            var obj = largeImageAnnotation.annotations.style({
                 fillColor: 'rgba(255,0,0,0.5)',
                 lineColor: 'rgba(0,255,255,0.5)'
             });
@@ -166,7 +160,7 @@ describe('Annotations', function () {
             expect(obj.strokeOpacity).toBe(0.5);
         });
         it('line width, no colors', function () {
-            var obj = largeImage.annotations.style({
+            var obj = largeImageAnnotation.annotations.style({
                 lineWidth: 2
             });
             expect(obj).toEqual({
@@ -185,7 +179,7 @@ describe('Annotations', function () {
                 height: 10,
                 rotation: 0
             };
-            var obj = largeImage.annotations.convert([element]);
+            var obj = largeImageAnnotation.annotations.convert([element]);
             var features = obj.features;
 
             expect(obj.type).toBe('FeatureCollection');
@@ -210,7 +204,7 @@ describe('Annotations', function () {
                     [1, 0, 0]
                 ]
             };
-            var obj = largeImage.annotations.convert([element]);
+            var obj = largeImageAnnotation.annotations.convert([element]);
             var features = obj.features;
 
             expect(obj.type).toBe('FeatureCollection');
