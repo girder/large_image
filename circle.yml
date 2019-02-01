@@ -10,6 +10,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Preinstall phantomjs to work around an npm permission issue
+          command: npm install -g phantomjs-prebuilt --unsafe-perm
+      - run:
           name: Run tests via tox
           command: tox
       - run:
