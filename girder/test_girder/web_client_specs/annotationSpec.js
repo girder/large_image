@@ -225,7 +225,7 @@ describe('Annotations', function () {
         var item, user, annotationId, annotation;
 
         it('setup', function () {
-            girder.auth.login('admin', 'adminpassword!').done(function (resp) {
+            girder.auth.login('admin', 'password').done(function (resp) {
                 user = resp;
             }).fail(function (resp) {
                 console.error(resp);
