@@ -14,7 +14,7 @@ from .girder_utilities import girderWorker  # noqa
     'imageViewerSpec.js',
     'largeImageSpec.js',
 ))
-def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):
+def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):  # noqa
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
     runWebClientTest(boundServer, spec)
 
@@ -27,7 +27,7 @@ def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):
     'geojsAnnotationSpec.js',
     'geojsSpec.js',
 ))
-def testWebClientWithAnnotation(boundServer, fsAssetstore, db, spec, girderWorker):
+def testWebClientWithAnnotation(boundServer, fsAssetstore, db, spec, girderWorker):  # noqa
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
     runWebClientTest(boundServer, spec)
 
@@ -35,7 +35,7 @@ def testWebClientWithAnnotation(boundServer, fsAssetstore, db, spec, girderWorke
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
 @pytest.mark.plugin('large_image_annotation')
-def testWebClientAnnotationSpec(boundServer, fsAssetstore, db, admin, girderWorker):
+def testWebClientAnnotationSpec(boundServer, fsAssetstore, db, admin, girderWorker):  # noqa
     # Create an item in the Public folder
     publicFolder = next(
         folder for folder in Folder().childFolders(parent=admin, parentType='user', user=admin)
