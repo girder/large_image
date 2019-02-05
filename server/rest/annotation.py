@@ -181,6 +181,7 @@ class AnnotationResource(Resource):
             idx = 0
             yield base[0]
             yield breakStr
+            collect = []
             for element in Annotationelement().yieldElements(annotation, params, info):
                 # The json conversion is fastest if we use defaults as much as
                 # possible.  The only value in an annotation element that needs
@@ -190,10 +191,17 @@ class AnnotationResource(Resource):
                 # Use ujson; it is much faster.  The standard json library
                 # could be used in its most default mode instead like so:
                 #   result = json.dumps(element, separators=(',', ':'))
-                result = ujson.dumps(element)
-                result = (b',' if idx else b'') + result.encode('utf8')
-                yield result
-                idx += 1
+                # Collect multiple elements before emitting them.  This
+                # balances using less memoryand streaming right away with
+                # efficiency in dumping the json.  Experimentally, 100 is
+                # significantly faster than 10 and not much slower than 1000.
+                collect.append(element)
+                if len(collect) >= 100:
+                    yield (b',' if idx else b'') + ujson.dumps(collect).encode('utf8')[1:-1]
+                    idx += 1
+                    collect = []
+            if len(collect):
+                yield (b',' if idx else b'') + ujson.dumps(collect).encode('utf8')[1:-1]
             yield base[1].rstrip().rstrip(b'}')
             yield b', "_elementQuery": '
             yield json.dumps(

@@ -366,7 +366,7 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
             'encoding': 2,
         }
         for key in badParams:
-            err = ('parameter is an incorrect' if key is not 'encoding' else
+            err = ('parameter is an incorrect' if key != 'encoding' else
                    'Invalid encoding')
             self._createTestTiles({key: badParams[key]}, error=err)
 
