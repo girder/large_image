@@ -1,67 +1,53 @@
 Large Image |build-status| |codecov-io| |license-badge|
 =======================================================
 
-As a Girder_ Plugin
--------------------
+Python modules to work with large multiresolution images.
 
-A Girder plugin to create, serve, and display large multiresolution images.
+Large Image consists of several Python modules designed to work together.  These include:
 
-Upload image files to Girder. If they are not already in a tiled-format, they can be converted to
-tiled images. The plugin has a variety of viewers to examine the images.
+- ``large_image``: The core module.
+  You can specify extras_require of the name of any tile source included with this repository, ``sources`` for all of the tile sources in the repository, ``memcached`` for using memcached for tile caching, or ``all`` for all of the tile sources and memcached.
 
-Note that some features will not be available unless MongoDB version 3.4 or 
-later is used for Girder's database.
+- ``girder_large_image``: Large Image as a Girder_ 3.x plugin.
+  You can specify extras_require of ``tasks`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
 
+- ``large_image_tasks``: A utility for using pyvips to convert images into pyramidal tiff files that can be read efficiently by large_image.  This can be used by itself or with Girder Worker.
 
-As a stand-alone Python module
-------------------------------
+- Tile sources:
 
-A Python module to work with large multiresolution images.
+  - ``large-image-source-tiff``: A tile source for reading pyramidal tiff files in common compression formats.
+
+  - ``large-image-source-openslide``: A tile source using the OpenSlide library.  This works with svs, ndpi, Mirax, tiff, vms, and other file formats.
+
+  - ``large-image-source-pil``: A tile source for small images via the Python Imaging Library (Pillow).
+
+  - ``large-image-source-mapnik``: A tile source for reading geotiff and netcdf files via Mapnik and GDAL.
+
+  - ``large-image-source-test``: A tile source that generates test tiles, including a simple fractal pattern.  Useful for testing extreme zoom levels.
+
+  - ``large-image-source-dummy``: A tile source that does nothing.
+
+  Most tile sources can be used with girder_large_image.
+
 
 Installation
-++++++++++++
+------------
 
-1.  `Install OpenSlide <http://openslide.org/download/>`_
+To install all packages from source, clone
 
-    If you are using Ubuntu 14.04, there is a known bug in OpenJPEG that will prevent OpenSlide from
-    reading certain files. This requires building OpenJPEG, libtiff, and OpenSlide from source to
-    work around the problem. For more information, there is an
-    `ansible script <https://github.com/DigitalSlideArchive/HistomicsTK/blob/master/ansible/roles/openslide/tasks/main.yml>`_
-    that builds these libraries, and some
-    `notes on the process <https://github.com/DigitalSlideArchive/digital_slide_archive/wiki/VIPS-and-OpenSlide-Installation>`_.
+1.  ``git clone https://github.com/girder/large_image.git``
 
-    You may want to install optional utilities:
+2.  Install all packages and dependencies:
 
-    * memcached - this allows memcached to be used for caching
-
-2.  ``pip install --user numpy==1.10.2``
-
-    The python libtiff library fails to include numpy as a dependency, which means that it must be
-    installed manually before you can install large_image.
-
-    You may want to pip install optional modules:
-
-    * psutil - this helps determine how much memory is available for caching
-
-3.  ``git clone https://github.com/girder/large_image.git``
-
-4.  ``cd large_image``
-
-5.  Install the base dependencies with:
-
-    ``pip install -e .``
-
-    or all optional dependencies with:
-
-    ``pip install -e .[openslide,memcached,mapnik]``
+    ``pip install -e large_image[memcached] -r requirements-dev.txt``
 
 
-Examples
-++++++++
+Tile source prerequisites
+=========================
 
-*   `Finding the average color of an image <examples/average_color.py>`_
+Many tile sources have complex prerequisites.  These can be installed directly using your system's package manager or from some prebuilt Python wheels for Linux.  The prebuilt wheels are not official packages, but they can be used by instructing pip to use them by preference:
 
-    This opens a tiled image and computes the average color at a specified magnification.
+    ``pip install -e large_image[memcached] -r requirements-dev.txt --find-links https://manthey.github.io/large_image_wheels``
 
 
 .. _Girder: https://github.com/girder/girder
