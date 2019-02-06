@@ -256,7 +256,7 @@ class ImageItem(Item):
         self.removeThumbnailFiles(item)
         return deleted
 
-    def getThumbnail(self, item, width=None, height=None, **kwargs):
+    def getThumbnail(self, item, checkAndCreate=False, width=None, height=None, **kwargs):
         """
         Using a tile source, get a basic thumbnail.  Aspect ratio is
         preserved.  If neither width nor height is given, a default value is
@@ -275,9 +275,9 @@ class ImageItem(Item):
         # check if a thumbnail file exists with a particular key
         keydict = dict(kwargs, width=width, height=height)
         return self._getAndCacheImage(
-            item, 'getThumbnail', keydict, width=width, height=height, **kwargs)
+            item, 'getThumbnail', checkAndCreate, keydict, width=width, height=height, **kwargs)
 
-    def _getAndCacheImage(self, item, imageFunc, keydict, **kwargs):
+    def _getAndCacheImage(self, item, imageFunc, checkAndCreate, keydict, **kwargs):
         if 'fill' in keydict and (keydict['fill']).lower() == 'none':
             del keydict['fill']
         keydict = {k: v for k, v in six.viewitems(keydict) if v is not None}
@@ -289,6 +289,8 @@ class ImageItem(Item):
             'thumbnailKey': key
         })
         if existing:
+            if checkAndCreate:
+                return True
             if kwargs.get('contentDisposition') != 'attachment':
                 contentDisposition = 'inline'
             else:
@@ -405,7 +407,7 @@ class ImageItem(Item):
         tileSource = self._loadTileSource(item, **kwargs)
         return tileSource.getAssociatedImagesList()
 
-    def getAssociatedImage(self, item, imageKey, *args, **kwargs):
+    def getAssociatedImage(self, item, imageKey, checkAndCreate=False, *args, **kwargs):
         """
         Return an associated image.
 
@@ -418,4 +420,4 @@ class ImageItem(Item):
         """
         keydict = dict(kwargs, imageKey=imageKey)
         return self._getAndCacheImage(
-            item, 'getAssociatedImage', keydict, imageKey=imageKey, **kwargs)
+            item, 'getAssociatedImage', checkAndCreate, keydict, imageKey=imageKey, **kwargs)
