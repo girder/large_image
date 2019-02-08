@@ -61,6 +61,14 @@ def createThumbnailsJobTask(item, spec):
             status['failed'] += 1
             status['lastFailed'] = str(item['_id'])
             logger.info('Failed to get thumbnail for item %s: %r' % (item['_id'], exc))
+        except AttributeError:
+            raise
+        except Exception:
+            status['failed'] += 1
+            status['lastFailed'] = str(item['_id'])
+            logger.exception(
+                'Unexpected exception when trying to create a thumbnail for item %s' %
+                item['_id'])
     return status
 
 
