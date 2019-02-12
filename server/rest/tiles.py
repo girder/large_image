@@ -300,13 +300,15 @@ class TilesItemResource(ItemResource):
     )
     # Without caching, this checks for permissions every time.  By using the
     # LoadModelCache, three database lookups are avoided, which saves around
-    # 6 ms in tests.
+    # 6 ms in tests. We also avoid the @access.public decorator and directly
+    # set the accessLevel attribute on the method, since in some environments
+    # access.cookie and access.public decorators interact with each other and
+    # both are necessary to get cookie access to work.
     #   @access.cookie   # access.cookie always looks up the token
     #   @access.public
     #   @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     #   def getTile(self, item, z, x, y, params):
     #       return self._getTile(item, z, x, y, params, True)
-    @access.public
     def getTile(self, itemId, z, x, y, params):
         _adjustParams(params)
         item = loadmodelcache.loadModel(
@@ -319,6 +321,7 @@ class TilesItemResource(ItemResource):
         if redirect not in ('any', 'exact', 'encoding'):
             redirect = False
         return self._getTile(item, z, x, y, params, mayRedirect=redirect)
+    getTile.accessLevel = 'public'
 
     @describeRoute(
         Description('Get a test large image tile.')
