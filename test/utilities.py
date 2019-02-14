@@ -46,7 +46,7 @@ def externaldata(
     return destpath
 
 
-def checkTilesZXY(source, metadata, tileParams={}, imgHeader=JPEGHeader):
+def checkTilesZXY(source, metadata, tileParams=None, imgHeader=JPEGHeader):
     """
     Test that the tile server is serving images.
 
@@ -58,6 +58,8 @@ def checkTilesZXY(source, metadata, tileParams={}, imgHeader=JPEGHeader):
     :param imgHeader: if something other than a JPEG is expected, this is
                       the first few bytes of the expected image.
     """
+    if tileParams is None:
+        tileParams = {}
     # We should get images for all valid levels, but only within the
     # expected range of tiles.
     for z in range(metadata.get('minLevel', 0), metadata['levels']):

@@ -60,7 +60,7 @@ def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
         if priority >= SourcePriority.MANUAL:
             continue
         sourceList.append((priority, sourceName))
-    for priority, sourceName in sorted(sourceList):
+    for _priority, sourceName in sorted(sourceList):
         if availableSources[sourceName].canRead(sourceObj):
             return availableSources[sourceName](sourceObj, *args, **kwargs)
     raise TileSourceException('No available tilesource for %s' % pathOrUri)

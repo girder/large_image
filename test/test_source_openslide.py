@@ -100,17 +100,17 @@ def testTileIterator():
     assert len(visited[0]) == 12
     # Check with a non-native magnfication with exact=True
     tileCount = 0
-    for tile in source.tileIterator(
+    for _tile in source.tileIterator(
             scale={'magnification': 4, 'exact': True}):
         tileCount += 1
     assert tileCount == 0
     # Check with a non-native (but factor of 2) magnfication with exact=True
-    for tile in source.tileIterator(
+    for _tile in source.tileIterator(
             scale={'magnification': 2.5, 'exact': True}):
         tileCount += 1
     assert tileCount == 0
     # Check with a native magnfication with exact=True
-    for tile in source.tileIterator(
+    for _tile in source.tileIterator(
             scale={'magnification': 5, 'exact': True}):
         tileCount += 1
     assert tileCount == 144
@@ -273,13 +273,13 @@ def testConvertRegionScale():
 
     # test tileIteratorAtAnotherScale
     tileCount = 0
-    for tile in source.tileIteratorAtAnotherScale(
+    for _tile in source.tileIteratorAtAnotherScale(
             sourceRegion, sourceScale, targetScale,
             format=constants.TILE_FORMAT_NUMPY):
         tileCount += 1
     assert tileCount == 72
     with pytest.raises(TypeError):
-        for tile in source.tileIteratorAtAnotherScale(
+        for _tile in source.tileIteratorAtAnotherScale(
                 sourceRegion, sourceScale, region=sourceRegion,
                 format=constants.TILE_FORMAT_NUMPY):
             tileCount += 1

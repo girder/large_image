@@ -146,7 +146,7 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):
         if priority >= SourcePriority.MANUAL:
             continue
         sourceList.append((priority, sourceName))
-    for priority, sourceName in sorted(sourceList):
+    for _priority, sourceName in sorted(sourceList):
         if AvailableGirderTileSources[sourceName].canRead(item):
             return sourceName
 

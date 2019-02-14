@@ -794,7 +794,7 @@ class Annotation(AccessControlledModel):
         return doc
 
     def versionList(self, annotationId, user=None, limit=0, offset=0,
-                    sort=[('_version', -1)], force=False):
+                    sort=(('_version', -1), ), force=False):
         """
         List annotation history entries for a specific annotationId.  Only
         annotations that belong to an existing item that the user is allowed to

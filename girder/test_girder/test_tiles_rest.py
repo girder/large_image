@@ -30,7 +30,7 @@ from . import girder_utilities as utilities
 from .girder_utilities import girderWorker  # noqa
 
 
-def _testTilesZXY(server, admin, itemId, metadata, tileParams={},
+def _testTilesZXY(server, admin, itemId, metadata, tileParams=None,
                   imgHeader=utilities.JPEGHeader, token=None):
     """
     Test that the tile server is serving images.
@@ -43,6 +43,8 @@ def _testTilesZXY(server, admin, itemId, metadata, tileParams={},
     :param imgHeader: if something other than a JPEG is expected, this is
                       the first few bytes of the expected image.
     """
+    if tileParams is None:
+        tileParams = {}
     if token:
         kwargs = {'token': token}
     else:
@@ -100,7 +102,7 @@ def _testTilesZXY(server, admin, itemId, metadata, tileParams={},
     assert 'layer does not exist' in resp.json['message']
 
 
-def _createTestTiles(server, admin, params={}, info=None, error=None):
+def _createTestTiles(server, admin, params=None, info=None, error=None):
     """
     Discard any existing tile set on an item, then create a test tile set
     with some optional parameters.
@@ -113,6 +115,8 @@ def _createTestTiles(server, admin, params={}, info=None, error=None):
                   message.
     :returns: the tile information dictionary.
     """
+    if params is None:
+        params = {}
     try:
         resp = server.request(path='/item/test/tiles', user=admin,
                               params=params)
