@@ -149,7 +149,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         # Check with a non-native magnfication without resampling
         tileCount = 0
         for tile in source.tileIterator(
-                format=tilesource.TILE_FORMAT_PIL, scale={'magnification': 2}):
+                format=tilesource.TILE_FORMAT_PIL, scale={'magnification': 2}, resample=False):
             tileCount += 1
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'], 256 if tile['level_x'] < 11 else 61)
@@ -163,6 +163,10 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
             self.assertEqual(tile['tile'].size, (tile['width'], tile['height']))
             self.assertEqual(tile['width'], 256 if tile['level_x'] < 4 else 126)
             self.assertEqual(tile['height'], 256 if tile['level_y'] < 4 else 134)
+        self.assertEqual(tileCount, 25)
+        # Check that the default is with resampling
+        tileCount = len(list(source.tileIterator(
+            format=tilesource.TILE_FORMAT_PIL, scale={'magnification': 2})))
         self.assertEqual(tileCount, 25)
 
         # Ask for numpy array as results
@@ -555,7 +559,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         tileCount = 0
         for tile in source.tileIteratorAtAnotherScale(
                 sourceRegion, sourceScale, targetScale,
-                format=tilesource.TILE_FORMAT_NUMPY):
+                format=tilesource.TILE_FORMAT_NUMPY, resample=False):
             tileCount += 1
         self.assertEqual(tileCount, 72)
         with six.assertRaisesRegex(self, TypeError, 'unexpected keyword'):
