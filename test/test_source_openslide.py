@@ -117,12 +117,14 @@ def testTileIterator():
     # Check with a non-native magnfication without resampling
     tileCount = 0
     for tile in source.tileIterator(
-            format=constants.TILE_FORMAT_PIL, scale={'magnification': 2}):
+            format=constants.TILE_FORMAT_PIL, scale={'magnification': 2}, resample=False):
         tileCount += 1
         assert tile['tile'].size == (tile['width'], tile['height'])
         assert tile['width'] == 256 if tile['level_x'] < 11 else 61
         assert tile['height'] == 256 if tile['level_y'] < 11 else 79
     assert tileCount == 144
+    assert source.getTileCount(
+        format=constants.TILE_FORMAT_PIL, scale={'magnification': 2}, resample=False) == 144
     # Check with a non-native magnfication with resampling
     tileCount = 0
     for tile in source.tileIterator(
@@ -132,6 +134,17 @@ def testTileIterator():
         assert tile['width'] == 256 if tile['level_x'] < 4 else 126
         assert tile['height'] == 256 if tile['level_y'] < 4 else 134
     assert tileCount == 25
+    assert source.getTileCount(
+        format=constants.TILE_FORMAT_PIL, scale={'magnification': 2}, resample=True) == 25
+    # Check that the default is with resampling
+    tileCount = len(list(source.tileIterator(
+        format=constants.TILE_FORMAT_PIL, scale={'magnification': 2})))
+    assert tileCount == 25
+    assert source.getTileCount(
+        format=constants.TILE_FORMAT_PIL, scale={'magnification': 2}) == 25
+    # Asking for exact scale should result in no tiles.
+    assert source.getTileCount(
+        format=constants.TILE_FORMAT_PIL, scale={'magnification': 2, 'exact': True}) == 0
 
     # Ask for numpy array as results
     tileCount = 0
@@ -275,7 +288,7 @@ def testConvertRegionScale():
     tileCount = 0
     for _tile in source.tileIteratorAtAnotherScale(
             sourceRegion, sourceScale, targetScale,
-            format=constants.TILE_FORMAT_NUMPY):
+            format=constants.TILE_FORMAT_NUMPY, resample=False):
         tileCount += 1
     assert tileCount == 72
     with pytest.raises(TypeError):

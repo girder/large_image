@@ -165,6 +165,8 @@ class LazyTileDict(dict):
             self['tile_y'] = self.get('tile_y', self['y'])
             self['tile_width'] = self.get('tile_width', self.width)
             self['tile_height'] = self.get('tile_width', self.height)
+            if self.get('magnification', None):
+                self['tile_magnification'] = self.get('tile_magnification', self['magnification'])
             self['x'] = float(self['tile_x'])
             self['y'] = float(self['tile_y'])
             # Add provisional width and height
@@ -173,6 +175,8 @@ class LazyTileDict(dict):
                     self['tile_width'] / self.requestedScale))
                 self['height'] = max(1, int(
                     self['tile_height'] / self.requestedScale))
+                if self.get('tile_magnification', None):
+                    self['magnification'] = self['tile_magnification'] / self.requestedScale
             # If we can resample the tile, many parameters may change once the
             # image is loaded.  Don't include width and height in this list;
             # the provisional values are sufficient.
@@ -1387,7 +1391,7 @@ class TileSource(object):
             level = max(0, min(mag['level'], level))
         return level
 
-    def tileIterator(self, format=(TILE_FORMAT_NUMPY, ), resample=False,
+    def tileIterator(self, format=(TILE_FORMAT_NUMPY, ), resample=True,
                      **kwargs):
         """
         Iterate on all tiles in the specifed region at the specified scale.
@@ -1436,13 +1440,14 @@ class TileSource(object):
             specified.
         :param resample: If True or one of PIL.Image.NEAREST, LANCZOS,
             BILINEAR, or BICUBIC to resample tiles that are not the target
-            output size.  Tiles that are resampled may have non-integer x, y,
-            width, and height values, and will have an additional dictionary
-            entries of:
+            output size.  Tiles that are resampled will have additional
+            dictionary entries of:
                 scaled: the scaling factor that was applied (less than 1 is
                     downsampled).
                 tile_x, tile_y: (left, top) coordinates before scaling
                 tile_width, tile_height: size of the current tile before
+                    scaling.
+                tile_magnification: magnificaiton of the current tile before
                     scaling.
             Note that scipy.misc.imresize uses PIL internally.
         :param region: a dictionary of optional values which specify the part
@@ -1575,6 +1580,18 @@ class TileSource(object):
         :return: a tile dictionary or None.
         """
         return next(self.tileIteratorAtAnotherScale(*args, **kwargs), None)
+
+    def getTileCount(self, *args, **kwargs):
+        """
+        Return the number of tiles that the tileIterator will return.  See
+        tileIterator for parameters.
+
+        :return: the number of tiles that the tileIterator will yield.
+        """
+        tile = next(self.tileIterator(*args, **kwargs), None)
+        if tile is not None:
+            return tile['iterator_range']['position']
+        return 0
 
     def getAssociatedImagesList(self):
         """
