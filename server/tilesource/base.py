@@ -1650,6 +1650,18 @@ class TileSource(object):
         """
         return next(self.tileIteratorAtAnotherScale(*args, **kwargs), None)
 
+    def getTileCount(self, *args, **kwargs):
+        """
+        Return the number of tiles that the tileIterator will return.  See
+        tileIterator for parameters.
+
+        :return: the number of tiles that the tileIterator will yield.
+        """
+        tile = next(self.tileIterator(*args, **kwargs), None)
+        if tile is not None:
+            return tile['iterator_range']['position']
+        return 0
+
     def getAssociatedImagesList(self):
         """
         Return a list of associated images.
