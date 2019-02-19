@@ -19,7 +19,10 @@
 # There is an issue with some of the wheels with pyvips and mapnik where if
 # both are to be imported, pyvips must be imported first.  To handle this,
 # even though we don't need pyvips, try to import it before mapnik.
+import os
 try:
+    # Because of its use of gobject, pyvips should be invoked without concurrency
+    os.environ['VIPS_CONCURRENCY'] = '1'
     import pyvips  # noqa
 except ImportError:
     pass

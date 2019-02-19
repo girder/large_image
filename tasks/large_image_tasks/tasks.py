@@ -8,6 +8,8 @@ from girder_worker.utils import girder_job
 @girder_job(title='Create a pyramidal tiff using vips', type='large_image_tiff')
 @app.task(bind=True)
 def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90, tileSize=256):
+    # Because of its use of gobject, pyvips should be invoked without concurrency
+    os.environ['VIPS_CONCURRENCY'] = '1'
     import pyvips
 
     inputPath = os.path.abspath(os.path.expanduser(inputFile))

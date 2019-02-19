@@ -16,7 +16,7 @@ from .girder_utilities import girderWorker  # noqa
 ))
 def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):  # noqa
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
-    runWebClientTest(boundServer, spec)
+    runWebClientTest(boundServer, spec, 15000)
 
 
 @pytest.mark.usefixtures('girderWorker')  # noqa
@@ -29,7 +29,7 @@ def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):  # noqa
 ))
 def testWebClientWithAnnotation(boundServer, fsAssetstore, db, spec, girderWorker):  # noqa
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
-    runWebClientTest(boundServer, spec)
+    runWebClientTest(boundServer, spec, 15000)
 
 
 @pytest.mark.usefixtures('girderWorker')  # noqa
@@ -44,4 +44,4 @@ def testWebClientAnnotationSpec(boundServer, fsAssetstore, db, admin, girderWork
 
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', 'annotationSpec.js')
 
-    runWebClientTest(boundServer, spec)
+    runWebClientTest(boundServer, spec, 15000)
