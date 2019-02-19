@@ -109,7 +109,7 @@ $(function () {
                 hoverEvents: true
             });
             viewer.once('g:beforeFirstRender', function () {
-                window.geo.util.mockVGLRenderer();
+                window.geo.util.mockWebglRenderer();
             });
             waitsFor(function () {
                 return $('.geojs-layer.active').length >= 1;
@@ -710,7 +710,7 @@ $(function () {
                 scale: {position: {bottom: 20, right: 10}, scale: 0.0005}
             });
             viewer.once('g:beforeFirstRender', function () {
-                window.geo.util.mockVGLRenderer();
+                window.geo.util.mockWebglRenderer();
             });
             waitsFor(function () {
                 return $('.geojs-layer.active').length >= 1 && viewer.scaleWidget;

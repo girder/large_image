@@ -6,12 +6,12 @@ girderTest.startApp();
 
 $(function () {
     describe('setup', function () {
-        it('mock VGL', function () {
+        it('mock Webgl', function () {
             var girder = window.girder;
             var GeojsViewer = girder.plugins.large_image.views.imageViewerWidget.geojs;
             girder.utilities.PluginUtils.wrap(GeojsViewer, 'initialize', function (initialize) {
                 this.once('g:beforeFirstRender', function () {
-                    window.geo.util.mockVGLRenderer();
+                    window.geo.util.mockWebglRenderer();
                 });
                 initialize.apply(this, _.rest(arguments));
             });
