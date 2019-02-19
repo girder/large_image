@@ -24,7 +24,7 @@ describe('AnnotationListWidget', function () {
     });
 
     describe('setup', function () {
-        it('mock VGL', function () {
+        it('mock Webgl', function () {
             var GeojsViewer = largeImage.views.imageViewerWidget.geojs;
             girder.utilities.PluginUtils.wrap(GeojsViewer, 'initialize', function (initialize) {
                 this.drawAnnotation = function (annotation) {
@@ -35,7 +35,7 @@ describe('AnnotationListWidget', function () {
                 };
 
                 this.once('g:beforeFirstRender', function () {
-                    window.geo.util.mockVGLRenderer();
+                    window.geo.util.mockWebglRenderer();
                 });
                 initialize.apply(this, _.rest(arguments));
             });
