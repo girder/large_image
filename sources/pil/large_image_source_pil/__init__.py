@@ -21,6 +21,7 @@ import math
 import numpy
 import os
 import six
+from pkg_resources import DistributionNotFound, get_distribution
 
 import PIL.Image
 
@@ -30,7 +31,11 @@ from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
 
 
-__version__ = '1.0.0'
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 def getMaxSize(size=None, maxDefault=4096):

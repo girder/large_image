@@ -4,10 +4,17 @@
 
 __author__ = """Kitware Inc"""
 __email__ = 'kitware@kitware.com'
-__version__ = '0.2.0'
 
 
 from girder_worker import GirderWorkerPluginABC
+from pkg_resources import DistributionNotFound, get_distribution
+
+
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 class LargeImageTasks(GirderWorkerPluginABC):

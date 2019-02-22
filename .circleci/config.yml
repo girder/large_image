@@ -1,0 +1,57 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/project
+    docker:
+      - image: zachmullen/tox-and-node
+      - image: memcached
+      - image: circleci/mongo:4.0-ram
+      - image: rabbitmq
+    steps:
+      - checkout
+      - run:
+          name: Preinstall phantomjs to work around an npm permission issue
+          command: npm install -g phantomjs-prebuilt --unsafe-perm
+      - run:
+          name: Run tests via tox
+          command: tox | cat
+      - run:
+          name: Install Codecov client
+          command: pip install codecov
+      - run:
+          name: Upload coverage
+          command: codecov --disable search pycov gcov --root project --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml
+  release:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - checkout
+      - run:
+          name: Setup virtual environment
+          command: |
+            if [ ! -d env ]; then python -m virtualenv env || python -m venv env; fi
+            echo ". $CIRCLE_WORKING_DIRECTORY/env/bin/activate" >> $BASH_ENV
+      - run:
+          name: Install python packages
+          command: pip install setuptools_scm twine
+      - run:
+          name: Release to PyPi
+          command: ./.circleci/release_pypi.sh
+
+workflows:
+  version: 2
+  ci:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /^v.*/
+      - release:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only: girder-3
+# Change to master branch when girder-3 becomes the master

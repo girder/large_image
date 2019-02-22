@@ -2,18 +2,31 @@
 # -*- coding: utf-8 -*-
 
 import os
-import re
 from setuptools import setup, find_packages
 
-init = os.path.join(os.path.dirname(__file__), 'large_image_source_openslide', '__init__.py')
-with open(init) as fd:
-    version = re.search(
-        r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
-        fd.read(), re.MULTILINE).group(1)
+
+def prerelease_local_scheme(version):
+    """
+    Return local scheme version unless building on master in CircleCI.
+
+    This function returns the local scheme version number
+    (e.g. 0.0.0.dev<N>+g<HASH>) unless building on CircleCI for a
+    pre-release in which case it ignores the hash and produces a
+    PEP440 compliant pre-release version number (e.g. 0.0.0.dev<N>).
+    """
+    from setuptools_scm.version import get_local_node_and_date
+
+    if 'CIRCLE_BRANCH' in os.environ and \
+       os.environ['CIRCLE_BRANCH'] in ('master', 'girder-3'):
+        return ''
+    else:
+        return get_local_node_and_date(version)
+
 
 setup(
     name='large-image-source-openslide',
-    version=version,
+    use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
+    setup_requires=['setuptools_scm'],
     description='An Openslide tilesource for large_image',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -29,11 +42,11 @@ setup(
         'Programming Language :: Python :: 3.7'
     ],
     install_requires=[
-        'large-image>=1.0.0',
+        'large-image>=1.0.0.dev0',
         'openslide-python>=1.1.0',
     ],
     extras_require={
-        'girder': 'girder-large-image>=1.0.0',
+        'girder': 'girder-large-image>=1.0.0.dev0',
     },
     license='Apache Software License 2.0',
     keywords='large_image, tile source',

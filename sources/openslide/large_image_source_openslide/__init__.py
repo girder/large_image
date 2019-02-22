@@ -23,6 +23,7 @@ from six.moves import range
 
 import openslide
 import PIL
+from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -31,7 +32,11 @@ from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
 
 
-__version__ = '1.0.0'
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 def _nearPowerOfTwo(val1, val2, tolerance=0.02):

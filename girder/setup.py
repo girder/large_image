@@ -2,22 +2,34 @@
 # -*- coding: utf-8 -*-
 
 import os
-import re
 from setuptools import setup, find_packages
 
 with open('../README.rst') as readme_file:
     readme = readme_file.read()
 
 
-init = os.path.join(os.path.dirname(__file__), '..', 'large_image', '__init__.py')
-with open(init) as fd:
-    version = re.search(
-        r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
-        fd.read(), re.MULTILINE).group(1)
+def prerelease_local_scheme(version):
+    """
+    Return local scheme version unless building on master in CircleCI.
+
+    This function returns the local scheme version number
+    (e.g. 0.0.0.dev<N>+g<HASH>) unless building on CircleCI for a
+    pre-release in which case it ignores the hash and produces a
+    PEP440 compliant pre-release version number (e.g. 0.0.0.dev<N>).
+    """
+    from setuptools_scm.version import get_local_node_and_date
+
+    if 'CIRCLE_BRANCH' in os.environ and \
+       os.environ['CIRCLE_BRANCH'] in ('master', 'girder-3'):
+        return ''
+    else:
+        return get_local_node_and_date(version)
+
 
 setup(
     name='girder_large_image',
-    version=version,
+    use_scm_version={'root': '..', 'local_scheme': prerelease_local_scheme},
+    setup_requires=['setuptools_scm'],
     description='A Girder plugin to create, serve, and display large multiresolution images.',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -38,7 +50,7 @@ setup(
         'girder-jobs>=3.0.0a2',
         'girder-worker[girder]>=0.5.1.dev213',
         'jsonschema>=2.5.1',
-        'large_image>=1.0.0',
+        'large_image>=1.0.0.dev0',
         'ujson>=1.35',
     ],
     extras_require={

@@ -16,8 +16,14 @@
 #  limitations under the License.
 #############################################################################
 
+from pkg_resources import DistributionNotFound, get_distribution
+
 from . import tilesource  # noqa
 from .tilesource import getTileSource  # noqa
 
 
-__version__ = '1.0.0'
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass

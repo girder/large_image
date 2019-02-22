@@ -19,6 +19,7 @@
 import colorsys
 import six
 from PIL import Image, ImageDraw, ImageFont
+from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.constants import SourcePriority
 from large_image.cache_util import strhash, methodcache, LruCacheMetaclass
@@ -26,7 +27,11 @@ from large_image.exceptions import TileSourceException
 from large_image.tilesource import TileSource
 
 
-__version__ = '1.0.0'
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 _counters = {

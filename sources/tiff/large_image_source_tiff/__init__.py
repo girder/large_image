@@ -21,6 +21,7 @@ import itertools
 import math
 import PIL.Image
 import six
+from pkg_resources import DistributionNotFound, get_distribution
 from six import BytesIO
 from six.moves import range
 
@@ -34,7 +35,11 @@ from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException, ValidationTiffException
 
 
-__version__ = '1.0.0'
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 @six.add_metaclass(LruCacheMetaclass)

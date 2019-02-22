@@ -38,6 +38,7 @@ import threading
 from operator import attrgetter
 from osgeo import gdal
 from osgeo import osr
+from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
@@ -46,7 +47,11 @@ from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource, TILE_FORMAT_PIL
 
 
-__version__ = '1.0.0'
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 TileInputUnits['projection'] = 'projection'

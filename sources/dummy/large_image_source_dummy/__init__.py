@@ -16,11 +16,17 @@
 #  limitations under the License.
 ##############################################################################
 
+from pkg_resources import DistributionNotFound, get_distribution
+
 from large_image.constants import SourcePriority
 from large_image.tilesource import TileSource
 
 
-__version__ = '1.0.0'
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 class DummyTileSource(TileSource):

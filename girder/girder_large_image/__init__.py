@@ -19,6 +19,7 @@
 import datetime
 import json
 import six
+from pkg_resources import DistributionNotFound, get_distribution
 
 import girder
 from girder import events
@@ -44,6 +45,13 @@ from .loadmodelcache import invalidateLoadModelCache
 from .models.image_item import ImageItem
 from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
+
+
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 def _postUpload(event):
