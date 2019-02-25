@@ -4,9 +4,6 @@
 import os
 from setuptools import setup, find_packages
 
-with open('../README.rst') as readme_file:
-    readme = readme_file.read()
-
 
 def prerelease_local_scheme(version):
     """
@@ -61,7 +58,7 @@ setup(
     include_package_data=True,
     keywords='girder-plugin, large_image',
     license='Apache Software License 2.0',
-    long_description=readme,
+    long_description='See the large-image package for more details.',
     packages=find_packages(exclude=['test', 'test.*']),
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     url='https://github.com/girder/large_image',
