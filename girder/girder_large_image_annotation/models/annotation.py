@@ -424,13 +424,13 @@ class Annotation(AccessControlledModel):
         self.exposeFields(AccessType.READ, (
             'annotation', '_version', '_elementQuery', '_active',
         ) + self.baseFields)
-        events.bind('model.item.remove', 'large_image.annotations', self._onItemRemove)
+        events.bind('model.item.remove', 'large_image_annotation', self._onItemRemove)
 
         self._historyEnabled = Setting().get(
             constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY)
         # Listen for changes to our relevant settings
-        events.bind('model.setting.save.after', 'large_image', self._onSettingChange)
-        events.bind('model.setting.remove', 'large_image', self._onSettingChange)
+        events.bind('model.setting.save.after', 'large_image_annotation', self._onSettingChange)
+        events.bind('model.setting.remove', 'large_image_annotation', self._onSettingChange)
 
     def _onItemRemove(self, event):
         """
