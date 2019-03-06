@@ -392,6 +392,46 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
         self.assertEqual(len(Annotation().revertVersion(
             annot['_id'], user=self.admin)['annotation']['elements']), 1)
 
+    def testAnnotationsAfterCopyItem(self):
+        from girder.plugins.large_image.models.annotation import Annotation
+        item = Item().createItem('sample', self.admin, self.publicFolder)
+        Annotation().createAnnotation(item, self.admin, sampleAnnotation)
+        resp = self.request(
+            '/annotation', user=self.admin, params={'itemId': item['_id']})
+        self.assertStatusOk(resp)
+        self.assertTrue(len(resp.json) == 1)
+        resp = self.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=self.admin)
+        self.assertStatusOk(resp)
+        resp = self.request(
+            '/annotation', user=self.admin, params={'itemId': resp.json['_id']})
+        self.assertStatusOk(resp)
+        self.assertTrue(len(resp.json) == 0)
+        resp = self.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=self.admin,
+            params={'copyAnnotations': 'true'})
+        self.assertStatusOk(resp)
+        resp = self.request(
+            '/annotation', user=self.admin, params={'itemId': resp.json['_id']})
+        self.assertStatusOk(resp)
+        self.assertTrue(len(resp.json) == 1)
+        resp = self.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=self.admin,
+            params={'copyAnnotations': 'false'})
+        self.assertStatusOk(resp)
+        resp = self.request(
+            '/annotation', user=self.admin, params={'itemId': resp.json['_id']})
+        self.assertStatusOk(resp)
+        self.assertTrue(len(resp.json) == 0)
+        resp = self.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=self.admin,
+            params={'copyAnnotations': True})
+        self.assertStatusOk(resp)
+        resp = self.request(
+            '/annotation', user=self.admin, params={'itemId': resp.json['_id']})
+        self.assertStatusOk(resp)
+        self.assertTrue(len(resp.json) == 1)
+
 
 class LargeImageAnnotationElementTest(common.LargeImageCommonTest):
     def testInitialize(self):

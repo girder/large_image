@@ -18,6 +18,7 @@
 ##############################################################################
 
 from bson import ObjectId
+import cherrypy
 import datetime
 import enum
 import jsonschema
@@ -425,6 +426,8 @@ class Annotation(AccessControlledModel):
             'annotation', '_version', '_elementQuery', '_active',
         ) + self.baseFields)
         events.bind('model.item.remove', 'large_image', self._onItemRemove)
+        events.bind('model.item.copy.prepare', 'large_image.annotation', self._prepareCopyItem)
+        events.bind('model.item.copy.after', 'large_image.annotation', self._handleCopyItem)
 
         self._historyEnabled = Setting().get(
             constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY)
@@ -446,6 +449,57 @@ class Annotation(AccessControlledModel):
                 self.update({'_id': annotation['_id']}, {'$set': {'_active': False}})
             else:
                 Annotation().remove(annotation)
+
+    def _prepareCopyItem(self, event):
+        # check if this copy should include annotations
+        if (not cherrypy.request or not cherrypy.request.params or
+                not cherrypy.request.params.get('copyAnnotations')):
+            return
+        if str(cherrypy.request.params.get('copyAnnotations')).lower() != 'true':
+            return
+        srcItem, newItem = event.info
+        if Annotation().findOne({
+                '_active': {'$ne': False}, 'itemId': srcItem['_id']}):
+            newItem['_annotationItemId'] = srcItem['_id']
+            Item().save(newItem, triggerEvents=False)
+
+    def _handleCopyItem(self, event):
+        newItem = event.info
+        srcItemId = newItem.pop('_annotationItemId', None)
+        if srcItemId:
+            Item().save(newItem, triggerEvents=False)
+            self._copyAnnotationsFromOtherItem(srcItemId, newItem)
+
+    def _copyAnnotationsFromOtherItem(self, srcItemId, destItem):
+        # Copy annotations from the original item to this one
+        query = {'_active': {'$ne': False}, 'itemId': srcItemId}
+        annotations = Annotation().find(query)
+        total = annotations.count()
+        if not total:
+            return
+        destItemId = destItem['_id']
+        folder = Folder().load(destItem['folderId'], force=True)
+        count = 0
+        for annotation in annotations:
+            logger.info('Copying annotation %d of %d from %s to %s',
+                        count + 1, total, srcItemId, destItemId)
+            # Make sure we have the elements
+            annotation = Annotation().load(annotation['_id'], force=True)
+            # This could happen, for instance, if the annotation were deleted
+            # while we are copying other annotations.
+            if annotation is None:
+                continue
+            annotation['itemId'] = destItemId
+            del annotation['_id']
+            # Remove existing permissionsi, then give it the same permissions
+            # as the item's folder.
+            annotation.pop('access', None)
+            self.copyAccessPolicies(destItem, annotation, save=False)
+            self.setPublic(annotation, folder.get('public'), save=False)
+            Annotation().save(annotation)
+            count += 1
+        logger.info('Copied %d annotations from %s to %s ',
+                    count, srcItemId, destItemId)
 
     def _onSettingChange(self, event):
         settingDoc = event.info
