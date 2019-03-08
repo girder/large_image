@@ -107,7 +107,7 @@ class MapnikTileSource(FileTileSource):
             if the projection is None.  For projections, None uses the default,
             which is the distance between (-180,0) and (180,0) in EPSG:4326
             converted to the projection divided by the tile size.  Proj4
-            projections that are not latlong (is_latlong() is False) must
+            projections that are not latlong (is_geographic is False) must
             specify unitsPerPixel.
         """
         super(MapnikTileSource, self).__init__(path, **kwargs)
@@ -156,7 +156,7 @@ class MapnikTileSource(FileTileSource):
         inProj = self._proj4Proj('+init=epsg:4326')
         # Since we already converted to bytes decoding is safe here
         outProj = self._proj4Proj(self.projection)
-        if outProj.is_latlong():
+        if outProj.crs.is_geographic:
             raise TileSourceException(
                 'Projection must not be geographic (it needs to use linear '
                 'units, not longitude/latitude).')
@@ -308,7 +308,7 @@ class MapnikTileSource(FileTileSource):
                 'srs': nativeSrs,
             }
             # Make sure geographic coordinates do not exceed their limits
-            if pyproj.Proj(nativeSrs).is_latlong() and srs:
+            if pyproj.Proj(nativeSrs).crs.is_geographic and srs:
                 try:
                     pyproj.Proj(srs)(0, 90, errcheck=True)
                     yBound = 90.0

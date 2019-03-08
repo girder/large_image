@@ -472,4 +472,4 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         self.assertEqual(bounds['xmin'], -180.00416667)
         self.assertEqual(bounds['xmax'], 179.99583333)
         self.assertEqual(bounds['ymin'], -89.99583333)
-        self.assertEqual(bounds['ymax'], 89.999999)
+        self.assertEqual(bounds['ymax'], 90)
