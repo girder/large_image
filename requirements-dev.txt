@@ -1,6 +1,6 @@
 # Top level dependencies
-git+https://github.com/girder/girder.git#egg=girder
-git+https://github.com/girder/girder.git#egg=girder-jobs&subdirectory=plugins/jobs
+girder>=3.0.0a5
+girder-jobs>=3.0.0a5
 -e sources/dummy
 -e sources/mapnik
 -e sources/openslide
@@ -22,7 +22,7 @@ flake8-quotes
 pydocstyle
 pytest>=3.6
 pytest-cov==2.5
-git+https://github.com/girder/girder.git#egg=pytest-girder&subdirectory=pytest_girder
+pytest-girder>=3.0.0a5
 pytest-xdist
 mock
 tox
