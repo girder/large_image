@@ -334,4 +334,4 @@ def testGuardAgainstBadLatLong():
     assert bounds['xmin'] == -180.00416667
     assert bounds['xmax'] == 179.99583333
     assert bounds['ymin'] == -89.99583333
-    assert bounds['ymax'] == 89.999999
+    assert bounds['ymax'] == 90

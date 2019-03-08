@@ -138,7 +138,7 @@ class MapnikFileTileSource(FileTileSource):
             if the projection is None.  For projections, None uses the default,
             which is the distance between (-180,0) and (180,0) in EPSG:4326
             converted to the projection divided by the tile size.  Proj4
-            projections that are not latlong (is_latlong() is False) must
+            projections that are not latlong (is_geographic is False) must
             specify unitsPerPixel.
         """
         super(MapnikFileTileSource, self).__init__(path, **kwargs)
@@ -255,7 +255,7 @@ class MapnikFileTileSource(FileTileSource):
         inProj = self._proj4Proj('+init=epsg:4326')
         # Since we already converted to bytes decoding is safe here
         outProj = self._proj4Proj(self.projection)
-        if outProj.is_latlong():
+        if outProj.crs.is_geographic:
             raise TileSourceException(
                 'Projection must not be geographic (it needs to use linear '
                 'units, not longitude/latitude).')
@@ -410,7 +410,7 @@ class MapnikFileTileSource(FileTileSource):
                 'srs': nativeSrs,
             }
             # Make sure geographic coordinates do not exceed their limits
-            if pyproj.Proj(nativeSrs).is_latlong() and srs:
+            if pyproj.Proj(nativeSrs).crs.is_geographic and srs:
                 try:
                     pyproj.Proj(srs)(0, 90, errcheck=True)
                     yBound = 90.0
@@ -772,7 +772,7 @@ class MapnikFileTileSource(FileTileSource):
                 # prime meridian by 360 degrees.  If none of the dataset is in
                 # the range of [-180, 180], this does't apply the shift either.
                 self._repeatLongitude = None
-                if pyproj.Proj(layerSrs).is_latlong():
+                if pyproj.Proj(layerSrs).crs.is_geographic:
                     bounds = self.getBounds()
                     if bounds['xmax'] - bounds['xmin'] < 361:
                         if bounds['xmin'] < -180 and bounds['xmax'] > -180:
