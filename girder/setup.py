@@ -41,7 +41,8 @@ setup(
         'Programming Language :: Python :: 3.7'
     ],
     install_requires=[
-        'enum34>=1.1.6',
+        'enum34>=1.1.6;python_version<"3.4"',
+        'futures;python_version<"3.4"',
         'girder>=3.0.0a2',
         'girder-jobs>=3.0.0a2',
         'girder-worker[girder]>=0.5.1.dev213',
