@@ -58,6 +58,7 @@ setup(
     install_requires=[
         'cachetools>=3.0.0',
         'enum34>=1.1.6',
+        'futures; python_version == "2.7"',
         'jsonschema>=2.5.1',
         'libtiff>=0.4.1',
         'numpy>=1.10.2',

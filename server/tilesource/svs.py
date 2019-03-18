@@ -220,7 +220,7 @@ class SVSFileTileSource(FileTileSource):
             mag = self._openslide.properties[
                 openslide.PROPERTY_NAME_OBJECTIVE_POWER]
             mag = float(mag) if mag else None
-        except (KeyError, ValueError):
+        except (KeyError, ValueError, openslide.lowlevel.OpenSlideError):
             mag = None
         try:
             mm_x = float(self._openslide.properties[
