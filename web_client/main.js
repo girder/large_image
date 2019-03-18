@@ -5,6 +5,7 @@ import './routes';
 import './views/fileList';
 import './views/itemList';
 import './views/imageViewerSelectWidget';
+import './views/checkedMenuWidget';
 
 // expose symbols under girder.plugins
 import * as largeImage from 'girder_plugins/large_image';
