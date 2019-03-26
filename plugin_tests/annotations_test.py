@@ -406,7 +406,7 @@ class LargeImageAnnotationTest(common.LargeImageCommonTest):
         resp = self.request(
             '/annotation', user=self.admin, params={'itemId': resp.json['_id']})
         self.assertStatusOk(resp)
-        self.assertTrue(len(resp.json) == 0)
+        self.assertTrue(len(resp.json) == 1)
         resp = self.request(
             '/item/%s/copy' % item['_id'], method='POST', user=self.admin,
             params={'copyAnnotations': 'true'})

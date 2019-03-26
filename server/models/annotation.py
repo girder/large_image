@@ -452,10 +452,8 @@ class Annotation(AccessControlledModel):
 
     def _prepareCopyItem(self, event):
         # check if this copy should include annotations
-        if (not cherrypy.request or not cherrypy.request.params or
-                not cherrypy.request.params.get('copyAnnotations')):
-            return
-        if str(cherrypy.request.params.get('copyAnnotations')).lower() != 'true':
+        if (cherrypy.request and cherrypy.request.params and
+                str(cherrypy.request.params.get('copyAnnotations')).lower() == 'false'):
             return
         srcItem, newItem = event.info
         if Annotation().findOne({
