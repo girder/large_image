@@ -298,3 +298,15 @@ def load(info):
     events.bind('model.item.remove', 'large_image', removeThumbnails)
     events.bind('server_fuse.unmount', 'large_image', cache_util.cachesClear)
     events.bind('model.file.remove', 'large_image', handleRemoveFile)
+
+    # add copyAnnotations option to POST resource/copy, POST item/{id}/copy and
+    # POST folder/{id}/copy
+    info['apiRoot'].resource.copyResources.description.param(
+        'copyAnnotations', 'Copy annotations when copying resources (default true)',
+        required=False, dataType='boolean')
+    info['apiRoot'].item.copyItem.description.param(
+        'copyAnnotations', 'Copy annotations when copying item (default true)',
+        required=False, dataType='boolean')
+    info['apiRoot'].folder.copyFolder.description.param(
+        'copyAnnotations', 'Copy annotations when copying folder (default true)',
+        required=False, dataType='boolean')
