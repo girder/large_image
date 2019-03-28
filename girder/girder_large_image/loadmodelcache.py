@@ -67,7 +67,7 @@ def loadModel(resource, model, plugin='_core', id=None, allowCookie=False,
         # cookies.
         if allowCookie:
             getCurrentToken(allowCookie)
-            setattr(cherrypy.request, 'girderAllowCookie', True)
+            cherrypy.request.girderAllowCookie = True
         entry = ModelImporter.model(model, plugin).load(
             id=id, level=level, user=resource.getCurrentUser())
         # If the cache becomes too large, just dump it -- this is simpler

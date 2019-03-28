@@ -338,6 +338,46 @@ class TestLargeImageAnnotation(object):
         assert len(Annotation().revertVersion(
             annot['_id'], user=admin)['annotation']['elements']) == 1
 
+    def testAnnotationsAfterCopyItem(self, server, admin):
+        publicFolder = utilities.namedFolder(admin, 'Public')
+        item = Item().createItem('sample', admin, publicFolder)
+        Annotation().createAnnotation(item, admin, sampleAnnotation)
+        resp = server.request(
+            '/annotation', user=admin, params={'itemId': item['_id']})
+        assert utilities.respStatus(resp) == 200
+        assert len(resp.json) == 1
+        resp = server.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=admin)
+        assert utilities.respStatus(resp) == 200
+        resp = server.request(
+            '/annotation', user=admin, params={'itemId': resp.json['_id']})
+        assert utilities.respStatus(resp) == 200
+        assert len(resp.json) == 1
+        resp = server.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=admin,
+            params={'copyAnnotations': 'true'})
+        assert utilities.respStatus(resp) == 200
+        resp = server.request(
+            '/annotation', user=admin, params={'itemId': resp.json['_id']})
+        assert utilities.respStatus(resp) == 200
+        assert len(resp.json) == 1
+        resp = server.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=admin,
+            params={'copyAnnotations': 'false'})
+        assert utilities.respStatus(resp) == 200
+        resp = server.request(
+            '/annotation', user=admin, params={'itemId': resp.json['_id']})
+        assert utilities.respStatus(resp) == 200
+        assert len(resp.json) == 0
+        resp = server.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=admin,
+            params={'copyAnnotations': True})
+        assert utilities.respStatus(resp) == 200
+        resp = server.request(
+            '/annotation', user=admin, params={'itemId': resp.json['_id']})
+        assert utilities.respStatus(resp) == 200
+        assert len(resp.json) == 1
+
 
 @pytest.mark.plugin('large_image_annotation')
 class TestLargeImageAnnotationElement(object):
