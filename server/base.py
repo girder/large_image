@@ -205,6 +205,7 @@ def validateBoolean(doc):
 
 
 @setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC,
     constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
     constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN,
 })

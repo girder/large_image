@@ -2,6 +2,7 @@ import _ from 'underscore';
 
 import { wrap } from 'girder/utilities/PluginUtils';
 import { apiRoot } from 'girder/rest';
+import { getCurrentUser } from 'girder/auth';
 import { AccessType } from 'girder/constants';
 import ItemListWidget from 'girder/views/widgets/ItemListWidget';
 
@@ -46,6 +47,9 @@ wrap(ItemListWidget, 'render', function (render) {
                 item.id + '/tiles/thumbnail?width=160&height=100'));
         var access = item.getAccessLevel();
         var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
+        if (!getCurrentUser()) {
+            extra = extraInfo[null] || {};
+        }
 
         /* Set the maximum number of columns we have so that we can let css
          * perform alignment. */
@@ -85,6 +89,12 @@ wrap(ItemListWidget, 'render', function (render) {
         // we will want to also show metadata, so these entries might look like
         // {images: ['label', 'macro'],  meta: [{key: 'abc', label: 'ABC'}]}
         var extraInfo = {};
+        if (settings['large_image.show_extra_public']) {
+            try {
+                extraInfo[null] = JSON.parse(settings['large_image.show_extra_public']);
+            } catch (err) {
+            }
+        }
         if (settings['large_image.show_extra']) {
             try {
                 extraInfo[AccessType.READ] = JSON.parse(settings['large_image.show_extra']);

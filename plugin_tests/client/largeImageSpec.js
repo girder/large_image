@@ -46,6 +46,7 @@ $(function () {
                 $('.g-large-image-auto-set-off').trigger('click');
                 $('.g-large-image-max-thumbnail-files').val('5');
                 $('.g-large-image-max-small-image-size').val('1024');
+                $('.g-large-image-show-extra-public').val('{}');
                 $('.g-large-image-show-extra').val('{}');
                 $('.g-large-image-show-extra-admin').val('{"images": ["label", "macro"]}');
                 $('#g-large-image-form input.btn-primary').click();
@@ -63,6 +64,7 @@ $(function () {
                         settings['large_image.default_viewer'] === 'geojs' &&
                         settings['large_image.max_thumbnail_files'] === 5 &&
                         settings['large_image.max_small_image_size'] === 1024 &&
+                        settings['large_image.show_extra_public'] === '{}' &&
                         settings['large_image.show_extra'] === '{}' &&
                         settings['large_image.show_extra_admin'] === '{"images": ["label", "macro"]}');
             }, 'large_image settings to change');
