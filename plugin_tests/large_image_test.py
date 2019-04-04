@@ -100,7 +100,8 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
                                        'must be a boolean'):
                 Setting().set(key, 'not valid')
         testExtraVal = json.dumps({'images': ['label']})
-        for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
+        for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC,
+                    constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
                     constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN):
             Setting().set(key, '')
             self.assertEqual(Setting().get(key), '')
@@ -143,6 +144,8 @@ class LargeImageLargeImageTest(common.LargeImageCommonTest):
             constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER], True)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS], True)
+        self.assertEqual(settings[
+            constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC], testExtraVal)
         self.assertEqual(settings[
             constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA], testExtraVal)
         self.assertEqual(settings[
