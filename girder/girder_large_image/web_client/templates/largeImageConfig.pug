@@ -49,7 +49,12 @@ form#g-large-image-form(role="form")
     label
       | Additional details to show in item lists
     p.g-large-image-description
-      | Details to show for all users.
+      | Details to show to anonymous users.
+    input.input-sm.form-control.g-large-image-show-extra-public(
+      type="text", value=settings['large_image.show_extra_public'], placeholder='A JSON object listing extra details to show.  For example: {"images": ["label", "macro"]}',
+      title='This can be specified images and metadata as a JSON object such as {"images": ["label", "macro"]}')
+    p.g-large-image-description
+      | Details to show for all logged-in users.
     input.input-sm.form-control.g-large-image-show-extra(
       type="text", value=settings['large_image.show_extra'], placeholder='A JSON object listing extra details to show.  For example: {"images": ["label", "macro"]}',
       title='This can be specified images and metadata as a JSON object such as {"images": ["label", "macro"]}')

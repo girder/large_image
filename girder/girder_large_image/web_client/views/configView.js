@@ -34,6 +34,9 @@ var ConfigView = View.extend({
                 key: 'large_image.max_small_image_size',
                 value: +this.$('.g-large-image-max-small-image-size').val()
             }, {
+                key: 'large_image.show_extra_public',
+                value: this.$('.g-large-image-show-extra-public').val()
+            }, {
                 key: 'large_image.show_extra',
                 value: this.$('.g-large-image-show-extra').val()
             }, {

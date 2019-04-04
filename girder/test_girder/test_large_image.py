@@ -69,7 +69,8 @@ def testSettings(server):
             Setting().set(key, 'not valid')
         assert 'must be a boolean' in str(exc)
     testExtraVal = json.dumps({'images': ['label']})
-    for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
+    for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC,
+                constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
                 constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN):
         Setting().set(key, '')
         assert Setting().get(key) == ''
@@ -100,6 +101,7 @@ def testSettings(server):
     assert settings[constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER] == 'geojs'
     assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER] is True
     assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS] is True
+    assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC] == testExtraVal
     assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA] == testExtraVal
     assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN] == testExtraVal
     assert settings[constants.PluginSettings.LARGE_IMAGE_AUTO_SET] is True
