@@ -143,8 +143,7 @@ class AnnotationResource(Resource):
         .errorResponse('Read access was denied for the annotation.', 403)
         .notes('Use "size" or "details" as possible sort keys.')
     )
-    @access.cookie
-    @access.public
+    @access.public(cookie=True)
     def getAnnotation(self, id, params):
         user = self.getCurrentUser()
         return self._getAnnotation(user, id, params)
@@ -390,8 +389,7 @@ class AnnotationResource(Resource):
                       defaultSortDir=SortDir.DESCENDING)
         .errorResponse('Read access was denied for the annotation.', 403)
     )
-    @access.cookie
-    @access.public
+    @access.public(cookie=True)
     def getAnnotationHistoryList(self, id, limit, offset, sort):
         return list(Annotation().versionList(id, self.getCurrentUser(), limit, offset, sort))
 
@@ -403,8 +401,7 @@ class AnnotationResource(Resource):
         .errorResponse('Annotation history version not found.')
         .errorResponse('Read access was denied for the annotation.', 403)
     )
-    @access.cookie
-    @access.public
+    @access.public(cookie=True)
     def getAnnotationHistory(self, id, version):
         result = Annotation().getVersion(id, version, self.getCurrentUser())
         if result is None:

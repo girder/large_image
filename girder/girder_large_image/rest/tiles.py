@@ -300,11 +300,8 @@ class TilesItemResource(ItemResource):
     # Without caching, this checks for permissions every time.  By using the
     # LoadModelCache, three database lookups are avoided, which saves around
     # 6 ms in tests. We also avoid the @access.public decorator and directly
-    # set the accessLevel attribute on the method, since in some environments
-    # access.cookie and access.public decorators interact with each other and
-    # both are necessary to get cookie access to work.
-    #   @access.cookie   # access.cookie always looks up the token
-    #   @access.public
+    # set the accessLevel attribute on the method.
+    #   @access.public(cookie=True)
     #   @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     #   def getTile(self, item, z, x, y, params):
     #       return self._getTile(item, z, x, y, params, True)
@@ -321,6 +318,7 @@ class TilesItemResource(ItemResource):
             redirect = False
         return self._getTile(item, z, x, y, params, mayRedirect=redirect)
     getTile.accessLevel = 'public'
+    getTile.cookieAuth = True
 
     @describeRoute(
         Description('Get a test large image tile.')
@@ -332,8 +330,7 @@ class TilesItemResource(ItemResource):
                paramType='path')
         .produces(ImageMimeTypes)
     )
-    @access.cookie
-    @access.public
+    @access.public(cookie=True)
     def getTestTile(self, z, x, y, params):
         item = {'largeImage': {'sourceName': 'test'}}
         imageArgs = self._parseTestParams(params)
@@ -380,8 +377,7 @@ class TilesItemResource(ItemResource):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-    @access.cookie
-    @access.public
+    @access.public(cookie=True)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesThumbnail(self, item, params):
         _adjustParams(params)
@@ -483,8 +479,7 @@ class TilesItemResource(ItemResource):
         .errorResponse('Read access was denied for the item.', 403)
         .errorResponse('Insufficient memory.')
     )
-    @access.cookie
-    @access.public
+    @access.public(cookie=True)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesRegion(self, item, params):
         _adjustParams(params)
@@ -538,8 +533,7 @@ class TilesItemResource(ItemResource):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-    @access.cookie
-    @access.public
+    @access.public(cookie=True)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesPixel(self, item, params):
         params = self._parseParams(params, True, [
@@ -590,7 +584,7 @@ class TilesItemResource(ItemResource):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-    @access.public
+    @access.public(cookie=True)
     def getAssociatedImage(self, itemId, image, params):
         _adjustParams(params)
         # We can't use the loadmodel decorator, as we want to allow cookies
