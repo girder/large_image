@@ -42,6 +42,25 @@ except DistributionNotFound:
     pass
 
 
+def _nearPowerOfTwo(val1, val2, tolerance=0.02):
+    """
+    Check if two values are different by nearly a power of two.
+
+    :param val1: the first value to check.
+    :param val2: the second value to check.
+    :param tolerance: the maximum difference in the log2 ratio's mantissa.
+    :return: True if the valeus are nearly a power of two different from each
+        other; false otherwise.
+    """
+    # If one or more of the values is zero or they have different signs, then
+    # return False
+    if val1 * val2 <= 0:
+        return False
+    log2ratio = math.log(float(val1) / float(val2)) / math.log(2)
+    # Compare the mantissa of the ratio's log2 value.
+    return abs(log2ratio - round(log2ratio)) < tolerance
+
+
 @six.add_metaclass(LruCacheMetaclass)
 class TiffFileTileSource(FileTileSource):
     """
@@ -104,7 +123,7 @@ class TiffFileTileSource(FileTileSource):
                 float(td.imageWidth) / td.tileWidth,
                 float(td.imageHeight) / td.tileHeight)) / math.log(2))))
             # Store information for sorting with the directory.
-            alldir.append((td.tileWidth * td.tileHeight, level, td))
+            alldir.append((td.tileWidth * td.tileHeight, level, directoryNum, td))
         # If there are no tiled images, raise an exception.
         if not len(alldir):
             msg = 'File %s didn\'t meet requirements for tile source: %s' % (
@@ -121,17 +140,26 @@ class TiffFileTileSource(FileTileSource):
         # preferred image
         for tdir in alldir:
             td = tdir[-1]
-            level = tdir[-2]
+            level = tdir[1]
             if (td.tileWidth != highest.tileWidth or
                     td.tileHeight != highest.tileHeight):
                 continue
+            # If a layer's image is not a multiple of the tile size, it should
+            # be near a power of two of the highest resolution image.
+            if (((td.imageWidth % td.tileWidth) and
+                    not _nearPowerOfTwo(td.imageWidth, highest.imageWidth)) or
+                    ((td.imageHeight % td.tileHeight) and
+                        not _nearPowerOfTwo(td.imageHeight, highest.imageHeight))):
+                continue
             directories[level] = td
+        if len(directories) < 2 and max(directories.keys()) + 1 > 4:
+            raise TileSourceException(
+                'Tiff image must have at least two levels.')
 
         # Sort the directories so that the highest resolution is the last one;
         # if a level is missing, put a None value in its place.
         self._tiffDirectories = [directories.get(key) for key in
                                  range(max(directories.keys()) + 1)]
-
         self.tileWidth = highest.tileWidth
         self.tileHeight = highest.tileHeight
         self.levels = len(self._tiffDirectories)

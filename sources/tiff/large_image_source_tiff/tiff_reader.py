@@ -194,13 +194,15 @@ class TiledTiffDirectory(object):
             raise ValidationTiffException(
                 'Only RGB and greyscale TIFF files are supported')
 
-        if self._tiffInfo.get('bitspersample') != 8:
+        if (self._tiffInfo.get('bitspersample') != 8 and (
+                self._tiffInfo.get('compression') != libtiff_ctypes.COMPRESSION_NONE or
+                self._tiffInfo.get('bitspersample') != 16)):
             raise ValidationTiffException(
                 'Only single-byte sampled TIFF files are supported')
 
-        if self._tiffInfo.get('sampleformat') not in (
+        if self._tiffInfo.get('sampleformat') not in {
                 None,  # default is still SAMPLEFORMAT_UINT
-                libtiff_ctypes.SAMPLEFORMAT_UINT):
+                libtiff_ctypes.SAMPLEFORMAT_UINT}:
             raise ValidationTiffException(
                 'Only unsigned int sampled TIFF files are supported')
 
@@ -208,22 +210,24 @@ class TiledTiffDirectory(object):
             raise ValidationTiffException(
                 'Only contiguous planar configuration TIFF files are supported')
 
-        if self._tiffInfo.get('photometric') not in (
+        if self._tiffInfo.get('photometric') not in {
                 libtiff_ctypes.PHOTOMETRIC_MINISBLACK,
                 libtiff_ctypes.PHOTOMETRIC_RGB,
-                libtiff_ctypes.PHOTOMETRIC_YCBCR):
+                libtiff_ctypes.PHOTOMETRIC_YCBCR}:
             raise ValidationTiffException(
                 'Only greyscale (black is 0), RGB, and YCbCr photometric '
                 'interpretation TIFF files are supported')
 
-        if self._tiffInfo.get('orientation') != libtiff_ctypes.ORIENTATION_TOPLEFT:
+        if self._tiffInfo.get('orientation') not in {None, libtiff_ctypes.ORIENTATION_TOPLEFT}:
             raise ValidationTiffException(
                 'Only top-left orientation TIFF files are supported')
 
-        if self._tiffInfo.get('compression') not in (
-                libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005):
+        if self._tiffInfo.get('compression') not in {
+                libtiff_ctypes.COMPRESSION_NONE,
+                libtiff_ctypes.COMPRESSION_JPEG,
+                33003, 33005}:
             raise ValidationTiffException(
-                'Only JPEG compression TIFF files are supported')
+                'Only uncompressed and JPEG compressed TIFF files are supported')
         if (not self._tiffInfo.get('istiled') or
                 not self._tiffInfo.get('tilewidth') or
                 not self._tiffInfo.get('tilelength')):
@@ -481,6 +485,30 @@ class TiledTiffDirectory(object):
         tileData = frameBuffer.raw[frameStartPos:-2]
         return tileData
 
+    def _getUncompressedTile(self, tileNum):
+        """
+        Get an uncompressed tile.
+
+        :param tileNum: The internal tile number of the desired tile.
+        :type tileNum: int
+        :return: the tile as a PIL 8-bit-per-channel images.
+        :rtype: PIL.Image
+        :raises: IOTiffException
+        """
+        tileSize = libtiff_ctypes.libtiff.TIFFTileSize(self._tiffFile).value
+        imageBuffer = ctypes.create_string_buffer(tileSize)
+
+        readSize = libtiff_ctypes.libtiff.TIFFReadEncodedTile(
+            self._tiffFile, tileNum, imageBuffer, tileSize)
+        if readSize < tileSize:
+            raise IOTiffException('Read an unexpected number of bytes from an encoded tile')
+        mode = 'L' if self._tiffInfo.get('samplesperpixel') == 1 else 'RGB'
+        if self._tiffInfo.get('bitspersample') == 16:
+            # Just take the high byte
+            imageBuffer = imageBuffer[1::2]
+        image = PIL.Image.frombytes(mode, (self._tileWidth, self._tileHeight), imageBuffer)
+        return image
+
     @property
     def tileWidth(self):
         """
@@ -551,6 +579,8 @@ class TiledTiffDirectory(object):
             image = image.convert('RGB')
             return image
 
+        return self._getUncompressedTile(tileNum)
+
     def parse_image_description(self, meta=None):
 
         self._pixelInfo = {}
@@ -566,7 +596,7 @@ class TiledTiffDirectory(object):
             if 'AppMag = ' in meta:
                 try:
                     self._pixelInfo = {
-                        'magnification': float(meta.split('AppMag = ')[1])
+                        'magnification': float(meta.split('AppMag = ')[1].split('|')[0].strip())
                     }
                 except Exception:
                     pass
