@@ -10,6 +10,7 @@ girder-jobs>=3.0.0a5
 # Get both the girder and worker dependencies so tasks can be used stand-alone
 -e tasks[girder,worker]
 -e girder/.
+-e girder_annotation/.
 
 # External dependencies
 pip>=9

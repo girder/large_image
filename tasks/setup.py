@@ -23,7 +23,7 @@ def prerelease_local_scheme(version):
 
 
 setup(
-    name='large_image_tasks',
+    name='large-image-tasks',
     use_scm_version={'root': '..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
     description='Girder Worker tasks for Large Image.',

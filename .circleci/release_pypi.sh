@@ -9,6 +9,9 @@ twine upload --verbose dist/*
 cd "$ROOTPATH/girder"
 python setup.py sdist
 twine upload --verbose dist/*
+cd "$ROOTPATH/girder_annotation"
+python setup.py sdist
+twine upload --verbose dist/*
 cd "$ROOTPATH/tasks"
 python setup.py sdist
 twine upload --verbose dist/*
