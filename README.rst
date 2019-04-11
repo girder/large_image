@@ -11,6 +11,8 @@ Large Image consists of several Python modules designed to work together.  These
 - ``girder_large_image``: Large Image as a Girder_ 3.x plugin.
   You can specify extras_require of ``tasks`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
 
+- ``girder_large_image_annotation``: Annotations for large images as a Girder_ 3.x plugin.
+
 - ``large_image_tasks``: A utility for using pyvips to convert images into pyramidal tiff files that can be read efficiently by large_image.  This can be used by itself or with Girder Worker.
 
 - Tile sources:

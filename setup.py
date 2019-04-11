@@ -43,7 +43,7 @@ def prerelease_local_scheme(version):
 
 
 setup(
-    name='large_image',
+    name='large-image',
     use_scm_version={'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
     description='Create, serve, and display large multiresolution images.',
