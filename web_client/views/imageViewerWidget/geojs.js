@@ -232,7 +232,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     }
                 });
                 this._mutateFeaturePropertiesForHighlight(annotation.id, features);
-                this.viewer.draw();
+                this.viewer.scheduleAnimationFrame(this.viewer.draw);
             });
     },
 
@@ -274,6 +274,18 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 // this slows down interactivity considerably.
                 return;
             }
+            var prop = {
+                datalen: data.length,
+                annotationId: annotationId,
+                fillOpacity: this._globalAnnotationFillOpacity,
+                highlightannot: this._highlightAnnotation,
+                highlightelem: this._highlightElement
+            };
+
+            if (_.isMatch(feature._lastFeatureProp, prop)) {
+                return;
+            }
+
             // pre-allocate arrays for performance
             const fillOpacityArray = new Array(data.length);
             const strokeOpacityArray = new Array(data.length);
@@ -295,6 +307,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
             feature.updateStyleFromArray('fillOpacity', fillOpacityArray);
             feature.updateStyleFromArray('strokeOpacity', strokeOpacityArray);
+            feature._lastFeatureProp = prop;
         });
     },
 
@@ -341,7 +354,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             });
             delete this._annotations[annotation.id];
             delete this._featureOpacity[annotation.id];
-            this.featureLayer.draw();
+            this.viewer.scheduleAnimationFrame(this.viewer.draw);
         }
     },
 
@@ -443,7 +456,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 const features = layer.features;
                 this._mutateFeaturePropertiesForHighlight(annotationId, features);
             });
-            this.featureLayer.draw();
+            this.viewer.scheduleAnimationFrame(this.viewer.draw);
         }
         return this;
     },
