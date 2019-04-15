@@ -36,6 +36,7 @@ from girder.plugins.jobs.models.job import Job
 
 from .base import TileGeneralException
 from .. import constants
+from ..constants import SourcePriority
 from ..tilesource import AvailableTileSources, TileSourceException
 
 
@@ -70,12 +71,21 @@ class ImageItem(Item):
 
         item['largeImage']['fileId'] = fileObj['_id']
         job = None
-        for sourceName in AvailableTileSources:
+        extensions = fileObj['exts']
+        sourceList = []
+        for idx, sourceName in enumerate(AvailableTileSources):
             if getattr(AvailableTileSources[sourceName], 'girderSource',
                        False):
-                if AvailableTileSources[sourceName].canRead(item):
-                    item['largeImage']['sourceName'] = sourceName
-                    break
+                sourceExtensions = AvailableTileSources[sourceName].extensions
+                priority = sourceExtensions.get(None, SourcePriority.MANUAL)
+                for ext in extensions:
+                    if ext in sourceExtensions:
+                        priority = min(priority, sourceExtensions[ext])
+                sourceList.append((priority, idx, sourceName))
+        for _priority, idx, sourceName in sorted(sourceList):
+            if AvailableTileSources[sourceName].canRead(item):
+                item['largeImage']['sourceName'] = sourceName
+                break
         if 'sourceName' not in item['largeImage'] and not createJob:
             raise TileGeneralException(
                 'A job must be used to generate a largeImage.')

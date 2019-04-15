@@ -21,6 +21,7 @@ import colorsys
 import six
 from .base import TileSource, TileSourceException
 from ..cache_util import strhash, methodcache, LruCacheMetaclass
+from ..constants import SourcePriority
 
 import PIL
 from PIL import Image, ImageDraw, ImageFont
@@ -36,6 +37,9 @@ tileCounter = 0
 class TestTileSource(TileSource):
     cacheName = 'tilesource'
     name = 'test'
+    extensions = {
+        None: SourcePriority.MANUAL
+    }
 
     def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,

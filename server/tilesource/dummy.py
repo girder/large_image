@@ -18,10 +18,14 @@
 ##############################################################################
 
 from .base import TileSource
+from ..constants import SourcePriority
 
 
 class DummyTileSource(TileSource):
     name = 'dummy'
+    extensions = {
+        None: SourcePriority.MANUAL
+    }
 
     def __init__(self, *args, **kwargs):
         super(DummyTileSource, self).__init__()

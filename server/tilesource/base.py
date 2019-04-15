@@ -18,9 +18,11 @@
 #############################################################################
 
 import math
+import os
 from six import BytesIO
 
 from ..cache_util import getTileCache, strhash, methodcache
+from ..constants import SourcePriority
 
 try:
     import girder
@@ -363,6 +365,13 @@ class LazyTileDict(dict):
 
 class TileSource(object):
     name = None
+
+    # extensions is a dictionary of known file extensions and the
+    # SourcePriority given to each.  It must contain a None key with a priority
+    # for the tile source when the extension does not match.
+    extensions = {
+        None: SourcePriority.FALLBACK
+    }
 
     def __init__(self, jpegQuality=95, jpegSubsampling=0,
                  encoding='JPEG', edge=False, tiffCompression='raw', *args,
@@ -1838,7 +1847,7 @@ if girder:  # noqa - the whole class is allowed to exceed complexity rules
                     'No large image file in this item: %s' % e.args[0])
 
 
-def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,
+def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,  # noqa
                           **kwargs):
     """
     Get a tile source based on an ordered dictionary of known sources and a
@@ -1853,22 +1862,43 @@ def getTileSourceFromDict(availableSources, pathOrUri, user=None, *args,
     """
     sourceObj = pathOrUri
     uriWithoutProtocol = pathOrUri.split('://', 1)[-1]
+    extensions = [ext.lower() for ext in os.path.basename(uriWithoutProtocol).split('.')[1:]]
     isGirder = pathOrUri.startswith('girder_item://')
     if isGirder and girder:
         sourceObj = Item().load(uriWithoutProtocol, user=user, level=AccessType.READ)
+        try:
+            if sourceObj.get('largeImage', {}).get('fileId'):
+                file = File().load(sourceObj['largeImage']['fileId'], force=True)
+            else:
+                file = Item().childFiles(sourceObj, limit=1)[0]
+            extensions = file['exts']
+        except Exception:
+            pass
     isLargeImageUri = pathOrUri.startswith('large_image://')
-    for sourceName in availableSources:
+    sourceList = []
+    for idx, sourceName in enumerate(availableSources):
+        sourceExtensions = availableSources[sourceName].extensions
+        priority = sourceExtensions.get(None, SourcePriority.MANUAL)
+        for ext in extensions:
+            if ext in sourceExtensions:
+                priority = min(priority, sourceExtensions[ext])
         useSource = False
         girderSource = getattr(availableSources[sourceName], 'girderSource',
                                False)
         if isGirder:
             if girderSource:
-                useSource = availableSources[sourceName].canRead(sourceObj)
+                useSource = True
         elif isLargeImageUri:
             if sourceName == uriWithoutProtocol:
                 useSource = True
+                return availableSources[sourceName](sourceObj, *args, **kwargs)
         elif not girderSource:
-            useSource = availableSources[sourceName].canRead(sourceObj)
+            useSource = True
+        if priority >= SourcePriority.MANUAL:
+            continue
         if useSource:
+            sourceList.append((priority, idx, sourceName))
+    for _priority, idx, sourceName in sorted(sourceList):
+        if availableSources[sourceName].canRead(sourceObj, *args, **kwargs):
             return availableSources[sourceName](sourceObj, *args, **kwargs)
     raise TileSourceException('No available tilesource for %s' % pathOrUri)

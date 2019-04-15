@@ -31,6 +31,7 @@ from operator import attrgetter
 
 from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL, TileInputUnits
 from ..cache_util import LruCacheMetaclass, methodcache, strhash
+from ..constants import SourcePriority
 
 try:
     import girder
@@ -47,9 +48,20 @@ class MapnikTileSource(FileTileSource):
     """
     Provides tile access to geospatial files.
     """
-
     cacheName = 'tilesource'
     name = 'mapnikfile'
+
+    # mimeTypes are common mime-types handleds by the source.  They can be used
+    # in place of or in additional to extensions
+    mimeTypes = {
+        None: SourcePriority.MEDIUM,
+        'nc': SourcePriority.PREFERRED,  # netcdf
+        # National Imagery Transmission Format
+        'ntf': SourcePriority.PREFERRED,
+        'nitf': SourcePriority.PREFERRED,
+        'tif': SourcePriority.LOW,
+        'tiff': SourcePriority.LOW,
+    }
 
     def __init__(self, path, projection=None, style=None, unitsPerPixel=None, **kwargs):
         """
