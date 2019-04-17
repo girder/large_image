@@ -88,6 +88,8 @@ class TilesItemResource(ItemResource):
                            self.getTilesPixel)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'fzxy', ':frame', ':z', ':x', ':y'),
+                           self.getTileWithFrame)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'images'),
                            self.getAssociatedImagesList)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'images', ':image'),
@@ -373,6 +375,43 @@ class TilesItemResource(ItemResource):
     getTile.cookieAuth = True
 
     @describeRoute(
+        Description('Get a large image tile with a frame number.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('frame', 'The frame number of the tile.', paramType='path')
+        .param('z', 'The layer number of the tile (0 is the most zoomed-out '
+               'layer).', paramType='path')
+        .param('x', 'The X coordinate of the tile (0 is the left side).',
+               paramType='path')
+        .param('y', 'The Y coordinate of the tile (0 is the top).',
+               paramType='path')
+        .param('redirect', 'If the tile exists as a complete file, allow an '
+               'HTTP redirect instead of returning the data directly.  The '
+               'redirect might not have the correct mime type.  "exact" must '
+               'match the image encoding and quality parameters, "encoding" '
+               'must match the image encoding but disregards quality, and '
+               '"any" will redirect to any image if possible.', required=False,
+               enum=['false', 'exact', 'encoding', 'any'], default='false')
+        .produces(ImageMimeTypes)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    # See getTile for caching rationale
+    def getTileWithFrame(self, itemId, frame, z, x, y, params):
+        _adjustParams(params)
+        item = loadmodelcache.loadModel(
+            self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
+        # Explicitly set a expires time to encourage browsers to cache this for
+        # a while.
+        setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
+            cherrypy.serving.response.time + 600))
+        redirect = params.get('redirect', False)
+        if redirect not in ('any', 'exact', 'encoding'):
+            redirect = False
+        params['frame'] = frame
+        return self._getTile(item, z, x, y, params, mayRedirect=redirect)
+    getTileWithFrame.accessLevel = 'public'
+
+    @describeRoute(
         Description('Get a test large image tile.')
         .param('z', 'The layer number of the tile (0 is the most zoomed-out '
                'layer).', paramType='path')
@@ -487,6 +526,9 @@ class TilesItemResource(ItemResource):
                'padded on either the sides or the top and bottom to the '
                'requested output size.  Most css colors are accepted.',
                required=False)
+        .param('frame', 'For multiframe images, the 0-based frame number.  '
+               'This is ignored on non-multiframe images.', required=False,
+               dataType='int')
         .param('encoding', 'Thumbnail output encoding', required=False,
                enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
         .param('contentDisposition', 'Specify the Content-Disposition response '
@@ -504,6 +546,7 @@ class TilesItemResource(ItemResource):
             ('width', int),
             ('height', int),
             ('fill', str),
+            ('frame', int),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
             ('tiffCompression', str),
@@ -579,6 +622,9 @@ class TilesItemResource(ItemResource):
         .param('exact', 'If magnification, mm_x, or mm_y are specified, they '
                'must match an existing level of the image exactly.',
                required=False, dataType='boolean', default=False)
+        .param('frame', 'For multiframe images, the 0-based frame number.  '
+               'This is ignored on non-multiframe images.', required=False,
+               dataType='int')
         .param('encoding', 'Output image encoding', required=False,
                enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
@@ -618,6 +664,7 @@ class TilesItemResource(ItemResource):
             ('mm_x', float, 'scale', 'mm_x'),
             ('mm_y', float, 'scale', 'mm_y'),
             ('exact', bool, 'scale', 'exact'),
+            ('frame', int),
             ('encoding', str),
             ('jpegQuality', int),
             ('jpegSubsampling', int),
@@ -649,6 +696,9 @@ class TilesItemResource(ItemResource):
                'magnfication, fraction is a scale of [0-1].', required=False,
                enum=sorted(set(TileInputUnits.values())),
                default='base_pixels')
+        .param('frame', 'For multiframe images, the 0-based frame number.  '
+               'This is ignored on non-multiframe images.', required=False,
+               dataType='int')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
@@ -661,6 +711,7 @@ class TilesItemResource(ItemResource):
             ('right', float, 'region', 'right'),
             ('bottom', float, 'region', 'bottom'),
             ('units', str, 'region', 'units'),
+            ('frame', int),
         ])
         try:
             pixel = self.imageItemModel.getPixel(item, **params)

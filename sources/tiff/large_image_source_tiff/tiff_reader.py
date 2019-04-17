@@ -21,6 +21,7 @@ import PIL.Image
 import os
 import six
 
+from collections import defaultdict
 from functools import partial
 from xml.etree import cElementTree
 
@@ -43,6 +44,37 @@ except ValueError as exc:
 
 # This suppress warnings about unknown tags
 libtiff_ctypes.suppress_warnings()
+
+
+def etreeToDict(t):
+    """
+    Convert an xml etree to a nested dictionary without schema names in the
+    keys.
+
+    @param t: an etree.
+    @returns: a python dictionary with the results.
+    """
+    # Remove schema
+    tag = t.tag.split('}', 1)[1] if t.tag.startswith('{') else t.tag
+    d = {tag: {}}
+    children = list(t)
+    if children:
+        entries = defaultdict(list)
+        for entry in map(etreeToDict, children):
+            for k, v in six.iteritems(entry):
+                entries[k].append(v)
+        d = {tag: {k: v[0] if len(v) == 1 else v
+                   for k, v in six.iteritems(entries)}}
+
+    if t.attrib:
+        d[tag].update({(k.split('}', 1)[1] if k.startswith('{') else k): v
+                       for k, v in six.iteritems(t.attrib)})
+    text = (t.text or '').strip()
+    if text and len(d[tag]):
+        d[tag]['text'] = text
+    elif text:
+        d[tag] = text
+    return d
 
 
 def patchLibtiff():
@@ -206,7 +238,9 @@ class TiledTiffDirectory(object):
             raise ValidationTiffException(
                 'Only unsigned int sampled TIFF files are supported')
 
-        if self._tiffInfo.get('planarconfig') != libtiff_ctypes.PLANARCONFIG_CONTIG:
+        if (self._tiffInfo.get('planarconfig') != libtiff_ctypes.PLANARCONFIG_CONTIG and
+                self._tiffInfo.get('photometric') not in {
+                    libtiff_ctypes.PHOTOMETRIC_MINISBLACK}):
             raise ValidationTiffException(
                 'Only contiguous planar configuration TIFF files are supported')
 
@@ -581,8 +615,7 @@ class TiledTiffDirectory(object):
 
         return self._getUncompressedTile(tileNum)
 
-    def parse_image_description(self, meta=None):
-
+    def parse_image_description(self, meta=None):  # noqa
         self._pixelInfo = {}
         self._embeddedImages = {}
 
@@ -631,4 +664,8 @@ class TiledTiffDirectory(object):
                 'WSI': 'thumbnail',
             }
             self._embeddedImages[typemap.get(typestr, typestr.lower())] = datastr
+        try:
+            self._description_xml = etreeToDict(xml)
+        except Exception:
+            pass
         return True

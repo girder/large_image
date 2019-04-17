@@ -1,29 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import itertools
 import os
-import platform
 from setuptools import setup, find_packages
-
-with open('README.rst') as readme_file:
-    readme = readme_file.read()
-
-extraReqs = {
-    'memcached': ['pylibmc>=1.5.1'] if platform.system() != 'Windows' else [],
-}
-sources = {
-    'dummy': ['large-image-source-dummy'],
-    'mapnik': ['large-image-source-mapnik'],
-    'ometiff': ['large-image-source-ometiff'],
-    'openslide': ['large-image-source-openslide'],
-    'pil': ['large-image-source-pil'],
-    'tiff': ['large-image-source-tiff'],
-    'test': ['large-image-source-test'],
-}
-extraReqs.update(sources)
-extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
-extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
 
 
 def prerelease_local_scheme(version):
@@ -44,10 +23,10 @@ def prerelease_local_scheme(version):
 
 
 setup(
-    name='large-image',
-    use_scm_version={'local_scheme': prerelease_local_scheme},
+    name='large-image-source-ometiff',
+    use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
-    description='Create, serve, and display large multiresolution images.',
+    description='An OMETiff tilesource for large_image',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
     classifiers=[
@@ -61,19 +40,22 @@ setup(
         'Programming Language :: Python :: 3.7'
     ],
     install_requires=[
-        'cachetools>=3.0.0',
-        'Pillow>=3.2.0',
-        'psutil>=4.2.0',  # technically optional
-        'numpy>=1.10.4',
-        'six>=1.10.0',
+        'large-image>=1.0.0.dev0',
+        'large-image-source-tiff>=1.0.0.dev0',
     ],
-    extras_require=extraReqs,
-    include_package_data=True,
-    keywords='large_image',
+    extras_require={
+        'girder': 'girder-large-image>=1.0.0.dev0',
+    },
     license='Apache Software License 2.0',
-    long_description=readme,
-    packages=find_packages(exclude=['test', 'test.*', 'girder']),
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
+    keywords='large_image, tile source',
+    packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    zip_safe=False,
+    entry_points={
+        'large_image.source': [
+            'ometiff = large_image_source_ometiff:OMETiffFileTileSource'
+        ],
+        'girder_large_image.source': [
+            'ometiff = large_image_source_ometiff.girder_source:OMETiffGirderTileSource'
+        ]
+    },
 )

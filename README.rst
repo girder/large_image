@@ -21,6 +21,8 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-openslide``: A tile source using the OpenSlide library.  This works with svs, ndpi, Mirax, tiff, vms, and other file formats.
 
+  - ``large-image-source-ometiff``: A tile source using the tiff library that can handle some multi-frame OMETiff files.
+
   - ``large-image-source-pil``: A tile source for small images via the Python Imaging Library (Pillow).
 
   - ``large-image-source-mapnik``: A tile source for reading geotiff and netcdf files via Mapnik and GDAL.

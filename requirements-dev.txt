@@ -3,6 +3,7 @@ girder>=3.0.0a5
 girder-jobs>=3.0.0a5
 -e sources/dummy
 -e sources/mapnik
+-e sources/ometiff
 -e sources/openslide
 -e sources/pil
 -e sources/test
