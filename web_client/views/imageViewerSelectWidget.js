@@ -37,6 +37,9 @@ var ImageViewerSelectWidget = View.extend({
         },
         'keyup select': function (event) {
             this._selectViewer(event.target.value);
+        },
+        'input #image-frame,#image-frame-number': function (event) {
+            this.frameUpdate(event.target);
         }
     },
 
@@ -80,6 +83,9 @@ var ImageViewerSelectWidget = View.extend({
             this.currentViewer.destroy();
             this.currentViewer = null;
         }
+        // hide general image controls; individual viewers must enable them
+        this.$('.image-controls>span').toggleClass('hidden', true);
+        this._frameUpdate = null;
         this.$('.image-viewer').toggleClass('hidden', true);
 
         var viewer = _.findWhere(largeImageConfig.viewers,
@@ -93,12 +99,54 @@ var ImageViewerSelectWidget = View.extend({
             el: viewerEl,
             parentView: this,
             itemId: this.itemId,
-            model: this.model
+            model: this.model,
+            setFrames: _.bind(this.setFrames, this)
         });
         this.currentViewer.name = viewerName;
         this._annotationList
             .setViewer(this.currentViewer)
             .render();
+    },
+
+    /**
+     * If a viewer supports handling multi-frame images, call this as part of
+     * this initial render to expose frame controls.
+     *
+     * @param {object} metadata A dictionary of metadata that might contain a
+     *      list of frames.
+     * @param {function} frameUpdate a function to call with the current frame
+     *      number when it changes.  This is called with an initial frame
+     *      number if the frame controls are available.  It is never called if
+     *      there is only one frame.
+     */
+    setFrames: function (metadata, frameUpdate) {
+        if (metadata.frames && metadata.frames.length > 1) {
+            this._frameUpdate = frameUpdate;
+            this.$('.image-controls-frame').removeClass('hidden');
+            var ctrl = this.$('#image-frame'),
+                ctrlnum = this.$('#image-frame-number');
+            ctrl.attr('max', metadata.frames.length - 1);
+            ctrlnum.attr('max', metadata.frames.length - 1);
+            var frame = +ctrl.val();
+            if (frame >= metadata.frames.length) {
+                ctrl.val(0);
+                frame = 0;
+            }
+            ctrlnum.val(frame);
+            frameUpdate(frame);
+        }
+    },
+
+    /**
+     * Handle a change in a frame control.
+     */
+    frameUpdate: function (ctrl) {
+        ctrl = $(ctrl);
+        var frame = ctrl.val();
+        this.$('#image-frame,#image-frame-number').val(frame);
+        if (this._frameUpdate) {
+            this._frameUpdate(frame);
+        }
     }
 });
 

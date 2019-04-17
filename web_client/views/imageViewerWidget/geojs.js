@@ -36,6 +36,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
         this._scale = settings.scale;
+        this._setFrames = settings.setFrames;
 
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
@@ -87,8 +88,12 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 this.el, w, h, this.tileWidth, this.tileHeight);
             params.layer.useCredentials = true;
             params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
+            if (this.tileWidth > 8192 || this.tileHeight > 8192) {
+                params.layer.renderer = 'canvas';
+            }
             this.viewer = geo.map(params.map);
-            this.viewer.createLayer('osm', params.layer);
+            params.layer.autoshareRenderer = false;
+            this._layer = this.viewer.createLayer('osm', params.layer);
         } else {
             params = {
                 keepLower: false,
@@ -107,7 +112,14 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 bottom: this.metadata.bounds.ymin
             }, 'EPSG:3857');
             this.viewer.createLayer('osm');
-            this.viewer.createLayer('osm', params);
+            if (this.tileWidth > 8192 || this.tileHeight > 8192) {
+                params.renderer = 'canvas';
+            }
+            params.autoshareRenderer = false;
+            this._layer = this.viewer.createLayer('osm', params);
+        }
+        if (this._setFrames) {
+            this._setFrames(this.metadata, _.bind(this.frameUpdate, this));
         }
         this.viewer.geoOn(geo.event.pan, () => {
             this.setBounds();
@@ -134,6 +146,38 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         this.trigger('g:imageRendered', this);
         return this;
+    },
+
+    frameUpdate: function (frame) {
+        if (this._frame === undefined) {
+            // don't set up layers until the we access the first non-zero frame
+            if (frame === 0) {
+                return;
+            }
+            // use two layers to get smooth transitions
+            this._layer2 = this.viewer.createLayer('osm', this._layer._options);
+            this._layer2.moveDown();
+            this._baseurl = this._layer.url();
+            this._frame = 0;
+        }
+        this._nextframe = frame;
+        if (frame !== this._frame && !this._updating) {
+            this._updating = true;
+            this._frame = frame;
+            this.viewer.onIdle(() => {
+                this._layer2.url(this._baseurl + '?frame=' + frame);
+                this.viewer.onIdle(() => {
+                    this._layer.moveDown();
+                    var ltemp = this._layer;
+                    this._layer = this._layer2;
+                    this._layer2 = ltemp;
+                    this._updating = false;
+                    if (frame !== this._nextframe) {
+                        this.frameUpdate(this._nextframe);
+                    }
+                });
+            });
+        }
     },
 
     destroy: function () {

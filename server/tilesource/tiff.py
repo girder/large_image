@@ -74,8 +74,8 @@ class TiffFileTileSource(FileTileSource):
     name = 'tifffile'
     extensions = {
         None: SourcePriority.MEDIUM,
-        'tif': SourcePriority.PREFERRED,
-        'tiff': SourcePriority.PREFERRED,
+        'tif': SourcePriority.HIGH,
+        'tiff': SourcePriority.HIGH,
         'ptif': SourcePriority.PREFERRED,
         'ptiff': SourcePriority.PREFERRED,
     }
@@ -220,7 +220,7 @@ class TiffFileTileSource(FileTileSource):
             if self._tiffDirectories[z] is None:
                 if sparseFallback:
                     raise IOTiffException('Missing z level %d' % z)
-                tile = self.getTileFromEmptyDirectory(x, y, z)
+                tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
                 format = TILE_FORMAT_PIL
             else:
                 tile = self._tiffDirectories[z].getTile(x, y)
@@ -235,8 +235,11 @@ class TiffFileTileSource(FileTileSource):
             raise TileSourceException(e.args[0])
         except IOTiffException as e:
             if sparseFallback and z and PIL:
-                image = self.getTile(x / 2, y / 2, z - 1, pilImageAllowed=True,
-                                     sparseFallback=sparseFallback, edge=False)
+                noedge = kwargs.copy()
+                noedge.pop('edge', None)
+                image = self.getTile(
+                    x / 2, y / 2, z - 1, pilImageAllowed=True,
+                    sparseFallback=sparseFallback, edge=False, **noedge)
                 if not isinstance(image, PIL.Image.Image):
                     image = PIL.Image.open(BytesIO(image))
                 image = image.crop((
@@ -249,7 +252,7 @@ class TiffFileTileSource(FileTileSource):
                                         **kwargs)
             raise TileSourceException('Internal I/O failure: %s' % e.args[0])
 
-    def getTileFromEmptyDirectory(self, x, y, z):
+    def getTileFromEmptyDirectory(self, x, y, z, **kwargs):
         """
         Given the x, y, z tile location in an unpopulated level, get tiles from
         higher resolution levels to make the lower-res tile.
@@ -274,7 +277,8 @@ class TiffFileTileSource(FileTileSource):
                     continue
                 subtile = self.getTile(
                     x * scale + newX, y * scale + newY, z,
-                    pilImageAllowed=True, sparseFallback=True, edge=False)
+                    pilImageAllowed=True, sparseFallback=True, edge=False,
+                    frame=kwargs.get('frame'))
                 if not isinstance(subtile, PIL.Image.Image):
                     subtile = PIL.Image.open(BytesIO(subtile))
                 tile.paste(subtile, (newX * self.tileWidth,

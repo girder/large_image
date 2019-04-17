@@ -214,7 +214,10 @@ class ImageItem(Item):
 
     def getTile(self, item, x, y, z, mayRedirect=False, **kwargs):
         tileSource = self._loadTileSource(item, **kwargs)
-        tileData = tileSource.getTile(x, y, z, mayRedirect=mayRedirect)
+        imageParams = {}
+        if 'frame' in kwargs:
+            imageParams['frame'] = int(kwargs['frame'])
+        tileData = tileSource.getTile(x, y, z, mayRedirect=mayRedirect, **imageParams)
         tileMimeType = tileSource.getTileMimeType()
         return tileData, tileMimeType
 
