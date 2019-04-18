@@ -71,7 +71,7 @@ class ImageItem(Item):
 
         item['largeImage']['fileId'] = fileObj['_id']
         job = None
-        extensions = fileObj['exts']
+        extensions = [entry.lower() for entry in fileObj['exts']]
         sourceList = []
         for idx, sourceName in enumerate(AvailableTileSources):
             if getattr(AvailableTileSources[sourceName], 'girderSource',

@@ -689,6 +689,23 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertStatusOk(resp)
         self.assertEqual(self.getBody(resp, text=False), image1)
 
+    def testTilesFromSCN(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_leica.scn'))
+        itemId = str(file['itemId'])
+        # The tile request should tell us about the file.  These are specific
+        # to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 512)
+        self.assertEqual(tileMetadata['tileHeight'], 512)
+        self.assertEqual(tileMetadata['sizeX'], 4737)
+        self.assertEqual(tileMetadata['sizeY'], 6338)
+        self.assertEqual(tileMetadata['levels'], 5)
+        self.assertEqual(tileMetadata['magnification'], 20)
+        self._testTilesZXY(itemId, tileMetadata)
+
     def testTilesFromPIL(self):
         # Allow images bigger than our test
         from girder.plugins.large_image import constants
