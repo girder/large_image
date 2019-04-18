@@ -82,6 +82,8 @@ class OpenslideFileTileSource(FileTileSource):
             self._openslide = openslide.OpenSlide(largeImagePath)
         except openslide.lowlevel.OpenSlideUnsupportedFormatError:
             raise TileSourceException('File cannot be opened via OpenSlide.')
+        except openslide.lowlevel.OpenSlideError:
+            raise TileSourceException('File will not be opened via OpenSlide.')
 
         svsAvailableLevels = self._getAvailableLevels(largeImagePath)
         if not len(svsAvailableLevels):

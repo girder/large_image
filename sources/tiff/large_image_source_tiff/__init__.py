@@ -100,11 +100,14 @@ class TiffFileTileSource(FileTileSource):
                 continue
             # Calculate the tile level, where 0 is a single tile, 1 is up to a
             # set of 2x2 tiles, 2 is 4x4, etc.
-            level = max(0, int(math.ceil(math.log(max(
+            level = int(math.ceil(math.log(max(
                 float(td.imageWidth) / td.tileWidth,
-                float(td.imageHeight) / td.tileHeight)) / math.log(2))))
+                float(td.imageHeight) / td.tileHeight)) / math.log(2)))
+            if level < 0:
+                continue
             # Store information for sorting with the directory.
-            alldir.append((td.tileWidth * td.tileHeight, level, directoryNum, td))
+            alldir.append((td.tileWidth * td.tileHeight, level,
+                           td.imageWidth * td.imageHeight, directoryNum, td))
         # If there are no tiled images, raise an exception.
         if not len(alldir):
             msg = 'File %s didn\'t meet requirements for tile source: %s' % (
@@ -133,7 +136,7 @@ class TiffFileTileSource(FileTileSource):
                         not nearPowerOfTwo(td.imageHeight, highest.imageHeight))):
                 continue
             directories[level] = td
-        if len(directories) < 2 and max(directories.keys()) + 1 > 4:
+        if not len(directories) or (len(directories) < 2 and max(directories.keys()) + 1 > 4):
             raise TileSourceException(
                 'Tiff image must have at least two levels.')
 

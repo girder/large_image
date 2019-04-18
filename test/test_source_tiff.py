@@ -458,3 +458,16 @@ def testTilesAssociatedImages():
     assert max(width, height) == 256
     # Test missing associated image
     assert source.getAssociatedImage('nosuchimage') is None
+
+
+def testTilesFromSCN():
+    imagePath = utilities.externaldata('data/sample_leica.scn.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 512
+    assert tileMetadata['tileHeight'] == 512
+    assert tileMetadata['sizeX'] == 4737
+    assert tileMetadata['sizeY'] == 6338
+    assert tileMetadata['levels'] == 5
+    assert tileMetadata['magnification'] == 20
+    utilities.checkTilesZXY(source, tileMetadata)
