@@ -4,7 +4,7 @@ import os
 from pkg_resources import iter_entry_points
 
 from .base import TileSource, FileTileSource, TileOutputMimeTypes, \
-    TILE_FORMAT_IMAGE, TILE_FORMAT_PIL, TILE_FORMAT_NUMPY
+    TILE_FORMAT_IMAGE, TILE_FORMAT_PIL, TILE_FORMAT_NUMPY, nearPowerOfTwo
 from ..exceptions import TileGeneralException, TileSourceException, TileSourceAssetstoreException
 from .. import config
 from ..constants import SourcePriority
@@ -82,5 +82,5 @@ __all__ = [
     'TileSource', 'FileTileSource',
     'exceptions', 'TileGeneralException', 'TileSourceException', 'TileSourceAssetstoreException',
     'TileOutputMimeTypes', 'TILE_FORMAT_IMAGE', 'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY',
-    'AvailableTileSources', 'getTileSource',
+    'AvailableTileSources', 'getTileSource', 'nearPowerOfTwo',
 ]

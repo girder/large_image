@@ -1057,3 +1057,33 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
     assert image == b''
+
+
+@pytest.mark.plugin('large_image')
+def testTilesWithFrameNumbers(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'data/sample.ome.tif.sha512', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    # Test that we can get frames via either tiles/zxy or tiles/fzxy and
+    # that the frames are different
+    resp = server.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                          user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    image0 = utilities.getBody(resp, text=False)
+    resp = server.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                          user=admin, isJson=False, params={'frame': 0})
+    assert utilities.respStatus(resp) == 200
+    assert utilities.getBody(resp, text=False) == image0
+    resp = server.request(path='/item/%s/tiles/fzxy/0/0/0/0' % itemId,
+                          user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    assert utilities.getBody(resp, text=False) == image0
+    resp = server.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                          user=admin, isJson=False, params={'frame': 1})
+    assert utilities.respStatus(resp) == 200
+    image1 = utilities.getBody(resp, text=False)
+    assert image1 != image0
+    resp = server.request(path='/item/%s/tiles/fzxy/1/0/0/0' % itemId,
+                          user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    assert utilities.getBody(resp, text=False) == image1

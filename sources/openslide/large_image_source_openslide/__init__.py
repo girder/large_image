@@ -29,7 +29,7 @@ from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority
 from large_image.exceptions import TileSourceException
-from large_image.tilesource import FileTileSource
+from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
 
 try:
@@ -37,25 +37,6 @@ try:
 except DistributionNotFound:
     # package is not installed
     pass
-
-
-def _nearPowerOfTwo(val1, val2, tolerance=0.02):
-    """
-    Check if two values are different by nearly a power of two.
-
-    :param val1: the first value to check.
-    :param val2: the second value to check.
-    :param tolerance: the maximum difference in the log2 ratio's mantissa.
-    :return: True if the values are nearly a power of two different from each
-        other; false otherwise.
-    """
-    # If one or more of the values is zero or they have different signs, then
-    # return False
-    if val1 * val2 <= 0:
-        return False
-    log2ratio = math.log(float(val1) / float(val2)) / math.log(2)
-    # Compare the mantissa of the ratio's log2 value.
-    return abs(log2ratio - round(log2ratio)) < tolerance
 
 
 @six.add_metaclass(LruCacheMetaclass)
@@ -227,8 +208,8 @@ class OpenslideFileTileSource(FileTileSource):
         # Discard levels that are not a power-of-two compared to the highest
         # resolution level.
         levels = [entry for entry in levels if
-                  _nearPowerOfTwo(levels[0]['width'], entry['width']) and
-                  _nearPowerOfTwo(levels[0]['height'], entry['height'])]
+                  nearPowerOfTwo(levels[0]['width'], entry['width']) and
+                  nearPowerOfTwo(levels[0]['height'], entry['height'])]
         return levels
 
     def getNativeMagnification(self):

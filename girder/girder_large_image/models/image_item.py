@@ -135,7 +135,7 @@ class ImageItem(Item):
             return None
         classHash = sourceClass.getLRUHash(item, **kwargs)
         tileHash = sourceClass.__name__ + ' ' + classHash + ' ' + strhash(
-            classHash) + strhash(*(x, y, z), **{'mayRedirect': mayRedirect})
+            classHash) + strhash(*(x, y, z), mayRedirect=mayRedirect, **kwargs)
         try:
             if tileCacheLock is None:
                 tileData = tileCache[tileHash]

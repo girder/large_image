@@ -29,7 +29,7 @@ from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority
 from large_image.exceptions import TileSourceException
-from large_image.tilesource import FileTileSource, TILE_FORMAT_PIL
+from large_image.tilesource import FileTileSource, TILE_FORMAT_PIL, nearPowerOfTwo
 
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException, ValidationTiffException
@@ -40,25 +40,6 @@ try:
 except DistributionNotFound:
     # package is not installed
     pass
-
-
-def _nearPowerOfTwo(val1, val2, tolerance=0.02):
-    """
-    Check if two values are different by nearly a power of two.
-
-    :param val1: the first value to check.
-    :param val2: the second value to check.
-    :param tolerance: the maximum difference in the log2 ratio's mantissa.
-    :return: True if the valeus are nearly a power of two different from each
-        other; false otherwise.
-    """
-    # If one or more of the values is zero or they have different signs, then
-    # return False
-    if val1 * val2 <= 0:
-        return False
-    log2ratio = math.log(float(val1) / float(val2)) / math.log(2)
-    # Compare the mantissa of the ratio's log2 value.
-    return abs(log2ratio - round(log2ratio)) < tolerance
 
 
 @six.add_metaclass(LruCacheMetaclass)
@@ -77,8 +58,8 @@ class TiffFileTileSource(FileTileSource):
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
-        'image/tiff': SourcePriority.PREFERRED,
-        'image/x-tiff': SourcePriority.PREFERRED,
+        'image/tiff': SourcePriority.HIGH,
+        'image/x-tiff': SourcePriority.HIGH,
         'image/x-ptif': SourcePriority.PREFERRED,
     }
 
@@ -147,9 +128,9 @@ class TiffFileTileSource(FileTileSource):
             # If a layer's image is not a multiple of the tile size, it should
             # be near a power of two of the highest resolution image.
             if (((td.imageWidth % td.tileWidth) and
-                    not _nearPowerOfTwo(td.imageWidth, highest.imageWidth)) or
+                    not nearPowerOfTwo(td.imageWidth, highest.imageWidth)) or
                     ((td.imageHeight % td.tileHeight) and
-                        not _nearPowerOfTwo(td.imageHeight, highest.imageHeight))):
+                        not nearPowerOfTwo(td.imageHeight, highest.imageHeight))):
                 continue
             directories[level] = td
         if len(directories) < 2 and max(directories.keys()) + 1 > 4:
@@ -239,23 +220,29 @@ class TiffFileTileSource(FileTileSource):
         except InvalidOperationTiffException as e:
             raise TileSourceException(e.args[0])
         except IOTiffException as e:
-            if sparseFallback and z and PIL:
-                noedge = kwargs.copy()
-                noedge.pop('edge', None)
-                image = self.getTile(
-                    x / 2, y / 2, z - 1, pilImageAllowed=True,
-                    sparseFallback=sparseFallback, edge=False, **noedge)
-                if not isinstance(image, PIL.Image.Image):
-                    image = PIL.Image.open(BytesIO(image))
-                image = image.crop((
-                    self.tileWidth / 2 if x % 2 else 0,
-                    self.tileHeight / 2 if y % 2 else 0,
-                    self.tileWidth if x % 2 else self.tileWidth / 2,
-                    self.tileHeight if y % 2 else self.tileHeight / 2))
-                image = image.resize((self.tileWidth, self.tileHeight))
-                return self._outputTile(image, 'PIL', x, y, z, pilImageAllowed,
-                                        **kwargs)
-            raise TileSourceException('Internal I/O failure: %s' % e.args[0])
+            return self.getTileIOTiffException(
+                x, y, z, pilImageAllowed=pilImageAllowed,
+                sparseFallback=sparseFallback, exception=e, **kwargs)
+
+    def getTileIOTiffException(self, x, y, z, pilImageAllowed=False,
+                               sparseFallback=False, exception=None, **kwargs):
+        if sparseFallback and z and PIL:
+            noedge = kwargs.copy()
+            noedge.pop('edge', None)
+            image = self.getTile(
+                x / 2, y / 2, z - 1, pilImageAllowed=True,
+                sparseFallback=sparseFallback, edge=False, **noedge)
+            if not isinstance(image, PIL.Image.Image):
+                image = PIL.Image.open(BytesIO(image))
+            image = image.crop((
+                self.tileWidth / 2 if x % 2 else 0,
+                self.tileHeight / 2 if y % 2 else 0,
+                self.tileWidth if x % 2 else self.tileWidth / 2,
+                self.tileHeight if y % 2 else self.tileHeight / 2))
+            image = image.resize((self.tileWidth, self.tileHeight))
+            return self._outputTile(image, 'PIL', x, y, z, pilImageAllowed,
+                                    **kwargs)
+        raise TileSourceException('Internal I/O failure: %s' % exception.args[0])
 
     def getTileFromEmptyDirectory(self, x, y, z, **kwargs):
         """
