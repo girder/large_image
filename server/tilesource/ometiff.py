@@ -19,7 +19,6 @@
 
 import math
 import six
-from six import BytesIO
 from six.moves import range
 
 from .base import TileSourceException
@@ -184,13 +183,13 @@ class OMETiffFileTileSource(TiffFileTileSource):
     def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
                 **kwargs):
         if (z < 0 or z >= len(self._omeLevels) or self._omeLevels[z] is None or
-                kwargs.get('frame') in (None, 0)):
+                kwargs.get('frame') in (None, 0, '0', '')):
             return super(OMETiffFileTileSource, self).getTile(
                 x, y, z, pilImageAllowed=pilImageAllowed, sparseFallback=sparseFallback, **kwargs)
-        frame = kwargs['frame']
+        frame = int(kwargs['frame'])
         if frame < 0 or frame >= len(self._omebase['TiffData']):
             raise TileSourceException('Frame does not exist')
-        dirnum = int(self._omeLevels[z]['TiffData'][kwargs['frame']]['IFD'])
+        dirnum = int(self._omeLevels[z]['TiffData'][frame]['IFD'])
         if dirnum in self._directoryCache:
             dir = self._directoryCache[dirnum]
         else:
@@ -208,23 +207,9 @@ class OMETiffFileTileSource(TiffFileTileSource):
         except InvalidOperationTiffException as e:
             raise TileSourceException(e.args[0])
         except IOTiffException as e:
-            if sparseFallback and z and PIL:
-                noedge = kwargs.copy()
-                noedge.pop('edge', None)
-                image = self.getTile(
-                    x / 2, y / 2, z - 1, pilImageAllowed=True,
-                    sparseFallback=sparseFallback, edge=False, **noedge)
-                if not isinstance(image, PIL.Image.Image):
-                    image = PIL.Image.open(BytesIO(image))
-                image = image.crop((
-                    self.tileWidth / 2 if x % 2 else 0,
-                    self.tileHeight / 2 if y % 2 else 0,
-                    self.tileWidth if x % 2 else self.tileWidth / 2,
-                    self.tileHeight if y % 2 else self.tileHeight / 2))
-                image = image.resize((self.tileWidth, self.tileHeight))
-                return self._outputTile(image, 'PIL', x, y, z, pilImageAllowed,
-                                        **kwargs)
-            raise TileSourceException('Internal I/O failure: %s' % e.args[0])
+            return self.getTileIOTiffException(
+                x, y, z, pilImageAllowed=pilImageAllowed,
+                sparseFallback=sparseFallback, exception=e, **kwargs)
 
 
 if girder:

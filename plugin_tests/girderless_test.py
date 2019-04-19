@@ -196,13 +196,13 @@ class LargeImageGirderlessTest(unittest.TestCase):
         self.assertEqual(tileMetadata['levels'], 7)
         self._testTilesZXY(source, tileMetadata, params, PNGHeader)
 
-    def testSVSNearPowerOfTwo(self):
-        from server.tilesource import svs
+    def testNearPowerOfTwo(self):
+        from server.tilesource.base import nearPowerOfTwo
 
-        self.assertTrue(svs._nearPowerOfTwo(45808, 11456))
-        self.assertTrue(svs._nearPowerOfTwo(45808, 11450))
-        self.assertFalse(svs._nearPowerOfTwo(45808, 11200))
-        self.assertTrue(svs._nearPowerOfTwo(45808, 11400))
-        self.assertFalse(svs._nearPowerOfTwo(45808, 11400, 0.005))
-        self.assertTrue(svs._nearPowerOfTwo(45808, 11500))
-        self.assertFalse(svs._nearPowerOfTwo(45808, 11500, 0.005))
+        self.assertTrue(nearPowerOfTwo(45808, 11456))
+        self.assertTrue(nearPowerOfTwo(45808, 11450))
+        self.assertFalse(nearPowerOfTwo(45808, 11200))
+        self.assertTrue(nearPowerOfTwo(45808, 11400))
+        self.assertFalse(nearPowerOfTwo(45808, 11400, 0.005))
+        self.assertTrue(nearPowerOfTwo(45808, 11500))
+        self.assertFalse(nearPowerOfTwo(45808, 11500, 0.005))
