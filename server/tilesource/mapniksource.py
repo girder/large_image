@@ -122,6 +122,7 @@ class MapnikTileSource(FileTileSource):
         if projection and not isinstance(projection, six.binary_type):
             projection = projection.encode('utf8')
         self.projection = projection
+        self._jsonstyle = style
         if style:
             try:
                 self.style = json.loads(style)
@@ -146,6 +147,7 @@ class MapnikTileSource(FileTileSource):
         self.sourceLevels = self.levels = int(max(0, math.ceil(max(
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1)
+        self._unitsPerPixel = unitsPerPixel
         if self.projection:
             self._initWithProjection(unitsPerPixel)
 
@@ -193,6 +195,10 @@ class MapnikTileSource(FileTileSource):
             kwargs.get('projection', args[1] if len(args) >= 2 else None),
             kwargs.get('style', args[2] if len(args) >= 3 else None),
             kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
+
+    def getState(self):
+        return super(MapnikTileSource, self).getState() + ',' + str((
+            self.projection, self._jsonstyle, self._unitsPerPixel))
 
     def getProj4String(self):
         """
