@@ -29,7 +29,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             waitsFor(function () {
-                return $('input.g-plugin-switch[key="large_image"]').length > 0;
+                return $('.g-plugin-config-link').length > 0;
             }, 'the plugins page to load');
             runs(function () {
                 expect($('.g-plugin-config-link[g-route="plugins/large_image/config"]').length > 0);

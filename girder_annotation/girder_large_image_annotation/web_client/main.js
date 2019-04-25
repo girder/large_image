@@ -1,6 +1,7 @@
 import { registerPluginNamespace } from '@girder/core/pluginUtils';
 
 // import modules for side effects
+import './routes';
 import './views/imageViewerSelectWidget';
 
 // expose symbols under girder.plugins
