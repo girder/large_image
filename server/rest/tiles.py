@@ -18,6 +18,7 @@
 #############################################################################
 
 import cherrypy
+import math
 import os
 import re
 import six
@@ -95,8 +96,15 @@ class TilesItemResource(ItemResource):
         apiRoot.item.route('GET', ('test', 'tiles'), self.getTestTilesInfo)
         apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTestTile)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'dzi.dzi'),
+                           self.getDZIInfo)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'dzi_files', ':level', ':xandy'),
+                           self.getDZITile)
         filter_logging.addLoggingFilter(
             'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}',
+            frequency=250)
+        filter_logging.addLoggingFilter(
+            'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/dzi_files(/[^/ ?#]+){2}',
             frequency=250)
         # Cache the model singleton
         self.imageItemModel = ImageItem()
@@ -249,6 +257,45 @@ class TilesItemResource(ItemResource):
         imageArgs = self._parseTestParams(params)
         return self._getTilesInfo(item, imageArgs)
 
+    @describeRoute(
+        Description('Get DeepZoom compatible metadata.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('overlap', 'Pixel overlap (default 0), must be non-negative.',
+               required=False, dataType='int')
+        .param('tilesize', 'Tile size (default 256), must be a power of 2',
+               required=False, dataType='int')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getDZIInfo(self, item, params):
+        if 'encoding' in params and params['encoding'] not in ('JPEG', 'PNG'):
+            raise RestException('Only JPEG and PNG encodings are supported', code=400)
+        info = self._getTilesInfo(item, params)
+        tilesize = int(params.get('tilesize', 256))
+        if tilesize & (tilesize - 1):
+            raise RestException('Invalid tilesize', code=400)
+        overlap = int(params.get('overlap', 0))
+        if overlap < 0:
+            raise RestException('Invalid overlap', code=400)
+        result = ''.join([
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<Image',
+            ' TileSize="%d"' % tilesize,
+            ' Overlap="%d"' % overlap,
+            ' Format="%s"' % ('png' if params.get('encoding') == 'PNG' else 'jpg'),
+            ' xmlns="http://schemas.microsoft.com/deepzoom/2008">',
+            '<Size',
+            ' Width="%d"' % info['sizeX'],
+            ' Height="%d"' % info['sizeY'],
+            '/>'
+            '</Image>',
+        ])
+        setResponseHeader('Content-Type', 'text/xml')
+        setRawResponse()
+        return result
+
     def _getTile(self, item, z, x, y, imageArgs, mayRedirect=False):
         """
         Get an large image tile.
@@ -339,6 +386,74 @@ class TilesItemResource(ItemResource):
         item = {'largeImage': {'sourceName': 'test'}}
         imageArgs = self._parseTestParams(params)
         return self._getTile(item, z, x, y, imageArgs)
+
+    @describeRoute(
+        Description('Get a DeepZoom image tile.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('level', 'The deepzoom layer number of the tile (8 is the '
+               'most zoomed-out layer).', paramType='path')
+        .param('xandy', 'The X and Y coordinate of the tile in the form '
+               '(x)_(y).(extension) where (0_0 is the left top).',
+               paramType='path')
+        .produces(ImageMimeTypes)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.cookie
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getDZITile(self, item, level, xandy, params):
+        _adjustParams(params)
+        tilesize = int(params.get('tilesize', 256))
+        if tilesize & (tilesize - 1):
+            raise RestException('Invalid tilesize', code=400)
+        overlap = int(params.get('overlap', 0))
+        if overlap < 0:
+            raise RestException('Invalid overlap', code=400)
+        x, y = [int(xy) for xy in xandy.split('.')[0].split('_')]
+        # Explicitly set a expires time to encourage browsers to cache this for
+        # a while.
+        setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
+            cherrypy.serving.response.time + 600))
+        metadata = self.imageItemModel.getMetadata(item, **params)
+        level = int(level)
+        maxlevel = int(math.ceil(math.log(max(
+            metadata['sizeX'], metadata['sizeY'])) / math.log(2)))
+        if level < 1 or level > maxlevel:
+            raise RestException('level must be between 1 and the image scale',
+                                code=400)
+        lfactor = 2 ** (maxlevel - level)
+        region = {
+            'left': (x * tilesize - overlap) * lfactor,
+            'top': (y * tilesize - overlap) * lfactor,
+            'right': ((x + 1) * tilesize + overlap) * lfactor,
+            'bottom': ((y + 1) * tilesize + overlap) * lfactor,
+        }
+        width = height = tilesize + overlap * 2
+        if region['left'] < 0:
+            width += region['left'] / lfactor
+            region['left'] = 0
+        if region['top'] < 0:
+            height += region['top'] / lfactor
+            region['top'] = 0
+        if region['left'] >= metadata['sizeX']:
+            raise RestException('x is outside layer', code=400)
+        if region['top'] >= metadata['sizeY']:
+            raise RestException('y is outside layer', code=400)
+        if region['left'] < metadata['sizeX'] and region['right'] > metadata['sizeX']:
+            region['right'] = metadata['sizeX']
+            width = int(math.ceil(float(region['right'] - region['left']) / lfactor))
+        if region['top'] < metadata['sizeY'] and region['bottom'] > metadata['sizeY']:
+            region['bottom'] = metadata['sizeY']
+            height = int(math.ceil(float(region['bottom'] - region['top']) / lfactor))
+        regionData, regionMime = self.imageItemModel.getRegion(
+            item,
+            region=region,
+            output=dict(maxWidth=width, maxHeight=height),
+            **params)
+        setResponseHeader('Content-Type', regionMime)
+        setRawResponse()
+        return regionData
 
     @describeRoute(
         Description('Remove a large image from this item.')
