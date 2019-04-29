@@ -860,6 +860,117 @@ def testTilesModelLookupCache(server, user, admin, fsAssetstore):
     assert User().load.call_count == lastCount
 
 
+@pytest.mark.plugin('large_image')
+def testTilesDZIEndpoints(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 200
+    tileMetadata = resp.json
+    resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    xml = utilities.getBody(resp)
+    assert 'Width="%d"' % tileMetadata['sizeX'] in xml
+    assert 'Overlap="0"' in xml
+    resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+        'overlap': 4
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    xml = utilities.getBody(resp)
+    assert 'Width="%d"' % tileMetadata['sizeX'] in xml
+    assert 'Overlap="4"' in xml
+    resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+        'encoding': 'PNG'
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    image = utilities.getBody(resp, text=False)
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 228
+    assert height == 48
+    resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+        'encoding': 'PNG',
+        'overlap': 4
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    assert utilities.getBody(resp, text=False) == image
+    # Test bad queries
+    resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+        'encoding': 'TIFF'
+    }, user=admin)
+    assert utilities.respStatus(resp) == 400
+    resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+        'tilesize': 128
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+        'tilesize': 129
+    }, user=admin)
+    assert utilities.respStatus(resp) == 400
+    resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+        'overlap': -1
+    }, user=admin)
+    assert utilities.respStatus(resp) == 400
+    resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+        'tilesize': 128
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+        'tilesize': 129
+    }, user=admin)
+    assert utilities.respStatus(resp) == 400
+    resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+        'overlap': -1
+    }, user=admin)
+    assert utilities.respStatus(resp) == 400
+    resp = server.request(path='/item/%s/tiles/dzi_files/0/0_0.png' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 400
+    resp = server.request(path='/item/%s/tiles/dzi_files/20/0_0.png' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 400
+    resp = server.request(path='/item/%s/tiles/dzi_files/12/0_3.png' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 400
+    resp = server.request(path='/item/%s/tiles/dzi_files/12/15_0.png' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 400
+    # Test tile sizes
+    resp = server.request(path='/item/%s/tiles/dzi_files/12/0_0.png' % itemId, params={
+        'encoding': 'PNG',
+        'overlap': 4
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    image = utilities.getBody(resp, text=False)
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 260
+    assert height == 260
+    resp = server.request(path='/item/%s/tiles/dzi_files/12/0_1.png' % itemId, params={
+        'encoding': 'PNG',
+        'overlap': 4
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    image = utilities.getBody(resp, text=False)
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 260
+    assert height == 264
+    resp = server.request(path='/item/%s/tiles/dzi_files/12/2_1.png' % itemId, params={
+        'encoding': 'PNG',
+        'overlap': 4
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    image = utilities.getBody(resp, text=False)
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 264
+    assert height == 264
+    resp = server.request(path='/item/%s/tiles/dzi_files/12/14_2.png' % itemId, params={
+        'encoding': 'PNG',
+        'overlap': 4
+    }, user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    image = utilities.getBody(resp, text=False)
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 68
+    assert height == 260
+
+
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
 def testTilesAfterCopyItem(boundServer, admin, fsAssetstore, girderWorker):  # noqa
