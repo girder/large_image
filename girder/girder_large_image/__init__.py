@@ -30,7 +30,7 @@ from girder.models.item import Item
 from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.plugin import GirderPlugin, getPlugin
-from girder.constants import SettingDefault
+from girder.settings import SettingDefault
 from girder.utility import config
 from girder.utility import setting_utilities
 from girder.utility.model_importer import ModelImporter

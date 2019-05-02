@@ -18,7 +18,7 @@
 
 from girder.exceptions import ValidationException
 from girder.plugin import GirderPlugin, getPlugin
-from girder.constants import SettingDefault
+from girder.settings import SettingDefault
 from girder.utility import setting_utilities
 from girder.utility.model_importer import ModelImporter
 
