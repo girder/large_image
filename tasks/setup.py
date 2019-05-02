@@ -32,11 +32,10 @@ setup(
     author_email='kitware@kitware.com',
     license='Apache Software License 2.0',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Scientific/Engineering',
         'Intended Audience :: Science/Research',
-        'Natural Language :: English',
         'Programming Language :: Python'
     ],
     install_requires=[

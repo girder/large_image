@@ -20,6 +20,7 @@ try:
     import resource
 except ImportError:
     resource = None
+import hashlib
 import six
 
 from .cachefactory import CacheFactory, pickAvailableCache
@@ -89,8 +90,9 @@ def methodcache(key=None):
             k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
             if hasattr(self, '_classkey'):
                 k = self._classkey + ' ' + k
-            # hash the key to make sure it isn't particularly long.
-            hashed_k = str(hash(k)) if len(k) > 200 else k
+            # hash the key to make sure it isn't particularly long.  We can't
+            # use Python's hash(), as it may not be the same between runs.
+            hashed_k = hashlib.sha256(k.encode('utf8')).hexdigest() if len(k) > 200 else k
             lock = getattr(self, 'cache_lock', None)
             try:
                 if lock:
@@ -100,6 +102,9 @@ def methodcache(key=None):
                     return self.cache[hashed_k]
             except KeyError:
                 pass  # key not found
+            except ValueError:
+                # this can happen if a different version of python wrote the record
+                pass
             v = func(self, *args, **kwargs)
             try:
                 if lock:

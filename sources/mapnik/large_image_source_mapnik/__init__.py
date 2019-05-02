@@ -60,6 +60,11 @@ TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
 TileInputUnits['4326'] = 'proj4:EPSG:4326'
 
 
+# Used to cache pixel size for projections
+ProjUnitsAcrossLevel0 = {}
+ProjUnitsAcrossLevel0_MaxSize = 100
+
+
 @six.add_metaclass(LruCacheMetaclass)
 class MapnikFileTileSource(FileTileSource):
     """
@@ -70,6 +75,9 @@ class MapnikFileTileSource(FileTileSource):
     extensions = {
         None: SourcePriority.MEDIUM,
         'nc': SourcePriority.PREFERRED,  # netcdf
+        # National Imagery Transmission Format
+        'ntf': SourcePriority.PREFERRED,
+        'nitf': SourcePriority.PREFERRED,
         'tif': SourcePriority.LOW,
         'tiff': SourcePriority.LOW,
     }
@@ -153,6 +161,7 @@ class MapnikFileTileSource(FileTileSource):
         if projection and not isinstance(projection, six.binary_type):
             projection = projection.encode('utf8')
         self.projection = projection
+        self._jsonstyle = style
         if style:
             try:
                 self.style = json.loads(style)
@@ -178,6 +187,7 @@ class MapnikFileTileSource(FileTileSource):
         self.sourceLevels = self.levels = int(max(0, math.ceil(max(
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1)
+        self._unitsPerPixel = unitsPerPixel
         if self.projection:
             self._initWithProjection(unitsPerPixel)
         self._getTileLock = threading.Lock()
@@ -259,18 +269,23 @@ class MapnikFileTileSource(FileTileSource):
             raise TileSourceException(
                 'Projection must not be geographic (it needs to use linear '
                 'units, not longitude/latitude).')
-        # If unitsPerPixel is not specified, the horizontal distance
-        # between -180,0 and +180,0 is used.  Some projections (such as
-        # stereographic) will fail in this case; they must have a
-        # unitsPerPixel specified.
         if unitsPerPixel:
             self.unitsAcrossLevel0 = float(unitsPerPixel) * self.tileSize
         else:
-            equator = pyproj.transform(inProj, outProj, [-180, 180], [0, 0])
-            self.unitsAcrossLevel0 = abs(equator[0][1] - equator[0][0])
-            if not self.unitsAcrossLevel0:
-                raise TileSourceException(
-                    'unitsPerPixel must be specified for this projection')
+            self.unitsAcrossLevel0 = ProjUnitsAcrossLevel0.get(self.projection)
+            if self.unitsAcrossLevel0 is None:
+                # If unitsPerPixel is not specified, the horizontal distance
+                # between -180,0 and +180,0 is used.  Some projections (such as
+                # stereographic) will fail in this case; they must have a
+                # unitsPerPixel specified.
+                equator = pyproj.transform(inProj, outProj, [-180, 180], [0, 0])
+                self.unitsAcrossLevel0 = abs(equator[0][1] - equator[0][0])
+                if not self.unitsAcrossLevel0:
+                    raise TileSourceException(
+                        'unitsPerPixel must be specified for this projection')
+                if len(ProjUnitsAcrossLevel0) >= ProjUnitsAcrossLevel0_MaxSize:
+                    ProjUnitsAcrossLevel0.clear()
+                ProjUnitsAcrossLevel0[self.projection] = self.unitsAcrossLevel0
         # This was
         #   self.projectionOrigin = pyproj.transform(inProj, outProj, 0, 0)
         # but for consistency, it should probably always be (0, 0).  Whatever
@@ -292,6 +307,10 @@ class MapnikFileTileSource(FileTileSource):
             kwargs.get('projection', args[1] if len(args) >= 2 else None),
             kwargs.get('style', args[2] if len(args) >= 3 else None),
             kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
+
+    def getState(self):
+        return super(MapnikFileTileSource, self).getState() + ',' + str((
+            self.projection, self._jsonstyle, self._unitsPerPixel))
 
     def getProj4String(self):
         """
@@ -421,8 +440,11 @@ class MapnikFileTileSource(FileTileSource):
             if srs and srs != nativeSrs:
                 inProj = self._proj4Proj(nativeSrs)
                 outProj = self._proj4Proj(srs)
-                for key in ('ll', 'ul', 'lr', 'ur'):
-                    pt = pyproj.transform(inProj, outProj, bounds[key]['x'], bounds[key]['y'])
+                keys = ('ll', 'ul', 'lr', 'ur')
+                pts = pyproj.itransform(inProj, outProj, [
+                    (bounds[key]['x'], bounds[key]['y']) for key in keys])
+                for idx, pt in enumerate(pts):
+                    key = keys[idx]
                     bounds[key]['x'] = pt[0]
                     bounds[key]['y'] = pt[1]
                 bounds['srs'] = srs.decode('utf8') if isinstance(srs, six.binary_type) else srs

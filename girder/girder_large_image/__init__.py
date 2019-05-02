@@ -23,13 +23,14 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 import girder
 from girder import events
-from girder.constants import AccessType, SettingDefault
+from girder.constants import AccessType
 from girder.exceptions import ValidationException
 from girder.models.file import File
 from girder.models.item import Item
 from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.plugin import GirderPlugin, getPlugin
+from girder.constants import SettingDefault
 from girder.utility import config
 from girder.utility import setting_utilities
 from girder.utility.model_importer import ModelImporter
@@ -139,8 +140,8 @@ def checkForLargeImageFiles(event):
     mimeType = file.get('mimeType')
     if mimeType in girder_tilesource.KnownMimeTypes:
         possible = True
-    exts = file.get('exts')
-    if exts and exts[-1] in girder_tilesource.KnownExtensions:
+    exts = [ext.split()[0] for ext in file.get('exts')]
+    if set(exts[-2:]).intersection(girder_tilesource.KnownExtensions):
         possible = True
     if not file.get('itemId') or not possible:
         return

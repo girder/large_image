@@ -52,16 +52,16 @@ def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
     for sourceName in availableSources:
         sourceExtensions = availableSources[sourceName].extensions
         priority = sourceExtensions.get(None, SourcePriority.MANUAL)
-        if isLargeImageUri and sourceName == uriWithoutProtocol:
-            priority = SourcePriority.NAMED
         for ext in extensions:
             if ext in sourceExtensions:
                 priority = min(priority, sourceExtensions[ext])
+        if isLargeImageUri and sourceName == uriWithoutProtocol:
+            priority = SourcePriority.NAMED
         if priority >= SourcePriority.MANUAL:
             continue
         sourceList.append((priority, sourceName))
     for _priority, sourceName in sorted(sourceList):
-        if availableSources[sourceName].canRead(sourceObj):
+        if availableSources[sourceName].canRead(sourceObj, *args, **kwargs):
             return availableSources[sourceName](sourceObj, *args, **kwargs)
     raise TileSourceException('No available tilesource for %s' % pathOrUri)
 
