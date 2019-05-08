@@ -31,7 +31,7 @@ from osgeo import osr
 from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image import config
-from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
+from large_image.cache_util import LruCacheMetaclass, methodcache, CacheProperties
 from large_image.constants import SourcePriority, TileInputUnits
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource, TILE_FORMAT_PIL
@@ -49,6 +49,10 @@ TileInputUnits['proj'] = 'projection'
 TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
 TileInputUnits['4326'] = 'proj4:EPSG:4326'
 
+# Inform the tile source cache about the potential size of this tile source
+CacheProperties['tilesource']['itemExpectedSize'] = max(
+    CacheProperties['tilesource']['itemExpectedSize'],
+    100 * 1024 ** 2)
 
 # Used to cache pixel size for projections
 ProjUnitsAcrossLevel0 = {}
@@ -146,6 +150,7 @@ class MapnikFileTileSource(FileTileSource):
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
+        self._projection = projection
         if projection and projection.lower().startswith('epsg:'):
             projection = '+init=' + projection.lower()
         if projection and not isinstance(projection, six.binary_type):
@@ -302,16 +307,15 @@ class MapnikFileTileSource(FileTileSource):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        return strhash(
-            super(MapnikFileTileSource, MapnikFileTileSource).getLRUHash(
-                *args, **kwargs),
-            kwargs.get('projection', args[1] if len(args) >= 2 else None),
-            kwargs.get('style', args[2] if len(args) >= 3 else None),
-            kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
+        return super(MapnikFileTileSource, MapnikFileTileSource).getLRUHash(
+            *args, **kwargs) + ',%s,%s,%s' % (
+                kwargs.get('projection', args[1] if len(args) >= 2 else None),
+                kwargs.get('style', args[2] if len(args) >= 3 else None),
+                kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
 
     def getState(self):
-        return super(MapnikFileTileSource, self).getState() + ',' + str((
-            self.projection, self._jsonstyle, self._unitsPerPixel))
+        return super(MapnikFileTileSource, self).getState() + ',%s,%s,%s' % (
+            self._projection, self._jsonstyle, self._unitsPerPixel)
 
     def getProj4String(self):
         """
@@ -811,6 +815,15 @@ class MapnikFileTileSource(FileTileSource):
             extent = '0 0 %d %d' % (self.sourceSizeX, self.sourceSizeY)
             overscan = 1
         xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
+        if self.projection:
+            # If we are using a projection, the tile could contain no data.
+            # Don't bother having mapnik render the blank tile -- just output
+            # it.
+            bounds = self.getBounds(self.projection)
+            if (xmin >= bounds['xmax'] or xmax <= bounds['xmin'] or
+                    ymin >= bounds['ymax'] or ymax <= bounds['ymin']):
+                pilimg = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
+                return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
         if overscan:
             pw = (xmax - xmin) / self.tileWidth
             py = (ymax - ymin) / self.tileHeight

@@ -18,7 +18,8 @@
 
 import atexit
 
-from .cache import LruCacheMetaclass, strhash, methodcache, getTileCache, isTileCacheSetup
+from .cache import (LruCacheMetaclass, strhash, methodcache, getTileCache,
+                    isTileCacheSetup, CacheProperties)
 try:
     from .memcache import MemCache
 except ImportError:
@@ -80,4 +81,4 @@ def cachesInfo(*args, **kwargs):
 
 __all__ = ('CacheFactory', 'getTileCache', 'isTileCacheSetup', 'MemCache',
            'strhash', 'LruCacheMetaclass', 'pickAvailableCache', 'cached',
-           'Cache', 'LRUCache', 'methodcache')
+           'Cache', 'LRUCache', 'methodcache', 'CacheProperties')

@@ -23,7 +23,6 @@ from osgeo import gdal
 from girder import logger
 from girder.models.file import File
 
-from large_image.cache_util import strhash
 from girder_large_image.girder_tilesource import GirderTileSource
 from . import MapnikFileTileSource
 
@@ -37,8 +36,7 @@ class MapnikGirderTileSource(MapnikFileTileSource, GirderTileSource):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        return strhash(
-            GirderTileSource.getLRUHash(*args, **kwargs),
+        return GirderTileSource.getLRUHash(*args, **kwargs) + ',%s,%s,%s' % (
             kwargs.get('projection', args[1] if len(args) >= 2 else None),
             kwargs.get('style', args[2] if len(args) >= 3 else None),
             kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))

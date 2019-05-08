@@ -33,6 +33,8 @@ from girder.models.upload import Upload
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
+from large_image.cache_util import getTileCache, strhash
+from large_image.constants import TileOutputMimeTypes
 from large_image.exceptions import TileGeneralException, TileSourceException
 
 from .. import constants
@@ -116,6 +118,34 @@ class ImageItem(Item):
             ]
         )
         return job.job
+
+    @classmethod
+    def _tileFromHash(cls, item, x, y, z, mayRedirect=False, **kwargs):
+        tileCache, tileCacheLock = getTileCache()
+        if tileCache is None:
+            return None
+        if 'largeImage' not in item:
+            return None
+        if item['largeImage'].get('expected'):
+            return None
+        sourceName = item['largeImage']['sourceName']
+        try:
+            sourceClass = girder_tilesource.AvailableGirderTileSources[sourceName]
+        except TileSourceException:
+            return None
+        classHash = sourceClass.getLRUHash(item, **kwargs)
+        tileHash = sourceClass.__name__ + ' ' + classHash + ' ' + strhash(
+            classHash) + strhash(*(x, y, z), **{'mayRedirect': mayRedirect})
+        try:
+            if tileCacheLock is None:
+                tileData = tileCache[tileHash]
+            else:
+                with tileCacheLock:
+                    tileData = tileCache[tileHash]
+            tileMime = TileOutputMimeTypes.get(kwargs.get('encoding'), 'image/jpeg')
+            return tileData, tileMime
+        except (KeyError, ValueError):
+            return None
 
     @classmethod
     def _loadTileSource(cls, item, **kwargs):

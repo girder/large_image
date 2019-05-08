@@ -20,7 +20,7 @@ import cherrypy
 
 from girder.models.setting import Setting
 
-from large_image.cache_util import methodcache, strhash
+from large_image.cache_util import methodcache
 from large_image.exceptions import TileSourceException
 
 from girder_large_image.constants import PluginSettings
@@ -44,14 +44,12 @@ class PILGirderTileSource(PILFileTileSource, GirderTileSource):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        return strhash(
-            GirderTileSource.getLRUHash(
-                *args, **kwargs),
-            kwargs.get('maxSize', args[1] if len(args) >= 2 else None))
+        return GirderTileSource.getLRUHash(*args, **kwargs) + ',%s' % (str(
+            kwargs.get('maxSize', args[1] if len(args) >= 2 else None)))
 
     def getState(self):
         return super(PILGirderTileSource, self).getState() + ',' + str(
-            self.maxSize)
+            self._maxSize)
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):

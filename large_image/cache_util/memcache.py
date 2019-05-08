@@ -73,7 +73,8 @@ class MemCache(cachetools.Cache):
         return None
 
     def __delitem__(self, key):
-        del self._client[key]
+        hashedKey = hashlib.sha256(key.encode()).hexdigest()
+        del self._client[hashedKey]
 
     def logError(self, err, func, msg):
         """
@@ -96,13 +97,9 @@ class MemCache(cachetools.Cache):
             self.lastError[key]['skipped'] += 1
 
     def __getitem__(self, key):
-        assert(isinstance(key, str))
-
-        hashObject = hashlib.sha512(key.encode())
-        hexVal = hashObject.hexdigest()
-
+        hashedKey = hashlib.sha256(key.encode()).hexdigest()
         try:
-            return self._client[hexVal]
+            return self._client[hashedKey]
         except KeyError:
             return self.__missing__(key)
         except pylibmc.ServerDown:
@@ -115,21 +112,17 @@ class MemCache(cachetools.Cache):
             return self.__missing__(key)
 
     def __setitem__(self, key, value):
-        assert (isinstance(key, str))
-
-        hashObject = hashlib.sha512(key.encode())
-        hexVal = hashObject.hexdigest()
-
+        hashedKey = hashlib.sha256(key.encode()).hexdigest()
         try:
-            self._client[hexVal] = value
+            self._client[hashedKey] = value
         except TypeError:
             self.logError(
                 TypeError, config.getConfig('logprint').error,
-                'Failed to save value %r with key %s' % (value, hexVal))
+                'Failed to save value %r with key %s' % (value, hashedKey))
         except KeyError:
             self.logError(
                 KeyError, config.getConfig('logprint').error,
-                'Failed to save value %s with key %s' % (value, hexVal))
+                'Failed to save value %s with key %s' % (value, hashedKey))
         except pylibmc.ServerDown:
             self.logError(pylibmc.ServerDown, config.getConfig('logprint').info,
                           'Memcached ServerDown')

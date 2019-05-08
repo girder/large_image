@@ -3,7 +3,6 @@ from girder.exceptions import ValidationException, FilePathException
 from girder.models.file import File
 from girder.models.item import Item
 
-from large_image.cache_util import strhash
 from large_image.constants import SourcePriority
 from large_image.exceptions import TileSourceException, TileSourceAssetstoreException
 from large_image import tilesource
@@ -38,11 +37,11 @@ class GirderTileSource(tilesource.FileTileSource):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        return strhash(
+        return '%s,%s,%s,%s,%s,%s,%s' % (
             str(args[0]['largeImage']['fileId']), args[0]['updated'],
-            kwargs.get('encoding'), kwargs.get('jpegQuality'),
-            kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
-            kwargs.get('edge'))
+            kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
+            kwargs.get('edge', False))
 
     def getState(self):
         return '%s,%s,%s,%s,%s,%s,%s' % (

@@ -268,11 +268,16 @@ class TilesItemResource(ItemResource):
         if x < 0 or y < 0 or z < 0:
             raise RestException('x, y, and z must be positive integers',
                                 code=400)
-        try:
-            tileData, tileMime = self.imageItemModel.getTile(
-                item, x, y, z, mayRedirect=mayRedirect, **imageArgs)
-        except TileGeneralException as e:
-            raise RestException(e.args[0], code=404)
+        result = self.imageItemModel._tileFromHash(
+            item, x, y, z, mayRedirect=mayRedirect, **imageArgs)
+        if result is not None:
+            tileData, tileMime = result
+        else:
+            try:
+                tileData, tileMime = self.imageItemModel.getTile(
+                    item, x, y, z, mayRedirect=mayRedirect, **imageArgs)
+            except TileGeneralException as e:
+                raise RestException(e.args[0], code=404)
         setResponseHeader('Content-Type', tileMime)
         setRawResponse()
         return tileData

@@ -20,7 +20,6 @@ try:
     import resource
 except ImportError:
     resource = None
-import hashlib
 import six
 
 from .cachefactory import CacheFactory, pickAvailableCache
@@ -32,8 +31,8 @@ _tileLock = None
 
 
 # If we have a resource module, ask to use as many file handles as the hard
-# limit allows, then calculate that how may tile sources we can have open based
-# on the actual limit.
+# limit allows, then calculate how may tile sources we can have open based on
+# the actual limit.
 MaximumTileSources = 10
 if resource:
     try:
@@ -52,8 +51,8 @@ CacheProperties = {
     'tilesource': {
         # Cache size is based on what the class needs, which does not include
         # individual tiles
-        'cacheMaxSize': pickAvailableCache(
-            24 * 1024 ** 2, maxItems=MaximumTileSources),
+        'itemExpectedSize': 24 * 1024 ** 2,
+        'maxItems': MaximumTileSources,
         # The cache timeout is not currently being used, but it is set here in
         # case we ever choose to implement it.
         'cacheTimeout': 300,
@@ -90,16 +89,13 @@ def methodcache(key=None):
             k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
             if hasattr(self, '_classkey'):
                 k = self._classkey + ' ' + k
-            # hash the key to make sure it isn't particularly long.  We can't
-            # use Python's hash(), as it may not be the same between runs.
-            hashed_k = hashlib.sha256(k.encode('utf8')).hexdigest() if len(k) > 200 else k
             lock = getattr(self, 'cache_lock', None)
             try:
                 if lock:
                     with self.cache_lock:
-                        return self.cache[hashed_k]
+                        return self.cache[k]
                 else:
-                    return self.cache[hashed_k]
+                    return self.cache[k]
             except KeyError:
                 pass  # key not found
             except ValueError:
@@ -109,16 +105,15 @@ def methodcache(key=None):
             try:
                 if lock:
                     with self.cache_lock:
-                        self.cache[hashed_k] = v
+                        self.cache[k] = v
                 else:
-                    self.cache[hashed_k] = v
+                    self.cache[k] = v
             except ValueError:
                 pass  # value too large
             except KeyError:
                 # the key was refused for some reason
                 config.getConfig('logger').debug(
-                    'Had a cache KeyError while trying to store a value to key %r (%r)' % (
-                        hashed_k, k))
+                    'Had a cache KeyError while trying to store a value to key %r' % (k))
             return v
         return wrapper
     return decorator
@@ -139,6 +134,12 @@ class LruCacheMetaclass(type):
         cacheName = kwargs.get('cacheName', cacheName)
 
         maxSize = CacheProperties.get(cacheName, {}).get('cacheMaxSize', None)
+        if (maxSize is None and cacheName in CacheProperties and
+                'maxItems' in CacheProperties[cacheName] and
+                'itemExpectedSize' in CacheProperties[cacheName] and 'itemExpectedSize'):
+            maxSize = pickAvailableCache(
+                CacheProperties[cacheName]['itemExpectedSize'],
+                maxItems=CacheProperties[cacheName]['maxItems'])
         maxSize = namespace.pop('cacheMaxSize', maxSize)
         maxSize = kwargs.get('cacheMaxSize', maxSize)
         if maxSize is None:

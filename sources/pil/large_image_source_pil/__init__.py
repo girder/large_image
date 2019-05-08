@@ -82,6 +82,7 @@ class PILFileTileSource(FileTileSource):
         """
         super(PILFileTileSource, self).__init__(path, **kwargs)
 
+        self._maxSize = maxSize
         if isinstance(maxSize, six.string_types):
             try:
                 maxSize = json.loads(maxSize)
@@ -142,7 +143,7 @@ class PILFileTileSource(FileTileSource):
 
     def getState(self):
         return super(PILFileTileSource, self).getState() + ',' + str(
-            self.maxSize)
+            self._maxSize)
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):

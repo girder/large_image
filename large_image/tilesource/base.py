@@ -328,9 +328,9 @@ class TileSource(object):
     @staticmethod
     def getLRUHash(*args, **kwargs):
         return strhash(
-            kwargs.get('encoding'), kwargs.get('jpegQuality'),
-            kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
-            kwargs.get('edge'))
+            kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
+            kwargs.get('edge', False))
 
     def getState(self):
         return str(self.encoding) + ',' + str(self.jpegQuality) + ',' + \
@@ -1672,9 +1672,9 @@ class FileTileSource(TileSource):
     @staticmethod
     def getLRUHash(*args, **kwargs):
         return strhash(
-            args[0], kwargs.get('encoding'), kwargs.get('jpegQuality'),
-            kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
-            kwargs.get('edge'))
+            args[0], kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
+            kwargs.get('edge', False))
 
     def getState(self):
         return self._getLargeImagePath() + ',' + str(self.encoding) + ',' + \
