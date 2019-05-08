@@ -301,17 +301,15 @@ class LargeImagePlugin(GirderPlugin):
         events.bind('jobs.job.update.after', 'large_image', _updateJob)
         events.bind('model.job.save', 'large_image', _updateJob)
         events.bind('model.job.remove', 'large_image', _updateJob)
-        events.bind('model.folder.save.after', 'large_image',
-                    invalidateLoadModelCache)
-        events.bind('model.group.save.after', 'large_image',
-                    invalidateLoadModelCache)
+        events.bind('model.folder.save.after', 'large_image', invalidateLoadModelCache)
+        events.bind('model.group.save.after', 'large_image', invalidateLoadModelCache)
+        events.bind('model.user.save.after', 'large_image', invalidateLoadModelCache)
+        events.bind('model.collection.save.after', 'large_image', invalidateLoadModelCache)
         events.bind('model.item.remove', 'large_image', invalidateLoadModelCache)
         events.bind('model.item.copy.prepare', 'large_image', prepareCopyItem)
         events.bind('model.item.copy.after', 'large_image', handleCopyItem)
-        events.bind('model.item.save.after', 'large_image',
-                    invalidateLoadModelCache)
-        events.bind('model.file.save.after', 'large_image',
-                    checkForLargeImageFiles)
+        events.bind('model.item.save.after', 'large_image', invalidateLoadModelCache)
+        events.bind('model.file.save.after', 'large_image', checkForLargeImageFiles)
         events.bind('model.item.remove', 'large_image.removeThumbnails', removeThumbnails)
         events.bind('server_fuse.unmount', 'large_image', large_image.cache_util.cachesClear)
         events.bind('model.file.remove', 'large_image', handleRemoveFile)
