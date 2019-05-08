@@ -163,6 +163,19 @@ class MapnikTileSource(FileTileSource):
         if self.projection:
             self._initWithProjection(unitsPerPixel)
 
+    def _getDriver(self):
+        """
+        Get the GDAL driver used to read this dataset.
+
+        :returns: The name of the driver.
+        """
+        if not hasattr(self, '_driver'):
+            if not self.dataset or not self.dataset.GetDriver():
+                self._driver = None
+            else:
+                self._driver = self.dataset.GetDriver().ShortName
+        return self._driver
+
     def _initWithProjection(self, unitsPerPixel=None):
         """
         Initialize aspects of the class when a projection is set.
@@ -220,6 +233,8 @@ class MapnikTileSource(FileTileSource):
         """
         wkt = self.dataset.GetProjection()
         if not wkt:
+            if self._getDriver() in {'NITF'}:
+                return '+init=epsg:4326'
             return
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
