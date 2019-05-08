@@ -16,16 +16,6 @@
 #  limitations under the License.
 #############################################################################
 
-# There is an issue with some of the wheels with pyvips and mapnik where if
-# both are to be imported, pyvips must be imported first.  To handle this,
-# even though we don't need pyvips, try to import it before mapnik.
-import os
-try:
-    # Because of its use of gobject, pyvips should be invoked without concurrency
-    os.environ['VIPS_CONCURRENCY'] = '1'
-    import pyvips  # noqa
-except ImportError:
-    pass
 import json
 import mapnik
 import math
@@ -192,6 +182,19 @@ class MapnikFileTileSource(FileTileSource):
             self._initWithProjection(unitsPerPixel)
         self._getTileLock = threading.Lock()
 
+    def _getDriver(self):
+        """
+        Get the GDAL driver used to read this dataset.
+
+        :returns: The name of the driver.
+        """
+        if not hasattr(self, '_driver'):
+            if not self.dataset or not self.dataset.GetDriver():
+                self._driver = None
+            else:
+                self._driver = self.dataset.GetDriver().ShortName
+        return self._driver
+
     def _checkNetCDF(self):
         """
         Check if this file is a netCDF file.  If so, get some metadata about
@@ -202,9 +205,7 @@ class MapnikFileTileSource(FileTileSource):
         time bounds and other series data and to prevent selecting subdatasets
         that are not spatially appropriate.
         """
-        if not self.dataset or not self.dataset.GetDriver():
-            return False
-        if self.dataset.GetDriver().ShortName != 'netCDF':
+        if self._getDriver != 'netCDF':
             return False
         datasets = {}
         for name, desc in self.dataset.GetSubDatasets():
@@ -320,7 +321,7 @@ class MapnikFileTileSource(FileTileSource):
         """
         wkt = self.dataset.GetProjection()
         if not wkt:
-            if hasattr(self, '_netcdf'):
+            if hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}:
                 return '+init=epsg:4326'
             return
         proj = osr.SpatialReference()
