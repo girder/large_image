@@ -335,7 +335,7 @@ class LargeImageResource(Resource):
             type='large_image_create_thumbnails',
             user=self.getCurrentUser(),
             public=True,
-            async_=True,
+            asynchronous=True,
         )
         Job().scheduleJob(job)
         return job

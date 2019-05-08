@@ -1,7 +1,7 @@
 import _ from 'underscore';
 
 import { wrap } from '@girder/core/utilities/PluginUtils';
-import { apiRoot } from '@girder/core/rest';
+import { getApiRoot } from '@girder/core/rest';
 import { getCurrentUser } from '@girder/core/auth';
 import { AccessType } from '@girder/core/constants';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
@@ -43,7 +43,7 @@ wrap(ItemListWidget, 'render', function (render) {
         /* We store the desired src attribute in deferred-src until we actually
          * load the image. */
         elem.append($('<img class="waiting"/>').attr(
-            'deferred-src', apiRoot + '/item/' +
+            'deferred-src', getApiRoot() + '/item/' +
                 item.id + '/tiles/thumbnail?width=160&height=100'));
         var access = item.getAccessLevel();
         var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
@@ -60,7 +60,7 @@ wrap(ItemListWidget, 'render', function (render) {
             elem = $('<div class="large_image_thumbnail"/>');
             container.append(elem);
             elem.append($('<img class="waiting"/>').attr(
-                'deferred-src', apiRoot + '/item/' + item.id +
+                'deferred-src', getApiRoot() + '/item/' + item.id +
                 '/tiles/images/' + imageName + '?width=160&height=100'
             ));
             elem.attr('extra-image', imageName);

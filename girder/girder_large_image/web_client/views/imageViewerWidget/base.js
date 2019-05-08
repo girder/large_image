@@ -1,4 +1,4 @@
-import { apiRoot, restRequest } from '@girder/core/rest';
+import { getApiRoot, restRequest } from '@girder/core/rest';
 import View from '@girder/core/views/View';
 
 var ImageViewerWidget = View.extend({
@@ -29,7 +29,7 @@ var ImageViewerWidget = View.extend({
      * @param {object} [query]: optional query parameters to add to the url.
      */
     _getTileUrl: function (level, x, y, query) {
-        var url = apiRoot + '/item/' + this.itemId + '/tiles/zxy/' +
+        var url = getApiRoot() + '/item/' + this.itemId + '/tiles/zxy/' +
             level + '/' + x + '/' + y;
         if (query) {
             url += '?' + $.param(query);

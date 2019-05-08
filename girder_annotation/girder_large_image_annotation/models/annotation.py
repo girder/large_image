@@ -747,7 +747,7 @@ class Annotation(AccessControlledModel):
         logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
         events.trigger('large_image.annotations.save_history', {
             'annotation': annotation
-        }, async_=True)
+        }, asynchronous=True)
         return result
 
     def updateAnnotation(self, annotation, updateUser=None):
