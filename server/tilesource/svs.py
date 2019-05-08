@@ -27,6 +27,7 @@ import PIL
 
 from .base import FileTileSource, TileSourceException
 from ..cache_util import LruCacheMetaclass, methodcache
+from ..constants import SourcePriority
 
 try:
     import girder
@@ -64,6 +65,19 @@ class SVSFileTileSource(FileTileSource):
     """
     cacheName = 'tilesource'
     name = 'svsfile'
+    extensions = {
+        None: SourcePriority.MEDIUM,
+        'bif': SourcePriority.LOW,  # Ventana
+        'mrxs': SourcePriority.PREFERRED,  # MIRAX
+        'ndpi': SourcePriority.PREFERRED,  # Hamamatsu
+        'scn': SourcePriority.LOW,  # Leica
+        'svs': SourcePriority.PREFERRED,
+        'svslide': SourcePriority.PREFERRED,
+        'tif': SourcePriority.MEDIUM,
+        'tiff': SourcePriority.MEDIUM,
+        'vms': SourcePriority.HIGH,  # Hamamatsu
+        'vmu': SourcePriority.HIGH,  # Hamamatsu
+    }
 
     def __init__(self, path, **kwargs):
         """

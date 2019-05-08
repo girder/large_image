@@ -30,3 +30,13 @@ class PluginSettings(object):
     LARGE_IMAGE_MAX_THUMBNAIL_FILES = 'large_image.max_thumbnail_files'
     LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE = 'large_image.max_small_image_size'
     LARGE_IMAGE_ANNOTATION_HISTORY = 'large_image.annotation_history'
+
+
+class SourcePriority(object):
+    NAMED = 0    # Explicitly requested
+    PREFERRED = 1
+    HIGH = 2
+    MEDIUM = 3
+    LOW = 4
+    FALLBACK = 5
+    MANUAL = 6   # Will never be selected automatically

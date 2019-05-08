@@ -26,6 +26,7 @@ from six.moves import range
 
 from .base import FileTileSource, TileSourceException
 from ..cache_util import LruCacheMetaclass, methodcache
+from ..constants import SourcePriority
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException, ValidationTiffException
 
@@ -52,6 +53,13 @@ class TiffFileTileSource(FileTileSource):
     """
     cacheName = 'tilesource'
     name = 'tifffile'
+    extensions = {
+        None: SourcePriority.MEDIUM,
+        'tif': SourcePriority.PREFERRED,
+        'tiff': SourcePriority.PREFERRED,
+        'ptif': SourcePriority.PREFERRED,
+        'ptiff': SourcePriority.PREFERRED,
+    }
 
     def __init__(self, path, **kwargs):
         """

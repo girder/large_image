@@ -31,6 +31,7 @@ from operator import attrgetter
 
 from .base import FileTileSource, TileSourceException, TILE_FORMAT_PIL, TileInputUnits
 from ..cache_util import LruCacheMetaclass, methodcache, strhash
+from ..constants import SourcePriority
 
 try:
     import girder
@@ -47,9 +48,20 @@ class MapnikTileSource(FileTileSource):
     """
     Provides tile access to geospatial files.
     """
-
     cacheName = 'tilesource'
     name = 'mapnikfile'
+
+    # mimeTypes are common mime-types handleds by the source.  They can be used
+    # in place of or in additional to extensions
+    mimeTypes = {
+        None: SourcePriority.MEDIUM,
+        'nc': SourcePriority.PREFERRED,  # netcdf
+        # National Imagery Transmission Format
+        'ntf': SourcePriority.PREFERRED,
+        'nitf': SourcePriority.PREFERRED,
+        'tif': SourcePriority.LOW,
+        'tiff': SourcePriority.LOW,
+    }
 
     def __init__(self, path, projection=None, style=None, unitsPerPixel=None, **kwargs):
         """
@@ -151,6 +163,19 @@ class MapnikTileSource(FileTileSource):
         if self.projection:
             self._initWithProjection(unitsPerPixel)
 
+    def _getDriver(self):
+        """
+        Get the GDAL driver used to read this dataset.
+
+        :returns: The name of the driver.
+        """
+        if not hasattr(self, '_driver'):
+            if not self.dataset or not self.dataset.GetDriver():
+                self._driver = None
+            else:
+                self._driver = self.dataset.GetDriver().ShortName
+        return self._driver
+
     def _initWithProjection(self, unitsPerPixel=None):
         """
         Initialize aspects of the class when a projection is set.
@@ -208,6 +233,8 @@ class MapnikTileSource(FileTileSource):
         """
         wkt = self.dataset.GetProjection()
         if not wkt:
+            if self._getDriver() in {'NITF'}:
+                return '+init=epsg:4326'
             return
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
