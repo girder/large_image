@@ -59,7 +59,8 @@ def testTileFromGeotiffs():
     assert tileMetadata['bounds']['xmin'] == 367185.0
     assert tileMetadata['bounds']['ymax'] == 3788115.0
     assert tileMetadata['bounds']['ymin'] == 3552885.0
-    assert tileMetadata['bounds']['srs'] == '+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs '
+    assert (tileMetadata['bounds']['srs'].strip() ==
+            '+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs')
     assert tileMetadata['geospatial']
     # Check that we read some band data, too
     assert len(tileMetadata['bands']) == 3
@@ -203,8 +204,7 @@ def testPixel():
 
     # Check if the point is outside of the image
     pixel = source.getPixel(region={'left': 10000000, 'top': 4000000, 'units': 'projection'})
-    assert pixel == {
-        'r': 0, 'g': 0, 'b': 0, 'a': 0}
+    assert pixel['a'] == 0
 
     # Test with styles
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,

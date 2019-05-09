@@ -210,7 +210,7 @@ class MapnikFileTileSource(FileTileSource):
         time bounds and other series data and to prevent selecting subdatasets
         that are not spatially appropriate.
         """
-        if self._getDriver != 'netCDF':
+        if self._getDriver() != 'netCDF':
             return False
         datasets = {}
         for name, desc in self.dataset.GetSubDatasets():
@@ -481,7 +481,7 @@ class MapnikFileTileSource(FileTileSource):
                 info['scale'] = band.GetScale()
                 info['offset'] = band.GetOffset()
                 info['units'] = band.GetUnitType()
-                info['catgeories'] = band.GetCategoryNames()
+                info['categories'] = band.GetCategoryNames()
                 interp = band.GetColorInterpretation()
                 info['interpretation'] = {
                     1: 'gray',
