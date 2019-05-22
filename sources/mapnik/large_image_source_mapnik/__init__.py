@@ -147,6 +147,7 @@ class MapnikFileTileSource(FileTileSource):
         self._bounds = {}
         self._path = self._getLargeImagePath()
         self.dataset = gdal.Open(self._path)
+        self._getDatasetLock = threading.RLock()
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
@@ -166,8 +167,9 @@ class MapnikFileTileSource(FileTileSource):
                 raise TileSourceException('Style is not a valid json object.')
 
         try:
-            self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
-            self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
+            with self._getDatasetLock:
+                self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
+                self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
         except AttributeError:
             raise TileSourceException('File cannot be opened via Mapnik.')
         is_netcdf = self._checkNetCDF()
@@ -194,10 +196,11 @@ class MapnikFileTileSource(FileTileSource):
         :returns: The name of the driver.
         """
         if not hasattr(self, '_driver'):
-            if not self.dataset or not self.dataset.GetDriver():
-                self._driver = None
-            else:
-                self._driver = self.dataset.GetDriver().ShortName
+            with self._getDatasetLock:
+                if not self.dataset or not self.dataset.GetDriver():
+                    self._driver = None
+                else:
+                    self._driver = self.dataset.GetDriver().ShortName
         return self._driver
 
     def _checkNetCDF(self):
@@ -213,23 +216,24 @@ class MapnikFileTileSource(FileTileSource):
         if self._getDriver() != 'netCDF':
             return False
         datasets = {}
-        for name, desc in self.dataset.GetSubDatasets():
-            parts = desc.split(None, 2)
-            dataset = {
-                'name': name,
-                'desc': desc,
-                'dim': [int(val) for val in parts[0].strip('[]').split('x')],
-                'key': parts[1],
-                'format': parts[2],
+        with self._getDatasetLock:
+            for name, desc in self.dataset.GetSubDatasets():
+                parts = desc.split(None, 2)
+                dataset = {
+                    'name': name,
+                    'desc': desc,
+                    'dim': [int(val) for val in parts[0].strip('[]').split('x')],
+                    'key': parts[1],
+                    'format': parts[2],
+                }
+                dataset['values'] = six.moves.reduce(lambda x, y: x * y, dataset['dim'])
+                datasets[dataset['key']] = dataset
+            if not len(datasets) and (not self.dataset.RasterCount or self.dataset.GetProjection()):
+                return False
+            self._netcdf = {
+                'datasets': datasets,
+                'metadata': self.dataset.GetMetadata_Dict()
             }
-            dataset['values'] = six.moves.reduce(lambda x, y: x * y, dataset['dim'])
-            datasets[dataset['key']] = dataset
-        if not len(datasets) and (not self.dataset.RasterCount or self.dataset.GetProjection()):
-            return False
-        self._netcdf = {
-            'datasets': datasets,
-            'metadata': self.dataset.GetMetadata_Dict()
-        }
         if not len(datasets):
             try:
                 self.getBounds('+init=epsg:3857')
@@ -237,22 +241,23 @@ class MapnikFileTileSource(FileTileSource):
                 self._bounds.clear()
                 del self._netcdf
                 return False
-        if not self.dataset.RasterCount:
-            self._netcdf['default'] = sorted([(
-                not ds['key'].endswith('_bnds'),
-                'character' not in ds['format'],
-                ds['values'],
-                len(ds['dim']),
-                ds['dim'],
-                ds['key']) for ds in six.itervalues(datasets)])[-1][-1]
-            # The base netCDF file reports different dimensions than the
-            # subdatasets.  For now, use the "best" subdataset's dimensions
-            dataset = self._netcdf['datasets'][self._netcdf['default']]
-            dataset['dataset'] = gdal.Open(dataset['name'])
-            self.sourceSizeX = self.sizeX = dataset['dataset'].RasterXSize
-            self.sourceSizeY = self.sizeY = dataset['dataset'].RasterYSize
+        with self._getDatasetLock:
+            if not self.dataset.RasterCount:
+                self._netcdf['default'] = sorted([(
+                    not ds['key'].endswith('_bnds'),
+                    'character' not in ds['format'],
+                    ds['values'],
+                    len(ds['dim']),
+                    ds['dim'],
+                    ds['key']) for ds in six.itervalues(datasets)])[-1][-1]
+                # The base netCDF file reports different dimensions than the
+                # subdatasets.  For now, use the "best" subdataset's dimensions
+                dataset = self._netcdf['datasets'][self._netcdf['default']]
+                dataset['dataset'] = gdal.Open(dataset['name'])
+                self.sourceSizeX = self.sizeX = dataset['dataset'].RasterXSize
+                self.sourceSizeY = self.sizeY = dataset['dataset'].RasterYSize
 
-            self.dataset = dataset['dataset']  # use for projection information
+                self.dataset = dataset['dataset']  # use for projection information
 
         if not hasattr(self, 'style'):
             self.style = {
@@ -323,7 +328,8 @@ class MapnikFileTileSource(FileTileSource):
 
         :returns: The proj4 string or None.
         """
-        wkt = self.dataset.GetProjection()
+        with self._getDatasetLock:
+            wkt = self.dataset.GetProjection()
         if not wkt:
             if hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}:
                 return '+init=epsg:4326'
@@ -409,7 +415,8 @@ class MapnikFileTileSource(FileTileSource):
             used.  None if we don't know the original projection.
         """
         if srs not in self._bounds:
-            gt = self.dataset.GetGeoTransform()
+            with self._getDatasetLock:
+                gt = self.dataset.GetGeoTransform()
             nativeSrs = self.getProj4String()
             if not nativeSrs:
                 self._bounds[srs] = None
@@ -466,48 +473,49 @@ class MapnikFileTileSource(FileTileSource):
 
     def getBandInformation(self, dataset=None):
         if not getattr(self, '_bandInfo', None) or dataset:
-            cache = not dataset
-            if not dataset:
-                dataset = self.dataset
-            infoSet = {}
-            for i in range(dataset.RasterCount):
-                band = dataset.GetRasterBand(i + 1)
-                info = {}
-                stats = band.GetStatistics(True, True)
-                # The statistics provide a min and max, so we don't fetch those
-                # separately
-                info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
-                info['nodata'] = band.GetNoDataValue()
-                info['scale'] = band.GetScale()
-                info['offset'] = band.GetOffset()
-                info['units'] = band.GetUnitType()
-                info['categories'] = band.GetCategoryNames()
-                interp = band.GetColorInterpretation()
-                info['interpretation'] = {
-                    1: 'gray',
-                    2: 'palette',
-                    3: 'red',
-                    4: 'green',
-                    5: 'blue',
-                    6: 'alpha',
-                    7: 'hue',
-                    8: 'saturation',
-                    9: 'lightness',
-                    10: 'cyan',
-                    11: 'magenta',
-                    12: 'yellow',
-                    13: 'black',
-                    14: 'Y',
-                    15: 'Cb',
-                    16: 'Cr',
-                }.get(interp, interp)
-                if band.GetColorTable():
-                    info['colortable'] = [band.GetColorTable().GetColorEntry(pos)
-                                          for pos in range(band.GetColorTable().GetCount())]
-                if band.GetMaskBand():
-                    info['maskband'] = band.GetMaskBand().GetBand() or None
-                # Only keep values that aren't None or the empty string
-                infoSet[i + 1] = {k: v for k, v in six.iteritems(info) if v not in (None, '')}
+            with self._getDatasetLock:
+                cache = not dataset
+                if not dataset:
+                    dataset = self.dataset
+                infoSet = {}
+                for i in range(dataset.RasterCount):
+                    band = dataset.GetRasterBand(i + 1)
+                    info = {}
+                    stats = band.GetStatistics(True, True)
+                    # The statistics provide a min and max, so we don't fetch those
+                    # separately
+                    info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
+                    info['nodata'] = band.GetNoDataValue()
+                    info['scale'] = band.GetScale()
+                    info['offset'] = band.GetOffset()
+                    info['units'] = band.GetUnitType()
+                    info['categories'] = band.GetCategoryNames()
+                    interp = band.GetColorInterpretation()
+                    info['interpretation'] = {
+                        1: 'gray',
+                        2: 'palette',
+                        3: 'red',
+                        4: 'green',
+                        5: 'blue',
+                        6: 'alpha',
+                        7: 'hue',
+                        8: 'saturation',
+                        9: 'lightness',
+                        10: 'cyan',
+                        11: 'magenta',
+                        12: 'yellow',
+                        13: 'black',
+                        14: 'Y',
+                        15: 'Cb',
+                        16: 'Cr',
+                    }.get(interp, interp)
+                    if band.GetColorTable():
+                        info['colortable'] = [band.GetColorTable().GetColorEntry(pos)
+                                              for pos in range(band.GetColorTable().GetCount())]
+                    if band.GetMaskBand():
+                        info['maskband'] = band.GetMaskBand().GetBand() or None
+                    # Only keep values that aren't None or the empty string
+                    infoSet[i + 1] = {k: v for k, v in six.iteritems(info) if v not in (None, '')}
             if not cache:
                 return infoSet
             self._bandInfo = infoSet
@@ -517,29 +525,31 @@ class MapnikFileTileSource(FileTileSource):
         if type(band) is not tuple:
             bandInfo = self.getBandInformation()[band]
         else:  # netcdf
-            dataset = self._netcdf['datasets'][band[0]]
-            if not dataset.get('bands'):
-                if not dataset.get('dataset'):
-                    dataset['dataset'] = gdal.Open(dataset['name'])
-                dataset['bands'] = self.getBandInformation(dataset['dataset'])
-            bandInfo = dataset['bands'][band[1]]
+            with self._getDatasetLock:
+                dataset = self._netcdf['datasets'][band[0]]
+                if not dataset.get('bands'):
+                    if not dataset.get('dataset'):
+                        dataset['dataset'] = gdal.Open(dataset['name'])
+                    dataset['bands'] = self.getBandInformation(dataset['dataset'])
+                bandInfo = dataset['bands'][band[1]]
         return bandInfo
 
     def getMetadata(self):
-        metadata = {
-            'geospatial': bool(self.dataset.GetProjection() or hasattr(self, '_netcdf')),
-            'levels': self.levels,
-            'sizeX': self.sizeX,
-            'sizeY': self.sizeY,
-            'sourceLevels': self.sourceLevels,
-            'sourceSizeX': self.sourceSizeX,
-            'sourceSizeY': self.sourceSizeY,
-            'tileWidth': self.tileWidth,
-            'tileHeight': self.tileHeight,
-            'bounds': self.getBounds(self.projection),
-            'sourceBounds': self.getBounds(),
-            'bands': self.getBandInformation(),
-        }
+        with self._getDatasetLock:
+            metadata = {
+                'geospatial': bool(self.dataset.GetProjection() or hasattr(self, '_netcdf')),
+                'levels': self.levels,
+                'sizeX': self.sizeX,
+                'sizeY': self.sizeY,
+                'sourceLevels': self.sourceLevels,
+                'sourceSizeX': self.sourceSizeX,
+                'sourceSizeY': self.sourceSizeY,
+                'tileWidth': self.tileWidth,
+                'tileHeight': self.tileHeight,
+                'bounds': self.getBounds(self.projection),
+                'sourceBounds': self.getBounds(),
+                'bands': self.getBandInformation(),
+            }
         metadata.update(self.getNativeMagnification())
         if hasattr(self, '_netcdf'):
             # To ensure all band information from all subdatasets in netcdf,
@@ -1047,7 +1057,8 @@ class MapnikFileTileSource(FileTileSource):
         outProj = self._proj4Proj(self.getProj4String())
         px, py = pyproj.transform(inProj, outProj, x, y)
         # convert to native pixel coordinates
-        gt = self.dataset.GetGeoTransform()
+        with self._getDatasetLock:
+            gt = self.dataset.GetGeoTransform()
         d = gt[2] * gt[4] - gt[1] * gt[5]
         x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
         y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
@@ -1085,12 +1096,13 @@ class MapnikFileTileSource(FileTileSource):
                 # convert to native pixel coordinates
                 x, y = self.toNativePixelCoordinates(x, y)
             if 0 <= int(x) < self.sizeX and 0 <= int(y) < self.sizeY:
-                for i in range(self.dataset.RasterCount):
-                    band = self.dataset.GetRasterBand(i + 1)
-                    try:
-                        value = band.ReadRaster(int(x), int(y), 1, 1, buf_type=gdal.GDT_Float32)
-                        if value:
-                            pixel.setdefault('bands', {})[i + 1] = struct.unpack('f', value)[0]
-                    except RuntimeError:
-                        pass
+                with self._getDatasetLock:
+                    for i in range(self.dataset.RasterCount):
+                        band = self.dataset.GetRasterBand(i + 1)
+                        try:
+                            value = band.ReadRaster(int(x), int(y), 1, 1, buf_type=gdal.GDT_Float32)
+                            if value:
+                                pixel.setdefault('bands', {})[i + 1] = struct.unpack('f', value)[0]
+                        except RuntimeError:
+                            pass
         return pixel
