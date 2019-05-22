@@ -93,7 +93,7 @@ def _letterboxImage(image, width, height, fill):
 
 class LazyTileDict(dict):
     """
-    Tiles returned from the tile iterator and dictioaries of information with
+    Tiles returned from the tile iterator and dictionaries of information with
     actual image data in the 'tile' key and the format in the 'format' key.
     Since some applications need information about the tile but don't need the
     image data, these two values are lazily computed.  The LazyTileDict can be
@@ -148,7 +148,7 @@ class LazyTileDict(dict):
             in the desired output encoding (regardless of subparameters).
         :param resample: if not False or None, allow resampling.  Once turned
             on, this cannot be turned off on the tile.
-        :param imageKwargs: additional parameters taht should be passed to
+        :param imageKwargs: additional parameters that should be passed to
             _encodeImage.
         """
         # If any parameters are changed, mark the tile as not loaded, so that
@@ -378,9 +378,9 @@ class TileSource(object):
         :param metadata: the metadata associated with this source.
         :param units: the units used for the scale.
         :param desiredMagnification: the output from getMagnificationForLevel
-            for the desired magnfication used to convert mag_pixels and mm.
+            for the desired magnification used to convert mag_pixels and mm.
         :param **kwargs: optional parameters.
-        :returns: (scaleX, scaleY) scaling parmeters in the horizontal and
+        :returns: (scaleX, scaleY) scaling parameters in the horizontal and
             vertical directions.
         """
         scaleX = scaleY = 1
@@ -438,7 +438,7 @@ class TileSource(object):
             pixels and mm are only available if the magnification and mm
             per pixel are defined for the image.
         :param desiredMagnification: the output from getMagnificationForLevel
-            for the desired magnfication used to convert mag_pixels and mm.
+            for the desired magnification used to convert mag_pixels and mm.
         :param cropToImage: if True, don't return region coordinates outside of
             the image.
         :param **kwargs: optional parameters.  These are passed to
@@ -506,7 +506,7 @@ class TileSource(object):
           If one of width or height is specified, the other is determined by
         preserving aspect ratio.  If both are specified, the result may not be
         that size, as aspect ratio is always preserved.  If neither are
-        specified, magnfication, mm_x, and/or mm_y are used to determine the
+        specified, magnification, mm_x, and/or mm_y are used to determine the
         size.  If none of those are specified, the original maximum resolution
         is returned.
 
@@ -536,7 +536,7 @@ class TileSource(object):
             maxHeight: maximum height in pixels.
         :param scale: a dictionary of optional values which specify the scale
                 of the region and / or output.  This applies to region if
-                pixels or mm are used for inits.  It applies to output if
+                pixels or mm are used for units.  It applies to output if
                 neither output maxWidth nor maxHeight is specified.  It
             magnification: the magnification ratio.
             mm_x: the horizontal size of a pixel in millimeters.
@@ -1237,7 +1237,7 @@ class TileSource(object):
         # memory region per line.  Although it frees this, the memory manager
         # often fails to reuse these smallish pieces.  By allocating the data
         # memory ourselves in one block, the memory manager does a better job.
-        # Furthermode, if the source buffer isn't in RGBA format, the memory is
+        # Furthermore, if the source buffer isn't in RGBA format, the memory is
         # still often inaccessible.
         try:
             image = PIL.Image.frombuffer(
@@ -1321,7 +1321,7 @@ class TileSource(object):
         Get the magnification at a particular level.
 
         :param level: None to use the maximum level, otherwise the level to get
-            the magification factor of.
+            the magnification factor of.
         :return: magnification, width of a pixel in mm, height of a pixel in mm.
         """
         mag = self.getNativeMagnification()
@@ -1343,7 +1343,7 @@ class TileSource(object):
                                  mm_x=None, mm_y=None, rounding='round',
                                  **kwargs):
         """
-        Get the level for a specific magnifcation or pixel size.  If the
+        Get the level for a specific magnification or pixel size.  If the
         magnification is unknown or no level is sufficient resolution, and an
         exact match is not requested, the highest level will be returned.
           If none of magnification, mm_x, and mm_y are specified, the maximum
@@ -1394,7 +1394,7 @@ class TileSource(object):
     def tileIterator(self, format=(TILE_FORMAT_NUMPY, ), resample=True,
                      **kwargs):
         """
-        Iterate on all tiles in the specifed region at the specified scale.
+        Iterate on all tiles in the specified region at the specified scale.
         Each tile is returned as part of a dictionary that includes
             x, y: (left, top) coordinates in current magnification pixels
             width, height: size of current tile in current magnification pixels
@@ -1431,7 +1431,7 @@ class TileSource(object):
                 requested region.
         If a region that includes partial tiles is requested, those tiles are
         cropped appropriately.  Most images will have tiles that get cropped
-        along the right and bottom egdes in any case.  If an exact
+        along the right and bottom edges in any case.  If an exact
         magnification or scale is requested, no tiles will be returned.
 
         :param format: the desired format or a tuple of allowed formats.
@@ -1447,7 +1447,7 @@ class TileSource(object):
                 tile_x, tile_y: (left, top) coordinates before scaling
                 tile_width, tile_height: size of the current tile before
                     scaling.
-                tile_magnification: magnificaiton of the current tile before
+                tile_magnification: magnification of the current tile before
                     scaling.
             Note that scipy.misc.imresize uses PIL internally.
         :param region: a dictionary of optional values which specify the part
@@ -1467,7 +1467,7 @@ class TileSource(object):
         :param output: a dictionary of optional values which specify the size
                 of the output.
             maxWidth: maximum width in pixels.  If either maxWidth or maxHeight
-                is specified, magnfication, mm_x, and mm_y are ignored.
+                is specified, magnification, mm_x, and mm_y are ignored.
             maxHeight: maximum height in pixels.
         :param scale: a dictionary of optional values which specify the scale
                 of the region and / or output.  This applies to region if
@@ -1605,7 +1605,7 @@ class TileSource(object):
         """
         Return an associated image.
 
-        :param imageKey: the key of the associated image to retreive.
+        :param imageKey: the key of the associated image to retrieve.
         :param **kwargs: optional arguments.  Some options are width, height,
             encoding, jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: imageData, imageMime: the image data and the mime type, or

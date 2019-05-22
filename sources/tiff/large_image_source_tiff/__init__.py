@@ -140,7 +140,7 @@ class TiffFileTileSource(FileTileSource):
 
     def _addAssociatedImage(self, largeImagePath, directoryNum):
         """
-        Check if the specfied TIFF directory contains a non-tiled image with a
+        Check if the specified TIFF directory contains a non-tiled image with a
         sensible image description that can be used as an ID.  If so, and if
         the image isn't too large, add this image as an associated image.
 

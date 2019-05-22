@@ -67,7 +67,7 @@ class PILFileTileSource(FileTileSource):
     """
     cacheName = 'tilesource'
     name = 'pilfile'
-    # No extensions or mime types are explicilty added for the PIL tile source,
+    # No extensions or mime types are explicitly added for the PIL tile source,
     # as it should always be a fallback source
 
     def __init__(self, path, maxSize=None, **kwargs):
