@@ -123,7 +123,7 @@ describe('AnnotationListWidget', function () {
             }, 15000);
             girderTest.waitForLoad();
             runs(function () {
-                expect($('.g-annotation-list-container *').length).toBe(0);
+                expect($('.g-annotation-list-container .g-annotation-row').length).toBe(0);
             });
         });
         it('get item model', function () {

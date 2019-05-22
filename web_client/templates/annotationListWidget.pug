@@ -1,8 +1,20 @@
-if annotations.length
-  .g-annotation-list-header
-    i.icon-pencil
-    | Annotations
+.g-annotation-list-header
+  i.icon-pencil
+  | Annotations
+  .btn-group.pull-right
+    if annotations.length
+      a.g-annotation-download(href=`${apiRoot}/annotation/item/${item.id}`, title='Download annotations', download=`${item.get('name')}_annotations.json`)
+        i.icon-download
+    if accessLevel >= AccessType.WRITE
+      a.g-annotation-upload(title='Upload annotation')
+        i.icon-upload
+    if accessLevel >= AccessType.ADMIN && annotations.length
+      a.g-annotation-permissions(title='Adjust permissions')
+        i.icon-lock
+      a.g-annotation-delete(title='Delete')
+        i.icon-cancel
 
+if annotations.length
   table.g-annotation-list.table.table-hover.table-condensed
     thead
       th.g-annotation-toggle

@@ -56,6 +56,7 @@ class AnnotationResource(Resource):
         self.route('PUT', (':id', 'access'), self.updateAnnotationAccess)
         self.route('GET', ('item', ':id',), self.getItemAnnotations)
         self.route('POST', ('item', ':id',), self.createItemAnnotations)
+        self.route('DELETE', ('item', ':id',), self.deleteItemAnnotations)
 
     @describeRoute(
         Description('Search for annotations.')
@@ -440,6 +441,7 @@ class AnnotationResource(Resource):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
+    @access.cookie
     @access.public
     def getItemAnnotations(self, item):
         user = self.getCurrentUser()
@@ -491,3 +493,23 @@ class AnnotationResource(Resource):
                     'Validation Error: JSON doesn\'t follow schema (%r).' % (
                         exc.args, ))
         return len(annotations)
+
+    @autoDescribeRoute(
+        Description('Delete all annotations for an item.')
+        .notes('This deletes all annotation model records.')
+        .modelParam('id', model=Item, level=AccessType.WRITE)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Write access was denied for the item.', 403)
+    )
+    @access.user
+    def deleteItemAnnotations(self, item):
+        user = self.getCurrentUser()
+        query = {'_active': {'$ne': False}, 'itemId': item['_id']}
+
+        count = 0
+        for annotation in Annotation().find(query, limit=0, sort=[('_id', 1)]):
+            annot = Annotation().load(annotation['_id'], user=user)
+            if annot:
+                Annotation().remove(annot)
+                count += 1
+        return count
