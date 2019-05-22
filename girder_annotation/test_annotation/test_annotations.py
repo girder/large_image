@@ -704,6 +704,22 @@ class TestLargeImageAnnotationRest(object):
         )
         assert utilities.respStatus(resp) == 400
 
+        # Delete annotations
+        resp = server.request(
+            path='/annotation/item/{}'.format(itemDest['_id']),
+            method='DELETE',
+            user=None
+        )
+        assert utilities.respStatus(resp) == 401
+
+        resp = server.request(
+            path='/annotation/item/{}'.format(itemDest['_id']),
+            method='DELETE',
+            user=admin
+        )
+        assert utilities.respStatus(resp) == 200
+        assert resp.json == 2
+
     def testDeleteAnnotation(self, server, admin):
         publicFolder = utilities.namedFolder(admin, 'Public')
         Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
