@@ -471,8 +471,7 @@ class AnnotationResource(Resource):
         .jsonParam('annotations', 'A JSON list of annotation model records or '
                    'annotations.  If these are complete models, the value of '
                    'the "annotation" key is used and the other information is '
-                   'ignored (such as original creator ID).', paramType='body',
-                   requireArray=True)
+                   'ignored (such as original creator ID).', paramType='body')
         .errorResponse('ID was invalid.')
         .errorResponse('Write access was denied for the item.', 403)
         .errorResponse('Invalid JSON passed in request body.')
@@ -481,6 +480,8 @@ class AnnotationResource(Resource):
     @access.user
     def createItemAnnotations(self, item, annotations):
         user = self.getCurrentUser()
+        if not isinstance(annotations, list):
+            annotations = [annotations]
         for entry in annotations:
             if not isinstance(entry, dict):
                 raise RestException('Entries in the annotation list must be JSON objects.')

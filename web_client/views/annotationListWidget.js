@@ -191,6 +191,7 @@ const AnnotationListWidget = View.extend({
         }
         const model = id ? this.collection.get(id) : this.collection.at(0).clone();
         if (!id) {
+            // if id is not set, override widget's saveAccessList
             model.get('annotation').name = 'All Annotations';
             model.save = () => {};
             model.updateAccess = () => {
@@ -207,7 +208,6 @@ const AnnotationListWidget = View.extend({
                 model.trigger('g:accessListSaved');
             };
         }
-        // if id is not set, override widget's saveAccessList
         new AccessWidget({
             el: $('#g-dialog-container'),
             type: 'annotation',
