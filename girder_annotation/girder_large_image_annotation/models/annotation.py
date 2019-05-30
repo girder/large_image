@@ -415,7 +415,8 @@ class Annotation(AccessControlledModel):
             ([
                 ('_annotationId', SortDir.ASCENDING),
                 ('_version', SortDir.DESCENDING),
-            ], {})
+            ], {}),
+            'updated',
         ])
         self.ensureTextIndex({
             'annotation.name': 10,
