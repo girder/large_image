@@ -1384,3 +1384,112 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
                             token=token, isJson=False)
         self.assertStatusOk(resp)
         self.assertEqual(User().load.call_count, lastCount)
+
+    def testTilesDZIEndpoints(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_image.ptif'))
+        itemId = str(file['itemId'])
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        resp = self.request(path='/item/%s/tiles/dzi.dzi' % itemId, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        xml = self.getBody(resp)
+        self.assertTrue('Width="%d"' % tileMetadata['sizeX'] in xml)
+        self.assertTrue('Overlap="0"' in xml)
+        resp = self.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+            'overlap': 4
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        xml = self.getBody(resp)
+        self.assertTrue('Width="%d"' % tileMetadata['sizeX'] in xml)
+        self.assertTrue('Overlap="4"' in xml)
+        resp = self.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+            'encoding': 'PNG'
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 228)
+        self.assertEqual(height, 48)
+        resp = self.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+            'encoding': 'PNG',
+            'overlap': 4
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        self.assertEqual(self.getBody(resp, text=False), image)
+        # Test bad queries
+        resp = self.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+            'encoding': 'TIFF'
+        }, user=self.admin)
+        self.assertStatus(resp, 400)
+        resp = self.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+            'tilesize': 128
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        resp = self.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+            'tilesize': 129
+        }, user=self.admin)
+        self.assertStatus(resp, 400)
+        resp = self.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
+            'overlap': -1
+        }, user=self.admin)
+        self.assertStatus(resp, 400)
+        resp = self.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+            'tilesize': 128
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        resp = self.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+            'tilesize': 129
+        }, user=self.admin)
+        self.assertStatus(resp, 400)
+        resp = self.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
+            'overlap': -1
+        }, user=self.admin)
+        self.assertStatus(resp, 400)
+        resp = self.request(path='/item/%s/tiles/dzi_files/0/0_0.png' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        resp = self.request(path='/item/%s/tiles/dzi_files/20/0_0.png' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        resp = self.request(path='/item/%s/tiles/dzi_files/12/0_3.png' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        resp = self.request(path='/item/%s/tiles/dzi_files/12/15_0.png' % itemId, user=self.admin)
+        self.assertStatus(resp, 400)
+        # Test tile sizes
+        resp = self.request(path='/item/%s/tiles/dzi_files/12/0_0.png' % itemId, params={
+            'encoding': 'PNG',
+            'overlap': 4
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 260)
+        self.assertEqual(height, 260)
+        resp = self.request(path='/item/%s/tiles/dzi_files/12/0_1.png' % itemId, params={
+            'encoding': 'PNG',
+            'overlap': 4
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 260)
+        self.assertEqual(height, 264)
+        resp = self.request(path='/item/%s/tiles/dzi_files/12/2_1.png' % itemId, params={
+            'encoding': 'PNG',
+            'overlap': 4
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 264)
+        self.assertEqual(height, 264)
+        resp = self.request(path='/item/%s/tiles/dzi_files/12/14_2.png' % itemId, params={
+            'encoding': 'PNG',
+            'overlap': 4
+        }, user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 68)
+        self.assertEqual(height, 260)
