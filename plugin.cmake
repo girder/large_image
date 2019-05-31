@@ -54,6 +54,7 @@ add_python_test(tiles PLUGIN large_image BIND_SERVER EXTERNAL_DATA
   "plugins/large_image/huron.image2_jpeg2k.tif"
   "plugins/large_image/G10-3_pelvis_crop-powers-of-3.tif"
   "plugins/large_image/sample.ome.tif"
+  "plugins/large_image/sample_leica.scn"
   )
 set_property(TEST server_large_image.tiles APPEND PROPERTY ENVIRONMENT
   "LARGE_IMAGE_DATA=${PROJECT_BINARY_DIR}/data/plugins/large_image")
