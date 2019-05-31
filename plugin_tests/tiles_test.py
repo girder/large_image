@@ -649,6 +649,63 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         self.assertEqual(tileMetadata['magnification'], 20)
         self._testTilesZXY(itemId, tileMetadata)
 
+    def testTilesFromOMETiff(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample.ome.tif'))
+        itemId = str(file['itemId'])
+        # The tile request should tell us about the file.  These are specific
+        # to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 1024)
+        self.assertEqual(tileMetadata['tileHeight'], 1024)
+        self.assertEqual(tileMetadata['sizeX'], 2106)
+        self.assertEqual(tileMetadata['sizeY'], 2016)
+        self.assertEqual(tileMetadata['levels'], 3)
+        self.assertEqual(len(tileMetadata['frames']), 3)
+        self._testTilesZXY(itemId, tileMetadata)
+        # Test that we can get frames via either tiles/zxy or tiles/fzxy and
+        # that the frames are different
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        image0 = self.getBody(resp, text=False)
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False, params={'frame': 0})
+        self.assertStatusOk(resp)
+        self.assertEqual(self.getBody(resp, text=False), image0)
+        resp = self.request(path='/item/%s/tiles/fzxy/0/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        self.assertEqual(self.getBody(resp, text=False), image0)
+        resp = self.request(path='/item/%s/tiles/zxy/0/0/0' % itemId,
+                            user=self.admin, isJson=False, params={'frame': 1})
+        self.assertStatusOk(resp)
+        image1 = self.getBody(resp, text=False)
+        self.assertNotEqual(image1, image0)
+        resp = self.request(path='/item/%s/tiles/fzxy/1/0/0/0' % itemId,
+                            user=self.admin, isJson=False)
+        self.assertStatusOk(resp)
+        self.assertEqual(self.getBody(resp, text=False), image1)
+
+    def testTilesFromSCN(self):
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample_leica.scn'))
+        itemId = str(file['itemId'])
+        # The tile request should tell us about the file.  These are specific
+        # to our test file
+        resp = self.request(path='/item/%s/tiles' % itemId, user=self.admin)
+        self.assertStatusOk(resp)
+        tileMetadata = resp.json
+        self.assertEqual(tileMetadata['tileWidth'], 512)
+        self.assertEqual(tileMetadata['tileHeight'], 512)
+        self.assertEqual(tileMetadata['sizeX'], 4737)
+        self.assertEqual(tileMetadata['sizeY'], 6338)
+        self.assertEqual(tileMetadata['levels'], 5)
+        self.assertEqual(tileMetadata['magnification'], 20)
+        self._testTilesZXY(itemId, tileMetadata)
+
     def testTilesFromPIL(self):
         # Allow images bigger than our test
         from girder.plugins.large_image import constants
@@ -1162,6 +1219,25 @@ class LargeImageTilesTest(common.LargeImageCommonTest):
         (width, height) = struct.unpack('!LL', image[16:24])
         self.assertEqual(width, 500)
         self.assertEqual(height, 375)
+
+        # test ome tiff image
+        file = self._uploadFile(os.path.join(
+            os.environ['LARGE_IMAGE_DATA'], 'sample.ome.tif'))
+        itemId = str(file['itemId'])
+        params = {'width': 1000, 'height': 1000, 'encoding': 'PNG'}
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        image = self.getBody(resp, text=False)
+        self.assertEqual(image[:len(common.PNGHeader)], common.PNGHeader)
+        (width, height) = struct.unpack('!LL', image[16:24])
+        self.assertEqual(width, 1000)
+        self.assertEqual(height, 957)
+        params['frame'] = 2
+        resp = self.request(path='/item/%s/tiles/region' % itemId,
+                            user=self.admin, isJson=False, params=params)
+        self.assertStatusOk(resp)
+        self.assertNotEqual(self.getBody(resp, text=False), image)
 
     def testPixel(self):
         file = self._uploadFile(os.path.join(

@@ -21,6 +21,7 @@ import ctypes
 import os
 import six
 
+from collections import defaultdict
 from functools import partial
 from xml.etree import cElementTree
 
@@ -50,6 +51,37 @@ except ImportError:
 
 # This suppress warnings about unknown tags
 libtiff_ctypes.suppress_warnings()
+
+
+def etreeToDict(t):
+    """
+    Convert an xml etree to a nested dictionary without schema names in the
+    keys.
+
+    @param t: an etree.
+    @returns: a python dictionary with the results.
+    """
+    # Remove schema
+    tag = t.tag.split('}', 1)[1] if t.tag.startswith('{') else t.tag
+    d = {tag: {}}
+    children = list(t)
+    if children:
+        entries = defaultdict(list)
+        for entry in map(etreeToDict, children):
+            for k, v in six.iteritems(entry):
+                entries[k].append(v)
+        d = {tag: {k: v[0] if len(v) == 1 else v
+                   for k, v in six.iteritems(entries)}}
+
+    if t.attrib:
+        d[tag].update({(k.split('}', 1)[1] if k.startswith('{') else k): v
+                       for k, v in six.iteritems(t.attrib)})
+    text = (t.text or '').strip()
+    if text and len(d[tag]):
+        d[tag]['text'] = text
+    elif text:
+        d[tag] = text
+    return d
 
 
 def patchLibtiff():
@@ -181,7 +213,7 @@ class TiledTiffDirectory(object):
             self._tiffFile.close()
             self._tiffFile = None
 
-    def _validate(self):
+    def _validate(self):  # noqa
         """
         Validate that this TIFF file and directory are suitable for reading.
 
@@ -213,7 +245,9 @@ class TiledTiffDirectory(object):
             raise ValidationTiffException(
                 'Only unsigned int sampled TIFF files are supported')
 
-        if self._tiffInfo.get('planarconfig') != libtiff_ctypes.PLANARCONFIG_CONTIG:
+        if (self._tiffInfo.get('planarconfig') != libtiff_ctypes.PLANARCONFIG_CONTIG and
+                self._tiffInfo.get('photometric') not in {
+                    libtiff_ctypes.PHOTOMETRIC_MINISBLACK}):
             raise ValidationTiffException(
                 'Only contiguous planar configuration TIFF files are supported')
 
@@ -247,6 +281,12 @@ class TiledTiffDirectory(object):
             raise ValidationTiffException(
                 'Only TIFF files with separate Huffman and quantization '
                 'tables are supported')
+
+        if self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG:
+            try:
+                self._getJpegTables()
+            except IOTiffException:
+                self._completeJpeg = True
 
     def _loadMetadata(self):
         fields = [key.split('_', 1)[1].lower() for key in
@@ -324,8 +364,7 @@ class TiledTiffDirectory(object):
                 libtiff_ctypes.TIFFTAG_JPEGTABLES,
                 ctypes.byref(tableSize),
                 ctypes.byref(tableBuffer)) != 1:
-            raise IOTiffException('Could not get JPEG Huffman /'
-                                  ' quantization tables')
+            raise IOTiffException('Could not get JPEG Huffman / quantization tables')
 
         tableSize = tableSize.value
         tableBuffer = ctypes.cast(tableBuffer, ctypes.POINTER(ctypes.c_char))
@@ -509,7 +548,11 @@ class TiledTiffDirectory(object):
             self._tiffFile, tileNum, imageBuffer, tileSize)
         if readSize < tileSize:
             raise IOTiffException('Read an unexpected number of bytes from an encoded tile')
-        mode = 'L' if self._tiffInfo.get('samplesperpixel') == 1 else 'RGB'
+        if self._tiffInfo.get('samplesperpixel') == 1:
+            mode = 'L'
+        elif self._tiffInfo.get('samplesperpixel') == 3:
+            mode = ('YCbCr' if self._tiffInfo.get('photometric') ==
+                    libtiff_ctypes.PHOTOMETRIC_YCBCR else 'RGB')
         if self._tiffInfo.get('bitspersample') == 16:
             # Just take the high byte
             imageBuffer = imageBuffer[1::2]
@@ -566,12 +609,15 @@ class TiledTiffDirectory(object):
         imageBuffer = six.BytesIO()
 
         if self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG:
-            # Write JPEG Start Of Image marker
-            imageBuffer.write(b'\xff\xd8')
-            imageBuffer.write(self._getJpegTables())
-            imageBuffer.write(self._getJpegFrame(tileNum))
-            # Write JPEG End Of Image marker
-            imageBuffer.write(b'\xff\xd9')
+            if not getattr(self, '_completeJpeg', False):
+                # Write JPEG Start Of Image marker
+                imageBuffer.write(b'\xff\xd8')
+                imageBuffer.write(self._getJpegTables())
+                imageBuffer.write(self._getJpegFrame(tileNum))
+                # Write JPEG End Of Image marker
+                imageBuffer.write(b'\xff\xd9')
+            else:
+                imageBuffer.write(self._getJpegFrame(tileNum, True))
             return imageBuffer.getvalue()
 
         if self._tiffInfo.get('compression') in (33003, 33005):
@@ -588,8 +634,7 @@ class TiledTiffDirectory(object):
 
         return self._getUncompressedTile(tileNum)
 
-    def parse_image_description(self, meta=None):
-
+    def parse_image_description(self, meta=None):  # noqa
         self._pixelInfo = {}
         self._embeddedImages = {}
 
@@ -638,4 +683,8 @@ class TiledTiffDirectory(object):
                 'WSI': 'thumbnail',
             }
             self._embeddedImages[typemap.get(typestr, typestr.lower())] = datastr
+        try:
+            self._description_xml = etreeToDict(xml)
+        except Exception:
+            pass
         return True

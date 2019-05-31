@@ -124,9 +124,9 @@ def checkForLargeImageFiles(event):
     mimeType = file.get('mimeType')
     if mimeType in ('image/tiff', 'image/x-tiff', 'image/x-ptif'):
         possible = True
-    exts = file.get('exts')
+    exts = [ext.split()[0] for ext in file.get('exts')]
     if set(exts[-2:]).intersection({
-            'svs', 'ptif', 'tif', 'tiff', 'ndpi', 'mrxs', 'nc', 'ntf', 'nitf'}):
+            'svs', 'ptif', 'tif', 'tiff', 'ndpi', 'mrxs', 'nc', 'ntf', 'nitf', 'scn'}):
         possible = True
     if not file.get('itemId') or not possible:
         return

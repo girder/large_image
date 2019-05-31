@@ -175,6 +175,25 @@ def _letterboxImage(image, width, height, fill):
     return result
 
 
+def nearPowerOfTwo(val1, val2, tolerance=0.02):
+    """
+    Check if two values are different by nearly a power of two.
+
+    :param val1: the first value to check.
+    :param val2: the second value to check.
+    :param tolerance: the maximum difference in the log2 ratio's mantissa.
+    :return: True if the valeus are nearly a power of two different from each
+        other; false otherwise.
+    """
+    # If one or more of the values is zero or they have different signs, then
+    # return False
+    if val1 * val2 <= 0:
+        return False
+    log2ratio = math.log(float(val1) / float(val2)) / math.log(2)
+    # Compare the mantissa of the ratio's log2 value.
+    return abs(log2ratio - round(log2ratio)) < tolerance
+
+
 class LazyTileDict(dict):
     """
     Tiles returned from the tile iterator and dictioaries of information with
@@ -198,6 +217,7 @@ class LazyTileDict(dict):
         """
         self.x = tileInfo['x']
         self.y = tileInfo['y']
+        self.frame = tileInfo.get('frame')
         self.level = tileInfo['level']
         self.format = tileInfo['format']
         self.encoding = tileInfo['encoding']
@@ -284,7 +304,7 @@ class LazyTileDict(dict):
             for y in range(ymin, ymax):
                 tileData = self.source.getTile(
                     x, y, self.level,
-                    pilImageAllowed=True, sparseFallback=True)
+                    pilImageAllowed=True, sparseFallback=True, frame=self.frame)
                 if not isinstance(tileData, PIL.Image.Image):
                     tileData = PIL.Image.open(BytesIO(tileData))
                 if retile is None:
@@ -311,7 +331,7 @@ class LazyTileDict(dict):
             if not self.retile:
                 tileData = self.source.getTile(
                     self.x, self.y, self.level,
-                    pilImageAllowed=True, sparseFallback=True)
+                    pilImageAllowed=True, sparseFallback=True, frame=self.frame)
             else:
                 tileData = self._retileTile()
             tileFormat = TILE_FORMAT_PIL
@@ -645,7 +665,7 @@ class TileSource(object):
             edges: if True, then the edge tiles will exclude the overlap
                 distance.  If unset or False, the edge tiles are full size.
         :param **kwargs: optional arguments.  Some options are encoding,
-            jpegQuality, jpegSubsampling, tiffCompression.
+            jpegQuality, jpegSubsampling, tiffCompression, frame.
         :returns: a dictionary of information needed for the tile iterator.
                 This is None if no tiles will be returned.  Otherwise, this
                 contains:
@@ -668,6 +688,7 @@ class TileSource(object):
                     this is different that region width and region height, then
                     the original request was asking for a different scale than
                     is being delivered.
+            frame: the frame value for the base image.
             format: a tuple of allowed output formats.
             encoding: if the output format is TILE_FORMAT_IMAGE, the desired
                 encoding.
@@ -811,6 +832,7 @@ class TileSource(object):
                 'width': outWidth,
                 'height': outHeight,
             },
+            'frame': kwargs.get('frame'),
             'format': kwargs.get('format', (TILE_FORMAT_NUMPY, )),
             'encoding': kwargs.get('encoding'),
             'requestedScale': requestedScale,
@@ -947,6 +969,7 @@ class TileSource(object):
                 tile = LazyTileDict({
                     'x': x,
                     'y': y,
+                    'frame': iterInfo.get('frame'),
                     'level': level,
                     'format': format,
                     'encoding': encoding,
@@ -1120,7 +1143,7 @@ class TileSource(object):
         }
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False):
+    def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False, frame=None):
         raise NotImplementedError()
 
     def getTileMimeType(self):
