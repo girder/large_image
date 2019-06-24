@@ -54,3 +54,5 @@ node_modules/
 .*.swp
 .*.swo
 *.aux.xml
+
+.eslintcache

@@ -1,3 +1,5 @@
+import $ from 'jquery';
+
 import ImageViewerWidget from './base';
 
 var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({

@@ -1,3 +1,5 @@
+import $ from 'jquery';
+
 import { restRequest } from '@girder/core/rest';
 
 import ImageViewerWidget from './base';

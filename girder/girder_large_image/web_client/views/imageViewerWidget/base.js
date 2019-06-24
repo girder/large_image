@@ -1,3 +1,5 @@
+import $ from 'jquery';
+
 import { getApiRoot, restRequest } from '@girder/core/rest';
 import View from '@girder/core/views/View';
 
