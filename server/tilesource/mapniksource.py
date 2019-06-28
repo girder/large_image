@@ -125,7 +125,6 @@ class MapnikTileSource(FileTileSource):
         super(MapnikTileSource, self).__init__(path, **kwargs)
         self._bounds = {}
         self._path = self._getLargeImagePath()
-        self.dataset = gdal.Open(self._path)
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
@@ -143,9 +142,10 @@ class MapnikTileSource(FileTileSource):
             except TypeError:
                 raise TileSourceException('Style is not a valid json object.')
 
+        dataset = self.dataset
         try:
-            self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
-            self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
+            self.sourceSizeX = self.sizeX = dataset.RasterXSize
+            self.sourceSizeY = self.sizeY = dataset.RasterYSize
         except AttributeError:
             raise TileSourceException('File cannot be opened via Mapnik.')
         try:
@@ -163,17 +163,22 @@ class MapnikTileSource(FileTileSource):
         if self.projection:
             self._initWithProjection(unitsPerPixel)
 
+    @property
+    def dataset(self):
+        return gdal.Open(self._path)
+
     def _getDriver(self):
         """
         Get the GDAL driver used to read this dataset.
 
         :returns: The name of the driver.
         """
+        dataset = self.dataset
         if not hasattr(self, '_driver'):
-            if not self.dataset or not self.dataset.GetDriver():
+            if not dataset or not dataset.GetDriver():
                 self._driver = None
             else:
-                self._driver = self.dataset.GetDriver().ShortName
+                self._driver = dataset.GetDriver().ShortName
         return self._driver
 
     def _initWithProjection(self, unitsPerPixel=None):
@@ -370,9 +375,10 @@ class MapnikTileSource(FileTileSource):
 
     def getBandInformation(self):
         if not getattr(self, '_bandInfo', None):
+            dataset = self.dataset
             infoSet = {}
-            for i in range(self.dataset.RasterCount):
-                band = self.dataset.GetRasterBand(i + 1)
+            for i in range(dataset.RasterCount):
+                band = dataset.GetRasterBand(i + 1)
                 info = {}
                 stats = band.GetStatistics(True, True)
                 # The statistics provide a min and max, so we don't fetch those
@@ -897,8 +903,9 @@ class MapnikTileSource(FileTileSource):
                 # convert to native pixel coordinates
                 x, y = self.toNativePixelCoordinates(x, y)
             if 0 <= int(x) < self.sizeX and 0 <= int(y) < self.sizeY:
-                for i in range(self.dataset.RasterCount):
-                    band = self.dataset.GetRasterBand(i + 1)
+                dataset = self.dataset
+                for i in range(dataset.RasterCount):
+                    band = dataset.GetRasterBand(i + 1)
                     try:
                         value = band.ReadRaster(int(x), int(y), 1, 1, buf_type=gdal.GDT_Float32)
                         if value:
