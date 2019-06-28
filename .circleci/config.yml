@@ -6,6 +6,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: upgrade pip
+          command: |
+            pip install --upgrade pip
+      - run:
           name: Install Docker Compose
           command: |
             pip install docker-compose
@@ -33,6 +37,10 @@ jobs:
     working_directory: /home/circleci/project
     steps:
       - checkout
+      - run:
+          name: upgrade pip
+          command: |
+            pip install --upgrade pip
       - run:
           name: Install Docker Compose
           command: |
