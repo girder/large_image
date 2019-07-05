@@ -128,9 +128,8 @@ class TestLargeImageAnnotation(object):
         publicFolder = utilities.namedFolder(admin, 'Public')
 
         item = Item().createItem('sample', admin, publicFolder)
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(Exception, match='Invalid ObjectId'):
             Annotation().load('nosuchid')
-        assert 'Invalid ObjectId' in str(exc)
         assert Annotation().load('012345678901234567890123', user=admin) is None
         annot = Annotation().createAnnotation(item, admin, sampleAnnotation)
         loaded = Annotation().load(annot['_id'], user=admin)
@@ -228,9 +227,8 @@ class TestLargeImageAnnotation(object):
         assert Annotation().validate(doc) is not None
         annot['elements'][0]['id'] = ObjectId('012345678901234567890123')
         annot['elements'].append(annot['elements'][0])
-        with pytest.raises(ValidationException) as exc:
+        with pytest.raises(ValidationException, match='not unique'):
             Annotation().validate(doc)
-        assert 'not unique' in str(exc)
         annot['elements'][1] = copy.deepcopy(annot['elements'][0])
         annot['elements'][1]['id'] = ObjectId('012345678901234567890124')
         assert Annotation().validate(doc) is not None

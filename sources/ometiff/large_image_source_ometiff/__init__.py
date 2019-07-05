@@ -70,6 +70,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
     """
     Provides tile access to TIFF files.
     """
+
     cacheName = 'tilesource'
     name = 'ometifffile'
     extensions = {

@@ -116,11 +116,10 @@ def testTileLinearStyleFromGeotiffs():
 
 def testTileStyleBadInput():
     def _assertStyleResponse(imagePath, style, message):
-        with pytest.raises(TileSourceException) as exc:
+        with pytest.raises(TileSourceException, match=message):
             source = large_image_source_mapnik.MapnikFileTileSource(
                 imagePath, projection='EPSG:3857', style=json.dumps(style))
             source.getTile(22, 51, 7, encoding='PNG')
-        assert message in str(exc)
 
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
@@ -243,17 +242,14 @@ def testPixel():
 def testSourceErrors():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    with pytest.raises(TileSourceException) as exc:
+    with pytest.raises(TileSourceException, match='must not be geographic'):
         large_image_source_mapnik.MapnikFileTileSource(imagePath, 'EPSG:4326')
-    assert 'must not be geographic' in str(exc)
     imagePath = os.path.join(testDir, 'test_files', 'zero_gi.tif')
-    with pytest.raises(TileSourceException) as exc:
+    with pytest.raises(TileSourceException, match='cannot be opened via Mapnik'):
         large_image_source_mapnik.MapnikFileTileSource(imagePath)
-    assert 'cannot be opened via Mapnik' in str(exc)
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
-    with pytest.raises(TileSourceException) as exc:
+    with pytest.raises(TileSourceException, match='does not have a projected scale'):
         large_image_source_mapnik.MapnikFileTileSource(imagePath)
-    assert 'does not have a projected scale' in str(exc)
 
 
 def testStereographicProjection():
@@ -261,9 +257,8 @@ def testStereographicProjection():
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     # We will fail if we ask for a stereographic projection and don't
     # specify unitsPerPixel
-    with pytest.raises(TileSourceException) as exc:
+    with pytest.raises(TileSourceException, match='unitsPerPixel must be specified'):
         large_image_source_mapnik.MapnikFileTileSource(imagePath, 'EPSG:3411')
-    assert 'unitsPerPixel must be specified' in str(exc)
     # But will pass if unitsPerPixel is specified
     large_image_source_mapnik.MapnikFileTileSource(imagePath, 'EPSG:3411', unitsPerPixel=150000)
 
@@ -312,10 +307,9 @@ def testConvertProjectionUnits():
     assert result[1] == pytest.approx(149, 1)
     assert result[2:] == (None, None, 'base_pixels')
 
-    with pytest.raises(TileSourceException) as exc:
+    with pytest.raises(TileSourceException, match='Cannot convert'):
         tsNoProj._convertProjectionUnits(
             -117.5, None, -117, None, None, None, 'EPSG:4326')
-    assert 'Cannot convert' in str(exc)
 
     tsProj = large_image_source_mapnik.MapnikFileTileSource(imagePath, projection='EPSG:3857')
     result = tsProj._convertProjectionUnits(

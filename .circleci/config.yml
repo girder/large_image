@@ -14,7 +14,9 @@ jobs:
           command: npm install -g phantomjs-prebuilt --unsafe-perm
       - run:
           name: Run tests via tox
-          command: tox | cat
+          # Piping through cat does less buffering of the output but can
+          # consume the exit code
+          command: tox | cat; test ${PIPESTATUS[0]} -eq 0
       - run:
           name: Install Codecov client
           command: pip install codecov

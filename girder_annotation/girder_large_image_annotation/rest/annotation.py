@@ -218,7 +218,7 @@ class AnnotationResource(Resource):
         .errorResponse('ID was invalid.')
         .errorResponse('Write access was denied for the item.', 403)
         .errorResponse('Invalid JSON passed in request body.')
-        .errorResponse('Validation Error: JSON doesn\'t follow schema.')
+        .errorResponse("Validation Error: JSON doesn't follow schema.")
     )
     @access.user
     @loadmodel(map={'itemId': 'item'}, model='item', level=AccessType.WRITE)
@@ -230,7 +230,7 @@ class AnnotationResource(Resource):
         except ValidationException as exc:
             logger.exception('Failed to validate annotation')
             raise RestException(
-                'Validation Error: JSON doesn\'t follow schema (%r).' % (
+                "Validation Error: JSON doesn't follow schema (%r)." % (
                     exc.args, ))
 
     @describeRoute(
@@ -266,7 +266,7 @@ class AnnotationResource(Resource):
                paramType='body', required=False)
         .errorResponse('Write access was denied for the item.', 403)
         .errorResponse('Invalid JSON passed in request body.')
-        .errorResponse('Validation Error: JSON doesn\'t follow schema.')
+        .errorResponse("Validation Error: JSON doesn't follow schema.")
     )
     @access.user
     @loadmodel(model='annotation', plugin='large_image', level=AccessType.WRITE)
@@ -296,7 +296,7 @@ class AnnotationResource(Resource):
         except ValidationException as exc:
             logger.exception('Failed to validate annotation')
             raise RestException(
-                'Validation Error: JSON doesn\'t follow schema (%r).' % (
+                "Validation Error: JSON doesn't follow schema (%r)." % (
                     exc.args, ))
         if not returnElements:
             del annotation['annotation']['elements']
@@ -383,7 +383,7 @@ class AnnotationResource(Resource):
         return annotation
 
     @autoDescribeRoute(
-        Description('Get a list of an annotation\'s history.')
+        Description("Get a list of an annotation's history.")
         .param('id', 'The ID of the annotation.', paramType='path')
         .pagingParams(defaultSort='_version', defaultLimit=0,
                       defaultSortDir=SortDir.DESCENDING)
@@ -394,7 +394,7 @@ class AnnotationResource(Resource):
         return list(Annotation().versionList(id, self.getCurrentUser(), limit, offset, sort))
 
     @autoDescribeRoute(
-        Description('Get a specific version of an annotation\'s history.')
+        Description("Get a specific version of an annotation's history.")
         .param('id', 'The ID of the annotation.', paramType='path')
         .param('version', 'The version of the annotation.', paramType='path',
                dataType='integer')
@@ -470,7 +470,7 @@ class AnnotationResource(Resource):
         .errorResponse('ID was invalid.')
         .errorResponse('Write access was denied for the item.', 403)
         .errorResponse('Invalid JSON passed in request body.')
-        .errorResponse('Validation Error: JSON doesn\'t follow schema.')
+        .errorResponse("Validation Error: JSON doesn't follow schema.")
     )
     @access.user
     def createItemAnnotations(self, item, annotations):
@@ -484,6 +484,6 @@ class AnnotationResource(Resource):
             except ValidationException as exc:
                 logger.exception('Failed to validate annotation')
                 raise RestException(
-                    'Validation Error: JSON doesn\'t follow schema (%r).' % (
+                    "Validation Error: JSON doesn't follow schema (%r)." % (
                         exc.args, ))
         return len(annotations)

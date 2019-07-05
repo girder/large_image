@@ -182,7 +182,7 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None):
             break
         except AssertionError:
             result = resp.json['message']
-            if 'didn\'t meet requirements' in result:
+            if "didn't meet requirements" in result:
                 return False
             if 'No large image file' in result:
                 return None

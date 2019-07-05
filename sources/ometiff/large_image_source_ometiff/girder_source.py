@@ -24,5 +24,6 @@ class OMETiffGirderTileSource(OMETiffFileTileSource, GirderTileSource):
     """
     Provides tile access to Girder items with an OMETiff file.
     """
+
     cacheName = 'tilesource'
     name = 'ometiff'

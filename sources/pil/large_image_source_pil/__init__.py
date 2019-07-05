@@ -65,6 +65,7 @@ class PILFileTileSource(FileTileSource):
     """
     Provides tile access to single image PIL files.
     """
+
     cacheName = 'tilesource'
     name = 'pilfile'
     # No extensions or mime types are explicitly added for the PIL tile source,

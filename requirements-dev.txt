@@ -22,7 +22,7 @@ flake8-blind-except
 flake8-bugbear; python_version >= '3.5'
 flake8-docstrings>=1.3
 flake8-quotes
-pydocstyle
+pydocstyle<4
 pytest>=3.6
 pytest-cov==2.5
 pytest-girder>=3.0.0a5

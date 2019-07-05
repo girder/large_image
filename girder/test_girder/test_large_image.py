@@ -65,9 +65,8 @@ def testSettings(server):
         assert not Setting().get(key)
         Setting().set(key, 'true')
         assert Setting().get(key)
-        with pytest.raises(ValidationException) as exc:
+        with pytest.raises(ValidationException, match='must be a boolean'):
             Setting().set(key, 'not valid')
-        assert 'must be a boolean' in str(exc)
     testExtraVal = json.dumps({'images': ['label']})
     for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC,
                 constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
@@ -76,22 +75,18 @@ def testSettings(server):
         assert Setting().get(key) == ''
         Setting().set(key, testExtraVal)
         assert Setting().get(key) == testExtraVal
-        with pytest.raises(ValidationException) as exc:
+        with pytest.raises(ValidationException, match='must be a JSON'):
             Setting().set(key, 'not valid')
-        assert 'must be a JSON' in str(exc)
-        with pytest.raises(ValidationException) as exc:
+        with pytest.raises(ValidationException, match='must be a JSON'):
             Setting().set(key, '[1]')
-        assert 'must be a JSON' in str(exc)
     Setting().set(constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER, 'geojs')
     assert Setting().get(constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER) == 'geojs'
-    with pytest.raises(ValidationException) as exc:
+    with pytest.raises(ValidationException, match='must be a non-negative integer'):
         Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, -1)
-    assert 'must be a non-negative integer' in str(exc)
     Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 5)
     assert Setting().get(constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES) == 5
-    with pytest.raises(ValidationException) as exc:
+    with pytest.raises(ValidationException, match='must be a non-negative integer'):
         Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, -1)
-    assert 'must be a non-negative integer' in str(exc)
     Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE, 1024)
     assert Setting().get(constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE) == 1024
     # Test the large_image/settings end point

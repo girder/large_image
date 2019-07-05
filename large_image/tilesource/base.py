@@ -123,6 +123,7 @@ class LazyTileDict(dict):
     Unless setFormat is called on the tile, tile images may always be returned
     as PIL images.
     """
+
     def __init__(self, tileInfo, *args, **kwargs):
         """
         Create a LazyTileDict dictionary where there is enough information to
@@ -1302,7 +1303,7 @@ class TileSource(object):
         for key in ('region', 'scale'):
             if key in kwargs:
                 raise TypeError('getRegionAtAnotherScale() got an unexpected '
-                                'keyword argument of \'%s\'' % key)
+                                'keyword argument of "%s"' % key)
         region = self.convertRegionScale(sourceRegion, sourceScale,
                                          targetScale, targetUnits)
         return self.getRegion(region=region, scale=targetScale, **kwargs)
@@ -1579,7 +1580,7 @@ class TileSource(object):
         for key in ('region', 'scale'):
             if key in kwargs:
                 raise TypeError('getRegionAtAnotherScale() got an unexpected '
-                                'keyword argument of \'%s\'' % key)
+                                'keyword argument of "%s"' % key)
         region = self.convertRegionScale(sourceRegion, sourceScale,
                                          targetScale, targetUnits)
         return self.tileIterator(region=region, scale=targetScale, **kwargs)

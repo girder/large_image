@@ -102,6 +102,7 @@ class InvalidOperationTiffException(TiffException):
     """
     An exception caused by the user making an invalid request of a TIFF file.
     """
+
     pass
 
 
@@ -110,6 +111,7 @@ class IOTiffException(TiffException):
     An exception caused by an internal failure, due to an invalid file or other
     error.
     """
+
     pass
 
 
@@ -118,6 +120,7 @@ class ValidationTiffException(TiffException):
     An exception caused by the TIFF reader not being able to support a given
     file.
     """
+
     pass
 
 

@@ -33,6 +33,7 @@ class PILGirderTileSource(PILFileTileSource, GirderTileSource):
     """
     Provides tile access to Girder items with a PIL file.
     """
+
     # Cache size is based on what the class needs, which does not include
     # individual tiles
     cacheName = 'tilesource'

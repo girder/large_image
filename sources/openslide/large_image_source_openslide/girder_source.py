@@ -25,6 +25,7 @@ class OpenslideGirderTileSource(OpenslideFileTileSource, GirderTileSource):
     Provides tile access to Girder items with an SVS file or other files that
     the openslide library can read.
     """
+
     cacheName = 'tilesource'
     name = 'svs'
 

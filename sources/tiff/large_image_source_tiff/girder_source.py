@@ -24,5 +24,6 @@ class TiffGirderTileSource(TiffFileTileSource, GirderTileSource):
     """
     Provides tile access to Girder items with a TIFF file.
     """
+
     cacheName = 'tilesource'
     name = 'tiff'

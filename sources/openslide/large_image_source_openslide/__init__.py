@@ -45,6 +45,7 @@ class OpenslideFileTileSource(FileTileSource):
     Provides tile access to SVS files and other files the openslide library can
     read.
     """
+
     cacheName = 'tilesource'
     name = 'svsfile'
     extensions = {
@@ -93,7 +94,7 @@ class OpenslideFileTileSource(FileTileSource):
         if (self.sizeX != self._openslide.dimensions[0] or
                 self.sizeY != self._openslide.dimensions[1]):
             msg = ('OpenSlide reports a dimension of %d x %d, but base layer '
-                   'has a dimension of %d x %d -- using base layer\'s '
+                   'has a dimension of %d x %d -- using base layer '
                    'dimensions.' % (
                        self._openslide.dimensions[0],
                        self._openslide.dimensions[1], self.sizeX, self.sizeY))

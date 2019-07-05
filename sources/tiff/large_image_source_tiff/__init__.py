@@ -47,6 +47,7 @@ class TiffFileTileSource(FileTileSource):
     """
     Provides tile access to TIFF files.
     """
+
     cacheName = 'tilesource'
     name = 'tifffile'
     extensions = {
@@ -110,7 +111,7 @@ class TiffFileTileSource(FileTileSource):
                            td.imageWidth * td.imageHeight, directoryNum, td))
         # If there are no tiled images, raise an exception.
         if not len(alldir):
-            msg = 'File %s didn\'t meet requirements for tile source: %s' % (
+            msg = "File %s didn't meet requirements for tile source: %s" % (
                 largeImagePath, lastException)
             config.getConfig('logger').debug(msg)
             raise TileSourceException(msg)

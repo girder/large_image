@@ -31,6 +31,7 @@ class MapnikGirderTileSource(MapnikFileTileSource, GirderTileSource):
     """
     Provides tile access to Girder items for mapnik layers.
     """
+
     name = 'mapnik'
     cacheName = 'tilesource'
 
@@ -58,4 +59,5 @@ class MapnikGirderTileSource(MapnikFileTileSource, GirderTileSource):
                 return largeImagePath
         except Exception:
             pass
+        print('-------------- %r' % GirderTileSource._getLargeImagePath(self))
         return GirderTileSource._getLargeImagePath(self)

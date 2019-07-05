@@ -44,6 +44,9 @@ except DistributionNotFound:
     pass
 
 
+mapnik.logger.set_severity(mapnik.severity_type.Debug)
+
+
 TileInputUnits['projection'] = 'projection'
 TileInputUnits['proj'] = 'projection'
 TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
@@ -64,6 +67,7 @@ class MapnikFileTileSource(FileTileSource):
     """
     Provides tile access to geospatial files.
     """
+
     cacheName = 'tilesource'
     name = 'mapnikfile'
     extensions = {
@@ -74,6 +78,7 @@ class MapnikFileTileSource(FileTileSource):
         'nitf': SourcePriority.PREFERRED,
         'tif': SourcePriority.LOW,
         'tiff': SourcePriority.LOW,
+        'vrt': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
@@ -841,6 +846,7 @@ class MapnikFileTileSource(FileTileSource):
             ymin, ymax = ymin - py * overscan, ymax + py * overscan
         with self._getTileLock:
             if not hasattr(self, '_mapnikMap'):
+                mapnik.logger.set_severity(mapnik.severity_type.Debug)
                 m = mapnik.Map(
                     self.tileWidth + overscan * 2,
                     self.tileHeight + overscan * 2,

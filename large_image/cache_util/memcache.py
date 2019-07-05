@@ -58,7 +58,7 @@ class MemCache(cachetools.Cache):
         self.throttleErrors = 10  # seconds between logging errors
 
     def __repr__(self):
-        return 'Memcache doesn\'t list its keys'
+        return "Memcache doesn't list its keys"
 
     def __iter__(self):
         # return invalid iter
