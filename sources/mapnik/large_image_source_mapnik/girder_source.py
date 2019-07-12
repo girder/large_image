@@ -59,5 +59,4 @@ class MapnikGirderTileSource(MapnikFileTileSource, GirderTileSource):
                 return largeImagePath
         except Exception:
             pass
-        print('-------------- %r' % GirderTileSource._getLargeImagePath(self))
         return GirderTileSource._getLargeImagePath(self)
