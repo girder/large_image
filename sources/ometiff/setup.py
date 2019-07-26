@@ -27,6 +27,7 @@ setup(
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
     description='An OMETiff tilesource for large_image',
+    long_description='See the large-image package for more details.',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
     classifiers=[

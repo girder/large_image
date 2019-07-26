@@ -3,17 +3,29 @@ Large Image |build-status| |codecov-io| |license-badge|
 
 Python modules to work with large multiresolution images.
 
+Quick Installation via pip
+--------------------------
+
+In addition to installing the ``large-image`` package, you'll need at least one tile source (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
+
+- Install all tile sources and all Girder plugins on linux: ``pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://manthey.github.io/large_image_wheels``
+
+- Install all tile sources on linux: ``pip install large-image[all] --find-links https://manthey.github.io/large_image_wheels``
+
+Modules
+-------
+
 Large Image consists of several Python modules designed to work together.  These include:
 
-- ``large_image``: The core module.
+- ``large-image``: The core module.
   You can specify extras_require of the name of any tile source included with this repository, ``sources`` for all of the tile sources in the repository, ``memcached`` for using memcached for tile caching, or ``all`` for all of the tile sources and memcached.
 
-- ``girder_large_image``: Large Image as a Girder_ 3.x plugin.
+- ``girder-large-image``: Large Image as a Girder_ 3.x plugin.
   You can specify extras_require of ``tasks`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
 
-- ``girder_large_image_annotation``: Annotations for large images as a Girder_ 3.x plugin.
+- ``girder-large-image-annotation``: Annotations for large images as a Girder_ 3.x plugin.
 
-- ``large_image_tasks``: A utility for using pyvips to convert images into pyramidal tiff files that can be read efficiently by large_image.  This can be used by itself or with Girder Worker.
+- ``large-image-tasks``: A utility for using pyvips to convert images into pyramidal tiff files that can be read efficiently by large_image.  This can be used by itself or with Girder Worker.
 
 - Tile sources:
 
@@ -31,7 +43,7 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-dummy``: A tile source that does nothing.
 
-  Most tile sources can be used with girder_large_image.
+  Most tile sources can be used with girder-large-image.
 
 
 Installation
@@ -43,7 +55,7 @@ To install all packages from source, clone
 
 2.  Install all packages and dependencies:
 
-    ``pip install -e large_image[memcached] -r requirements-dev.txt``
+    ``pip install -e large-image[memcached] -r requirements-dev.txt``
 
 
 Tile source prerequisites
@@ -51,7 +63,7 @@ Tile source prerequisites
 
 Many tile sources have complex prerequisites.  These can be installed directly using your system's package manager or from some prebuilt Python wheels for Linux.  The prebuilt wheels are not official packages, but they can be used by instructing pip to use them by preference:
 
-    ``pip install -e large_image[memcached] -r requirements-dev.txt --find-links https://manthey.github.io/large_image_wheels``
+    ``pip install -e large-image[memcached] -r requirements-dev.txt --find-links https://manthey.github.io/large_image_wheels``
 
 
 .. _Girder: https://github.com/girder/girder
