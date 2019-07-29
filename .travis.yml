@@ -221,6 +221,7 @@ before_install:
 install:
   - pushd $girder_path
   - pip install --no-cache-dir -U -r requirements-dev.txt -e .[mount]
+  - pip install 'pydocstyle<4'
   - popd
   - girder-install plugin --symlink $large_image_path
   # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them

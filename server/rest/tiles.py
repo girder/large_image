@@ -757,6 +757,7 @@ class TilesItemResource(ItemResource):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
+    @access.cookie
     @access.public
     def getAssociatedImage(self, itemId, image, params):
         _adjustParams(params)

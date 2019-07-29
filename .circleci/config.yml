@@ -13,12 +13,14 @@ jobs:
           name: Install Docker Compose
           command: |
             pip install docker-compose
-
       - run:
           name: Get the environment up and running
           command: |
             cd devops/mapnik_py35 && docker-compose build && docker-compose up -d
-
+      - run:
+          name: upgrade pip
+          command: |
+            docker exec large-image-mapnik-python35 pip3 install --upgrade pip
       - run:
           name: Install large image plugin
           command: |
@@ -45,12 +47,14 @@ jobs:
           name: Install Docker Compose
           command: |
             pip install docker-compose
-
       - run:
           name: Get the environment up and running
           command: |
             cd devops/mapnik_py36 && docker-compose build && docker-compose up -d
-
+      - run:
+          name: upgrade pip
+          command: |
+            docker exec large-image-mapnik-python36 pip3 install --upgrade pip
       - run:
           name: Install large image plugin
           command: |
