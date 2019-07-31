@@ -74,7 +74,12 @@ const AnnotationListWidget = View.extend({
         const annotation = this.collection.get(id);
         if ($el.find('input').prop('checked')) {
             this._drawn.add(id);
-            this._viewer.drawAnnotation(annotation);
+            annotation.fetch().then(() => {
+                if (this._drawn.has(id)) {
+                    this._viewer.drawAnnotation(annotation);
+                }
+                return null;
+            });
         } else {
             this._drawn.delete(id);
             this._viewer.removeAnnotation(annotation);
