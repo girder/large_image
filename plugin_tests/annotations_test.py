@@ -775,6 +775,22 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         )
         self.assertStatus(resp, 400)
 
+        # Delete annotations
+        resp = self.request(
+            path='/annotation/item/{}'.format(itemDest['_id']),
+            method='DELETE',
+            user=None
+        )
+        self.assertStatus(resp, 401)
+
+        resp = self.request(
+            path='/annotation/item/{}'.format(itemDest['_id']),
+            method='DELETE',
+            user=self.admin
+        )
+        self.assertStatusOk(resp)
+        self.assertEqual(resp.json, 2)
+
     def testDeleteAnnotation(self):
         from girder.plugins.large_image.models.annotation import Annotation
         from girder.plugins.large_image import constants

@@ -89,8 +89,8 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         self.assertEqual(tileMetadata['bounds']['xmin'], 367185.0)
         self.assertEqual(tileMetadata['bounds']['ymax'], 3788115.0)
         self.assertEqual(tileMetadata['bounds']['ymin'], 3552885.0)
-        self.assertEqual(tileMetadata['bounds']['srs'],
-                         '+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs ')
+        self.assertEqual(tileMetadata['bounds']['srs'].strip(),
+                         '+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs')
         self.assertTrue(tileMetadata['geospatial'])
         # Check that we read some band data, too
         self.assertEqual(len(tileMetadata['bands']), 3)

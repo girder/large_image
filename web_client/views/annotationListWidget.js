@@ -2,10 +2,13 @@ import _ from 'underscore';
 
 import { AccessType } from 'girder/constants';
 import { confirm } from 'girder/dialog';
-import { getApiRoot } from 'girder/rest';
+import { getApiRoot, restRequest } from 'girder/rest';
 import AccessWidget from 'girder/views/widgets/AccessWidget';
 import UserCollection from 'girder/collections/UserCollection';
 import View from 'girder/views/View';
+import events from 'girder/events';
+import FileModel from 'girder/models/FileModel';
+import UploadWidget from 'girder/views/widgets/UploadWidget';
 
 import AnnotationCollection from '../collections/AnnotationCollection';
 
@@ -17,6 +20,7 @@ const AnnotationListWidget = View.extend({
     events: {
         'change .g-annotation-toggle': '_displayAnnotation',
         'click .g-annotation-delete': '_deleteAnnotation',
+        'click .g-annotation-upload': '_uploadAnnotation',
         'click .g-annotation-permissions': '_changePermissions',
         'click .g-annotation-row'(evt) {
             var $el = $(evt.currentTarget);
@@ -52,6 +56,8 @@ const AnnotationListWidget = View.extend({
 
     render() {
         this.$el.html(annotationList({
+            item: this.model,
+            accessLevel: this.model.getAccessLevel(),
             annotations: this.collection,
             users: this.users,
             canDraw: this._viewer && this._viewer.annotationAPI(),
@@ -89,6 +95,22 @@ const AnnotationListWidget = View.extend({
     _deleteAnnotation(evt) {
         const $el = $(evt.currentTarget);
         const id = $el.parents('.g-annotation-row').data('annotationId');
+        if (!id) {
+            confirm({
+                text: `Are you sure you want to delete <b>ALL</b> annotations?`,
+                escapedHtml: true,
+                yesText: 'Delete',
+                confirmCallback: () => {
+                    restRequest({
+                        url: `annotation/item/${this.model.id}`,
+                        method: 'DELETE'
+                    }).done(() => {
+                        this.collection.fetch(null, true);
+                    });
+                }
+            });
+            return;
+        }
         const model = this.collection.get(id);
 
         confirm({
@@ -102,10 +124,90 @@ const AnnotationListWidget = View.extend({
         });
     },
 
+    _uploadAnnotation() {
+        var uploadWidget = new UploadWidget({
+            el: $('#g-dialog-container'),
+            title: 'Upload Annotation',
+            parent: this._makeUploadParent(),
+            parentType: 'file', // invokes special upload widget code
+            parentView: this,
+            multiFile: true
+        }).on('g:uploadFinished', function () {
+            events.trigger('g:alert', {
+                icon: 'ok',
+                text: 'Uploaded annotations.',
+                type: 'success',
+                timeout: 4000
+            });
+        }, this);
+        this._uploadWidget = uploadWidget;
+        uploadWidget.render();
+        uploadWidget.on('g:uploadFinished', () => {
+            this.collection.fetch(null, true);
+        });
+    },
+
+    _makeUploadParent() {
+        var parent = new FileModel();
+        parent.updateContents = (data) => {
+            restRequest({
+                url: `annotation/item/${this.model.id}`,
+                method: 'POST',
+                data: data,
+                contentType: 'application/json',
+                processData: false
+            }).done((resp) => {
+                parent.name = this.model.name();
+                parent.trigger('g:upload.progress', {
+                    startByte: 0,
+                    loaded: data.size,
+                    total: data.size,
+                    file: parent
+                });
+                this._uploadWidget.parent = this._makeUploadParent();
+                parent.trigger('g:upload.complete');
+            }).fail((resp) => {
+                this._uploadWidget.parent = this._makeUploadParent();
+                parent.trigger('g:upload.error', {
+                    message: 'An error occurred while uploading, check console.',
+                    response: resp
+                });
+            });
+        };
+        parent.name = () => {
+            return this.model.name();
+        };
+        parent.get = () => {
+            return this.model.get.apply(this.model, arguments);
+        };
+        return parent;
+    },
+
     _changePermissions(evt) {
         const $el = $(evt.currentTarget);
-        const id = $el.parents('.g-annotation-row').data('annotationId');
-        const model = this.collection.get(id);
+        let id = $el.parents('.g-annotation-row').data('annotationId');
+        if (!id && this.collection.length === 1) {
+            id = this.collection.at(0).id;
+        }
+        const model = id ? this.collection.get(id) : this.collection.at(0).clone();
+        if (!id) {
+            // if id is not set, override widget's saveAccessList
+            model.get('annotation').name = 'All Annotations';
+            model.save = () => {};
+            model.updateAccess = () => {
+                const access = {
+                    access: model.get('access'),
+                    public: model.get('public'),
+                    publicFlags: model.get('publicFlags')
+                };
+                this.collection.each((loopmodel) => {
+                    loopmodel.set(access);
+                    loopmodel.updateAccess();
+                });
+                this.collection.fetch(null, true);
+                model.trigger('g:accessListSaved');
+            };
+        }
         new AccessWidget({
             el: $('#g-dialog-container'),
             type: 'annotation',

@@ -123,7 +123,7 @@ describe('AnnotationListWidget', function () {
             }, 15000);
             girderTest.waitForLoad();
             runs(function () {
-                expect($('.g-annotation-list-container *').length).toBe(0);
+                expect($('.g-annotation-list-container .g-annotation-row').length).toBe(0);
             });
         });
         it('get item model', function () {
@@ -280,12 +280,93 @@ describe('AnnotationListWidget', function () {
                 expect(drawnAnnotations[id]).toBeUndefined();
             });
         });
+        it('test that neither the delete-all nor all-permissions icons are present', function () {
+            expect($('.g-annotation-list-header .g-annotation-permissions').length).toBe(0);
+            expect($('.g-annotation-list-header .g-annotation-delete').length).toBe(0);
+        });
         it('switch to a viewer that does not support annotations', function () {
             $('.g-item-image-viewer-select select').val('leaflet').trigger('change');
             waitForLargeImageViewer('leaflet');
             runs(function () {
                 expect($('.g-annotation-list .g-annotation-toggle input:first').prop('disabled')).toBe(true);
             });
+        });
+    });
+    describe('Test bulk actions as admin', function () {
+        it('logout', girderTest.logout('log out user'));
+        it('login as admin', girderTest.login('admin', 'Admin', 'Admin', 'testpassword'));
+        it('reload the item page', function () {
+            girder.router.navigate('', {trigger: true});
+            girderTest.waitForLoad();
+            runs(function () {
+                girder.router.navigate('item/' + item.id, {trigger: true});
+            });
+            girderTest.waitForLoad();
+            waitForLargeImageViewer('openseadragon');
+            runs(function () {
+                $('.g-item-image-viewer-select select').val('geojs').trigger('change');
+            });
+            waitForLargeImageViewer('geojs');
+        });
+        it('test upload annotation button with cancel', function () {
+            runs(function () {
+                $('.g-annotation-list-header .g-annotation-upload').click();
+            });
+            girderTest.waitForDialog();
+            runs(function () {
+                $('.modal-footer a.btn').click(); // cancel
+            });
+            girderTest.waitForLoad();
+        });
+        it('test upload annotation button with file', function () {
+            runs(function () {
+                $('.g-annotation-list-header .g-annotation-upload').click();
+            });
+            girderTest.waitForDialog();
+            runs(function () {
+                girderTest._prepareTestUpload();
+                girderTest._uploadDataExtra = 0;
+                girderTest.sendFile('plugins/large_image/plugin_tests/client/sample_annotation.json');
+            });
+            waitsFor(function () {
+                return $('.g-overall-progress-message i.icon-ok').length > 0;
+            }, 'the filesChanged event to happen');
+            runs(function () {
+                $('#g-files').parent().addClass('hide');
+                $('.g-start-upload').click();
+            });
+            girderTest.waitForLoad();
+            waitsFor(function () {
+                var $el = $('.g-annotation-list .g-annotation-row');
+                console.log($el.length);
+                return $el.length === 10;
+            }, 'the upload to finish');
+        });
+        it('test header permission editor link', function () {
+            var $el = $('.g-annotation-list-header');
+            expect($el.find('.g-annotation-permissions').length).toBe(1);
+            $el.find('.g-annotation-permissions').click();
+
+            girderTest.waitForDialog();
+            runs(function () {
+                expect($('#g-dialog-container .modal-title').text()).toBe('Access control');
+                $('#g-dialog-container .g-save-access-list').click();
+            });
+            girderTest.waitForLoad();
+        });
+        it('test header delete link', function () {
+            var $el = $('.g-annotation-list-header');
+            expect($el.find('.g-annotation-delete').length).toBe(1);
+            $el.find('.g-annotation-delete').click();
+
+            girderTest.waitForDialog();
+            runs(function () {
+                $('#g-dialog-container #g-confirm-button').click();
+            });
+
+            waitsFor(function () {
+                return $('.g-annotation-list .g-annotation-row').length === 0;
+            }, 'all annotations to be removed');
         });
     });
 });
