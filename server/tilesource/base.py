@@ -144,11 +144,15 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
         else:
             encoding = TileOutputPILFormat.get(encoding, encoding)
             output = BytesIO()
+            params = {}
             if encoding == 'JPEG' and image.mode not in ('L', 'RGB'):
                 image = image.convert('RGB')
-            image.save(
-                output, encoding, quality=jpegQuality,
-                subsampling=jpegSubsampling, compression=tiffCompression)
+            if encoding == 'JPEG':
+                params['quality'] = jpegQuality
+                params['subsampling'] = jpegSubsampling
+            elif encoding == 'TIFF':
+                params['compression'] = tiffCompression
+            image.save(output, encoding, **params)
             imageData = output.getvalue()
     return imageData, imageFormatOrMimeType
 
@@ -1105,9 +1109,13 @@ class TileSource(object):
             tile.fp.seek(0)
             return tile.fp.read()
         output = BytesIO()
-        tile.save(
-            output, encoding, quality=self.jpegQuality,
-            subsampling=self.jpegSubsampling, compression=self.tiffCompression)
+        params = {}
+        if encoding == 'JPEG':
+            params['quality'] = self.jpegQuality
+            params['subsampling'] = self.jpegSubsampling
+        elif encoding == 'TIFF':
+            params['compression'] = self.tiffCompression
+        tile.save(output, encoding, **params)
         return output.getvalue()
 
     def _getAssociatedImage(self, imageKey):
