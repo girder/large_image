@@ -62,8 +62,6 @@ CacheProperties['tilesource']['itemExpectedSize'] = max(
 ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
-# Proj 6 no longer wants +init= as part of the projection name, but doesn't
-# actually work without it.
 InitPrefix = '+init='
 
 
@@ -299,7 +297,7 @@ class MapnikFileTileSource(FileTileSource):
                 # between -180,0 and +180,0 is used.  Some projections (such as
                 # stereographic) will fail in this case; they must have a
                 # unitsPerPixel specified.
-                equator = pyproj.transform(inProj, outProj, [-180, 180], [0, 0])
+                equator = pyproj.transform(inProj, outProj, [-180, 180], [0, 0], always_xy=True)
                 self.unitsAcrossLevel0 = abs(equator[0][1] - equator[0][0])
                 if not self.unitsAcrossLevel0:
                     raise TileSourceException(
@@ -451,9 +449,9 @@ class MapnikFileTileSource(FileTileSource):
                 'srs': nativeSrs,
             }
             # Make sure geographic coordinates do not exceed their limits
-            if pyproj.Proj(nativeSrs).crs.is_geographic and srs:
+            if self._proj4Proj(nativeSrs).crs.is_geographic and srs:
                 try:
-                    pyproj.Proj(srs)(0, 90, errcheck=True)
+                    self._proj4Proj(srs)(0, 90, errcheck=True)
                     yBound = 90.0
                 except RuntimeError:
                     yBound = 89.999999
@@ -464,7 +462,7 @@ class MapnikFileTileSource(FileTileSource):
                 outProj = self._proj4Proj(srs)
                 keys = ('ll', 'ul', 'lr', 'ur')
                 pts = pyproj.itransform(inProj, outProj, [
-                    (bounds[key]['x'], bounds[key]['y']) for key in keys])
+                    (bounds[key]['x'], bounds[key]['y']) for key in keys], always_xy=True)
                 for idx, pt in enumerate(pts):
                     key = keys[idx]
                     bounds[key]['x'] = pt[0]
@@ -819,7 +817,7 @@ class MapnikFileTileSource(FileTileSource):
                 # prime meridian by 360 degrees.  If none of the dataset is in
                 # the range of [-180, 180], this does't apply the shift either.
                 self._repeatLongitude = None
-                if pyproj.Proj(layerSrs).crs.is_geographic:
+                if self._proj4Proj(layerSrs).crs.is_geographic:
                     bounds = self.getBounds()
                     if bounds['xmax'] - bounds['xmin'] < 361:
                         if bounds['xmin'] < -180 and bounds['xmax'] > -180:
@@ -887,6 +885,11 @@ class MapnikFileTileSource(FileTileSource):
             proj = proj.split(':', 1)[1]
         if proj.lower().startswith('epsg:'):
             proj = InitPrefix + proj.lower()
+        try:
+            if proj.startswith(InitPrefix) and int(pyproj.proj_version_str.split('.')[0]) >= 6:
+                proj = proj[len(InitPrefix):]
+        except Exception:
+            pass  # failed to parse version
         return pyproj.Proj(proj)
 
     def _convertProjectionUnits(self, left, top, right, bottom, width, height,
@@ -942,11 +945,11 @@ class MapnikFileTileSource(FileTileSource):
             pleft, ptop = pyproj.transform(
                 inProj, outProj,
                 right if left is None else left,
-                bottom if top is None else top)
+                bottom if top is None else top, always_xy=True)
             pright, pbottom = pyproj.transform(
                 inProj, outProj,
                 left if right is None else right,
-                top if bottom is None else bottom)
+                top if bottom is None else bottom, always_xy=True)
             units = 'projection'
         left = pleft if left is not None else None
         top = ptop if top is not None else None
@@ -1066,7 +1069,7 @@ class MapnikFileTileSource(FileTileSource):
         # convert to the native projection
         inProj = self._proj4Proj(proj)
         outProj = self._proj4Proj(self.getProj4String())
-        px, py = pyproj.transform(inProj, outProj, x, y)
+        px, py = pyproj.transform(inProj, outProj, x, y, always_xy=True)
         # convert to native pixel coordinates
         with self._getDatasetLock:
             gt = self.dataset.GetGeoTransform()
