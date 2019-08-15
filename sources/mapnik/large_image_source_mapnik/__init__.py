@@ -27,6 +27,7 @@ import struct
 import threading
 from operator import attrgetter
 from osgeo import gdal
+from osgeo import gdalconst
 from osgeo import osr
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -60,6 +61,14 @@ CacheProperties['tilesource']['itemExpectedSize'] = max(
 # Used to cache pixel size for projections
 ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
+
+# Proj 6 no longer wants +init= as part of the projection name
+InitPrefix = '+init='
+try:
+    if int(pyproj.proj_version_str.split('.')) > 6:
+        InitPrefix = ''
+except Exception:
+    pass
 
 
 @six.add_metaclass(LruCacheMetaclass)
@@ -151,14 +160,16 @@ class MapnikFileTileSource(FileTileSource):
         super(MapnikFileTileSource, self).__init__(path, **kwargs)
         self._bounds = {}
         self._path = self._getLargeImagePath()
-        self.dataset = gdal.Open(self._path)
+        self.dataset = gdal.Open(self._path, gdalconst.GA_ReadOnly)
         self._getDatasetLock = threading.RLock()
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
         self._projection = projection
         if projection and projection.lower().startswith('epsg:'):
-            projection = '+init=' + projection.lower()
+            projection = InitPrefix + projection.lower()
+        if projection and not InitPrefix and projection.startswith('+init='):
+            projection = projection[6:]
         if projection and not isinstance(projection, six.binary_type):
             projection = projection.encode('utf8')
         self.projection = projection
@@ -241,7 +252,7 @@ class MapnikFileTileSource(FileTileSource):
             }
         if not len(datasets):
             try:
-                self.getBounds('+init=epsg:3857')
+                self.getBounds(InitPrefix + 'epsg:3857')
             except RuntimeError:
                 self._bounds.clear()
                 del self._netcdf
@@ -258,7 +269,7 @@ class MapnikFileTileSource(FileTileSource):
                 # The base netCDF file reports different dimensions than the
                 # subdatasets.  For now, use the "best" subdataset's dimensions
                 dataset = self._netcdf['datasets'][self._netcdf['default']]
-                dataset['dataset'] = gdal.Open(dataset['name'])
+                dataset['dataset'] = gdal.Open(dataset['name'], gdalconst.GA_ReadOnly)
                 self.sourceSizeX = self.sizeX = dataset['dataset'].RasterXSize
                 self.sourceSizeY = self.sizeY = dataset['dataset'].RasterYSize
 
@@ -278,7 +289,7 @@ class MapnikFileTileSource(FileTileSource):
         """
         Initialize aspects of the class when a projection is set.
         """
-        inProj = self._proj4Proj('+init=epsg:4326')
+        inProj = self._proj4Proj(InitPrefix + 'epsg:4326')
         # Since we already converted to bytes decoding is safe here
         outProj = self._proj4Proj(self.projection)
         if outProj.crs.is_geographic:
@@ -337,7 +348,7 @@ class MapnikFileTileSource(FileTileSource):
             wkt = self.dataset.GetProjection()
         if not wkt:
             if hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}:
-                return '+init=epsg:4326'
+                return InitPrefix + 'epsg:4326'
             return
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
@@ -378,7 +389,7 @@ class MapnikFileTileSource(FileTileSource):
 
         :returns: the pixel size in meters or None.
         """
-        bounds = self.getBounds('+init=epsg:4326')
+        bounds = self.getBounds(InitPrefix + 'epsg:4326')
         if not bounds:
             return
         geod = pyproj.Geod(ellps='WGS84')
@@ -487,8 +498,8 @@ class MapnikFileTileSource(FileTileSource):
                     band = dataset.GetRasterBand(i + 1)
                     info = {}
                     stats = band.GetStatistics(True, True)
-                    # The statistics provide a min and max, so we don't fetch those
-                    # separately
+                    # The statistics provide a min and max, so we don't fetch
+                    # those separately
                     info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
                     info['nodata'] = band.GetNoDataValue()
                     info['scale'] = band.GetScale()
@@ -497,22 +508,22 @@ class MapnikFileTileSource(FileTileSource):
                     info['categories'] = band.GetCategoryNames()
                     interp = band.GetColorInterpretation()
                     info['interpretation'] = {
-                        1: 'gray',
-                        2: 'palette',
-                        3: 'red',
-                        4: 'green',
-                        5: 'blue',
-                        6: 'alpha',
-                        7: 'hue',
-                        8: 'saturation',
-                        9: 'lightness',
-                        10: 'cyan',
-                        11: 'magenta',
-                        12: 'yellow',
-                        13: 'black',
-                        14: 'Y',
-                        15: 'Cb',
-                        16: 'Cr',
+                        gdalconst.GCI_GrayIndex: 'gray',
+                        gdalconst.GCI_PaletteIndex: 'palette',
+                        gdalconst.GCI_RedBand: 'red',
+                        gdalconst.GCI_GreenBand: 'green',
+                        gdalconst.GCI_BlueBand: 'blue',
+                        gdalconst.GCI_AlphaBand: 'alpha',
+                        gdalconst.GCI_HueBand: 'hue',
+                        gdalconst.GCI_SaturationBand: 'saturation',
+                        gdalconst.GCI_LightnessBand: 'lightness',
+                        gdalconst.GCI_CyanBand: 'cyan',
+                        gdalconst.GCI_MagentaBand: 'magenta',
+                        gdalconst.GCI_YellowBand: 'yellow',
+                        gdalconst.GCI_BlackBand: 'black',
+                        gdalconst.GCI_YCbCr_YBand: 'Y',
+                        gdalconst.GCI_YCbCr_CbBand: 'Cb',
+                        gdalconst.GCI_YCbCr_CrBand: 'Cr',
                     }.get(interp, interp)
                     if band.GetColorTable():
                         info['colortable'] = [band.GetColorTable().GetColorEntry(pos)
@@ -534,7 +545,7 @@ class MapnikFileTileSource(FileTileSource):
                 dataset = self._netcdf['datasets'][band[0]]
                 if not dataset.get('bands'):
                     if not dataset.get('dataset'):
-                        dataset['dataset'] = gdal.Open(dataset['name'])
+                        dataset['dataset'] = gdal.Open(dataset['name'], gdalconst.GA_ReadOnly)
                     dataset['bands'] = self.getBandInformation(dataset['dataset'])
                 bandInfo = dataset['bands'][band[1]]
         return bandInfo
@@ -562,7 +573,7 @@ class MapnikFileTileSource(FileTileSource):
             # for key in self._netcdf['datasets']:
             #     dataset = self._netcdf['datasets'][key]
             #     if 'bands' not in dataset:
-            #         gdaldataset = gdal.Open(dataset['name'])
+            #         gdaldataset = gdal.Open(dataset['name'], gdalconst.GA_ReadOnly)
             #         dataset['bands'] = self.getBandInformation(gdaldataset)
             #         dataset['sizeX'] = gdaldataset.RasterXSize
             #         dataset['sizeY'] = gdaldataset.RasterYSize
@@ -881,7 +892,7 @@ class MapnikFileTileSource(FileTileSource):
         if proj.lower().startswith('proj4:'):
             proj = proj.split(':', 1)[1]
         if proj.lower().startswith('epsg:'):
-            proj = '+init=' + proj.lower()
+            proj = InitPrefix + proj.lower()
         return pyproj.Proj(proj)
 
     def _convertProjectionUnits(self, left, top, right, bottom, width, height,
