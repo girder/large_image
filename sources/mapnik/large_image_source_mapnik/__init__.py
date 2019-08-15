@@ -62,13 +62,9 @@ CacheProperties['tilesource']['itemExpectedSize'] = max(
 ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
-# Proj 6 no longer wants +init= as part of the projection name
+# Proj 6 no longer wants +init= as part of the projection name, but doesn't
+# actually work without it.
 InitPrefix = '+init='
-try:
-    if int(pyproj.proj_version_str.split('.')) > 6:
-        InitPrefix = ''
-except Exception:
-    pass
 
 
 @six.add_metaclass(LruCacheMetaclass)
@@ -168,8 +164,6 @@ class MapnikFileTileSource(FileTileSource):
         self._projection = projection
         if projection and projection.lower().startswith('epsg:'):
             projection = InitPrefix + projection.lower()
-        if projection and not InitPrefix and projection.startswith('+init='):
-            projection = projection[6:]
         if projection and not isinstance(projection, six.binary_type):
             projection = projection.encode('utf8')
         self.projection = projection
