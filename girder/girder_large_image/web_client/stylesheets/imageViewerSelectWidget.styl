@@ -1,0 +1,37 @@
+@import "~nib/index.styl"
+
+.g-item-image-viewer-select
+  select
+    display inline
+    width auto
+    margin-left 25px
+
+  .image-viewer
+    border 1px solid #f0f0f0
+    width 100%
+    height 600px
+    -webkit-touch-callout none
+    user-select none
+
+    &:focus
+      outline none
+
+.g-li-full-screen
+  width 100%
+  height 100%
+  position absolute
+  top 0
+  left 0
+
+.image-controls-frame
+  label
+    margin-right 8px
+  input.image-controls-number
+    display inline-block
+    vertical-align middle
+    width 60px
+    margin-right 8px
+  input.image-controls-slider
+    display inline-block
+    vertical-align middle
+    width 30%

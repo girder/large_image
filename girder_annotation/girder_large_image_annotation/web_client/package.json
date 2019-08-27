@@ -1,0 +1,185 @@
+{
+    "name": "@girder/large_image_annotation",
+    "version": "1.0.0",
+    "description": "Support annotations in the large_image plugin.",
+    "homepage": "https://github.com/girder/large_image",
+    "bugs": {
+        "url": "https://github.com/girder/large_image/issues"
+    },
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/girder/large_image.git"
+    },
+    "peerDependencies": {
+        "@girder/core": "*",
+        "@girder/large_image": "*"
+    },
+    "dependencies": {
+        "tinycolor2": "^1.4.1"
+    },
+    "main": "./index.js",
+    "girderPlugin": {
+        "name": "large_image_annotation",
+        "main": "./main.js",
+        "dependencies": [
+            "large_image"
+        ]
+    },
+    "eslintConfig": {
+        "extends": "@girder",
+        "rules": {
+            "for-direction": "error",
+            "getter-return": "error",
+            "multiline-ternary": [
+                "error",
+                "always-multiline"
+            ],
+            "no-alert": "error",
+            "switch-colon-spacing": "error",
+            "object-curly-spacing": "off",
+            "import/exports-last": "error",
+            "promise/no-native": "error",
+            "promise/no-return-in-finally": "error",
+            "promise/no-return-wrap": "error"
+        },
+        "root": true
+    },
+    "eslintIgnore": [
+        "**/node_modules/"
+    ],
+    "pugLintConfig": {
+        "extends": "@girder/pug-lint-config",
+        "excludeFiles": [
+            "**/node_modules/"
+        ]
+    },
+    "stylintrc": {
+        "blocks": false,
+        "brackets": {
+            "expect": "never",
+            "error": true
+        },
+        "colons": {
+            "expect": "never",
+            "error": true
+        },
+        "colors": false,
+        "commaSpace": {
+            "expect": "always",
+            "error": true
+        },
+        "commentSpace": {
+            "expect": "always",
+            "error": true
+        },
+        "cssLiteral": {
+            "expect": "never",
+            "error": true
+        },
+        "depthLimit": false,
+        "efficient": {
+            "expect": "always",
+            "error": true
+        },
+        "exclude": [
+            "**/node_modules/**"
+        ],
+        "extendPref": "@extend",
+        "globalDupe": false,
+        "groupOutputByFile": {
+            "expect": true,
+            "error": true
+        },
+        "indentPref": {
+            "expect": 2,
+            "error": true
+        },
+        "leadingZero": {
+            "expect": "always",
+            "error": true
+        },
+        "maxErrors": false,
+        "maxWarnings": false,
+        "mixed": false,
+        "mixins": [],
+        "namingConvention": false,
+        "namingConventionStrict": false,
+        "none": {
+            "expect": "always",
+            "error": true
+        },
+        "noImportant": false,
+        "parenSpace": {
+            "expect": "never",
+            "error": true
+        },
+        "placeholders": false,
+        "prefixVarsWithDollar": {
+            "expect": "always",
+            "error": true
+        },
+        "quotePref": {
+            "expect": "double",
+            "error": true
+        },
+        "reporterOptions": {
+            "columns": [
+                "lineData",
+                "severity",
+                "description",
+                "rule"
+            ],
+            "columnSplitter": "  ",
+            "showHeaders": false,
+            "truncate": true
+        },
+        "semicolons": {
+            "expect": "never",
+            "error": true
+        },
+        "sortOrder": false,
+        "stackedProperties": {
+            "expect": "never",
+            "error": true
+        },
+        "trailingWhitespace": {
+            "expect": "never",
+            "error": true
+        },
+        "universal": {
+            "expect": "never",
+            "error": true
+        },
+        "valid": {
+            "expect": true,
+            "error": true
+        },
+        "zeroUnits": {
+            "expect": "never",
+            "error": true
+        },
+        "zIndexNormalize": {
+            "expect": 5,
+            "error": true
+        }
+    },
+    "devDependencies": {
+        "@girder/eslint-config": "^3.0.0-rc1",
+        "eslint": "^5.16.0",
+        "eslint-config-semistandard": "^13.0.0",
+        "eslint-config-standard": "^12.0.0",
+        "eslint-plugin-backbone": "^2.1.1",
+        "eslint-plugin-import": "^2.17.3",
+        "eslint-plugin-node": "^9.1.0",
+        "eslint-plugin-promise": "^4.1.1",
+        "eslint-plugin-standard": "^4.0.0",
+        "eslint-plugin-underscore": "0.0.10",
+        "@girder/pug-lint-config": "^3.0.0-rc1",
+        "pug-lint": "^2.6.0",
+        "stylint": "^1.5.9"
+    },
+    "scripts": {
+        "lint": "eslint --cache . && pug-lint . && stylint"
+    }
+}

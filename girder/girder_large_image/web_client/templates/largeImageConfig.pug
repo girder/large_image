@@ -1,0 +1,71 @@
+.g-config-breadcrumb-container
+p.g-large-image-description
+  | Very large images can be served as tiles, allowing many different viewers
+  | to show them.
+form#g-large-image-form(role="form")
+  .form-group
+    label Default large image item viewer
+    .g-large-image-default-viewer-container
+      select.form-control.input-sm.g-large-image-default-viewer
+        each viewer in viewers
+          option(value=viewer.name, selected=(settings['large_image.default_viewer'] === viewer.name)) #{viewer.label}
+  .form-group
+    label Automatically use new items as large images
+    p.g-large-image-description
+      | Uploaded and imported items with files that have MIME-types or extensions that are typical of large images will be set as large image items if they can be used without running a conversion job.
+    .g-large-image-auto-set-container
+      label.radio-inline
+        input.g-large-image-auto-set-on(type="radio", name="g-large-image-auto-set", checked=settings['large_image.auto_set'] !== false ? 'checked': undefined)
+        | Automatically use large images
+      label.radio-inline
+        input.g-large-image-auto-set-off(type="radio", name="g-large-image-auto-set", checked=settings['large_image.auto_set'] !== false ? undefined : 'checked')
+        | No automatic use
+  .form-group
+    label
+      | Maximum size of regular images to use without conversion
+    p.g-large-image-description
+      | Images in common formats, such as JPEG and PNG can be used as large images without conversion if they are not too large.
+    input.input-sm.form-control.g-large-image-max-small-image-size(
+      type="text", value=settings['large_image.max_small_image_size'], title="The maximum size in pixels.  0 to not use regular images.", placeholder="0 to not use regular images.")
+  .form-group
+    label Large images in items
+    .g-large-image-viewer-container
+      label.radio-inline
+        input.g-large-image-viewer-show(type="radio", name="g-large-image-viewer", checked=settings['large_image.show_viewer'] !== false ? 'checked': undefined)
+        | Show viewer
+      label.radio-inline
+        input.g-large-image-viewer-hide(type="radio", name="g-large-image-viewer", checked=settings['large_image.show_viewer'] !== false ? undefined : 'checked')
+        | Don't show
+  .form-group
+    label Large image thumbnails in item lists
+    .g-large-image-thumbnails-container
+      label.radio-inline
+        input.g-large-image-thumbnails-show(type="radio", name="g-large-image-thumbnails", checked=settings['large_image.show_thumbnails'] !== false ? 'checked': undefined)
+        | Show thumbnails
+      label.radio-inline
+        input.g-large-image-thumbnails-hide(type="radio", name="g-large-image-thumbnails", checked=settings['large_image.show_thumbnails'] !== false ? undefined : 'checked')
+        | Don't show
+  .form-group
+    label
+      | Additional details to show in item lists
+    p.g-large-image-description
+      | Details to show to anonymous users.
+    input.input-sm.form-control.g-large-image-show-extra-public(
+      type="text", value=settings['large_image.show_extra_public'], placeholder='A JSON object listing extra details to show.  For example: {"images": ["label", "macro"]}', title='This can be specified images and metadata as a JSON object such as {"images": ["label", "macro"]}')
+    p.g-large-image-description
+      | Details to show for all logged-in users.
+    input.input-sm.form-control.g-large-image-show-extra(
+      type="text", value=settings['large_image.show_extra'], placeholder='A JSON object listing extra details to show.  For example: {"images": ["label", "macro"]}', title='This can be specified images and metadata as a JSON object such as {"images": ["label", "macro"]}')
+    p.g-large-image-description
+      | Details to show for admins and owners of the images.
+    input.input-sm.form-control.g-large-image-show-extra-admin(
+      type="text", value=settings['large_image.show_extra_admin'], placeholder='A JSON object listing extra details to show.  For example: {"images": ["label", "macro"]}', title='This can be specified images and metadata as a JSON object such as {"images": ["label", "macro"]}')
+  .form-group
+    label
+      | Maximum number of thumbnail files to save per item
+    p.g-large-image-description
+      | Caching files speeds up thumbnail retrieval but takes some storage space.  Use 0 to not cache thumbnails as files.
+    input.input-sm.form-control.g-large-image-max-thumbnail-files(
+      type="text", value=settings['large_image.max_thumbnail_files'], placeholder="Use 0 to not cache thumbnails as files.")
+  p#g-large-image-error-message.g-validation-failed-message
+  input.btn.btn-sm.btn-primary(type="submit", value="Save")

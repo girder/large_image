@@ -1,7 +1,6 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-##############################################################################
+#############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -15,19 +14,16 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-##############################################################################
+#############################################################################
+
+from pkg_resources import DistributionNotFound, get_distribution
+
+from . import tilesource  # noqa
+from .tilesource import getTileSource  # noqa
+
 
 try:
-    from . import server   # Works in non-editable install
-    from .server import tilesource
-    from .server import cache_util
-    from .server.cache_util import cachefactory as config
-except ImportError:
-    import server          # Works in editable install
-    from server import tilesource
-    from server import cache_util
-    from server.cache_util import cachefactory as config
-
-getTileSource = tilesource.getTileSource  # noqa
-
-__all__ = ['server', 'tilesource', 'getTileSource', 'cache_util', 'config']
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass

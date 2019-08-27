@@ -1,0 +1,14 @@
+// TODO: change .g-item-info-header to its own class that extends
+.g-item-info-header
+  i.icon-picture
+  span  Image Viewer
+  select.form-control.input-sm
+    each viewer in viewers
+      option(value=viewer.name) #{viewer.label}
+.image-controls
+  span.image-controls-frame.hidden
+    label(for='image-frame') Frame:
+    input#image-frame-number.image-controls-number(type='number', min='0', value='0')
+    input#image-frame.image-controls-slider(type='range', min='0', value='0')
+each viewer in viewers
+  .image-viewer.hidden(id=viewer.name)

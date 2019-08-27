@@ -1,262 +1,32 @@
+sudo: false
+dist: xenial
 language: python
-
 python:
   - "2.7"
   - "3.5"
   - "3.6"
-
-env:
-  matrix:
-    - LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
-    - LIBTIFF_VERSION=4.0.8 LIBTIFF_DIR=     OPENJPEG_VERSION=2.1.2 OPENJPEG_FILE=v2.1.2.tar.gz      OPENJPEG_DIR="openjpeg-2.1.2" BUILD_VIPS="yes"
-
-matrix:
-  exclude:
-  - python: "3.5"
-    env: LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
-  - python: "3.6"
-    env: LIBTIFF_VERSION=4.0.3 LIBTIFF_DIR=/old OPENJPEG_VERSION=2.1   OPENJPEG_FILE=version.2.1.tar.gz OPENJPEG_DIR="openjpeg-version.2.1"
-
-cache:
-  directories:
-    - $HOME/.cache
-    - $HOME/lib_build
-    - $HOME/girder_build/store
-    - $HOME/girder_build/data
-
-sudo: required
-
-dist: trusty
-
-compiler:
-  - gcc
-
+  - "3.7"
+services:
+  - mongodb
+  - memcached
 addons:
   apt:
     packages:
-      # Pillow dependencies (see
-      # https://pillow.readthedocs.org/en/latest/installation.html)
-      - libtiff5-dev
-      - libjpeg8-dev
-      - zlib1g-dev
-      - libfreetype6-dev
-      - liblcms2-dev
-      - libwebp-dev
-      - tcl8.6-dev
-      - tk8.6-dev
-      - python-tk
-      # openjpeg
-      - libglib2.0-dev
-      - libjpeg-dev
-      - libxml2-dev
-      - libpng12-dev
-      # openslide
-      - autoconf
-      - automake
-      - libtool
-      - pkg-config
-      - libcairo2-dev
-      - libgdk-pixbuf2.0-dev
-      - libxml2-dev
-      - libsqlite3-dev
-      # install vips
-      - libvips-tools
-      # for building vips
-      - build-essential
-      - gobject-introspection
-      - libcfitsio3-dev
-      - libexif-dev
-      - libfftw3-dev
-      - libgif-dev
-      - libgirepository1.0-dev
-      - libglib2.0-dev
-      - libgsf-1-dev
-      - libjpeg-turbo8-dev
-      - libmagick++-dev
-      - libmatio-dev
-      - liborc-0.4-dev
-      - libpango1.0-dev
-      - libxml2-dev
-      - pkg-config
-      - python-gi-dev
-      # mapnik
-      - libgdal-dev
-      - gdal-bin
-      - python-gdal
-      - libmapnik-dev
-      - python-mapnik
-      # girder worker - not needed; included in travis
-      # - rabbitmq-server
-      # fuse plugin tests - not needed; included in travis
-      # - fuse
-
-services:
-  - rabbitmq
-
-before_install:
-
-  - export CPLUS_INCLUDE_PATH=/usr/include/gdal
-  - export C_INCLUDE_PATH=/usr/include/gdal
-  # Fix a travis/boto issue.  See
-  # https://github.com/travis-ci/travis-ci/issues/7940
-  - sudo rm -f /etc/boto.cfg
-
-  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "3" ]; then export PY3="true"; else export PY2="true"; fi
-  - if [ -n "${PY3}" ]; then export MONGO_VERSION=3.6.2; export PY_COVG="OFF"; else export MONGO_VERSION=3.4.10; export PY_COVG="ON"; export DEPLOY=true; fi
-  - GIRDER_VERSION=2.x-maintenance
-  - GIRDER_WORKER_VERSION=v0.5.1
-
-  # Define installation paths
-  - large_image_path=$TRAVIS_BUILD_DIR
-  - girder_path=$HOME/girder/girder
-  - girder_worker_path=$HOME/girder/girder_worker
-  - lib_build_path=$HOME/lib_build
-  - girder_build_path=$HOME/girder_build
-
-  - nvm install v8
-  - npm install -g npm
-
-  - git clone https://github.com/girder/girder.git $girder_path && git -C $girder_path checkout $GIRDER_VERSION
-
-  - CACHE=$HOME/.cache CMAKE_VERSION=3.4.3 CMAKE_SHORT_VERSION=3.4 source $girder_path/scripts/install_cmake.sh
-  - cmake --version
-
-  - mkdir -p $lib_build_path
-
-  # There is an issue with the OpenJPEG library included with Ubuntu 14.04,
-  # so install it from source.
-  - cd $lib_build_path
-  - if [[ ! -d $OPENJPEG_DIR ]]; then
-      wget -O "openjpeg-$OPENJPEG_VERSION.tar.gz" "https://github.com/uclouvain/openjpeg/archive/$OPENJPEG_FILE" &&
-      tar -zxpf "openjpeg-$OPENJPEG_VERSION.tar.gz" ;
-    fi
-  - cd "$OPENJPEG_DIR"
-  # - wget -O openjpeg-1.5.2.tar.gz https://github.com/uclouvain/openjpeg/archive/version.1.5.2.tar.gz
-  # - tar -zxf openjpeg-1.5.2.tar.gz
-  # - cd openjpeg-version.1.5.2
-  - cmake .
-  - make -j 3
-  - sudo make install
-  - sudo ldconfig
-  - cd $large_image_path
-
-  # Build libtiff so it will use our openjpeg
-  - cd $lib_build_path
-  - if [[ ! -d "tiff-$LIBTIFF_VERSION" ]]; then
-      wget -O "tiff-$LIBTIFF_VERSION.tar.gz" "http://download.osgeo.org/libtiff$LIBTIFF_DIR/tiff-$LIBTIFF_VERSION.tar.gz" &&
-      tar -zxpf "tiff-$LIBTIFF_VERSION.tar.gz" ;
-    fi
-  - cd "tiff-$LIBTIFF_VERSION"
-  - ./configure
-  - make -j 3
-  - sudo make install
-  - sudo ldconfig
-  - cd $large_image_path
-
-  # Build OpenSlide ourselves so that it will use our libtiff
-  - cd $lib_build_path
-  - if [[ ! -d openslide-3.4.1 ]]; then
-      wget -O openslide-3.4.1.tar.gz https://github.com/openslide/openslide/archive/v3.4.1.tar.gz &&
-      tar -zxpf openslide-3.4.1.tar.gz ;
-    fi
-  - cd openslide-3.4.1
-  - autoreconf -i
-  - ./configure
-  - make -j 3
-  - sudo make install
-  - sudo ldconfig
-  - cd $large_image_path
-
-  # Build vips to use our libraries
-  - if [ "$BUILD_VIPS" = "yes" ]; then
-      cd $lib_build_path &&
-      if [ ! -f vips-8.7.0/config.status ]; then
-        if [[ ! -d vips-8.7.0 ]]; then
-          wget -O vips-8.7.0.tar.gz https://github.com/libvips/libvips/releases/download/v8.7.0/vips-8.7.0.tar.gz &&
-          tar -zxpf vips-8.7.0.tar.gz ;
-        fi &&
-        cd vips-8.7.0 &&
-        ./configure &&
-        make -j 3 >/tmp/vips_build.txt ;
-      else
-        cd vips-8.7.0 ;
-      fi &&
-      sudo make install &&
-      sudo ldconfig ;
-    fi
-  - cd $large_image_path
-  - vips --version
-
-  - git clone https://github.com/girder/girder_worker.git $girder_worker_path && git -C $girder_worker_path checkout $GIRDER_WORKER_VERSION
-  - cp $large_image_path/plugin_tests/test_files/girder_worker.cfg $girder_worker_path/girder_worker/worker.local.cfg
-  # - python $girder_worker_path/scripts/install_requirements.py # --mode=dev
-  # - pip install --no-cache-dir -U -e $girder_worker_path'[girder_io]'
-  # Change in travis in 2017-09 require sudo for pip2 when in the python3 main
-  # environment
-  - if [ -n "${PY3}" ]; then
-    sudo pip2 install --no-cache-dir -U setuptools &&
-    sudo pip2 install --no-cache-dir -U $girder_worker_path'[girder_io]' ;
-    else
-    pip install --no-cache-dir -U $girder_worker_path'[girder_io]' ;
-    fi
-
-  - export PY_COVG="ON"
-  - CACHE=$HOME/.cache source $girder_path/scripts/install_mongo.sh
-  - mkdir /tmp/db
-  - mongod --dbpath=/tmp/db >/dev/null 2>/dev/null &
-  - mongod --version
-
-  - npm install -g npm
-  - npm install -g npm-install-retry
-  - npm --version
-
-  - pip install --no-cache-dir -U pip virtualenv
-
-  - pip install --no-cache-dir numpy>=1.11.3  # needed because libtiff doesn't install correctly without it.  This ensures we have the same version for libtiff as for the project.
-
-  # Allow access to /etc/fuse.conf by all users
-  - sudo chmod a+r /etc/fuse.conf
-
-
+    - rabbitmq-server
 install:
-  - pushd $girder_path
-  - pip install --no-cache-dir -U -r requirements-dev.txt -e .[mount]
-  - pip install 'pydocstyle<4'
-  - popd
-  - girder-install plugin --symlink $large_image_path
-  # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them
-  # Trusty supports gdal 1.10.0; don't test mapnik on Python 3 (for now)
-  - if [ -n "${PY3}" ]; then
-      pip install -e $large_image_path[memcached,openslide] ;
-    else
-      pip install gdal==1.10.0 pyproj==2.1.3 &&
-      pip install -e $large_image_path[memcached,openslide,mapnik] ;
-    fi
-  - ls -l $girder_path/plugins
-  # Make sure we have a prefered version of celery for Girder Worker
-  - pip install -U 'celery>=4,<4.2'
-  # # Make sure we have a prefered version of cryptography for Girder Worker
-  # - pip install -U 'cryptography>=1.7'
-  - python -c "import openslide;print(openslide.__version__)"
-  # This was
-  # - npm install
-  # but since there are often connection failures, use the retry package.
-  - npm-install-retry
-  - NYC_CWD=$large_image_path girder-install web --plugins=jobs,worker,large_image --dev
-
+  - pip install --upgrade pip
+  - pip install --upgrade virtualenv
+  - pip install tox-travis
+  # If the last tag is more than 50 commits away, we need to fetch more for
+  # the scm_version module to determine the version.
+  - git fetch --depth=1000
 script:
-  - mkdir -p $girder_build_path
-  - cd $girder_worker_path
-  - python2 -m girder_worker >/tmp/worker.out 2>&1 &
-  - cd $girder_build_path
-  - cmake -DPYTHON_COVERAGE:BOOL=${PY_COVG} -DPYTHON_VERSION:STRING=${TRAVIS_PYTHON_VERSION} -DRUN_CORE_TESTS:BOOL="OFF" -DTEST_PLUGINS:STRING="large_image" $girder_path
-  - make -j 3
-  - JASMINE_TIMEOUT=15000 ctest -VV
-
-after_failure:
-  # On failures, show the worker output and other information
-  - pip freeze
-  - cat /tmp/worker.out
-
+  # Piping through cat does less buffering of the output but can consume the
+  # exit code
+  #   Deselect the test_conversion tests, as the virtualenv travis uses fails
+  # to import pyvips with an error
+  # "OSError: dlopen: cannot load any more object with static TLS"
+  - tox -- -k 'not test_conversion' | cat; test ${PIPESTATUS[0]} -eq 0
 after_success:
-  - bash <(curl -s https://codecov.io/bash) -R $large_image_path -s $girder_path
+  - pip install codecov
+  - codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml

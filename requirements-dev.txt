@@ -1,0 +1,34 @@
+# Top level dependencies
+girder>=3.0.0a5
+girder-jobs>=3.0.0a5
+-e sources/dummy
+-e sources/mapnik
+-e sources/openslide
+-e sources/pil
+-e sources/test
+-e sources/tiff
+# must be after sources/tiff
+-e sources/ometiff
+# Get both the girder and worker dependencies so tasks can be used stand-alone
+-e tasks[girder,worker]
+-e girder/.
+-e girder_annotation/.
+
+# External dependencies
+pip>=9
+coverage
+flake8
+flake8-blind-except
+flake8-bugbear; python_version >= '3.5'
+flake8-docstrings
+flake8-quotes
+pytest>=3.6
+pytest-cov==2.5
+pytest-girder>=3.0.0a5
+pytest-xdist
+mock
+tox
+twine
+virtualenv
+
+

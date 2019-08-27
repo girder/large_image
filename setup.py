@@ -1,87 +1,79 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
+import itertools
+import os
 import platform
-
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
-with open('plugin.json') as f:
-    pkginfo = json.load(f)
+extraReqs = {
+    'memcached': ['pylibmc>=1.5.1'] if platform.system() != 'Windows' else [],
+}
+sources = {
+    'dummy': ['large-image-source-dummy'],
+    'mapnik': ['large-image-source-mapnik'],
+    'ometiff': ['large-image-source-ometiff'],
+    'openslide': ['large-image-source-openslide'],
+    'pil': ['large-image-source-pil'],
+    'tiff': ['large-image-source-tiff'],
+    'test': ['large-image-source-test'],
+}
+extraReqs.update(sources)
+extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
+extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
 
-with open('LICENSE') as f:
-    license_str = f.read()
+
+def prerelease_local_scheme(version):
+    """
+    Return local scheme version unless building on master in CircleCI.
+
+    This function returns the local scheme version number
+    (e.g. 0.0.0.dev<N>+g<HASH>) unless building on CircleCI for a
+    pre-release in which case it ignores the hash and produces a
+    PEP440 compliant pre-release version number (e.g. 0.0.0.dev<N>).
+    """
+    from setuptools_scm.version import get_local_node_and_date
+
+    if os.getenv('CIRCLE_BRANCH') in ('master', 'girder-3'):
+        return ''
+    else:
+        return get_local_node_and_date(version)
+
 
 setup(
-    name='large_image',
-    version=pkginfo['version'],
-    description=pkginfo['description'],
-    long_description=readme,
+    name='large-image',
+    use_scm_version={'local_scheme': prerelease_local_scheme},
+    setup_requires=['setuptools-scm'],
+    description='Create, serve, and display large multiresolution images.',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
-    url='https://github.com/girder/large_image',
-    packages=[
-        'large_image',
-        'large_image.server',
-        'large_image.server.cache_util',
-        'large_image.server.models',
-        'large_image.server.rest',
-        'large_image.server.tilesource',
-    ],
-    data_files=[
-        ('large_image/girder', ['plugin.json']),
-    ],
-    package_dir={
-        'large_image': 'large_image',
-        'large_image.server': 'server',
-    },
     classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Environment :: Console',
+        'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5'
-        'Programming Language :: Python :: 3.6'
-        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7'
     ],
-    include_package_data=True,
     install_requires=[
         'cachetools>=3.0.0',
-        'enum34>=1.1.6',
-        'futures;python_version<"3.4"',
-        'jsonschema>=2.5.1',
-        'libtiff>=0.4.1',
-        'numpy>=1.10.2',
         'Pillow>=3.2.0',
-        'psutil>=4.2.0',
+        'psutil>=4.2.0',  # technically optional
+        'numpy>=1.10.4',
         'six>=1.10.0',
-        'ujson>=1.35',
     ],
-    extras_require={
-        'memcached': [
-            'pylibmc>=1.5.1'
-        ] if platform.system() != 'Windows' else [],
-        'openslide': [
-            'openslide-python>=1.1.0'
-        ],
-        'mapnik': [
-            'mapnik',
-            'pyproj',
-            'gdal',
-            'palettable'
-        ]
-    },
-    license=license_str,
-    # zip_safe=False,  # Comment out to let setuptools decide
+    extras_require=extraReqs,
+    include_package_data=True,
     keywords='large_image',
-    test_suite='plugin_tests')
+    license='Apache Software License 2.0',
+    long_description=readme,
+    packages=find_packages(exclude=['test', 'test.*', 'girder']),
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
+    url='https://github.com/girder/large_image',
+    zip_safe=False,
+)
