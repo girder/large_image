@@ -16,7 +16,7 @@ def prerelease_local_scheme(version):
     """
     from setuptools_scm.version import get_local_node_and_date
 
-    if os.getenv('CIRCLE_BRANCH') in ('master', 'girder-3'):
+    if os.getenv('CIRCLE_BRANCH') in ('master', ):
         return ''
     else:
         return get_local_node_and_date(version)
@@ -41,7 +41,7 @@ setup(
     ],
     install_requires=[
         'jsonschema>=2.5.1',
-        'girder-large-image>=1.0.0.dev0',
+        'girder-large-image>=1.0.0',
         'ujson>=1.35',
     ],
     extras_require={

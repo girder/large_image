@@ -16,7 +16,7 @@ def prerelease_local_scheme(version):
     """
     from setuptools_scm.version import get_local_node_and_date
 
-    if os.getenv('CIRCLE_BRANCH') in ('master', 'girder-3'):
+    if os.getenv('CIRCLE_BRANCH') in ('master', ):
         return ''
     else:
         return get_local_node_and_date(version)
@@ -39,8 +39,8 @@ setup(
         'Programming Language :: Python'
     ],
     install_requires=[
-        'girder-worker>=0.5.1.dev213',
-        'girder_worker_utils>=0.8.5.dev23',
+        'girder-worker>=0.6.0',
+        'girder-worker-utils>=0.8.5',
         # Packages required by both producer and consumer side installations
         'six>=1.10.0',
     ],

@@ -56,5 +56,4 @@ workflows:
             tags:
               only: /^v.*/
             branches:
-              only: girder-3
-# Change to master branch when girder-3 becomes the master
+              only: master
