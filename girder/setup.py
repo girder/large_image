@@ -16,7 +16,7 @@ def prerelease_local_scheme(version):
     """
     from setuptools_scm.version import get_local_node_and_date
 
-    if os.getenv('CIRCLE_BRANCH') in ('master', 'girder-3'):
+    if os.getenv('CIRCLE_BRANCH') in ('master', ):
         return ''
     else:
         return get_local_node_and_date(version)
@@ -42,10 +42,10 @@ setup(
     install_requires=[
         'enum34>=1.1.6;python_version<"3.4"',
         'futures;python_version<"3.4"',
-        'girder>=3.0.0a2',
-        'girder-jobs>=3.0.0a2',
-        'girder-worker[girder]>=0.5.1.dev213',
-        'large_image>=1.0.0.dev0',
+        'girder>=3.0.3',
+        'girder-jobs>=3.0.3',
+        'girder-worker[girder]>=0.6.0',
+        'large_image>=1.0.0',
     ],
     extras_require={
         'tasks': [

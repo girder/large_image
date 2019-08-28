@@ -16,7 +16,7 @@ def prerelease_local_scheme(version):
     """
     from setuptools_scm.version import get_local_node_and_date
 
-    if os.getenv('CIRCLE_BRANCH') in ('master', 'girder-3'):
+    if os.getenv('CIRCLE_BRANCH') in ('master', ):
         return ''
     else:
         return get_local_node_and_date(version)
@@ -41,11 +41,11 @@ setup(
         'Programming Language :: Python :: 3.7'
     ],
     install_requires=[
-        'large-image>=1.0.0.dev0',
+        'large-image>=1.0.0',
         'openslide-python>=1.1.0',
     ],
     extras_require={
-        'girder': 'girder-large-image>=1.0.0.dev0',
+        'girder': 'girder-large-image>=1.0.0',
     },
     license='Apache Software License 2.0',
     keywords='large_image, tile source',

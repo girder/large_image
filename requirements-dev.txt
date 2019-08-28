@@ -1,6 +1,6 @@
 # Top level dependencies
-girder>=3.0.0a5
-girder-jobs>=3.0.0a5
+girder>=3.0.3
+girder-jobs>=3.0.3
 -e sources/dummy
 -e sources/mapnik
 -e sources/openslide
@@ -24,7 +24,7 @@ flake8-docstrings
 flake8-quotes
 pytest>=3.6
 pytest-cov==2.5
-pytest-girder>=3.0.0a5
+pytest-girder>=3.0.3
 pytest-xdist
 mock
 tox
