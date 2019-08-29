@@ -45,7 +45,7 @@ setup(
         'gdal',
         'mapnik',
         'palettable',
-        'pyproj>=2.0.0',
+        'pyproj>=2.2.0',
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
