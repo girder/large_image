@@ -6,7 +6,9 @@ import AnnotationModel from '../models/AnnotationModel';
 export default Collection.extend({
     resourceName: 'annotation',
     model: AnnotationModel,
-    pageLimit: 100,
+    // this is a large number so that we probably never need to page
+    // annotations.
+    pageLimit: 10000,
     sortField: 'created',
     sortDir: SORT_DESC
 });
