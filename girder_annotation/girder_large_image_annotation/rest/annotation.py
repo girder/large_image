@@ -199,7 +199,7 @@ class AnnotationResource(Resource):
                 else:
                     element = struct.pack(
                         '>QL', int(element[0][:16], 16), int(element[0][16:24], 16)
-                        ) + struct.pack('<fffl', *element[1:])
+                    ) + struct.pack('<fffl', *element[1:])
                 # Use ujson; it is much faster.  The standard json library
                 # could be used in its most default mode instead like so:
                 #   result = json.dumps(element, separators=(',', ':'))

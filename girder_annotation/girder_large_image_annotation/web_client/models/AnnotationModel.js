@@ -23,12 +23,14 @@ export default AccessControlledModel.extend({
     resourceName: 'annotation',
 
     defaults: {
-        'annotation': {}
+        annotation: {},
+        maxDetails: 250000,
+        maxCentroids: 2000000
     },
 
     initialize() {
         this._region = {
-            maxDetails: 250000,
+            maxDetails: this.get('maxDetails'),
             sort: 'size',
             sortdir: -1
         };
@@ -57,7 +59,7 @@ export default AccessControlledModel.extend({
         var url = (this.altUrl || this.resourceName) + '/' + this.get('_id');
         var restOpts = {
             url: url,
-            data: {sort: 'size', sortdir: -1, centroids: true, limit: 2000000},
+            data: {sort: 'size', sortdir: -1, centroids: true, limit: this.get('maxCentroids')},
             xhrFields: {
                 responseType: 'arraybuffer'
             },
@@ -118,15 +120,15 @@ export default AccessControlledModel.extend({
                 return propsdict;
             });
             dv = new DataView(resp, z0 + 1, z1 - z0 - 1);
-            if (dv.byteLength !== result._elementQuery.count * 28) {
+            if (dv.byteLength !== result._elementQuery.returned * 28) {
                 throw new Error('invalid centroid data size');
             }
             let centroids = {
-                id: new Array(result._elementQuery.count),
-                x: new Float32Array(result._elementQuery.count),
-                y: new Float32Array(result._elementQuery.count),
-                r: new Float32Array(result._elementQuery.count),
-                s: new Uint32Array(result._elementQuery.count)
+                id: new Array(result._elementQuery.returned),
+                x: new Float32Array(result._elementQuery.returned),
+                y: new Float32Array(result._elementQuery.returned),
+                r: new Float32Array(result._elementQuery.returned),
+                s: new Uint32Array(result._elementQuery.returned)
             };
             let i, s;
             for (i = s = 0; s < dv.byteLength; i += 1, s += 28) {
@@ -140,8 +142,10 @@ export default AccessControlledModel.extend({
                 centroids.s[i] = dv.getUint32(s + 24, true);
             }
             result.centroids = centroids;
-            result.data = {length: result._elementQuery.count};
-
+            result.data = {length: result._elementQuery.returned};
+            if (result._elementQuery.count > result._elementQuery.returned) {
+                result.partial = true;
+            }
             this._centroids = result;
             return result;
         });
