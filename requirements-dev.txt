@@ -23,7 +23,7 @@ flake8-bugbear; python_version >= '3.5'
 flake8-docstrings
 flake8-quotes
 pytest>=3.6
-pytest-cov==2.5
+pytest-cov>=2.6
 pytest-girder>=3.0.3
 pytest-xdist
 mock
