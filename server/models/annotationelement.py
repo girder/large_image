@@ -128,7 +128,7 @@ class Annotationelement(Model):
             element for element in self.yieldElements(
                 annotation, region, annotation['_elementQuery'])]
 
-    def yieldElements(self, annotation, region=None, info=None):  # noqa
+    def yieldElements(self, annotation, region=None, info=None):
         """
         Given an annotation, fetch the elements from the database.
             When a region is used to request specific element, the following
@@ -201,6 +201,9 @@ class Annotationelement(Model):
             for key in propskeys:
                 fields['element.%s' % key] = True
             props = {}
+            info['centroids'] = True
+            info['props'] = proplist
+            info['propskeys'] = propskeys
         elementCursor = self.find(
             query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
             offset=offset, fields=fields)
@@ -243,10 +246,6 @@ class Annotationelement(Model):
                 break
         info['returned'] = count
         info['details'] = details
-        if centroids:
-            info['centroids'] = True
-            info['props'] = proplist
-            info['propskeys'] = propskeys
 
     def removeWithQuery(self, query):
         """
