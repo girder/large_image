@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import six
 
 from girder.models.folder import Folder
 from girder.models.upload import Upload
@@ -38,3 +39,23 @@ def uploadTestFile(fileName, user, assetstore, folderName='Public', name=None):
 
 def respStatus(resp):
     return int(resp.output_status.split()[0])
+
+
+def getBody(response, text=True):
+    """
+    Returns the response body as a text type or binary string.
+
+    :param response: The response object from the server.
+    :param text: If true, treat the data as a text string, otherwise, treat
+                 as binary.
+    """
+    data = '' if text else b''
+
+    for chunk in response.body:
+        if text and isinstance(chunk, six.binary_type):
+            chunk = chunk.decode('utf8')
+        elif not text and not isinstance(chunk, six.binary_type):
+            chunk = chunk.encode('utf8')
+        data += chunk
+
+    return data

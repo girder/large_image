@@ -426,5 +426,53 @@ describe('Annotations', function () {
             });
             expect(model.name()).toBe('test annotation');
         });
+
+        it('create a large annotation', function () {
+            var model = new largeImageAnnotation.models.AnnotationModel({itemId: item._id});
+            var done;
+
+            for (var i = 0; i < 1000; i += 1) {
+                model.elements().add({
+                    center: [5 + (i % 100), 5 + Math.round(i / 100), 0],
+                    height: 1 + (i % 4),
+                    rotation: 0,
+                    type: 'rectangle',
+                    width: 1 + (i % 5)
+                });
+            }
+
+            model.save().done(function (resp) {
+                expect(model.id).toBeDefined();
+                annotationId = model.id;
+                expect(resp.annotation).toBeDefined();
+                expect(resp.annotation.elements).toBeDefined();
+                expect(resp.annotation.elements.length).toBe(1000);
+                done = true;
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+
+            waitsFor(function () {
+                return done;
+            });
+        });
+
+        it('fetch a paged annotation', function () {
+            var done;
+            annotation = new largeImageAnnotation.models.AnnotationModel({_id: annotationId, maxDetails: 100, maxCentroids: 500});
+            annotation.once('g:fetched', function () { done = true; });
+            annotation.fetch().done(function () {
+                expect(annotation.get('itemId')).toBeDefined();
+            }).fail(function (resp) {
+                console.error(resp);
+            });
+            waitsFor(function () {
+                return done;
+            }, 'fetch to complete');
+            runs(function () {
+                expect(annotation._centroids).toBeDefined();
+                expect(annotation._centroids.partial).toBeDefined();
+            });
+        });
     });
 });

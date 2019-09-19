@@ -697,6 +697,60 @@ $(function () {
                 checkFeatureOpacity(annotation2.id, 0.5, 1);
             });
         });
+        describe('large annotations', function () {
+            var annotations = [], count = 0;
+            it('generate several sizes of annotations', function () {
+                [0, 1, 2].forEach(function (i) {
+                    var elements = new Array(Math.pow(10, i + 1)).fill(0).map(function (_elem, idx) {
+                        return {
+                            type: 'rectangle',
+                            center: [0.2 + (idx % 100) * 0.1, 0.2 + (Math.floor(idx / 100)) * 0.1, 0],
+                            width: 0.12 + (idx % 40) * 0.01,
+                            height: 0.12 + (idx % 51) * 0.01,
+                            rotation: 0,
+                            fillColor: 'rgba(0, 0, 0, 0.5)'
+                        };
+                    });
+                    girder.rest.restRequest({
+                        url: 'annotation?itemId=' + itemId,
+                        contentType: 'application/json',
+                        processData: false,
+                        type: 'POST',
+                        data: JSON.stringify({
+                            name: 'annotation' + i,
+                            elements: elements
+                        })
+                    }).done(function (resp) {
+                        annotations[i] = new largeImageAnnotation.models.AnnotationModel({
+                            _id: resp._id,
+                            maxDetails: 50,
+                            maxCentroids: 500
+                        });
+                        count += 1;
+                    });
+                });
+                waitsFor(function () {
+                    return count === 3;
+                }, 'annotations to be created');
+                runs(function () {
+                    annotations.forEach(function (annot) {
+                        return viewer.drawAnnotation(annot);
+                    });
+                });
+                girderTest.waitForLoad();
+            });
+            it('check that annotations are using centroids when appropriate', function () {
+                runs(function () {
+                    expect(annotations[0]._centroids).not.toBeDefined();
+                    expect(annotations[1]._centroids).toBeDefined();
+                    expect(annotations[1]._centroids.partial).not.toBeDefined();
+                    expect(annotations[2]._centroids).toBeDefined();
+                    expect(annotations[2]._centroids.partial).toBeDefined();
+                    viewer.viewer.zoom(viewer.viewer.zoom() + 1);
+                    expect(annotations[1]._lastZoom).toBeDefined();
+                });
+            });
+        });
         it('destroy the viewer', function () {
             viewer.destroy();
             expect($('.geojs-layer').length).toBe(0);
