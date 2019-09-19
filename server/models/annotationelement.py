@@ -116,6 +116,8 @@ class Annotationelement(Model):
         The sum of the details values of the elements may exceed maxDetails
         slightly (the sum of all but the last element will be less than
         maxDetails, but the last element may exceed the value).
+            centroids: if specified and true, only return the id, center of the
+        bounding box, and bounding box size for each element.
 
         :param annotation: the annotation to get elements for.  Modified.
         :param region: if present, a dictionary restricting which annotations
@@ -128,8 +130,7 @@ class Annotationelement(Model):
 
     def yieldElements(self, annotation, region=None, info=None):
         """
-        Given an annotation, fetch the elements from the database and add them
-        to it.
+        Given an annotation, fetch the elements from the database.
             When a region is used to request specific element, the following
         keys can be specified:
             left, right, top, bottom, low, high: the spatial area where
@@ -149,10 +150,21 @@ class Annotationelement(Model):
         The sum of the details values of the elements may exceed maxDetails
         slightly (the sum of all but the last element will be less than
         maxDetails, but the last element may exceed the value).
+            centroids: if specified and true, only return the id, center of the
+        bounding box, and bounding box size for each element.
 
         :param annotation: the annotation to get elements for.  Modified.
         :param region: if present, a dictionary restricting which annotations
             are returned.
+        :param info: an optional dictionary that will be modified with
+            additional query information, including count (total number of
+            available elements), returned (number of elements in response),
+            maxDetails (as specified by the region dictionary), details (sum of
+            details returned), limit (as specified by region), centroids (a
+            boolean based on the region specification).
+        :returns: a list of elements.  If centroids were requested, each entry
+            is a list with str(id), x, y, size.  Otherwise, each entry is the
+            element record.
         """
         info = info if info is not None else {}
         region = region or {}
@@ -176,9 +188,25 @@ class Annotationelement(Model):
         queryLimit = maxDetails if maxDetails and (not limit or maxDetails < limit) else limit
         offset = int(region['offset']) if region.get('offset') else 0
         logger.debug('element query %r for %r', query, region)
+        fields = {'_id': True, 'element': True, 'bbox.details': True}
+        centroids = str(region.get('centroids')).lower() == 'true'
+        if centroids:
+            # fields = {'_id': True, 'element': True, 'bbox': True}
+            fields = {
+                '_id': True,
+                'element.id': True,
+                'bbox': True}
+            proplist = []
+            propskeys = ['type', 'fillColor', 'lineColor', 'lineWidth', 'closed']
+            for key in propskeys:
+                fields['element.%s' % key] = True
+            props = {}
+            info['centroids'] = True
+            info['props'] = proplist
+            info['propskeys'] = propskeys
         elementCursor = self.find(
-            query=query, sort=[(sortkey, sortdir)], limit=queryLimit, offset=offset,
-            fields={'_id': True, 'element': True, 'bbox.details': True})
+            query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
+            offset=offset, fields=fields)
 
         info.update({
             'count': elementCursor.count(),
@@ -194,9 +222,26 @@ class Annotationelement(Model):
         for entry in elementCursor:
             element = entry['element']
             element.setdefault('id', entry['_id'])
-            yield element
+            if centroids:
+                bbox = entry.get('bbox')
+                if not bbox or 'lowx' not in bbox or 'size' not in bbox:
+                    continue
+                prop = tuple(element.get(key) for key in propskeys)
+                if prop not in props:
+                    props[prop] = len(props)
+                    proplist.append(list(prop))
+                yield [
+                    str(element['id']),
+                    (bbox['lowx'] + bbox['highx']) / 2,
+                    (bbox['lowy'] + bbox['highy']) / 2,
+                    bbox['size'] if entry.get('type') != 'point' else 0,
+                    props[prop]
+                ]
+                details += 1
+            else:
+                yield element
+                details += entry.get('bbox', {}).get('details', 1)
             count += 1
-            details += entry.get('bbox', {}).get('details', 1)
             if maxDetails and details >= maxDetails:
                 break
         info['returned'] = count
@@ -301,6 +346,8 @@ class Annotationelement(Model):
         bbox['size'] = (
             (bbox['highy'] - bbox['lowy'])**2 +
             (bbox['highx'] - bbox['lowx'])**2) ** 0.5
+        # we may want to store perimeter or area as that could help when we
+        # simplify to points
         return bbox
 
     def updateElements(self, annotation):

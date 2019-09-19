@@ -5,6 +5,8 @@ import { restRequest } from 'girder/rest';
 import ElementCollection from '../collections/ElementCollection';
 import convert from '../annotations/convert';
 
+import style from '../annotations/style.js';
+
 /**
  * Define a backbone model representing an annotation.
  * An annotation contains zero or more "elements" or
@@ -21,12 +23,14 @@ export default AccessControlledModel.extend({
     resourceName: 'annotation',
 
     defaults: {
-        'annotation': {}
+        annotation: {},
+        maxDetails: 250000,
+        maxCentroids: 2000000
     },
 
     initialize() {
         this._region = {
-            maxDetails: 250000,
+            maxDetails: this.get('maxDetails'),
             sort: 'size',
             sortdir: -1
         };
@@ -49,6 +53,105 @@ export default AccessControlledModel.extend({
     },
 
     /**
+     * Fetch the centroids and unpack the bianry data.
+     */
+    fetchCentroids: function () {
+        var url = (this.altUrl || this.resourceName) + '/' + this.get('_id');
+        var restOpts = {
+            url: url,
+            data: {sort: 'size', sortdir: -1, centroids: true, limit: this.get('maxCentroids')},
+            xhrFields: {
+                responseType: 'arraybuffer'
+            },
+            error: null
+        };
+
+        return restRequest(restOpts).done((resp) => {
+            let dv = new DataView(resp);
+            let z0 = 0, z1 = dv.byteLength - 1;
+            for (; dv.getUint8(z0) && z0 < dv.byteLength; z0 += 1);
+            for (; dv.getUint8(z1) && z1 >= 0; z1 -= 1);
+            if (z0 >= z1) {
+                throw new Error('invalid centroid data');
+            }
+            let json = new Uint8Array(z0 + dv.byteLength - z1 - 1);
+            json.set(new Uint8Array(resp.slice(0, z0)), 0);
+            json.set(new Uint8Array(resp.slice(z1 + 1)), z0);
+            let result = JSON.parse(decodeURIComponent(escape(String.fromCharCode.apply(null, json))));
+            let defaults = {
+                default: {
+                    fillColor: {r: 1, g: 120 / 255, b: 0},
+                    fillOpacity: 0.8,
+                    strokeColor: {r: 0, g: 0, b: 0},
+                    strokeOpacity: 1,
+                    strokeWidth: 1
+                },
+                rectangle: {
+                    fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
+                    strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
+                    strokeWidth: 2
+                },
+                polyline: {
+                    strokeColor: {r: 1, g: 120 / 255, b: 0},
+                    strokeOpacity: 0.5,
+                    strokeWidth: 4
+                },
+                polyline_closed: {
+                    fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
+                    strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
+                    strokeWidth: 2
+                }
+            };
+            result.props = result._elementQuery.props.map((props) => {
+                let propsdict = {};
+                result._elementQuery.propskeys.forEach((key, i) => {
+                    propsdict[key] = props[i];
+                });
+                Object.assign(propsdict, style(propsdict));
+                let type = propsdict.type + (propsdict.closed ? '_closed' : '');
+                ['fillColor', 'strokeColor', 'strokeWidth', 'fillOpacity', 'strokeOpacity'].forEach((key) => {
+                    if (propsdict[key] === undefined) {
+                        propsdict[key] = (defaults[type] || defaults.default)[key];
+                    }
+                    if (propsdict[key] === undefined) {
+                        propsdict[key] = defaults.default[key];
+                    }
+                });
+                return propsdict;
+            });
+            dv = new DataView(resp, z0 + 1, z1 - z0 - 1);
+            if (dv.byteLength !== result._elementQuery.returned * 28) {
+                throw new Error('invalid centroid data size');
+            }
+            let centroids = {
+                id: new Array(result._elementQuery.returned),
+                x: new Float32Array(result._elementQuery.returned),
+                y: new Float32Array(result._elementQuery.returned),
+                r: new Float32Array(result._elementQuery.returned),
+                s: new Uint32Array(result._elementQuery.returned)
+            };
+            let i, s;
+            for (i = s = 0; s < dv.byteLength; i += 1, s += 28) {
+                centroids.id[i] =
+                    ('0000000' + dv.getUint32(s, false).toString(16)).substr(-8) +
+                    ('0000000' + dv.getUint32(s + 4, false).toString(16)).substr(-8) +
+                    ('0000000' + dv.getUint32(s + 8, false).toString(16)).substr(-8);
+                centroids.x[i] = dv.getFloat32(s + 12, true);
+                centroids.y[i] = dv.getFloat32(s + 16, true);
+                centroids.r[i] = dv.getFloat32(s + 20, true);
+                centroids.s[i] = dv.getUint32(s + 24, true);
+            }
+            result.centroids = centroids;
+            result.data = {length: result._elementQuery.returned};
+            if (result._elementQuery.count > result._elementQuery.returned) {
+                result.partial = true;
+            }
+            this._centroids = result;
+            return result;
+        });
+    },
+
+    /**
      * Fetch a single resource from the server. Triggers g:fetched on success,
      * or g:error on error.
      * To ignore the default error handler, pass
@@ -64,7 +167,7 @@ export default AccessControlledModel.extend({
         opts = opts || {};
         var restOpts = {
             url: (this.altUrl || this.resourceName) + '/' + this.get('_id'),
-            /* Add out region request into the query */
+            /* Add our region request into the query */
             data: this._region
         };
         if (opts.extraPath) {
@@ -74,6 +177,11 @@ export default AccessControlledModel.extend({
             restOpts.error = null;
         }
         this._inFetch = true;
+        if (this._refresh) {
+            delete this._pageElements;
+            delete this._centroids;
+            this._refresh = false;
+        }
         return restRequest(restOpts).done((resp) => {
             const annotation = resp.annotation || {};
             const elements = annotation.elements || [];
@@ -81,22 +189,45 @@ export default AccessControlledModel.extend({
             this.set(resp);
             if (this._pageElements === undefined && resp._elementQuery) {
                 this._pageElements = resp._elementQuery.count > resp._elementQuery.returned;
+                if (this._pageElements) {
+                    this._inFetch = 'centroids';
+                    this.fetchCentroids().then(() => {
+                        this._inFetch = true;
+                        if (opts.extraPath) {
+                            this.trigger('g:fetched.' + opts.extraPath);
+                        } else {
+                            this.trigger('g:fetched');
+                        }
+                        return null;
+                    }).always(() => {
+                        this._inFetch = false;
+                        if (this._nextFetch) {
+                            var nextFetch = this._nextFetch;
+                            this._nextFetch = null;
+                            nextFetch();
+                        }
+                        return null;
+                    });
+                }
             }
-            if (opts.extraPath) {
-                this.trigger('g:fetched.' + opts.extraPath);
-            } else {
-                this.trigger('g:fetched');
+            if (this._inFetch !== 'centroids') {
+                if (opts.extraPath) {
+                    this.trigger('g:fetched.' + opts.extraPath);
+                } else {
+                    this.trigger('g:fetched');
+                }
             }
-
             this._elements.reset(elements, _.extend({sync: true}, opts));
         }).fail((err) => {
             this.trigger('g:error', err);
         }).always(() => {
-            this._inFetch = false;
-            if (this._nextFetch) {
-                var nextFetch = this._nextFetch;
-                this._nextFetch = null;
-                nextFetch();
+            if (this._inFetch !== 'centroids') {
+                this._inFetch = false;
+                if (this._nextFetch) {
+                    var nextFetch = this._nextFetch;
+                    this._nextFetch = null;
+                    nextFetch();
+                }
             }
         });
     },
@@ -225,8 +356,10 @@ export default AccessControlledModel.extend({
      * @param {number} maxZoom the maximum zoom factor.
      * @param {boolean} noFetch Truthy to not perform a fetch if the view
      *  changes.
+     * @param {number} sizeX the maximum width to query.
+     * @param {number} sizeY the maximum height to query.
      */
-    setView(bounds, zoom, maxZoom, noFetch) {
+    setView(bounds, zoom, maxZoom, noFetch, sizeX, sizeY) {
         if (this._pageElements === false || this.isNew()) {
             return;
         }
@@ -245,14 +378,18 @@ export default AccessControlledModel.extend({
         if (canskip && !this._inFetch) {
             return;
         }
-        this._region.left = bounds.left - xoverlap;
-        this._region.top = bounds.top - yoverlap;
-        this._region.right = bounds.right + xoverlap;
-        this._region.bottom = bounds.bottom + yoverlap;
-        /* ask for items that will be at least 0.5 pixels, minus a bit */
+        var lastRegion = Object.assign({}, this._region);
+        this._region.left = Math.max(0, bounds.left - xoverlap);
+        this._region.top = Math.max(0, bounds.top - yoverlap);
+        this._region.right = Math.min(sizeX || 1e6, bounds.right + xoverlap);
+        this._region.bottom = Math.min(sizeY || 1e6, bounds.bottom + yoverlap);
         this._lastZoom = zoom;
-        this._region.minimumSize = Math.pow(2, maxZoom - zoom - 1) - 1;
+        /* Don't ask for a minimum size; we show centroids if the data is
+         * incomplete. */
         if (noFetch) {
+            return;
+        }
+        if (['left', 'top', 'right', 'bottom', 'minumumSize'].every((key) => this._region[key] === lastRegion[key])) {
             return;
         }
         if (!this._nextFetch) {

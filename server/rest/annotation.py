@@ -18,6 +18,7 @@
 ##############################################################################
 
 import json
+import struct
 import ujson
 
 import cherrypy
@@ -139,6 +140,9 @@ class AnnotationResource(Resource):
                'points are used to defined it.  This is applied in addition '
                'to the limit.  Using maxDetails helps ensure results will be '
                'able to be rendered.', required=False, dataType='int')
+        .param('centroids', 'If true, only return the centroids of each '
+               'element.  The results are returned as a packed binary array '
+               'with a json wrapper.', dataType='boolean', required=False)
         .pagingParams(defaultSort='_id', defaultLimit=None,
                       defaultSortDir=SortDir.ASCENDING)
         .errorResponse('ID was invalid.')
@@ -176,6 +180,7 @@ class AnnotationResource(Resource):
         breakStr = b'"elements": ['
         base = json.dumps(annotation, sort_keys=True, allow_nan=False,
                           cls=JsonEncoder).encode('utf8').split(breakStr)
+        centroids = str(params.get('centroids')).lower() == 'true'
 
         def generateResult():
             info = {}
@@ -183,12 +188,20 @@ class AnnotationResource(Resource):
             yield base[0]
             yield breakStr
             collect = []
+            if centroids:
+                # Add a null byte to indicate the start of the binary data
+                yield b'\x00'
             for element in Annotationelement().yieldElements(annotation, params, info):
                 # The json conversion is fastest if we use defaults as much as
                 # possible.  The only value in an annotation element that needs
                 # special handling is the id, so cast that ourselves and then
                 # use a json encoder in the most compact form.
-                element['id'] = str(element['id'])
+                if isinstance(element, dict):
+                    element['id'] = str(element['id'])
+                else:
+                    element = struct.pack(
+                        '>QL', int(element[0][:16], 16), int(element[0][16:24], 16)
+                    ) + struct.pack('<fffl', *element[1:])
                 # Use ujson; it is much faster.  The standard json library
                 # could be used in its most default mode instead like so:
                 #   result = json.dumps(element, separators=(',', ':'))
@@ -198,18 +211,30 @@ class AnnotationResource(Resource):
                 # significantly faster than 10 and not much slower than 1000.
                 collect.append(element)
                 if len(collect) >= 100:
-                    yield (b',' if idx else b'') + ujson.dumps(collect).encode('utf8')[1:-1]
+                    if isinstance(collect[0], dict):
+                        yield (b',' if idx else b'') + ujson.dumps(collect).encode('utf8')[1:-1]
+                    else:
+                        yield b''.join(collect)
                     idx += 1
                     collect = []
             if len(collect):
-                yield (b',' if idx else b'') + ujson.dumps(collect).encode('utf8')[1:-1]
+                if isinstance(collect[0], dict):
+                    yield (b',' if idx else b'') + ujson.dumps(collect).encode('utf8')[1:-1]
+                else:
+                    yield b''.join(collect)
+            if centroids:
+                # Add a final null byte to indicate the end of the binary data
+                yield b'\x00'
             yield base[1].rstrip().rstrip(b'}')
             yield b', "_elementQuery": '
             yield json.dumps(
                 info, sort_keys=True, allow_nan=False, cls=JsonEncoder).encode('utf8')
             yield b'}'
 
-        setResponseHeader('Content-Type', 'application/json')
+        if centroids:
+            setResponseHeader('Content-Type', 'application/octet-stream')
+        else:
+            setResponseHeader('Content-Type', 'application/json')
         return generateResult
 
     @describeRoute(

@@ -218,17 +218,22 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         options = _.defaults(options || {}, {fetch: true});
         var geojson = annotation.geojson();
         var present = _.has(this._annotations, annotation.id);
+        var centroidFeature;
         if (present) {
-            _.each(this._annotations[annotation.id].features, (feature) => {
-                this.featureLayer.deleteFeature(feature);
+            _.each(this._annotations[annotation.id].features, (feature, idx) => {
+                if (idx || !annotation._centroids || feature.data().length !== annotation._centroids.data.length) {
+                    this.featureLayer.deleteFeature(feature);
+                } else {
+                    centroidFeature = feature;
+                }
             });
         }
         this._annotations[annotation.id] = {
-            features: [],
+            features: centroidFeature ? [centroidFeature] : [],
             options: options,
             annotation: annotation
         };
-        if (options.fetch && (!present || annotation.refresh())) {
+        if (options.fetch && (!present || annotation.refresh() || annotation._inFetch === 'centroids')) {
             annotation.off('g:fetched', null, this).on('g:fetched', () => {
                 // Trigger an event indicating to the listener that
                 // mouseover states should reset.
@@ -239,9 +244,86 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 this.drawAnnotation(annotation);
             }, this);
             this.setBounds({[annotation.id]: this._annotations[annotation.id]});
+            if (annotation._inFetch === 'centroids') {
+                return;
+            }
         }
         annotation.refresh(false);
         var featureList = this._annotations[annotation.id].features;
+        // draw centroids except for otherwise shown values
+        if (annotation._centroids && !centroidFeature) {
+            let feature = this.featureLayer.createFeature('point');
+            featureList.push(feature);
+            feature.data(annotation._centroids.data).position((d, i) => ({
+                x: annotation._centroids.centroids.x[i],
+                y: annotation._centroids.centroids.y[i]
+            })).style({
+                radius: (d, i) => {
+                    let r = annotation._centroids.centroids.r[i];
+                    if (!r) {
+                        return 8;
+                    }
+                    // the given value is the diagonal of the bounding box, so
+                    // to convert it to a circle radius means it must be
+                    // divided by 2 or by 2 * 4/pi.
+                    r /= 2.5 * this.viewer.unitsPerPixel(this.viewer.zoom());
+                    return r;
+                },
+                stroke: (d, i) => {
+                    return !annotation._shownIds || !annotation._shownIds.has(annotation._centroids.centroids.id[i]);
+                },
+                strokeColor: (d, i) => {
+                    let s = annotation._centroids.centroids.s[i];
+                    return annotation._centroids.props[s].strokeColor;
+                },
+                strokeOpacity: (d, i) => {
+                    let s = annotation._centroids.centroids.s[i];
+                    return annotation._centroids.props[s].strokeOpacity;
+                },
+                strokeWidth: (d, i) => {
+                    let s = annotation._centroids.centroids.s[i];
+                    return annotation._centroids.props[s].strokeWidth;
+                },
+                fill: (d, i) => {
+                    return !annotation._shownIds || !annotation._shownIds.has(annotation._centroids.centroids.id[i]);
+                },
+                fillColor: (d, i) => {
+                    let s = annotation._centroids.centroids.s[i];
+                    return annotation._centroids.props[s].fillColor;
+                },
+                fillOpacity: (d, i) => {
+                    let s = annotation._centroids.centroids.s[i];
+                    return annotation._centroids.props[s].fillOpacity;
+                }
+            });
+            // bind an event so zoom updates radius
+            annotation._centroidLastZoom = undefined;
+            feature.geoOn(geo.event.pan, () => {
+                if (this.viewer.zoom() !== annotation._centroidLastZoom) {
+                    annotation._centroidLastZoom = this.viewer.zoom();
+                    if (feature.verticesPerFeature) {
+                        let scale = 2.5 * this.viewer.unitsPerPixel(this.viewer.zoom());
+                        let vpf = feature.verticesPerFeature(),
+                            count = feature.data().length,
+                            radius = new Float32Array(vpf * count);
+                        for (var i = 0, j = 0; i < count; i += 1) {
+                            let r = annotation._centroids.centroids.r[i];
+                            if (r) {
+                                r /= scale;
+                            } else {
+                                r = 8;
+                            }
+                            for (var k = 0; k < vpf; k += 1, j += 1) {
+                                radius[j] = r;
+                            }
+                        }
+                        feature.updateStyleFromArray('radius', radius, true);
+                    } else {
+                        feature.modified().draw();
+                    }
+                }
+            });
+        }
         this._featureOpacity[annotation.id] = {};
         geo.createFileReader('jsonReader', {layer: this.featureLayer})
             .read(geojson, (features) => {
@@ -264,6 +346,9 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
                     // store the original opacities for the elements in each feature
                     const data = feature.data();
+                    if (annotation._centroids) {
+                        annotation._shownIds = new Set(feature.data().map((d) => d.id));
+                    }
                     if (data.length <= this._highlightFeatureSizeLimit) {
                         this._featureOpacity[annotation.id][feature.featureType] = feature.data()
                             .map(({id, properties}) => {
@@ -276,7 +361,28 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     }
                 });
                 this._mutateFeaturePropertiesForHighlight(annotation.id, features);
-                this.viewer.scheduleAnimationFrame(this.viewer.draw);
+                if (annotation._centroids && featureList[0]) {
+                    if (featureList[0].verticesPerFeature) {
+                        this.viewer.scheduleAnimationFrame(() => {
+                            let vpf = featureList[0].verticesPerFeature(),
+                                count = featureList[0].data().length,
+                                shown = new Float32Array(vpf * count);
+                            for (let i = 0, j = 0; i < count; i += 1) {
+                                let val = annotation._shownIds.has(annotation._centroids.centroids.id[i]) ? 0 : 1;
+                                for (let k = 0; k < vpf; k += 1, j += 1) {
+                                    shown[j] = val;
+                                }
+                            }
+                            featureList[0].updateStyleFromArray({
+                                stroke: shown,
+                                fill: shown
+                            }, undefined, true);
+                        });
+                    } else {
+                        featureList[0].modified();
+                    }
+                }
+                this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
             });
     },
 
@@ -371,7 +477,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             zoomRange = this.viewer.zoomRange();
         _.each(annotations || this._annotations, (annotation) => {
             if (annotation.options.fetch && annotation.annotation.setView) {
-                annotation.annotation.setView(bounds, zoom, zoomRange.max);
+                annotation.annotation.setView(bounds, zoom, zoomRange.max, undefined, this.sizeX, this.sizeY);
             }
         });
     },
