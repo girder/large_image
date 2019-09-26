@@ -7,6 +7,7 @@ girder-jobs>=3.0.3
 -e sources/pil
 -e sources/test
 -e sources/tiff
+-e sources/imagej
 # must be after sources/tiff
 -e sources/ometiff
 # Get both the girder and worker dependencies so tasks can be used stand-alone
