@@ -18,15 +18,11 @@
 
 from girder_large_image.girder_tilesource import GirderTileSource
 
-from . import SimpleBioFormatsFileTileSource
+from . import OMETiffBioFormatsFileTileSource
 
 
-class SimpleBioFormatsGirderTileSource(SimpleBioFormatsFileTileSource, GirderTileSource):
-    """
-    Provides tile access to Girder items with a PIL file.
-    """
-
+class OMETiffBioFormatsGirderTileSource(OMETiffBioFormatsFileTileSource, GirderTileSource):
     # Cache size is based on what the class needs, which does not include
     # individual tiles
     cacheName = 'tilesource'
-    name = 'bioformats'
+    name = 'ometiff-bioformats'

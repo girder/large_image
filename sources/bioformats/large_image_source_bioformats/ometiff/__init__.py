@@ -16,17 +16,24 @@
 #  limitations under the License.
 #############################################################################
 
-from girder_large_image.girder_tilesource import GirderTileSource
+from large_image.constants import SourcePriority
 
-from . import SimpleBioFormatsFileTileSource
+from ..base import BioFormatsFileTileSource
 
 
-class SimpleBioFormatsGirderTileSource(SimpleBioFormatsFileTileSource, GirderTileSource):
+class OMETiffBioFormatsFileTileSource(BioFormatsFileTileSource):
     """
-    Provides tile access to Girder items with a PIL file.
+    Provides tile access to single image PIL files.
     """
 
-    # Cache size is based on what the class needs, which does not include
-    # individual tiles
-    cacheName = 'tilesource'
-    name = 'bioformats'
+    name = 'ometiff-bioformats'
+    extensions = {
+        'ome.tif': SourcePriority.HIGH,
+        'tif': SourcePriority.HIGH,
+        'tiff': SourcePriority.HIGH,
+        'ome': SourcePriority.PREFERRED,
+    }
+
+    def computeTiles(self):
+        self.tileWidth = int(self._metadata['TileWidth']) if 'TileWidth' in self._metadata else min(self.sizeX, 256)
+        self.tileHeight = int(self._metadata['TileLength']) if 'TileLength' in self._metadata else min(self.sizeY, 256)
