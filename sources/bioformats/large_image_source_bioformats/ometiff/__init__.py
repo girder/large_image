@@ -23,7 +23,7 @@ from ..base import BioFormatsFileTileSource
 
 class OMETiffBioFormatsFileTileSource(BioFormatsFileTileSource):
     """
-    Provides tile access to single image PIL files.
+    Provides tile access to via Bio Formats for OME Tiff files
     """
 
     name = 'ometiff-bioformats'
@@ -35,5 +35,5 @@ class OMETiffBioFormatsFileTileSource(BioFormatsFileTileSource):
     }
 
     def computeTiles(self):
-        self.tileWidth = int(self._metadata['TileWidth']) if 'TileWidth' in self._metadata else min(self.sizeX, 256)
-        self.tileHeight = int(self._metadata['TileLength']) if 'TileLength' in self._metadata else min(self.sizeY, 256)
+        self.tileWidth = int(self._metadata.get('TileWidth', min(self.sizeX, 256)))
+        self.tileHeight = int(self._metadata.get('TileLength', min(self.sizeY, 256)))
