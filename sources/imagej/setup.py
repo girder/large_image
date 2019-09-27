@@ -42,7 +42,8 @@ setup(
     ],
     install_requires=[
         'large-image>=1.0.0',
-        'cython>=0.29.13',
+        'Cython>=0.29.13',
+        'jnius>=1.1.0',
         'pyimagej>=0.4.0'
     ],
     extras_require={

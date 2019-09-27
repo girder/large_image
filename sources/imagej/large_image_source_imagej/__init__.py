@@ -16,10 +16,14 @@
 #  limitations under the License.
 #############################################################################
 
+import imagej
 import six
 from pkg_resources import DistributionNotFound, get_distribution
 
-from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
+import PIL.Image
+
+from large_image.cache_util import LruCacheMetaclass, methodcache
+from large_image.constants import SourcePriority
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
 
@@ -39,8 +43,12 @@ class ImageJFileTileSource(FileTileSource):
 
     cacheName = 'tilesource'
     name = 'imagejfile'
-    # No extensions or mime types are explicitly added for the PIL tile source,
-    # as it should always be a fallback source
+    extensions = {
+        'jp2': SourcePriority.HIGH
+    }
+    mimeTypes = {
+        'image/jp2': SourcePriority.HIGH
+    }
 
     def __init__(self, path, **kwargs):
         """
@@ -56,26 +64,27 @@ class ImageJFileTileSource(FileTileSource):
 
         largeImagePath = self._getLargeImagePath()
 
-        # try:
-        #     self._pilImage = PIL.Image.open(largeImagePath)
-        # except IOError:
-        #     raise TileSourceException('File cannot be opened via PIL.')
+        try:
+            ij = self._ij = imagej.init('sc.fiji:fiji')
+            img = self._img = self._ij.io.open(largeImagePath)
+            self._pilImage = PIL.Image.fromarray(arr, 'RGB')
+        except IOError:
+            raise TileSourceException('File cannot be opened via ImageJ.')
 
-        # self.sizeX = self._pilImage.width
-        # self.sizeY = self._pilImage.height
-        # # We have just one tile which is the entire image.
-        # self.tileWidth = self.sizeX
-        # self.tileHeight = self.sizeY
-        # self.levels = 1
-        # # Throw an exception if too big
-        # if self.tileWidth <= 0 or self.tileHeight <= 0:
-        #     raise TileSourceException('ImageJ tile size is invalid.')
+        dims = ij.py.dims(img)
+        self.sizeX = dims[0]
+        self.sizeY = dims[1]
+        self.tileWidth = dims[0]
+        self.tileHeight = dims[1]
+        self.levels = 1
 
-    @staticmethod
-    def getLRUHash(*args, **kwargs):
-        return strhash(
-            super(ImageJFileTileSource, ImageJFileTileSource).getLRUHash(
-                *args, **kwargs))
+        # Throw an exception if too big
+        if self.tileWidth <= 0 or self.tileHeight <= 0:
+            raise TileSourceException('ImageJ tile size is invalid.')
+
+        # img_from_ij = ij.py.from_java(ij_img)
+        # # Fix the axis order
+        # img_as_rgb = np.moveaxis(img_as_8bit, 0, -1)
 
     @methodcache()
     def getTile(self, x, y, z, imagejImageAllowed=False, mayRedirect=False, **kwargs):
