@@ -107,7 +107,7 @@ class TiffFileTileSource(FileTileSource):
             if level < 0:
                 continue
             # Store information for sorting with the directory.
-            alldir.append((td.tileWidth * td.tileHeight, level,
+            alldir.append((level > 0, td.tileWidth * td.tileHeight, level,
                            td.imageWidth * td.imageHeight, directoryNum, td))
         # If there are no tiled images, raise an exception.
         if not len(alldir):
@@ -125,9 +125,11 @@ class TiffFileTileSource(FileTileSource):
         # preferred image
         for tdir in alldir:
             td = tdir[-1]
-            level = tdir[1]
+            level = tdir[2]
             if (td.tileWidth != highest.tileWidth or
                     td.tileHeight != highest.tileHeight):
+                if not len(self._associatedImages):
+                    self._addAssociatedImage(largeImagePath, tdir[-2], True, highest)
                 continue
             # If a layer's image is not a multiple of the tile size, it should
             # be near a power of two of the highest resolution image.
@@ -151,19 +153,29 @@ class TiffFileTileSource(FileTileSource):
         self.sizeX = highest.imageWidth
         self.sizeY = highest.imageHeight
 
-    def _addAssociatedImage(self, largeImagePath, directoryNum):
+    def _addAssociatedImage(self, largeImagePath, directoryNum, mustBeTiled=False, topImage=None):
         """
-        Check if the specified TIFF directory contains a non-tiled image with a
-        sensible image description that can be used as an ID.  If so, and if
-        the image isn't too large, add this image as an associated image.
+        Check if the specified TIFF directory contains an image with a sensible
+        image description that can be used as an ID.  If so, and if the image
+        isn't too large, add this image as an associated image.
 
         :param largeImagePath: path to the TIFF file.
         :param directoryNum: libtiff directory number of the image.
+        :param mustBeTiles: if true, use tiled images.  If false, require
+           untiled images.
+        :param topImage: if specified, add image-embedded metadata to this
+           image.
         """
         try:
-            associated = TiledTiffDirectory(largeImagePath, directoryNum, False)
-            id = associated._tiffInfo.get(
-                'imagedescription').strip().split(None, 1)[0].lower()
+            associated = TiledTiffDirectory(largeImagePath, directoryNum, mustBeTiled)
+            id = ''
+            if associated._tiffInfo.get('imagedescription'):
+                id = associated._tiffInfo.get(
+                    'imagedescription').strip().split(None, 1)[0].lower()
+            elif mustBeTiled:
+                id = 'dir%d' % directoryNum
+                if not len(self._associatedImages):
+                    id = 'macro'
             if not isinstance(id, six.text_type):
                 id = id.decode('utf8')
             # Only use this as an associated image if the parsed id is
@@ -172,7 +184,14 @@ class TiffFileTileSource(FileTileSource):
             if (id.isalnum() and len(id) > 3 and len(id) <= 20 and
                     associated._pixelInfo['width'] <= 8192 and
                     associated._pixelInfo['height'] <= 8192):
-                self._associatedImages[id] = associated._tiffFile.read_image()
+                image = associated._tiffFile.read_image()
+                # Optrascan scanners are store xml image descriptions in a
+                # "tiled image".  Check if this is the case, and, if so, parse
+                # such data
+                if image.tobytes()[:6] == b'<?xml ':
+                    self._parseImageXml(image.tobytes().rsplit(b'>', 1)[0] + b'>', topImage)
+                    return
+                self._associatedImages[id] = image
         except (TiffException, AttributeError):
             # If we can't validate or read an associated image or it has no
             # useful imagedescription, fail quietly without adding an
@@ -183,6 +202,34 @@ class TiffFileTileSource(FileTileSource):
             # what happened.
             config.getConfig('logger').exception(
                 'Could not use non-tiled TIFF image as an associated image.')
+
+    def _parseImageXml(self, xml, topImage):
+        """
+        Parse metadata stored in arbitrary xml and associate it with a specific
+        image.
+
+        :params xml: the xml as a string or bytes object.
+        :params topImage: the image to add metadata to.
+        """
+        if not topImage or topImage.pixelInfo.get('magnificaiton'):
+            return
+        topImage.parse_image_description(xml)
+        if not topImage._description_xml:
+            return
+        try:
+            xml = topImage._description_xml
+            # Optrascan metadata
+            scanDetails = xml.get('ScanInfo', xml.get('EncodeInfo'))['ScanDetails']
+            mag = float(scanDetails['Magnification'])
+            # In microns; convert to mm
+            scale = float(scanDetails['PixelResolution']) * 1e-3
+            topImage._pixelInfo = {
+                'magnification': mag,
+                'mm_x': scale,
+                'mm_y': scale,
+            }
+        except Exception:
+            pass
 
     def getNativeMagnification(self):
         """
