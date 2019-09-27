@@ -23,10 +23,10 @@ def prerelease_local_scheme(version):
 
 
 setup(
-    name='large-image-source-imagejs',
+    name='large-image-source-bioformats',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
-    description='An ImageJ tilesource for large_image',
+    description='An BioFormats tilesource for large_image',
     long_description='See the large-image package for more details.',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -42,9 +42,7 @@ setup(
     ],
     install_requires=[
         'large-image>=1.0.0',
-        'Cython>=0.29.13',
-        'jnius>=1.1.0',
-        'pyimagej>=0.4.0'
+        'python-bioformats'
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
@@ -55,10 +53,10 @@ setup(
     url='https://github.com/girder/large_image',
     entry_points={
         'large_image.source': [
-            'imagej = large_image_source_imagej:ImageJFileTileSource'
+            'bioformats = large_image_source_bioformats:BioFormatsFileTileSource'
         ],
         'girder_large_image.source': [
-            'imagej = large_image_source_imagej.girder_source:ImageJGirderTileSource'
+            'bioformats = large_image_source_bioformats.girder_source:BioFormatsGirderTileSource'
         ]
     },
 )

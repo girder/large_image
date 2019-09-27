@@ -18,7 +18,7 @@ sources = {
     'ometiff': ['large-image-source-ometiff'],
     'openslide': ['large-image-source-openslide'],
     'pil': ['large-image-source-pil'],
-    'imagej': ['large-image-source-imagej'],
+    'bioformats': ['large-image-source-bioformats'],
     'tiff': ['large-image-source-tiff'],
     'test': ['large-image-source-test'],
 }

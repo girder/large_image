@@ -18,10 +18,10 @@
 
 from girder_large_image.girder_tilesource import GirderTileSource
 
-from . import ImageJFileTileSource
+from . import BioFormatsFileTileSource
 
 
-class ImageJGirderTileSource(ImageJFileTileSource, GirderTileSource):
+class BioFormatsGirderTileSource(BioFormatsFileTileSource, GirderTileSource):
     """
     Provides tile access to Girder items with a PIL file.
     """
@@ -29,4 +29,4 @@ class ImageJGirderTileSource(ImageJFileTileSource, GirderTileSource):
     # Cache size is based on what the class needs, which does not include
     # individual tiles
     cacheName = 'tilesource'
-    name = 'imagej'
+    name = 'bioformats'
