@@ -18,7 +18,6 @@
 
 import atexit
 import bioformats
-import threading
 import javabridge
 import math
 
@@ -39,11 +38,15 @@ try:
 except RuntimeError as e:
     logger.exception('cannot start JVM BioFormat source not working', e)
 
+
 class BioFormatsFileTileSource(FileTileSource):
     """
     Provides tile access to via BioFormat.
     """
 
+    _attached = False
+    _img = None
+    _metadata = {}
 
     def __init__(self, path, **kwargs):
         """
@@ -64,23 +67,17 @@ class BioFormatsFileTileSource(FileTileSource):
             raise TileSourceException('File cannot be opened via BioFormats, cause it does not '
                                       'contain the file suffix. (%s)' % largeImagePath)
 
-
         try:
-            print('load img')
             javabridge.attach()
-            self._img = bioformats.load_image(largeImagePath, rescale=False)
-            print('loaded img')
+            self._attached = True
         except javabridge.JavaException as e:
-            print('errordd')
-            print(javabridge.to_string(e.throwable))
-            raise TileSourceException('File cannot be opened via BioFormats. (%s)' % javabridge.to_string(e.throwable))
-        except Exception as e:
-            print('error')
-
-            print(threading.currentThread().ident)
-            import traceback, sys
-            traceback.print_exc(file=sys.stdout)
-            raise TileSourceException('File cannot be opened via BioFormats. (%r)' % e)
+            es = javabridge.to_string(e.throwable)
+            raise TileSourceException('File cannot be opened via BioFormats. (%s)' % es)
+        try:
+            self._img = bioformats.load_image(largeImagePath, rescale=False)
+        except javabridge.JavaException as e:
+            es = javabridge.to_string(e.throwable)
+            raise TileSourceException('File cannot be opened via BioFormats. (%s)' % es)
 
         self._metadata = javabridge.jdictionary_to_string_dictionary(self._img.rdr.getMetadata())
 
@@ -131,6 +128,7 @@ class BioFormatsFileTileSource(FileTileSource):
         return self._outputTile(tile, 'PIL', x, y, z, pilImageAllowed, **kwargs)
 
     def __del__(self):
-        if hasattr(self, '_img') and self._img:
+        if self._img is not None:
             self._img.close()
-        javabridge.detach()
+        if self._attached:
+            javabridge.detach()
