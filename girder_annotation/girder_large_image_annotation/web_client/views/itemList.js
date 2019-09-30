@@ -18,7 +18,7 @@ wrap(ItemListWidget, 'render', function (render) {
         collection.fetch({
             itemId: item.id
         }).done(() => {
-            const thumbnail = $('a[g-item-cid="' + item.cid + '"] .large_image_thumbnail', parent);
+            const thumbnail = $('a[g-item-cid="' + item.cid + '"] .large_image_thumbnail', parent).first();
 
             let badge = thumbnail.find('.large_image_annotation_badge');
             if (badge.length === 0) {
