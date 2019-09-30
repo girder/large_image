@@ -23,7 +23,7 @@ from . import SimpleBioFormatsFileTileSource
 
 class SimpleBioFormatsGirderTileSource(SimpleBioFormatsFileTileSource, GirderTileSource):
     """
-    Provides tile access to Girder items with a PIL file.
+    Provides tile access to via BioFormat.
     """
 
     # Cache size is based on what the class needs, which does not include

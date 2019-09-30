@@ -22,17 +22,6 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
-entry_points = {
-    'large_image.source': [
-        'bioformats = large_image_source_bioformats:SimpleBioFormatsFileTileSource',
-        'ometiff-bioformats = large_image_source_bioformats.ometiff:OMETiffBioFormatsFileTileSource'
-    ],
-    'girder_large_image.source': [
-        'bioformats = large_image_source_bioformats.girder_source:SimpleBioFormatsGirderTileSource',
-        'ometiff-bioformats = large_image_source_bioformats.ometiff.girder_source:OMETiffBioFormatsGirderTileSource'
-    ]
-}
-
 setup(
     name='large-image-source-bioformats',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
@@ -62,5 +51,14 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    entry_points=entry_points,
+    entry_points={
+        'large_image.source': [
+            'bioformats = large_image_source_bioformats:SimpleBioFormatsFileTileSource',
+            # 'ometiff-bioformats = large_image_source_bioformats.ometiff:OMETiffBioFormatsFileTileSource'
+        ],
+        'girder_large_image.source': [
+            'bioformats = large_image_source_bioformats.girder_source:SimpleBioFormatsGirderTileSource',
+            # 'ometiff-bioformats = large_image_source_bioformats.ometiff.girder_source:OMETiffBioFormatsGirderTileSource'
+        ]
+    },
 )

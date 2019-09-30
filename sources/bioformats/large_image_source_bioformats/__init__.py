@@ -15,9 +15,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #############################################################################
+import six
+
 from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.constants import SourcePriority
+from large_image.cache_util import LruCacheMetaclass, methodcache
 
 from .base import BioFormatsFileTileSource
 
@@ -29,15 +32,23 @@ except DistributionNotFound:
     pass
 
 
+@six.add_metaclass(LruCacheMetaclass)
 class SimpleBioFormatsFileTileSource(BioFormatsFileTileSource):
     """
     Provides tile access to single image PIL files.
     """
 
+    cacheName = 'tilesource'
     name = 'bioformats'
     extensions = {
+        None: SourcePriority.LOW,
         'jp2': SourcePriority.HIGH,
     }
     mimeTypes = {
         'image/jp2': SourcePriority.HIGH
     }
+
+    @methodcache()
+    def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
+        return super(SimpleBioFormatsFileTileSource, self).getTile(x, y, z, pilImageAllowed=False,
+                                                                   mayRedirect=False, **kwargs)

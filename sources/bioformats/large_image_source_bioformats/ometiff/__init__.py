@@ -26,8 +26,10 @@ class OMETiffBioFormatsFileTileSource(BioFormatsFileTileSource):
     Provides tile access to via Bio Formats for OME Tiff files
     """
 
+    cacheName = 'tilesource'
     name = 'ometiff-bioformats'
     extensions = {
+        None: SourcePriority.LOW,
         'ome.tif': SourcePriority.HIGH,
         'tif': SourcePriority.HIGH,
         'tiff': SourcePriority.HIGH,

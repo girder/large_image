@@ -16,26 +16,34 @@
 #  limitations under the License.
 #############################################################################
 
+import atexit
 import bioformats
+import threading
 import javabridge
 import math
-import six
 
 from bioformats import log4j
+from pathlib import PurePath
 import PIL.Image
 
-from large_image.cache_util import LruCacheMetaclass, methodcache
+from girder import logger
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
 
 
-@six.add_metaclass(LruCacheMetaclass)
+try:
+    javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+    log4j.basic_config()
+    atexit.register(lambda: javabridge.kill_vm())
+    logger.info('started JVM for BioFormat tile source')
+except RuntimeError as e:
+    logger.exception('cannot start JVM BioFormat source not working', e)
+
 class BioFormatsFileTileSource(FileTileSource):
     """
     Provides tile access to via BioFormat.
     """
 
-    cacheName = 'tilesource'
 
     def __init__(self, path, **kwargs):
         """
@@ -50,12 +58,28 @@ class BioFormatsFileTileSource(FileTileSource):
         super(BioFormatsFileTileSource, self).__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
+        print(largeImagePath)
+
+        if not PurePath(largeImagePath).suffix:
+            raise TileSourceException('File cannot be opened via BioFormats, cause it does not '
+                                      'contain the file suffix. (%s)' % largeImagePath)
+
 
         try:
-            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
-            log4j.basicConfig()
+            print('load img')
+            javabridge.attach()
             self._img = bioformats.load_image(largeImagePath, rescale=False)
+            print('loaded img')
         except javabridge.JavaException as e:
+            print('errordd')
+            print(javabridge.to_string(e.throwable))
+            raise TileSourceException('File cannot be opened via BioFormats. (%s)' % javabridge.to_string(e.throwable))
+        except Exception as e:
+            print('error')
+
+            print(threading.currentThread().ident)
+            import traceback, sys
+            traceback.print_exc(file=sys.stdout)
             raise TileSourceException('File cannot be opened via BioFormats. (%r)' % e)
 
         self._metadata = javabridge.jdictionary_to_string_dictionary(self._img.rdr.getMetadata())
@@ -82,7 +106,6 @@ class BioFormatsFileTileSource(FileTileSource):
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1
 
-    @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
         if z < 0:
             raise TileSourceException('z layer does not exist')
@@ -108,6 +131,6 @@ class BioFormatsFileTileSource(FileTileSource):
         return self._outputTile(tile, 'PIL', x, y, z, pilImageAllowed, **kwargs)
 
     def __del__(self):
-        if self._img:
+        if hasattr(self, '_img') and self._img:
             self._img.close()
-        javabridge.kill_vm()
+        javabridge.detach()
