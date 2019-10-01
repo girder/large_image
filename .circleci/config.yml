@@ -16,7 +16,7 @@ jobs:
           name: Install OpenJDK
           command: |
             apt-get update
-            apt-get install -y openjdk-8-jre
+            apt-get install -y openjdk-8-jdk
       - run:
           name: Run tests via tox
           # Piping through cat does less buffering of the output but can
@@ -43,7 +43,7 @@ jobs:
           name: Install OpenJDK
           command: |
             apt-get update
-            apt-get install -y openjdk-8-jre
+            apt-get install -y openjdk-8-jdk
       - run:
           name: Install python packages
           command: pip install setuptools_scm twine
