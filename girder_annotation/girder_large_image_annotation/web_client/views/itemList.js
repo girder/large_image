@@ -9,7 +9,6 @@ import AnnotationCollection from '../collections/AnnotationCollection';
 
 import '../stylesheets/itemList.styl';
 
-
 wrap(ItemListWidget, 'render', function (render) {
     render.apply(this, _.rest(arguments));
 
@@ -55,6 +54,5 @@ wrap(ItemListWidget, 'render', function (render) {
         });
     });
 });
-
 
 export default ItemListWidget;
