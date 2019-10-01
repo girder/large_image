@@ -21,10 +21,13 @@ twine upload --verbose dist/*
 cd "$ROOTPATH/sources/mapnik"
 python setup.py sdist
 twine upload --verbose dist/*
-cd "$ROOTPATH/sources/openslide"
+cd "$ROOTPATH/sources/ometiff"
 python setup.py sdist
 twine upload --verbose dist/*
-cd "$ROOTPATH/sources/ometiff"
+cd "$ROOTPATH/sources/openjpeg"
+python setup.py sdist
+twine upload --verbose dist/*
+cd "$ROOTPATH/sources/openslide"
 python setup.py sdist
 twine upload --verbose dist/*
 cd "$ROOTPATH/sources/pil"
