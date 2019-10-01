@@ -61,7 +61,6 @@ class BioFormatsFileTileSource(FileTileSource):
         super(BioFormatsFileTileSource, self).__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
-        print(largeImagePath)
 
         if not PurePath(largeImagePath).suffix:
             raise TileSourceException('File cannot be opened via BioFormats, cause it does not '
@@ -71,7 +70,10 @@ class BioFormatsFileTileSource(FileTileSource):
             javabridge.attach()
             self._img = bioformats.ImageReader(largeImagePath)
 
-            self._metadata = javabridge.jdictionary_to_string_dictionary(self._img.rdr.getMetadata())
+            converter = javabridge.jdictionary_to_string_dictionary
+            self._metadata = converter(self._img.rdr.getMetadata())
+
+            print(self._metadata)
 
             self.sizeX = self._img.rdr.getSizeX()
             self.sizeY = self._img.rdr.getSizeY()
@@ -110,8 +112,8 @@ class BioFormatsFileTileSource(FileTileSource):
         if not (0 <= offsety < self.sizeY):
             raise TileSourceException('y is outside layer')
 
-        width = self.tileWidth * scale
-        height = self.tileHeight * scale
+        width = min(self.tileWidth * scale, self.sizeX)
+        height = min(self.tileHeight * scale, self.sizeY)
 
         try:
             javabridge.attach()
