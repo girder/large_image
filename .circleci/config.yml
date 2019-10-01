@@ -14,7 +14,9 @@ jobs:
           command: npm install -g phantomjs-prebuilt --unsafe-perm
       - run:
           name: Install OpenJDK
-          command: apt-get install -y openjdk-8-jre
+          command: |
+            apt-get update
+            apt-get install -y openjdk-8-jre
       - run:
           name: Run tests via tox
           # Piping through cat does less buffering of the output but can
@@ -39,7 +41,9 @@ jobs:
             echo ". $CIRCLE_WORKING_DIRECTORY/env/bin/activate" >> $BASH_ENV
       - run:
           name: Install OpenJDK
-          command: apt-get install -y openjdk-8-jre
+          command: |
+            apt-get update
+            apt-get install -y openjdk-8-jre
       - run:
           name: Install python packages
           command: pip install setuptools_scm twine
