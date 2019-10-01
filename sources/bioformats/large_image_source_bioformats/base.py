@@ -146,7 +146,7 @@ class BioFormatsFileTileSource(FileTileSource):
         result = super(BioFormatsFileTileSource, self).getMetadata()
         # We may want to reformat the frames to standardize this across sources
         if self._img_props.sizeFrames > 1:
-            result['frames'] = self._img_props.sizeFrames
+            result['frames'] = list(range(self._img_props.sizeFrames))
         return result
 
     def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
