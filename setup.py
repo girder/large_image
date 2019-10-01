@@ -74,6 +74,9 @@ setup(
         'openslide': [
             'openslide-python>=1.1.0'
         ],
+        'openjpeg': [
+            'glymur>=0.8.18'
+        ],
         'mapnik': [
             'mapnik',
             'pyproj',
