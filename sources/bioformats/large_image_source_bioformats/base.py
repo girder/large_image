@@ -19,6 +19,7 @@
 import atexit
 import bioformats
 import javabridge
+import math
 import threading
 
 from bioformats import log4j
@@ -130,7 +131,9 @@ class BioFormatsFileTileSource(FileTileSource):
         self.tileHeight = self.sizeY
 
     def computeLevels(self):
-        self.levels = 1
+        self.levels = int(math.ceil(max(
+            math.log(float(self.sizeX) / self.tileWidth),
+            math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1
 
     def getMetadata(self):
         """
