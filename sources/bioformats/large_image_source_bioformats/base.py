@@ -19,10 +19,10 @@
 import atexit
 import bioformats
 import javabridge
-import math
 
 from bioformats import log4j
 from pathlib import PurePath
+import numpy as np
 import PIL.Image
 
 from girder import logger
@@ -69,24 +69,21 @@ class BioFormatsFileTileSource(FileTileSource):
 
         try:
             javabridge.attach()
-            self._attached = True
-        except javabridge.JavaException as e:
-            es = javabridge.to_string(e.throwable)
-            raise TileSourceException('File cannot be opened via BioFormats. (%s)' % es)
-        try:
             self._img = bioformats.ImageReader(largeImagePath)
+
+            self._metadata = javabridge.jdictionary_to_string_dictionary(self._img.rdr.getMetadata())
+
+            self.sizeX = self._img.rdr.getSizeX()
+            self.sizeY = self._img.rdr.getSizeY()
+
+            self.computeTiles()
+            self.computeLevels()
         except javabridge.JavaException as e:
             es = javabridge.to_string(e.throwable)
             raise TileSourceException('File cannot be opened via BioFormats. (%s)' % es)
-
-        self._metadata = javabridge.jdictionary_to_string_dictionary(self._img.rdr.getMetadata())
-
-        self.sizeX = self._img.rdr.getSizeX()
-        self.sizeY = self._img.rdr.getSizeY()
-
-        self.computeTiles()
-        self.computeLevels()
-        print(dict(levels=self.levels, s=self.sizeX, y=self.sizeY, tw=self.tileWidth, th=self.tileHeight))
+        finally:
+            if javabridge.get_env():
+                javabridge.detach()
 
         if self.levels < 1:
             raise TileSourceException(
@@ -96,40 +93,49 @@ class BioFormatsFileTileSource(FileTileSource):
             raise TileSourceException('BioFormats tile size is invalid.')
 
     def computeTiles(self):
-        self.tileWidth = min(self.sizeX, 256)
-        self.tileHeight = min(self.sizeY, 256)
+        self.tileWidth = self.sizeX
+        self.tileHeight = self.sizeY
 
     def computeLevels(self):
-        self.levels = int(math.ceil(max(
-            math.log(float(self.sizeX) / self.tileWidth),
-            math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1
+        self.levels = 1
 
     def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
         if z < 0:
             raise TileSourceException('z layer does not exist')
-        # When we read a region from the SVS, we have to ask for it in the
-        # SVS level 0 coordinate system.  Our x and y is in tile space at the
-        # specifed z level, so the offset in SVS level 0 coordinates has to be
-        # scaled by the tile size and by the z level.
-        scale = 2 ** (self.levels - 1 - z)
+        scale = 2 ** (self.levels - 1)
         offsetx = x * self.tileWidth * scale
         if not (0 <= offsetx < self.sizeX):
             raise TileSourceException('x is outside layer')
         offsety = y * self.tileHeight * scale
         if not (0 <= offsety < self.sizeY):
             raise TileSourceException('y is outside layer')
+
+        width = self.tileWidth * scale
+        height = self.tileHeight * scale
+
         try:
-            arr = self._img.read(
-                XYWH=(offsetx, offsety, self.tileWidth * scale, self.tileHeight * scale))
+            javabridge.attach()
+            arr = self._img.read(XYWH=(offsetx, offsety, width, height))
+
+            # convert to rgb 256
+            if arr.dtype == np.float32:
+                arr = (arr * 255 / np.max(arr)).astype(np.uint8)
+
             tile = PIL.Image.fromarray(arr)
         except javabridge.JavaException as exc:
             raise TileSourceException('Failed to get BioFormat region (%r).' % exc)
+        finally:
+            if javabridge.get_env():
+                javabridge.detach()
         if scale != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight), PIL.Image.LANCZOS)
         return self._outputTile(tile, 'PIL', x, y, z, pilImageAllowed, **kwargs)
 
     def __del__(self):
         if self._img is not None:
-            self._img.close()
-        if self._attached:
-            javabridge.detach()
+            try:
+                javabridge.attach()
+                self._img.close()
+            finally:
+                if javabridge.get_env():
+                    javabridge.detach()
