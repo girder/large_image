@@ -74,7 +74,7 @@ class BioFormatsFileTileSource(FileTileSource):
             es = javabridge.to_string(e.throwable)
             raise TileSourceException('File cannot be opened via BioFormats. (%s)' % es)
         try:
-            self._img = bioformats.load_image(largeImagePath, rescale=False)
+            self._img = bioformats.ImageReader(largeImagePath)
         except javabridge.JavaException as e:
             es = javabridge.to_string(e.throwable)
             raise TileSourceException('File cannot be opened via BioFormats. (%s)' % es)
@@ -86,6 +86,7 @@ class BioFormatsFileTileSource(FileTileSource):
 
         self.computeTiles()
         self.computeLevels()
+        print(dict(levels=self.levels, s=self.sizeX, y=self.sizeY, tw=self.tileWidth, th=self.tileHeight))
 
         if self.levels < 1:
             raise TileSourceException(
