@@ -6,13 +6,15 @@ jobs:
       - image: zachmullen/tox-and-node
       - image: memcached
       - image: circleci/mongo:4.0-ram
-      - image: circleci/openjdk:8
       - image: rabbitmq
     steps:
       - checkout
       - run:
           name: Preinstall phantomjs to work around an npm permission issue
           command: npm install -g phantomjs-prebuilt --unsafe-perm
+      - run:
+          name: Install OpenJDK
+          command: apt-get install openjdk-8-jre
       - run:
           name: Run tests via tox
           # Piping through cat does less buffering of the output but can
@@ -28,7 +30,6 @@ jobs:
   release:
     docker:
       - image: circleci/python:3.7
-      - image: circleci/openjdk:8
     steps:
       - checkout
       - run:
@@ -36,6 +37,9 @@ jobs:
           command: |
             if [ ! -d env ]; then python -m virtualenv env || python -m venv env; fi
             echo ". $CIRCLE_WORKING_DIRECTORY/env/bin/activate" >> $BASH_ENV
+      - run:
+          name: Install OpenJDK
+          command: apt-get install openjdk-8-jre
       - run:
           name: Install python packages
           command: pip install setuptools_scm twine
