@@ -6,6 +6,7 @@ jobs:
       - image: zachmullen/tox-and-node
       - image: memcached
       - image: circleci/mongo:4.0-ram
+      - image: circleci/openjdk:8
       - image: rabbitmq
     steps:
       - checkout
@@ -27,6 +28,7 @@ jobs:
   release:
     docker:
       - image: circleci/python:3.7
+      - image: circleci/openjdk:8
     steps:
       - checkout
       - run:
