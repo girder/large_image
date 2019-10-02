@@ -245,7 +245,7 @@ def testSourceErrors():
     with pytest.raises(TileSourceException, match='must not be geographic'):
         large_image_source_mapnik.MapnikFileTileSource(imagePath, 'EPSG:4326')
     imagePath = os.path.join(testDir, 'test_files', 'zero_gi.tif')
-    with pytest.raises(TileSourceException, match='cannot be opened via Mapnik'):
+    with pytest.raises(TileSourceException, match='cannot be opened via'):
         large_image_source_mapnik.MapnikFileTileSource(imagePath)
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
     with pytest.raises(TileSourceException, match='does not have a projected scale'):
