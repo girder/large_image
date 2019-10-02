@@ -64,7 +64,7 @@ class MapnikTileSource(FileTileSource):
         'tiff': SourcePriority.LOW,
     }
 
-    def __init__(self, path, projection=None, style=None, unitsPerPixel=None, **kwargs):
+    def __init__(self, path, projection=None, style=None, unitsPerPixel=None, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -126,7 +126,10 @@ class MapnikTileSource(FileTileSource):
         super(MapnikTileSource, self).__init__(path, **kwargs)
         self._bounds = {}
         self._path = self._getLargeImagePath()
-        self.dataset = gdal.Open(self._path)
+        try:
+            self.dataset = gdal.Open(self._path)
+        except RuntimeError:
+            raise TileSourceException('File cannot be opened via GDAL')
         self._getDatasetLock = threading.RLock()
         self.tileSize = 256
         self.tileWidth = self.tileSize

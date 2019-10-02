@@ -379,7 +379,7 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
             MapnikTileSource(filepath, 'EPSG:4326')
         filepath = os.path.join(
             os.path.dirname(__file__), 'test_files', 'zero_gi.tif')
-        with six.assertRaisesRegex(self, TileSourceException, 'cannot be opened via Mapnik'):
+        with six.assertRaisesRegex(self, TileSourceException, 'cannot be opened via'):
             MapnikTileSource(filepath)
         filepath = os.path.join(
             os.path.dirname(__file__), 'test_files', 'yb10kx5k.png')
