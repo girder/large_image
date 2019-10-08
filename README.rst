@@ -8,9 +8,9 @@ Quick Installation via pip
 
 In addition to installing the ``large-image`` package, you'll need at least one tile source (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
 
-- Install all tile sources and all Girder plugins on linux: ``pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://manthey.github.io/large_image_wheels``
+- Install all tile sources and all Girder plugins on linux: ``pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://girder.github.io/large_image_wheels``
 
-- Install all tile sources on linux: ``pip install large-image[all] --find-links https://manthey.github.io/large_image_wheels``
+- Install all tile sources on linux: ``pip install large-image[all] --find-links https://girder.github.io/large_image_wheels``
 
 Modules
 -------
@@ -63,7 +63,7 @@ Tile source prerequisites
 
 Many tile sources have complex prerequisites.  These can be installed directly using your system's package manager or from some prebuilt Python wheels for Linux.  The prebuilt wheels are not official packages, but they can be used by instructing pip to use them by preference:
 
-    ``pip install -e large-image[memcached] -r requirements-dev.txt --find-links https://manthey.github.io/large_image_wheels``
+    ``pip install -e large-image[memcached] -r requirements-dev.txt --find-links https://girder.github.io/large_image_wheels``
 
 
 .. _Girder: https://github.com/girder/girder
