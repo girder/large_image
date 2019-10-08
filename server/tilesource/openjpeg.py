@@ -93,6 +93,7 @@ class OpenjpegFileTileSource(FileTileSource):
             self._openjpeg = glymur.Jp2k(largeImagePath)
         except glymur.jp2box.InvalidJp2kError:
             raise TileSourceException('File cannot be opened via Glymur and OpenJPEG.')
+        self._openjpegHandles = [self._openjpeg]
         try:
             self.sizeY, self.sizeX = self._openjpeg.shape[:2]
         except IndexError:
@@ -202,8 +203,17 @@ class OpenjpegFileTileSource(FileTileSource):
             raise TileSourceException('x is outside layer')
         if y < 0 or y0 >= self.sizeY:
             raise TileSourceException('y is outside layer')
+        # possible open the file multiple times so multiple threads can access
+        # it concurrently.
         with self._openjpegLock:
-            tile = self._openjpeg[y0:y1:step, x0:x1:step]
+            if not len(self._openjpegHandles):
+                self._openjpegHandles.append(glymur.Jp2k(self._largeImagePath))
+            openjpegHandle = self._openjpegHandles.pop()
+        try:
+            tile = openjpegHandle[y0:y1:step, x0:x1:step]
+        finally:
+            with self._openjpegLock:
+                self._openjpegHandles.append(openjpegHandle)
         mode = 'L'
         if len(tile.shape) == 3:
             mode = ['L', 'LA', 'RGB', 'RGBA'][tile.shape[2] - 1]
