@@ -75,6 +75,9 @@ class OpenjpegFileTileSource(FileTileSource):
     }
     _xmlTag = b'mxl '
 
+    _minTileSize = 256
+    _maxTileSize = 512
+
     def __init__(self, path, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
@@ -99,10 +102,24 @@ class OpenjpegFileTileSource(FileTileSource):
         except IndexError:
             raise TileSourceException('File cannot be opened via Glymur and OpenJPEG.')
         self.levels = self._openjpeg.codestream.segment[2].num_res + 1
+        self._minlevel = 0
         self.tileWidth = self.tileHeight = 2 ** int(math.ceil(max(
             math.log(float(self.sizeX)) / math.log(2) - self.levels + 1,
             math.log(float(self.sizeY)) / math.log(2) - self.levels + 1)))
-        # read associated images and metadata from boxes
+        # Small and large tiles are both inefficient.  Large tiles don't work
+        # with some viewers (leaflet and Slide Atlas, for instance)
+        if self.tileWidth < self._minTileSize or self.tileWidth > self._maxTileSize:
+            self.tileWidth = self.tileHeight = min(
+                self._maxTileSize, max(self._minTileSize, self.tileWidth))
+            self.levels = math.ceil(math.log(float(max(
+                self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1
+            self._minlevel = self.levels - self._openjpeg.codestream.segment[2].num_res - 1
+        self._getAssociatedImages()
+
+    def _getAssociatedImages(self):
+        """
+        Read associated images and metadata from boxes.
+        """
         self._associatedImages = {}
         for box in self._openjpeg.box:
             if box.box_id == self._xmlTag or box.box_id in self._boxToTag:
@@ -203,6 +220,10 @@ class OpenjpegFileTileSource(FileTileSource):
             raise TileSourceException('x is outside layer')
         if y < 0 or y0 >= self.sizeY:
             raise TileSourceException('y is outside layer')
+        scale = None
+        if z < self._minlevel:
+            scale = 2 ** (self._minlevel - z)
+            step = 2 ** (self.levels - 1 - self._minlevel)
         # possible open the file multiple times so multiple threads can access
         # it concurrently.
         with self._openjpegLock:
@@ -218,6 +239,8 @@ class OpenjpegFileTileSource(FileTileSource):
         if len(tile.shape) == 3:
             mode = ['L', 'LA', 'RGB', 'RGBA'][tile.shape[2] - 1]
         tile = PIL.Image.frombytes(mode, (tile.shape[1], tile.shape[0]), tile)
+        if scale:
+            tile = tile.resize((tile.size[0] // scale, tile.size[1] // scale), PIL.Image.LANCZOS)
         if tile.size != (self.tileWidth, self.tileHeight):
             wrap = PIL.Image.new(mode, (self.tileWidth, self.tileHeight))
             wrap.paste(tile, (0, 0))

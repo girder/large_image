@@ -23,6 +23,7 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
     },
 
     render: function () {
+        var errmsg;
         // If script or metadata isn't loaded, then abort
         if (!window.L || !this.tileWidth || !this.tileHeight || this.deleted) {
             return this;
@@ -34,7 +35,15 @@ var LeafletImageViewerWidget = ImageViewerWidget.extend({
         }
 
         if (this.tileWidth !== this.tileHeight) {
-            console.error('The Leaflet viewer only supports square tiles.');
+            errmsg = 'The Leaflet viewer only supports square tiles.';
+        }
+        if (this.tileWidth > 256) {
+            errmsg = 'The Leaflet viewer does not support tiles wider than 256 pixels.';
+        }
+        if (errmsg) {
+            this.viewer = $('<div/>').text(errmsg);
+            this.$el.append(this.viewer);
+            console.error(errmsg);
             return this;
         }
 
