@@ -18,7 +18,6 @@
 
 import ctypes
 import PIL.Image
-import numpy
 import os
 import six
 import threading
