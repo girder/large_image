@@ -20,10 +20,10 @@ import glymur
 import math
 import PIL.Image
 import six
-import threading
 import warnings
 
 from six import BytesIO
+from six.moves import queue
 from xml.etree import cElementTree
 
 from pkg_resources import DistributionNotFound, get_distribution
@@ -77,6 +77,7 @@ class OpenjpegFileTileSource(FileTileSource):
 
     _minTileSize = 256
     _maxTileSize = 512
+    _maxOpenHandles = 6
 
     def __init__(self, path, **kwargs):
         """
@@ -91,17 +92,19 @@ class OpenjpegFileTileSource(FileTileSource):
 
         self._largeImagePath = largeImagePath
         self._pixelInfo = {}
-        self._openjpegLock = threading.RLock()
         try:
             self._openjpeg = glymur.Jp2k(largeImagePath)
         except glymur.jp2box.InvalidJp2kError:
             raise TileSourceException('File cannot be opened via Glymur and OpenJPEG.')
-        self._openjpegHandles = [self._openjpeg]
+        self._openjpegHandles = queue.LifoQueue()
+        for _ in range(self._maxOpenHandles - 1):
+            self._openjpegHandles.put(None)
+        self._openjpegHandles.put(self._openjpeg)
         try:
             self.sizeY, self.sizeX = self._openjpeg.shape[:2]
         except IndexError:
             raise TileSourceException('File cannot be opened via Glymur and OpenJPEG.')
-        self.levels = self._openjpeg.codestream.segment[2].num_res + 1
+        self.levels = int(self._openjpeg.codestream.segment[2].num_res) + 1
         self._minlevel = 0
         self.tileWidth = self.tileHeight = 2 ** int(math.ceil(max(
             math.log(float(self.sizeX)) / math.log(2) - self.levels + 1,
@@ -111,8 +114,8 @@ class OpenjpegFileTileSource(FileTileSource):
         if self.tileWidth < self._minTileSize or self.tileWidth > self._maxTileSize:
             self.tileWidth = self.tileHeight = min(
                 self._maxTileSize, max(self._minTileSize, self.tileWidth))
-            self.levels = math.ceil(math.log(float(max(
-                self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1
+            self.levels = int(math.ceil(math.log(float(max(
+                self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2))) + 1
             self._minlevel = self.levels - self._openjpeg.codestream.segment[2].num_res - 1
         self._getAssociatedImages()
 
@@ -193,7 +196,7 @@ class OpenjpegFileTileSource(FileTileSource):
 
         :return: the list of image keys.
         """
-        return list(self._associatedImages.keys())
+        return list(sorted(self._associatedImages.keys()))
 
     def _readbox(self, box):
         if box.length > 16 * 1024 * 1024:
@@ -211,7 +214,7 @@ class OpenjpegFileTileSource(FileTileSource):
     def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
         if z < 0 or z >= self.levels:
             raise TileSourceException('z layer does not exist')
-        step = 2 ** (self.levels - 1 - z)
+        step = int(2 ** (self.levels - 1 - z))
         x0 = x * step * self.tileWidth
         x1 = min((x + 1) * step * self.tileWidth, self.sizeX)
         y0 = y * step * self.tileHeight
@@ -222,19 +225,23 @@ class OpenjpegFileTileSource(FileTileSource):
             raise TileSourceException('y is outside layer')
         scale = None
         if z < self._minlevel:
-            scale = 2 ** (self._minlevel - z)
-            step = 2 ** (self.levels - 1 - self._minlevel)
+            scale = int(2 ** (self._minlevel - z))
+            step = int(2 ** (self.levels - 1 - self._minlevel))
         # possible open the file multiple times so multiple threads can access
         # it concurrently.
-        with self._openjpegLock:
-            if not len(self._openjpegHandles):
-                self._openjpegHandles.append(glymur.Jp2k(self._largeImagePath))
-            openjpegHandle = self._openjpegHandles.pop()
+        while True:
+            try:
+                # A timeout prevents uniterupptable waits on some platforms
+                openjpegHandle = self._openjpegHandles.get(timeout=1.0)
+                break
+            except queue.Empty:
+                continue
+        if openjpegHandle is None:
+            openjpegHandle = glymur.Jp2k(self._largeImagePath)
         try:
             tile = openjpegHandle[y0:y1:step, x0:x1:step]
         finally:
-            with self._openjpegLock:
-                self._openjpegHandles.append(openjpegHandle)
+            self._openjpegHandles.put(openjpegHandle)
         mode = 'L'
         if len(tile.shape) == 3:
             mode = ['L', 'LA', 'RGB', 'RGBA'][tile.shape[2] - 1]
