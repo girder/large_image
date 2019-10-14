@@ -192,6 +192,18 @@ describe('AnnotationListWidget', function () {
             var id = $el.data('annotationId');
             expect($el.find('.g-annotation-download').prop('href')).toMatch(new RegExp('.*annotation/' + id + '$'));
         });
+        it('test permission editor link', function () {
+            var $el = $('.g-annotation-list .g-annotation-row:first');
+            expect($el.find('.g-annotation-permissions').length).toBe(1);
+            $el.find('.g-annotation-permissions').click();
+
+            girderTest.waitForDialog();
+            runs(function () {
+                expect($('#g-dialog-container .modal-title').text()).toBe('Access control');
+                $('#g-dialog-container .g-save-access-list').click();
+            });
+            girderTest.waitForLoad();
+        });
         it('test delete link', function () {
             var $el = $('.g-annotation-list .g-annotation-row:first');
             var id = $el.data('annotationId');
@@ -206,17 +218,6 @@ describe('AnnotationListWidget', function () {
             waitsFor(function () {
                 return $('.g-annotation-list .g-annotation-row[data-annotation-id="' + id + '"]').length === 0;
             }, 'annotation to be removed');
-        });
-        it('test permission editor link', function () {
-            var $el = $('.g-annotation-list .g-annotation-row:first');
-            expect($el.find('.g-annotation-permissions').length).toBe(1);
-            $el.find('.g-annotation-permissions').click();
-
-            girderTest.waitForDialog();
-            runs(function () {
-                expect($('#g-dialog-container .modal-title').text()).toBe('Access control');
-                $('#g-dialog-container .g-save-access-list').click();
-            });
             girderTest.waitForLoad();
         });
     });
