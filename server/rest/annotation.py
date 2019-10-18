@@ -32,6 +32,7 @@ from girder.exceptions import ValidationException, RestException, AccessExceptio
 from girder.models.item import Item
 from girder.models.user import User
 from girder.utility import JsonEncoder
+from girder.utility.progress import setResponseTimeLimit
 from ..models.annotation import AnnotationSchema, Annotation
 from ..models.annotationelement import Annotationelement
 
@@ -165,6 +166,8 @@ class AnnotationResource(Resource):
         :param params: paging and region parameters for the annotation.
         :returns: a function that will return a generator.
         """
+        # Set the response time limit to a very long value
+        setResponseTimeLimit(86400)
         annotation = Annotation().load(
             id, region=params, user=user, level=AccessType.READ, getElements=False)
         if annotation is None:
@@ -300,6 +303,8 @@ class AnnotationResource(Resource):
     @loadmodel(model='annotation', plugin='large_image', level=AccessType.WRITE)
     @filtermodel(model='annotation', plugin='large_image')
     def updateAnnotation(self, annotation, params):
+        # Set the response time limit to a very long value
+        setResponseTimeLimit(86400)
         user = self.getCurrentUser()
         item = Item().load(annotation.get('itemId'), force=True)
         if item is not None:
