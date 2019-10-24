@@ -495,3 +495,16 @@ def testOrientations():
             image[11][image.shape[1] // 2][0], image[-11][image.shape[1] // 2][0],
             image[-11][11][0], image[-11][-11][0]
         ) == testResults[orient]['pixels']
+
+
+def testTilesFromMultipleTiledTIF():
+    imagePath = utilities.externaldata('data//JK-kidney_H3_4C_1-500sec.tif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 16384
+    assert tileMetadata['sizeY'] == 14848
+    assert tileMetadata['levels'] == 7
+    assert tileMetadata['magnification'] == 40
+    utilities.checkTilesZXY(source, tileMetadata)
