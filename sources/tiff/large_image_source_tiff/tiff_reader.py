@@ -20,6 +20,7 @@ import ctypes
 import PIL.Image
 import os
 import six
+import threading
 
 from functools import partial
 from xml.etree import cElementTree
@@ -122,6 +123,7 @@ class TiledTiffDirectory(object):
         self._mustBeTiled = mustBeTiled
 
         self._tiffFile = None
+        self._tileLock = threading.RLock()
 
         self._open(filePath, directoryNum)
         self._loadMetadata()
@@ -224,9 +226,18 @@ class TiledTiffDirectory(object):
                 'Only greyscale (black is 0), RGB, and YCbCr photometric '
                 'interpretation TIFF files are supported')
 
-        if self._tiffInfo.get('orientation') not in {None, libtiff_ctypes.ORIENTATION_TOPLEFT}:
+        if self._tiffInfo.get('orientation') not in {
+                libtiff_ctypes.ORIENTATION_TOPLEFT,
+                libtiff_ctypes.ORIENTATION_TOPRIGHT,
+                libtiff_ctypes.ORIENTATION_BOTRIGHT,
+                libtiff_ctypes.ORIENTATION_BOTLEFT,
+                libtiff_ctypes.ORIENTATION_LEFTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT,
+                libtiff_ctypes.ORIENTATION_LEFTBOT,
+                None}:
             raise ValidationTiffException(
-                'Only top-left orientation TIFF files are supported')
+                'Unsupported TIFF orientation')
 
         if self._tiffInfo.get('compression') not in {
                 libtiff_ctypes.COMPRESSION_NONE,
@@ -277,6 +288,13 @@ class TiledTiffDirectory(object):
         self._tileHeight = info.get('tilelength')
         self._imageWidth = info.get('imagewidth')
         self._imageHeight = info.get('imagelength')
+        if info.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_LEFTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT,
+                libtiff_ctypes.ORIENTATION_LEFTBOT}:
+            self._imageWidth, self._imageHeight = self._imageHeight, self._imageWidth
+            self._tileWidth, self._tileHeight = self._tileHeight, self._tileWidth
         self.parse_image_description(info.get('imagedescription', ''))
         # From TIFF specification, tag 0x128, 2 is inches, 3 is centimeters.
         units = {2: 25.4, 3: 10}
@@ -291,10 +309,10 @@ class TiledTiffDirectory(object):
                 units.get(info.get('resolutionunit')) and
                 info.get('yresolution') >= 100):
             self._pixelInfo['mm_y'] = units[info['resolutionunit']] / info['yresolution']
-        if not self._pixelInfo.get('width') and info.get('imagewidth'):
-            self._pixelInfo['width'] = info['imagewidth']
-        if not self._pixelInfo.get('height') and info.get('imagelength'):
-            self._pixelInfo['height'] = info['imagelength']
+        if not self._pixelInfo.get('width') and self._imageWidth:
+            self._pixelInfo['width'] = self._imageWidth
+        if not self._pixelInfo.get('height') and self._imageHeight:
+            self._pixelInfo['height'] = self._imageHeight
 
     @methodcache(key=partial(strhash, '_getJpegTables'))
     def _getJpegTables(self):
@@ -347,7 +365,7 @@ class TiledTiffDirectory(object):
         tableData = tableBuffer[2:tableSize - 2]
         return tableData
 
-    def _toTileNum(self, x, y):
+    def _toTileNum(self, x, y, transpose=False):
         """
         Get the internal tile number of a tile, from its row and column index.
 
@@ -355,17 +373,25 @@ class TiledTiffDirectory(object):
         :type x: int
         :param y: The row index of the desired tile.
         :type y: int
+        :param transpose: If true, transpose width and height
+        :type tranpose: boolean
         :return: The internal tile number of the desired tile.
         :rtype int
         :raises: InvalidOperationTiffException
         """
         # TIFFCheckTile and TIFFComputeTile require pixel coordinates
-        pixelX = int(x * self._tileWidth)
-        pixelY = int(y * self._tileHeight)
-
-        if pixelX >= self._imageWidth or pixelY >= self._imageHeight:
-            raise InvalidOperationTiffException(
-                'Tile x=%d, y=%d does not exist' % (x, y))
+        if not transpose:
+            pixelX = int(x * self._tileWidth)
+            pixelY = int(y * self._tileHeight)
+            if pixelX >= self._imageWidth or pixelY >= self._imageHeight:
+                raise InvalidOperationTiffException(
+                    'Tile x=%d, y=%d does not exist' % (x, y))
+        else:
+            pixelX = int(x * self._tileHeight)
+            pixelY = int(y * self._tileWidth)
+            if pixelX >= self._imageHeight or pixelY >= self._imageWidth:
+                raise InvalidOperationTiffException(
+                    'Tile x=%d, y=%d does not exist' % (x, y))
         if libtiff_ctypes.libtiff.TIFFCheckTile(
                 self._tiffFile, pixelX, pixelY, 0, 0) == 0:
             raise InvalidOperationTiffException(
@@ -506,11 +532,13 @@ class TiledTiffDirectory(object):
         :rtype: PIL.Image
         :raises: IOTiffException
         """
-        tileSize = libtiff_ctypes.libtiff.TIFFTileSize(self._tiffFile).value
+        with self._tileLock:
+            tileSize = libtiff_ctypes.libtiff.TIFFTileSize(self._tiffFile).value
         imageBuffer = ctypes.create_string_buffer(tileSize)
 
-        readSize = libtiff_ctypes.libtiff.TIFFReadEncodedTile(
-            self._tiffFile, tileNum, imageBuffer, tileSize)
+        with self._tileLock:
+            readSize = libtiff_ctypes.libtiff.TIFFReadEncodedTile(
+                self._tiffFile, tileNum, imageBuffer, tileSize)
         if readSize < tileSize:
             raise IOTiffException('Read an unexpected number of bytes from an encoded tile')
         if self._tiffInfo.get('samplesperpixel') == 1:
@@ -523,6 +551,77 @@ class TiledTiffDirectory(object):
             imageBuffer = imageBuffer[1::2]
         image = PIL.Image.frombytes(mode, (self._tileWidth, self._tileHeight), imageBuffer)
         return image
+
+    def _getTileRotated(self, x, y):
+        """
+        Get a tile from a rotated TIF.  This composites uncompressed tiles as
+        necessary and then rotates the result.
+
+        :param x: The column index of the desired tile.
+        :param y: The row index of the desired tile.
+        :return: either a buffer with a JPEG or a PIL image.
+        """
+        x0 = x * self._tileWidth
+        x1 = x0 + self._tileWidth
+        y0 = y * self._tileHeight
+        y1 = y0 + self._tileHeight
+        iw, ih = self._imageWidth, self._imageHeight
+        tw, th = self._tileWidth, self._tileHeight
+        transpose = False
+        if self._tiffInfo.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_LEFTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT,
+                libtiff_ctypes.ORIENTATION_LEFTBOT}:
+            x0, x1, y0, y1 = y0, y1, x0, x1
+            iw, ih = ih, iw
+            tw, th = th, tw
+            transpose = True
+        if self._tiffInfo.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_TOPRIGHT,
+                libtiff_ctypes.ORIENTATION_BOTRIGHT,
+                libtiff_ctypes.ORIENTATION_RIGHTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT}:
+            x0, x1 = iw - x1, iw - x0
+        if self._tiffInfo.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_BOTRIGHT,
+                libtiff_ctypes.ORIENTATION_BOTLEFT,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT,
+                libtiff_ctypes.ORIENTATION_LEFTBOT}:
+            y0, y1 = ih - y1, ih - y0
+        tx0 = x0 // tw
+        tx1 = (x1 - 1) // tw
+        ty0 = y0 // th
+        ty1 = (y1 - 1) // th
+        tile = None
+        for ty in range(max(0, ty0), max(0, ty1 + 1)):
+            for tx in range(max(0, tx0), max(0, tx1 + 1)):
+                subtile = self._getUncompressedTile(self._toTileNum(tx, ty, transpose))
+                if not tile:
+                    tile = PIL.Image.new(subtile.mode, (tw, th))
+                tile.paste(subtile, (tx * tw - x0, ty * th - y0))
+        if tile is None:
+            raise InvalidOperationTiffException(
+                'Tile x=%d, y=%d does not exist' % (x, y))
+        if self._tiffInfo.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_BOTRIGHT,
+                libtiff_ctypes.ORIENTATION_BOTLEFT,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT,
+                libtiff_ctypes.ORIENTATION_LEFTBOT}:
+            tile = tile.transpose(PIL.Image.FLIP_TOP_BOTTOM)
+        if self._tiffInfo.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_TOPRIGHT,
+                libtiff_ctypes.ORIENTATION_BOTRIGHT,
+                libtiff_ctypes.ORIENTATION_RIGHTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT}:
+            tile = tile.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+        if self._tiffInfo.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_LEFTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT,
+                libtiff_ctypes.ORIENTATION_LEFTBOT}:
+            tile = tile.transpose(PIL.Image.TRANSPOSE)
+        return tile
 
     @property
     def tileWidth(self):
@@ -568,6 +667,10 @@ class TiledTiffDirectory(object):
         :rtype: bytes
         :raises: InvalidOperationTiffException or IOTiffException
         """
+        if self._tiffInfo.get('orientation') not in {
+                libtiff_ctypes.ORIENTATION_TOPLEFT,
+                None}:
+            return self._getTileRotated(x, y)
         # This raises an InvalidOperationTiffException if the tile doesn't exist
         tileNum = self._toTileNum(x, y)
 

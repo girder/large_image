@@ -185,9 +185,9 @@ class TiffFileTileSource(FileTileSource):
                     associated._pixelInfo['width'] <= 8192 and
                     associated._pixelInfo['height'] <= 8192):
                 image = associated._tiffFile.read_image()
-                # Optrascan scanners are store xml image descriptions in a
-                # "tiled image".  Check if this is the case, and, if so, parse
-                # such data
+                # Optrascan scanners store xml image descriptions in a "tiled
+                # image".  Check if this is the case, and, if so, parse such
+                # data
                 if image.tobytes()[:6] == b'<?xml ':
                     self._parseImageXml(image.tobytes().rsplit(b'>', 1)[0] + b'>', topImage)
                     return
@@ -262,7 +262,7 @@ class TiffFileTileSource(FileTileSource):
             else:
                 tile = self._tiffDirectories[z].getTile(x, y)
                 format = 'JPEG'
-            if PIL and isinstance(tile, PIL.Image.Image):
+            if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     **kwargs)

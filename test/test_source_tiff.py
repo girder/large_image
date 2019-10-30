@@ -468,3 +468,43 @@ def testTilesFromSCN():
     assert tileMetadata['levels'] == 5
     assert tileMetadata['magnification'] == 20
     utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testOrientations():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    testResults = {
+        0: {'shape': (100, 66, 4), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
+        1: {'shape': (100, 66, 4), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
+        2: {'shape': (100, 66, 4), 'pixels': (0, 0, 133, 0, 0, 255, 255, 0)},
+        3: {'shape': (100, 66, 4), 'pixels': (255, 0, 143, 0, 255, 0, 0, 0)},
+        4: {'shape': (100, 66, 4), 'pixels': (0, 255, 0, 255, 255, 0, 0, 0)},
+        5: {'shape': (66, 100, 4), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
+        6: {'shape': (66, 100, 4), 'pixels': (0, 255, 0, 255, 141, 0, 0, 0)},
+        7: {'shape': (66, 100, 4), 'pixels': (255, 0, 255, 0, 143, 0, 0, 0)},
+        8: {'shape': (66, 100, 4), 'pixels': (0, 0, 255, 0, 0, 255, 255, 0)},
+    }
+    for orient in range(9):
+        imagePath = os.path.join(testDir, 'test_files', 'test_orient%d.tif' % orient)
+        source = large_image_source_tiff.TiffFileTileSource(imagePath)
+        image, _ = source.getRegion(
+            output={'maxWidth': 100, 'maxHeight': 100}, format=constants.TILE_FORMAT_NUMPY)
+        assert image.shape == testResults[orient]['shape']
+        assert (
+            image[11][11][0], image[11][-11][0],
+            image[image.shape[0] // 2][11][0], image[image.shape[0] // 2][-11][0],
+            image[11][image.shape[1] // 2][0], image[-11][image.shape[1] // 2][0],
+            image[-11][11][0], image[-11][-11][0]
+        ) == testResults[orient]['pixels']
+
+
+def testTilesFromMultipleTiledTIF():
+    imagePath = utilities.externaldata('data//JK-kidney_H3_4C_1-500sec.tif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 16384
+    assert tileMetadata['sizeY'] == 14848
+    assert tileMetadata['levels'] == 7
+    assert tileMetadata['magnification'] == 40
+    utilities.checkTilesZXY(source, tileMetadata)
