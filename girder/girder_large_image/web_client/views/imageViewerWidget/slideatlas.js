@@ -25,6 +25,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     },
 
     render: function () {
+        var errmsg;
         // If script or metadata isn't loaded, then abort
         if (!window.SA || !this.tileWidth || !this.tileHeight || this.deleted) {
             return this;
@@ -36,7 +37,15 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         }
 
         if (this.tileWidth !== this.tileHeight) {
-            console.error('The SlideAtlas viewer only supports square tiles.');
+            errmsg = 'The SlideAtlas viewer only supports square tiles.';
+        }
+        if (this.tileWidth > 256) {
+            errmsg = 'The SlideAtlas viewer does not support tiles wider than 256 pixels.';
+        }
+        if (errmsg) {
+            this.viewer = $('<div/>').text(errmsg);
+            this.$el.append(this.viewer);
+            console.error(errmsg);
             return this;
         }
 

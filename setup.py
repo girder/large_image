@@ -16,6 +16,7 @@ sources = {
     'dummy': ['large-image-source-dummy'],
     'mapnik': ['large-image-source-mapnik'],
     'ometiff': ['large-image-source-ometiff'],
+    'openjpeg': ['large-image-source-openjpeg'],
     'openslide': ['large-image-source-openslide'],
     'pil': ['large-image-source-pil'],
     'tiff': ['large-image-source-tiff'],
