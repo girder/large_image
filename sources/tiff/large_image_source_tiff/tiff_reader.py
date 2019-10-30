@@ -17,6 +17,7 @@
 ###############################################################################
 
 import ctypes
+import math
 import PIL.Image
 import os
 import six
@@ -189,7 +190,6 @@ class TiledTiffDirectory(object):
         if not self._mustBeTiled:
             if self._mustBeTiled is not None and self._tiffInfo.get('istiled'):
                 raise ValidationTiffException('Expected a non-tiled TIFF file')
-            return
         # For any non-supported file, we probably can add a conversion task in
         # the create_image.py script, such as flatten or colourspace.  These
         # should only be done if necessary, which would require the conversion
@@ -200,11 +200,9 @@ class TiledTiffDirectory(object):
             raise ValidationTiffException(
                 'Only RGB and greyscale TIFF files are supported')
 
-        if (self._tiffInfo.get('bitspersample') != 8 and (
-                self._tiffInfo.get('compression') != libtiff_ctypes.COMPRESSION_NONE or
-                self._tiffInfo.get('bitspersample') != 16)):
+        if self._tiffInfo.get('bitspersample') not in (8, 16):
             raise ValidationTiffException(
-                'Only single-byte sampled TIFF files are supported')
+                'Only 8 and 16 bits-per-sample TIFF files are supported')
 
         if self._tiffInfo.get('sampleformat') not in {
                 None,  # default is still SAMPLEFORMAT_UINT
@@ -239,16 +237,16 @@ class TiledTiffDirectory(object):
             raise ValidationTiffException(
                 'Unsupported TIFF orientation')
 
-        if self._tiffInfo.get('compression') not in {
-                libtiff_ctypes.COMPRESSION_NONE,
-                libtiff_ctypes.COMPRESSION_JPEG,
-                33003, 33005}:
-            raise ValidationTiffException(
-                'Only uncompressed and JPEG compressed TIFF files are supported')
-        if (not self._tiffInfo.get('istiled') or
+        if self._mustBeTiled and (
+                not self._tiffInfo.get('istiled') or
                 not self._tiffInfo.get('tilewidth') or
                 not self._tiffInfo.get('tilelength')):
-            raise ValidationTiffException('Only tiled TIFF files are supported')
+            raise ValidationTiffException('A tiled TIFF is required.')
+
+        if self._mustBeTiled is False and (
+                self._tiffInfo.get('istiled') or
+                not self._tiffInfo.get('rowsperstrip')):
+            raise ValidationTiffException('A non-tiled TIFF with strips is required.')
 
         if (self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG and
                 self._tiffInfo.get('jpegtablesmode') !=
@@ -284,10 +282,15 @@ class TiledTiffDirectory(object):
                 if value:
                     info[func.lower()] = value
         self._tiffInfo = info
-        self._tileWidth = info.get('tilewidth')
-        self._tileHeight = info.get('tilelength')
+        self._tileWidth = info.get('tilewidth') or info.get('imagewidth')
+        self._tileHeight = info.get('tilelength') or info.get('rowsperstrip')
         self._imageWidth = info.get('imagewidth')
         self._imageHeight = info.get('imagelength')
+        if not info.get('tilelength'):
+            self._stripsPerTile = int(max(1, math.ceil(256.0 / self._tileHeight)))
+            self._stripHeight = self._tileHeight
+            self._tileHeight = self._stripHeight * self._stripsPerTile
+            self._stripCount = int(math.ceil(float(self._imageHeight) / self._stripHeight))
         if info.get('orientation') in {
                 libtiff_ctypes.ORIENTATION_LEFTTOP,
                 libtiff_ctypes.ORIENTATION_RIGHTTOP,
@@ -383,22 +386,28 @@ class TiledTiffDirectory(object):
         if not transpose:
             pixelX = int(x * self._tileWidth)
             pixelY = int(y * self._tileHeight)
-            if pixelX >= self._imageWidth or pixelY >= self._imageHeight:
+            if x < 0 or y < 0 or pixelX >= self._imageWidth or pixelY >= self._imageHeight:
                 raise InvalidOperationTiffException(
                     'Tile x=%d, y=%d does not exist' % (x, y))
         else:
             pixelX = int(x * self._tileHeight)
             pixelY = int(y * self._tileWidth)
-            if pixelX >= self._imageHeight or pixelY >= self._imageWidth:
+            if x < 0 or y < 0 or pixelX >= self._imageHeight or pixelY >= self._imageWidth:
                 raise InvalidOperationTiffException(
                     'Tile x=%d, y=%d does not exist' % (x, y))
-        if libtiff_ctypes.libtiff.TIFFCheckTile(
-                self._tiffFile, pixelX, pixelY, 0, 0) == 0:
-            raise InvalidOperationTiffException(
-                'Tile x=%d, y=%d does not exist' % (x, y))
-
-        tileNum = libtiff_ctypes.libtiff.TIFFComputeTile(
-            self._tiffFile, pixelX, pixelY, 0, 0).value
+        # We had been using TIFFCheckTile, but with z=0 and sample=0, this is
+        # just a check that x, y is within the image
+        # if libtiff_ctypes.libtiff.TIFFCheckTile(
+        #         self._tiffFile, pixelX, pixelY, 0, 0) == 0:
+        #     raise InvalidOperationTiffException(
+        #         'Tile x=%d, y=%d does not exist' % (x, y))
+        if self._tiffInfo.get('istiled'):
+            tileNum = libtiff_ctypes.libtiff.TIFFComputeTile(
+                self._tiffFile, pixelX, pixelY, 0, 0).value
+        else:
+            # TIFFComputeStrip with sample=0 is just the row divided by the
+            # strip height
+            tileNum = int(pixelY // self._stripHeight)
         return tileNum
 
     @methodcache(key=partial(strhash, '_getTileByteCountsType'))
@@ -524,21 +533,43 @@ class TiledTiffDirectory(object):
 
     def _getUncompressedTile(self, tileNum):
         """
-        Get an uncompressed tile.
+        Get an uncompressed tile or strip.
 
-        :param tileNum: The internal tile number of the desired tile.
+        :param tileNum: The internal tile or strip number of the desired tile
+            or strip.
         :type tileNum: int
         :return: the tile as a PIL 8-bit-per-channel images.
         :rtype: PIL.Image
         :raises: IOTiffException
         """
         with self._tileLock:
-            tileSize = libtiff_ctypes.libtiff.TIFFTileSize(self._tiffFile).value
+            if self._tiffInfo.get('istiled'):
+                tileSize = libtiff_ctypes.libtiff.TIFFTileSize(self._tiffFile).value
+            else:
+                stripSize = libtiff_ctypes.libtiff.TIFFStripSize(
+                    self._tiffFile).value
+                stripsCount = min(self._stripsPerTile, self._stripCount - tileNum)
+                tileSize = stripSize * self._stripsPerTile
         imageBuffer = ctypes.create_string_buffer(tileSize)
-
         with self._tileLock:
-            readSize = libtiff_ctypes.libtiff.TIFFReadEncodedTile(
-                self._tiffFile, tileNum, imageBuffer, tileSize)
+            if self._tiffInfo.get('istiled'):
+                readSize = libtiff_ctypes.libtiff.TIFFReadEncodedTile(
+                    self._tiffFile, tileNum, imageBuffer, tileSize)
+            else:
+                readSize = 0
+                for stripNum in range(stripsCount):
+                    chunkSize = libtiff_ctypes.libtiff.TIFFReadEncodedStrip(
+                        self._tiffFile,
+                        tileNum + stripNum,
+                        ctypes.byref(imageBuffer, stripSize * stripNum),
+                        stripSize).value
+                    if chunkSize <= 0:
+                        raise IOTiffException(
+                            'Read an unexpected number of bytes from an encoded strip')
+                    readSize += chunkSize
+                if readSize < tileSize:
+                    ctypes.memset(ctypes.byref(imageBuffer, readSize), 0, tileSize - readSize)
+                    readSize = tileSize
         if readSize < tileSize:
             raise IOTiffException('Read an unexpected number of bytes from an encoded tile')
         if self._tiffInfo.get('samplesperpixel') == 1:
@@ -549,7 +580,14 @@ class TiledTiffDirectory(object):
         if self._tiffInfo.get('bitspersample') == 16:
             # Just take the high byte
             imageBuffer = imageBuffer[1::2]
-        image = PIL.Image.frombytes(mode, (self._tileWidth, self._tileHeight), imageBuffer)
+        tw, th = self._tileWidth, self._tileHeight
+        if self._tiffInfo.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_LEFTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT,
+                libtiff_ctypes.ORIENTATION_LEFTBOT}:
+            tw, th = th, tw
+        image = PIL.Image.frombytes(mode, (tw, th), imageBuffer)
         return image
 
     def _getTileRotated(self, x, y):
@@ -674,33 +712,33 @@ class TiledTiffDirectory(object):
         # This raises an InvalidOperationTiffException if the tile doesn't exist
         tileNum = self._toTileNum(x, y)
 
+        if (not self._tiffInfo.get('istiled') or
+                self._tiffInfo.get('compression') not in (
+                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005) or
+                self._tiffInfo.get('bitspersample') != 8):
+            return self._getUncompressedTile(tileNum)
+
         imageBuffer = six.BytesIO()
 
-        if self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG:
-            if not getattr(self, '_completeJpeg', False):
-                # Write JPEG Start Of Image marker
-                imageBuffer.write(b'\xff\xd8')
-                imageBuffer.write(self._getJpegTables())
-                imageBuffer.write(self._getJpegFrame(tileNum))
-                # Write JPEG End Of Image marker
-                imageBuffer.write(b'\xff\xd9')
-            else:
-                imageBuffer.write(self._getJpegFrame(tileNum, True))
+        if (self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG and
+                not getattr(self, '_completeJpeg', False)):
+            # Write JPEG Start Of Image marker
+            imageBuffer.write(b'\xff\xd8')
+            imageBuffer.write(self._getJpegTables())
+            imageBuffer.write(self._getJpegFrame(tileNum))
+            # Write JPEG End Of Image marker
+            imageBuffer.write(b'\xff\xd9')
             return imageBuffer.getvalue()
-
-        if self._tiffInfo.get('compression') in (33003, 33005):
-            # Get the whole frame, which is JPEG 2000 format, and convert it to
-            # a PIL image
-            imageBuffer.write(self._getJpegFrame(tileNum, True))
-            image = PIL.Image.open(imageBuffer)
-            # Converting the image mode ensures that it gets loaded once and is
-            # in a form we expect.  IF this isn't done, then PIL can load the
-            # image multiple times, which sometimes throws an exception in
-            # PIL's JPEG 2000 module.
-            image = image.convert('RGB')
-            return image
-
-        return self._getUncompressedTile(tileNum)
+        # Get the whole frame, which is in a JPEG or JPEG 2000 format, and
+        # convert it to a PIL image
+        imageBuffer.write(self._getJpegFrame(tileNum, True))
+        image = PIL.Image.open(imageBuffer)
+        # Converting the image mode ensures that it gets loaded once and is in
+        # a form we expect.  If this isn't done, then PIL can load the image
+        # multiple times, which sometimes throws an exception in PIL's JPEG
+        # 2000 module.
+        image = image.convert('RGB')
+        return image
 
     def parse_image_description(self, meta=None):  # noqa
         self._pixelInfo = {}

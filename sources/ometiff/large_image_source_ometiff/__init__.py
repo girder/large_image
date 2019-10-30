@@ -92,11 +92,11 @@ class OMETiffFileTileSource(TiffFileTileSource):
         largeImagePath = self._getLargeImagePath()
 
         try:
-            base = TiledTiffDirectory(largeImagePath, 0)
+            base = TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
         except TiffException:
-            raise TileSourceException('Not a tiled OME Tiff')
+            raise TileSourceException('Not a recognized OME Tiff')
         info = getattr(base, '_description_xml', None)
-        if not info.get('OME'):
+        if not info or not info.get('OME'):
             raise TileSourceException('Not an OME Tiff')
         self._omeinfo = info['OME']
         if isinstance(self._omeinfo['Image'], dict):
@@ -108,7 +108,13 @@ class OMETiffFileTileSource(TiffFileTileSource):
                 img['Pixels']['Plane'] = [img['Pixels']['Plane']]
         try:
             self._omebase = self._omeinfo['Image'][0]['Pixels']
-            if len({entry['UUID']['FileName'] for entry in self._omebase['TiffData']}) > 1:
+            if ((not len(self._omebase['TiffData']) or (
+                    len(self._omebase['TiffData']) == 1 and
+                    self._omebase['TiffData'][0] == {})) and
+                    len(self._omebase['Plane'])):
+                self._omebase['TiffData'] = self._omebase['Plane']
+            if len({entry.get('UUID', {}).get('FileName', '')
+                    for entry in self._omebase['TiffData']}) > 1:
                 raise TileSourceException('OME Tiff references multiple files')
             if (len(self._omebase['TiffData']) != int(self._omebase['SizeC']) *
                     int(self._omebase['SizeT']) * int(self._omebase['SizeZ']) or
@@ -126,10 +132,16 @@ class OMETiffFileTileSource(TiffFileTileSource):
             for entry in omeimages]
         omebylevel = dict(zip(levels, omeimages))
         self._omeLevels = [omebylevel.get(key) for key in range(max(omebylevel.keys()) + 1)]
-        self._tiffDirectories = [
-            TiledTiffDirectory(largeImagePath, int(entry['TiffData'][0]['IFD']))
-            if entry else None
-            for entry in self._omeLevels]
+        if base._tiffInfo.get('istiled'):
+            self._tiffDirectories = [
+                TiledTiffDirectory(largeImagePath, int(entry['TiffData'][0]['IFD']))
+                if entry else None
+                for entry in self._omeLevels]
+        else:
+            self._tiffDirectories = [
+                TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
+                if entry else None
+                for entry in self._omeLevels]
         self._directoryCache = {}
         self._directoryCacheMaxSize = max(20, len(self._omebase['TiffData']) * 3)
         self.tileWidth = base.tileWidth
@@ -166,11 +178,11 @@ class OMETiffFileTileSource(TiffFileTileSource):
         if result['mm_x'] is None and 'PhysicalSizeX' in self._omebase:
             result['mm_x'] = (
                 float(self._omebase['PhysicalSizeX']) * 1e3 *
-                _omeUnitsToMeters[self._omebase.get('PhysicalSizeXUnit', '\u00b5m')])
+                _omeUnitsToMeters[self._omebase.get('PhysicalSizeXUnit', u'\u00b5m')])
         if result['mm_y'] is None and 'PhysicalSizeY' in self._omebase:
             result['mm_y'] = (
                 float(self._omebase['PhysicalSizeY']) * 1e3 *
-                _omeUnitsToMeters[self._omebase.get('PhysicalSizeYUnit', '\u00b5m')])
+                _omeUnitsToMeters[self._omebase.get('PhysicalSizeYUnit', u'\u00b5m')])
         if not result.get('magnification') and result.get('mm_x'):
             result['magnification'] = 0.01 / result['mm_x']
         return result
@@ -185,13 +197,13 @@ class OMETiffFileTileSource(TiffFileTileSource):
         frame = int(kwargs['frame'])
         if frame < 0 or frame >= len(self._omebase['TiffData']):
             raise TileSourceException('Frame does not exist')
-        dirnum = int(self._omeLevels[z]['TiffData'][frame]['IFD'])
+        dirnum = int(self._omeLevels[z]['TiffData'][frame].get('IFD', frame))
         if dirnum in self._directoryCache:
             dir = self._directoryCache[dirnum]
         else:
             if len(self._directoryCache) >= self._directoryCacheMaxSize:
                 self._directoryCache = {}
-            dir = TiledTiffDirectory(self._getLargeImagePath(), dirnum)
+            dir = TiledTiffDirectory(self._getLargeImagePath(), dirnum, mustBeTiled=None)
             self._directoryCache[dirnum] = dir
         try:
             tile = dir.getTile(x, y)
