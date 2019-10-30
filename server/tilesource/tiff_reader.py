@@ -21,11 +21,11 @@ import ctypes
 import os
 import six
 
-from collections import defaultdict
 from functools import partial
 from xml.etree import cElementTree
 
 from ..cache_util import LRUCache, strhash, methodcache
+from .base import etreeToDict
 
 try:
     from girder import logger
@@ -51,37 +51,6 @@ except ImportError:
 
 # This suppress warnings about unknown tags
 libtiff_ctypes.suppress_warnings()
-
-
-def etreeToDict(t):
-    """
-    Convert an xml etree to a nested dictionary without schema names in the
-    keys.
-
-    @param t: an etree.
-    @returns: a python dictionary with the results.
-    """
-    # Remove schema
-    tag = t.tag.split('}', 1)[1] if t.tag.startswith('{') else t.tag
-    d = {tag: {}}
-    children = list(t)
-    if children:
-        entries = defaultdict(list)
-        for entry in map(etreeToDict, children):
-            for k, v in six.iteritems(entry):
-                entries[k].append(v)
-        d = {tag: {k: v[0] if len(v) == 1 else v
-                   for k, v in six.iteritems(entries)}}
-
-    if t.attrib:
-        d[tag].update({(k.split('}', 1)[1] if k.startswith('{') else k): v
-                       for k, v in six.iteritems(t.attrib)})
-    text = (t.text or '').strip()
-    if text and len(d[tag]):
-        d[tag]['text'] = text
-    elif text:
-        d[tag] = text
-    return d
 
 
 def patchLibtiff():

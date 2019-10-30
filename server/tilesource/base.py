@@ -18,7 +18,14 @@
 #############################################################################
 
 import math
+import numpy
 import os
+import PIL
+import PIL.Image
+import PIL.ImageColor
+import PIL.ImageDraw
+import six
+from collections import defaultdict
 from six import BytesIO
 
 from ..cache_util import getTileCache, strhash, methodcache
@@ -55,11 +62,6 @@ try:
 except ImportError:
     logger.warning('Error: Could not import PIL')
     PIL = None
-try:
-    import numpy
-except ImportError:
-    logger.warning('Error: Could not import numpy')
-    numpy = None
 
 
 TILE_FORMAT_IMAGE = 'image'
@@ -177,6 +179,37 @@ def _letterboxImage(image, width, height, fill):
     result = PIL.Image.new(image.mode, (width, height), color)
     result.paste(image, (int((width - image.width) / 2), int((height - image.height) / 2)))
     return result
+
+
+def etreeToDict(t):
+    """
+    Convert an xml etree to a nested dictionary without schema names in the
+    keys.
+
+    @param t: an etree.
+    @returns: a python dictionary with the results.
+    """
+    # Remove schema
+    tag = t.tag.split('}', 1)[1] if t.tag.startswith('{') else t.tag
+    d = {tag: {}}
+    children = list(t)
+    if children:
+        entries = defaultdict(list)
+        for entry in map(etreeToDict, children):
+            for k, v in six.iteritems(entry):
+                entries[k].append(v)
+        d = {tag: {k: v[0] if len(v) == 1 else v
+                   for k, v in six.iteritems(entries)}}
+
+    if t.attrib:
+        d[tag].update({(k.split('}', 1)[1] if k.startswith('{') else k): v
+                       for k, v in six.iteritems(t.attrib)})
+    text = (t.text or '').strip()
+    if text and len(d[tag]):
+        d[tag]['text'] = text
+    elif text:
+        d[tag] = text
+    return d
 
 
 def nearPowerOfTwo(val1, val2, tolerance=0.02):
@@ -1056,8 +1089,7 @@ class TileSource(object):
         # compatibility could be an issue.
         return False
 
-    def _outputTile(self, tile, tileEncoding, x, y, z, pilImageAllowed=False,
-                    **kwargs):
+    def _outputTile(self, tile, tileEncoding, x, y, z, pilImageAllowed=False, **kwargs):
         """
         Convert a tile from a PIL image or image in memory to the desired
         encoding.

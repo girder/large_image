@@ -225,6 +225,7 @@ install:
   - popd
   - girder-install plugin --symlink $large_image_path
   # Install all extras (since "girder-install plugin" does not provide a mechanism to specify them
+  - pip install glymur --find-links https://manthey.github.io/large_image_wheels
   # Trusty supports gdal 1.10.0; don't test mapnik on Python 3 (for now)
   - if [ -n "${PY3}" ]; then
       pip install -e $large_image_path[memcached,openslide] ;
