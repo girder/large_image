@@ -18,6 +18,7 @@
 ##############################################################################
 
 from bson import ObjectId
+import bson
 import cherrypy
 import datetime
 import enum
@@ -639,7 +640,7 @@ class Annotation(AccessControlledModel):
         """
         When removing an annotation, remove all element associated with it.
         This overrides the collection delete_one method so that all of the
-        triggers are fired as expectd and cancelling from an event will work
+        triggers are fired as expected and cancelling from an event will work
         as needed.
 
         :param annotation: the annotation document to remove.
@@ -1003,3 +1004,158 @@ class Annotation(AccessControlledModel):
             }
             self.collection.update_one(query, update)
         return annotation
+
+    def removeOldAnnotations(self, remove=False, minAgeInDays=30, keepInactiveVersions=5):  # noqa
+        """
+        Remove annotations that (a) have no item or (b) are inactive and at
+        least (1) a minimum age in days and (2) not the most recent inactive
+        versions.  Also remove any annotation elements that don't have
+        associated annotations and are a minimum age in days.
+
+        :param remove: if False, just report on what would be done.  If true,
+            actually remove the annotations and compact the collections.
+        :param minAgeInDays: only work on annotations that are at least this
+            old.  This must be greater than or equal to 7.
+        :param keepInactiveVersions: keep at least this many inactive versions
+            of any annotation, regardless of age.
+        """
+        if remove and minAgeInDays < 7 or minAgeInDays < 0:
+            raise ValidationException('minAgeInDays must be >= 7')
+        age = datetime.datetime.utcnow() + datetime.timedelta(-minAgeInDays)
+        if keepInactiveVersions < 0:
+            raise ValidationException('keepInactiveVersions mist be non-negative')
+        options = {
+            # By allowing disk use, large sorted queries will work.  If
+            # disallowed, they will fail.  Although this is slower than
+            # memory sorting, actual experiemnts show it to be acceptable
+            'allowDiskUse': True,
+            # Start with a 0-sized batch.  This avoids fetching data from
+            # the Mongo server if the query is never polled and starts
+            # streaming data faster than a fixed batch size.
+            'cursor': {'batchSize': 0},
+        }
+        report = {}
+        # elements without annotations
+        # This can be done via an aggregation, but it is very slow
+        """
+        abandonedElements = [
+            {'$match': {'created': {'$lt': age}}},
+            {'$group': {'_id': '$_version'}},
+            {'$lookup': {
+                'from': 'annotation',
+                'localField': '_id',
+                'foreignField': '_version',
+                'as': '__l'
+            }},
+            {'$match': {'__l': {'$eq': []}}}
+        ]
+        try:
+            logger.info('Checking old annotations, abandoned elements: %s',
+                        bson.json_util.dumps(abandonedElements))
+            report['abandonedVersions'] = next(iter(
+                Annotationelement().collection.aggregate(
+                    abandonedElements + [{'$count': 'count'}], **options)
+                ))['count']
+        except StopIteration:
+            report['abandonedVersions'] = 0
+        logger.info('Checking old annotations, abandoned elements: %r', report['abandonedVersions'])
+        """
+        # This will fail if there are too many versions.
+        logger.info('Checking old annotations, abandoned elements: using distinct')
+        elemversions = Annotationelement().collection.distinct(
+            '_version', filter={'created': {'$lt': age}})
+        docversions = self.collection.distinct('_version')
+        abandonedVersions = set(elemversions) - set(docversions)
+        report['abandonedVersions'] = len(abandonedVersions)
+        logger.info('Checking old annotations, abandoned elements: %r', report['abandonedVersions'])
+        # Annotations without items
+        fromDeletedItems = [
+            {'$match': {'updated': {'$lt': age}}},
+            {'$lookup': {
+                'from': 'item',
+                'localField': 'itemId',
+                'foreignField': '_id',
+                'as': '__l'
+            }},
+            {'$match': {'__l': {'$eq': []}}}
+        ]
+        try:
+            logger.info('Checking old annotations, from deleted items: %s',
+                        bson.json_util.dumps(fromDeletedItems))
+            report['fromDeletedItems'] = next(iter(
+                self.collection.aggregate(
+                    fromDeletedItems + [{'$count': 'count'}], **options)
+                ))['count']
+        except StopIteration:
+            report['fromDeletedItems'] = 0
+        logger.info('Checking old annotations, from deleted items: %r', report['fromDeletedItems'])
+        # Old versions
+        oldVersions = [
+            {'$match': {'_active': False}},
+            {'$addFields': {'_annotationId': {'$ifNull': ['$_annotationId', '$_id']}}},
+            {'$sort': {'_version': 1}},
+            {'$group': {'_id': '$_annotationId', 'versions': {'$push': '$_version'}}},
+            {'$match': {'$expr': {'$gt': [{'$size': '$versions'}, keepInactiveVersions]}}},
+            {'$addFields': {'versions': {'$slice': ['$versions', keepInactiveVersions, 1e9]}}},
+            {'$unwind': "$versions"},
+            {'$lookup': {
+                'from': 'annotation',
+                'localField': 'versions',
+                'foreignField': '_version',
+                'as': '__l'
+            }},
+            {'$unwind': "$__l"},
+            {'$replaceRoot': {'newRoot': '$__l'}},
+            # Repeating _active: False shouldn't be necessary
+            {'$match': {'updated': {'$lt': age}, '_active': False}}
+        ]
+        try:
+            logger.info('Checking old annotations: old versions: %s',
+                        bson.json_util.dumps(oldVersions))
+            report['oldVersions'] = next(iter(
+                self.collection.aggregate(
+                    oldVersions + [{'$count': 'count'}], **options)
+                ))['count']
+        except StopIteration:
+            report['oldVersions'] = 0
+        logger.info('Checking old annotations: old versions: %r', report['oldVersions'])
+        # Walk results and remove if required
+        if report['abandonedVersions']:
+            for version in abandonedVersions:
+                if remove:
+                    Annotationelement().removeWithQuery({'_version': version})
+                    report['removedAbandonedVersions'] = report.get(
+                        'removedAbandonedVersions', 0) + 1
+            logger.info('%s old annotations, abandoned elements: %r',
+                        'Checked' if not remove else 'Deleted',
+                        report['abandonedVersions'])
+        if report['fromDeletedItems']:
+            for annotation in self.collection.aggregate(
+                    fromDeletedItems, **options):
+                if remove:
+                    super(Annotation, self).remove(annotation)
+                    Annotationelement().removeWithQuery({'_version': annotation['_version']})
+                    report['removedFromDeletedItems'] = report.get(
+                        'removedFromDeletedItems', 0) + 1
+            logger.info('%s old annotations, from deleted items: %r',
+                        'Checked' if not remove else 'Deleted',
+                        report['fromDeletedItems'])
+        if report['oldVersions']:
+            for annotation in self.collection.aggregate(
+                    oldVersions, **options):
+                if remove:
+                    super(Annotation, self).remove(annotation)
+                    Annotationelement().removeWithQuery({'_version': annotation['_version']})
+                    report['removedOldVersions'] = report.get(
+                        'removedOldVersions', 0) + 1
+            logger.info('%s old annotations: old versions: %r',
+                        'Checked' if not remove else 'Deleted',
+                        report['oldVersions'])
+        if (remove and (report['abandonedVersions'] or report['fromDeletedItems'] or
+                        report['oldVersions'])):
+            logger.info('Compacting annotation collection')
+            self.collection.database.command('compact', self.name)
+            logger.info('Compacting annotationelement collection')
+            self.collection.database.command('compact', Annotationelement().name)
+            logger.info('Done compacting collections')
+        return report

@@ -1084,6 +1084,16 @@ class LargeImageAnnotationRestTest(common.LargeImageCommonTest):
         loaded = Annotation().load(annot['_id'], user=self.admin)
         self.assertEqual(len(loaded['annotation']['elements']), 4)
 
+        # Test old
+        resp = self.request('/annotation/old', method='GET', user=self.user)
+        self.assertStatus(resp, 403)
+        resp = self.request('/annotation/old', method='GET', user=self.admin)
+        self.assertStatus(resp, 200)
+        self.assertEqual(resp.json['abandonedVersions'], 0)
+        resp = self.request('/annotation/old', method='DELETE', user=self.admin)
+        self.assertStatus(resp, 200)
+        self.assertEqual(resp.json['abandonedVersions'], 0)
+
     #  Add tests for:
     # find
 

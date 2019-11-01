@@ -56,9 +56,11 @@ class AnnotationResource(Resource):
         self.route('DELETE', (':id',), self.deleteAnnotation)
         self.route('GET', (':id', 'access'), self.getAnnotationAccess)
         self.route('PUT', (':id', 'access'), self.updateAnnotationAccess)
-        self.route('GET', ('item', ':id',), self.getItemAnnotations)
-        self.route('POST', ('item', ':id',), self.createItemAnnotations)
-        self.route('DELETE', ('item', ':id',), self.deleteItemAnnotations)
+        self.route('GET', ('item', ':id'), self.getItemAnnotations)
+        self.route('POST', ('item', ':id'), self.createItemAnnotations)
+        self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
+        self.route('GET', ('old',), self.getOldAnnotations)
+        self.route('DELETE', ('old',), self.deleteOldAnnotations)
 
     @describeRoute(
         Description('Search for annotations.')
@@ -545,3 +547,29 @@ class AnnotationResource(Resource):
                 Annotation().remove(annot)
                 count += 1
         return count
+
+    @autoDescribeRoute(
+        Description('Report on old annotations.')
+        .param('age', 'The minimum age in days.', required=False,
+               dataType='int', default=30)
+        .param('versions', 'Keep at least this many history entries for each '
+               'annotation.', required=False, dataType='int', default=10)
+        .errorResponse()
+    )
+    @access.admin
+    def getOldAnnotations(self, age, versions):
+        setResponseTimeLimit(86400)
+        return Annotation().removeOldAnnotations(False, age, versions)
+
+    @autoDescribeRoute(
+        Description('Delete old annotations.')
+        .param('age', 'The minimum age in days.', required=False,
+               dataType='int', default=30)
+        .param('versions', 'Keep at least this many history entries for each '
+               'annotation.', required=False, dataType='int', default=10)
+        .errorResponse()
+    )
+    @access.admin
+    def deleteOldAnnotations(self, age, versions):
+        setResponseTimeLimit(86400)
+        return Annotation().removeOldAnnotations(True, age, versions)
