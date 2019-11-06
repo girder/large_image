@@ -3,7 +3,7 @@ executors:
   toxandnode:
     working_directory: ~/project
     docker:
-      - image: zachmullen/tox-and-node
+      - image: girder/tox-and-node
       - image: memcached
       - image: circleci/mongo:4.0-ram
       - image: rabbitmq
@@ -34,6 +34,18 @@ commands:
           command: for i in $(seq 1 10); do [ $i -gt 1 ] && echo "retrying $i" && sleep 5; codecov --required --disable search pycov gcov --root project --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml && s=0 && break || s=$?; done; (exit $s)
 
 jobs:
+  testdocker:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: Build the test docker
+          command: docker build --force-rm -t girder/tox-and-node --build-arg SKIP_TOX=true .
+      - run:
+          name: Publish the images to Docker Hub
+          command: |
+              echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+              docker push girder/tox-and-node:latest
   py27:
     executor: toxandnode
     steps:
@@ -62,6 +74,13 @@ jobs:
       - tox:
           env: py37
       - coverage
+  py38:
+    executor: toxandnode
+    steps:
+      - checkout
+      - tox:
+          env: py38
+      - coverage
   lint_and_docs:
     executor: toxandnode
     steps:
@@ -89,6 +108,13 @@ workflows:
   version: 2
   ci:
     jobs:
+      - testdocker:
+          filters:
+            branches:
+              only:
+                - master
+                # Create a branch of this name to push to docker hub
+                - testdocker
       - py27:
           filters:
             tags:
@@ -117,6 +143,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      - py38:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - lint_and_docs:
           filters:
             tags:
@@ -130,6 +163,7 @@ workflows:
             - py35
             - py36
             - py37
+            - py38
             - lint_and_docs
           filters:
             tags:

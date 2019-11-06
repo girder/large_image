@@ -1,0 +1,9 @@
+build
+test
+.git
+girder
+girder_annotation
+large_image
+sources
+tasks
+examples
