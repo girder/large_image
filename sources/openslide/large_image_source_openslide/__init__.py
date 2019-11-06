@@ -27,7 +27,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import SourcePriority
+from large_image.constants import SourcePriority, TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
@@ -245,7 +245,7 @@ class OpenslideFileTileSource(FileTileSource):
         }
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         if z < 0:
             raise TileSourceException('z layer does not exist')
         try:
@@ -278,7 +278,8 @@ class OpenslideFileTileSource(FileTileSource):
         if svslevel['scale'] != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight),
                                PIL.Image.LANCZOS)
-        return self._outputTile(tile, 'PIL', x, y, z, pilImageAllowed, **kwargs)
+        return self._outputTile(tile, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
+                                numpyAllowed, **kwargs)
 
     def getPreferredLevel(self, level):
         """

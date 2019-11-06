@@ -17,15 +17,15 @@
 ##############################################################################
 
 import math
+import numpy
 import PIL.Image
 import six
 from pkg_resources import DistributionNotFound, get_distribution
 from six.moves import range
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import SourcePriority
+from large_image.constants import SourcePriority, TILE_FORMAT_PIL, TILE_FORMAT_NUMPY
 from large_image.exceptions import TileSourceException
-from large_image.tilesource import TILE_FORMAT_PIL
 
 from large_image_source_tiff import TiffFileTileSource
 from large_image_source_tiff.tiff_reader import TiledTiffDirectory, \
@@ -238,12 +238,14 @@ class OMETiffFileTileSource(TiffFileTileSource):
         return result
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
-                **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
+                sparseFallback=False, **kwargs):
         if (z < 0 or z >= len(self._omeLevels) or self._omeLevels[z] is None or
                 kwargs.get('frame') in (None, 0, '0', '')):
             return super(OMETiffFileTileSource, self).getTile(
-                x, y, z, pilImageAllowed=pilImageAllowed, sparseFallback=sparseFallback, **kwargs)
+                x, y, z, pilImageAllowed=pilImageAllowed,
+                numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
+                **kwargs)
         frame = int(kwargs['frame'])
         if frame < 0 or frame >= len(self._omebase['TiffData']):
             raise TileSourceException('Frame does not exist')
@@ -258,13 +260,16 @@ class OMETiffFileTileSource(TiffFileTileSource):
         try:
             tile = dir.getTile(x, y)
             format = 'JPEG'
-            if PIL and isinstance(tile, PIL.Image.Image):
+            if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
+            if isinstance(tile, numpy.ndarray):
+                format = TILE_FORMAT_NUMPY
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
-                                    **kwargs)
+                                    numpyAllowed, **kwargs)
         except InvalidOperationTiffException as e:
             raise TileSourceException(e.args[0])
         except IOTiffException as e:
             return self.getTileIOTiffException(
                 x, y, z, pilImageAllowed=pilImageAllowed,
-                sparseFallback=sparseFallback, exception=e, **kwargs)
+                numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
+                exception=e, **kwargs)

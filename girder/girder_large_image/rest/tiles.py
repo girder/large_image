@@ -551,6 +551,7 @@ class TilesItemResource(ItemResource):
             ('jpegSubsampling', int),
             ('tiffCompression', str),
             ('encoding', str),
+            ('style', str),
             ('contentDisposition', str),
         ])
         try:
@@ -636,6 +637,7 @@ class TilesItemResource(ItemResource):
         .param('tiffCompression', 'Compression method when storing a TIFF '
                'image', required=False,
                enum=['raw', 'tiff_lzw', 'jpeg', 'tiff_adobe_deflate'])
+        .param('style', 'JSON-encoded style string', required=False)
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
@@ -669,6 +671,7 @@ class TilesItemResource(ItemResource):
             ('jpegQuality', int),
             ('jpegSubsampling', int),
             ('tiffCompression', str),
+            ('style', str),
             ('contentDisposition', str),
         ])
         try:
@@ -767,6 +770,7 @@ class TilesItemResource(ItemResource):
             ('jpegSubsampling', int),
             ('tiffCompression', str),
             ('encoding', str),
+            ('style', str),
             ('contentDisposition', str),
         ])
         try:

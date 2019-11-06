@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import json
+import numpy
 import os
 import pytest
 import struct
@@ -37,6 +39,39 @@ def testTilesFromPTIF():
     assert tileMetadata['levels'] == 9
     tileMetadata['sparse'] = 5
     utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testTileIterator():
+    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+
+    # Ask for JPEGS
+    tileCount = 0
+    for tile in source.tileIterator(
+            scale={'magnification': 2.5},
+            format=constants.TILE_FORMAT_IMAGE,
+            encoding='JPEG'):
+        tileCount += 1
+        assert tile['tile'][:len(utilities.JPEGHeader)] == utilities.JPEGHeader
+    assert tileCount == 45
+    # Ask for PNGs
+    tileCount = 0
+    for tile in source.tileIterator(
+            scale={'magnification': 2.5},
+            format=constants.TILE_FORMAT_IMAGE,
+            encoding='PNG'):
+        tileCount += 1
+        assert tile['tile'][:len(utilities.PNGHeader)] == utilities.PNGHeader
+    assert tileCount == 45
+    # Ask for TIFFS
+    tileCount = 0
+    for tile in source.tileIterator(
+            scale={'magnification': 2.5},
+            format=constants.TILE_FORMAT_IMAGE,
+            encoding='TIFF'):
+        tileCount += 1
+        assert tile['tile'][:len(utilities.TIFFHeader)] == utilities.TIFFHeader
+    assert tileCount == 45
 
 
 def testTileIteratorRetiling():
@@ -473,15 +508,15 @@ def testTilesFromSCN():
 def testOrientations():
     testDir = os.path.dirname(os.path.realpath(__file__))
     testResults = {
-        0: {'shape': (100, 66, 4), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
-        1: {'shape': (100, 66, 4), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
-        2: {'shape': (100, 66, 4), 'pixels': (0, 0, 133, 0, 0, 255, 255, 0)},
-        3: {'shape': (100, 66, 4), 'pixels': (255, 0, 143, 0, 255, 0, 0, 0)},
-        4: {'shape': (100, 66, 4), 'pixels': (0, 255, 0, 255, 255, 0, 0, 0)},
-        5: {'shape': (66, 100, 4), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
-        6: {'shape': (66, 100, 4), 'pixels': (0, 255, 0, 255, 141, 0, 0, 0)},
-        7: {'shape': (66, 100, 4), 'pixels': (255, 0, 255, 0, 143, 0, 0, 0)},
-        8: {'shape': (66, 100, 4), 'pixels': (0, 0, 255, 0, 0, 255, 255, 0)},
+        0: {'shape': (100, 66, 1), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
+        1: {'shape': (100, 66, 1), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
+        2: {'shape': (100, 66, 1), 'pixels': (0, 0, 133, 0, 0, 255, 255, 0)},
+        3: {'shape': (100, 66, 1), 'pixels': (255, 0, 143, 0, 255, 0, 0, 0)},
+        4: {'shape': (100, 66, 1), 'pixels': (0, 255, 0, 255, 255, 0, 0, 0)},
+        5: {'shape': (66, 100, 1), 'pixels': (0, 0, 0, 255, 0, 255, 0, 255)},
+        6: {'shape': (66, 100, 1), 'pixels': (0, 255, 0, 255, 141, 0, 0, 0)},
+        7: {'shape': (66, 100, 1), 'pixels': (255, 0, 255, 0, 143, 0, 0, 0)},
+        8: {'shape': (66, 100, 1), 'pixels': (0, 0, 255, 0, 0, 255, 255, 0)},
     }
     for orient in range(9):
         imagePath = os.path.join(testDir, 'test_files', 'test_orient%d.tif' % orient)
@@ -498,7 +533,7 @@ def testOrientations():
 
 
 def testTilesFromMultipleTiledTIF():
-    imagePath = utilities.externaldata('data//JK-kidney_H3_4C_1-500sec.tif.sha512')
+    imagePath = utilities.externaldata('data/JK-kidney_H3_4C_1-500sec.tif.sha512')
     source = large_image_source_tiff.TiffFileTileSource(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 256
@@ -508,3 +543,56 @@ def testTilesFromMultipleTiledTIF():
     assert tileMetadata['levels'] == 7
     assert tileMetadata['magnification'] == 40
     utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testStyleSwapChannels():
+    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    image, _ = source.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    # swap the green and blue channels
+    sourceB = large_image_source_tiff.TiffFileTileSource(imagePath, style=json.dumps({'bands': [
+        {'band': 'red', 'palette': ['#000', '#f00']},
+        {'band': 'green', 'palette': ['#000', '#00f']},
+        {'band': 'blue', 'palette': ['#000', '#0f0']},
+    ]}))
+    imageB, _ = sourceB.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    imageB = imageB[:, :, :3]
+    assert numpy.any(image != imageB)
+    assert numpy.all(image[:, :, 0] == imageB[:, :, 0])
+    assert numpy.any(image[:, :, 1] != imageB[:, :, 1])
+    assert numpy.all(image[:, :, 1] == imageB[:, :, 2])
+    assert numpy.all(image[:, :, 2] == imageB[:, :, 1])
+
+
+def testStyleClamp():
+    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(
+        imagePath, style=json.dumps({'min': 100, 'max': 200, 'clamp': True}))
+    image, _ = source.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    sourceB = large_image_source_tiff.TiffFileTileSource(
+        imagePath, style=json.dumps({'min': 100, 'max': 200, 'clamp': False}))
+    imageB, _ = sourceB.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    assert numpy.all(image[:, :, 3] == 255)
+    assert numpy.any(imageB[:, :, 3] != 255)
+    assert image[0][0][3] == 255
+    assert imageB[0][0][3] == 0
+
+
+def testStyleNoData():
+    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(
+        imagePath, style=json.dumps({'nodata': None}))
+    image, _ = source.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    sourceB = large_image_source_tiff.TiffFileTileSource(
+        imagePath, style=json.dumps({'nodata': 101}))
+    imageB, _ = sourceB.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    assert numpy.all(image[:, :, 3] == 255)
+    assert numpy.any(imageB[:, :, 3] != 255)
+    assert image[12][215][3] == 255
+    assert imageB[12][215][3] != 255

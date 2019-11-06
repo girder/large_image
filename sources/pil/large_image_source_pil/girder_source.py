@@ -21,6 +21,7 @@ import cherrypy
 from girder.models.setting import Setting
 
 from large_image.cache_util import methodcache
+from large_image.constants import TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
 
 from girder_large_image.constants import PluginSettings
@@ -53,18 +54,19 @@ class PILGirderTileSource(PILFileTileSource, GirderTileSource):
             self._maxSize)
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
+                mayRedirect=False, **kwargs):
         if z != 0:
             raise TileSourceException('z layer does not exist')
         if x != 0:
             raise TileSourceException('x is outside layer')
         if y != 0:
             raise TileSourceException('y is outside layer')
-        if (mayRedirect and not pilImageAllowed and
+        if (mayRedirect and not pilImageAllowed and not numpyAllowed and
                 cherrypy.request and
                 self._pilFormatMatches(self._pilImage, mayRedirect, **kwargs)):
             url = '%s/api/v1/file/%s/download' % (
                 cherrypy.request.base, self.item['largeImage']['fileId'])
             raise cherrypy.HTTPRedirect(url)
-        return self._outputTile(self._pilImage, 'PIL', x, y, z,
-                                pilImageAllowed, **kwargs)
+        return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
+                                pilImageAllowed, numpyAllowed, **kwargs)

@@ -37,21 +37,26 @@ class GirderTileSource(tilesource.FileTileSource):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        return '%s,%s,%s,%s,%s,%s,%s' % (
-            str(args[0]['largeImage']['fileId']), args[0]['updated'],
-            kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
-            kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
-            kwargs.get('edge', False))
+        return '%s,%s,%s,%s,%s,%s,%s,%s' % (
+            args[0]['largeImage']['fileId'],
+            args[0]['updated'],
+            kwargs.get('encoding', 'JPEG'),
+            kwargs.get('jpegQuality', 95),
+            kwargs.get('jpegSubsampling', 0),
+            kwargs.get('tiffCompression', 'raw'),
+            kwargs.get('edge', False),
+            kwargs.get('style', None))
 
     def getState(self):
-        return '%s,%s,%s,%s,%s,%s,%s' % (
+        return '%s,%s,%s,%s,%s,%s,%s,%s' % (
             self.item['largeImage']['fileId'],
             self.item['updated'],
             self.encoding,
             self.jpegQuality,
             self.jpegSubsampling,
             self.tiffCompression,
-            self.edge)
+            self.edge,
+            self._jsonstyle)
 
     def _getLargeImagePath(self):
         # If self.mayHaveAdjacentFiles is True, we try to use the girder

@@ -21,7 +21,7 @@ import six
 from PIL import Image, ImageDraw, ImageFont
 from pkg_resources import DistributionNotFound, get_distribution
 
-from large_image.constants import SourcePriority
+from large_image.constants import SourcePriority, TILE_FORMAT_PIL
 from large_image.cache_util import strhash, methodcache, LruCacheMetaclass
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import TileSource
@@ -157,7 +157,7 @@ class TestTileSource(TileSource):
             font=imageDrawFont
         )
         _counters['tiles'] += 1
-        return self._outputTile(image, 'PIL', x, y, z, **kwargs)
+        return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, **kwargs)
 
     @staticmethod
     def getLRUHash(*args, **kwargs):

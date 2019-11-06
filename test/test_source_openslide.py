@@ -205,7 +205,7 @@ def testGetRegion():
     # We should be able to get a PIL image
     image, imageFormat = source.getRegion(
         scale={'magnification': 2.5},
-        format=(constants.TILE_FORMAT_PIL, constants.TILE_FORMAT_NUMPY))
+        format=(constants.TILE_FORMAT_PIL, ))
     assert imageFormat == constants.TILE_FORMAT_PIL
     assert image.width == 1438
     assert image.height == 1447
@@ -414,3 +414,31 @@ def testTilesFromSmallFile():
     assert tileMetadata['sizeY'] == 1
     assert tileMetadata['levels'] == 1
     utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testEdgeOptions():
+    imagePath = utilities.externaldata(
+        'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
+        'af6f-14fefbbdf7bd.svs.sha512')
+    image = large_image_source_openslide.OpenslideFileTileSource(
+        imagePath, format=constants.TILE_FORMAT_IMAGE, encoding='PNG',
+        edge='crop').getTile(0, 0, 0)
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 124
+    assert height == 54
+    image = large_image_source_openslide.OpenslideFileTileSource(
+        imagePath, format=constants.TILE_FORMAT_IMAGE, encoding='PNG',
+        edge='#DDD').getTile(0, 0, 0)
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 240
+    assert height == 240
+    imageB = large_image_source_openslide.OpenslideFileTileSource(
+        imagePath, format=constants.TILE_FORMAT_IMAGE, encoding='PNG',
+        edge='yellow').getTile(0, 0, 0)
+    assert imageB[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', imageB[16:24])
+    assert width == 240
+    assert height == 240
+    assert imageB != image

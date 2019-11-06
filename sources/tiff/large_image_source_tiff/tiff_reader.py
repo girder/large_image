@@ -18,8 +18,9 @@
 
 import ctypes
 import math
-import PIL.Image
+import numpy
 import os
+import PIL.Image
 import six
 import threading
 
@@ -572,14 +573,6 @@ class TiledTiffDirectory(object):
                     readSize = tileSize
         if readSize < tileSize:
             raise IOTiffException('Read an unexpected number of bytes from an encoded tile')
-        if self._tiffInfo.get('samplesperpixel') == 1:
-            mode = 'L'
-        elif self._tiffInfo.get('samplesperpixel') == 3:
-            mode = ('YCbCr' if self._tiffInfo.get('photometric') ==
-                    libtiff_ctypes.PHOTOMETRIC_YCBCR else 'RGB')
-        if self._tiffInfo.get('bitspersample') == 16:
-            # Just take the high byte
-            imageBuffer = imageBuffer[1::2]
         tw, th = self._tileWidth, self._tileHeight
         if self._tiffInfo.get('orientation') in {
                 libtiff_ctypes.ORIENTATION_LEFTTOP,
@@ -587,7 +580,16 @@ class TiledTiffDirectory(object):
                 libtiff_ctypes.ORIENTATION_RIGHTBOT,
                 libtiff_ctypes.ORIENTATION_LEFTBOT}:
             tw, th = th, tw
-        image = PIL.Image.frombytes(mode, (tw, th), imageBuffer)
+        image = numpy.ctypeslib.as_array(
+            ctypes.cast(imageBuffer, ctypes.POINTER(
+                ctypes.c_uint16 if self._tiffInfo.get('bitspersample') == 16 else ctypes.c_uint8)),
+            (th, tw, self._tiffInfo.get('samplesperpixel')))
+        if (self._tiffInfo.get('samplesperpixel') == 3 and
+                self._tiffInfo.get('photometric') == libtiff_ctypes.PHOTOMETRIC_YCBCR):
+            if self._tiffInfo.get('bitspersample') == 16:
+                image = numpy.floor_divide(image, 256).astype(numpy.uint8)
+            image = PIL.Image.fromarray(image, 'YCbCr')
+            image = numpy.array(image.convert('RGB'))
         return image
 
     def _getTileRotated(self, x, y):
@@ -635,9 +637,23 @@ class TiledTiffDirectory(object):
         for ty in range(max(0, ty0), max(0, ty1 + 1)):
             for tx in range(max(0, tx0), max(0, tx1 + 1)):
                 subtile = self._getUncompressedTile(self._toTileNum(tx, ty, transpose))
-                if not tile:
-                    tile = PIL.Image.new(subtile.mode, (tw, th))
-                tile.paste(subtile, (tx * tw - x0, ty * th - y0))
+                if tile is None:
+                    tile = numpy.zeros(
+                        (th, tw) if len(subtile.shape) == 2 else
+                        (th, tw, subtile.shape[2]), dtype=subtile.dtype)
+                stx, sty = tx * tw - x0, ty * th - y0
+                if (stx >= tw or stx + subtile.shape[1] <= 0 or
+                        sty >= th or sty + subtile.shape[0] <= 0):
+                    continue
+                if stx < 0:
+                    subtile = subtile[:, -stx:]
+                    stx = 0
+                if sty < 0:
+                    subtile = subtile[-sty:, :]
+                    sty = 0
+                subtile = subtile[:min(subtile.shape[0], th - sty),
+                                  :min(subtile.shape[1], tw - stx)]
+                tile[sty:sty + subtile.shape[0], stx:stx + subtile.shape[1]] = subtile
         if tile is None:
             raise InvalidOperationTiffException(
                 'Tile x=%d, y=%d does not exist' % (x, y))
@@ -646,19 +662,19 @@ class TiledTiffDirectory(object):
                 libtiff_ctypes.ORIENTATION_BOTLEFT,
                 libtiff_ctypes.ORIENTATION_RIGHTBOT,
                 libtiff_ctypes.ORIENTATION_LEFTBOT}:
-            tile = tile.transpose(PIL.Image.FLIP_TOP_BOTTOM)
+            tile = tile[::-1, :]
         if self._tiffInfo.get('orientation') in {
                 libtiff_ctypes.ORIENTATION_TOPRIGHT,
                 libtiff_ctypes.ORIENTATION_BOTRIGHT,
                 libtiff_ctypes.ORIENTATION_RIGHTTOP,
                 libtiff_ctypes.ORIENTATION_RIGHTBOT}:
-            tile = tile.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+            tile = tile[:, ::-1]
         if self._tiffInfo.get('orientation') in {
                 libtiff_ctypes.ORIENTATION_LEFTTOP,
                 libtiff_ctypes.ORIENTATION_RIGHTTOP,
                 libtiff_ctypes.ORIENTATION_RIGHTBOT,
                 libtiff_ctypes.ORIENTATION_LEFTBOT}:
-            tile = tile.transpose(PIL.Image.TRANSPOSE)
+            tile = tile.transpose((1, 0) if len(tile.shape) == 2 else (1, 0, 2))
         return tile
 
     @property
