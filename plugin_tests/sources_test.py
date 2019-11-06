@@ -477,7 +477,7 @@ class LargeImageSourcesTest(common.LargeImageCommonTest):
         # We should be able to get a PIL image
         image, imageFormat = source.getRegion(
             scale={'magnification': 2.5},
-            format=(tilesource.TILE_FORMAT_PIL, tilesource.TILE_FORMAT_NUMPY))
+            format=(tilesource.TILE_FORMAT_PIL, ))
         self.assertEqual(imageFormat, tilesource.TILE_FORMAT_PIL)
         self.assertEqual(image.width, 1438)
         self.assertEqual(image.height, 1447)

@@ -20,13 +20,14 @@
 import base64
 import itertools
 import math
+import numpy
 import six
 from six import BytesIO
 from six.moves import range
 
 from .base import FileTileSource, TileSourceException, nearPowerOfTwo
 from ..cache_util import LruCacheMetaclass, methodcache
-from ..constants import SourcePriority
+from ..constants import SourcePriority, TILE_FORMAT_PIL, TILE_FORMAT_NUMPY
 from .tiff_reader import TiledTiffDirectory, TiffException, \
     InvalidOperationTiffException, IOTiffException, ValidationTiffException
 
@@ -38,7 +39,6 @@ except ImportError:
     girder = None
     import logging as logger
     logger.getLogger().setLevel(logger.INFO)
-from .base import TILE_FORMAT_PIL
 
 try:
     import PIL.Image
@@ -245,21 +245,27 @@ class TiffFileTileSource(FileTileSource):
         }
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False,
-                **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
+                sparseFallback=False, **kwargs):
+        if z < 0:
+            raise TileSourceException('z layer does not exist')
         try:
+            allowStyle = True
             if self._tiffDirectories[z] is None:
                 if sparseFallback:
                     raise IOTiffException('Missing z level %d' % z)
                 tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
+                allowStyle = False
                 format = TILE_FORMAT_PIL
             else:
                 tile = self._tiffDirectories[z].getTile(x, y)
                 format = 'JPEG'
             if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
+            if isinstance(tile, numpy.ndarray):
+                format = TILE_FORMAT_NUMPY
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
-                                    **kwargs)
+                                    numpyAllowed, applyStyle=allowStyle, **kwargs)
         except IndexError:
             raise TileSourceException('z layer does not exist')
         except InvalidOperationTiffException as e:
@@ -267,15 +273,17 @@ class TiffFileTileSource(FileTileSource):
         except IOTiffException as e:
             return self.getTileIOTiffException(
                 x, y, z, pilImageAllowed=pilImageAllowed,
-                sparseFallback=sparseFallback, exception=e, **kwargs)
+                numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
+                exception=e, **kwargs)
 
     def getTileIOTiffException(self, x, y, z, pilImageAllowed=False,
-                               sparseFallback=False, exception=None, **kwargs):
-        if sparseFallback and z and PIL:
+                               numpyAllowed=False, sparseFallback=False,
+                               exception=None, **kwargs):
+        if sparseFallback and z:
             noedge = kwargs.copy()
             noedge.pop('edge', None)
             image = self.getTile(
-                x / 2, y / 2, z - 1, pilImageAllowed=True,
+                x / 2, y / 2, z - 1, pilImageAllowed=True, numpyAllowed=False,
                 sparseFallback=sparseFallback, edge=False, **noedge)
             if not isinstance(image, PIL.Image.Image):
                 image = PIL.Image.open(BytesIO(image))
@@ -285,8 +293,8 @@ class TiffFileTileSource(FileTileSource):
                 self.tileWidth if x % 2 else self.tileWidth / 2,
                 self.tileHeight if y % 2 else self.tileHeight / 2))
             image = image.resize((self.tileWidth, self.tileHeight))
-            return self._outputTile(image, 'PIL', x, y, z, pilImageAllowed,
-                                    **kwargs)
+            return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
+                                    numpyAllowed, applyStyle=False, **kwargs)
         raise TileSourceException('Internal I/O failure: %s' % exception.args[0])
 
     def getTileFromEmptyDirectory(self, x, y, z, **kwargs):
@@ -314,8 +322,8 @@ class TiffFileTileSource(FileTileSource):
                     continue
                 subtile = self.getTile(
                     x * scale + newX, y * scale + newY, z,
-                    pilImageAllowed=True, sparseFallback=True, edge=False,
-                    frame=kwargs.get('frame'))
+                    pilImageAllowed=True, numpyAllowed=False,
+                    sparseFallback=True, edge=False, frame=kwargs.get('frame'))
                 if not isinstance(subtile, PIL.Image.Image):
                     subtile = PIL.Image.open(BytesIO(subtile))
                 tile.paste(subtile, (newX * self.tileWidth,

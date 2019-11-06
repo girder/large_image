@@ -27,8 +27,8 @@ from six.moves import queue
 from xml.etree import cElementTree
 
 from ..cache_util import LruCacheMetaclass, methodcache
-from ..constants import SourcePriority
-from .base import TileSourceException, FileTileSource, etreeToDict, TILE_FORMAT_PIL
+from ..constants import SourcePriority, TILE_FORMAT_NUMPY
+from .base import TileSourceException, FileTileSource, etreeToDict
 
 
 try:
@@ -211,7 +211,7 @@ class OpenjpegFileTileSource(FileTileSource):
             pass
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         if z < 0 or z >= self.levels:
             raise TileSourceException('z layer does not exist')
         step = int(2 ** (self.levels - 1 - z))
@@ -242,17 +242,10 @@ class OpenjpegFileTileSource(FileTileSource):
             tile = openjpegHandle[y0:y1:step, x0:x1:step]
         finally:
             self._openjpegHandles.put(openjpegHandle)
-        mode = 'L'
-        if len(tile.shape) == 3:
-            mode = ['L', 'LA', 'RGB', 'RGBA'][tile.shape[2] - 1]
-        tile = PIL.Image.frombytes(mode, (tile.shape[1], tile.shape[0]), tile)
         if scale:
-            tile = tile.resize((tile.size[0] // scale, tile.size[1] // scale), PIL.Image.LANCZOS)
-        if tile.size != (self.tileWidth, self.tileHeight):
-            wrap = PIL.Image.new(mode, (self.tileWidth, self.tileHeight))
-            wrap.paste(tile, (0, 0))
-            tile = wrap
-        return self._outputTile(tile, TILE_FORMAT_PIL, x, y, z, pilImageAllowed, **kwargs)
+            tile = tile[::scale, ::scale]
+        return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
+                                pilImageAllowed, numpyAllowed, **kwargs)
 
 
 if girder:

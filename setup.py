@@ -62,7 +62,7 @@ setup(
         'jsonschema>=2.5.1',
         'libtiff>=0.4.1',
         'numpy>=1.10.2',
-        'Pillow>=3.2.0',
+        'Pillow>=4.2.0',
         'psutil>=4.2.0',
         'six>=1.10.0',
         'ujson>=1.35',

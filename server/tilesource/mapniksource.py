@@ -605,7 +605,9 @@ class MapnikTileSource(FileTileSource):
             for styleBand in styleBands:
 
                 styleBand = styleBand.copy()
-                styleBand['band'] = self._bandNumber(styleBand.get('band'))
+                # Default to band 1 -- perhaps we should default to gray or
+                # green instead.
+                styleBand['band'] = self._bandNumber(styleBand.get('band', 1))
                 style.append(styleBand)
         if not len(style):
             for interp in ('red', 'green', 'blue', 'gray', 'palette', 'alpha'):
@@ -664,6 +666,16 @@ class MapnikTileSource(FileTileSource):
             overscan = 1
         m = mapnik.Map(self.tileWidth + overscan * 2, self.tileHeight + overscan * 2, mapSrs)
         xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
+        if self.projection:
+            # If we are using a projection, the tile could contain no data.
+            # Don't bother having mapnik render the blank tile -- just output
+            # it.
+            bounds = self.getBounds(self.projection)
+            if (xmin >= bounds['xmax'] or xmax <= bounds['xmin'] or
+                    ymin >= bounds['ymax'] or ymax <= bounds['ymin']):
+                pilimg = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
+                return self._outputTile(
+                    pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs)
         if overscan:
             xmin, xmax = xmin - overscan, xmax + overscan
             ymin, ymax = ymin - overscan, ymax + overscan
@@ -674,7 +686,7 @@ class MapnikTileSource(FileTileSource):
         pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
         if overscan:
             pilimg = pilimg.crop((1, 1, pilimg.width - overscan, pilimg.height - overscan))
-        return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
+        return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs)
 
     @staticmethod
     def _proj4Proj(proj):

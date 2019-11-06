@@ -38,6 +38,7 @@ except ImportError:
 
 from .base import FileTileSource, TileSourceException
 from ..cache_util import LruCacheMetaclass, strhash, methodcache
+from ..constants import TILE_FORMAT_PIL
 
 try:
     import girder
@@ -151,14 +152,15 @@ class PILFileTileSource(FileTileSource):
             self.maxSize)
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
+                mayRedirect=False, **kwargs):
         if z != 0:
             raise TileSourceException('z layer does not exist')
         if x != 0:
             raise TileSourceException('x is outside layer')
         if y != 0:
             raise TileSourceException('y is outside layer')
-        return self._outputTile(self._pilImage, 'PIL', x, y, z,
+        return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, **kwargs)
 
 
@@ -184,17 +186,18 @@ if girder:
                 self.maxSize)
 
         @methodcache()
-        def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
+        def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
+                    mayRedirect=False, **kwargs):
             if z != 0:
                 raise TileSourceException('z layer does not exist')
             if x != 0:
                 raise TileSourceException('x is outside layer')
             if y != 0:
                 raise TileSourceException('y is outside layer')
-            if (mayRedirect and not pilImageAllowed and
+            if (mayRedirect and not pilImageAllowed and not numpyAllowed and
                     self._pilFormatMatches(self._pilImage, mayRedirect, **kwargs)):
                 url = '%s/api/v1/file/%s/download' % (
                     cherrypy.request.base, self.item['largeImage']['fileId'])
                 raise cherrypy.HTTPRedirect(url)
-            return self._outputTile(self._pilImage, 'PIL', x, y, z,
-                                    pilImageAllowed, **kwargs)
+            return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
+                                    pilImageAllowed, numpyAllowed, **kwargs)

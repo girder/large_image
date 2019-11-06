@@ -40,3 +40,8 @@ class SourcePriority(object):
     LOW = 4
     FALLBACK = 5
     MANUAL = 6   # Will never be selected automatically
+
+
+TILE_FORMAT_IMAGE = 'image'
+TILE_FORMAT_PIL = 'PIL'
+TILE_FORMAT_NUMPY = 'numpy'
