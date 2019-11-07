@@ -5,6 +5,7 @@ import pytest
 import six
 import subprocess
 
+from girder import events
 from girder.models.folder import Folder
 from girder.models.setting import Setting
 from girder.models.upload import Upload
@@ -67,7 +68,7 @@ def getBody(response, text=True):
 
 
 @pytest.fixture
-def unavailableWorker():
+def unavailableWorker(db):
     """
     Make sure that Girder Worker can't be reached and times out quickly.
     """
@@ -82,8 +83,8 @@ def unavailableWorker():
     Setting().unset(WorkerSettings.BACKEND)
 
 
-@pytest.fixture(scope='session')
-def girderWorker():
+@pytest.fixture
+def girderWorker(db):
     """
     Run an instance of Girder worker, connected to rabbitmq.  The rabbitmq
     service must be running.
@@ -101,3 +102,14 @@ def girderWorker():
     proc.wait()
     Setting().unset(WorkerSettings.BROKER)
     Setting().unset(WorkerSettings.BACKEND)
+
+
+def unbindGirderEventsByHandlerName(handlerName):
+    for eventName in events._mapping:
+        events.unbind(eventName, handlerName)
+
+
+@pytest.fixture
+def unbindLargeImage(db):
+    yield True
+    unbindGirderEventsByHandlerName('large_image')

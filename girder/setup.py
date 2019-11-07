@@ -42,7 +42,7 @@ setup(
     install_requires=[
         'enum34>=1.1.6;python_version<"3.4"',
         'futures;python_version<"3.4"',
-        'girder>=3.0.3',
+        'girder>=3.0.4',
         'girder-jobs>=3.0.3',
         'girder-worker[girder]>=0.6.0',
         'large_image>=1.0.0',

@@ -20,6 +20,7 @@ from girder_large_image_annotation.models.annotationelement import Annotationele
 from girder_large_image import constants
 
 from . import girder_utilities as utilities
+from .girder_utilities import unbindLargeImage, unbindAnnotation  # noqa
 
 
 sampleAnnotationEmpty = {
@@ -60,6 +61,7 @@ def makeLargeSampleAnnotation():
     return annotation
 
 
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
 class TestLargeImageAnnotation(object):
     def testAnnotationSchema(self):
@@ -84,7 +86,7 @@ class TestLargeImageAnnotation(object):
         result = Annotation().load(annotId, user=admin)
         assert len(result['annotation']['elements']) == 1
 
-    def testSimilarElementStructure(self):
+    def testSimilarElementStructure(self, db):
         ses = Annotation()._similarElementStructure
         assert ses('a', 'a')
         assert not ses('a', 'b')
@@ -149,6 +151,7 @@ class TestLargeImageAnnotation(object):
             {'type': 'point', 'center': [10.0, 24.0, 0]},
             {'type': 'point', 'center': [25.5, 23.0, 0]},
         ])
+        assert len(list(Annotation().versionList(annot['_id']))) == 1
         # Test without history
         Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
         saved = Annotation().save(annot)
@@ -180,7 +183,7 @@ class TestLargeImageAnnotation(object):
         saved = Annotation().updateAnnotation(annot, updateUser=user)
         assert saved['updatedId'] == user['_id']
 
-    def testRemove(self, admin):
+    def testRemove(self, db, admin):
         publicFolder = utilities.namedFolder(admin, 'Public')
         # Test without history
         Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
@@ -220,7 +223,7 @@ class TestLargeImageAnnotation(object):
         assert loaded is not None
         assert not loaded['_active']
 
-    def testValidate(self):
+    def testValidate(self, db):
         annot = copy.deepcopy(sampleAnnotation)
         doc = {'annotation': annot}
         assert Annotation().validate(doc) is not None
@@ -232,7 +235,7 @@ class TestLargeImageAnnotation(object):
         annot['elements'][1]['id'] = ObjectId('012345678901234567890124')
         assert Annotation().validate(doc) is not None
 
-    def testVersionList(self, user, admin):
+    def testVersionList(self, db, user, admin):
         privateFolder = utilities.namedFolder(admin, 'Private')
         # Test without history
         Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
@@ -336,6 +339,7 @@ class TestLargeImageAnnotation(object):
             annot['_id'], user=admin)['annotation']['elements']) == 1
 
 
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
 class TestLargeImageAnnotationElement(object):
     def testInitialize(self):
@@ -497,6 +501,7 @@ class TestLargeImageAnnotationElement(object):
     # updateElements
 
 
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
 class TestLargeImageAnnotationAccessMigration(object):
     def testMigrateAnnotationAccessControl(self, user, admin):

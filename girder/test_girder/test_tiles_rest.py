@@ -27,7 +27,7 @@ from girder_large_image import getGirderTileSource
 from girder_large_image import loadmodelcache
 
 from . import girder_utilities as utilities
-from .girder_utilities import girderWorker  # noqa
+from .girder_utilities import girderWorker, unbindLargeImage  # noqa
 
 
 def _testTilesZXY(server, admin, itemId, metadata, tileParams=None,
@@ -192,6 +192,7 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None):
     return resp.json
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromPTIF(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
@@ -309,6 +310,7 @@ def testTilesFromPTIF(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromTest(server, admin, fsAssetstore):
     publicFolder = utilities.namedFolder(admin, 'Public')
@@ -387,6 +389,7 @@ def testTilesFromTest(server, admin, fsAssetstore):
         _createTestTiles(server, admin, {key: badParams[key]}, error=err)
 
 
+@pytest.mark.usefixtures('unbindLargeImage')  # noqa
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
 def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):  # noqa
@@ -460,6 +463,7 @@ def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):  # noqa
     assert tileMetadata['levels'] == 7
 
 
+@pytest.mark.usefixtures('unbindLargeImage')  # noqa
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
 def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):  # noqa
@@ -478,6 +482,7 @@ def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):  # n
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
 
 
+@pytest.mark.usefixtures('unbindLargeImage')  # noqa
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
 def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):  # noqa
@@ -507,6 +512,7 @@ def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):  #
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesWithUnicodeName(server, admin, fsAssetstore):
     # Unicode file names shouldn't cause problems when accessing ptifs.
@@ -528,6 +534,7 @@ def testTilesWithUnicodeName(server, admin, fsAssetstore):
     assert tileMetadata['sizeY'] == 12288
 
 
+@pytest.mark.usefixtures('unbindLargeImage')  # noqa
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
 def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):  # noqa
@@ -548,6 +555,7 @@ def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):  # no
     assert resp.json['deleted'] is False
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testThumbnails(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
@@ -646,6 +654,7 @@ def testThumbnails(server, admin, fsAssetstore):
     assert present == 0
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testContentDisposition(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
@@ -682,6 +691,7 @@ def testContentDisposition(server, admin, fsAssetstore):
         'largeImageThumbnail' in resp.headers['Content-Disposition'])
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testRegions(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
@@ -765,6 +775,7 @@ def testRegions(server, admin, fsAssetstore):
     assert height == 375
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testPixel(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
@@ -799,6 +810,7 @@ def testPixel(server, admin, fsAssetstore):
     assert resp.json == {}
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testGetTileSource(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
@@ -824,6 +836,7 @@ def testGetTileSource(server, admin, fsAssetstore):
     assert height == 100
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesLoadModelCache(server, admin, fsAssetstore):
     loadmodelcache.invalidateLoadModelCache()
@@ -841,6 +854,7 @@ def testTilesLoadModelCache(server, admin, fsAssetstore):
     assert six.next(six.itervalues(loadmodelcache.LoadModelCache))['hits'] > 70
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesModelLookupCache(server, user, admin, fsAssetstore):
     User().load = mock.Mock(wraps=User().load)
@@ -860,6 +874,7 @@ def testTilesModelLookupCache(server, user, admin, fsAssetstore):
     assert User().load.call_count == lastCount
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesDZIEndpoints(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
@@ -1012,6 +1027,7 @@ def testTilesAutoSetOption(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesAssociatedImages(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
@@ -1059,6 +1075,7 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
     assert image == b''
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesWithFrameNumbers(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
