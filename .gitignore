@@ -56,3 +56,4 @@ node_modules/
 *.aux.xml
 
 .eslintcache
+test/externaldata

@@ -276,12 +276,19 @@ SettingDefault.defaults.update({
 })
 
 
+def unbindGirderEventsByHandlerName(handlerName):
+    for eventName in events._mapping:
+        events.unbind(eventName, handlerName)
+
+
 class LargeImagePlugin(GirderPlugin):
     DISPLAY_NAME = 'Large Image'
     CLIENT_SOURCE_PATH = 'web_client'
 
     def load(self, info):
         getPlugin('worker').load(info)
+
+        unbindGirderEventsByHandlerName('large_image')
 
         ModelImporter.registerModel('image_item', ImageItem, 'large_image')
         large_image.config.setConfig('logger', girder.logger)

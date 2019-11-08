@@ -1,5 +1,5 @@
 # Top level dependencies
-girder>=3.0.3
+girder>=3.0.4
 girder-jobs>=3.0.3
 -e sources/dummy
 -e sources/mapnik
@@ -25,7 +25,7 @@ flake8-docstrings
 flake8-quotes
 pytest>=3.6
 pytest-cov>=2.6
-pytest-girder>=3.0.3
+pytest-girder>=3.0.4
 pytest-xdist
 mock
 tox

@@ -19,7 +19,7 @@ from girder_large_image import constants
 from girder_large_image.models.image_item import ImageItem
 
 from . import girder_utilities as utilities
-from .girder_utilities import unavailableWorker  # noqa
+from .girder_utilities import unavailableWorker, unbindLargeImage  # noqa
 
 
 def _waitForJobToBeRunning(job):
@@ -56,6 +56,7 @@ def _createThumbnails(server, admin, spec, cancel=False):
         time.sleep(0.1)
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testSettings(server):
     for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
@@ -104,6 +105,7 @@ def testSettings(server):
     assert settings[constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE] == 1024
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testThumbnailFileJob(server, admin, user, fsAssetstore):
     file = utilities.uploadExternalFile('data/sample_image.ptif.sha512', admin, fsAssetstore)
@@ -213,6 +215,7 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
     assert present < 3 + len(slowList)
 
 
+@pytest.mark.usefixtures('unbindLargeImage')  # noqa
 @pytest.mark.usefixtures('unavailableWorker')  # noqa
 @pytest.mark.plugin('large_image')
 def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):  # noqa
@@ -270,6 +273,7 @@ def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorke
     assert results['removed'] == 1
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testCaches(server, admin):
     resp = server.request(path='/large_image/cache', user=admin)
@@ -282,6 +286,7 @@ def testCaches(server, admin):
     assert 'cacheCleared' in results
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testAssociateImageCaching(server, admin, user, fsAssetstore):
     file = utilities.uploadExternalFile('data/sample_image.ptif.sha512', admin, fsAssetstore)

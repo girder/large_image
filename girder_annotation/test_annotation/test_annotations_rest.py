@@ -14,9 +14,11 @@ from girder_large_image_annotation.models.annotation import Annotation
 from girder_large_image import constants
 
 from . import girder_utilities as utilities
+from .girder_utilities import unbindLargeImage, unbindAnnotation  # noqa
 from .test_annotations import sampleAnnotationEmpty, sampleAnnotation, makeLargeSampleAnnotation
 
 
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
 class TestLargeImageAnnotationRest(object):
     def testGetAnnotationSchema(self, server):
