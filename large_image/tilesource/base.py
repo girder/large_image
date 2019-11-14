@@ -1127,6 +1127,79 @@ class TileSource(object):
         # compatibility could be an issue.
         return False
 
+    def histogram(self, dtype=None, onlyMinMax=False, bins=256,
+                  density=False, format=None, *args, **kwargs):
+        """
+        Get a histogram for a region.
+
+        :param dtype: if specified, the tiles must be this numpy.dtype.
+        :param onlyMinMax: if True, only return the minimum and maximum value
+            of the region.
+        :param bins: the number of bins in the histogram.  This is passed to
+            numpy.histogram, but needs to produce teh same set of edges for
+            each tile.
+        :param density: if True, scale the results based on the number of
+            samples.
+        :param format: ignored.  Used to override the format for the
+            tileIterator.
+        :param range: if None, use the computed min and (max + 1).  Otherwise,
+            this is the range passed to numpy.histogram.  Note this is only
+            accessible via kwargs as it otherwise overloads the range function.
+        :param *args: parameters to pass to the tileIterator.
+        :param **kwargs: parameters to pass to the tileIterator.
+        """
+        kwargs = kwargs.copy()
+        histRange = kwargs.pop('range', None)
+        results = None
+        for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+            tile = tile['tile']
+            if dtype is not None and tile.dtype != dtype:
+                if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
+                    tile = numpy.array(tile, dtype=numpy.uint16) * 257
+                else:
+                    continue
+            tilemin = numpy.array([
+                numpy.amin(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
+            tilemax = numpy.array([
+                numpy.amax(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
+            if results is None:
+                results = {'min': tilemin, 'max': tilemax}
+            results['min'] = numpy.minimum(results['min'], tilemin)
+            results['max'] = numpy.maximum(results['max'], tilemax)
+        if results is None or onlyMinMax:
+            return results
+        results['histogram'] = [{
+            'min': results['min'][idx],
+            'max': results['max'][idx],
+            'range': ((results['min'][idx], results['max'][idx] + 1)
+                      if histRange is None else histRange),
+            'hist': None,
+            'bin_edges': None
+        } for idx in range(len(results['min']))]
+        for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+            tile = tile['tile']
+            if dtype is not None and tile.dtype != dtype:
+                if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
+                    tile = numpy.array(tile, dtype=numpy.uint16) * 257
+                else:
+                    continue
+            for idx in range(len(results['min'])):
+                entry = results['histogram'][idx]
+                hist, bin_edges = numpy.histogram(
+                    tile[:, :, idx], bins, entry['range'], density=False)
+                if entry['hist'] is None:
+                    entry['hist'] = hist
+                    entry['bin_edges'] = bin_edges
+                else:
+                    entry['hist'] += hist
+        for idx in range(len(results['min'])):
+            entry = results['histogram'][idx]
+            if entry['hist'] is not None:
+                entry['samples'] = numpy.sum(entry['hist'])
+                if density:
+                    entry['hist'] = entry['hist'].astype(numpy.float) / entry['samples']
+        return results
+
     def _scanForMinMax(self, dtype, frame=None, analysisSize=1024):
         """
         Scan the image at a lower resolution to find the minimum and maximum
@@ -1141,30 +1214,15 @@ class TileSource(object):
         classkey = self._classkey
         self._classkey = 'nocache' + str(random.random)
         try:
-            self._bandRanges[frame] = None
-            for tile in self.tileIterator(
-                    output={'maxWidth': min(self.sizeX, analysisSize),
-                            'maxHeight': min(self.sizeY, analysisSize)},
-                    frame=frame):
-                tile = tile['tile']
-                if tile.dtype != dtype:
-                    if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
-                        tile = numpy.array(tile, dtype=numpy.uint16) * 257
-                    else:
-                        continue
-                tilemin = numpy.array([
-                    numpy.amin(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
-                tilemax = numpy.array([
-                    numpy.amax(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
-                if self._bandRanges[frame] is None:
-                    self._bandRanges[frame] = {'min': tilemin, 'max': tilemax}
-                self._bandRanges[frame]['min'] = numpy.minimum(
-                    self._bandRanges[frame]['min'], tilemin)
-                self._bandRanges[frame]['max'] = numpy.maximum(
-                    self._bandRanges[frame]['max'], tilemax)
+            self._bandRanges[frame] = self.histogram(
+                dtype=dtype,
+                onlyMinMax=True,
+                output={'maxWidth': min(self.sizeX, analysisSize),
+                        'maxHeight': min(self.sizeY, analysisSize)},
+                resample=False,
+                frame=frame)
             if self._bandRanges[frame]:
                 config.getConfig('logger').info('Style range is %r' % self._bandRanges[frame])
-                # Add histogram collection here
         finally:
             del self._skipStyle
             self._classkey = classkey

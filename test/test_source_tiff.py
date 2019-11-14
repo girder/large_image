@@ -596,3 +596,27 @@ def testStyleNoData():
     assert numpy.any(imageB[:, :, 3] != 255)
     assert image[12][215][3] == 255
     assert imageB[12][215][3] != 255
+
+
+def testHistogram():
+    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    hist = source.histogram(bins=8, output={'maxWidth': 1024}, resample=False)
+    assert len(hist['histogram']) == 3
+    assert hist['histogram'][0]['range'] == (0, 256)
+    assert list(hist['histogram'][0]['hist']) == [182, 276, 639, 1426, 2123, 2580, 145758, 547432]
+    assert list(hist['histogram'][0]['bin_edges']) == [0, 32, 64, 96, 128, 160, 192, 224, 256]
+    assert hist['histogram'][0]['samples'] == 700416
+
+    hist = source.histogram(bins=256, output={'maxWidth': 1024},
+                            resample=False, density=True)
+    assert len(hist['histogram']) == 3
+    assert hist['histogram'][0]['range'] == (0, 256)
+    assert len(list(hist['histogram'][0]['hist'])) == 256
+    assert hist['histogram'][0]['hist'][128] == pytest.approx(5.43e-5, 0.01)
+    assert hist['histogram'][0]['samples'] == 700416
+
+    hist = source.histogram(bins=256, output={'maxWidth': 2048},
+                            density=True, resample=False)
+    assert hist['histogram'][0]['samples'] == 2801664
+    assert hist['histogram'][0]['hist'][128] == pytest.approx(6.39e-5, 0.01)

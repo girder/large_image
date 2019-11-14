@@ -86,6 +86,8 @@ class TilesItemResource(ItemResource):
                            self.getTilesRegion)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'pixel'),
                            self.getTilesPixel)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'histogram'),
+                           self.getHistogram)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTile)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'fzxy', ':frame', ':z', ':x', ':y'),
@@ -723,6 +725,87 @@ class TilesItemResource(ItemResource):
         except ValueError as e:
             raise RestException('Value Error: %s' % e.args[0])
         return pixel
+
+    @describeRoute(
+        Description('Get a histogram for any region of a large image item.')
+        .notes('This can take all of the parameters as the region endpoint, '
+               'plus some histogram-specific parameters.  Only typically used '
+               'parameters are listed.  The returned result is a list with '
+               'one entry per channel (always one of L, LA, RGB, or RGBA '
+               'colorspace).  Each entry has the histogram values, bin edges, '
+               'minimum and maximum values for the channel, and number of '
+               'samples (pixels) used in the computation.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('width', 'The maximum width of the analyzed region in pixels.',
+               default=2048, required=False, dataType='int')
+        .param('height', 'The maximum height of the analyzed region in pixels.',
+               default=2048, required=False, dataType='int')
+        .param('resample', 'If false, an existing level of the image is used '
+               'for the histogram.  If true, the internal values are '
+               'interpolated to match the specified size as needed.',
+               required=False, dataType='boolean', default=False)
+        .param('frame', 'For multiframe images, the 0-based frame number.  '
+               'This is ignored on non-multiframe images.', required=False,
+               dataType='int')
+        .param('bins', 'The number of bins in the histogram.',
+               default=256, required=False, dataType='int')
+        .param('rangeMin', 'The minimum value in the histogram.  Defaults to '
+               'the minimum value in the image.',
+               required=False, dataType='float')
+        .param('rangeMax', 'The maximum value in the histogram.  Defaults to '
+               'the maximum value in the image.',
+               required=False, dataType='float')
+        .param('density', 'If true, scale the results by the number of '
+               'samples.', required=False, dataType='boolean', default=False)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getHistogram(self, item, params):
+        _adjustParams(params)
+        params = self._parseParams(params, True, [
+            ('left', float, 'region', 'left'),
+            ('top', float, 'region', 'top'),
+            ('right', float, 'region', 'right'),
+            ('bottom', float, 'region', 'bottom'),
+            ('regionWidth', float, 'region', 'width'),
+            ('regionHeight', float, 'region', 'height'),
+            ('units', str, 'region', 'units'),
+            ('unitsWH', str, 'region', 'unitsWH'),
+            ('width', int, 'output', 'maxWidth'),
+            ('height', int, 'output', 'maxHeight'),
+            ('fill', str),
+            ('magnification', float, 'scale', 'magnification'),
+            ('mm_x', float, 'scale', 'mm_x'),
+            ('mm_y', float, 'scale', 'mm_y'),
+            ('exact', bool, 'scale', 'exact'),
+            ('frame', int),
+            ('encoding', str),
+            ('jpegQuality', int),
+            ('jpegSubsampling', int),
+            ('tiffCompression', str),
+            ('style', str),
+            ('resample', bool),
+            ('bins', int),
+            ('rangeMin', int),
+            ('rangeMax', int),
+            ('density', bool),
+        ])
+        histRange = None
+        if 'rangeMin' in params or 'rangeMax' in params:
+            histRange = [params.pop('rangeMin', 0), params.pop('rangeMax', 256)]
+        result = self.imageItemModel.histogram(item, range=histRange, **params)
+        result = result['histogram']
+        # Cast everything to lists and floats so json with encode properly
+        for entry in result:
+            for key in {'bin_edges', 'hist', 'range'}:
+                if key in entry:
+                    entry[key] = [float(val) for val in list(entry[key])]
+            for key in {'min', 'max', 'samples'}:
+                if key in entry:
+                    entry[key] = float(entry[key])
+        return result
 
     @describeRoute(
         Description('Get a list of additional images associated with a large image.')
