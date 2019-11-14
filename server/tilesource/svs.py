@@ -194,12 +194,13 @@ class SVSFileTileSource(FileTileSource):
                     'height': svsLevelDimensions[svslevel][1],
                 }
                 if level['width'] > 0 and level['height'] > 0:
-                    # add to the list so that we can sort by resolution
-                    levels.append((level['width'] * level['height'], level))
+                    # add to the list so that we can sort by resolution and
+                    # then by earlier entries
+                    levels.append((level['width'] * level['height'], -len(levels), level))
             except openslide.lowlevel.OpenSlideError:
                 self._openslide = openslide.OpenSlide(path)
         # sort highest resolution first.
-        levels = [entry[-1] for entry in sorted(levels, reverse=True)]
+        levels = [entry[-1] for entry in sorted(levels, reverse=True, key=lambda x: x[:-1])]
         # Discard levels that are not a power-of-two compared to the highest
         # resolution level.
         levels = [entry for entry in levels if
