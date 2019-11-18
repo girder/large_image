@@ -122,9 +122,7 @@ class MapnikFileTileSource(FileTileSource):
                     the reported minimum or maximum.
                 scheme: one of the mapnik.COLORIZER_xxx values.  Case
                     insensitive.  Possible values are at least 'discrete',
-                    'linear', and 'exact'.  If palette is unspecified and the
-                    band was specified as a string, this defaults to 'linear'.
-                    Otherwise it defaults to 'discrete'.
+                    'linear', and 'exact'.  This defaults to 'linear'.
                 palette: either a list of two or more color strings, a string
                     with a dotted class name from the python palettable
                     package, or 'colortable' to use the band's color table
@@ -133,8 +131,8 @@ class MapnikFileTileSource(FileTileSource):
                     unspecified and the band is one of 'red', 'green', 'blue',
                     gray', or 'alpha', this defaults to an appropriate band
                     pair.  Otherwise, this defaults to the band's color table
-                    (palette) if it has one and 'cmocean.diverging.Curl_10' if
-                    it does not.
+                    (palette) if it has one and a black-to-white palette if it
+                    does not.
                 nodata: the value to use for missing data.  'auto' to use the
                     band reported value, if any.  null or unset to not use a
                     nodata value.
@@ -613,7 +611,7 @@ class MapnikFileTileSource(FileTileSource):
         :returns: a mapnik raster colorizer.
         """
         try:
-            scheme = style.get('scheme', 'discrete')
+            scheme = style.get('scheme', 'linear')
             mapnik_scheme = getattr(mapnik, 'COLORIZER_{}'.format(scheme.upper()))
         except AttributeError:
             mapnik_scheme = mapnik.COLORIZER_DISCRETE
@@ -638,7 +636,7 @@ class MapnikFileTileSource(FileTileSource):
             for value, color in enumerate(bandInfo['colortable']):
                 colorizer.add_stop(value, mapnik.Color(*color))
         else:
-            colors = style.get('palette', 'cmocean.diverging.Curl_10')
+            colors = style.get('palette', ['#000000', '#ffffff'])
             if not isinstance(colors, list):
                 colors = self.getHexColors(colors)
             else:
@@ -792,7 +790,8 @@ class MapnikFileTileSource(FileTileSource):
         for styleBand in style:
             if styleBand['band'] != -1:
                 colorizer = self._colorizerFromStyle(styleBand)
-                composite = getattr(mapnik.CompositeOp, styleBand.get('composite', 'lighten'))
+                composite = getattr(mapnik.CompositeOp, styleBand.get(
+                    'composite', 'multiply' if styleBand['band'] == 'alpha' else 'lighten'))
                 nodata = styleBand.get('nodata')
                 if nodata == 'auto':
                     nodata = bands.get('nodata')

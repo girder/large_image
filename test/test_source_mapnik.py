@@ -95,6 +95,7 @@ def testTileStyleFromGeotiffs():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
+                        'scheme': 'discrete',
                         'palette': 'matplotlib.Plasma_6'})
     source = large_image_source_mapnik.MapnikFileTileSource(
         imagePath, projection='EPSG:3857', style=style)
@@ -207,6 +208,7 @@ def testPixel():
 
     # Test with styles
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
+                        'scheme': 'discrete',
                         'palette': 'matplotlib.Plasma_6'})
     source = large_image_source_mapnik.MapnikFileTileSource(
         imagePath, projection='EPSG:3857', style=style)
@@ -216,6 +218,7 @@ def testPixel():
 
     # Test with palette as an array of colors
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
+                        'scheme': 'discrete',
                         'palette': ['#0000ff', '#00ff00', '#ff0000']})
     source = large_image_source_mapnik.MapnikFileTileSource(
         imagePath, projection='EPSG:3857', style=style)
