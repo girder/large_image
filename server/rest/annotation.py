@@ -331,7 +331,7 @@ class AnnotationResource(Resource):
             raise RestException(
                 'Validation Error: JSON doesn\'t follow schema (%r).' % (
                     exc.args, ))
-        if not returnElements:
+        if not returnElements and 'elements' in annotation['annotation']:
             del annotation['annotation']['elements']
         return annotation
 
@@ -461,7 +461,8 @@ class AnnotationResource(Resource):
         if not annotation:
             raise RestException('Annotation history version not found.')
         # Don't return the elements -- it can be too verbose
-        del annotation['annotation']['elements']
+        if 'elements' in annotation['annotation']:
+            del annotation['annotation']['elements']
         return annotation
 
     @autoDescribeRoute(
