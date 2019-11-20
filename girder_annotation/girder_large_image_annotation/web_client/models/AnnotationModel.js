@@ -257,8 +257,9 @@ export default AccessControlledModel.extend({
         const data = _.extend({}, this.get('annotation'));
         let url;
         let method;
+        let isNew = this.isNew();
 
-        if (this.isNew()) {
+        if (isNew) {
             if (!this.get('itemId')) {
                 throw new Error('itemId is required to save new annotations');
             }
@@ -269,7 +270,7 @@ export default AccessControlledModel.extend({
             method = 'PUT';
         }
 
-        if (this._pageElements === false || this.isNew()) {
+        if (this._pageElements === false || isNew) {
             this._pageElements = false;
             data.elements = _.map(data.elements, (element) => {
                 element = _.extend({}, element);
@@ -293,9 +294,11 @@ export default AccessControlledModel.extend({
             processData: false,
             data: JSON.stringify(data)
         }).done((annotation) => {
-            // the elements array does not come back with this request
-            annotation.elements = (this.get('annotation') || {}).elements || [];
-            this.set(annotation);
+            if (isNew) {
+                // the elements array does not come back with this request
+                annotation.elements = (this.get('annotation') || {}).elements || [];
+                this.set(annotation);
+            }
             this.trigger('sync', this, annotation, options);
         });
     },
