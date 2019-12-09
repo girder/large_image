@@ -16,5 +16,6 @@ for (var key in viewers) {
 export {
     ConfigView,
     ImageViewerSelectWidget,
-    ItemListWidget
+    ItemListWidget,
+    viewers as ViewerWidget
 };
