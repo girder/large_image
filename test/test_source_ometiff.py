@@ -29,5 +29,5 @@ def testTilesFromStripOMETiff():
     assert tileMetadata['sizeX'] == 1024
     assert tileMetadata['sizeY'] == 1022
     assert tileMetadata['levels'] == 3
-    assert len(tileMetadata['frames']) == 5
+    assert len(tileMetadata['frames']) == 145
     utilities.checkTilesZXY(source, tileMetadata)

@@ -99,6 +99,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
         if not info or not info.get('OME'):
             raise TileSourceException('Not an OME Tiff')
         self._omeinfo = info['OME']
+        self._checkForOMEZLoop(largeImagePath)
         if isinstance(self._omeinfo['Image'], dict):
             self._omeinfo['Image'] = [self._omeinfo['Image']]
         for img in self._omeinfo['Image']:
@@ -154,6 +155,55 @@ class OMETiffFileTileSource(TiffFileTileSource):
         # images as associated images.  This would require enumerating tiff
         # directories not mentioned by the ome list.
         self._associatedImages = {}
+
+    def _checkForOMEZLoop(self, largeImagePath):
+        """
+        Check if the OME description lists a Z-loop that isn't references by
+        the frames or TiffData list and is present based on the number of tiff
+        directories.  This can modify self._omeinfo.
+
+        :param largeImagePath: used for checking for the maximum directory.
+        """
+        info = self._omeinfo
+        try:
+            zloopinfo = info['Image']['Description'].split('Z Stack Loop: ')[1]
+            zloop = int(zloopinfo.split()[0])
+            stepinfo = zloopinfo.split('Step: ')[1].split()
+            stepmm = float(stepinfo[0])
+            stepmm *= {u'mm': 1, u'\xb5m': 0.001}[stepinfo[1]]
+            planes = len(info['Image']['Pixels']['Plane'])
+            for plane in info['Image']['Pixels']['Plane']:
+                if int(plane.get('TheZ', 0)) != 0:
+                    return
+            if int(info['Image']['Pixels']['SizeZ']) != 1:
+                return
+        except Exception:
+            return
+        if zloop <= 1 or not stepmm or not planes:
+            return
+        if len(info['Image']['Pixels'].get('TiffData', {})):
+            return
+        expecteddir = planes * zloop
+        try:
+            lastdir = TiledTiffDirectory(largeImagePath, expecteddir - 1, mustBeTiled=None)
+            if not lastdir._tiffFile.lastdirectory():
+                return
+        except Exception:
+            return
+        tiffdata = []
+        for z in range(zloop):
+            for plane in info['Image']['Pixels']['Plane']:
+                td = plane.copy()
+                td['TheZ'] = str(z)
+                # This position is probably wrong -- it seems like the
+                # listed position is likely to be the center of the stack, not
+                # the bottom, but we'd have to confirm it.
+                td['PositionZ'] = str(float(td.get('PositionZ', 0)) + z * stepmm * 1000)
+                tiffdata.append(td)
+        info['Image']['Pixels']['TiffData'] = tiffdata
+        info['Image']['Pixels']['Plane'] = tiffdata
+        info['Image']['Pixels']['PlanesFromZloop'] = 'true'
+        info['Image']['Pixels']['SizeZ'] = str(zloop)
 
     def getMetadata(self):
         """
