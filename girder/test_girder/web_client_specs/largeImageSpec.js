@@ -1,10 +1,6 @@
 /* globals girder, girderTest, describe, it, expect, waitsFor, runs */
 
-girderTest.addScripts([
-    '/static/built/plugins/jobs/plugin.min.js',
-    '/static/built/plugins/worker/plugin.min.js',
-    '/static/built/plugins/large_image/plugin.min.js'
-]);
+girderTest.importPlugin('jobs', 'worker', 'large_image');
 
 girderTest.startApp();
 
