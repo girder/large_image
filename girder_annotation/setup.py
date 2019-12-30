@@ -53,7 +53,7 @@ setup(
     keywords='girder-plugin, large_image',
     license='Apache Software License 2.0',
     long_description='See the large-image package for more details.',
-    packages=find_packages(exclude=['test', 'test.*']),
+    packages=find_packages(exclude=['test', 'test.*', 'test_annotation', 'test_annotation.*']),
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     url='https://github.com/girder/large_image',
     zip_safe=False,

@@ -1,10 +1,9 @@
 /* globals beforeEach, afterEach, describe, it, expect, sinon, girder, Backbone, _ */
 /* eslint-disable camelcase, no-new */
 
+girderTest.importPlugin('jobs', 'worker', 'large_image', 'large_image_annotation');
 girderTest.addScripts([
-    '/static/built/plugins/large_image/extra/sinon.js',
-    '/static/built/plugins/large_image/plugin.min.js',
-    '/static/built/plugins/large_image_annotation/plugin.min.js'
+    '/static/built/plugins/large_image/extra/sinon.js'
 ]);
 
 girderTest.startApp();
