@@ -23,10 +23,8 @@ install:
 script:
   # Piping through cat does less buffering of the output but can consume the
   # exit code
-  #   Deselect the test_conversion tests, as the virtualenv travis uses fails
-  # to import pyvips with an error
-  # "OSError: dlopen: cannot load any more object with static TLS"
-  - tox -- -k 'not test_conversion' | cat; test ${PIPESTATUS[0]} -eq 0
+  - tox | cat; test ${PIPESTATUS[0]} -eq 0
 after_success:
   - pip install codecov
   - codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml
+  - if [ ${TRAVIS_PYTHON_VERSION:0:3} == "3.7" ]; then pip install travis-sphinx; travis-sphinx -o docs/build -v deploy -b sphinx,master; fi

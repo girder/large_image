@@ -57,3 +57,5 @@ node_modules/
 
 .eslintcache
 test/externaldata
+
+docs/source
