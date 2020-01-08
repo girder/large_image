@@ -14,6 +14,7 @@ large_image also works as a Girder plugin with optional annotation support.
    :maxdepth: 2
    :caption: Contents:
 
+   tilesource_options
    large_image/modules
    large_image_source_dummy/modules
    large_image_source_mapnik/modules
