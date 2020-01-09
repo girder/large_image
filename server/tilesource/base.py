@@ -51,9 +51,6 @@ except ImportError:
 try:
     import PIL
 
-    if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
-        logger.warning('Error: Pillow v3.0 or later is required')
-        PIL = None
     import PIL.Image
     import PIL.ImageColor
     import PIL.ImageDraw
