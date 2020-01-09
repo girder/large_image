@@ -23,10 +23,7 @@ from .base import TileSource, TileSourceException
 from ..cache_util import strhash, methodcache, LruCacheMetaclass
 from ..constants import SourcePriority
 
-import PIL
 from PIL import Image, ImageDraw, ImageFont
-if int(PIL.PILLOW_VERSION.split('.')[0]) < 3:
-    raise ImportError('Pillow v3.0 or later is required')
 
 
 # Used in testing
