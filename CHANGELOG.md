@@ -2,8 +2,13 @@
 
 ## Unreleased
 
+### Features
+- Add style options for all tile sources to remap channels and colors (#397)
+- Better support for high bit-depth images (#397)
+
 ### Improvements
 - Make it easier to load the annotation-enable web viewers (#402)
+- Improved support for z-loops in OMETiff files (#397)
 
 ## Version 1.0.1
 
