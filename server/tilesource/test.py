@@ -21,7 +21,7 @@ import colorsys
 import six
 from .base import TileSource, TileSourceException
 from ..cache_util import strhash, methodcache, LruCacheMetaclass
-from ..constants import SourcePriority
+from ..constants import SourcePriority, TILE_FORMAT_PIL
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -146,7 +146,7 @@ class TestTileSource(TileSource):
         )
         global tileCounter
         tileCounter += 1
-        return self._outputTile(image, 'PIL', x, y, z, **kwargs)
+        return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, **kwargs)
 
     @staticmethod
     def getLRUHash(*args, **kwargs):

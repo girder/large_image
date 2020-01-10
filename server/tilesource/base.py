@@ -1,22 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#############################################################################
-#  Copyright Kitware Inc.
-#
-#  Licensed under the Apache License, Version 2.0 ( the "License" );
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#############################################################################
-
+import json
 import math
 import numpy
 import os
@@ -24,12 +9,14 @@ import PIL
 import PIL.Image
 import PIL.ImageColor
 import PIL.ImageDraw
+import random
 import six
+import threading
 from collections import defaultdict
 from six import BytesIO
 
 from ..cache_util import getTileCache, strhash, methodcache
-from ..constants import SourcePriority
+from ..constants import SourcePriority, TILE_FORMAT_IMAGE, TILE_FORMAT_PIL, TILE_FORMAT_NUMPY
 
 try:
     import girder
@@ -60,10 +47,6 @@ except ImportError:
     logger.warning('Error: Could not import PIL')
     PIL = None
 
-
-TILE_FORMAT_IMAGE = 'image'
-TILE_FORMAT_PIL = 'PIL'
-TILE_FORMAT_NUMPY = 'numpy'
 
 TileOutputMimeTypes = {
     # JFIF forces conversion to JPEG through PIL to ensure the image is in a
@@ -108,7 +91,7 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
                  format=(TILE_FORMAT_IMAGE, ), tiffCompression='raw',
                  **kwargs):
     """
-    Convert a PIL image into the raw output bytes and a mime type.
+    Convert a PIL or numpy image into raw output bytes and a mime type.
 
     :param image: a PIL image.
     :param encoding: a valid PIL encoding (typically 'PNG' or 'JPEG').  Must
@@ -124,20 +107,21 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
             TILE_FORMAT_IMAGE, or the format of the image data if it is
             anything else.
     """
-    if not isinstance(format, tuple):
+    if not isinstance(format, (tuple, set, list)):
         format = (format, )
     imageData = image
     imageFormatOrMimeType = TILE_FORMAT_PIL
-    if TILE_FORMAT_PIL in format:
-        # already in an acceptable format
-        pass
-    elif TILE_FORMAT_NUMPY in format:
-        imageData = numpy.asarray(image)
+    if TILE_FORMAT_NUMPY in format:
+        imageData, _ = _imageToNumpy(image)
         imageFormatOrMimeType = TILE_FORMAT_NUMPY
+    elif TILE_FORMAT_PIL in format:
+        imageData = _imageToPIL(image)
+        imageFormatOrMimeType = TILE_FORMAT_PIL
     elif TILE_FORMAT_IMAGE in format:
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
         imageFormatOrMimeType = TileOutputMimeTypes[encoding]
+        image = _imageToPIL(image)
         if image.width == 0 or image.height == 0:
             imageData = b''
         else:
@@ -145,7 +129,7 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
             output = BytesIO()
             params = {}
             if encoding == 'JPEG' and image.mode not in ('L', 'RGB'):
-                image = image.convert('RGB')
+                image = image.convert('RGB' if image.mode != 'LA' else 'L')
             if encoding == 'JPEG':
                 params['quality'] = jpegQuality
                 params['subsampling'] = jpegSubsampling
@@ -154,6 +138,57 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
             image.save(output, encoding, **params)
             imageData = output.getvalue()
     return imageData, imageFormatOrMimeType
+
+
+def _imageToPIL(image, setMode=None):
+    """
+    Convert an image in PIL, numpy, or image file format to a PIL image.
+
+    :param image: input image.
+    :param setMode: if specified, the output image is converted to this mode.
+    :returns: a PIL image.
+    """
+    if isinstance(image, numpy.ndarray):
+        mode = 'L'
+        if len(image.shape) == 3:
+            mode = ['L', 'LA', 'RGB', 'RGBA'][image.shape[2] - 1]
+        if len(image.shape) == 3 and image.shape[2] == 1:
+            image = numpy.resize(image, image.shape[:2])
+        if image.dtype == numpy.uint16:
+            image = numpy.floor_divide(image, 256).astype(numpy.uint8)
+        elif image.dtype != numpy.uint8:
+            image = image.astype(numpy.uint8)
+        image = PIL.Image.fromarray(image, mode)
+    elif not isinstance(image, PIL.Image.Image):
+        image = PIL.Image.open(BytesIO(image))
+    if setMode is not None and image.mode != setMode:
+        image = image.convert(setMode)
+    return image
+
+
+def _imageToNumpy(image):
+    """
+    Convert an image in PIL, numpy, or image file format to a numpy array.  The
+    output numpy array always has three dimensions.
+
+    :param image: input image.
+    :returns: a numpy array and a target PIL image mode.
+    """
+    if not isinstance(image, numpy.ndarray):
+        if not isinstance(image, PIL.Image.Image):
+            image = PIL.Image.open(BytesIO(image))
+        if image.mode not in ('L', 'LA', 'RGB', 'RGBA'):
+            image.convert('RGBA')
+        mode = image.mode
+        image = numpy.asarray(image)
+    else:
+        if len(image.shape) == 3:
+            mode = ['L', 'LA', 'RGB', 'RGBA'][image.shape[2] - 1]
+        else:
+            mode = 'L'
+    if len(image.shape) == 2:
+        image = numpy.resize(image, (image.shape[0], image.shape[1], 1))
+    return image, mode
 
 
 def _letterboxImage(image, width, height, fill):
@@ -338,15 +373,23 @@ class LazyTileDict(dict):
             for y in range(ymin, ymax):
                 tileData = self.source.getTile(
                     x, y, self.level,
-                    pilImageAllowed=True, sparseFallback=True, frame=self.frame)
-                if not isinstance(tileData, PIL.Image.Image):
-                    tileData = PIL.Image.open(BytesIO(tileData))
+                    numpyAllowed='always', sparseFallback=True, frame=self.frame)
                 if retile is None:
-                    retile = PIL.Image.new(
-                        tileData.mode, (self.width, self.height))
-                retile.paste(tileData, (
-                    int(x * self.metadata['tileWidth'] - self['x']),
-                    int(y * self.metadata['tileHeight'] - self['y'])))
+                    retile = numpy.zeros(
+                        (self.height, self.width) if len(tileData.shape) == 2 else
+                        (self.height, self.width, tileData.shape[2]),
+                        dtype=tileData.dtype)
+                x0 = int(x * self.metadata['tileWidth'] - self['x'])
+                y0 = int(y * self.metadata['tileHeight'] - self['y'])
+                if x0 < 0:
+                    tileData = tileData[:, -x0:]
+                    x0 = 0
+                if y0 < 0:
+                    tileData = tileData[-y0:, :]
+                    y0 = 0
+                tileData = tileData[:min(tileData.shape[0], self.height - y0),
+                                    :min(tileData.shape[1], self.width - x0)]
+                retile[y0:y0 + tileData.shape[0], x0:x0 + tileData.shape[1]] = tileData
         return retile
 
     def __getitem__(self, key, *args, **kwargs):
@@ -365,44 +408,48 @@ class LazyTileDict(dict):
             if not self.retile:
                 tileData = self.source.getTile(
                     self.x, self.y, self.level,
-                    pilImageAllowed=True, sparseFallback=True, frame=self.frame)
+                    pilImageAllowed=True, numpyAllowed=True,
+                    sparseFallback=True, frame=self.frame)
             else:
                 tileData = self._retileTile()
-            tileFormat = TILE_FORMAT_PIL
-            # If the tile isn't in PIL format, and it is not in an image format
-            # that is the same as a desired output format and encoding, convert
-            # it to PIL format.
-            if not isinstance(tileData, PIL.Image.Image):
-                pilData = PIL.Image.open(BytesIO(tileData))
-                if (self.format and TILE_FORMAT_IMAGE in self.format and
-                        pilData.format == self.encoding):
-                    tileFormat = TILE_FORMAT_IMAGE
-                else:
-                    tileData = pilData
-            else:
-                pilData = tileData
+
             if self.crop and not self.retile:
-                tileData = pilData.crop(self.crop)
-                tileFormat = TILE_FORMAT_PIL
+                tileData, _ = _imageToNumpy(tileData)
+                tileData = tileData[self.crop[1]:self.crop[3], self.crop[0]:self.crop[2]]
+            pilData = _imageToPIL(tileData)
 
             # resample if needed
             if self.resample not in (False, None) and self.requestedScale:
                 self['width'] = max(1, int(
-                    tileData.size[0] / self.requestedScale))
+                    pilData.size[0] / self.requestedScale))
                 self['height'] = max(1, int(
-                    tileData.size[1] / self.requestedScale))
-                tileData = tileData.resize(
+                    pilData.size[1] / self.requestedScale))
+                pilData = tileData = pilData.resize(
                     (self['width'], self['height']),
                     resample=PIL.Image.LANCZOS if self.resample is True else self.resample)
 
+            tileFormat = (TILE_FORMAT_PIL if isinstance(tileData, PIL.Image.Image)
+                          else (TILE_FORMAT_NUMPY if isinstance(tileData, numpy.ndarray)
+                                else TILE_FORMAT_IMAGE))
+            tileEncoding = None if tileFormat != TILE_FORMAT_IMAGE else (
+                'JPEG' if tileData[:3] == b'\xff\xd8\xff' else
+                'PNG' if tileData[:4] == b'\x89PNG' else
+                'TIFF' if tileData[:4] == b'II\x2a\x00' else
+                None)
             # Reformat the image if required
-            if not self.alwaysAllowPIL:
-                if tileFormat in self.format:
+            if (not self.alwaysAllowPIL or
+                    (TILE_FORMAT_NUMPY in self.format and isinstance(tileData, numpy.ndarray))):
+                if (tileFormat in self.format and (tileFormat != TILE_FORMAT_IMAGE or (
+                        tileEncoding and
+                        tileEncoding == self.imageKwargs.get('encoding', self.encoding)))):
                     # already in an acceptable format
                     pass
-                elif TILE_FORMAT_NUMPY in self.format and numpy:
-                    tileData = numpy.asarray(tileData)
+                elif TILE_FORMAT_NUMPY in self.format:
+                    tileData, _ = _imageToNumpy(tileData)
                     tileFormat = TILE_FORMAT_NUMPY
+                elif TILE_FORMAT_PIL in self.format:
+                    tileData = pilData
+                    tileFormat = TILE_FORMAT_PIL
                 elif TILE_FORMAT_IMAGE in self.format:
                     tileData, mimeType = _encodeImage(
                         tileData, **self.imageKwargs)
@@ -411,6 +458,9 @@ class LazyTileDict(dict):
                     raise TileSourceException(
                         'Cannot yield tiles in desired format %r' % (
                             self.format, ))
+            else:
+                tileData = pilData
+                tileFormat = TILE_FORMAT_PIL
 
             self['tile'] = tileData
             self['format'] = tileFormat
@@ -427,8 +477,8 @@ class TileSource(object):
         None: SourcePriority.FALLBACK
     }
 
-    def __init__(self, jpegQuality=95, jpegSubsampling=0,
-                 encoding='JPEG', edge=False, tiffCompression='raw', *args,
+    def __init__(self, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
+                 tiffCompression='raw', edge=False, style=None, *args,
                  **kwargs):
         """
         Initialize the tile class.
@@ -441,6 +491,38 @@ class TileSource(object):
             edge tiles, otherwise, an #rrggbb color to fill edges.
         :param tiffCompression: the compression format to use when encoding a
             TIFF.
+        :param style: if None, use the default style for the file.  Otherwise,
+            this is a string with a json-encoded dictionary.  The style can
+            contain the following keys:
+                band: if -1 or None, and if style is specified at all, the
+                    greyscale value is used.  Otherwise, a 1-based numerical
+                    index into the channels of the image or a string that
+                    matches the interpretation of the band ('red', 'green',
+                    'blue', 'gray', 'alpha').  Note that 'gray' on an RGB or
+                    RGBA image will use the green band.
+                min: the value to map to the first palette value.  Defaults to
+                    0.  'auto' to use 0 if the reported minimum and maximum of
+                    the band are between [0, 255] or use the reported minimum
+                    otherwise.  'min' or 'max' to always uses the reported
+                    minimum or maximum.
+                max: the value to map to the last palette value.  Defaults to
+                    255.  'auto' to use 0 if the reported minimum and maximum
+                    of the band are between [0, 255] or use the reported
+                    maximum otherwise.  'min' or 'max' to always uses the
+                    reported minimum or maximum.
+                palette: a list of two or more color strings, where color
+                    strings are of the form #RRGGBB, #RRGGBBAA, #RGB, #RGBA.
+                nodata: the value to use for missing data.  null or unset to
+                    not use a nodata value.
+                composite: either 'lighten' or 'multiply'.  Defaults to
+                    'lighten' for all except the alpha band.
+                clamp: either True to clamp values outside of the [min, max]
+                    to the ends of the palette or False to make outside values
+                    transparent.
+            Alternately, the style object can contain a single key of 'bands',
+            which has a value which is a list of style dictionaries as above,
+            excepting that each must have a band that is not -1.  Bands are
+            composited in the order listed.
         """
         self.cache, self.cache_lock = getTileCache()
 
@@ -449,6 +531,8 @@ class TileSource(object):
         self.levels = None
         self.sizeX = None
         self.sizeY = None
+        self._styleLock = threading.RLock()
+        self._bandRanges = {}
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -458,18 +542,30 @@ class TileSource(object):
         self.jpegSubsampling = int(jpegSubsampling)
         self.tiffCompression = tiffCompression
         self.edge = edge
+        self._jsonstyle = style
+        if style:
+            try:
+                self.style = json.loads(style)
+                if not isinstance(self.style, dict):
+                    raise TypeError
+            except TypeError:
+                raise TileSourceException('Style is not a valid json object.')
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
         return strhash(
-            kwargs.get('encoding'), kwargs.get('jpegQuality'),
-            kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
-            kwargs.get('edge'))
+            kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
+            kwargs.get('edge', False), kwargs.get('style', None))
 
     def getState(self):
-        return str(self.encoding) + ',' + str(self.jpegQuality) + ',' + \
-            str(self.jpegSubsampling) + ',' + str(self.tiffCompression) + \
-            ',' + str(self.edge)
+        return '%s,%s,%s,%s,%s,%s' % (
+            self.encoding,
+            self.jpegQuality,
+            self.jpegSubsampling,
+            self.tiffCompression,
+            self.edge,
+            self._jsonstyle)
 
     def wrapKey(self, *args, **kwargs):
         return strhash(self.getState()) + strhash(*args, **kwargs)
@@ -497,10 +593,10 @@ class TileSource(object):
         if width and not height:
             height = width * 16
         if width * regionHeight > height * regionWidth:
-            scale = float(height) / regionHeight
+            scale = float(regionHeight) / height
             width = max(1, int(regionWidth * height / regionHeight))
         else:
-            scale = float(width) / regionWidth
+            scale = float(regionWidth) / width
             height = max(1, int(regionHeight * width / regionWidth))
         return width, height, scale
 
@@ -826,8 +922,8 @@ class TileSource(object):
         # If we need to resample to make tiles at a non-native resolution,
         # adjust the tile size and tile overlap paramters appropriately.
         if resample is not False:
-            tile_size['width'] = int(round(tile_size['width'] * requestedScale))
-            tile_size['height'] = int(round(tile_size['height'] * requestedScale))
+            tile_size['width'] = max(1, int(round(tile_size['width'] * requestedScale)))
+            tile_size['height'] = max(1, int(round(tile_size['height'] * requestedScale)))
             tile_overlap['x'] = int(round(tile_overlap['x'] * requestedScale))
             tile_overlap['y'] = int(round(tile_overlap['y'] * requestedScale))
 
@@ -884,10 +980,10 @@ class TileSource(object):
             x, y: (left, top) coordinate in current magnification pixels
             width, height: size of current tile in current magnification pixels
             tile: cropped tile image
-            format: format of the tile.  Always TILE_FORMAT_PIL or
-                TILE_FORMAT_IMAGE.  TILE_FORMAT_IMAGE is only returned if it
-                was explicitly allowed and the tile is already in the correct
-                image encoding.
+            format: format of the tile.  One of TILE_FORMAT_NUMPY,
+                TILE_FORMAT_PIL, or TILE_FORMAT_IMAGE.  TILE_FORMAT_IMAGE is
+                only returned if it was explicitly allowed and the tile is
+                already in the correct image encoding.
             level: level of the current tile
             level_x, level_y: the tile reference number within the level.
                 Tiles are numbered (0, 0), (1, 0), (2, 0), etc.  The 0th tile
@@ -1086,10 +1182,238 @@ class TileSource(object):
         # compatibility could be an issue.
         return False
 
-    def _outputTile(self, tile, tileEncoding, x, y, z, pilImageAllowed=False, **kwargs):
+    def histogram(self, dtype=None, onlyMinMax=False, bins=256,
+                  density=False, format=None, *args, **kwargs):
         """
-        Convert a tile from a PIL image or image in memory to the desired
-        encoding.
+        Get a histogram for a region.
+
+        :param dtype: if specified, the tiles must be this numpy.dtype.
+        :param onlyMinMax: if True, only return the minimum and maximum value
+            of the region.
+        :param bins: the number of bins in the histogram.  This is passed to
+            numpy.histogram, but needs to produce teh same set of edges for
+            each tile.
+        :param density: if True, scale the results based on the number of
+            samples.
+        :param format: ignored.  Used to override the format for the
+            tileIterator.
+        :param range: if None, use the computed min and (max + 1).  Otherwise,
+            this is the range passed to numpy.histogram.  Note this is only
+            accessible via kwargs as it otherwise overloads the range function.
+        :param *args: parameters to pass to the tileIterator.
+        :param **kwargs: parameters to pass to the tileIterator.
+        """
+        kwargs = kwargs.copy()
+        histRange = kwargs.pop('range', None)
+        results = None
+        for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+            tile = tile['tile']
+            if dtype is not None and tile.dtype != dtype:
+                if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
+                    tile = numpy.array(tile, dtype=numpy.uint16) * 257
+                else:
+                    continue
+            tilemin = numpy.array([
+                numpy.amin(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
+            tilemax = numpy.array([
+                numpy.amax(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
+            if results is None:
+                results = {'min': tilemin, 'max': tilemax}
+            results['min'] = numpy.minimum(results['min'], tilemin)
+            results['max'] = numpy.maximum(results['max'], tilemax)
+        if results is None or onlyMinMax:
+            return results
+        results['histogram'] = [{
+            'min': results['min'][idx],
+            'max': results['max'][idx],
+            'range': ((results['min'][idx], results['max'][idx] + 1)
+                      if histRange is None else histRange),
+            'hist': None,
+            'bin_edges': None
+        } for idx in range(len(results['min']))]
+        for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+            tile = tile['tile']
+            if dtype is not None and tile.dtype != dtype:
+                if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
+                    tile = numpy.array(tile, dtype=numpy.uint16) * 257
+                else:
+                    continue
+            for idx in range(len(results['min'])):
+                entry = results['histogram'][idx]
+                hist, bin_edges = numpy.histogram(
+                    tile[:, :, idx], bins, entry['range'], density=False)
+                if entry['hist'] is None:
+                    entry['hist'] = hist
+                    entry['bin_edges'] = bin_edges
+                else:
+                    entry['hist'] += hist
+        for idx in range(len(results['min'])):
+            entry = results['histogram'][idx]
+            if entry['hist'] is not None:
+                entry['samples'] = numpy.sum(entry['hist'])
+                if density:
+                    entry['hist'] = entry['hist'].astype(numpy.float) / entry['samples']
+        return results
+
+    def _scanForMinMax(self, dtype, frame=None, analysisSize=1024):
+        """
+        Scan the image at a lower resolution to find the minimum and maximum
+        values.
+
+        :param dtype: the numpy dtype.  Used for guessing the range.
+        :param frame: the frame to use for auto-ranging.
+        :param analysisSize: the size of the image to use for analysis.
+        """
+        self._skipStyle = True
+        # Divert the tile cache while querying unstyled tiles
+        classkey = self._classkey
+        self._classkey = 'nocache' + str(random.random)
+        try:
+            self._bandRanges[frame] = self.histogram(
+                dtype=dtype,
+                onlyMinMax=True,
+                output={'maxWidth': min(self.sizeX, analysisSize),
+                        'maxHeight': min(self.sizeY, analysisSize)},
+                resample=False,
+                frame=frame)
+            if self._bandRanges[frame]:
+                logger.info('Style range is %r' % self._bandRanges[frame])
+        finally:
+            del self._skipStyle
+            self._classkey = classkey
+
+    def _getMinMax(self, minmax, value, dtype, bandidx=None, frame=None):
+        """
+        Get an appropriate minimum or maximum for a band.
+
+        :param minmax: either 'min' or 'max'.
+        :param value: the specified value, 'auto', 'min', or 'max'.  'auto'
+            uses the parameter specified in 'minmax' or 0 or 255 if the
+            band's minimum is in the range [0, 254] and maximum is in the range
+            [2, 255].
+        :param dtype: the numpy dtype.  Used for guessing the range.
+        :param bandidx: the index of the channel that could be used for
+            determining the min or max.
+        :param frame: the frame to use for auto-ranging.
+        """
+        frame = frame or 0
+        if value not in {'min', 'max', 'auto'}:
+            try:
+                value = float(value)
+            except ValueError:
+                logger.warn(
+                    'Style min/max value of %r is not valid; using "auto"', value)
+                value = 'auto'
+        if value in {'min', 'max', 'auto'} and frame not in self._bandRanges:
+            self._scanForMinMax(dtype, frame)
+        if value == 'auto':
+            if (self._bandRanges.get(frame) and
+                    numpy.all(self._bandRanges[frame]['min'] >= 0) and
+                    numpy.all(self._bandRanges[frame]['min'] <= 254) and
+                    numpy.all(self._bandRanges[frame]['max'] >= 2) and
+                    numpy.all(self._bandRanges[frame]['max'] <= 255)):
+                value = 0 if minmax == 'min' else 255
+            else:
+                value = minmax
+        if value == 'min':
+            if bandidx is not None and self._bandRanges.get(frame):
+                value = self._bandRanges[frame]['min'][bandidx]
+            else:
+                value = 0
+        elif value == 'max':
+            if bandidx is not None and self._bandRanges.get(frame):
+                value = self._bandRanges[frame]['max'][bandidx]
+            elif dtype == numpy.uint16:
+                value = 65535
+            elif dtype == numpy.float:
+                value = 1
+            else:
+                value = 255
+        return float(value)
+
+    def _applyStyle(self, image, style, frame=None):
+        """
+        Apply a style to a numpy image.
+
+        :param image: the image to modify.
+        :param style: a style object.
+        :param frame: the frame to use for auto ranging.
+        :returns: a styled image.
+        """
+        style = style['bands'] if 'bands' in style else [style]
+        output = numpy.zeros((image.shape[0], image.shape[1], 4), numpy.float)
+        for entry in style:
+            bandidx = 0 if image.shape[2] <= 2 else 1
+            band = image[:, :, 0] if image.shape[2] <= 2 else image[:, :, 1]
+            if (isinstance(entry.get('band'), six.integer_types) and
+                    entry['band'] >= 1 and entry['band'] <= image.shape[2]):
+                band = image[:, :, entry['band'] - 1]
+            composite = entry.get('composite', 'lighten')
+            if entry.get('band') == 'red' and image.shape[2] > 2:
+                bandidx = 0
+                band = image[:, :, 0]
+            elif entry.get('band') == 'blue' and image.shape[2] > 2:
+                bandidx = 2
+                band = image[:, :, 2]
+            elif entry.get('band') == 'alpha':
+                bandidx = image.shape[2] - 1 if image.shape[2] in (2, 4) else None
+                band = (image[:, :, -1] if image.shape[2] in (2, 4) else
+                        numpy.full(image.shape[:2], 255, numpy.uint8))
+                composite = entry.get('composite', 'multiply')
+            palette = numpy.array([
+                PIL.ImageColor.getcolor(clr, 'RGBA') for clr in entry.get(
+                    'palette', ['#000', '#FFF']
+                    if entry.get('band') != 'alpha' else ['#FFF0', '#FFFF'])])
+            palettebase = numpy.linspace(0, 1, len(palette), endpoint=True)
+            nodata = entry.get('nodata')
+            min = self._getMinMax('min', entry.get('min', 'auto'), image.dtype, bandidx, frame)
+            max = self._getMinMax('max', entry.get('max', 'auto'), image.dtype, bandidx, frame)
+            clamp = entry.get('clamp', True)
+            delta = max - min if max != min else 1
+            if nodata is not None:
+                keep = band != nodata
+            else:
+                keep = numpy.full(image.shape[:2], True)
+            band = (band - min) / delta
+            if not clamp:
+                keep = keep & (band >= 0) & (band <= 1)
+            for channel in range(4):
+                clrs = numpy.interp(band, palettebase, palette[:, channel])
+                if composite == 'multiply':
+                    output[:, :, channel] = numpy.multiply(
+                        output[:, :, channel], numpy.where(keep, clrs, 1))
+                else:
+                    output[:, :, channel] = numpy.maximum(
+                        output[:, :, channel], numpy.where(keep, clrs, 0))
+        return output
+
+    def _outputTileNumpyStyle(self, tile, applyStyle, frame=None):
+        """
+        Convert a tile to a NUMPY array.  Optionally apply the style to a tile.
+        Always returns a NUMPY tile.
+
+        :param tile: the tile to convert.
+        :param applyStyle: if True and there is a style, apply it.
+        :param frame: the frame to use for auto-ranging.
+        :returns: a numpy array and a target PIL image mode.
+        """
+        tile, mode = _imageToNumpy(tile)
+        if applyStyle and getattr(self, 'style', None):
+            with self._styleLock:
+                if not getattr(self, '_skipStyle', False):
+                    tile = self._applyStyle(tile, self.style, frame)
+        if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
+            extend = numpy.zeros((self.tileHeight, self.tileWidth, tile.shape[2]))
+            extend[:min(self.tileHeight, tile.shape[0]),
+                   :min(self.tileWidth, tile.shape[1])] = tile
+            tile = extend
+        return tile, mode
+
+    def _outputTile(self, tile, tileEncoding, x, y, z, pilImageAllowed=False,
+                    numpyAllowed=False, applyStyle=True, **kwargs):
+        """
+        Convert a tile from a numpy array, PIL image, or image in memory to the
+        desired encoding.
 
         :param tile: the tile to convert.
         :param tileEncoding: the current tile encoding.
@@ -1097,7 +1421,11 @@ class TileSource(object):
         :param y: tile y value.  Used for cropping or edge adjustment.
         :param z: tile z (level) value.  Used for cropping or edge adjustment.
         :param pilImageAllowed: True if a PIL image may be returned.
-        :returns: either a PIL image or a memory object with an image file.
+        :param numpyAllowed: True if a NUMPY image may be returned.  'always'
+            to return a numpy array.
+        :param applyStyle: if True and there is a style, apply it.
+        :returns: either a numpy array, a PIL image, or a memory object with an
+            image file.
         """
         isEdge = False
         if self.edge:
@@ -1106,27 +1434,30 @@ class TileSource(object):
             maxX = (x + 1) * self.tileWidth
             maxY = (y + 1) * self.tileHeight
             isEdge = maxX > sizeX or maxY > sizeY
-        if tileEncoding != TILE_FORMAT_PIL:
-            if tileEncoding == self.encoding and not isEdge:
-                return tile
-            tile = PIL.Image.open(BytesIO(tile))
+        if (tileEncoding not in (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY) and
+                numpyAllowed != 'always' and tileEncoding == self.encoding and
+                not isEdge and (not applyStyle or not getattr(self, 'style', None))):
+            return tile
+        mode = None
+        if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
+                (applyStyle and getattr(self, 'style', None)) or isEdge):
+            tile, mode = self._outputTileNumpyStyle(tile, applyStyle, kwargs.get('frame'))
         if isEdge:
             contentWidth = min(self.tileWidth,
                                sizeX - (maxX - self.tileWidth))
             contentHeight = min(self.tileHeight,
                                 sizeY - (maxY - self.tileHeight))
+            tile, mode = _imageToNumpy(tile)
             if self.edge in (True, 'crop'):
-                tile = tile.crop((0, 0, contentWidth, contentHeight))
+                tile = tile[:contentHeight, :contentWidth]
             else:
-                color = PIL.ImageColor.getcolor(self.edge, tile.mode)
-                if contentWidth < self.tileWidth:
-                    PIL.ImageDraw.Draw(tile).rectangle(
-                        [(contentWidth, 0), (self.tileWidth, contentHeight)],
-                        fill=color, outline=None)
-                if contentHeight < self.tileHeight:
-                    PIL.ImageDraw.Draw(tile).rectangle(
-                        [(0, contentHeight), (self.tileWidth, self.tileHeight)],
-                        fill=color, outline=None)
+                color = PIL.ImageColor.getcolor(self.edge, mode)
+                tile = tile.copy()
+                tile[:, contentWidth:] = color
+                tile[contentHeight:] = color
+        if isinstance(tile, numpy.ndarray) and numpyAllowed:
+            return tile
+        tile = _imageToPIL(tile)
         if pilImageAllowed:
             return tile
         encoding = TileOutputPILFormat.get(self.encoding, self.encoding)
@@ -1180,7 +1511,8 @@ class TileSource(object):
         }
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, sparseFallback=False, frame=None):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
+                sparseFallback=False, frame=None):
         raise NotImplementedError()
 
     def getTileMimeType(self):
@@ -1218,7 +1550,7 @@ class TileSource(object):
             return self.getRegion(**params)
         metadata = self.getMetadata()
         tileData = self.getTile(0, 0, 0)
-        image = PIL.Image.open(BytesIO(tileData))
+        image = _imageToPIL(tileData)
         imageWidth = int(math.floor(
             metadata['sizeX'] * 2 ** -(metadata['levels'] - 1)))
         imageHeight = int(math.floor(
@@ -1352,57 +1684,57 @@ class TileSource(object):
         :returns: regionData, formatOrRegionMime: the image data and either the
             mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
+        if not isinstance(format, (tuple, set, list)):
+            format = (format, )
         if 'tile_position' in kwargs:
             kwargs = kwargs.copy()
             kwargs.pop('tile_position', None)
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
-            # In PIL 3.4.2, you can't directly create a 0 sized image.  It was
-            # easier to do this before:
-            #  image = PIL.Image.new('RGB', (0, 0))
-            image = PIL.Image.new('RGB', (1, 1)).crop((0, 0, 0, 0))
+            image = PIL.Image.new('RGB', (0, 0))
             return _encodeImage(image, format=format, **kwargs)
         regionWidth = iterInfo['region']['width']
         regionHeight = iterInfo['region']['height']
         top = iterInfo['region']['top']
         left = iterInfo['region']['left']
-        mode = iterInfo['mode']
+        mode = None if TILE_FORMAT_NUMPY in format else iterInfo['mode']
         outWidth = iterInfo['output']['width']
         outHeight = iterInfo['output']['height']
-        # We can construct an image using PIL.Image.new:
-        #   image = PIL.Image.new('RGB', (regionWidth, regionHeight))
-        # but, for large images (larger than 4 Megapixels), PIL allocates one
-        # memory region per line.  Although it frees this, the memory manager
-        # often fails to reuse these smallish pieces.  By allocating the data
-        # memory ourselves in one block, the memory manager does a better job.
-        # Furthermode, if the source buffer isn't in RGBA format, the memory is
-        # still often inaccessible.
-        try:
-            image = PIL.Image.frombuffer(
-                mode, (regionWidth, regionHeight),
-                # PIL will reallocate buffers that aren't in 'raw', RGBA, 0, 1.
-                # See PIL documentation and code for more details.
-                b'\x00' * (regionWidth * regionHeight * 4), 'raw', 'RGBA', 0, 1)
-        except MemoryError:
-            raise TileSourceException(
-                'Insufficient memory to get region of %d x %d pixels.' % (
-                    regionWidth, regionHeight))
+        image = None
         for tile in self._tileIterator(iterInfo):
-            # Add each tile to the image.  PIL crops these if they are off the
-            # edge.
-            image.paste(tile['tile'], (tile['x'] - left, tile['y'] - top))
+            # Add each tile to the image
+            subimage, _ = _imageToNumpy(tile['tile'])
+            if image is None:
+                try:
+                    image = numpy.zeros(
+                        (regionHeight, regionWidth, subimage.shape[2]),
+                        dtype=subimage.dtype)
+                except MemoryError:
+                    raise TileSourceException(
+                        'Insufficient memory to get region of %d x %d pixels.' % (
+                            regionWidth, regionHeight))
+            x0, y0 = tile['x'] - left, tile['y'] - top
+            if x0 < 0:
+                subimage = subimage[:, -x0:]
+                x0 = 0
+            if y0 < 0:
+                subimage = subimage[-y0:, :]
+                y0 = 0
+            subimage = subimage[:min(subimage.shape[0], regionHeight - y0),
+                                :min(subimage.shape[1], regionWidth - x0)]
+            image[y0:y0 + subimage.shape[0], x0:x0 + subimage.shape[1]] = subimage
         # Scale if we need to
         outWidth = int(math.floor(outWidth))
         outHeight = int(math.floor(outHeight))
         if outWidth != regionWidth or outHeight != regionHeight:
-            image = image.resize(
+            image = _imageToPIL(image, mode).resize(
                 (outWidth, outHeight),
                 PIL.Image.BICUBIC if outWidth > regionWidth else
                 PIL.Image.LANCZOS)
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:
-            image = _letterboxImage(image, maxWidth, maxHeight, kwargs['fill'])
+            image = _letterboxImage(_imageToPIL(image, mode), maxWidth, maxHeight, kwargs['fill'])
         return _encodeImage(image, format=format, **kwargs)
 
     def getRegionAtAnotherScale(self, sourceRegion, sourceScale=None,
@@ -1810,14 +2142,19 @@ class FileTileSource(TileSource):
     @staticmethod
     def getLRUHash(*args, **kwargs):
         return strhash(
-            args[0], kwargs.get('encoding'), kwargs.get('jpegQuality'),
-            kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
-            kwargs.get('edge'))
+            args[0], kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
+            kwargs.get('edge', False), kwargs.get('style', None))
 
     def getState(self):
-        return self._getLargeImagePath() + ',' + str(self.encoding) + ',' + \
-            str(self.jpegQuality) + ',' + str(self.jpegSubsampling) + ',' + \
-            str(self.tiffCompression) + ',' + str(self.edge)
+        return '%s,%s,%s,%s,%s,%s,%s' % (
+            self._getLargeImagePath(),
+            self.encoding,
+            self.jpegQuality,
+            self.jpegSubsampling,
+            self.tiffCompression,
+            self.edge,
+            self._jsonstyle)
 
     def _getLargeImagePath(self):
         return self.largeImagePath
@@ -1858,17 +2195,26 @@ if girder:  # noqa - the whole class is allowed to exceed complexity rules
 
         @staticmethod
         def getLRUHash(*args, **kwargs):
-            return strhash(
-                str(args[0]['largeImage']['fileId']), args[0]['updated'],
-                kwargs.get('encoding'), kwargs.get('jpegQuality'),
-                kwargs.get('jpegSubsampling'), kwargs.get('tiffCompression'),
-                kwargs.get('edge'))
+            return '%s,%s,%s,%s,%s,%s,%s,%s' % (
+                args[0]['largeImage']['fileId'],
+                args[0]['updated'],
+                kwargs.get('encoding', 'JPEG'),
+                kwargs.get('jpegQuality', 95),
+                kwargs.get('jpegSubsampling', 0),
+                kwargs.get('tiffCompression', 'raw'),
+                kwargs.get('edge', False),
+                kwargs.get('style', None))
 
         def getState(self):
-            return str(self.item['largeImage']['fileId']) + ',' + \
-                str(self.item['updated']) + ',' + str(self.encoding) + ',' + \
-                str(self.jpegQuality) + ',' + str(self.jpegSubsampling) + \
-                ',' + str(self.tiffCompression) + ',' + str(self.edge)
+            return '%s,%s,%s,%s,%s,%s,%s,%s' % (
+                self.item['largeImage']['fileId'],
+                self.item['updated'],
+                self.encoding,
+                self.jpegQuality,
+                self.jpegSubsampling,
+                self.tiffCompression,
+                self.edge,
+                self._jsonstyle)
 
         def _getLargeImagePath(self):
             # If self.mayHaveadjacentFiles is True, we try to use the girder

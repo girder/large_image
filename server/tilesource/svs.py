@@ -27,7 +27,7 @@ import PIL
 
 from .base import FileTileSource, TileSourceException, nearPowerOfTwo
 from ..cache_util import LruCacheMetaclass, methodcache
-from ..constants import SourcePriority
+from ..constants import SourcePriority, TILE_FORMAT_PIL
 
 try:
     import girder
@@ -237,7 +237,7 @@ class SVSFileTileSource(FileTileSource):
         }
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         if z < 0:
             raise TileSourceException('z layer does not exist')
         try:
@@ -270,7 +270,8 @@ class SVSFileTileSource(FileTileSource):
         if svslevel['scale'] != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight),
                                PIL.Image.LANCZOS)
-        return self._outputTile(tile, 'PIL', x, y, z, pilImageAllowed, **kwargs)
+        return self._outputTile(tile, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
+                                numpyAllowed, **kwargs)
 
     def getPreferredLevel(self, level):
         """
