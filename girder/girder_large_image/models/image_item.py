@@ -361,6 +361,18 @@ class ImageItem(Item):
         tileSource = self._loadTileSource(item, **kwargs)
         return tileSource.getPixel(**kwargs)
 
+    def histogram(self, item, **kwargs):
+        """
+        Using a tile source, get a histogram of the image.
+
+        :param item: the item with the tile source.
+        :param **kwargs: optional arguments.  See the tilesource histogram
+            method.
+        :returns: histogram object.
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        return tileSource.histogram(**kwargs)
+
     def tileSource(self, item, **kwargs):
         """
         Get a tile source for an item.

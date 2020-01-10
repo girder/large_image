@@ -33,9 +33,9 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, CacheProperties
-from large_image.constants import SourcePriority, TileInputUnits
+from large_image.constants import SourcePriority, TileInputUnits, TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
-from large_image.tilesource import FileTileSource, TILE_FORMAT_PIL
+from large_image.tilesource import FileTileSource
 
 
 try:
@@ -758,7 +758,9 @@ class MapnikFileTileSource(FileTileSource):
             for styleBand in styleBands:
 
                 styleBand = styleBand.copy()
-                styleBand['band'] = self._bandNumber(styleBand.get('band'))
+                # Default to band 1 -- perhaps we should default to gray or
+                # green instead.
+                styleBand['band'] = self._bandNumber(styleBand.get('band', 1))
                 style.append(styleBand)
         if not len(style):
             for interp in ('red', 'green', 'blue', 'gray', 'palette', 'alpha'):
@@ -843,7 +845,8 @@ class MapnikFileTileSource(FileTileSource):
             if (xmin >= bounds['xmax'] or xmax <= bounds['xmin'] or
                     ymin >= bounds['ymax'] or ymax <= bounds['ymin']):
                 pilimg = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
-                return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
+                return self._outputTile(
+                    pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs)
         if overscan:
             pw = (xmax - xmin) / self.tileWidth
             py = (ymax - ymin) / self.tileHeight
@@ -868,7 +871,7 @@ class MapnikFileTileSource(FileTileSource):
             pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
         if overscan:
             pilimg = pilimg.crop((1, 1, pilimg.width - overscan, pilimg.height - overscan))
-        return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, **kwargs)
+        return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs)
 
     @staticmethod
     def _proj4Proj(proj):

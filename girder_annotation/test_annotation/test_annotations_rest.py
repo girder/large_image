@@ -380,9 +380,6 @@ class TestLargeImageAnnotationRest(object):
         publicFolder = utilities.namedFolder(admin, 'Public')
         item = Item().createItem('sample', admin, publicFolder)
         annot = Annotation().createAnnotation(item, admin, sampleAnnotation)
-        import sys
-        sys.stderr.write('%r\n' % [annot])  # ##DWM::
-        sys.stderr.write('%r\n' % [sampleAnnotation])
         resp = server.request(path='/annotation/%s' % annot['_id'], user=admin)
         assert utilities.respStatus(resp) == 200
         annot = resp.json

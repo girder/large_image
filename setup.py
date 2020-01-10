@@ -63,7 +63,7 @@ setup(
     ],
     install_requires=[
         'cachetools>=3.0.0',
-        'Pillow>=3.2.0',
+        'Pillow>=4.1.0',
         'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
         'six>=1.10.0',

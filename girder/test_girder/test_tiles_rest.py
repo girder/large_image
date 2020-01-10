@@ -1104,3 +1104,18 @@ def testTilesWithFrameNumbers(server, admin, fsAssetstore):
                           user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     assert utilities.getBody(resp, text=False) == image1
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testTilesHistogram(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False})
+    assert len(resp.json) == 3
+    assert len(resp.json[0]['hist']) == 256
+    assert resp.json[1]['samples'] == 2801664
+    assert resp.json[1]['hist'][128] == 176

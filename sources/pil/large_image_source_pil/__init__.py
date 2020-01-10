@@ -27,6 +27,7 @@ import PIL.Image
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
+from large_image.constants import TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
 
@@ -147,12 +148,13 @@ class PILFileTileSource(FileTileSource):
             self._maxSize)
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, mayRedirect=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
+                mayRedirect=False, **kwargs):
         if z != 0:
             raise TileSourceException('z layer does not exist')
         if x != 0:
             raise TileSourceException('x is outside layer')
         if y != 0:
             raise TileSourceException('y is outside layer')
-        return self._outputTile(self._pilImage, 'PIL', x, y, z,
-                                pilImageAllowed, **kwargs)
+        return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
+                                pilImageAllowed, numpyAllowed, **kwargs)
