@@ -43,6 +43,8 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-openjpeg``: A tile source using the Glymur library to read jp2 (JPEG 2000) files.
 
+  - ``large-image-source-nd2``: A tile source for reading nd2 (NIS Element) images.
+
   - ``large-image-source-test``: A tile source that generates test tiles, including a simple fractal pattern.  Useful for testing extreme zoom levels.
 
   - ``large-image-source-dummy``: A tile source that does nothing.

@@ -3,6 +3,7 @@ girder>=3.0.4
 girder-jobs>=3.0.3
 -e sources/dummy
 -e sources/gdal
+-e sources/nd2
 -e sources/openjpeg
 -e sources/openslide
 -e sources/pil
