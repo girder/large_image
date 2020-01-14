@@ -114,7 +114,7 @@ class ImageItem(Item):
             outputName=outputName,
             outputDir=TemporaryDirectory(),
             girder_result_hooks=[
-                GirderUploadToItem(str(item['_id']), True),
+                GirderUploadToItem(str(item['_id']), False),
             ]
         )
         return job.job
