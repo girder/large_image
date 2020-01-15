@@ -22,8 +22,8 @@ from . import OpenjpegFileTileSource
 
 class OpenjpegGirderTileSource(OpenjpegFileTileSource, GirderTileSource):
     """
-    Provides tile access to Girder items with an SVS file or other files that
-    the openslide library can read.
+    Provides tile access to Girder items with a jp2 file or other files that
+    the openjpeg library can read.
     """
 
     cacheName = 'tilesource'
