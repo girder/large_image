@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Added nd2 tile source (#419)
+
 ## Version 1.0.3
 
 ### Features
@@ -14,6 +17,11 @@
 
 ### Improvements
 - Better handling of imported file formats with adjacent files (#424)
+
+## Version 1.0.2
+
+### Features
+- Added nd2 tile source
 
 ## Version 1.0.2
 

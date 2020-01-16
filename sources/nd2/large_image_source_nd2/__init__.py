@@ -18,10 +18,9 @@
 
 import math
 import nd2reader
-import os
 import six
-import struct
 import threading
+import types
 import warnings
 
 from pkg_resources import DistributionNotFound, get_distribution
@@ -77,7 +76,7 @@ class ND2FileTileSource(FileTileSource):
             self._nd2 = nd2reader.ND2Reader(self._largeImagePath)
         except (UnicodeDecodeError,
                 nd2reader.exceptions.InvalidVersionError,
-                nd2reader.exceptions.EmotyFileError):
+                nd2reader.exceptions.EmptyFileError):
             raise TileSourceException('File cannot be opened via nd2reader.')
         self._logger = config.getConfig('logger')
         self._tileLock = threading.RLock()
@@ -124,140 +123,58 @@ class ND2FileTileSource(FileTileSource):
         # self._nd2.ndim   6
         # self._nd2.pixel_type   numpy.float64
         # self._nd2.sizes  {'x': 1024, 'y': 1022, 'c': 4, 't': 1, 'z': 2500, 'v': 2500}
-        self._metadata = self._getND2Metadata()
+        self._getND2Metadata()
 
-    def _getND2Chunk_CustomData(self, chunk, data):
-        if len(chunk['parts']) == 2 and chunk['parts'][1] in {
-                b'X', b'Y', b'Z', b'Z1',
-                b'Camera_ExposureTime1',
-                b'AcqTimesCache'}:
-            if len(data) % 8:
-                return
-            chunk['data'] = struct.unpack('<%dd' % (len(data) / 8), data)
-        # Other CustomData could be processed here
-
-    def _getND2Chunk_process_lv(self, chunk, data):
-        origdata = data
-        chunk['data'] = results = {}
-        while len(data) > 2:
-            dtype, keylen = struct.unpack('BB', data[:2])
-            if dtype < 1 or dtype > 11 or keylen == 0:
-                self._logger.debug(
-                    'Stopped reading LV record (%r), unknown dtype %d, %d bytes into record',
-                    chunk, dtype, len(origdata) - len(data))
-                break
-            if data[keylen * 2:keylen * 2 + 2] != b'\x00\x00':
-                self._logger.debug(
-                    'Stopped reading LV record (%r), unterminated key, %d bytes into record',
-                    chunk, len(origdata) - len(data))
-                break
-            key = data[2:keylen * 2].decode('utf16')
-            data = data[keylen * 2 + 2:]
-            if dtype in {1, 2, 3, 4, 5, 6, 7}:
-                dlen = {1: 1, 2: 4, 3: 4, 4: 8, 5: 8, 6: 8, 7: 8}[dtype]
-                value = struct.unpack('<%s' % {
-                    1: 'B', 2: 'l', 3: 'L', 4: 'q', 5: 'Q', 6: 'd', 7: 'Q',
-                }[dtype], data[:dlen])[0]
-                data = data[dlen:]
-            elif dtype == 8:
-                value = None
-                for idx in range(0, len(data), 2):
-                    if data[idx:idx + 2] == b'\x00\x00':
-                        value = data[:idx].decode('utf16')
-                        data = data[idx + 2:]
-                        break
-                if value is None:
-                    return
-            elif dtype == 9:
-                dlen = struct.unpack('<Q', data[:8])[0]
-                value = data[8:8 + dlen]
-                data = data[8 + dlen:]
-            elif dtype in {10, 11}:
-                value = None
-                count = struct.unpack('<L', data[:4])[0]
-                if count:
-                    # pos = struct.unpack('<LQ', data[4:12])[0]
-                    data = data[12:]
-                    # This isn't generally correct
-                    # value = struct.unpack(
-                    #     '<%dQ' % count, origdata[pos:pos + count * 8]) if dtype == 11 else None
-                else:
-                    self._logger.debug(
-                        'Stopped reading LV record (%r), levels record has no '
-                        'count, %d bytes into record',
-                        chunk, len(origdata) - len(data))
-                    break
-            if value not in {None, b'', ''}:
-                results[key] = value
-
-    def _getND2Chunk_ImageMetadataLV(self, chunk, data):
-        self._getND2Chunk_process_lv(chunk, data)
-
-    def _getND2Chunk_ImageEventsLV(self, chunk, data):
-        self._getND2Chunk_process_lv(chunk, data)
-
-    def _getND2Chunk_ImageAttributesLV(self, chunk, data):
-        self._getND2Chunk_process_lv(chunk, data)
-
-    def _getND2Chunk_ImageCalibrationLV(self, chunk, data):
-        self._getND2Chunk_process_lv(chunk, data)
-
-    def _getND2Chunk_ImageMetadataSeqLV(self, chunk, data):
-        self._getND2Chunk_process_lv(chunk, data)
-
-    def _getND2Chunk_ImageTextInfoLV(self, chunk, data):
-        self._getND2Chunk_process_lv(chunk, data)
+    def _getND2MetadataCleanDict(self, olddict):
+        newdict = {}
+        for key, value in olddict.items():
+            if value not in (None, b'', ''):
+                if isinstance(key, six.binary_type):
+                    key = key.decode()
+                if (isinstance(value, dict) and len(value) == 1 and
+                        list(value.keys())[0] in (b'', '')):
+                    value = list(value.values())[0]
+                if isinstance(value, six.binary_type):
+                    value = value.decode()
+                if isinstance(value, dict):
+                    value = self._getND2MetadataCleanDict(value)
+                    if not len(value):
+                        continue
+                if isinstance(value, list):
+                    if not len(value):
+                        continue
+                    for idx, entry in enumerate(value):
+                        if isinstance(entry, six.binary_type):
+                            entry = entry.decode()
+                        if isinstance(entry, dict):
+                            entry = self._getND2MetadataCleanDict(entry)
+                        value[idx] = entry
+                newdict[key] = value
+        return newdict
 
     def _getND2Metadata(self):
-        chunkMapSig = b'ND2 CHUNK MAP SIGNATURE 0000001'
-        fileMapSig = b'ND2 FILEMAP SIGNATURE NAME 0001'
-        with open(self._largeImagePath, 'rb') as fptr:
-            fptr.seek(-40, os.SEEK_END)
-            data = fptr.read(40)
-            if len(data) != 40 or not data.startswith(chunkMapSig):
-                return
-            pos = struct.unpack('<Q', data[len(chunkMapSig) + 1:])[0]
-            fptr.seek(pos, os.SEEK_SET)
-            data = fptr.read(48)
-            if len(data) != 48 or not data[16:].startswith(fileMapSig):
-                return
-            headerlen, datalen = struct.unpack('<LQ', data[4:16])
-            fptr.seek(pos + headerlen + 16, os.SEEK_SET)
-            data = fptr.read(datalen)
-            chunks = {}
-            while b'!' in data:
-                chunkname, data = data.split(b'!', 1)
-                if len(data) < 16:
-                    break
-                chunkpos, chunklen = struct.unpack('<QQ', data[:16])
-                data = data[16:]
-                chunks[chunkname] = {
-                    'pos': chunkpos,
-                    'len': chunklen,
-                    'name': chunkname,
-                    'parts': chunkname.split(b'|'),
-                }
-            self._logger.debug('Chunks: %r' % [key.decode() for key in sorted(chunks.keys())])
-            for chunkname, chunk in chunks.items():
-                func = None
-                for partidx in range(len(chunk['parts']), 0, -1):
-                    funcname = '_getND2Chunk_' + (
-                        b'_'.join(chunk['parts'][:partidx])).decode().replace(' ', '_')
-                    func = getattr(self, funcname, None)
-                    if func:
-                        break
-                if func and chunk['len'] <= 16 * 1024 * 1024:
-                    fptr.seek(chunk['pos'])
-                    data = fptr.read(16 + len(chunkname) + 1)
-                    if data[16:-1] != chunkname or data[-1:] != b'!':
-                        continue
-                    headerlen, datalen = struct.unpack('<LQ', data[4:16])
-                    if datalen != chunk['len']:
-                        continue
-                    fptr.seek(chunk['pos'] + 16 + headerlen)
-                    data = fptr.read(datalen)
-                    func(chunk, data)
-        return chunks
+        self._metadata = self._nd2.metadata.copy()
+        for key in {
+                'acquisition_times', 'app_info', 'camera_exposure_time',
+                'camera_temp', 'channels', 'custom_data', 'date', 'events',
+                'experiment', 'fields_of_view', 'frames', 'height',
+                'image_attributes', 'image_calibration', 'image_events',
+                'image_metadata', 'image_metadata_sequence', 'image_text_info',
+                'num_frames', 'pfs_offset', 'pfs_status', 'pixel_microns',
+                'roi_metadata', 'total_images_per_channel', 'width', 'x_data',
+                'y_data', 'z_coordinates', 'z_data', 'z_levels'}:
+            if key in self._metadata:
+                continue
+            try:
+                value = getattr(self._nd2.parser._raw_metadata, key, None)
+            except AttributeError:
+                continue
+            if isinstance(value, types.GeneratorType):
+                value = list(value)
+            if isinstance(value, dict):
+                value = self._getND2MetadataCleanDict(value)
+            if value is not None and value != [] and value != {}:
+                self._metadata[key] = value
 
     def getNativeMagnification(self):
         """
@@ -289,14 +206,10 @@ class ND2FileTileSource(FileTileSource):
         :returns: metadata dictonary.
         """
         result = super(ND2FileTileSource, self).getMetadata()
-        result['nd2'] = self._nd2.metadata
+        result['nd2'] = self._metadata
         result['nd2_sizes'] = sizes = self._nd2.sizes
         result['nd2_axes'] = baseaxes = self._nd2.axes
         result['nd2_iter_axes'] = self._nd2.iter_axes
-        result['nd2_file_metadata'] = {}
-        for chunkname, chunk in self._metadata.items():
-            if 'data' in chunk:
-                result['nd2_file_metadata'][chunkname.decode()] = chunk['data']
         # We may want to reformat the frames to standardize this across sources
         # An example of frames from OMETiff: {
         #   "DeltaT": "3532.529541",
@@ -327,16 +240,14 @@ class ND2FileTileSource(FileTileSource):
                     cdidx += ref[axis] * basis
                     basis *= sizes[axis]
             for mkey, fkey in [
-                (b'CustomData|X', 'PositionX'),
-                (b'CustomData|Y', 'PositionY'),
-                (b'CustomData|Z1', 'PositionZ'),
-                (b'CustomData|Z', 'PositionZ'),
-                (b'CustomData|AcqTimesCache', 'DeltaT'),
-                (b'CustomData|Camera_ExposureTime1', 'ExposureTime'),
+                ('x_data', 'PositionX'),
+                ('y_data', 'PositionY'),
+                ('z_data', 'PositionZ'),
+                ('acquisition_times', 'DeltaT'),
+                ('camera_exposure_time', 'ExposureTime'),
             ]:
-                if self._metadata.get(mkey, {}).get('data'):
-                    frame[fkey] = self._metadata[mkey]['data'][
-                        cdidx % len(self._metadata[mkey]['data'])]
+                if mkey in self._metadata:
+                    frame[fkey] = self._metadata[mkey][cdidx % len(self._metadata[mkey])]
             frames.append(frame)
         return result
 
