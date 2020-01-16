@@ -125,19 +125,22 @@ class OpenjpegFileTileSource(FileTileSource):
         """
         self._associatedImages = {}
         for box in self._openjpeg.box:
-            if box.box_id == self._xmlTag or box.box_id in self._boxToTag:
+            box_id = box.box_id
+            if box_id == 'xxxx':
+                box_id = getattr(box, 'claimed_box_id', box.box_id)
+            if box_id == self._xmlTag or box_id in self._boxToTag:
                 data = self._readbox(box)
                 if data is None:
                     continue
-                if box.box_id == self._xmlTag:
+                if box_id == self._xmlTag:
                     self._parseMetadataXml(data)
                     continue
                 try:
-                    self._associatedImages[self._boxToTag[box.box_id]] = PIL.Image.open(
+                    self._associatedImages[self._boxToTag[box_id]] = PIL.Image.open(
                         BytesIO(data))
                 except Exception:
                     pass
-            if box.box_id == 'jp2c':
+            if box_id == 'jp2c':
                 for segment in box.codestream.segment:
                     if segment.marker_id == 'CME' and hasattr(segment, 'ccme'):
                         self._parseMetadataXml(segment.ccme)
