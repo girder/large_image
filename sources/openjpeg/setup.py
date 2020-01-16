@@ -42,7 +42,8 @@ setup(
     ],
     install_requires=[
         'large-image>=1.0.0',
-        'glymur>=0.8.18,<0.9',
+        'glymur>=0.8.18,<0.9 ; python_version < "3.6"',
+        'glymur>=0.8.18 ; python_version >= "3.6"',
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
