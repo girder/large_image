@@ -237,8 +237,9 @@ class ND2FileTileSource(FileTileSource):
             basis = 1
             for axis in baseaxes:
                 if axis not in {'x', 'y', 'c'}:
-                    cdidx += ref[axis] * basis
-                    basis *= sizes[axis]
+                    cdidx += ref.get(axis, 0) * basis
+                    if axis in ref:
+                        basis *= sizes[axis]
             for mkey, fkey in [
                 ('x_data', 'PositionX'),
                 ('y_data', 'PositionY'),

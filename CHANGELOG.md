@@ -21,11 +21,6 @@
 ## Version 1.0.2
 
 ### Features
-- Added nd2 tile source
-
-## Version 1.0.2
-
-### Features
 - Add style options for all tile sources to remap channels and colors (#397)
 - Better support for high bit-depth images (#397)
 
