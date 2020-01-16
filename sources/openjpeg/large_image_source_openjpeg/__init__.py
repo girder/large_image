@@ -47,7 +47,7 @@ warnings.filterwarnings('ignore', category=UserWarning, module='glymur')
 @six.add_metaclass(LruCacheMetaclass)
 class OpenjpegFileTileSource(FileTileSource):
     """
-    Provides tile access to SVS files and other files the openjpeg library can
+    Provides tile access to jp2 files and other files the openjpeg library can
     read.
     """
 
