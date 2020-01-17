@@ -37,7 +37,9 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-pil``: A tile source for small images via the Python Imaging Library (Pillow).
 
-  - ``large-image-source-mapnik``: A tile source for reading geotiff and netcdf files via Mapnik and GDAL.
+  - ``large-image-source-gdal``: A tile source for reading geotiff files via GDAL.  This handles source data with more complex transforms than the mapnik tile source.
+
+  - ``large-image-source-mapnik``: A tile source for reading geotiff and netcdf files via Mapnik and GDAL.  This handles more vector issues than the gdal tile source.
 
   - ``large-image-source-openjpeg``: A tile source using the Glymur library to read jp2 (JPEG 2000) files.
 

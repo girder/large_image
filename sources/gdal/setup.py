@@ -23,10 +23,10 @@ def prerelease_local_scheme(version):
 
 
 setup(
-    name='large-image-source-mapnik',
+    name='large-image-source-gdal',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
-    description='A Mapnik/GDAL tilesource for large_image',
+    description='A GDAL tilesource for large_image',
     long_description='See the large-image package for more details.',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -42,8 +42,9 @@ setup(
     ],
     install_requires=[
         'large-image>=1.0.0',
-        'large-image-source-gdal',
-        'mapnik',
+        'gdal',
+        'palettable',
+        'pyproj>=2.2.0',
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
@@ -54,10 +55,10 @@ setup(
     url='https://github.com/girder/large_image',
     entry_points={
         'large_image.source': [
-            'mapnik = large_image_source_mapnik:MapnikFileTileSource'
+            'gdal = large_image_source_gdal:GDALFileTileSource'
         ],
         'girder_large_image.source': [
-            'mapnik = large_image_source_mapnik.girder_source:MapnikGirderTileSource'
+            'gdal = large_image_source_gdal.girder_source:GDALGirderTileSource'
         ]
     },
 )

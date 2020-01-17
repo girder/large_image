@@ -2,7 +2,7 @@
 girder>=3.0.4
 girder-jobs>=3.0.3
 -e sources/dummy
--e sources/mapnik
+-e sources/gdal
 -e sources/openjpeg
 -e sources/openslide
 -e sources/pil
@@ -10,6 +10,8 @@ girder-jobs>=3.0.3
 -e sources/tiff
 # must be after sources/tiff
 -e sources/ometiff
+# must be after source/gdal
+-e sources/mapnik
 # Get both the girder and worker dependencies so tasks can be used stand-alone
 -e tasks[girder,worker]
 -e girder/.

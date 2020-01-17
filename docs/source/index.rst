@@ -17,6 +17,7 @@ large_image also works as a Girder plugin with optional annotation support.
    tilesource_options
    large_image/modules
    large_image_source_dummy/modules
+   large_image_source_gdal/modules
    large_image_source_mapnik/modules
    large_image_source_ometiff/modules
    large_image_source_openjpeg/modules
