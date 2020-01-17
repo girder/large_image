@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.0.2
 
 ### Features
 - Add style options for all tile sources to remap channels and colors (#397)
@@ -9,6 +9,10 @@
 ### Improvements
 - Make it easier to load the annotation-enable web viewers (#402)
 - Improved support for z-loops in OMETiff files (#397)
+- Support using Glymur 0.9.1 (#411)
+
+### Bug Fixes
+- Fixed an issue where a Girder image conversion task could raise an error about a missing file (#409)
 
 ## Version 1.0.1
 
