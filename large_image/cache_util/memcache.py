@@ -126,6 +126,8 @@ class MemCache(cachetools.Cache):
         except pylibmc.ServerDown:
             self.logError(pylibmc.ServerDown, config.getConfig('logprint').info,
                           'Memcached ServerDown')
+        except pylibmc.TooBig:
+            pass
         except pylibmc.Error as exc:
             # memcached won't cache items larger than 1 Mb, but this returns a
             # 'SUCCESS' error.  Raise other errors.
