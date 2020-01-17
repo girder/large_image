@@ -16,12 +16,16 @@
 #  limitations under the License.
 ##############################################################################
 
+import array
 import math
 import nd2reader
+import numpy
 import six
 import threading
 import types
 import warnings
+
+from six.moves import range
 
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -140,6 +144,9 @@ class ND2FileTileSource(FileTileSource):
                     value = self._getND2MetadataCleanDict(value)
                     if not len(value):
                         continue
+                if (isinstance(value, types.GeneratorType) or
+                        isinstance(value, (numpy.ndarray, array.array, range))):
+                    value = list(value)
                 if isinstance(value, list):
                     if not len(value):
                         continue
@@ -154,6 +161,11 @@ class ND2FileTileSource(FileTileSource):
 
     def _getND2Metadata(self):
         self._metadata = self._nd2.metadata.copy()
+        for key, value in self._metadata.items():
+            if (isinstance(value, types.GeneratorType) or
+                    isinstance(value, (numpy.ndarray, array.array, range))):
+                value = list(value)
+            self._metadata[key] = value
         for key in {
                 'acquisition_times', 'app_info', 'camera_exposure_time',
                 'camera_temp', 'channels', 'custom_data', 'date', 'events',
@@ -169,7 +181,8 @@ class ND2FileTileSource(FileTileSource):
                 value = getattr(self._nd2.parser._raw_metadata, key, None)
             except AttributeError:
                 continue
-            if isinstance(value, types.GeneratorType):
+            if (isinstance(value, types.GeneratorType) or
+                    isinstance(value, (numpy.ndarray, array.array, range))):
                 value = list(value)
             if isinstance(value, dict):
                 value = self._getND2MetadataCleanDict(value)
@@ -198,7 +211,7 @@ class ND2FileTileSource(FileTileSource):
             'mm_y': mm_y,
         }
 
-    def getMetadata(self):
+    def getMetadata(self):  # noqa
         """
         Return a dictionary of metadata containing levels, sizeX, sizeY,
         tileWidth, tileHeight, magnification, mm_x, mm_y, and frames.
@@ -206,7 +219,21 @@ class ND2FileTileSource(FileTileSource):
         :returns: metadata dictonary.
         """
         result = super(ND2FileTileSource, self).getMetadata()
+
+        # If two imgeas haven't panned by this factor of their size, treat them
+        # as the same IndexXY
+        separateXY = 0.25
+        x_sep_um = y_sep_um = 0
+        if result['mm_x']:
+            w_um = result['sizeX'] * result['mm_x'] * 1000
+            h_um = result['sizeY'] * result['mm_y'] * 1000
+            x_sep_um = w_um * separateXY
+            y_sep_um = h_um * separateXY
+
         result['nd2'] = self._metadata
+        result['nd2'].pop('custom_data', None)
+        result['nd2'].pop('image_metadata', None)
+        result['nd2'].pop('image_metadata_sequence', None)
         result['nd2_sizes'] = sizes = self._nd2.sizes
         result['nd2_axes'] = baseaxes = self._nd2.axes
         result['nd2_iter_axes'] = self._nd2.iter_axes
@@ -223,16 +250,23 @@ class ND2FileTileSource(FileTileSource):
         # }
         axes = self._nd2.iter_axes
         result['frames'] = frames = []
+        last_xy = None
+        xy_set = None
+        last_z = None
+        z_index = 0
         for idx in range(len(self._nd2)):
-            frame = {}
+            frame = {'Frame': idx, 'TheZ': 0, 'TheV': 0}
             basis = 1
             ref = {}
             for axis in axes:
                 ref[axis] = (idx // basis) % sizes[axis]
                 frame['The' + axis.upper()] = (idx // basis) % sizes[axis]
                 basis *= sizes.get(axis, 1)
-            if 'z_coordinates' in self._nd2.metadata:
-                frame['PositionZ'] = self._nd2.metadata['z_coordinates'][ref.get('z', 0)]
+            if ('channels' in self._metadata and 'c' in ref and
+                    ref['c'] < len(self._metadata['channels'])):
+                frame['Channel'] = self._metadata['channels'][ref['c']]
+            if 'z_coordinates' in self._metadata:
+                frame['PositionZ'] = self._metadata['z_coordinates'][ref.get('z', 0)]
             cdidx = 0
             basis = 1
             for axis in baseaxes:
@@ -240,6 +274,7 @@ class ND2FileTileSource(FileTileSource):
                     cdidx += ref.get(axis, 0) * basis
                     if axis in ref:
                         basis *= sizes[axis]
+            frame['Index'] = cdidx
             for mkey, fkey in [
                 ('x_data', 'PositionX'),
                 ('y_data', 'PositionY'),
@@ -249,6 +284,21 @@ class ND2FileTileSource(FileTileSource):
             ]:
                 if mkey in self._metadata:
                     frame[fkey] = self._metadata[mkey][cdidx % len(self._metadata[mkey])]
+            x, y = frame.get('PositionX'), frame.get('PositionY')
+            if (x is not None and y is not None and (
+                    last_xy is None or
+                    abs(x - last_xy[0]) > x_sep_um or abs(y - last_xy[1]) > y_sep_um)):
+                last_xy = (x, y)
+                xy_set = xy_set + 1 if xy_set is not None else 0
+                z_index = 0
+                last_z = frame.get('PositionZ')
+            if frame.get('PositionZ') != last_z:
+                last_z = frame.get('PositionZ')
+                z_index += 1
+            if x is not None and y is not None:
+                frame['IndexXY'] = xy_set
+            if last_z is not None:
+                frame['IndexZ'] = z_index
             frames.append(frame)
         return result
 
