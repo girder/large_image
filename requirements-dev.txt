@@ -17,17 +17,6 @@ girder-jobs>=3.0.3
 
 # External dependencies
 pip>=9
-coverage
-flake8
-flake8-blind-except
-flake8-bugbear; python_version >= '3.5'
-flake8-docstrings
-flake8-quotes
-pytest>=3.6
-pytest-cov>=2.6
-pytest-girder>=3.0.4
-pytest-xdist
-mock
 tox
 twine
 virtualenv

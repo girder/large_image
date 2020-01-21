@@ -89,6 +89,9 @@ def _imageToPIL(image, setMode=None):
     if isinstance(image, numpy.ndarray):
         mode = 'L'
         if len(image.shape) == 3:
+            # Fallback for hyperspectral data to just use the first three bands
+            if image.shape[2] > 4:
+                image = image[:, :, :3]
             mode = ['L', 'LA', 'RGB', 'RGBA'][image.shape[2] - 1]
         if len(image.shape) == 3 and image.shape[2] == 1:
             image = numpy.resize(image, image.shape[:2])
@@ -121,7 +124,7 @@ def _imageToNumpy(image):
         image = numpy.asarray(image)
     else:
         if len(image.shape) == 3:
-            mode = ['L', 'LA', 'RGB', 'RGBA'][image.shape[2] - 1]
+            mode = ['L', 'LA', 'RGB', 'RGBA'][(image.shape[2] - 1) if image.shape[2] <= 4 else 3]
         else:
             mode = 'L'
     if len(image.shape) == 2:
@@ -1200,7 +1203,7 @@ class TileSource(object):
                     entry['hist'] = entry['hist'].astype(numpy.float) / entry['samples']
         return results
 
-    def _scanForMinMax(self, dtype, frame=None, analysisSize=1024):
+    def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, **kwargs):
         """
         Scan the image at a lower resolution to find the minimum and maximum
         values.
@@ -1220,7 +1223,7 @@ class TileSource(object):
                 output={'maxWidth': min(self.sizeX, analysisSize),
                         'maxHeight': min(self.sizeY, analysisSize)},
                 resample=False,
-                frame=frame)
+                frame=frame, **kwargs)
             if self._bandRanges[frame]:
                 config.getConfig('logger').info('Style range is %r' % self._bandRanges[frame])
         finally:
@@ -1289,14 +1292,17 @@ class TileSource(object):
         output = numpy.zeros((image.shape[0], image.shape[1], 4), numpy.float)
         for entry in style:
             bandidx = 0 if image.shape[2] <= 2 else 1
-            band = image[:, :, 0] if image.shape[2] <= 2 else image[:, :, 1]
+            band = None
             if (isinstance(entry.get('band'), six.integer_types) and
                     entry['band'] >= 1 and entry['band'] <= image.shape[2]):
-                band = image[:, :, entry['band'] - 1]
+                bandidx = entry['band'] - 1
             composite = entry.get('composite', 'lighten')
+            if (hasattr(self, '_bandnames') and entry.get('band') and
+                    str(entry['band']).lower() in self._bandnames and
+                    image.shape[2] > self._bandnames[str(entry['band']).lower()]):
+                bandidx = self._bandnames[str(entry['band']).lower()]
             if entry.get('band') == 'red' and image.shape[2] > 2:
                 bandidx = 0
-                band = image[:, :, 0]
             elif entry.get('band') == 'blue' and image.shape[2] > 2:
                 bandidx = 2
                 band = image[:, :, 2]
@@ -1305,6 +1311,8 @@ class TileSource(object):
                 band = (image[:, :, -1] if image.shape[2] in (2, 4) else
                         numpy.full(image.shape[:2], 255, numpy.uint8))
                 composite = entry.get('composite', 'multiply')
+            if band is None:
+                band = image[:, :, bandidx]
             palette = numpy.array([
                 PIL.ImageColor.getcolor(clr, 'RGBA') for clr in entry.get(
                     'palette', ['#000', '#FFF']
@@ -1326,7 +1334,7 @@ class TileSource(object):
                 clrs = numpy.interp(band, palettebase, palette[:, channel])
                 if composite == 'multiply':
                     output[:, :, channel] = numpy.multiply(
-                        output[:, :, channel], numpy.where(keep, clrs, 1))
+                        output[:, :, channel], numpy.where(keep, clrs / 255, 1))
                 else:
                     output[:, :, channel] = numpy.maximum(
                         output[:, :, channel], numpy.where(keep, clrs, 0))
@@ -1348,7 +1356,9 @@ class TileSource(object):
                 if not getattr(self, '_skipStyle', False):
                     tile = self._applyStyle(tile, self.style, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
-            extend = numpy.zeros((self.tileHeight, self.tileWidth, tile.shape[2]))
+            extend = numpy.zeros(
+                (self.tileHeight, self.tileWidth, tile.shape[2]),
+                dtype=tile.dtype)
             extend[:min(self.tileHeight, tile.shape[0]),
                    :min(self.tileWidth, tile.shape[1])] = tile
             tile = extend
