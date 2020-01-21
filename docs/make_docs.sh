@@ -5,6 +5,9 @@ set -e
 cd "$(dirname $0)"
 stat make_docs.sh
 
+pushd ..
+pip install -e . -r requirements-dev.txt --find-links https://girder.github.io/large_image_wheels
+popd
 # git clean -fxd .
 
 sphinx-apidoc -f -o source/large_image ../large_image
