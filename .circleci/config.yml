@@ -1,14 +1,19 @@
-version: 2
-jobs:
-  build:
+version: 2.1
+executors:
+  toxandnode:
     working_directory: ~/project
     docker:
       - image: zachmullen/tox-and-node
       - image: memcached
       - image: circleci/mongo:4.0-ram
       - image: rabbitmq
+commands:
+  tox:
+    description: "Run tox"
+    parameters:
+      env:
+        type: string
     steps:
-      - checkout
       - run:
           name: Preinstall phantomjs to work around an npm permission issue
           command: npm install -g phantomjs-prebuilt --unsafe-perm
@@ -16,7 +21,10 @@ jobs:
           name: Run tests via tox
           # Piping through cat does less buffering of the output but can
           # consume the exit code
-          command: tox | cat; test ${PIPESTATUS[0]} -eq 0
+          command: tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+  coverage:
+    description: "Upload coverage"
+    steps:
       - run:
           name: Install Codecov client
           command: pip install codecov
@@ -24,6 +32,42 @@ jobs:
           name: Upload coverage
           # Retry as codecov can be flaky
           command: for i in $(seq 1 10); do [ %i -gt 1 ] && echo "retrying $i" && sleep 5; codecov --required --disable search pycov gcov --root project --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml && s=0 && break || s=$?; done; (exit $s)
+
+jobs:
+  py27:
+    executor: toxandnode
+    steps:
+      - checkout
+      - tox:
+          env: py27
+      - coverage
+  py35:
+    executor: toxandnode
+    steps:
+      - checkout
+      - tox:
+          env: py35
+      - coverage
+  py36:
+    executor: toxandnode
+    steps:
+      - checkout
+      - tox:
+          env: py36
+      - coverage
+  py37:
+    executor: toxandnode
+    steps:
+      - checkout
+      - tox:
+          env: py37
+      - coverage
+  lint_and_docs:
+    executor: toxandnode
+    steps:
+      - checkout
+      - tox:
+          env: docs,flake8,lintclient,lintannotationclient
   release:
     docker:
       - image: circleci/python:3.7
@@ -45,7 +89,35 @@ workflows:
   version: 2
   ci:
     jobs:
-      - build:
+      - py27:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
+      - py35:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
+      - py36:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
+      - py37:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
+      - lint_and_docs:
           filters:
             tags:
               only: /^v.*/
@@ -54,7 +126,11 @@ workflows:
                 - gh-pages
       - release:
           requires:
-            - build
+            - py27
+            - py35
+            - py36
+            - py37
+            - lint_and_docs
           filters:
             tags:
               only: /^v.*/
