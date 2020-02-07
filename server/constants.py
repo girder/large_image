@@ -35,11 +35,13 @@ class PluginSettings(object):
 class SourcePriority(object):
     NAMED = 0    # Explicitly requested
     PREFERRED = 1
-    HIGH = 2
-    MEDIUM = 3
-    LOW = 4
-    FALLBACK = 5
-    MANUAL = 6   # Will never be selected automatically
+    HIGHER = 2
+    HIGH = 3
+    MEDIUM = 4
+    LOW = 5
+    LOWER = 6
+    FALLBACK = 7
+    MANUAL = 8   # Will never be selected automatically
 
 
 TILE_FORMAT_IMAGE = 'image'

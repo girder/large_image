@@ -372,31 +372,31 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
     def testSourceErrors(self):
         from girder.plugins.large_image.tilesource import TileSourceException
-        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikFileTileSource
         filepath = os.path.join(
             os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff')
         with six.assertRaisesRegex(self, TileSourceException, 'must not be geographic'):
-            MapnikTileSource(filepath, 'EPSG:4326')
+            MapnikFileTileSource(filepath, 'EPSG:4326')
         filepath = os.path.join(
             os.path.dirname(__file__), 'test_files', 'zero_gi.tif')
         with six.assertRaisesRegex(self, TileSourceException, 'cannot be opened via'):
-            MapnikTileSource(filepath)
+            MapnikFileTileSource(filepath)
         filepath = os.path.join(
             os.path.dirname(__file__), 'test_files', 'yb10kx5k.png')
         with six.assertRaisesRegex(self, TileSourceException, 'does not have a projected scale'):
-            MapnikTileSource(filepath)
+            MapnikFileTileSource(filepath)
 
     def testStereographicProjection(self):
         from girder.plugins.large_image.tilesource import TileSourceException
-        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikFileTileSource
 
         filepath = os.path.join(os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff')
         # We will fail if we ask for a stereographic projection and don't
         # specify unitsPerPixel
         with six.assertRaisesRegex(self, TileSourceException, 'unitsPerPixel must be specified'):
-            MapnikTileSource(filepath, projection='EPSG:3411')
+            MapnikFileTileSource(filepath, projection='EPSG:3411')
         # But will pass if unitsPerPixel is specified
-        MapnikTileSource(filepath, projection='EPSG:3411', unitsPerPixel=150000)
+        MapnikFileTileSource(filepath, projection='EPSG:3411', unitsPerPixel=150000)
 
         # We can also upload and access this via a rest call
         file = self._uploadFile(filepath)
@@ -408,19 +408,19 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
 
     def testProj4Proj(self):
         # Test obtaining pyproj.Proj projection values
-        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikFileTileSource
 
-        proj = MapnikTileSource._proj4Proj(b'epsg:4326')
-        self.assertEqual(MapnikTileSource._proj4Proj(u'epsg:4326').srs, proj.srs)
-        self.assertEqual(MapnikTileSource._proj4Proj('proj4:EPSG:4326').srs, proj.srs)
-        self.assertIsNone(MapnikTileSource._proj4Proj(4326))
+        proj = MapnikFileTileSource._proj4Proj(b'epsg:4326')
+        self.assertEqual(MapnikFileTileSource._proj4Proj(u'epsg:4326').srs, proj.srs)
+        self.assertEqual(MapnikFileTileSource._proj4Proj('proj4:EPSG:4326').srs, proj.srs)
+        self.assertIsNone(MapnikFileTileSource._proj4Proj(4326))
 
     def testConvertProjectionUnits(self):
         from girder.plugins.large_image.tilesource import TileSourceException
-        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikFileTileSource
         filepath = os.path.join(
             os.path.dirname(__file__), 'test_files', 'rgb_geotiff.tiff')
-        tsNoProj = MapnikTileSource(filepath)
+        tsNoProj = MapnikFileTileSource(filepath)
 
         result = tsNoProj._convertProjectionUnits(
             -13024380, 3895303, None, None, None, None, 'EPSG:3857')
@@ -455,7 +455,7 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
             tsNoProj._convertProjectionUnits(
                 -117.5, None, -117, None, None, None, 'EPSG:4326')
 
-        tsProj = MapnikTileSource(filepath, 'EPSG:3857')
+        tsProj = MapnikFileTileSource(filepath, 'EPSG:3857')
         result = tsProj._convertProjectionUnits(
             -13024380, 3895303, None, None, None, None, 'EPSG:3857')
         self.assertAlmostEqual(result[0], -13024380, 0)
@@ -463,10 +463,10 @@ class LargeImageSourceMapnikTest(common.LargeImageCommonTest):
         self.assertEqual(result[2:], (None, None, 'projection'))
 
     def testGuardAgainstBadLatLong(self):
-        from girder.plugins.large_image.tilesource.mapniksource import MapnikTileSource
+        from girder.plugins.large_image.tilesource.mapniksource import MapnikFileTileSource
         filepath = os.path.join(
             os.path.dirname(__file__), 'test_files', 'global_dem.tif')
-        source = MapnikTileSource(filepath)
+        source = MapnikFileTileSource(filepath)
         bounds = source.getBounds(srs='EPSG:4326')
 
         self.assertEqual(bounds['xmin'], -180.00416667)
