@@ -91,9 +91,10 @@ class ND2FileTileSource(FileTileSource):
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1)
         frames = self._nd2.sizes.get('c', 0) * self._nd2.metadata.get(
             'total_images_per_channel', 0)
-        self._nd2.iter_axes = sorted(a for a in self._nd2.axes if a not in {'x', 'y', 'v'})
+        self._nd2.iter_axes = sorted(
+            [a for a in self._nd2.axes if a not in {'x', 'y', 'v'}], reverse=True)
         if frames and len(self._nd2) != frames and 'v' in self._nd2.axes:
-            self._nd2.iter_axes = self._nd2.iter_axes + ['v']
+            self._nd2.iter_axes = ['v'] + self._nd2.iter_axes
         if 'c' in self._nd2.iter_axes and len(self._nd2.metadata.get('channels', [])):
             self._bandnames = {
                 name.lower(): idx for idx, name in enumerate(self._nd2.metadata['channels'])}
