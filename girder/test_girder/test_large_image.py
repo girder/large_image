@@ -311,3 +311,11 @@ def testAssociateImageCaching(server, admin, user, fsAssetstore):
     resp = server.request(path='/large_image/associated_images', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json == 0
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testListSources(server):
+    resp = server.request(path='/large_image/sources')
+    assert resp.json['tiff']['extensions']['tiff'] > 0
+    assert resp.json['tiff']['version'] is not None
