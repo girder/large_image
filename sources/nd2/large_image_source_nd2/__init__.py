@@ -249,7 +249,7 @@ class ND2FileTileSource(FileTileSource):
         #   "TheT": "0",
         #   "TheZ": "1",
         # }
-        axes = self._nd2.iter_axes
+        axes = self._nd2.iter_axes[::-1]
         result['frames'] = frames = []
         last_xy = None
         xy_set = None
