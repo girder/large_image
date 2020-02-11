@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Features
+- Added a GET large_image/sources endpoint to list versions of all installed sources
+
 ## Version 1.0.2
 
 ### Features

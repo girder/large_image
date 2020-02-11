@@ -20,6 +20,7 @@ import concurrent.futures
 import datetime
 import json
 import psutil
+import sys
 import time
 from six.moves import range
 
@@ -38,6 +39,7 @@ from large_image.exceptions import TileGeneralException
 from large_image import cache_util
 
 from .. import constants
+from .. import girder_tilesource
 from ..models.image_item import ImageItem
 
 
@@ -217,6 +219,7 @@ class LargeImageResource(Resource):
         self.route('GET', ('cache', ), self.cacheInfo)
         self.route('PUT', ('cache', 'clear'), self.cacheClear)
         self.route('GET', ('settings',), self.getPublicSettings)
+        self.route('GET', ('sources',), self.listSources)
         self.route('GET', ('thumbnails',), self.countThumbnails)
         self.route('PUT', ('thumbnails',), self.createThumbnails)
         self.route('DELETE', ('thumbnails',), self.deleteThumbnails)
@@ -409,3 +412,27 @@ class LargeImageResource(Resource):
             ImageItem().delete(item)
             result['removed'] += 1
         return result
+
+    @describeRoute(
+        Description('List all Girder tile sources with associated extensions, '
+                    'mime types, and versions.  Lower values indicate a '
+                    'higher priority for an extension of mime type with that '
+                    'source.')
+    )
+    @access.public
+    def listSources(self, params):
+        results = {}
+        for key, source in girder_tilesource.AvailableGirderTileSources.items():
+            results[key] = {}
+            results[key]['extensions'] = {
+                k if k else 'default': v for k, v in source.extensions.items()}
+            results[key]['mimeTypes'] = {
+                k if k else 'default': v for k, v in source.mimeTypes.items()}
+            for cls in source.__mro__:
+                try:
+                    if sys.modules[cls.__module__].__version__:
+                        results[key]['version'] = sys.modules[cls.__module__].__version__
+                        break
+                except Exception:
+                    pass
+        return results
