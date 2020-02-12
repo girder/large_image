@@ -89,8 +89,8 @@ class ND2FileTileSource(FileTileSource):
         self.sizeX = self._nd2.metadata['width']
         self.sizeY = self._nd2.metadata['height']
         self.tileWidth = self.tileHeight = 256
-        self.levels = max(1, math.ceil(math.log(
-            float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1)
+        self.levels = int(max(1, math.ceil(math.log(
+            float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
         frames = self._nd2.sizes.get('c', 1) * self._nd2.metadata.get(
             'total_images_per_channel', 0)
         self._framecount = frames if frames else None
@@ -138,12 +138,12 @@ class ND2FileTileSource(FileTileSource):
         for key, value in olddict.items():
             if value not in (None, b'', ''):
                 if isinstance(key, six.binary_type):
-                    key = key.decode()
+                    key = key.decode('utf8')
                 if (isinstance(value, dict) and len(value) == 1 and
                         list(value.keys())[0] in (b'', '')):
                     value = list(value.values())[0]
                 if isinstance(value, six.binary_type):
-                    value = value.decode()
+                    value = value.decode('utf8')
                 if isinstance(value, dict):
                     value = self._getND2MetadataCleanDict(value)
                     if not len(value):
@@ -156,7 +156,7 @@ class ND2FileTileSource(FileTileSource):
                         continue
                     for idx, entry in enumerate(value):
                         if isinstance(entry, six.binary_type):
-                            entry = entry.decode()
+                            entry = entry.decode('utf8')
                         if isinstance(entry, dict):
                             entry = self._getND2MetadataCleanDict(entry)
                         value[idx] = entry
