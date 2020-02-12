@@ -502,10 +502,8 @@ class Annotation(AccessControlledModel):
 
     def _onSettingChange(self, event):
         settingDoc = event.info
-        if settingDoc['key'] in (
-                constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, ):
-            self._historyEnabled = Setting().get(
-                constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY)
+        if settingDoc['key'] == constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY:
+            self._historyEnabled = settingDoc['value']
 
     def _loadAndMigrateAnnotation(self, id, *args, **kwargs):
         """

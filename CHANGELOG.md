@@ -3,7 +3,10 @@
 ## Unreleased
 
 ### Features
-- Added a GET large_image/sources endpoint to list versions of all installed sources
+- Added a GET large_image/sources endpoint to list versions of all installed sources (#421)
+
+### Bug Fixes
+- Fixed an issue where changing the annotation history setting when Girder's settings' cache was enable wouldn't take effect until after a restart (#422)
 
 ## Version 1.0.2
 
