@@ -17,6 +17,7 @@
 ##############################################################################
 
 import array
+import cachetools
 import math
 import nd2reader
 import numpy
@@ -84,13 +85,15 @@ class ND2FileTileSource(FileTileSource):
             raise TileSourceException('File cannot be opened via nd2reader.')
         self._logger = config.getConfig('logger')
         self._tileLock = threading.RLock()
+        self._recentFrames = cachetools.LRUCache(maxsize=6)
         self.sizeX = self._nd2.metadata['width']
         self.sizeY = self._nd2.metadata['height']
         self.tileWidth = self.tileHeight = 256
         self.levels = max(1, math.ceil(math.log(
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1)
-        frames = self._nd2.sizes.get('c', 0) * self._nd2.metadata.get(
+        frames = self._nd2.sizes.get('c', 1) * self._nd2.metadata.get(
             'total_images_per_channel', 0)
+        self._framecount = frames if frames else None
         self._nd2.iter_axes = sorted(
             [a for a in self._nd2.axes if a not in {'x', 'y', 'v'}], reverse=True)
         if frames and len(self._nd2) != frames and 'v' in self._nd2.axes:
@@ -301,6 +304,8 @@ class ND2FileTileSource(FileTileSource):
             if last_z is not None:
                 frame['IndexZ'] = z_index
             frames.append(frame)
+            if self._framecount and len(frames) == self._framecount:
+                break
         return result
 
     @methodcache()
@@ -321,6 +326,11 @@ class ND2FileTileSource(FileTileSource):
         if frame < 0 or frame >= len(self._nd2):
             raise TileSourceException('Frame does not exist')
         with self._tileLock:
-            tile = self._nd2[frame][y0:y1:step, x0:x1:step].copy()
+            if frame in self._recentFrames:
+                tileframe = self._recentFrames[frame]
+            else:
+                tileframe = self._nd2[frame]
+                self._recentFrames[frame] = tileframe
+            tile = tileframe[y0:y1:step, x0:x1:step].copy()
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
