@@ -18,6 +18,9 @@ twine upload --verbose dist/*
 cd "$ROOTPATH/sources/dummy"
 python setup.py sdist
 twine upload --verbose dist/*
+cd "$ROOTPATH/sources/gdal"
+python setup.py sdist
+twine upload --verbose dist/*
 cd "$ROOTPATH/sources/mapnik"
 python setup.py sdist
 twine upload --verbose dist/*

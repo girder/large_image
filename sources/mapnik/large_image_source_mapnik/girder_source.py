@@ -16,47 +16,14 @@
 #  limitations under the License.
 #############################################################################
 
-import re
-from distutils.version import StrictVersion
-from osgeo import gdal
-
-from girder import logger
-from girder.models.file import File
-
-from girder_large_image.girder_tilesource import GirderTileSource
+from large_image_source_gdal.girder_source import GDALGirderTileSource
 from . import MapnikFileTileSource
 
 
-class MapnikGirderTileSource(MapnikFileTileSource, GirderTileSource):
+class MapnikGirderTileSource(MapnikFileTileSource, GDALGirderTileSource):
     """
     Provides tile access to Girder items for mapnik layers.
     """
 
     name = 'mapnik'
     cacheName = 'tilesource'
-
-    @staticmethod
-    def getLRUHash(*args, **kwargs):
-        return GirderTileSource.getLRUHash(*args, **kwargs) + ',%s,%s,%s' % (
-            kwargs.get('projection', args[1] if len(args) >= 2 else None),
-            kwargs.get('style', args[2] if len(args) >= 3 else None),
-            kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
-
-    def _getLargeImagePath(self):
-        """
-        GDAL can read directly from http/https/ftp via /vsicurl.  If this
-        is a link file, try to use it.
-        """
-        try:
-            largeImageFileId = self.item['largeImage']['fileId']
-            largeImageFile = File().load(largeImageFileId, force=True)
-            if (StrictVersion(gdal.__version__) >= StrictVersion('2.1.3') and
-                    largeImageFile.get('linkUrl') and
-                    not largeImageFile.get('assetstoreId') and
-                    re.match(r'(http(|s)|ftp)://', largeImageFile['linkUrl'])):
-                largeImagePath = '/vsicurl/' + largeImageFile['linkUrl']
-                logger.info('Using %s' % largeImagePath)
-                return largeImagePath
-        except Exception:
-            pass
-        return GirderTileSource._getLargeImagePath(self)
