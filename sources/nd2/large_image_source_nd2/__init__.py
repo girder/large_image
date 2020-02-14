@@ -288,17 +288,18 @@ class ND2FileTileSource(FileTileSource):
             ]:
                 if mkey in self._metadata:
                     frame[fkey] = self._metadata[mkey][cdidx % len(self._metadata[mkey])]
-            x, y = frame.get('PositionX'), frame.get('PositionY')
-            if (x is not None and y is not None and (
-                    last_xy is None or
-                    abs(x - last_xy[0]) > x_sep_um or abs(y - last_xy[1]) > y_sep_um)):
-                last_xy = (x, y)
-                xy_set = xy_set + 1 if xy_set is not None else 0
-                z_index = 0
-                last_z = frame.get('PositionZ')
-            if frame.get('PositionZ') != last_z:
-                last_z = frame.get('PositionZ')
-                z_index += 1
+            if not ref.get('t', 0):
+                x, y = frame.get('PositionX'), frame.get('PositionY')
+                if (x is not None and y is not None and (
+                        last_xy is None or
+                        abs(x - last_xy[0]) > x_sep_um or abs(y - last_xy[1]) > y_sep_um)):
+                    last_xy = (x, y)
+                    xy_set = xy_set + 1 if xy_set is not None else 0
+                    z_index = 0
+                    last_z = frame.get('PositionZ')
+                if frame.get('PositionZ') != last_z:
+                    last_z = frame.get('PositionZ')
+                    z_index += 1
             if x is not None and y is not None:
                 frame['IndexXY'] = xy_set
             if last_z is not None:
