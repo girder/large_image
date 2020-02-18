@@ -226,14 +226,6 @@ class ND2FileTileSource(FileTileSource):
 
         # If two imgeas haven't panned by this factor of their size, treat them
         # as the same IndexXY
-        separateXY = 0.25
-        x_sep_um = y_sep_um = 0
-        if result['mm_x']:
-            w_um = result['sizeX'] * result['mm_x'] * 1000
-            h_um = result['sizeY'] * result['mm_y'] * 1000
-            x_sep_um = w_um * separateXY
-            y_sep_um = h_um * separateXY
-
         result['nd2'] = self._metadata
         result['nd2'].pop('custom_data', None)
         result['nd2'].pop('image_metadata', None)
@@ -254,10 +246,6 @@ class ND2FileTileSource(FileTileSource):
         # }
         axes = self._nd2.iter_axes[::-1]
         result['frames'] = frames = []
-        last_xy = None
-        xy_set = None
-        last_z = None
-        z_index = 0
         for idx in range(len(self._nd2)):
             frame = {'Frame': idx, 'TheZ': 0, 'TheV': 0}
             basis = 1
@@ -288,22 +276,8 @@ class ND2FileTileSource(FileTileSource):
             ]:
                 if mkey in self._metadata:
                     frame[fkey] = self._metadata[mkey][cdidx % len(self._metadata[mkey])]
-            if not ref.get('t', 0):
-                x, y = frame.get('PositionX'), frame.get('PositionY')
-                if (x is not None and y is not None and (
-                        last_xy is None or
-                        abs(x - last_xy[0]) > x_sep_um or abs(y - last_xy[1]) > y_sep_um)):
-                    last_xy = (x, y)
-                    xy_set = xy_set + 1 if xy_set is not None else 0
-                    z_index = 0
-                    last_z = frame.get('PositionZ')
-                if frame.get('PositionZ') != last_z:
-                    last_z = frame.get('PositionZ')
-                    z_index += 1
-            if x is not None and y is not None:
-                frame['IndexXY'] = xy_set
-            if last_z is not None:
-                frame['IndexZ'] = z_index
+            frame['IndexXY'] = ref.get('v', 0)
+            frame['IndexZ'] = ref.get('z', 0)
             frames.append(frame)
             if self._framecount and len(frames) == self._framecount:
                 break
