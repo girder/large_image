@@ -91,6 +91,19 @@ class ND2FileTileSource(FileTileSource):
         self.tileWidth = self.tileHeight = 256
         self.levels = int(max(1, math.ceil(math.log(
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
+        # There is one file that throws a warning 'Z-levels details missing in
+        # metadata'.  In this instance, there should be no z-levels.
+        try:
+            if (self._nd2.sizes.get('z') and
+                    self._nd2.sizes.get('z') == self._nd2.sizes.get('v') and
+                    not len(self._nd2._parser._raw_metadata._parse_dimension(
+                        r""".*?Z\((\d+)\).*?""")) and
+                    self._nd2.sizes['v'] * self._nd2.sizes.get('t', 1) ==
+                    self._nd2.metadata.get('total_images_per_channel')):
+                self._nd2._parser._raw_metadata._metadata_parsed['z_levels'] = []
+                self._nd2.sizes['z'] = 1
+        except Exception:
+            pass
         frames = self._nd2.sizes.get('c', 1) * self._nd2.metadata.get(
             'total_images_per_channel', 0)
         self._framecount = frames if frames else None
