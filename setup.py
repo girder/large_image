@@ -5,6 +5,7 @@ import itertools
 import os
 import platform
 from setuptools import setup, find_packages
+import sys
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -24,6 +25,10 @@ sources = {
     'tiff': ['large-image-source-tiff'],
     'test': ['large-image-source-test'],
 }
+if sys.version_info >= (3, ):
+    sources.update({
+        'bioformats': ['large-image-source-bioformats'],
+    })
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
 extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))

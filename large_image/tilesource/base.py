@@ -102,6 +102,14 @@ def _imageToPIL(image, setMode=None):
             image = numpy.resize(image, image.shape[:2])
         if image.dtype == numpy.uint16:
             image = numpy.floor_divide(image, 256).astype(numpy.uint8)
+        # TODO: The scaling of float data needs to be identical across all
+        # tiles of an image.  This means that we need a reference to the parent
+        # tile source or some other way of regulating it.
+        # elif image.dtype.kind == 'f':
+        #     if numpy.max(image) > 1:
+        #         maxl2 = math.ceil(math.log(numpy.max(image) + 1) / math.log(2))
+        #         image = image / ((2 ** maxl2) - 1)
+        #     image = (image * 255).astype(numpy.uint8)
         elif image.dtype != numpy.uint8:
             image = image.astype(numpy.uint8)
         image = PIL.Image.fromarray(image, mode)
@@ -1322,7 +1330,7 @@ class TileSource(object):
                 value = self._bandRanges[frame]['max'][bandidx]
             elif dtype == numpy.uint16:
                 value = 65535
-            elif dtype == numpy.float:
+            elif dtype.kind == 'f':
                 value = 1
             else:
                 value = 255
