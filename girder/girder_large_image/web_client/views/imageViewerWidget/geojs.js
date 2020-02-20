@@ -16,6 +16,11 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this._scale = settings.scale;
         this._setFrames = settings.setFrames;
 
+        let root = '/static/built';
+        try {
+            root = __webpack_public_path__ || root; // eslint-disable-line
+        } catch (err) { }
+        root = root.replace(/\/$/, '');
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
                 if (this.metadata.geospatial) {
@@ -36,7 +41,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 return this;
             }),
             $.ajax({ // like $.getScript, but allow caching
-                url: '/static/built/plugins/large_image/extra/geojs.js',
+                url: root + '/plugins/large_image/extra/geojs.js',
                 dataType: 'script',
                 cache: true
             }))
