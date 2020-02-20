@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 
 import json
+import mock
+import os
 import pytest
 import time
 
 from girder import events
 from girder.exceptions import ValidationException
+from girder.models.file import File
 from girder.models.item import Item
 from girder.models.setting import Setting
 
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
-# from girder_worker.girder_plugin.constants import PluginSettings as WorkerSettings
 from girder_worker.girder_plugin.status import CustomJobStatus
 
 from girder_large_image import constants
@@ -319,3 +321,28 @@ def testListSources(server):
     resp = server.request(path='/large_image/sources')
     assert resp.json['tiff']['extensions']['tiff'] > 0
     assert resp.json['tiff']['version'] is not None
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testGetLargeImagePath(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile('data/sample_image.ptif.sha512', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    item = Item().load(itemId, user=admin)
+    ts = ImageItem().tileSource(item)
+
+    with mock.patch.object(File(), 'getGirderMountFilePath', return_value='mockmount'):
+        path = ts._getLargeImagePath()
+        abspath = os.path.abspath(path)
+        assert path != file['path']
+        assert path.endswith(file['path'])
+        ts._mayHaveAdjacentFiles = True
+        path = ts._getLargeImagePath()
+        assert path == 'mockmount'
+        origFile = file
+        file['imported'] = True
+        file['path'] = abspath
+        file = File().save(file)
+        path = ts._getLargeImagePath()
+        assert path == abspath
+        file = File().save(origFile)
