@@ -4,12 +4,17 @@ import ImageViewerWidget from './base';
 
 var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
+        let root = '/static/built';
+        try {
+            root = __webpack_public_path__ || root; // eslint-disable-line
+        } catch (err) { }
+        root = root.replace(/\/$/, '');
         if (!$('head #large_image-slideatlas-css').length) {
             $('head').prepend(
                 $('<link>', {
                     id: 'large_image-slideatlas-css',
                     rel: 'stylesheet',
-                    href: '/static/built/plugins/large_image/extra/slideatlas/sa.css'
+                    href: root + '/plugins/large_image/extra/slideatlas/sa.css'
                 })
             );
         }
@@ -17,7 +22,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
             $.ajax({ // like $.getScript, but allow caching
-                url: '/static/built/plugins/large_image/extra/slideatlas/sa-all.min.js',
+                url: root + '/plugins/large_image/extra/slideatlas/sa-all.min.js',
                 dataType: 'script',
                 cache: true
             }))
@@ -52,10 +57,15 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         // TODO: if a viewer already exists, do we render again?
         // SlideAtlas bundles its own version of jQuery, which should attach itself to "window.$" when it's sourced
         // The "this.$el" still uses the Girder version of jQuery, which will not have "saViewer" registered on it.
+        let root = '/static/built';
+        try {
+            root = __webpack_public_path__ || root; // eslint-disable-line
+        } catch (err) { }
+        root = root.replace(/\/$/, '');
         window.$(this.el).saViewer({
             zoomWidget: true,
             drawWidget: true,
-            prefixUrl: '/static/built/plugins/large_image/extra/slideatlas/img/',
+            prefixUrl: root + '/plugins/large_image/extra/slideatlas/img/',
             tileSource: {
                 height: this.sizeY,
                 width: this.sizeX,
