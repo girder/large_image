@@ -4,8 +4,9 @@ import logging
 
 # Default logger
 fallbackLogger = logging.getLogger('large_image')
+fallbackLogger.setLevel(logging.INFO)
 fallbackLogHandler = logging.StreamHandler()
-fallbackLogHandler.setLevel(logging.INFO)
+fallbackLogHandler.setLevel(logging.NOTSET)
 fallbackLogger.addHandler(fallbackLogHandler)
 
 ConfigValues = {
