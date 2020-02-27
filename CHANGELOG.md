@@ -8,6 +8,10 @@
 
 ### Bug Fixes
 - Fixed an issue where changing the annotation history setting when Girder's settings' cache was enable wouldn't take effect until after a restart (#422)
+- Fixed an issue when used as a Girder plugin and served with a proxy with a prefix path (#423)
+
+### Improvements
+- Better handling of imported file formats with adjacent files (#424)
 
 ## Version 1.0.2
 

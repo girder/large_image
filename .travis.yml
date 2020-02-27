@@ -1,5 +1,5 @@
 sudo: false
-dist: xenial
+# dist: xenial
 language: python
 python:
   - "2.7"
@@ -12,10 +12,11 @@ services:
 addons:
   apt:
     packages:
-    - rabbitmq-server
+      - rabbitmq-server
 install:
   - pip install --upgrade pip
   - pip install --upgrade virtualenv
+  - if [ ${TRAVIS_PYTHON_VERSION:0:3} == "2.7" ]; then pip install virtualenv==20.0.5; fi
   - pip install tox-travis
   # If the last tag is more than 50 commits away, we need to fetch more for
   # the scm_version module to determine the version.
@@ -23,7 +24,7 @@ install:
 script:
   # Piping through cat does less buffering of the output but can consume the
   # exit code
-  - tox | cat; test ${PIPESTATUS[0]} -eq 0
+  - tox -s | cat; test ${PIPESTATUS[0]} -eq 0
 after_success:
   - pip install codecov
   - codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml
