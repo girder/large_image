@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## Version 1.0.3
+
 ### Features
 - Added gdal tile source (#418)
 - Added a GET large_image/sources endpoint to list versions of all installed sources (#421)
