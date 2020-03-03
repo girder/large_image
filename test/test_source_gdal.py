@@ -324,3 +324,12 @@ def testPalettizedGeotiff():
     image = numpy.asarray(image)
     assert list(image[0, 0, :]) == [0, 0, 0, 0]
     assert list(image[255, 0, :]) == [221, 201, 201, 255]
+
+
+def testRetileProjection():
+    imagePath = utilities.externaldata('data/landcover_sample_1000.tif.sha512')
+    ts = large_image_source_gdal.GDALFileTileSource(imagePath, projection='EPSG:3857')
+    ti = ts.getSingleTile(tile_size=dict(width=1000, height=1000), tile_position=1000)
+    assert ti['tile'].size == 3000000
+    tile = ts.getTile(1178, 1507, 12)
+    assert len(tile) > 1000
