@@ -61,6 +61,10 @@ class Annotationelement(Model):
                 ('_version', SortDir.DESCENDING),
                 ('element.group', SortDir.ASCENDING),
             ], {}),
+            ([
+                ('created', SortDir.ASCENDING),
+                ('_version', SortDir.ASCENDING),
+            ], {}),
         ])
 
         self.exposeFields(AccessType.READ, (
@@ -83,8 +87,13 @@ class Annotationelement(Model):
             versionObject = self.collection.find_one(
                 {'annotationId': 'version_sequence'})
             if versionObject is None:
+                startingId = self.collection.find_one({}, sort=[('_version', SortDir.DESCENDING)])
+                if startingId:
+                    startingId = startingId['_version'] + 1
+                else:
+                    startingId = 0
                 self.versionId = self.collection.insert_one(
-                    {'annotationId': 'version_sequence', '_version': 0}
+                    {'annotationId': 'version_sequence', '_version': startingId}
                 ).inserted_id
             else:
                 self.versionId = versionObject['_id']

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Added endpoints to remove old annotations (#432)
+
 ### Improvements
 - Migrate some database values on start to allow better annotation count reporting (#431)
 

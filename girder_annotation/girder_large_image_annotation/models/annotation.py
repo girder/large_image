@@ -620,7 +620,7 @@ class Annotation(AccessControlledModel):
         """
         When removing an annotation, remove all element associated with it.
         This overrides the collection delete_one method so that all of the
-        triggers are fired as expectd and cancelling from an event will work
+        triggers are fired as expected and cancelling from an event will work
         as needed.
 
         :param annotation: the annotation document to remove.
@@ -1000,3 +1000,88 @@ class Annotation(AccessControlledModel):
         if update:
             self.update({'_id': doc['_id']}, {'$set': {'access': doc['access']}})
         return doc
+
+    def removeOldAnnotations(self, remove=False, minAgeInDays=30, keepInactiveVersions=5):  # noqa
+        """
+        Remove annotations that (a) have no item or (b) are inactive and at
+        least (1) a minimum age in days and (2) not the most recent inactive
+        versions.  Also remove any annotation elements that don't have
+        associated annotations and are a minimum age in days.
+        :param remove: if False, just report on what would be done.  If true,
+            actually remove the annotations and compact the collections.
+        :param minAgeInDays: only work on annotations that are at least this
+            old.  This must be greater than or equal to 7.
+        :param keepInactiveVersions: keep at least this many inactive versions
+            of any annotation, regardless of age.
+        """
+        if remove and minAgeInDays < 7 or minAgeInDays < 0:
+            raise ValidationException('minAgeInDays must be >= 7')
+        age = datetime.datetime.utcnow() + datetime.timedelta(-minAgeInDays)
+        if keepInactiveVersions < 0:
+            raise ValidationException('keepInactiveVersions mist be non-negative')
+        report = {'fromDeletedItems': 0, 'oldVersions': 0, 'active': 0, 'recentVersions': 0}
+        if remove:
+            report['removedVersions'] = 0
+        itemIds = {}
+        processedIds = set()
+        annotVersions = set()
+        logger.info('Checking old annotations')
+        logtime = time.time()
+        for annot in self.collection.find().sort([('_id', SortDir.ASCENDING)]):
+            if time.time() - logtime > 10:
+                logger.info('Still checking old annotations, checked %d with %d versions, %r' % (
+                    len(processedIds), len(annotVersions), report))
+                logtime = time.time()
+            id = annot.get('_annotationId', annot['_id'])
+            version = annot.get('_version')
+            annotVersions.add(version)
+            if id in processedIds:
+                continue
+            itemId = annot.get('itemId')
+            if itemId not in itemIds:
+                if len(itemIds) > 10000:
+                    itemIds = {}
+                itemIds[itemId] = Item().findOne({'_id': itemId}) is not None
+            keep = keepInactiveVersions if itemIds[itemId] else 0
+            history = self.versionList(id, force=True)
+            for record in history:
+                if record.get('_active') is not False and itemIds[itemId]:
+                    report['active'] += 1
+                    continue
+                if keep:
+                    keep -= 1
+                    report['recentVersions'] += 1
+                    continue
+                if max(record['created'], record['updated']) < age:
+                    if remove:
+                        self.collection.delete_one({'_id': record['_id']})
+                        Annotationelement().removeWithQuery({'_version': record['_version']})
+                        report['removedVersions'] += 1
+                    if not itemIds[itemId]:
+                        report['fromDeletedItems'] += 1
+                    else:
+                        report['oldVersions'] += 1
+                else:
+                    report['recentVersions'] += 1
+            processedIds.add(id)
+        logger.info('Getting distinct element versions')
+        elemVersions = Annotationelement().collection.distinct(
+            '_version', filter={'created': {'$lt': age}})
+        logger.info('Got %d distinct element versions' % len(elemVersions))
+        logtime = time.time()
+        abandonedVersions = set(elemVersions) - set(annotVersions)
+        report['abandonedVersions'] = len(abandonedVersions)
+        if remove:
+            for version in abandonedVersions:
+                if time.time() - logtime > 10:
+                    logger.info('Removing abandoned versions, %r' % report)
+                    logtime = time.time()
+                Annotationelement().removeWithQuery({'_version': version})
+                report['removedVersions'] += 1
+            logger.info('Compacting annotation collection')
+            self.collection.database.command('compact', self.name)
+            logger.info('Compacting annotationelement collection')
+            self.collection.database.command('compact', Annotationelement().name)
+            logger.info('Done compacting collections')
+        logger.info('Finished checking old annotations, %r' % report)
+        return report
