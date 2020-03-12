@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Added nd2 tile source (#419)
+
 ## Version 1.0.4
 
 ### Bug Fixes

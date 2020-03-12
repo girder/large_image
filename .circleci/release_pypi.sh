@@ -24,6 +24,9 @@ twine upload --verbose dist/*
 cd "$ROOTPATH/sources/mapnik"
 python setup.py sdist
 twine upload --verbose dist/*
+cd "$ROOTPATH/sources/nd2"
+python setup.py sdist
+twine upload --verbose dist/*
 cd "$ROOTPATH/sources/ometiff"
 python setup.py sdist
 twine upload --verbose dist/*
