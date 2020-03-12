@@ -490,12 +490,12 @@ class Annotation(AccessControlledModel):
                 continue
             annotation['itemId'] = destItemId
             del annotation['_id']
-            # Remove existing permissionsi, then give it the same permissions
+            # Remove existing permissions, then give it the same permissions
             # as the item's folder.
             annotation.pop('access', None)
             self.copyAccessPolicies(destItem, annotation, save=False)
             self.setPublic(annotation, folder.get('public'), save=False)
-            Annotation().save(annotation)
+            self.save(annotation)
             count += 1
         logger.info('Copied %d annotations from %s to %s ',
                     count, srcItemId, destItemId)
@@ -646,7 +646,8 @@ class Annotation(AccessControlledModel):
             # just mark the annotations as inactive
             result = self.update({'_id': annotation['_id']}, {'$set': {'_active': False}})
         else:
-            delete_one = self.collection.delete_one
+            with self._writeLock:
+                delete_one = self.collection.delete_one
 
             def deleteElements(query, *args, **kwargs):
                 ret = delete_one(query, *args, **kwargs)
@@ -1001,3 +1002,18 @@ class Annotation(AccessControlledModel):
             }
             self.collection.update_one(query, update)
         return annotation
+
+    def setAccessList(self, doc, access, save=False, **kwargs):
+        """
+        The super class's setAccessList function can save a document.  However,
+        annotations which have not loaded elements lose their elements when
+        this occurs, because the validation step of the save function adds an
+        empty element list.  By using an update instead of a save, this
+        prevents the problem.
+        """
+        update = save and '_id' in doc
+        save = save and '_id' not in doc
+        doc = super(Annotation, self).setAccessList(doc, access, save=save, **kwargs)
+        if update:
+            self.update({'_id': doc['_id']}, {'$set': {'access': doc['access']}})
+        return doc
