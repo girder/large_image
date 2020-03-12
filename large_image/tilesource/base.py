@@ -303,8 +303,8 @@ class LazyTileDict(dict):
 
     def _retileTile(self):
         """
-        Given the tile information, create a PIL image and merge multiple tiles
-        together to form a tile of a different size.
+        Given the tile information, create a numpy array and merge multiple
+        tiles together to form a tile of a different size.
         """
         retile = None
         xmin = int(max(0, self['x'] // self.metadata['tileWidth']))
@@ -316,6 +316,7 @@ class LazyTileDict(dict):
                 tileData = self.source.getTile(
                     x, y, self.level,
                     numpyAllowed='always', sparseFallback=True, frame=self.frame)
+                tileData, _ = _imageToNumpy(tileData)
                 if retile is None:
                     retile = numpy.zeros(
                         (self.height, self.width) if len(tileData.shape) == 2 else

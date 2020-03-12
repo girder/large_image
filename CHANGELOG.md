@@ -5,6 +5,11 @@
 ### Features
 - Added nd2 tile source (#419)
 
+## Version 1.0.4
+
+### Bug Fixes
+- Fixed an issue where retiling some tile sources could fail (#427)
+
 ## Version 1.0.3
 
 ### Features
