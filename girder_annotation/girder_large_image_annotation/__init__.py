@@ -58,7 +58,8 @@ class LargeImageAnnotationPlugin(GirderPlugin):
         ModelImporter.registerModel('annotation', Annotation, 'large_image')
         info['apiRoot'].annotation = AnnotationResource()
         # Ask for some models to make sure their singletons are initialized.
-        Annotation()
+        # Also migrate the database as a one-time action.
+        Annotation()._migrateDatabase()
 
         # add copyAnnotations option to POST resource/copy, POST item/{id}/copy
         # and POST folder/{id}/copy

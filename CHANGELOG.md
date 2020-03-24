@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Improvements
+- Migrate some database values on start to allow better annotation count reporting (#431)
+
 ## Version 1.1.0
 
 ### Features

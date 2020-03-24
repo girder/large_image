@@ -505,37 +505,23 @@ class Annotation(AccessControlledModel):
         if settingDoc['key'] == constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY:
             self._historyEnabled = settingDoc['value']
 
-    def _loadAndMigrateAnnotation(self, id, *args, **kwargs):
-        """
-        Load the annotation and add access control information if necessary.
-        """
-        # We first need to load the full annotation document to perform the
-        # migration.
-        annotation = self._migrateACL(super(Annotation, self).load(id, force=True))
-
-        # If force is not provided, we can do an access control check without
-        # reloading the model.
-        if annotation is not None and not kwargs.get('force'):
-            self.requireAccess(
-                annotation, kwargs.get('user'), kwargs.get('level', AccessType.ADMIN)
-            )
-
-        # If any other keyword arguments were provided, we reload the model to avoid
-        # having to duplicate code from super class methods.  Since these flags are
-        # rarely used the performance implications should be minimal.
-        if kwargs.get('objectId') or kwargs.get('fields') or kwargs.get('exc'):
-            annotation = super(Annotation, self).load(id, *args, **kwargs)
-
-        return annotation
+    def _migrateDatabase(self):
+        # Check that all entries have ACL
+        for annotation in self.collection.find({'access': {'$exists': False}}):
+            self._migrateACL(annotation)
+        # Check that all annotations have groups
+        for annotation in self.collection.find({'groups': {'$exists': False}}):
+            self.injectAnnotationGroupSet(annotation)
 
     def _migrateACL(self, annotation):
         """
         Add access control information to an annotation model.
 
-        Originally annotation models were not access controlled.  This function performs
-        the migration for annotations created before this change was made.  The access
-        object is copied from the folder containing the image the annotation is attached
-        to.   In addition, the creator is given admin access.
+        Originally annotation models were not access controlled.  This function
+        performs the migration for annotations created before this change was
+        made.  The access object is copied from the folder containing the image
+        the annotation is attached to.   In addition, the creator is given
+        admin access.
         """
         if annotation is None or 'access' in annotation:
             return annotation
@@ -601,10 +587,7 @@ class Annotation(AccessControlledModel):
             annotation.
         :returns: the matching annotation or none.
         """
-        # This call can be replaced with the superclass load method if migrations
-        # are no longer necessary.
-        annotation = self._loadAndMigrateAnnotation(id, *args, **kwargs)
-
+        annotation = super(Annotation, self).load(id, *args, **kwargs)
         if annotation is None:
             return
 
