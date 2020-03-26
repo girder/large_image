@@ -2,8 +2,17 @@
 
 ## Unreleased
 
+## Version 1.1.0
+
 ### Features
 - Added nd2 tile source (#419)
+
+### Bug Fixes
+- Fixed an issue where, if users or groups were deleted outside of normal methods, checking an annotation's access would delete its elements (#428)
+- Fix an issue where retiling some tile sources could fail (#427)
+
+### Improvements
+- Testing fully with Python 3.8 (#429)
 
 ## Version 1.0.4
 
