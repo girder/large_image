@@ -11,6 +11,7 @@ from six.moves import range
 from girder.constants import AccessType
 from girder.exceptions import AccessException, ValidationException
 from girder.models.item import Item
+from girder.models.group import Group
 from girder.models.setting import Setting
 
 from girder_large_image_annotation.models import annotation
@@ -337,6 +338,27 @@ class TestLargeImageAnnotation(object):
         Annotation().remove(annot)
         assert len(Annotation().revertVersion(
             annot['_id'], user=admin)['annotation']['elements']) == 1
+
+    def testPermissions(self, admin):
+        publicFolder = utilities.namedFolder(admin, 'Public')
+        item = Item().createItem('sample', admin, publicFolder)
+        annot = Annotation().createAnnotation(item, admin, sampleAnnotation)
+        group = Group().createGroup('Delete Me', admin)
+        annot['access']['groups'].append({'id': str(group['_id']), 'level': 0, 'flags': []})
+        Annotation().save(annot)
+        annot = Annotation().load(annot['_id'], getElements=False, force=True)
+        acl = Annotation().getFullAccessList(annot)
+        assert len(annot['access']['groups']) == 1
+        assert len(acl['groups']) == 1
+        # If you remove the group using the remove method, the acls will be
+        # pruned.  If you use removeWithQuery, they won't be, and getting the
+        # access list will cause the access list to be resaved.
+        Group().removeWithQuery({'_id': group['_id']})
+        acl = Annotation().getFullAccessList(annot)
+        assert len(acl['groups']) == 0
+        assert len(annot['access']['groups']) == 0
+        check = Annotation().load(annot['_id'], force=True)
+        assert len(check['annotation']['elements']) > 0
 
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
