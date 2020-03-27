@@ -541,6 +541,8 @@ class TestLargeImageAnnotationAccessMigration(object):
         del annot['public']
         Annotation().save(annot)
 
+        Annotation()._migrateDatabase()
+
         # load the annotation and assert access properties were added
         annot = Annotation().load(annot['_id'], force=True)
 
@@ -565,9 +567,9 @@ class TestLargeImageAnnotationAccessMigration(object):
 
         Annotation().save(annot)
         with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
-            annot = Annotation().load(annot['_id'], force=True)
+            Annotation()._migrateDatabase()
             logger.warning.assert_called_once()
-
+        annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot
 
     def testMigrateAnnotationAccessControlNoFolderError(self, user, admin):
@@ -584,11 +586,10 @@ class TestLargeImageAnnotationAccessMigration(object):
         # save an invalid folder id to the item
         item['folderId'] = ObjectId()
         Item().save(item)
-
         with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
-            annot = Annotation().load(annot['_id'], force=True)
+            Annotation()._migrateDatabase()
             logger.warning.assert_called_once()
-
+        annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot
 
     def testMigrateAnnotationAccessControlNoUserError(self, user, admin):
@@ -602,9 +603,8 @@ class TestLargeImageAnnotationAccessMigration(object):
         del annot['public']
         annot['creatorId'] = ObjectId()
         Annotation().save(annot)
-
         with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
-            annot = Annotation().load(annot['_id'], force=True)
+            Annotation()._migrateDatabase()
             logger.warning.assert_called_once()
-
+        annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot

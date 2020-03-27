@@ -655,6 +655,7 @@ class TestLargeImageAnnotationElementGroups(object):
                 }]
             }
         )
+        annotationModel._migrateDatabase()
 
     def testFindAnnotations(self, server, admin):
         self.makeAnnot(admin)

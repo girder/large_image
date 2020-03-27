@@ -96,12 +96,9 @@ class AnnotationResource(Resource):
             (
                 'annotation.name', 'annotation.description', 'access', 'groups', '_version'
             ) + Annotation().baseFields)
-        annotations = list(Annotation().filterResultsByPermission(
-            cursor=Annotation().find(query, sort=sort, fields=fields),
-            user=self.getCurrentUser(), level=AccessType.READ, limit=limit, offset=offset
-        ))
-        for annotation in annotations:
-            Annotation().injectAnnotationGroupSet(annotation)
+        annotations = Annotation().findWithPermissions(
+            query, sort=sort, fields=fields, user=self.getCurrentUser(),
+            level=AccessType.READ, limit=limit, offset=offset)
         return annotations
 
     @describeRoute(
