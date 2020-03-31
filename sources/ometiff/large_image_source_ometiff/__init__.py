@@ -20,6 +20,7 @@ import math
 import numpy
 import PIL.Image
 import six
+from collections import OrderedDict
 from pkg_resources import DistributionNotFound, get_distribution
 from six.moves import range
 
@@ -215,6 +216,49 @@ class OMETiffFileTileSource(TiffFileTileSource):
         result = super(OMETiffFileTileSource, self).getMetadata()
         # We may want to reformat the frames to standardize this across sources
         result['frames'] = self._omebase.get('Plane', self._omebase['TiffData'])
+        # Expose channel information
+        channels = []
+        for img in self._omeinfo['Image']:
+            try:
+                channels = [channel['Name'] for channel in img['Pixels']['Channel']]
+                if len(channels) > 1:
+                    break
+            except Exception:
+                pass
+        if len(set(channels)) != len(channels):
+            channels = []
+        # Standardize "TheX" to "IndexX" values
+        reftbl = OrderedDict([
+            ('TheC', 'IndexC'), ('TheZ', 'IndexZ'), ('TheT', 'IndexT'),
+            ('FirstC', 'IndexC'), ('FirstZ', 'IndexZ'), ('FirstT', 'IndexT'),
+        ])
+        maxref = {}
+        index = 0
+        for idx, frame in enumerate(result['frames']):
+            for key in reftbl:
+                if key in frame and not reftbl[key] in frame:
+                    frame[reftbl[key]] = int(frame[key])
+                    if frame[reftbl[key]] + 1 > maxref.get(reftbl[key], 0):
+                        maxref[reftbl[key]] = frame[reftbl[key]] + 1
+            frame['Frame'] = idx
+            if (idx and (
+                    frame.get('IndexV') != result['frames'][idx - 1].get('IndexV') or
+                    frame.get('IndexZ') != result['frames'][idx - 1].get('IndexZ'))):
+                index += 1
+            frame['Index'] = index
+        if any(val > 1 for val in maxref.values()):
+            result['IndexRange'] = {key: value for key, value in maxref.items() if value > 1}
+            result['IndexStride'] = {
+                key: [idx for idx, frame in enumerate(result['frames']) if frame[key] == 1][0]
+                for key in result['IndexRange']
+            }
+        # Add channel information
+        if len(channels) >= maxref.get('IndexC', 1):
+            result['channels'] = channels[:maxref.get('IndexC', 1)]
+            result['channelmap'] = {
+                cname: c for c, cname in enumerate(channels[:maxref.get('IndexC', 1)])}
+            for frame in result['frames']:
+                frame['Channel'] = channels[frame.get('IndexC', 0)]
         result['omeinfo'] = self._omeinfo
         return result
 

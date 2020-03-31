@@ -20,6 +20,10 @@ def testTilesFromOMETiff():
     assert tileMetadata['sizeY'] == 2016
     assert tileMetadata['levels'] == 3
     assert len(tileMetadata['frames']) == 3
+    assert tileMetadata['frames'][1]['Frame'] == 1
+    assert tileMetadata['frames'][1]['Index'] == 0
+    assert tileMetadata['frames'][1]['IndexC'] == 1
+    assert tileMetadata['IndexRange'] == {'IndexC': 3}
     utilities.checkTilesZXY(source, tileMetadata)
 
 
@@ -34,6 +38,12 @@ def testTilesFromStripOMETiff():
     assert tileMetadata['sizeY'] == 1022
     assert tileMetadata['levels'] == 3
     assert len(tileMetadata['frames']) == 145
+    assert tileMetadata['frames'][101]['Frame'] == 101
+    assert tileMetadata['frames'][101]['Index'] == 20
+    assert tileMetadata['frames'][101]['IndexC'] == 1
+    assert tileMetadata['frames'][101]['IndexZ'] == 20
+    assert tileMetadata['channels'] == ['Brightfield', 'CY3', 'A594', 'CY5', 'DAPI']
+    assert tileMetadata['IndexRange'] == {'IndexC': 5, 'IndexZ': 29}
     utilities.checkTilesZXY(source, tileMetadata)
 
 
