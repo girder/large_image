@@ -537,6 +537,19 @@ class TestLargeImageAnnotationRest(object):
         loaded = Annotation().load(annot['_id'], user=admin)
         assert len(loaded['annotation']['elements']) == 4
 
+        # Test old
+        resp = server.request('/annotation/old', method='GET', user=user)
+        assert utilities.respStatus(resp) == 403
+        resp = server.request('/annotation/old', method='GET', user=admin)
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['abandonedVersions'] == 0
+        resp = server.request('/annotation/old', method='DELETE', user=admin)
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['abandonedVersions'] == 0
+        resp = server.request('/annotation/old', method='DELETE', user=admin, params={'age': 6})
+        assert utilities.respStatus(resp) == 400
+        assert 'minAgeInDays' in resp.json['message']
+
     def testAnnotationsAfterCopyItem(self, server, admin):
         publicFolder = utilities.namedFolder(admin, 'Public')
         item = Item().createItem('sample', admin, publicFolder)
