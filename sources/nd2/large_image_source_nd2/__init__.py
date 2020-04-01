@@ -244,7 +244,7 @@ class ND2FileTileSource(FileTileSource):
         result['nd2'].pop('image_metadata', None)
         result['nd2'].pop('image_metadata_sequence', None)
         result['nd2_sizes'] = sizes = self._nd2.sizes
-        result['nd2_axes'] = baseaxes = self._nd2.axes
+        result['nd2_axes'] = self._nd2.axes
         result['nd2_iter_axes'] = self._nd2.iter_axes
         # We may want to reformat the frames to standardize this across sources
         # An example of frames from OMETiff: {
@@ -259,27 +259,30 @@ class ND2FileTileSource(FileTileSource):
         # }
         axes = self._nd2.iter_axes[::-1]
         result['frames'] = frames = []
+        maxref = {}
+        index = 0
         for idx in range(len(self._nd2)):
-            frame = {'Frame': idx, 'TheZ': 0, 'TheV': 0}
+            frame = {'Frame': idx, 'IndexZ': 0, 'IndexXY': 0}
             basis = 1
             ref = {}
             for axis in axes:
                 ref[axis] = (idx // basis) % sizes[axis]
-                frame['The' + axis.upper()] = (idx // basis) % sizes[axis]
+                frame['Index' + (axis.upper() if axis != 'v' else 'XY')] = (
+                    idx // basis) % sizes[axis]
+                if ref[axis] + 1 > maxref.get(axis, 0):
+                    maxref[axis] = ref[axis] + 1
                 basis *= sizes.get(axis, 1)
             if ('channels' in self._metadata and 'c' in ref and
                     ref['c'] < len(self._metadata['channels'])):
                 frame['Channel'] = self._metadata['channels'][ref['c']]
             if 'z_coordinates' in self._metadata:
                 frame['PositionZ'] = self._metadata['z_coordinates'][ref.get('z', 0)]
-            cdidx = 0
-            basis = 1
-            for axis in baseaxes:
-                if axis not in {'x', 'y', 'c'}:
-                    cdidx += ref.get(axis, 0) * basis
-                    if axis in ref:
-                        basis *= sizes[axis]
-            frame['Index'] = cdidx
+            if (idx and (
+                    frame.get('IndexV') != result['frames'][idx - 1].get('IndexV') or
+                    frame.get('IndexXY') != result['frames'][idx - 1].get('IndexXY') or
+                    frame.get('IndexZ') != result['frames'][idx - 1].get('IndexZ'))):
+                index += 1
+            frame['Index'] = index
             for mkey, fkey in [
                 ('x_data', 'PositionX'),
                 ('y_data', 'PositionY'),
@@ -288,12 +291,25 @@ class ND2FileTileSource(FileTileSource):
                 ('camera_exposure_time', 'ExposureTime'),
             ]:
                 if mkey in self._metadata:
-                    frame[fkey] = self._metadata[mkey][cdidx % len(self._metadata[mkey])]
-            frame['IndexXY'] = ref.get('v', 0)
-            frame['IndexZ'] = ref.get('z', 0)
+                    frame[fkey] = self._metadata[mkey][index % len(self._metadata[mkey])]
             frames.append(frame)
             if self._framecount and len(frames) == self._framecount:
                 break
+        if ('channels' in self._metadata and
+                len(self._metadata['channels']) >= maxref.get('c', 1) and
+                len(set(self._metadata['channels'])) == len(self._metadata['channels'])):
+            result['channels'] = self._metadata['channels'][:maxref.get('c', 1)]
+            result['channelmap'] = {
+                cname: c for c, cname in enumerate(self._metadata['channels'][:maxref.get('c', 1)])}
+        if any(val > 1 for val in maxref.values()):
+            result['IndexRange'] = {
+                'Index' + (axis.upper() if axis != 'v' else 'XY'): value
+                for axis, value in maxref.items() if value > 1
+            }
+        result['IndexStride'] = {
+            key: [idx for idx, frame in enumerate(result['frames']) if frame[key] == 1][0]
+            for key in result['IndexRange']
+        }
         return result
 
     @methodcache()

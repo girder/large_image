@@ -1454,6 +1454,28 @@ class TileSource(object):
         return False
 
     def getMetadata(self):
+        """
+        Return metadata about this tile source.  In addition to the keys that
+        are listed in this template function, tile sources that expose multiple
+        frames will also contain:
+        - frames: a list of frames.  Each frame entry is a dictionary with
+          - Frame: a 0-values frame index (the location in the list)
+          - Channel (optional): the name of the channel, if known
+          - IndexC (optional if unique): a 0-based index into the channel list
+          - IndexT (optional if unique): a 0-based index for time values
+          - IndexZ (optional if unique): a 0-based index for z values
+          - IndexXY (optional if unique): a 0-based index for view (xy) values
+          - Index: a 0-based index of non-channel unique sets.  If the frames
+              vary only by channel and are adjacent, they will have the same
+              index.
+        - IndexRange: a dictionary of the number of unique index values from
+            frames if greater than 1 (e.g., if an entry like IndexXY is not
+            present, then all frames either do not have that value or have a
+            value of 0).
+        - channels (optional): if known, a list of channel names
+        - channelmap (optional): if known, a dictionary of channel names with
+            their offset into the channel list.
+        """
         mag = self.getNativeMagnification()
         return {
             'levels': self.levels,
