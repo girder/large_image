@@ -8,6 +8,9 @@
 ### Improvements
 - Migrate some database values on start to allow better annotation count reporting (#431)
 
+### Changes
+- Standardize metadata for tile sources with multiple frames (#433)
+
 ## Version 1.1.0
 
 ### Features
