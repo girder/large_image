@@ -3,6 +3,7 @@
 
 import os
 from setuptools import setup, find_packages
+import sys
 
 
 def prerelease_local_scheme(version):
@@ -43,8 +44,8 @@ setup(
     install_requires=[
         'enum34>=1.1.6;python_version<"3.4"',
         'futures;python_version<"3.4"',
-        'girder>=3.0.4',
-        'girder-jobs>=3.0.3',
+        'girder>=3.0.4' + (',<=3.1.0' if sys.version_info < (3, 6) else ''),
+        'girder-jobs>=3.0.3' + (',<=3.1.0' if sys.version_info < (3, 6) else ''),
         'girder-worker[girder]>=0.6.0',
         'large_image>=1.0.0',
     ],
