@@ -237,15 +237,7 @@ class ND2FileTileSource(FileTileSource):
         """
         result = super(ND2FileTileSource, self).getMetadata()
 
-        # If two imgeas haven't panned by this factor of their size, treat them
-        # as the same IndexXY
-        result['nd2'] = self._metadata
-        result['nd2'].pop('custom_data', None)
-        result['nd2'].pop('image_metadata', None)
-        result['nd2'].pop('image_metadata_sequence', None)
-        result['nd2_sizes'] = sizes = self._nd2.sizes
-        result['nd2_axes'] = self._nd2.axes
-        result['nd2_iter_axes'] = self._nd2.iter_axes
+        sizes = self._nd2.sizes
         # We may want to reformat the frames to standardize this across sources
         # An example of frames from OMETiff: {
         #   "DeltaT": "3532.529541",
@@ -310,6 +302,24 @@ class ND2FileTileSource(FileTileSource):
             key: [idx for idx, frame in enumerate(result['frames']) if frame[key] == 1][0]
             for key in result['IndexRange']
         }
+        return result
+
+    def getInternalMetadata(self, **kwargs):
+        """
+        Return additional known metadata about the tile source.  Data returned
+        from this method is not guaranteed to be in any particular format or
+        have specific values.
+
+        :returns: a dictionary of data or None.
+        """
+        result = {}
+        result['nd2'] = self._metadata
+        # result['nd2'].pop('custom_data', None)
+        # result['nd2'].pop('image_metadata', None)
+        # result['nd2'].pop('image_metadata_sequence', None)
+        result['nd2_sizes'] = self._nd2.sizes
+        result['nd2_axes'] = self._nd2.axes
+        result['nd2_iter_axes'] = self._nd2.iter_axes
         return result
 
     @methodcache()

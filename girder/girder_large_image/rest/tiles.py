@@ -103,6 +103,8 @@ class TilesItemResource(ItemResource):
                            self.getDZIInfo)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'dzi_files', ':level', ':xandy'),
                            self.getDZITile)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'internal_metadata'),
+                           self.getInternalMetadata)
         filter_logging.addLoggingFilter(
             'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}',
             frequency=250)
@@ -248,8 +250,21 @@ class TilesItemResource(ItemResource):
     @access.public
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getTilesInfo(self, item, params):
-        # TODO: parse params?
         return self._getTilesInfo(item, params)
+
+    @describeRoute(
+        Description('Get large image internal metadata.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getInternalMetadata(self, item, params):
+        try:
+            return self.imageItemModel.getInternalMetadata(item, **params)
+        except TileGeneralException as e:
+            raise RestException(e.args[0], code=400)
 
     @describeRoute(
         Description('Get test large image metadata.')

@@ -244,6 +244,19 @@ class OpenslideFileTileSource(FileTileSource):
             'mm_y': mm_y,
         }
 
+    def getInternalMetadata(self, **kwargs):
+        """
+        Return additional known metadata about the tile source.  Data returned
+        from this method is not guaranteed to be in any particular format or
+        have specific values.
+
+        :returns: a dictionary of data or None.
+        """
+        results = {'openslide': {}}
+        for key in self._openslide.properties:
+            results['openslide'][key] = self._openslide.properties[key]
+        return results
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         if z < 0:

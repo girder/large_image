@@ -74,3 +74,10 @@ def testStyleAutoMinMax():
     assert image[128][128][0] < imageB[128][128][0]
     assert image[0][128][0] < imageB[0][128][0]
     assert image[240][128][0] < imageB[240][128][0]
+
+
+def testInternalMetadata():
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    metadata = source.getInternalMetadata()
+    assert 'omeinfo' in metadata

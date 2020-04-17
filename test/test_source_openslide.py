@@ -442,3 +442,12 @@ def testEdgeOptions():
     assert width == 240
     assert height == 240
     assert imageB != image
+
+
+def testInternalMetadata():
+    imagePath = utilities.externaldata(
+        'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs.sha512')
+    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    metadata = source.getInternalMetadata()
+    assert 'openslide' in metadata

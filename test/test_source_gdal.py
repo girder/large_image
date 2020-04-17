@@ -332,3 +332,11 @@ def testRetileProjection():
     assert ti['tile'].size == 3000000
     tile = ts.getTile(1178, 1507, 12)
     assert len(tile) > 1000
+
+
+def testInternalMetadata():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
+    source = large_image_source_gdal.GDALFileTileSource(imagePath)
+    metadata = source.getInternalMetadata()
+    assert metadata['driverShortName'] == 'GTiff'

@@ -213,6 +213,19 @@ class OpenjpegFileTileSource(FileTileSource):
         except Exception:
             pass
 
+    def getInternalMetadata(self, **kwargs):
+        """
+        Return additional known metadata about the tile source.  Data returned
+        from this method is not guaranteed to be in any particular format or
+        have specific values.
+
+        :returns: a dictionary of data or None.
+        """
+        results = {}
+        if hasattr(self, '_description_xml'):
+            results['xml'] = self._description_xml
+        return results
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         if z < 0 or z >= self.levels:

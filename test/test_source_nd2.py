@@ -27,3 +27,10 @@ def testTilesFromND2():
     assert tileMetadata['channels'] == ['Brightfield', 'YFP', 'A594', 'DAPI']
     assert tileMetadata['IndexRange'] == {'IndexC': 4, 'IndexXY': 2, 'IndexZ': 29}
     utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testInternalMetadata():
+    imagePath = utilities.externaldata('data/ITGA3Hi_export_crop2.nd2.sha512')
+    source = large_image_source_nd2.ND2FileTileSource(imagePath)
+    metadata = source.getInternalMetadata()
+    assert 'nd2' in metadata

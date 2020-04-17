@@ -546,6 +546,31 @@ class GDALFileTileSource(FileTileSource):
             metadata['netcdf'] = self._netcdf
         return metadata
 
+    def getInternalMetadata(self, **kwargs):
+        """
+        Return additional known metadata about the tile source.  Data returned
+        from this method is not guaranteed to be in any particular format or
+        have specific values.
+
+        :returns: a dictionary of data or None.
+        """
+        print('HERE')
+        result = {}
+        with self._getDatasetLock:
+            result['driverShortName'] = self.dataset.GetDriver().ShortName
+            result['driverLongName'] = self.dataset.GetDriver().LongName
+            result['fileList'] = self.dataset.GetFileList()
+            result['RasterXSize'] = self.dataset.RasterXSize
+            result['RasterYSize'] = self.dataset.RasterYSize
+            result['GeoTransform'] = self.dataset.GetGeoTransform()
+            result['GCPProjection'] = self.dataset.GetGCPProjection()
+            result['Metadata'] = self.dataset.GetMetadata_List()
+            for key in ['IMAGE_STRUCTURE', 'SUBDATASETS', 'GEOLOCATION', 'RPC']:
+                metadatalist = self.dataset.GetMetadata_List(key)
+                if metadatalist:
+                    result['Metadata_' + key] = metadatalist
+        return result
+
     def getTileCorners(self, z, x, y):
         """
         Returns bounds of a tile for a given x,y,z index.

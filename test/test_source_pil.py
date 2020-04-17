@@ -60,3 +60,10 @@ def testReadingVariousColorFormats():
     for name in files:
         imagePath = os.path.join(testDir, 'test_files', name)
         assert large_image_source_pil.PILFileTileSource.canRead(imagePath) is True
+
+
+def testInternalMetadata():
+    imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
+    source = large_image_source_pil.PILFileTileSource(imagePath)
+    metadata = source.getInternalMetadata()
+    assert 'pil' in metadata
