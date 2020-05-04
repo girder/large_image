@@ -55,21 +55,27 @@ Large Image consists of several Python modules designed to work together.  These
 Installation
 ------------
 
-To install all packages from source, clone
+To install all packages from source:
 
-1.  ``git clone https://github.com/girder/large_image.git``
+1.  Clone the repository:
+ 
+    ``git clone https://github.com/girder/large_image.git``
+
+    Change to the source directory:
+
+    ``cd large_image``
 
 2.  Install all packages and dependencies:
 
-    ``pip install -e large-image[memcached] -r requirements-dev.txt``
+    ``pip install -e .[memcached] -r requirements-dev.txt``
 
 
 Tile source prerequisites
 =========================
 
-Many tile sources have complex prerequisites.  These can be installed directly using your system's package manager or from some prebuilt Python wheels for Linux.  The prebuilt wheels are not official packages, but they can be used by instructing pip to use them by preference:
+Many tile sources have complex prerequisites.  These can be installed directly using your system's package manager or from some prebuilt Python wheels for Linux.  The prebuilt wheels are not official packages, but they can be used by instructing pip to use them by preference::
 
-    ``pip install -e large-image[memcached] -r requirements-dev.txt --find-links https://girder.github.io/large_image_wheels``
+    pip install -e .[memcached] -r requirements-dev.txt --find-links https://girder.github.io/large_image_wheels
 
 
 Migration from Girder 2 to Girder 3
