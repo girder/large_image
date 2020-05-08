@@ -353,12 +353,12 @@ class LazyTileDict(dict):
                     self.x, self.y, self.level,
                     pilImageAllowed=True, numpyAllowed=True,
                     sparseFallback=True, frame=self.frame)
+                if self.crop:
+                    tileData, _ = _imageToNumpy(tileData)
+                    tileData = tileData[self.crop[1]:self.crop[3], self.crop[0]:self.crop[2]]
             else:
                 tileData = self._retileTile()
 
-            if self.crop and not self.retile:
-                tileData, _ = _imageToNumpy(tileData)
-                tileData = tileData[self.crop[1]:self.crop[3], self.crop[0]:self.crop[2]]
             pilData = _imageToPIL(tileData)
 
             # resample if needed
@@ -1140,7 +1140,7 @@ class TileSource(object):
         :param onlyMinMax: if True, only return the minimum and maximum value
             of the region.
         :param bins: the number of bins in the histogram.  This is passed to
-            numpy.histogram, but needs to produce teh same set of edges for
+            numpy.histogram, but needs to produce the same set of edges for
             each tile.
         :param density: if True, scale the results based on the number of
             samples.
@@ -1216,7 +1216,7 @@ class TileSource(object):
         self._skipStyle = True
         # Divert the tile cache while querying unstyled tiles
         classkey = self._classkey
-        self._classkey = 'nocache' + str(random.random)
+        self._classkey = 'nocache' + str(random.random())
         try:
             self._bandRanges[frame] = self.histogram(
                 dtype=dtype,
