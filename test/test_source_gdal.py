@@ -298,9 +298,8 @@ def testPalettizedGeotiff():
     assert tileMetadata['sizeX'] == 687
     assert tileMetadata['sizeY'] == 509
     assert tileMetadata['levels'] == 3
-    assert (tileMetadata['bounds']['srs'].strip() ==
-            '+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 '
-            '+y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
+    assert tileMetadata['bounds']['srs'].strip().startswith(
+        '+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0')
     assert tileMetadata['geospatial']
     assert len(tileMetadata['bands']) == 1
     assert tileMetadata['bands'][1]['interpretation'] == 'palette'
