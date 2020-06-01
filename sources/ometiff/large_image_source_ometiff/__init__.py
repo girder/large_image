@@ -159,7 +159,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
 
     def _checkForOMEZLoop(self, largeImagePath):
         """
-        Check if the OME description lists a Z-loop that isn't references by
+        Check if the OME description lists a Z-loop that isn't referenced by
         the frames or TiffData list and is present based on the number of tiff
         directories.  This can modify self._omeinfo.
 

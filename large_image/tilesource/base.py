@@ -1838,10 +1838,8 @@ class TileSource(object):
         if rounding:
             level = int(math.ceil(level) if rounding == 'ceil' else
                         round(level))
-        open('/tmp/junk.txt', 'a').write('ratio E: %r\n' % [exact, level, mag, rounding])  # ##DWM::
         if (exact and (level > mag['level'] or level < 0) or
                 (rounding == 'ceil' and level > mag['level'])):
-            open('/tmp/junk.txt', 'a').write('ratio G: %r\n' % [])  # ##DWM::
             return None
         if rounding is not None:
             level = max(0, min(mag['level'], level))

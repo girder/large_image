@@ -81,7 +81,7 @@ def externaldata(
                         raise Exception('Download has wrong hash value - %s' % destpath)
                     break
                 raise Exception('Incomplete download (got %d of %d) of %s' % (
-                    os.path.getsize(destpath), int(request.headers['content-length'], destpath)))
+                    os.path.getsize(destpath), int(request.headers['content-length']), destpath))
             except Exception:
                 pass
             if os.path.exists(destpath):
