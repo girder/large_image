@@ -620,3 +620,29 @@ def testHistogram():
                             density=True, resample=False)
     assert hist['histogram'][0]['samples'] == 2801664
     assert hist['histogram'][0]['hist'][128] == pytest.approx(6.39e-5, 0.01)
+
+
+def testSingleTileIteratorResample():
+    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    tile = source.getSingleTile()
+    assert tile['mm_x'] == 0.00025
+    assert tile['width'] == 256
+    tile = source.getSingleTile(
+        tile_size={'width': 255, 'height': 255}, scale={'mm_x': 0.5e-3})
+    assert tile['mm_x'] == 0.0005
+    assert tile['width'] == 255
+    tile = source.getSingleTile(
+        tile_size={'width': 255, 'height': 255}, scale={'mm_x': 0.6e-3}, resample=False)
+    assert tile['mm_x'] == 0.0005
+    assert tile['width'] == 255
+    assert tile['magnification'] == 20.0
+    assert 'tile_mm_x' not in tile
+    assert 'tile_magnification' not in tile
+    tile = source.getSingleTile(
+        tile_size={'width': 255, 'height': 255}, scale={'mm_x': 0.6e-3}, resample=True)
+    assert tile['mm_x'] == pytest.approx(0.0006, 1e-3)
+    assert tile['magnification'] == pytest.approx(16.667, 1e-3)
+    assert tile['width'] == 255
+    assert tile['tile_mm_x'] == 0.0005
+    assert tile['tile_magnification'] == 20.0

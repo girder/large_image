@@ -282,6 +282,8 @@ class LazyTileDict(dict):
             self['tile_height'] = self.get('tile_width', self.height)
             if self.get('magnification', None):
                 self['tile_magnification'] = self.get('tile_magnification', self['magnification'])
+            self['tile_mm_x'] = self.get('mm_x')
+            self['tile_mm_y'] = self.get('mm_y')
             self['x'] = float(self['tile_x'])
             self['y'] = float(self['tile_y'])
             # Add provisional width and height
@@ -292,6 +294,10 @@ class LazyTileDict(dict):
                     self['tile_height'] / self.requestedScale))
                 if self.get('tile_magnification', None):
                     self['magnification'] = self['tile_magnification'] / self.requestedScale
+                if self.get('tile_mm_x', None):
+                    self['mm_x'] = self['tile_mm_x'] * self.requestedScale
+                if self.get('tile_mm_y', None):
+                    self['mm_y'] = self['tile_mm_y'] * self.requestedScale
             # If we can resample the tile, many parameters may change once the
             # image is loaded.  Don't include width and height in this list;
             # the provisional values are sufficient.
@@ -1832,8 +1838,10 @@ class TileSource(object):
         if rounding:
             level = int(math.ceil(level) if rounding == 'ceil' else
                         round(level))
+        open('/tmp/junk.txt', 'a').write('ratio E: %r\n' % [exact, level, mag, rounding])  # ##DWM::
         if (exact and (level > mag['level'] or level < 0) or
                 (rounding == 'ceil' and level > mag['level'])):
+            open('/tmp/junk.txt', 'a').write('ratio G: %r\n' % [])  # ##DWM::
             return None
         if rounding is not None:
             level = max(0, min(mag['level'], level))
@@ -1897,6 +1905,8 @@ class TileSource(object):
                     scaling.
                 tile_magnification: magnification of the current tile before
                     scaling.
+                tile_mm_x, tile_mm_y: size of a pixel in a tile in millimeters
+                    before scaling.
             Note that scipy.misc.imresize uses PIL internally.
         :param region: a dictionary of optional values which specify the part
                 of the image to process.
