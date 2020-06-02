@@ -259,6 +259,17 @@ class OMETiffFileTileSource(TiffFileTileSource):
                 cname: c for c, cname in enumerate(channels[:maxref.get('IndexC', 1)])}
             for frame in result['frames']:
                 frame['Channel'] = channels[frame.get('IndexC', 0)]
+        return result
+
+    def getInternalMetadata(self, **kwargs):
+        """
+        Return additional known metadata about the tile source.  Data returned
+        from this method is not guaranteed to be in any particular format or
+        have specific values.
+
+        :returns: a dictionary of data or None.
+        """
+        result = {}
         result['omeinfo'] = self._omeinfo
         return result
 

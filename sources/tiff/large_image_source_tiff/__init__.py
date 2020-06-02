@@ -249,6 +249,21 @@ class TiffFileTileSource(FileTileSource):
             'mm_y': mm_y,
         }
 
+    def getInternalMetadata(self, **kwargs):
+        """
+        Return additional known metadata about the tile source.  Data returned
+        from this method is not guaranteed to be in any particular format or
+        have specific values.
+
+        :returns: a dictionary of data or None.
+        """
+        results = {}
+        for idx, dir in enumerate(self._tiffDirectories[::-1]):
+            if dir and hasattr(dir, '_description_xml'):
+                results['xml' + (
+                    '' if not results.get('xml') else '_' + str(idx))] = dir._description_xml
+        return results
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 sparseFallback=False, **kwargs):

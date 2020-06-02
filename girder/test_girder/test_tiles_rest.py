@@ -1119,3 +1119,13 @@ def testTilesHistogram(server, admin, fsAssetstore):
     assert len(resp.json[0]['hist']) == 256
     assert resp.json[1]['samples'] == 2801664
     assert resp.json[1]['hist'][128] == 176
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testTilesInternalMetadata(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    resp = server.request(path='/item/%s/tiles/internal_metadata' % itemId)
+    assert resp.json['tilesource'] == 'tiff'

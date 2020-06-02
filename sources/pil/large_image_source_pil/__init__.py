@@ -147,6 +147,22 @@ class PILFileTileSource(FileTileSource):
         return super(PILFileTileSource, self).getState() + ',' + str(
             self._maxSize)
 
+    def getInternalMetadata(self, **kwargs):
+        """
+        Return additional known metadata about the tile source.  Data returned
+        from this method is not guaranteed to be in any particular format or
+        have specific values.
+
+        :returns: a dictionary of data or None.
+        """
+        results = {'pil': {}}
+        for key in ('filename', 'format', 'mode', 'size', 'width', 'height', 'palette', 'info'):
+            try:
+                results['pil'][key] = getattr(self._pilImage, key)
+            except Exception:
+                pass
+        return results
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 mayRedirect=False, **kwargs):

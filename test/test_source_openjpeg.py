@@ -54,3 +54,10 @@ def testBelowLevelTilesFromOpenJPEG():
     large_image_source_openjpeg.OpenjpegFileTileSource._minTileSize = origMin
     large_image_source_openjpeg.OpenjpegFileTileSource._maxTileSize = origMax
     cachesClear()
+
+
+def testInternalMetadata():
+    imagePath = utilities.externaldata('data/sample_image.jp2.sha512')
+    source = large_image_source_openjpeg.OpenjpegFileTileSource(imagePath)
+    metadata = source.getInternalMetadata()
+    assert 'ScanInfo' in metadata['xml']

@@ -646,3 +646,10 @@ def testSingleTileIteratorResample():
     assert tile['width'] == 255
     assert tile['tile_mm_x'] == 0.0005
     assert tile['tile_magnification'] == 20.0
+
+
+def testInternalMetadata():
+    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    metadata = source.getInternalMetadata()
+    assert 'xml' in metadata

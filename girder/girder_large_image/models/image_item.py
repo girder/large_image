@@ -173,6 +173,12 @@ class ImageItem(Item):
         tileSource = self._loadTileSource(item, **kwargs)
         return tileSource.getMetadata()
 
+    def getInternalMetadata(self, item, **kwargs):
+        tileSource = self._loadTileSource(item, **kwargs)
+        result = tileSource.getInternalMetadata() or {}
+        result['tilesource'] = tileSource.name
+        return result
+
     def getTile(self, item, x, y, z, mayRedirect=False, **kwargs):
         tileSource = self._loadTileSource(item, **kwargs)
         imageParams = {}
