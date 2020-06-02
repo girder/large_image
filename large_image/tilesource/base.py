@@ -1716,7 +1716,12 @@ class TileSource(object):
                 y0 = 0
             subimage = subimage[:min(subimage.shape[0], regionHeight - y0),
                                 :min(subimage.shape[1], regionWidth - x0)]
-            image[y0:y0 + subimage.shape[0], x0:x0 + subimage.shape[1]] = subimage
+            if subimage.shape[2] > image.shape[2]:
+                newimage = numpy.ones((image.shape[0], image.shape[1], subimage.shape[2]))
+                newimage[:, :, :image.shape[2]] = image
+                image = newimage
+            image[y0:y0 + subimage.shape[0], x0:x0 + subimage.shape[1],
+                  :subimage.shape[2]] = subimage
         # Scale if we need to
         outWidth = int(math.floor(outWidth))
         outHeight = int(math.floor(outHeight))

@@ -9,6 +9,7 @@ import PIL.ImageChops
 import pytest
 import six
 
+from large_image import constants
 from large_image.exceptions import TileSourceException
 
 import large_image_source_gdal
@@ -340,3 +341,11 @@ def testInternalMetadata():
     source = large_image_source_gdal.GDALFileTileSource(imagePath)
     metadata = source.getInternalMetadata()
     assert metadata['driverShortName'] == 'GTiff'
+
+
+def testGetRegionWithProjection():
+    imagePath = utilities.externaldata('data/landcover_sample_1000.tif.sha512')
+    ts = large_image_source_gdal.GDALFileTileSource(imagePath, projection='EPSG:3857')
+    region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
+                             format=constants.TILE_FORMAT_NUMPY)
+    assert region.shape == (1024, 1024, 4)
