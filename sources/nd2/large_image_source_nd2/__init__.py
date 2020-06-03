@@ -65,6 +65,11 @@ class ND2FileTileSource(FileTileSource):
         'image/nd2': SourcePriority.PREFERRED,
     }
 
+    # If frames are smaller than this they are served as single tiles, which
+    # can be more efficient than handling multiple tiles.
+    _singleTileThreshold = 2048
+    _tileSize = 512
+
     def __init__(self, path, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
@@ -88,7 +93,10 @@ class ND2FileTileSource(FileTileSource):
         self._recentFrames = cachetools.LRUCache(maxsize=6)
         self.sizeX = self._nd2.metadata['width']
         self.sizeY = self._nd2.metadata['height']
-        self.tileWidth = self.tileHeight = 256
+        self.tileWidth = self.tileHeight = self._tileSize
+        if self.sizeX <= self._singleTileThreshold and self.sizeY <= self._singleTileThreshold:
+            self.tileWidth = self.sizeX
+            self.tileHeight = self.sizeY
         self.levels = int(max(1, math.ceil(math.log(
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
         # There is one file that throws a warning 'Z-levels details missing in
