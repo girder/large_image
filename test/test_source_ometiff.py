@@ -2,8 +2,10 @@
 
 import json
 import numpy
+from xml.etree import cElementTree
 
 from large_image.constants import TILE_FORMAT_NUMPY
+from large_image.tilesource import etreeToDict
 import large_image_source_ometiff
 
 from . import utilities
@@ -81,3 +83,31 @@ def testInternalMetadata():
     source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
     metadata = source.getInternalMetadata()
     assert 'omeinfo' in metadata
+
+
+def testXMLParsing():
+    samples = [{
+        'xml': """<?xml version='1.0' encoding='utf-8'?>
+<OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" UUID="urn:uuid:1ae9b229-162c-4431-8be0-1833b52302e5" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd"><Image ID="Image:0"><Pixels BigEndian="false" DimensionOrder="XYZCT" ID="Pixels:0" PhysicalSizeX="0.32499998807907104" PhysicalSizeXUnit="µm" PhysicalSizeY="0.32499998807907104" PhysicalSizeYUnit="µm" SizeC="3" SizeT="1" SizeX="57346" SizeY="54325" SizeZ="1" Type="uint8"><Channel ID="Channel:0:0" Name="Red" SamplesPerPixel="1"><LightPath /></Channel><Channel ID="Channel:0:1" Name="Green" SamplesPerPixel="1"><LightPath /></Channel><Channel ID="Channel:0:2" Name="Blue" SamplesPerPixel="1"><LightPath /></Channel><TiffData IFD="0" PlaneCount="3" /><Plane TheC="0" TheT="0" TheZ="0" /><Plane TheC="1" TheT="0" TheZ="0" /><Plane TheC="2" TheT="0" TheZ="0" /></Pixels></Image></OME>""",  # noqa
+        'checks': {
+            'frames': 3,
+            'IndexRange': {'IndexC': 3},
+            'IndexStride': {'IndexC': 1},
+            'channelmap': {'Blue': 2, 'Green': 1, 'Red': 0},
+            'channels': ['Red', 'Green', 'Blue'],
+        }
+    }]
+    # Create a source so we can use internal functions for testing
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    for sample in samples:
+        xml = cElementTree.fromstring(sample['xml'])
+        info = etreeToDict(xml)
+        source._omeinfo = info['OME']
+        source._parseOMEInfo()
+        metadata = source.getMetadata()
+        for key, value in sample['checks'].items():
+            if key in {'frames'}:
+                assert len(metadata[key]) == value
+            else:
+                assert metadata[key] == value
