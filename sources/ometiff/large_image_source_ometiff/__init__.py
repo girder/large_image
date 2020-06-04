@@ -16,6 +16,7 @@
 #  limitations under the License.
 ##############################################################################
 
+import copy
 import math
 import numpy
 import PIL.Image
@@ -101,30 +102,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
             raise TileSourceException('Not an OME Tiff')
         self._omeinfo = info['OME']
         self._checkForOMEZLoop(largeImagePath)
-        if isinstance(self._omeinfo['Image'], dict):
-            self._omeinfo['Image'] = [self._omeinfo['Image']]
-        for img in self._omeinfo['Image']:
-            if isinstance(img['Pixels'].get('TiffData'), dict):
-                img['Pixels']['TiffData'] = [img['Pixels']['TiffData']]
-            if isinstance(img['Pixels'].get('Plane'), dict):
-                img['Pixels']['Plane'] = [img['Pixels']['Plane']]
-        try:
-            self._omebase = self._omeinfo['Image'][0]['Pixels']
-            if ((not len(self._omebase['TiffData']) or (
-                    len(self._omebase['TiffData']) == 1 and
-                    self._omebase['TiffData'][0] == {})) and
-                    len(self._omebase['Plane'])):
-                self._omebase['TiffData'] = self._omebase['Plane']
-            if len({entry.get('UUID', {}).get('FileName', '')
-                    for entry in self._omebase['TiffData']}) > 1:
-                raise TileSourceException('OME Tiff references multiple files')
-            if (len(self._omebase['TiffData']) != int(self._omebase['SizeC']) *
-                    int(self._omebase['SizeT']) * int(self._omebase['SizeZ']) or
-                    len(self._omebase['TiffData']) != len(
-                        self._omebase.get('Plane', self._omebase['TiffData']))):
-                raise TileSourceException('OME Tiff contains frames that contain multiple planes')
-        except (KeyError, ValueError, IndexError):
-            raise TileSourceException('OME Tiff does not contain an expected record')
+        self._parseOMEInfo()
         omeimages = [
             entry['Pixels'] for entry in self._omeinfo['Image'] if
             len(entry['Pixels']['TiffData']) == len(self._omebase['TiffData'])]
@@ -206,6 +184,39 @@ class OMETiffFileTileSource(TiffFileTileSource):
         info['Image']['Pixels']['PlanesFromZloop'] = 'true'
         info['Image']['Pixels']['SizeZ'] = str(zloop)
 
+    def _parseOMEInfo(self):
+        if isinstance(self._omeinfo['Image'], dict):
+            self._omeinfo['Image'] = [self._omeinfo['Image']]
+        for img in self._omeinfo['Image']:
+            if isinstance(img['Pixels'].get('TiffData'), dict):
+                img['Pixels']['TiffData'] = [img['Pixels']['TiffData']]
+            if isinstance(img['Pixels'].get('Plane'), dict):
+                img['Pixels']['Plane'] = [img['Pixels']['Plane']]
+        try:
+            self._omebase = self._omeinfo['Image'][0]['Pixels']
+            if ((not len(self._omebase['TiffData']) or
+                    len(self._omebase['TiffData']) == 1) and
+                    len(self._omebase['Plane'])):
+                if not len(self._omebase['TiffData']) or self._omebase['TiffData'][0] == {}:
+                    self._omebase['TiffData'] = self._omebase['Plane']
+                elif (int(self._omebase['TiffData'][0].get('PlaneCount', 0)) ==
+                        len(self._omebase['Plane'])):
+                    planes = copy.deepcopy(self._omebase['Plane'])
+                    for idx, plane in enumerate(planes):
+                        plane['IFD'] = plane.get(
+                            'IFD', int(self._omebase['TiffData'][0].get('IFD', 0)) + idx)
+                    self._omebase['TiffData'] = planes
+            if len({entry.get('UUID', {}).get('FileName', '')
+                    for entry in self._omebase['TiffData']}) > 1:
+                raise TileSourceException('OME Tiff references multiple files')
+            if (len(self._omebase['TiffData']) != int(self._omebase['SizeC']) *
+                    int(self._omebase['SizeT']) * int(self._omebase['SizeZ']) or
+                    len(self._omebase['TiffData']) != len(
+                        self._omebase.get('Plane', self._omebase['TiffData']))):
+                raise TileSourceException('OME Tiff contains frames that contain multiple planes')
+        except (KeyError, ValueError, IndexError):
+            raise TileSourceException('OME Tiff does not contain an expected record')
+
     def getMetadata(self):
         """
         Return a dictionary of metadata containing levels, sizeX, sizeY,
@@ -238,8 +249,8 @@ class OMETiffFileTileSource(TiffFileTileSource):
             for key in reftbl:
                 if key in frame and not reftbl[key] in frame:
                     frame[reftbl[key]] = int(frame[key])
-                    if frame[reftbl[key]] + 1 > maxref.get(reftbl[key], 0):
-                        maxref[reftbl[key]] = frame[reftbl[key]] + 1
+                if reftbl[key] in frame and frame[reftbl[key]] + 1 > maxref.get(reftbl[key], 0):
+                    maxref[reftbl[key]] = frame[reftbl[key]] + 1
             frame['Frame'] = idx
             if (idx and (
                     frame.get('IndexV') != result['frames'][idx - 1].get('IndexV') or

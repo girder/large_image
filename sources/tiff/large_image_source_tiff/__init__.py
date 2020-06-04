@@ -65,6 +65,14 @@ class TiffFileTileSource(FileTileSource):
         'image/x-ptif': SourcePriority.PREFERRED,
     }
 
+    # When getting tiles for otherwise empty directories (missing powers of
+    # two), we composite the tile from higher resolution levels.  This can use
+    # excessive memory if there are too many missing levels.  For instance, if
+    # there are six missing levels and the tile size is 1024 square RGBA, then
+    # 16 Gb are needed for the composited tile at a minimum.  By setting
+    # _maxSkippedLevels, such large gaps are composited in stages.
+    _maxSkippedLevels = 3
+
     def __init__(self, path, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
@@ -272,9 +280,13 @@ class TiffFileTileSource(FileTileSource):
         try:
             allowStyle = True
             if self._tiffDirectories[z] is None:
-                if sparseFallback:
-                    raise IOTiffException('Missing z level %d' % z)
-                tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
+                try:
+                    tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
+                except Exception:
+                    if sparseFallback:
+                        raise IOTiffException('Missing z level %d' % z)
+                    else:
+                        raise
                 allowStyle = False
                 format = TILE_FORMAT_PIL
             else:
@@ -327,10 +339,14 @@ class TiffFileTileSource(FileTileSource):
         :param z: original level.
         :returns: tile in PIL format.
         """
+        basez = z
         scale = 1
         while self._tiffDirectories[z] is None:
             scale *= 2
             z += 1
+        while z - basez > self._maxSkippedLevels:
+            z -= self._maxSkippedLevels
+            scale = int(scale / 2 ** self._maxSkippedLevels)
         tile = PIL.Image.new(
             'RGBA', (self.tileWidth * scale, self.tileHeight * scale))
         maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
@@ -361,8 +377,11 @@ class TiffFileTileSource(FileTileSource):
         :returns level: a level with actual data that is no lower resolution.
         """
         level = max(0, min(level, self.levels - 1))
+        baselevel = level
         while self._tiffDirectories[level] is None and level < self.levels - 1:
             level += 1
+        while level - baselevel > self._maxSkippedLevels:
+            level -= self._maxSkippedLevels
         return level
 
     def getAssociatedImagesList(self):
