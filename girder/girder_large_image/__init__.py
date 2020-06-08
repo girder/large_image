@@ -223,6 +223,9 @@ def validateBoolean(doc):
     constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC,
     constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
     constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN,
+    constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA_PUBLIC,
+    constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA,
+    constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA_ADMIN,
 })
 def validateDictOrJSON(doc):
     val = doc['value']

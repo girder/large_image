@@ -1,6 +1,6 @@
 .g-annotation-list-header
   i.icon-pencil
-  | Annotations
+  |  Annotations
   .btn-group.pull-right
     if annotations.length
       a.g-annotation-download(href=`${apiRoot}/annotation/item/${item.id}`, title='Download annotations', download=`${item.get('name')}_annotations.json`)

@@ -89,26 +89,6 @@ wrap(ItemListWidget, 'render', function (render) {
     largeImageConfig.getSettings((settings) => {
         // we will want to also show metadata, so these entries might look like
         // {images: ['label', 'macro'],  meta: [{key: 'abc', label: 'ABC'}]}
-        var extraInfo = {};
-        if (settings['large_image.show_extra_public']) {
-            try {
-                extraInfo[null] = JSON.parse(settings['large_image.show_extra_public']);
-            } catch (err) {
-            }
-        }
-        if (settings['large_image.show_extra']) {
-            try {
-                extraInfo[AccessType.READ] = JSON.parse(settings['large_image.show_extra']);
-            } catch (err) {
-            }
-        }
-        if (settings['large_image.show_extra_admin']) {
-            try {
-                extraInfo[AccessType.ADMIN] = JSON.parse(settings['large_image.show_extra_admin']);
-            } catch (err) {
-            }
-        }
-
         if (settings['large_image.show_thumbnails'] === false ||
                 this.$('.large_image_container').length > 0) {
             return this;
@@ -123,7 +103,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 var elem = $('<div class="large_image_container"/>');
                 if (item.get('largeImage')) {
                     item.getAccessLevel(function () {
-                        addLargeImageDetails(item, elem, parent, extraInfo);
+                        addLargeImageDetails(item, elem, parent, settings.extraInfo);
                     });
                 }
                 $('a[g-item-cid="' + item.cid + '"]>i', parent).before(elem);

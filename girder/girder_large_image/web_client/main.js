@@ -4,6 +4,7 @@ import { registerPluginNamespace } from '@girder/core/pluginUtils';
 import './routes';
 import './views/fileList';
 import './views/itemList';
+import './views/itemView';
 import './views/imageViewerSelectWidget';
 
 // expose symbols under girder.plugins

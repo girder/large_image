@@ -73,7 +73,11 @@ def testSettings(server):
     testExtraVal = json.dumps({'images': ['label']})
     for key in (constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC,
                 constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA,
-                constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN):
+                constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN,
+                constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA_PUBLIC,
+                constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA,
+                constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA_ADMIN,
+                ):
         Setting().set(key, '')
         assert Setting().get(key) == ''
         Setting().set(key, testExtraVal)
@@ -102,6 +106,9 @@ def testSettings(server):
     assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC] == testExtraVal
     assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA] == testExtraVal
     assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN] == testExtraVal
+    assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA_PUBLIC] == testExtraVal
+    assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA] == testExtraVal
+    assert settings[constants.PluginSettings.LARGE_IMAGE_SHOW_ITEM_EXTRA_ADMIN] == testExtraVal
     assert settings[constants.PluginSettings.LARGE_IMAGE_AUTO_SET] is True
     assert settings[constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES] == 5
     assert settings[constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE] == 1024

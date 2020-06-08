@@ -344,7 +344,6 @@ describe('AnnotationListWidget', function () {
             girderTest.waitForLoad();
             waitsFor(function () {
                 var $el = $('.g-annotation-list .g-annotation-row');
-                console.log($el.length);
                 return $el.length === 10;
             }, 'the upload to finish');
         });
