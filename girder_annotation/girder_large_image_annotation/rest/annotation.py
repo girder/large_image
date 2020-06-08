@@ -26,7 +26,7 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import describeRoute, autoDescribeRoute, Description
 from girder.api.rest import Resource, loadmodel, filtermodel, setResponseHeader
-from girder.constants import AccessType, SortDir
+from girder.constants import AccessType, SortDir, TokenScope
 from girder.exceptions import ValidationException, RestException, AccessException
 from girder.models.item import Item
 from girder.models.user import User
@@ -60,6 +60,7 @@ class AnnotationResource(Resource):
         self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
         self.route('GET', ('old',), self.getOldAnnotations)
         self.route('DELETE', ('old',), self.deleteOldAnnotations)
+        self.route('GET', ('counts',), self.getItemListAnnotationCounts)
 
     @describeRoute(
         Description('Search for annotations.')
@@ -565,3 +566,20 @@ class AnnotationResource(Resource):
     def deleteOldAnnotations(self, age, versions):
         setResponseTimeLimit(86400)
         return Annotation().removeOldAnnotations(True, age, versions)
+
+    @access.public(scope=TokenScope.DATA_READ)
+    @autoDescribeRoute(
+        Description('Get annotation counts for a list of items.')
+        .param('items', 'A comma-separated list of item ids.')
+        .errorResponse()
+    )
+    def getItemListAnnotationCounts(self, items):
+        user = self.getCurrentUser()
+        results = {}
+        for itemId in items.split(','):
+            item = Item().load(itemId, level=AccessType.READ, user=user)
+            annotations = Annotation().findWithPermissions(
+                {'_active': {'$ne': False}, 'itemId': item['_id']},
+                user=self.getCurrentUser(), level=AccessType.READ, limit=-1)
+            results[itemId] = annotations.count()
+        return results
