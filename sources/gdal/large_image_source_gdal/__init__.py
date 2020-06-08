@@ -554,7 +554,6 @@ class GDALFileTileSource(FileTileSource):
 
         :returns: a dictionary of data or None.
         """
-        print('HERE')
         result = {}
         with self._getDatasetLock:
             result['driverShortName'] = self.dataset.GetDriver().ShortName
