@@ -57,7 +57,9 @@ wrap(ItemListWidget, 'render', function (render) {
                 error: null
             }).done((resp) => {
                 Object.entries(resp).forEach(([id, count]) => {
-                    this.collection.get(id)._annotationCount = count;
+                    if (this.collection.get(id)) {
+                        this.collection.get(id)._annotationCount = count;
+                    }
                 });
             });
         }
