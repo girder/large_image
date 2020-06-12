@@ -277,6 +277,13 @@ class TiffFileTileSource(FileTileSource):
                 sparseFallback=False, **kwargs):
         if z < 0:
             raise TileSourceException('z layer does not exist')
+        scale = 2 ** (self.levels - 1 - z)
+        offsetx = x * self.tileWidth * scale
+        if not (0 <= offsetx < self.sizeX):
+            raise TileSourceException('x is outside layer')
+        offsety = y * self.tileHeight * scale
+        if not (0 <= offsety < self.sizeY):
+            raise TileSourceException('y is outside layer')
         try:
             allowStyle = True
             if self._tiffDirectories[z] is None:
