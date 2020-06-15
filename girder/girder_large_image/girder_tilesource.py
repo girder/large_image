@@ -148,7 +148,7 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):
         loadGirderTileSources()
     if not file:
         file = File().load(item['largeImage']['fileId'], force=True)
-    extensions = [entry.lower().split()[0] for entry in file['exts']]
+    extensions = [entry.lower().split()[0] for entry in file['exts'] if entry]
     sourceList = []
     for sourceName in AvailableGirderTileSources:
         if not getattr(AvailableGirderTileSources[sourceName], 'girderSource', False):

@@ -1129,3 +1129,33 @@ def testTilesInternalMetadata(server, admin, fsAssetstore):
     itemId = str(file['itemId'])
     resp = server.request(path='/item/%s/tiles/internal_metadata' % itemId)
     assert resp.json['tilesource'] == 'tiff'
+
+
+@pytest.mark.usefixtures('unbindLargeImage')  # noqa
+@pytest.mark.usefixtures('girderWorker')  # noqa
+@pytest.mark.plugin('large_image')
+def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+    # Unicode file names shouldn't cause problems when generating tiles.
+    file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
+    # Our normal testing method doesn't pass through the unicode name
+    # properly, so just change it after upload.
+    file = File().load(file['_id'], force=True)
+    file['name'] = 'A name with...dots.png'
+    file = File().save(file)
+    fileId = str(file['_id'])
+
+    itemId = str(file['itemId'])
+    item = Item().load(itemId, force=True)
+    item['name'] = 'A name with...dots.png'
+    item = Item().save(item)
+
+    tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId)
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 10000
+    assert tileMetadata['sizeY'] == 5000
+    assert tileMetadata['levels'] == 7
+    assert tileMetadata['magnification'] is None
+    assert tileMetadata['mm_x'] is None
+    assert tileMetadata['mm_y'] is None
+    _testTilesZXY(boundServer, admin, itemId, tileMetadata)
