@@ -20,12 +20,14 @@ Large Image consists of several Python modules designed to work together.  These
 - ``large-image``: The core module.
   You can specify extras_require of the name of any tile source included with this repository, ``sources`` for all of the tile sources in the repository, ``memcached`` for using memcached for tile caching, or ``all`` for all of the tile sources and memcached.
 
+- ``large-image-converter``: A utility for using pyvips and other libraries to convert images into pyramidal tiff files that can be read efficiently by large_image.
+
 - ``girder-large-image``: Large Image as a Girder_ 3.x plugin.
   You can specify extras_require of ``tasks`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
 
 - ``girder-large-image-annotation``: Annotations for large images as a Girder_ 3.x plugin.
 
-- ``large-image-tasks``: A utility for using pyvips to convert images into pyramidal tiff files that can be read efficiently by large_image.  This can be used by itself or with Girder Worker.
+- ``large-image-tasks``: A utility for running the converter via Girder Worker.
 
 - Tile sources:
 

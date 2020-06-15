@@ -26,6 +26,7 @@ large_image also works as a Girder plugin with optional annotation support.
    large_image_source_pil/modules
    large_image_source_test/modules
    large_image_source_tiff/modules
+   large_image_converter/modules
    large_image_tasks/modules
    girder_large_image/modules
    girder_large_image_annotation/modules

@@ -16,7 +16,9 @@ cd "$ROOTPATH/girder"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/girder_annotation"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
-cd "$ROOTPATH/tasks"
+cd "$ROOTPATH/utilities/converter"
+pip wheel . --no-deps -w ~/wheels && rm -rf build
+cd "$ROOTPATH/utilities/tasks"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/bioformats"
 pip wheel . --no-deps -w ~/wheels && rm -rf build

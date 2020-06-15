@@ -24,7 +24,7 @@ def prerelease_local_scheme(version):
 
 setup(
     name='large-image-tasks',
-    use_scm_version={'root': '..', 'local_scheme': prerelease_local_scheme},
+    use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
     description='Girder Worker tasks for Large Image.',
     long_description=long_desc,
@@ -32,7 +32,7 @@ setup(
     author_email='kitware@kitware.com',
     license='Apache Software License 2.0',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Scientific/Engineering',
         'Intended Audience :: Science/Research',
@@ -54,8 +54,8 @@ setup(
         ],
         'worker': [
             # Dependencies required on the consumer (Girder Worker) side.
-            'pyvips',
-        ]
+            'large-image-converter[sources]',
+        ],
     },
     python_requires='>=3.6',
     entry_points={

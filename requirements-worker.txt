@@ -1,8 +1,4 @@
-# Top level dependencies
-girder>=3.0.4 ; python_version < '3.8'
-girder>=3.0.13.dev6 ; python_version >= '3.8'
-girder-jobs>=3.0.3 
--e sources/bioformats 
+-e sources/bioformats
 -e sources/dummy
 -e sources/gdal
 -e sources/nd2
@@ -17,18 +13,13 @@ girder-jobs>=3.0.3
 -e sources/mapnik
 # Don't specify extras for the converter; they are already present above
 -e utilities/converter
-# Girder and worker dependencies are already installed above
+# Worker dependencies are already installed above
 -e utilities/tasks
--e girder/.
--e girder_annotation/.
 
 # Extras from main setup.py
 pylibmc>=1.5.1
 
 # External dependencies
 pip>=9
-tox
-twine
-virtualenv
 
 

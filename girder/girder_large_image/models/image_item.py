@@ -17,10 +17,8 @@
 #############################################################################
 
 import json
-import os
 import pymongo
 import six
-import time
 
 from girder import logger
 from girder.constants import SortDir
@@ -54,11 +52,10 @@ class ImageItem(Item):
         ], {})])
 
     def createImageItem(self, item, fileObj, user=None, token=None,
-                        createJob=True, notify=False):
+                        createJob=True, notify=False, **kwargs):
         # Using setdefault ensures that 'largeImage' is in the item
         if 'fileId' in item.setdefault('largeImage', {}):
-            # TODO: automatically delete the existing large file
-            raise TileGeneralException('Item already has a largeImage set.')
+            raise TileGeneralException('Item already has largeImage set.')
         if fileObj['itemId'] != item['_id']:
             raise TileGeneralException('The provided file must be in the '
                                        'provided item.')
@@ -75,13 +72,13 @@ class ImageItem(Item):
         sourceName = girder_tilesource.getGirderTileSourceName(item, fileObj)
         if sourceName:
             item['largeImage']['sourceName'] = sourceName
-        if not sourceName:
+        if not sourceName or createJob == 'always':
             if not createJob:
                 raise TileGeneralException(
                     'A job must be used to generate a largeImage.')
             # No source was successful
             del item['largeImage']['fileId']
-            job = self._createLargeImageJob(item, fileObj, user, token)
+            job = self._createLargeImageJob(item, fileObj, user, token, **kwargs)
             item['largeImage']['expected'] = True
             item['largeImage']['notify'] = notify
             item['largeImage']['originalId'] = fileObj['_id']
@@ -89,16 +86,12 @@ class ImageItem(Item):
         self.save(item)
         return job
 
-    def _createLargeImageJob(self, item, fileObj, user, token):
+    def _createLargeImageJob(self, item, fileObj, user, token, **kwargs):
         import large_image_tasks.tasks
         from girder_worker_utils.transforms.girder_io import GirderUploadToItem
         from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
         from girder_worker_utils.transforms.common import TemporaryDirectory
 
-        outputName = os.path.splitext(fileObj['name'])[0] + '.tiff'
-        if outputName == fileObj['name']:
-            outputName = (os.path.splitext(fileObj['name'])[0] + '.' +
-                          time.strftime('%Y%m%d-%H%M%S') + '.tiff')
         try:
             localPath = File().getLocalFilePath(fileObj)
         except (FilePathException, AttributeError):
@@ -111,11 +104,12 @@ class ImageItem(Item):
                 'task': 'createImageItem',
             }},
             inputFile=GirderFileIdAllowDirect(str(fileObj['_id']), fileObj['name'], localPath),
-            outputName=outputName,
+            inputName=fileObj['name'],
             outputDir=TemporaryDirectory(),
             girder_result_hooks=[
                 GirderUploadToItem(str(item['_id']), False),
-            ]
+            ],
+            **kwargs,
         )
         return job.job
 

@@ -143,9 +143,22 @@ class TilesItemResource(ItemResource):
         .param('fileId', 'The ID of the source file containing the image. '
                          'Required if there is more than one file in the item.',
                required=False)
+        .param('force', 'Always use a job to create the large image.',
+               dataType='boolean', default=False, required=False)
         .param('notify', 'If a job is required to create the large image, '
                'a nofication can be sent when it is complete.',
                dataType='boolean', default=True, required=False)
+        .param('tileSize', 'Tile size', dataType='int', default=256,
+               required=False)
+        .param('compression', 'Internal compression format', required=False,
+               enum=['none', 'jpeg', 'deflate', 'lzw', 'zstd', 'packbits', 'webp'])
+        .param('quality', 'JPEG compression quality where 0 is small and 100 '
+               'is highest quality', dataType='int', default=90,
+               required=False)
+        .param('level', 'Compression level for deflate (zip) or zstd.',
+               dataType='int', required=False)
+        .param('predictor', 'Predictor for deflate (zip) or lzw.',
+               required=False, enum=['none', 'horizontal', 'float', 'yes'])
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -164,6 +177,7 @@ class TilesItemResource(ItemResource):
         try:
             return self.imageItemModel.createImageItem(
                 item, largeImageFile, user, token,
+                createJob='always' if self.boolParam('force', params, default=False) else True,
                 notify=self.boolParam('notify', params, default=True))
         except TileGeneralException as e:
             raise RestException(e.args[0])
@@ -671,7 +685,8 @@ class TilesItemResource(ItemResource):
                enum=['0', '1', '2'], dataType='int', default='0')
         .param('tiffCompression', 'Compression method when storing a TIFF '
                'image', required=False,
-               enum=['raw', 'tiff_lzw', 'jpeg', 'tiff_adobe_deflate'])
+               enum=['none', 'raw', 'lzw', 'tiff_lzw', 'jpeg', 'deflate',
+                     'tiff_adobe_deflate'])
         .param('style', 'JSON-encoded style string', required=False)
         .param('resample', 'If false, an existing level of the image is used '
                'for the histogram.  If true, the internal values are '
