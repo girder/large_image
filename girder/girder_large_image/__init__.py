@@ -140,7 +140,7 @@ def checkForLargeImageFiles(event):
     mimeType = file.get('mimeType')
     if mimeType in girder_tilesource.KnownMimeTypes:
         possible = True
-    exts = [ext.split()[0] for ext in file.get('exts')]
+    exts = [ext.split()[0] for ext in file.get('exts') if ext]
     if set(exts[-2:]).intersection(girder_tilesource.KnownExtensions):
         possible = True
     if not file.get('itemId') or not possible:
