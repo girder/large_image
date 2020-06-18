@@ -1,0 +1,81 @@
+mixin maketable(info, depth)
+  table.table.table-hover.table-condensed
+    thead
+      th Property
+      th Value
+    each value, key in info
+      tr
+        if Array.isArray(value) && value.length <= 100
+          td(scope="row", key=key, rowspan=value.length || 1) #{key}
+          for rowvalue, rowidx in value
+            if rowidx
+              tr
+                +tableentry(rowvalue, depth)
+            else
+              +tableentry(rowvalue, depth)
+        else
+          td(scope="row", key=key) #{key}
+          +tableentry(value, depth)
+
+mixin tableentry(value, depth)
+  //- each value, if an array or object, convert to yaml or json
+      and add a class to show it differently
+  if value === null
+    td.null &lt;null&gt;
+  else if value && value.constructor.name === 'Object' && (depth || 0) < 3
+    td.subtable
+      +maketable(value, (depth || 0) + 1)
+  else if Array.isArray(value) || (value && value.constructor.name === 'Object')
+    if yaml.dump(value).split('\n').length <= 100
+      td.yaml #{yaml.dump(value)}
+    else
+      td.json #{JSON.stringify(value)}
+  else
+    td #{value}
+
+//- check what metadata we have that we want to list
+- var metadataList = [];
+if Array.isArray(extra.metadata)
+  for mkey in extra.metadata
+    if largeImageMetadata[mkey]
+      - metadataList.push(mkey);
+
+if metadataList.length
+  .g-widget-metadata-header
+    i.icon-tags
+    |  Large Image Metadata
+  .g-widget-metadata-container.li-metadata-tabs
+    ul.nav.nav-tabs(role="tablist")
+      for mkey, midx in metadataList
+        - title = mkey.substr(0, 1).toUpperCase() + mkey.substr(1);
+        li(role="presentation", class=midx ? "" : "active")
+          a(href="#li-metadata-" + mkey, role="tab", data-toggle="tab") #{title}
+    .tab-content
+      for mkey, midx in metadataList
+        .tab-pane(id="li-metadata-" + mkey, role="tabpanel", class=midx ? "" : "active")
+          +maketable(largeImageMetadata[mkey])
+
+//- check what images we have that we want to list
+- var imageList = []
+if Array.isArray(extra.images)
+  for ikey in extra.images
+    if ikey === '*'
+      for likey in largeImageMetadata.images
+        if imageList.indexOf(likey) < 0
+          - imageList.push(likey);
+    else if largeImageMetadata.images.indexOf(ikey) >= 0 && imageList.indexOf(ikey) < 0
+      - imageList.push(ikey);
+- var imageWidth = 400, imageHeight = 400;
+
+if imageList.length
+  .g-widget-metadata-header.auximage
+    i.icon-picture
+    |  Associated Images
+  .g-widget-metadata-container.auximage
+    for ikey in imageList
+      - title = ikey.substr(0, 1).toUpperCase() + ikey.substr(1);
+      a.g-widget-auximage(href=`${imageUrl}${ikey}`, target="_blank")
+        .g-widget-auximage-title
+          | #{title}
+        .g-widget-auximage-image
+          img(src=`${imageUrl}${ikey}?width=${imageWidth}&height=${imageHeight}`)

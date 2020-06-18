@@ -11,6 +11,8 @@ $(function () {
                 'admin', 'admin@email.com', 'Admin', 'Admin', 'testpassword')();
         });
         it('change the large_image settings', function () {
+            var settings;
+
             waitsFor(function () {
                 return $('a.g-nav-link[g-target="admin"]').length > 0;
             }, 'admin console link to load');
@@ -45,25 +47,35 @@ $(function () {
                 $('.g-large-image-show-extra-public').val('{}');
                 $('.g-large-image-show-extra').val('{}');
                 $('.g-large-image-show-extra-admin').val('{"images": ["label", "macro"]}');
+                $('.g-large-image-show-item-extra-public').val('{}');
+                $('.g-large-image-show-item-extra').val('{}');
+                $('.g-large-image-show-item-extra-admin').val('{"metadata": ["tile", "internal"], "images": ["label", "macro", "*"]}');
                 $('#g-large-image-form input.btn-primary').click();
             });
+            girderTest.waitForLoad();
             waitsFor(function () {
                 var resp = girder.rest.restRequest({
                     url: 'large_image/settings',
                     type: 'GET',
                     async: false
                 });
-                var settings = resp.responseJSON;
-                return (settings['large_image.show_thumbnails'] === false &&
-                        settings['large_image.show_viewer'] === false &&
-                        settings['large_image.auto_set'] === false &&
-                        settings['large_image.default_viewer'] === 'geojs' &&
-                        settings['large_image.max_thumbnail_files'] === 5 &&
-                        settings['large_image.max_small_image_size'] === 1024 &&
-                        settings['large_image.show_extra_public'] === '{}' &&
-                        settings['large_image.show_extra'] === '{}' &&
-                        settings['large_image.show_extra_admin'] === '{"images": ["label", "macro"]}');
+                settings = resp.responseJSON;
+                return settings['large_image.max_thumbnail_files'] === 5;
             }, 'large_image settings to change');
+            runs(function () {
+                expect(settings['large_image.show_thumbnails']).toBe(false);
+                expect(settings['large_image.show_viewer']).toBe(false);
+                expect(settings['large_image.auto_set']).toBe(false);
+                expect(settings['large_image.default_viewer']).toBe('geojs');
+                expect(settings['large_image.max_thumbnail_files']).toBe(5);
+                expect(settings['large_image.max_small_image_size']).toBe(1024);
+                expect(settings['large_image.show_extra_public']).toBe('{}');
+                expect(settings['large_image.show_extra']).toBe('{}');
+                expect(settings['large_image.show_extra_admin']).toBe('{"images": ["label", "macro"]}');
+                expect(settings['large_image.show_item_extra_public']).toBe('{}');
+                expect(settings['large_image.show_item_extra']).toBe('{}');
+                expect(JSON.parse(settings['large_image.show_item_extra_admin'])).toEqual({'metadata': ['tile', 'internal'], 'images': ['label', 'macro', '*']});
+            });
             girderTest.waitForLoad();
         });
     });

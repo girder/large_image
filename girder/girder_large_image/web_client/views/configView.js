@@ -2,6 +2,7 @@ import View from '@girder/core/views/View';
 
 import PluginConfigBreadcrumbWidget from '@girder/core/views/widgets/PluginConfigBreadcrumbWidget';
 import { restRequest } from '@girder/core/rest';
+import { AccessType } from '@girder/core/constants';
 import events from '@girder/core/events';
 
 import ConfigViewTemplate from '../templates/largeImageConfig.pug';
@@ -42,6 +43,15 @@ var ConfigView = View.extend({
             }, {
                 key: 'large_image.show_extra_admin',
                 value: this.$('.g-large-image-show-extra-admin').val()
+            }, {
+                key: 'large_image.show_item_extra_public',
+                value: this.$('.g-large-image-show-item-extra-public').val()
+            }, {
+                key: 'large_image.show_item_extra',
+                value: this.$('.g-large-image-show-item-extra').val()
+            }, {
+                key: 'large_image.show_item_extra_admin',
+                value: this.$('.g-large-image-show-item-extra-admin').val()
             }]);
         }
     },
@@ -135,6 +145,29 @@ var ConfigView = View.extend({
                 type: 'GET',
                 url: 'large_image/settings'
             }).done((resp) => {
+                resp.extraInfo = {};
+                resp.extraItemInfo = {};
+                let extraList = [{
+                    access: null,
+                    extraInfo: 'large_image.show_extra_public',
+                    extraItemInfo: 'large_image.show_item_extra_public'
+                }, {
+                    access: AccessType.READ,
+                    extraInfo: 'large_image.show_extra',
+                    extraItemInfo: 'large_image.show_item_extra'
+                }, {
+                    access: AccessType.ADMIN,
+                    extraInfo: 'large_image.show_extra_admin',
+                    extraItemInfo: 'large_image.show_item_extra_admin'
+                }];
+                extraList.forEach((entry) => {
+                    ['extraInfo', 'extraItemInfo'].forEach((key) => {
+                        try {
+                            resp[key][entry.access] = JSON.parse(resp[entry[key]]);
+                        } catch (err) {
+                        }
+                    });
+                });
                 ConfigView.settings = resp;
                 if (callback) {
                     callback(ConfigView.settings);
