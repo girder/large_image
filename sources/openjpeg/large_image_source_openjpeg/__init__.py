@@ -24,7 +24,7 @@ import warnings
 
 from six import BytesIO
 from six.moves import queue
-from xml.etree import cElementTree
+from xml.etree import ElementTree
 
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -165,7 +165,7 @@ class OpenjpegFileTileSource(FileTileSource):
         if not isinstance(meta, six.string_types):
             meta = meta.decode('utf8', 'ignore')
         try:
-            xml = cElementTree.fromstring(meta)
+            xml = ElementTree.fromstring(meta)
         except Exception:
             return
         self._description_record = etreeToDict(xml)
