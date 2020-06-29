@@ -168,8 +168,8 @@ class OpenjpegFileTileSource(FileTileSource):
             xml = cElementTree.fromstring(meta)
         except Exception:
             return
-        self._description_xml = etreeToDict(xml)
-        xml = self._description_xml
+        self._description_record = etreeToDict(xml)
+        xml = self._description_record
         try:
             # Optrascan metadata
             scanDetails = xml.get('ScanInfo', xml.get('EncodeInfo'))['ScanDetails']
@@ -222,8 +222,8 @@ class OpenjpegFileTileSource(FileTileSource):
         :returns: a dictionary of data or None.
         """
         results = {}
-        if hasattr(self, '_description_xml'):
-            results['xml'] = self._description_xml
+        if hasattr(self, '_description_record'):
+            results['xml'] = self._description_record
         return results
 
     @methodcache()

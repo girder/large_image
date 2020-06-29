@@ -223,10 +223,10 @@ class TiffFileTileSource(FileTileSource):
         if not topImage or topImage.pixelInfo.get('magnificaiton'):
             return
         topImage.parse_image_description(xml)
-        if not topImage._description_xml:
+        if not topImage._description_record:
             return
         try:
-            xml = topImage._description_xml
+            xml = topImage._description_record
             # Optrascan metadata
             scanDetails = xml.get('ScanInfo', xml.get('EncodeInfo'))['ScanDetails']
             mag = float(scanDetails['Magnification'])
@@ -267,9 +267,9 @@ class TiffFileTileSource(FileTileSource):
         """
         results = {}
         for idx, dir in enumerate(self._tiffDirectories[::-1]):
-            if dir and hasattr(dir, '_description_xml'):
+            if dir and hasattr(dir, '_description_record'):
                 results['xml' + (
-                    '' if not results.get('xml') else '_' + str(idx))] = dir._description_xml
+                    '' if not results.get('xml') else '_' + str(idx))] = dir._description_record
         return results
 
     @methodcache()

@@ -97,7 +97,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
             base = TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
         except TiffException:
             raise TileSourceException('Not a recognized OME Tiff')
-        info = getattr(base, '_description_xml', None)
+        info = getattr(base, '_description_record', None)
         if not info or not info.get('OME'):
             raise TileSourceException('Not an OME Tiff')
         self._omeinfo = info['OME']
@@ -225,9 +225,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
         :returns: metadata dictonary.
         """
         result = super(OMETiffFileTileSource, self).getMetadata()
-        # We may want to reformat the frames to standardize this across sources
-        result['frames'] = self._omebase.get('Plane', self._omebase['TiffData'])
-        # Expose channel information
+        result['frames'] = copy.deepcopy(self._omebase.get('Plane', self._omebase['TiffData']))
         channels = []
         for img in self._omeinfo['Image']:
             try:
@@ -243,33 +241,11 @@ class OMETiffFileTileSource(TiffFileTileSource):
             ('TheC', 'IndexC'), ('TheZ', 'IndexZ'), ('TheT', 'IndexT'),
             ('FirstC', 'IndexC'), ('FirstZ', 'IndexZ'), ('FirstT', 'IndexT'),
         ])
-        maxref = {}
-        index = 0
-        for idx, frame in enumerate(result['frames']):
+        for frame in result['frames']:
             for key in reftbl:
                 if key in frame and not reftbl[key] in frame:
                     frame[reftbl[key]] = int(frame[key])
-                if reftbl[key] in frame and frame[reftbl[key]] + 1 > maxref.get(reftbl[key], 0):
-                    maxref[reftbl[key]] = frame[reftbl[key]] + 1
-            frame['Frame'] = idx
-            if (idx and (
-                    frame.get('IndexV') != result['frames'][idx - 1].get('IndexV') or
-                    frame.get('IndexZ') != result['frames'][idx - 1].get('IndexZ'))):
-                index += 1
-            frame['Index'] = index
-        if any(val > 1 for val in maxref.values()):
-            result['IndexRange'] = {key: value for key, value in maxref.items() if value > 1}
-            result['IndexStride'] = {
-                key: [idx for idx, frame in enumerate(result['frames']) if frame[key] == 1][0]
-                for key in result['IndexRange']
-            }
-        # Add channel information
-        if len(channels) >= maxref.get('IndexC', 1):
-            result['channels'] = channels[:maxref.get('IndexC', 1)]
-            result['channelmap'] = {
-                cname: c for c, cname in enumerate(channels[:maxref.get('IndexC', 1)])}
-            for frame in result['frames']:
-                frame['Channel'] = channels[frame.get('IndexC', 0)]
+        self._addMetadataFrameInformation(result, channels)
         return result
 
     def getInternalMetadata(self, **kwargs):

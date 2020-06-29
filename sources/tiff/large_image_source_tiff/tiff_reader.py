@@ -806,7 +806,7 @@ class TiledTiffDirectory(object):
             }
             self._embeddedImages[typemap.get(typestr, typestr.lower())] = datastr
         try:
-            self._description_xml = etreeToDict(xml)
+            self._description_record = etreeToDict(xml)
         except Exception:
             pass
         return True

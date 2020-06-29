@@ -72,7 +72,11 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
                 params['quality'] = jpegQuality
                 params['subsampling'] = jpegSubsampling
             elif encoding == 'TIFF':
-                params['compression'] = tiffCompression
+                params['compression'] = {
+                    'none': 'raw',
+                    'lzw': 'tiff_lzw',
+                    'deflate': 'tiff_adobe_deflate',
+                }.get(tiffCompression, tiffCompression)
             image.save(output, encoding, **params)
             imageData = output.getvalue()
     return imageData, imageFormatOrMimeType
@@ -1494,6 +1498,46 @@ class TileSource(object):
             'mm_y': mag['mm_y'],
         }
 
+    def _addMetadataFrameInformation(self, metadata, channels=None):
+        """
+        Given a metadata response that has a `frames` list, where each frame
+        has some of `Index(XY|Z|C|T)`, populate the `Frame`, `Index` and
+        possibly the `Channel` of each frame in the list and the `IndexRange`,
+        `IndexStride`, and possibly the `channels` and `channelmap` entries of
+        the metadata.
+
+        :param metadata: the metadata response that might contain `frames`.
+            Modified.
+        :param channels: an optional list of channel names.
+        """
+        if 'frames' not in metadata:
+            return
+        maxref = {}
+        refkeys = {'IndexC', 'IndexZ', 'IndexXY', 'IndexT'}
+        index = 0
+        for idx, frame in enumerate(metadata['frames']):
+            for key in refkeys:
+                if key in frame and frame[key] + 1 > maxref.get(key, 0):
+                    maxref[key] = frame[key] + 1
+            frame['Frame'] = idx
+            if idx and any(
+                    frame.get(key) != metadata['frames'][idx - 1].get(key)
+                    for key in refkeys if key != 'IndexC'):
+                index += 1
+            frame['Index'] = index
+        if any(val > 1 for val in maxref.values()):
+            metadata['IndexRange'] = {key: value for key, value in maxref.items() if value > 1}
+            metadata['IndexStride'] = {
+                key: [idx for idx, frame in enumerate(metadata['frames']) if frame[key] == 1][0]
+                for key in metadata['IndexRange']
+            }
+        if channels and len(channels) >= maxref.get('IndexC', 1):
+            metadata['channels'] = channels[:maxref.get('IndexC', 1)]
+            metadata['channelmap'] = {
+                cname: c for c, cname in enumerate(channels[:maxref.get('IndexC', 1)])}
+            for frame in metadata['frames']:
+                frame['Channel'] = channels[frame.get('IndexC', 0)]
+
     def getInternalMetadata(self, **kwargs):
         """
         Return additional known metadata about the tile source.  Data returned
@@ -1990,6 +2034,7 @@ class TileSource(object):
             JPEG.
         :param tiffCompression: the compression format when encoding a TIFF.
             This is usually 'raw', 'tiff_lzw', 'jpeg', or 'tiff_adobe_deflate'.
+            Some of these are aliased: 'none', 'lzw', 'deflate'.
         :param **kwargs: optional arguments.
         :yields: an iterator that returns a dictionary as listed above.
         """
