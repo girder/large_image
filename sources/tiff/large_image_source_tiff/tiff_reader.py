@@ -25,7 +25,7 @@ import six
 import threading
 
 from functools import partial
-from xml.etree import cElementTree
+from xml.etree import ElementTree
 
 from large_image import config
 from large_image.cache_util import LRUCache, strhash, methodcache
@@ -765,7 +765,7 @@ class TiledTiffDirectory(object):
         if not isinstance(meta, six.string_types):
             meta = meta.decode('utf8', 'ignore')
         try:
-            xml = cElementTree.fromstring(meta)
+            xml = ElementTree.fromstring(meta)
         except Exception:
             if 'AppMag = ' in meta:
                 try:

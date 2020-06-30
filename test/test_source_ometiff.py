@@ -2,7 +2,7 @@
 
 import json
 import numpy
-from xml.etree import cElementTree
+from xml.etree import ElementTree
 
 from large_image.constants import TILE_FORMAT_NUMPY
 from large_image.tilesource import etreeToDict
@@ -101,7 +101,7 @@ def testXMLParsing():
     imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
     source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
     for sample in samples:
-        xml = cElementTree.fromstring(sample['xml'])
+        xml = ElementTree.fromstring(sample['xml'])
         info = etreeToDict(xml)
         source._omeinfo = info['OME']
         source._parseOMEInfo()
