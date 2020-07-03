@@ -259,8 +259,7 @@ class OpenslideFileTileSource(FileTileSource):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        if z < 0:
-            raise TileSourceException('z layer does not exist')
+        self._xyzInRange(x, y, z)
         try:
             svslevel = self._svslevels[z]
         except IndexError:
@@ -271,11 +270,7 @@ class OpenslideFileTileSource(FileTileSource):
         # scaled by the tile size and by the z level.
         scale = 2 ** (self.levels - 1 - z)
         offsetx = x * self.tileWidth * scale
-        if not (0 <= offsetx < self.sizeX):
-            raise TileSourceException('x is outside layer')
         offsety = y * self.tileHeight * scale
-        if not (0 <= offsety < self.sizeY):
-            raise TileSourceException('y is outside layer')
         # We ask to read an area that will cover the tile at the z level.  The
         # scale we computed in the __init__ process for this svs level tells
         # how much larger a region we need to read.
