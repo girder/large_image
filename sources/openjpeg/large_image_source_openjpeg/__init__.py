@@ -228,17 +228,12 @@ class OpenjpegFileTileSource(FileTileSource):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        if z < 0 or z >= self.levels:
-            raise TileSourceException('z layer does not exist')
+        self._xyzInRange(x, y, z)
         step = int(2 ** (self.levels - 1 - z))
         x0 = x * step * self.tileWidth
         x1 = min((x + 1) * step * self.tileWidth, self.sizeX)
         y0 = y * step * self.tileHeight
         y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
-        if x < 0 or x0 >= self.sizeX:
-            raise TileSourceException('x is outside layer')
-        if y < 0 or y0 >= self.sizeY:
-            raise TileSourceException('y is outside layer')
         scale = None
         if z < self._minlevel:
             scale = int(2 ** (self._minlevel - z))

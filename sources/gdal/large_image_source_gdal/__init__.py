@@ -645,17 +645,12 @@ class GDALFileTileSource(FileTileSource):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         if not self.projection:
-            if z < 0 or z >= self.levels:
-                raise TileSourceException('z layer does not exist')
+            self._xyzInRange(x, y, z)
             factor = int(2 ** (self.levels - 1 - z))
             x0 = int(x * factor * self.tileWidth)
             y0 = int(y * factor * self.tileHeight)
             x1 = int(min(x0 + factor * self.tileWidth, self.sourceSizeX))
             y1 = int(min(y0 + factor * self.tileHeight, self.sourceSizeY))
-            if x < 0 or x0 >= self.sizeX:
-                raise TileSourceException('x is outside layer')
-            if y < 0 or y0 >= self.sizeY:
-                raise TileSourceException('y is outside layer')
             w = int(max(1, round((x1 - x0) / factor)))
             h = int(max(1, round((y1 - y0) / factor)))
             with self._getDatasetLock:
