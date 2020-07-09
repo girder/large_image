@@ -87,6 +87,18 @@ jobs:
       - checkout
       - tox:
           env: docs,flake8,lintclient,lintannotationclient
+  wheels:
+    executor: toxandnode
+    steps:
+      - checkout
+      - run:
+          name: Build wheels
+          command: ./.circleci/make_wheels.sh
+      - run:
+          name: Make index file
+          command: python ./.circleci/make_index.py ~/wheels
+      - store_artifacts:
+          path: ~/wheels
   release:
     docker:
       - image: circleci/python:3.7
@@ -151,6 +163,20 @@ workflows:
               ignore:
                 - gh-pages
       - lint_and_docs:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
+      - wheels:
+          requires:
+            - py27
+            - py35
+            - py36
+            - py37
+            - py38
+            - lint_and_docs
           filters:
             tags:
               only: /^v.*/
