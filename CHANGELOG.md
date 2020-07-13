@@ -2,14 +2,32 @@
 
 ## Unreleased
 
+## Version 1.2.0
+
 ### Features
 - Added endpoints to remove old annotations (#432)
+- Show auxiliary images and metadata on Girder item pages (#457)
 
 ### Improvements
 - Migrate some database values on start to allow better annotation count reporting (#431)
+- Speed up Girder item list annotation counts (#454)
+- Read more OME Tiff files (#450)
+- Handle subimages of different component depths (#449)
+- When scaling, adjust reported mm_x/y (#441)
 
 ### Changes
 - Standardize metadata for tile sources with multiple frames (#433)
+- Unify code to check if a tile exists (#462)
+- Switch to ElementTree, as cElementTree is deprecate (#461)
+- Refactor how frame information is added to metadata (#460)
+- Upgrade GeoJS to the latest version (#451)
+
+### Bug Fixes
+- Fix a threading issue with multiple styled tiles (#444)
+- Guard against reading tiff tiles outside of the image (#458)
+- Guard against a missing annotation value (#456(
+- Fix handling Girder filenames with multiple periods in a row (#459)
+- Work around a file descriptor issue in cheroot (#465)
 
 ## Version 1.1.0
 
