@@ -48,6 +48,8 @@ setup(
         'girder-jobs>=3.0.3' + (',<=3.1.0' if sys.version_info < (3, 6) else ''),
         'girder-worker[girder]>=0.6.0',
         'large_image>=1.0.0',
+        # Needed for Python 3.5 and Girder
+        'dogpile.cache<1;python_version<"3.6"',
     ],
     extras_require={
         'tasks': [
