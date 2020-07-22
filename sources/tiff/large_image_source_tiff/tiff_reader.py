@@ -99,21 +99,23 @@ class ValidationTiffException(TiffException):
 class TiledTiffDirectory(object):
 
     CoreFunctions = [
-        'SetDirectory', 'GetField', 'LastDirectory', 'GetMode', 'IsTiled',
-        'IsByteSwapped', 'IsUpSampled', 'IsMSB2LSB', 'NumberOfStrips'
+        'SetDirectory', 'SetSubDirectory', 'GetField',
+        'LastDirectory', 'GetMode', 'IsTiled', 'IsByteSwapped', 'IsUpSampled',
+        'IsMSB2LSB', 'NumberOfStrips',
     ]
 
-    def __init__(self, filePath, directoryNum, mustBeTiled=True):
+    def __init__(self, filePath, directoryNum, mustBeTiled=True, subDirectoryNum=0):
         """
         Create a new reader for a tiled image file directory in a TIFF file.
 
         :param filePath: A path to a TIFF file on disk.
         :type filePath: str
         :param directoryNum: The number of the TIFF image file directory to
-        open.
+            open.
         :type directoryNum: int
         :param mustBeTiled: if True, only tiled images validate.  If False,
             only non-tiled images validate.  None validates both.
+        :param subDirectoryNum: if set, the number of the TIFF subdirectory.
         :raises: InvalidOperationTiffException or IOTiffException or
         ValidationTiffException
         """
@@ -127,10 +129,10 @@ class TiledTiffDirectory(object):
         self._tiffFile = None
         self._tileLock = threading.RLock()
 
-        self._open(filePath, directoryNum)
+        self._open(filePath, directoryNum, subDirectoryNum)
         self._loadMetadata()
         config.getConfig('logger').debug(
-            'TiffDirectory %d Information %r', directoryNum, self._tiffInfo)
+            'TiffDirectory %d:%d Information %r', directoryNum, subDirectoryNum, self._tiffInfo)
         try:
             self._validate()
         except ValidationTiffException:
@@ -140,7 +142,7 @@ class TiledTiffDirectory(object):
     def __del__(self):
         self._close()
 
-    def _open(self, filePath, directoryNum):
+    def _open(self, filePath, directoryNum, subDirectoryNum=0):
         """
         Open a TIFF file to a given file and IFD number.
 
@@ -148,6 +150,8 @@ class TiledTiffDirectory(object):
         :type filePath: str
         :param directoryNum: The number of the TIFF IFD to be used.
         :type directoryNum: int
+        :param subDirectoryNum: The number of the TIFF sub-IFD to be used.
+        :type subDirectoryNum: int
         :raises: InvalidOperationTiffException or IOTiffException
         """
         self._close()
@@ -176,6 +180,18 @@ class TiledTiffDirectory(object):
             self._tiffFile.close()
             raise IOTiffException(
                 'Could not set TIFF directory to %d' % directoryNum)
+        self._subDirectoryNum = subDirectoryNum
+        if self._subDirectoryNum:
+            subifds = self._tiffFile.GetField('subifd')
+            if (subifds is None or self._subDirectoryNum < 1 or
+                    self._subDirectoryNum > len(subifds)):
+                raise IOTiffException(
+                    'Could not set TIFF subdirectory to %d' % subDirectoryNum)
+            subifd = subifds[self._subDirectoryNum - 1]
+            if self._tiffFile.SetSubDirectory(subifd) != 1:
+                self._tiffFile.close()
+                raise IOTiffException(
+                    'Could not set TIFF subdirectory to %d' % subDirectoryNum)
 
     def _close(self):
         if self._tiffFile:
@@ -277,7 +293,7 @@ class TiledTiffDirectory(object):
                     'Loading field "%s" in directory number %d resulted in TypeError - "%s"',
                     field, self._directoryNum, err)
 
-        for func in self.CoreFunctions[2:]:
+        for func in self.CoreFunctions[3:]:
             if hasattr(self._tiffFile, func):
                 value = getattr(self._tiffFile, func)()
                 if value:

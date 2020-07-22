@@ -349,6 +349,23 @@ class TiffFileTileSource(FileTileSource):
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                 exception=e, **kwargs)
 
+    def _getDirFromCache(self, dirnum, subdir=None):
+        if not hasattr(self, '_directoryCache'):
+            self._directoryCache = {}
+            self._directoryCacheMaxSize = max(20, self.levels * 3)
+        key = (dirnum, subdir)
+        result = self._directoryCache.get(key)
+        if result is None:
+            if len(self._directoryCache) >= self._directoryCacheMaxSize:
+                self._directoryCache = {}
+            try:
+                result = TiledTiffDirectory(
+                    self._getLargeImagePath(), dirnum, mustBeTiled=None, subDirectoryNum=subdir)
+            except IOTiffException:
+                result = None
+            self._directoryCache[key] = result
+        return result
+
     def getTileIOTiffException(self, x, y, z, pilImageAllowed=False,
                                numpyAllowed=False, sparseFallback=False,
                                exception=None, **kwargs):

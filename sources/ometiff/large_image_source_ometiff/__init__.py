@@ -282,23 +282,32 @@ class OMETiffFileTileSource(TiffFileTileSource):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 sparseFallback=False, **kwargs):
-        if (z < 0 or z >= len(self._omeLevels) or self._omeLevels[z] is None or
-                kwargs.get('frame') in (None, 0, '0', '')):
+        if (z < 0 or z >= len(self._omeLevels) or (
+                self._omeLevels[z] is not None and kwargs.get('frame') in (None, 0, '0', ''))):
             return super(OMETiffFileTileSource, self).getTile(
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                 **kwargs)
-        frame = int(kwargs['frame'])
+        frame = int(kwargs.get('frame') or 0)
         if frame < 0 or frame >= len(self._omebase['TiffData']):
             raise TileSourceException('Frame does not exist')
-        dirnum = int(self._omeLevels[z]['TiffData'][frame].get('IFD', frame))
-        if dirnum in self._directoryCache:
-            dir = self._directoryCache[dirnum]
+        subdir = None
+        if self._omeLevels[z] is not None:
+            dirnum = int(self._omeLevels[z]['TiffData'][frame].get('IFD', frame))
         else:
-            if len(self._directoryCache) >= self._directoryCacheMaxSize:
-                self._directoryCache = {}
-            dir = TiledTiffDirectory(self._getLargeImagePath(), dirnum, mustBeTiled=None)
-            self._directoryCache[dirnum] = dir
+            dirnum = int(self._omeLevels[-1]['TiffData'][frame].get('IFD', frame))
+            subdir = self.levels - 1 - z
+        dir = self._getDirFromCache(dirnum, subdir)
+        if subdir:
+            scale = int(2 ** subdir)
+            if (dir is None or
+                    dir.tileWidth != self.tileWidth or dir.tileHeight != self.tileHeight or
+                    abs(dir.imageWidth * scale - self.sizeX) > scale or
+                    abs(dir.imageHeight * scale - self.sizeY) > scale):
+                return super(OMETiffFileTileSource, self).getTile(
+                    x, y, z, pilImageAllowed=pilImageAllowed,
+                    numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
+                    **kwargs)
         try:
             tile = dir.getTile(x, y)
             format = 'JPEG'
