@@ -122,8 +122,6 @@ class OMETiffFileTileSource(TiffFileTileSource):
                 TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
                 if entry else None
                 for entry in self._omeLevels]
-        self._directoryCache = {}
-        self._directoryCacheMaxSize = max(20, len(self._omebase['TiffData']) * 3)
         self.tileWidth = base.tileWidth
         self.tileHeight = base.tileHeight
         self.levels = len(self._tiffDirectories)

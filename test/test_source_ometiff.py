@@ -31,7 +31,7 @@ def testTilesFromOMETiff():
 
 def testTilesFromOMETiffWithSubIFD():
     imagePath = utilities.externaldata('data/sample.subifd.ome.tif.sha512')
-    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath, frame=1)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 256
