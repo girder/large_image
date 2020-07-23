@@ -29,6 +29,24 @@ def testTilesFromOMETiff():
     utilities.checkTilesZXY(source, tileMetadata)
 
 
+def testTilesFromOMETiffWithSubIFD():
+    imagePath = utilities.externaldata('data/sample.subifd.ome.tif.sha512')
+    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    tileMetadata = source.getMetadata()
+
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 2106
+    assert tileMetadata['sizeY'] == 2016
+    assert tileMetadata['levels'] == 5
+    assert len(tileMetadata['frames']) == 3
+    assert tileMetadata['frames'][1]['Frame'] == 1
+    assert tileMetadata['frames'][1]['Index'] == 0
+    assert tileMetadata['frames'][1]['IndexC'] == 1
+    assert tileMetadata['IndexRange'] == {'IndexC': 3}
+    utilities.checkTilesZXY(source, tileMetadata)
+
+
 def testTilesFromStripOMETiff():
     imagePath = utilities.externaldata('data/DDX58_AXL_EGFR_well2_XY01.ome.tif.sha512')
     source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
