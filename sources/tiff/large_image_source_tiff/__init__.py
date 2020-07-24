@@ -83,41 +83,12 @@ class TiffFileTileSource(FileTileSource):
         super(TiffFileTileSource, self).__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
-        lastException = None
-        # Associated images are smallish TIFF images that have an image
-        # description and are not tiled.  They have their own TIFF directory.
-        # Individual TIFF images can also have images embedded into their
-        # directory as tags (this is a vendor-specific method of adding more
-        # images into a file) -- those are stored in the individual
-        # directories' _embeddedImages field.
-        self._associatedImages = {}
+        try:
+            alldir = self._scanDirectories()
+        except (ValidationTiffException, TiffException) as exc:
+            alldir = []
+            lastException = exc
 
-        # Query all know directories in the tif file.  Only keep track of
-        # directories that contain tiled images.
-        alldir = []
-        for directoryNum in itertools.count():  # pragma: no branch
-            try:
-                td = TiledTiffDirectory(largeImagePath, directoryNum)
-            except ValidationTiffException as exc:
-                lastException = exc
-                self._addAssociatedImage(largeImagePath, directoryNum)
-                continue
-            except TiffException as exc:
-                if not lastException:
-                    lastException = exc
-                break
-            if not td.tileWidth or not td.tileHeight:
-                continue
-            # Calculate the tile level, where 0 is a single tile, 1 is up to a
-            # set of 2x2 tiles, 2 is 4x4, etc.
-            level = int(math.ceil(math.log(max(
-                float(td.imageWidth) / td.tileWidth,
-                float(td.imageHeight) / td.tileHeight)) / math.log(2)))
-            if level < 0:
-                continue
-            # Store information for sorting with the directory.
-            alldir.append((level > 0, td.tileWidth * td.tileHeight, level,
-                           td.imageWidth * td.imageHeight, directoryNum, td))
         # If there are no tiled images, raise an exception.
         if not len(alldir):
             msg = "File %s didn't meet requirements for tile source: %s" % (
@@ -161,6 +132,57 @@ class TiffFileTileSource(FileTileSource):
         self.levels = len(self._tiffDirectories)
         self.sizeX = highest.imageWidth
         self.sizeY = highest.imageHeight
+
+    def _scanDirectories(self):
+        largeImagePath = self._getLargeImagePath()
+        lastException = None
+        # Associated images are smallish TIFF images that have an image
+        # description and are not tiled.  They have their own TIFF directory.
+        # Individual TIFF images can also have images embedded into their
+        # directory as tags (this is a vendor-specific method of adding more
+        # images into a file) -- those are stored in the individual
+        # directories' _embeddedImages field.
+        self._associatedImages = {}
+
+        dir = None
+        # Query all know directories in the tif file.  Only keep track of
+        # directories that contain tiled images.
+        alldir = []
+        associatedDirs = []
+        for directoryNum in itertools.count():  # pragma: no branch
+            try:
+                if dir is None:
+                    dir = TiledTiffDirectory(largeImagePath, directoryNum, validate=False)
+                else:
+                    dir._setDirectory(directoryNum)
+                    dir._loadMetadata()
+                dir._validate()
+            except ValidationTiffException as exc:
+                lastException = exc
+                associatedDirs.append(directoryNum)
+                continue
+            except TiffException as exc:
+                if not lastException:
+                    lastException = exc
+                break
+            if not dir.tileWidth or not dir.tileHeight:
+                continue
+            # Calculate the tile level, where 0 is a single tile, 1 is up to a
+            # set of 2x2 tiles, 2 is 4x4, etc.
+            level = int(math.ceil(math.log(max(
+                float(dir.imageWidth) / dir.tileWidth,
+                float(dir.imageHeight) / dir.tileHeight)) / math.log(2)))
+            if level < 0:
+                continue
+            td, dir = dir, None
+            # Store information for sorting with the directory.
+            alldir.append((level > 0, td.tileWidth * td.tileHeight, level,
+                           td.imageWidth * td.imageHeight, directoryNum, td))
+        if not alldir and lastException:
+            raise lastException
+        for directoryNum in associatedDirs:
+            self._addAssociatedImage(largeImagePath, directoryNum)
+        return alldir
 
     def _addAssociatedImage(self, largeImagePath, directoryNum, mustBeTiled=False, topImage=None):
         """

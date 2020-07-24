@@ -132,20 +132,20 @@ class LargeImageCachedTilesTest(object):
         self.delCount = 0
         source = large_image.getTileSource(imagePath)
         assert source is not None
-        assert self.initCount == 14
-        assert self.delCount < 14
+        assert self.initCount == 12
+        assert self.delCount < 12
         # Create another source; we shouldn't init it again, as it should be
         # cached.
         source = large_image.getTileSource(imagePath)
         assert source is not None
-        assert self.initCount == 14
-        assert self.delCount < 14
+        assert self.initCount == 12
+        assert self.delCount < 12
         source = None
         # Clear the cache to free references and force garbage collection
         cachesClear()
         gc.collect(2)
         cachesClear()
-        assert self.delCount == 14
+        assert self.delCount == 12
 
 
 class TestMemcachedCache(LargeImageCachedTilesTest):

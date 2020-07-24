@@ -104,7 +104,7 @@ class TiledTiffDirectory(object):
         'IsMSB2LSB', 'NumberOfStrips',
     ]
 
-    def __init__(self, filePath, directoryNum, mustBeTiled=True, subDirectoryNum=0):
+    def __init__(self, filePath, directoryNum, mustBeTiled=True, subDirectoryNum=0, validate=True):
         """
         Create a new reader for a tiled image file directory in a TIFF file.
 
@@ -115,14 +115,15 @@ class TiledTiffDirectory(object):
         :type directoryNum: int
         :param mustBeTiled: if True, only tiled images validate.  If False,
             only non-tiled images validate.  None validates both.
+        :type mustBeTiled: bool
         :param subDirectoryNum: if set, the number of the TIFF subdirectory.
+        :type subDirectoryNum: int
+        :param validate: if False, don't validate that images can be read.
+        :type mustBeTiled: bool
         :raises: InvalidOperationTiffException or IOTiffException or
         ValidationTiffException
         """
-        # TODO how many to keep in the cache
-        # create local cache to store Jpeg tables and
-        # getTileByteCountsType
-
+        # create local cache to store Jpeg tables and getTileByteCountsType
         self.cache = LRUCache(10)
         self._mustBeTiled = mustBeTiled
 
@@ -134,7 +135,8 @@ class TiledTiffDirectory(object):
         config.getConfig('logger').debug(
             'TiffDirectory %d:%d Information %r', directoryNum, subDirectoryNum, self._tiffInfo)
         try:
-            self._validate()
+            if validate:
+                self._validate()
         except ValidationTiffException:
             self._close()
             raise
@@ -174,7 +176,9 @@ class TiledTiffDirectory(object):
                     hasattr(self._tiffFile, func.lower())):
                 setattr(self._tiffFile, func, getattr(
                     self._tiffFile, func.lower()))
+        self._setDirectory(directoryNum, subDirectoryNum)
 
+    def _setDirectory(self, directoryNum, subDirectoryNum=0):
         self._directoryNum = directoryNum
         if self._tiffFile.SetDirectory(self._directoryNum) != 1:
             self._tiffFile.close()
