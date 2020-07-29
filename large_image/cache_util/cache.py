@@ -39,10 +39,6 @@ if resource:
         SoftNoFile, HardNoFile = resource.getrlimit(resource.RLIMIT_NOFILE)
         resource.setrlimit(resource.RLIMIT_NOFILE, (HardNoFile, HardNoFile))
         SoftNoFile, HardNoFile = resource.getrlimit(resource.RLIMIT_NOFILE)
-        # When run under cheroot, cheroot can fail if the file descriptor is
-        # greater than 1024 (see github.com/cherrypy/cheroot/issues/249), so
-        # limit this further
-        SoftNoFile = min(SoftNoFile, 1024)
         # Reserve some file handles for general use, and expect that tile
         # sources could use many handles each.  This is conservative, since
         # running out of file handles breaks the program in general.
