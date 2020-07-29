@@ -133,7 +133,8 @@ class TiledTiffDirectory(object):
         self._open(filePath, directoryNum, subDirectoryNum)
         self._loadMetadata()
         config.getConfig('logger').debug(
-            'TiffDirectory %d:%d Information %r', directoryNum, subDirectoryNum, self._tiffInfo)
+            'TiffDirectory %d:%d Information %r',
+            directoryNum, subDirectoryNum or 0, self._tiffInfo)
         try:
             if validate:
                 self._validate()
