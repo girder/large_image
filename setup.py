@@ -66,8 +66,9 @@ setup(
     ],
     install_requires=[
         'cachetools>=3.0.0',
-        # older versions of Pillow probably work but have security issues
-        'Pillow>=6.2.2',
+        # We don't pin the version of Pillow, as anything newer than 3.0
+        # probably works, though we'd rather have the latest.
+        'Pillow',
         'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
         'six>=1.10.0',
