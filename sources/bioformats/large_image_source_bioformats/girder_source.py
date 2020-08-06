@@ -32,3 +32,8 @@ class BioformatsGirderTileSource(BioformatsFileTileSource, GirderTileSource):
 
     cacheName = 'tilesource'
     name = 'bioformats'
+
+    def mayHaveAdjacentFiles(self, largeImageFile):
+        # bioformats uses extensions to determine how to open a file, so this
+        # needs to be set for all file formats.
+        return True
