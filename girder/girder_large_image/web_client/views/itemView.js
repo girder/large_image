@@ -45,6 +45,7 @@ wrap(ItemView, 'render', function (render) {
                         metadata: largeImageMetadata
                     });
                     this.itemViewWidget.render();
+                    this.trigger('g:largeImageItemViewRendered', this);
                     return null;
                 });
             });
