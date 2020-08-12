@@ -1,37 +1,39 @@
-mixin maketable(info, depth)
-  table.table.table-hover.table-condensed
+mixin maketable(info, depth, prefix)
+  table.table.table-hover.table-condensed.large_image_metadata_table(keyname=prefix)
     thead
       th Property
       th Value
     each value, key in info
+      //- TODO replace \ in key with \\, ; in key with \;
+      - let keyname = prefix + ';' + key.replace(/\\/g, '\\\\').replace(/;/g, '\\;');
       tr
         if Array.isArray(value) && value.length <= 100
-          td(scope="row", key=key, rowspan=value.length || 1) #{key}
+          td.large_image_metadata_key(scope="row", key=key, rowspan=value.length || 1) #{key}
           for rowvalue, rowidx in value
             if rowidx
               tr
-                +tableentry(rowvalue, depth)
+                +tableentry(rowvalue, depth, keyname + ';' + rowidx)
             else
-              +tableentry(rowvalue, depth)
+              +tableentry(rowvalue, depth, keyname + ';' + rowidx)
         else
-          td(scope="row", key=key) #{key}
-          +tableentry(value, depth)
+          td.large_image_metadata_key(scope="row", key=key) #{key}
+          +tableentry(value, depth, keyname)
 
-mixin tableentry(value, depth)
+mixin tableentry(value, depth, keyname)
   //- each value, if an array or object, convert to yaml or json
       and add a class to show it differently
   if value === null
-    td.null &lt;null&gt;
+    td.null.large_image_metadata_value(keyname=keyname) &lt;null&gt;
   else if value && value.constructor.name === 'Object' && (depth || 0) < 3
-    td.subtable
-      +maketable(value, (depth || 0) + 1)
+    td.subtable.large_image_metadata_table(keyname=keyname)
+      +maketable(value, (depth || 0) + 1, keyname)
   else if Array.isArray(value) || (value && value.constructor.name === 'Object')
     if yaml.dump(value).split('\n').length <= 100
-      td.yaml #{yaml.dump(value)}
+      td.yaml.large_image_metadata_value(keyname=keyname) #{yaml.dump(value)}
     else
-      td.json #{JSON.stringify(value)}
+      td.json.large_image_metadata_value(keyname=keyname) #{JSON.stringify(value)}
   else
-    td #{value}
+    td.large_image_metadata_value(keyname=keyname) #{value}
 
 //- check what metadata we have that we want to list
 - var metadataList = [];
@@ -53,7 +55,7 @@ if metadataList.length
     .tab-content
       for mkey, midx in metadataList
         .tab-pane(id="li-metadata-" + mkey, role="tabpanel", class=midx ? "" : "active")
-          +maketable(largeImageMetadata[mkey])
+          +maketable(largeImageMetadata[mkey], 0, mkey)
 
 //- check what images we have that we want to list
 - var imageList = []
@@ -74,7 +76,7 @@ if imageList.length
   .g-widget-metadata-container.auximage
     for ikey in imageList
       - title = ikey.substr(0, 1).toUpperCase() + ikey.substr(1);
-      a.g-widget-auximage(href=`${imageUrl}${ikey}`, target="_blank")
+      a.g-widget-auximage(href=`${imageUrl}${ikey}`, target="_blank", auximage=ikey)
         .g-widget-auximage-title
           | #{title}
         .g-widget-auximage-image

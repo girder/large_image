@@ -47,7 +47,7 @@ class OpenslideFileTileSource(FileTileSource):
     """
 
     cacheName = 'tilesource'
-    name = 'svsfile'
+    name = 'openslidefile'
     extensions = {
         None: SourcePriority.MEDIUM,
         'bif': SourcePriority.LOW,  # Ventana
