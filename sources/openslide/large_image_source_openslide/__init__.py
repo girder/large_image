@@ -255,6 +255,10 @@ class OpenslideFileTileSource(FileTileSource):
         results = {'openslide': {}}
         for key in self._openslide.properties:
             results['openslide'][key] = self._openslide.properties[key]
+            if key == 'openslide.comment':
+                leader = self._openslide.properties[key].split('\n', 1)[0].strip()
+                if 'aperio' in leader.lower():
+                    results['aperio_version'] = leader
         return results
 
     @methodcache()
