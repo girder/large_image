@@ -257,6 +257,32 @@ class TiffFileTileSource(FileTileSource):
             'mm_y': mm_y,
         }
 
+    def _xmlToMetadata(self, xml):
+        if not isinstance(xml, dict) or set(xml.keys()) != {'DataObject'}:
+            return xml
+        values = {}
+        try:
+            objlist = xml['DataObject']
+            if not isinstance(objlist, list):
+                objlist = [objlist]
+            for obj in objlist:
+                attrList = obj['Attribute']
+                if not isinstance(attrList, list):
+                    attrList = [attrList]
+                for attr in attrList:
+                    if 'Array' not in attr:
+                        values[attr['Name']] = attr.get('text', '')
+                    else:
+                        if 'DataObject' in attr['Array']:
+                            subvalues = self._xmlToMetadata(attr['Array'])
+                            for key, subvalue in six.iteritems(subvalues):
+                                if key not in {'PIM_DP_IMAGE_DATA', }:
+                                    values[attr['Name'] + '|' + key] = subvalue
+        except Exception:
+            config.getConfig('logger').exception('Here')
+            return xml
+        return values
+
     def getInternalMetadata(self, **kwargs):
         """
         Return additional known metadata about the tile source.  Data returned
@@ -269,7 +295,8 @@ class TiffFileTileSource(FileTileSource):
         for idx, dir in enumerate(self._tiffDirectories[::-1]):
             if dir and hasattr(dir, '_description_record'):
                 results['xml' + (
-                    '' if not results.get('xml') else '_' + str(idx))] = dir._description_record
+                    '' if not results.get('xml') else '_' + str(idx))] = self._xmlToMetadata(
+                        dir._description_record)
         return results
 
     @methodcache()
