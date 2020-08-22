@@ -10,6 +10,7 @@ import PIL.ImageDraw
 import random
 import six
 import threading
+import xml.etree.ElementTree
 from collections import defaultdict
 from six import BytesIO
 
@@ -161,10 +162,11 @@ def _letterboxImage(image, width, height, fill):
 def etreeToDict(t):
     """
     Convert an xml etree to a nested dictionary without schema names in the
-    keys.
+    keys.  If you have an xml string, this can be converted to a dictionary via
+    xml.etree.etreeToDict(ElementTree.fromstring(xml_string)).
 
-    @param t: an etree.
-    @returns: a python dictionary with the results.
+    :param t: an etree.
+    :returns: a python dictionary with the results.
     """
     # Remove schema
     tag = t.tag.split('}', 1)[1] if t.tag.startswith('{') else t.tag
@@ -187,6 +189,42 @@ def etreeToDict(t):
     elif text:
         d[tag] = text
     return d
+
+
+def dictToEtree(d, root=None):
+    """
+    Convert a dictionary in the style produced by etreeToDict back to an etree.
+    Make an xml string via xml.etree.ElementTree.tostring(dictToEtree(
+    dictionary), encoding='utf8', method='xml').  Note that this function and
+    etreeToDict are not perfect conversions; numerical values are quoted in
+    xml.  Plain key-value pairs are ambiguous whether they should be attributes
+    or text values.  Text fields are collected together.
+
+    :param d: a dictionary.
+    :prarm root: the root node to attach this dictionary to.
+    :returns: an etree.
+    """
+    if root is None:
+        if len(d) == 1:
+            k, v = six.next(six.iteritems(d))
+            root = xml.etree.ElementTree.Element(k)
+            dictToEtree(v, root)
+            return root
+        root = xml.etree.ElementTree.Element('root')
+    for k, v in six.iteritems(d):
+        if isinstance(v, list):
+            for l in v:
+                elem = xml.etree.ElementTree.SubElement(root, k)
+                dictToEtree(l, elem)
+        elif isinstance(v, dict):
+            elem = xml.etree.ElementTree.SubElement(root, k)
+            dictToEtree(v, elem)
+        else:
+            if k == 'text':
+                root.text = v
+            else:
+                root.set(k, v)
+    return root
 
 
 def nearPowerOfTwo(val1, val2, tolerance=0.02):

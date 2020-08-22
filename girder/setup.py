@@ -50,6 +50,8 @@ setup(
         'large_image>=1.0.0',
         # Needed for Python 3.5 and Girder
         'dogpile.cache<1;python_version<"3.6"',
+        # Needed for Python 2.7 and Girder worker
+        'diskcache<5;python_version<"3"',
     ],
     extras_require={
         'tasks': [

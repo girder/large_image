@@ -48,6 +48,8 @@ setup(
         'girder-worker-utils>=0.8.5',
         # Packages required by both producer and consumer side installations
         'six>=1.10.0',
+        # Needed for girder-worker and Python 2.7
+        'diskcache<5;python_version<"3"',
     ],
     extras_require={
         'girder': [

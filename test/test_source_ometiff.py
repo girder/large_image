@@ -5,7 +5,7 @@ import numpy
 from xml.etree import ElementTree
 
 from large_image.constants import TILE_FORMAT_NUMPY
-from large_image.tilesource import etreeToDict
+from large_image.tilesource import etreeToDict, dictToEtree
 import large_image_source_ometiff
 
 from . import utilities
@@ -103,6 +103,7 @@ def testXMLParsing():
     for sample in samples:
         xml = ElementTree.fromstring(sample['xml'])
         info = etreeToDict(xml)
+        assert etreeToDict(dictToEtree(info)) == info
         source._omeinfo = info['OME']
         source._parseOMEInfo()
         metadata = source.getMetadata()
