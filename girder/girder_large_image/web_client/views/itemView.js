@@ -65,6 +65,7 @@ var ItemViewWidget = View.extend({
     render: function () {
         this.$el.html(itemViewWidget({
             extra: this.extra,
+            updated: this.model.get('updated'),
             largeImageMetadata: this.metadata,
             yaml: yaml,
             imageUrl: `${getApiRoot()}/item/${this.itemId}/tiles/images/`

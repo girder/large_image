@@ -67,17 +67,16 @@ if Array.isArray(extra.images)
           - imageList.push(likey);
     else if largeImageMetadata.images.indexOf(ikey) >= 0 && imageList.indexOf(ikey) < 0
       - imageList.push(ikey);
-- var imageWidth = 400, imageHeight = 400;
-
 if imageList.length
+  - var imageWidth = 400, imageHeight = 400;
   .g-widget-metadata-header.auximage
     i.icon-picture
     |  Associated Images
   .g-widget-metadata-container.auximage
     for ikey in imageList
       - title = ikey.substr(0, 1).toUpperCase() + ikey.substr(1);
-      a.g-widget-auximage(href=`${imageUrl}${ikey}`, target="_blank", auximage=ikey)
+      a.g-widget-auximage(href=`${imageUrl}${ikey}?_=${updated}`, target="_blank", auximage=ikey)
         .g-widget-auximage-title
           | #{title}
         .g-widget-auximage-image
-          img(src=`${imageUrl}${ikey}?width=${imageWidth}&height=${imageHeight}`)
+          img(src=`${imageUrl}${ikey}?width=${imageWidth}&height=${imageHeight}&_=${updated}`)
