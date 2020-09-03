@@ -30,6 +30,7 @@ import bioformats.log4j
 import javabridge
 import logging
 import math
+import numpy
 import os
 import six
 import threading
@@ -216,7 +217,7 @@ class BioformatsFileTileSource(FileTileSource):
             self._computeMagnification()
         except javabridge.JavaException as exc:
             es = javabridge.to_string(exc.throwable)
-            print(es)
+            self._logger.debug('File cannot be opened via Bioformats. (%s)' % es)
             raise TileSourceException('File cannot be opened via Bioformats. (%s)' % es)
         finally:
             if javabridge.get_env():
@@ -238,55 +239,77 @@ class BioformatsFileTileSource(FileTileSource):
                 if javabridge.get_env():
                     javabridge.detach()
 
+    def _getSeriesStarts(self, rdr):
+        self._metadata['frameSeries'] = [{
+            'series': [0],
+            'sizeX': self._metadata['sizeX'],
+            'sizeY': self._metadata['sizeY'],
+        }]
+        if self._metadata['seriesCount'] <= 1:
+            return 1
+        rdr.setSeries(0)
+        seriesMetadata = javabridge.jdictionary_to_string_dictionary(rdr.getSeriesMetadata())
+        frameList = []
+        nextSeriesNum = 0
+        try:
+            for key, value in six.iteritems(seriesMetadata):
+                frameNum = int(value)
+                seriesNum = int(key.split('Series ')[1].split('|')[0]) - 1
+                if seriesNum >= 0 and seriesNum < self._metadata['seriesCount']:
+                    while len(frameList) <= frameNum:
+                        frameList.append([])
+                    if seriesNum not in frameList[frameNum]:
+                        frameList[frameNum].append(seriesNum)
+                        frameList[frameNum].sort()
+                    nextSeriesNum = max(nextSeriesNum, seriesNum + 1)
+        except Exception as exc:
+            self._logger.debug('Failed to parse series information: %s', exc)
+            rdr.setSeries(0)
+            return 1
+        frameList = [fl for fl in frameList if len(fl)]
+        self._metadata['frameSeries'] = [{
+            'series': fl,
+        } for fl in frameList]
+        rdr.setSeries(0)
+        return nextSeriesNum
+
     def _checkSeries(self, rdr):
-        # TODO: some formats have primary images that are different sizes
-        self._metadata['fullSeries'] = [0]
-        self._metadata['seriesLevels'] = [0]
+        firstPossibleAssoc = self._getSeriesStarts(rdr)
         self._metadata['seriesAssociatedImages'] = {}
-        checkLevels = True
-        if self._metadata['seriesCount'] > 1:
-            self._metadata['seriesInfo'] = []
-            for seriesNum in range(self._metadata['seriesCount']):
-                rdr.setSeries(seriesNum)
+        for seriesNum in range(firstPossibleAssoc, self._metadata['seriesCount']):
+            rdr.setSeries(seriesNum)
+            info = {
+                'sizeX': rdr.getSizeX(),
+                'sizeY': rdr.getSizeY(),
+            }
+            if (info['sizeX'] < self._associatedImageMaxSize and
+                    info['sizeY'] < self._associatedImageMaxSize):
+                # TODO: Figure out better names for associated images.  Can
+                # we tell if any of them are the macro or label image?
+                info['seriesNum'] = seriesNum
+                self._metadata['seriesAssociatedImages'][
+                    'image%d' % seriesNum] = info
+        validate = None
+        for frame in self._metadata['frameSeries']:
+            for level in range(len(frame['series'])):
+                rdr.setSeries(frame['series'][level])
                 info = {
                     'sizeX': rdr.getSizeX(),
                     'sizeY': rdr.getSizeY(),
-                    'metadata': javabridge.jdictionary_to_string_dictionary(
-                        rdr.getSeriesMetadata()),
                 }
-                self._metadata['seriesInfo'].append(info)
-                if seriesNum:
-                    if (info['sizeX'] == self._metadata['sizeX'] and
-                            info['sizeY'] == self._metadata['sizeY']):
-                        self._metadata['fullSeries'].append(seriesNum)
-                        checkLevels = False
-                    elif checkLevels:
-                        if (nearPowerOfTwo(self._metadata['sizeX'], info['sizeX']) and
-                                nearPowerOfTwo(self._metadata['sizeY'], info['sizeY'])):
-                            level = int(round(math.log(
-                                self._metadata['sizeX'] / info['sizeX']) / math.log(2)))
-                            while level < len(self._metadata['seriesLevels']):
-                                self._metadata['seriesLevels'].append(None)
-                                print(level, len(self._metadata['seriesLevels']))
-                            if level == len(self._metadata['seriesLevels']):
-                                self._metadata['seriesLevels'].append(seriesNum)
-                            else:
-                                checkLevels = False
-                        else:
-                            checkLevels = False
-                    if (not checkLevels and (
-                            len(self._metadata['fullSeries']) == 1 or
-                            seriesNum - self._metadata['fullSeries'][-1] >=
-                            self._metadata['fullSeries'][1])):
-                        if (info['sizeX'] < self._associatedImageMaxSize and
-                                info['sizeY'] < self._associatedImageMaxSize):
-                            # TODO: Figure out better names for associated
-                            # images.  Can we tell if any of them are the macro
-                            # or label image?
-                            self._metadata['seriesAssociatedImages'][
-                                'image%d' % seriesNum] = seriesNum
-            rdr.setSeries(0)
-        self._metadata['sizeXY'] = len(self._metadata['fullSeries'])
+                if not level:
+                    frame.update(info)
+                    self._metadata['sizeX'] = max(self._metadata['sizeX'], frame['sizeX'])
+                    self._metadata['sizeY'] = max(self._metadata['sizeY'], frame['sizeY'])
+                elif validate is not False:
+                    if (not nearPowerOfTwo(frame['sizeX'], info['sizeX']) or
+                            not nearPowerOfTwo(frame['sizeY'], info['sizeY'])):
+                        frame['series'] = frame['series'][:level]
+                        validate = True
+            if validate is None:
+                validate = False
+        rdr.setSeries(0)
+        self._metadata['sizeXY'] = len(self._metadata['frameSeries'])
 
     def _computeTiles(self):
         if (self._metadata['resolutionCount'] <= 1 and
@@ -361,6 +384,11 @@ class BioformatsFileTileSource(FileTileSource):
                             'IndexT': t,
                             'IndexXY': xy,
                         })
+        if len(self._metadata['frameSeries']) == len(frames):
+            for idx, frame in enumerate(frames):
+                frame['sizeX'] = self._metadata['frameSeries'][idx]['sizeX']
+                frame['sizeY'] = self._metadata['frameSeries'][idx]['sizeY']
+                frame['levels'] = len(self._metadata['frameSeries'][idx]['series'])
         if len(frames) > 1:
             result['frames'] = frames
             self._addMetadataFrameInformation(result, self._metadata['channelNames'])
@@ -379,19 +407,8 @@ class BioformatsFileTileSource(FileTileSource):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         self._xyzInRange(x, y, z)
-        seriesLevel = self.levels - 1 - z
-        scale = 1
-        while (seriesLevel > len(self._metadata['seriesLevels']) or
-                self._metadata['seriesLevels'][seriesLevel] is None):
-            seriesLevel -= 1
-            scale *= 2
-        offsetx = x * self.tileWidth * scale
-        offsety = y * self.tileHeight * scale
-
-        width = min(self.tileWidth * scale, self.sizeX // 2 ** seriesLevel - offsetx)
-        height = min(self.tileHeight * scale, self.sizeY // 2 ** seriesLevel - offsety)
-
-        ft = fc = fz = fseries = 0
+        ft = fc = fz = 0
+        fseries = self._metadata['frameSeries'][0]
         if kwargs.get('frame') is not None:
             frame = int(kwargs.get('frame'))
             fc = frame % self._metadata['sizeC']
@@ -402,17 +419,38 @@ class BioformatsFileTileSource(FileTileSource):
                    self._metadata['sizeZ'] // self._metadata['sizeT'])
             if frame < 0 or fxy > self._metadata['sizeXY']:
                 raise TileSourceException('Frame does not exist')
-            fseries = self._metadata['fullSeries'][fxy]
-        fseries += seriesLevel
+            fseries = self._metadata['frameSeries'][fxy]
+        seriesLevel = self.levels - 1 - z
+        scale = 1
+        while seriesLevel >= len(fseries['series']):
+            seriesLevel -= 1
+            scale *= 2
+        offsetx = x * self.tileWidth * scale
+        offsety = y * self.tileHeight * scale
+        width = min(self.tileWidth * scale, self.sizeX // 2 ** seriesLevel - offsetx)
+        height = min(self.tileHeight * scale, self.sizeY // 2 ** seriesLevel - offsety)
+        sizeXAtScale = fseries['sizeX'] // (2 ** seriesLevel)
+        sizeYAtScale = fseries['sizeY'] // (2 ** seriesLevel)
+        finalWidth = width // scale
+        finalHeight = height // scale
+        width = min(width, sizeXAtScale - offsetx)
+        height = min(height, sizeYAtScale - offsety)
+
         with self._tileLock:
             try:
                 javabridge.attach()
-                # TODO: read different resolutions if resolutionCount > 1
-                tile = self._bioimage.read(
-                    c=fc, z=fz, t=ft, series=fseries,
-                    rescale=False,  # return internal data types
-                    XYWH=(offsetx, offsety, width, height))
-                # TODO: if a file doesn't have lower resolutions, read in tiles
+                if width > 0 and height > 0:
+                    tile = self._bioimage.read(
+                        c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
+                        rescale=False,  # return internal data types
+                        XYWH=(offsetx, offsety, width, height))
+                else:
+                    # We need the same dtype, so read 1x1 at 0x0
+                    tile = self._bioimage.read(
+                        c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
+                        rescale=False,  # return internal data types
+                        XYWH=(0, 0, 1, 1))
+                    tile = numpy.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
                 format = TILE_FORMAT_NUMPY
             except javabridge.JavaException as exc:
                 es = javabridge.to_string(exc.throwable)
@@ -423,6 +461,20 @@ class BioformatsFileTileSource(FileTileSource):
                     javabridge.detach()
         if scale > 1:
             tile = tile[::scale, ::scale]
+        if tile.shape[:2] != (finalHeight, finalWidth):
+            fillValue = 0
+            if tile.dtype == numpy.uint16:
+                fillValue = 65535
+            elif tile.dtype == numpy.uint8:
+                fillValue = 255
+            elif tile.dtype.kind == 'f':
+                fillValue = 1
+            retile = numpy.full(
+                tuple([finalHeight, finalWidth] + list(tile.shape[2:])),
+                fillValue,
+                dtype=tile.dtype)
+            retile[0:tile.shape[0], 0:tile.shape[1]] = tile
+            tile = retile
         return self._outputTile(tile, format, x, y, z, pilImageAllowed, numpyAllowed, **kwargs)
 
     def getAssociatedImagesList(self):
@@ -440,10 +492,10 @@ class BioformatsFileTileSource(FileTileSource):
         :param imageKey: the key of the associated image.
         :return: the image in PIL format or None.
         """
-        series = self._metadata['seriesAssociatedImages'].get(imageKey)
-        if series is None:
+        info = self._metadata['seriesAssociatedImages'].get(imageKey)
+        if info is None:
             return
-        info = self._metadata['seriesInfo'][series]
+        series = info['seriesNum']
         with self._tileLock:
             try:
                 javabridge.attach()
