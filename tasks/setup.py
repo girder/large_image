@@ -46,6 +46,7 @@ setup(
     install_requires=[
         'girder-worker>=0.6.0',
         'girder-worker-utils>=0.8.5',
+        'girder-client<3.1;python_version<"3.6"',
         # Packages required by both producer and consumer side installations
         'six>=1.10.0',
         # Needed for girder-worker and Python 2.7
