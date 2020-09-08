@@ -299,7 +299,6 @@ class TiffFileTileSource(FileTileSource):
                         '' if not results.get('xml') else '_' + str(idx))] = self._xmlToMetadata(
                             dir._description_record)
                 for k, v in six.iteritems(dir._tiffInfo):
-                    print(dir, k, v)
                     if k == 'imagedescription' and hasattr(dir, '_description_record'):
                         continue
                     if isinstance(v, (str, bytes)) and k:
@@ -309,7 +308,7 @@ class TiffFileTileSource(FileTileSource):
                             except UnicodeDecodeError:
                                 continue
                         results.setdefault('tiff', {})
-                        if not dir and k not in results['tiff']:
+                        if not idx and k not in results['tiff']:
                             results['tiff'][k] = v
                         elif k not in results['tiff'] or v != results['tiff'][k]:
                             results['tiff'][k + ':%d' % idx] = v
