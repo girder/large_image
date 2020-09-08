@@ -247,8 +247,11 @@ class BioformatsFileTileSource(FileTileSource):
         }]
         if self._metadata['seriesCount'] <= 1:
             return 1
-        rdr.setSeries(0)
-        seriesMetadata = javabridge.jdictionary_to_string_dictionary(rdr.getSeriesMetadata())
+        seriesMetadata = {}
+        for idx in range(self._metadata['seriesCount']):
+            rdr.setSeries(idx)
+            seriesMetadata.update(
+                javabridge.jdictionary_to_string_dictionary(rdr.getSeriesMetadata()))
         frameList = []
         nextSeriesNum = 0
         try:
@@ -263,7 +266,7 @@ class BioformatsFileTileSource(FileTileSource):
                         frameList[frameNum].sort()
                     nextSeriesNum = max(nextSeriesNum, seriesNum + 1)
         except Exception as exc:
-            self._logger.debug('Failed to parse series information: %s', exc)
+            self._logger.info('Failed to parse series information: %s', exc)
             rdr.setSeries(0)
             return 1
         frameList = [fl for fl in frameList if len(fl)]
