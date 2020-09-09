@@ -266,7 +266,7 @@ class BioformatsFileTileSource(FileTileSource):
                         frameList[frameNum].sort()
                     nextSeriesNum = max(nextSeriesNum, seriesNum + 1)
         except Exception as exc:
-            self._logger.info('Failed to parse series information: %s', exc)
+            self._logger.debug('Failed to parse series information: %s', exc)
             rdr.setSeries(0)
             return 1
         frameList = [fl for fl in frameList if len(fl)]
@@ -476,7 +476,8 @@ class BioformatsFileTileSource(FileTileSource):
                 tuple([finalHeight, finalWidth] + list(tile.shape[2:])),
                 fillValue,
                 dtype=tile.dtype)
-            retile[0:tile.shape[0], 0:tile.shape[1]] = tile
+            retile[0:min(tile.shape[0], finalHeight), 0:min(tile.shape[1], finalWidth)] = tile[
+                0:min(tile.shape[0], finalHeight), 0:min(tile.shape[1], finalWidth)]
             tile = retile
         return self._outputTile(tile, format, x, y, z, pilImageAllowed, numpyAllowed, **kwargs)
 
