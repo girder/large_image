@@ -61,6 +61,7 @@ setup(
             'pyvips',
         ]
     },
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     entry_points={
         'girder_worker_plugins': [
             'large_image_tasks = large_image_tasks:LargeImageTasks',
