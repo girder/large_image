@@ -52,6 +52,7 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     entry_points={
         'large_image.source': [
             'nd2 = large_image_source_nd2:ND2FileTileSource'

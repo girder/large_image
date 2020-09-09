@@ -79,7 +79,7 @@ setup(
     license='Apache Software License 2.0',
     long_description=readme,
     packages=find_packages(exclude=['test', 'test.*', 'girder']),
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     url='https://github.com/girder/large_image',
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     zip_safe=False,
 )
