@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Added bioformats tile source (#463)
+
 ## Version 1.2.0
 
 ### Features

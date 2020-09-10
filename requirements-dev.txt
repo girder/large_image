@@ -3,6 +3,7 @@ girder>=3.0.4 ; python_version < '3.8'
 girder>=3.0.13.dev6 ; python_version >= '3.8'
 girder-jobs>=3.0.3,<3.1 ; python_version < '3.6'
 girder-jobs>=3.0.3 ; python_version >= '3.6'
+-e sources/bioformats ; python_version >= '3.5'
 -e sources/dummy
 -e sources/gdal
 -e sources/nd2

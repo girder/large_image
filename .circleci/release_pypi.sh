@@ -15,6 +15,9 @@ twine upload --verbose dist/*
 cd "$ROOTPATH/tasks"
 python setup.py sdist
 twine upload --verbose dist/*
+cd "$ROOTPATH/sources/bioformats"
+python setup.py sdist
+twine upload --verbose dist/*
 cd "$ROOTPATH/sources/dummy"
 python setup.py sdist
 twine upload --verbose dist/*
