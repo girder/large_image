@@ -5,6 +5,16 @@
 ### Features
 - Added bioformats tile source (#463)
 
+### Improvements
+- Expose more internal metadata (#479)
+- Improve how Philips XML internal metadata is reported (#475)
+- Show aperio version in internal metadata (#474)
+- Add css classes to metadata on the item page (#472)
+
+### Bug Fixes
+- Add a reference to updated time to avoid overcaching associated images (#477)
+- Fix a typo in the settings page (#473)
+
 ## Version 1.2.0
 
 ### Features
