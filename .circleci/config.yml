@@ -40,7 +40,7 @@ jobs:
       - checkout
       - run:
           name: Build the test docker
-          command: docker build --force-rm -t girder/tox-and-node --build-arg SKIP_TOX=true .
+          command: docker build --force-rm -t girder/tox-and-node --build-arg .
       - run:
           name: Publish the images to Docker Hub
           command: |

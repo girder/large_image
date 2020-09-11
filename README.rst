@@ -104,6 +104,6 @@ Update the tile source name by issuing the Mongo command::
     :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
     :alt: License
 
-.. |codecov-io| image:: https://codecov.io/github/girder/large_image/coverage.svg?branch=master
+.. |codecov-io| image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
    :target: https://codecov.io/github/girder/large_image?branch=master
    :alt: codecov.io
