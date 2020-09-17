@@ -114,7 +114,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
         self._omeLevels = [omebylevel.get(key) for key in range(max(omebylevel.keys()) + 1)]
         if base._tiffInfo.get('istiled'):
             self._tiffDirectories = [
-                TiledTiffDirectory(largeImagePath, int(entry['TiffData'][0]['IFD']))
+                TiledTiffDirectory(largeImagePath, int(entry['TiffData'][0].get('IFD', 0)))
                 if entry else None
                 for entry in self._omeLevels]
         else:
@@ -122,8 +122,6 @@ class OMETiffFileTileSource(TiffFileTileSource):
                 TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
                 if entry else None
                 for entry in self._omeLevels]
-        self._directoryCache = {}
-        self._directoryCacheMaxSize = max(20, len(self._omebase['TiffData']) * 3)
         self.tileWidth = base.tileWidth
         self.tileHeight = base.tileHeight
         self.levels = len(self._tiffDirectories)
@@ -184,7 +182,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
         info['Image']['Pixels']['PlanesFromZloop'] = 'true'
         info['Image']['Pixels']['SizeZ'] = str(zloop)
 
-    def _parseOMEInfo(self):
+    def _parseOMEInfo(self):  # noqa
         if isinstance(self._omeinfo['Image'], dict):
             self._omeinfo['Image'] = [self._omeinfo['Image']]
         for img in self._omeinfo['Image']:
@@ -192,20 +190,28 @@ class OMETiffFileTileSource(TiffFileTileSource):
                 img['Pixels']['TiffData'] = [img['Pixels']['TiffData']]
             if isinstance(img['Pixels'].get('Plane'), dict):
                 img['Pixels']['Plane'] = [img['Pixels']['Plane']]
+            if isinstance(img['Pixels'].get('Channels'), dict):
+                img['Pixels']['Channels'] = [img['Pixels']['Channels']]
         try:
             self._omebase = self._omeinfo['Image'][0]['Pixels']
+            if isinstance(self._omebase.get('Plane'), dict):
+                self._omebase['Plane'] = [self._omebase['Plane']]
             if ((not len(self._omebase['TiffData']) or
                     len(self._omebase['TiffData']) == 1) and
-                    len(self._omebase['Plane'])):
+                    (len(self._omebase.get('Plane', [])) or
+                     len(self._omebase.get('Channel', [])))):
                 if not len(self._omebase['TiffData']) or self._omebase['TiffData'][0] == {}:
-                    self._omebase['TiffData'] = self._omebase['Plane']
+                    self._omebase['TiffData'] = self._omebase.get(
+                        'Plane', self._omebase.get('Channel'))
                 elif (int(self._omebase['TiffData'][0].get('PlaneCount', 0)) ==
-                        len(self._omebase['Plane'])):
-                    planes = copy.deepcopy(self._omebase['Plane'])
+                        len(self._omebase.get('Plane', self._omebase.get('Channel', [])))):
+                    planes = copy.deepcopy(self._omebase.get('Plane', self._omebase.get('Channel')))
                     for idx, plane in enumerate(planes):
                         plane['IFD'] = plane.get(
                             'IFD', int(self._omebase['TiffData'][0].get('IFD', 0)) + idx)
                     self._omebase['TiffData'] = planes
+            if isinstance(self._omebase['TiffData'], dict):
+                self._omebase['TiffData'] = [self._omebase['TiffData']]
             if len({entry.get('UUID', {}).get('FileName', '')
                     for entry in self._omebase['TiffData']}) > 1:
                 raise TileSourceException('OME Tiff references multiple files')
@@ -213,8 +219,10 @@ class OMETiffFileTileSource(TiffFileTileSource):
                     int(self._omebase['SizeT']) * int(self._omebase['SizeZ']) or
                     len(self._omebase['TiffData']) != len(
                         self._omebase.get('Plane', self._omebase['TiffData']))):
-                raise TileSourceException('OME Tiff contains frames that contain multiple planes')
+                raise TileSourceException(
+                    'OME Tiff contains frames that contain multiple planes')
         except (KeyError, ValueError, IndexError):
+            print('B')
             raise TileSourceException('OME Tiff does not contain an expected record')
 
     def getMetadata(self):
@@ -282,23 +290,32 @@ class OMETiffFileTileSource(TiffFileTileSource):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 sparseFallback=False, **kwargs):
-        if (z < 0 or z >= len(self._omeLevels) or self._omeLevels[z] is None or
-                kwargs.get('frame') in (None, 0, '0', '')):
+        if (z < 0 or z >= len(self._omeLevels) or (
+                self._omeLevels[z] is not None and kwargs.get('frame') in (None, 0, '0', ''))):
             return super(OMETiffFileTileSource, self).getTile(
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                 **kwargs)
-        frame = int(kwargs['frame'])
+        frame = int(kwargs.get('frame') or 0)
         if frame < 0 or frame >= len(self._omebase['TiffData']):
             raise TileSourceException('Frame does not exist')
-        dirnum = int(self._omeLevels[z]['TiffData'][frame].get('IFD', frame))
-        if dirnum in self._directoryCache:
-            dir = self._directoryCache[dirnum]
+        subdir = None
+        if self._omeLevels[z] is not None:
+            dirnum = int(self._omeLevels[z]['TiffData'][frame].get('IFD', frame))
         else:
-            if len(self._directoryCache) >= self._directoryCacheMaxSize:
-                self._directoryCache = {}
-            dir = TiledTiffDirectory(self._getLargeImagePath(), dirnum, mustBeTiled=None)
-            self._directoryCache[dirnum] = dir
+            dirnum = int(self._omeLevels[-1]['TiffData'][frame].get('IFD', frame))
+            subdir = self.levels - 1 - z
+        dir = self._getDirFromCache(dirnum, subdir)
+        if subdir:
+            scale = int(2 ** subdir)
+            if (dir is None or
+                    dir.tileWidth != self.tileWidth or dir.tileHeight != self.tileHeight or
+                    abs(dir.imageWidth * scale - self.sizeX) > scale or
+                    abs(dir.imageHeight * scale - self.sizeY) > scale):
+                return super(OMETiffFileTileSource, self).getTile(
+                    x, y, z, pilImageAllowed=pilImageAllowed,
+                    numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
+                    **kwargs)
         try:
             tile = dir.getTile(x, y)
             format = 'JPEG'
