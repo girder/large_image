@@ -129,10 +129,13 @@ class BioformatsFileTileSource(FileTileSource):
 
         largeImagePath = self._getLargeImagePath()
 
-        if not os.path.splitext(largeImagePath)[1]:
+        ext = os.path.splitext(largeImagePath)[1]
+        if not ext:
             raise TileSourceException(
                 'File cannot be opened via bioformats because it has no '
                 'extension to specify the file type (%s).' % largeImagePath)
+        if ext.lower() in ('.jpg', '.jpeg', '.jpe'):
+            raise TileSourceException('File will not be opened by bioformats reader')
 
         if not _startJavabridge(self._logger):
             raise TileSourceException(
@@ -219,6 +222,9 @@ class BioformatsFileTileSource(FileTileSource):
             es = javabridge.to_string(exc.throwable)
             self._logger.debug('File cannot be opened via Bioformats. (%s)' % es)
             raise TileSourceException('File cannot be opened via Bioformats. (%s)' % es)
+        except AttributeError:
+            self._logger.exception('The bioformats reader threw an unhandled exception.')
+            raise TileSourceException('The bioformats reader threw an unhandled exception.')
         finally:
             if javabridge.get_env():
                 javabridge.detach()
