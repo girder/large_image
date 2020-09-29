@@ -1,13 +1,11 @@
 import $ from 'jquery';
-import yaml from 'js-yaml';
 import { AccessType } from '@girder/core/constants';
-import { restRequest, getApiRoot } from '@girder/core/rest';
+import { restRequest } from '@girder/core/rest';
 import { wrap } from '@girder/core/utilities/PluginUtils';
 import ItemView from '@girder/core/views/body/ItemView';
-import View from '@girder/core/views/View';
 
 import largeImageConfig from './configView';
-import itemViewWidget from '../templates/itemView.pug';
+import ItemViewWidget from './itemViewWidget';
 import '../stylesheets/itemView.styl';
 
 wrap(ItemView, 'render', function (render) {
@@ -52,24 +50,4 @@ wrap(ItemView, 'render', function (render) {
         }
     }, this);
     render.call(this);
-});
-
-var ItemViewWidget = View.extend({
-    initialize: function (settings) {
-        this.itemId = settings.imageModel.id;
-        this.model = settings.imageModel;
-        this.extra = settings.extra;
-        this.metadata = settings.metadata;
-    },
-
-    render: function () {
-        this.$el.html(itemViewWidget({
-            extra: this.extra,
-            updated: this.model.get('updated'),
-            largeImageMetadata: this.metadata,
-            yaml: yaml,
-            imageUrl: `${getApiRoot()}/item/${this.itemId}/tiles/images/`
-        }));
-        return this;
-    }
 });
