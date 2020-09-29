@@ -11,7 +11,7 @@
 - Improve how Philips XML internal metadata is reported (#475)
 - Show aperio version in internal metadata (#474)
 - Add css classes to metadata on the item page (#472)
-- The Girder web client exports the ItemViewWidget
+- The Girder web client exports the ItemViewWidget (#483)
 
 ### Bug Fixes
 - Add a reference to updated time to avoid overcaching associated images (#477)
