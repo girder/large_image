@@ -25,11 +25,21 @@ import openslide
 import PIL
 from pkg_resources import DistributionNotFound, get_distribution
 
+try:
+    import tifftools
+except ImportError:
+    tifftools = None
+
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority, TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
+
+try:
+    from libtiff import libtiff_ctypes
+except ImportError:
+    libtiff_ctypes = False
 
 
 try:
@@ -85,6 +95,11 @@ class OpenslideFileTileSource(FileTileSource):
             raise TileSourceException('File cannot be opened via OpenSlide.')
         except openslide.lowlevel.OpenSlideError:
             raise TileSourceException('File will not be opened via OpenSlide.')
+        if tifftools and libtiff_ctypes:
+            try:
+                self._tiffinfo = tifftools.read_tiff(largeImagePath)
+            except Exception:
+                pass
 
         svsAvailableLevels = self._getAvailableLevels(largeImagePath)
         if not len(svsAvailableLevels):
@@ -309,16 +324,38 @@ class OpenslideFileTileSource(FileTileSource):
             scale /= 2
         return level
 
+    def _getAssociatedImagesDict(self):
+        images = {}
+        try:
+            for key in self._openslide.associated_images:
+                images[key] = 'openslide'
+        except openslide.lowlevel.OpenSlideError:
+            pass
+        if hasattr(self, '_tiffinfo'):
+            vendor = self._openslide.properties['openslide.vendor']
+            for ifdidx, ifd in enumerate(self._tiffinfo['ifds']):
+                key = None
+                if vendor == 'hamamatsu':
+                    if tifftools.Tag.NDPI_SOURCELENS.value in ifd['tags']:
+                        lens = ifd['tags'][tifftools.Tag.NDPI_SOURCELENS.value]['data'][0]
+                        key = {-1: 'macro', -2: 'nonempty'}.get(lens)
+                elif vendor == 'aperio':
+                    if (ifd['tags'].get(tifftools.Tag.NewSubfileType.value) and
+                            ifd['tags'][tifftools.Tag.NewSubfileType.value]['data'][0] &
+                            tifftools.Tag.NewSubfileType.bitfield.Page.value):
+                        key = 'label' if ifd['tags'][
+                            tifftools.Tag.NewSubfileType.value]['data'][0] == 1 else 'macro'
+                if key and key not in images:
+                    images[key] = ifdidx
+        return images
+
     def getAssociatedImagesList(self):
         """
         Get a list of all associated images.
 
         :return: the list of image keys.
         """
-        try:
-            return sorted(self._openslide.associated_images)
-        except openslide.lowlevel.OpenSlideError:
-            return []
+        return sorted(self._getAssociatedImagesDict().keys())
 
     def _getAssociatedImage(self, imageKey):
         """
@@ -327,9 +364,18 @@ class OpenslideFileTileSource(FileTileSource):
         :param imageKey: the key of the associated image.
         :return: the image in PIL format or None.
         """
-        try:
-            if imageKey in self._openslide.associated_images:
+        images = self._getAssociatedImagesDict()
+        if imageKey not in images:
+            return None
+        if images[imageKey] == 'openslide':
+            try:
                 return self._openslide.associated_images[imageKey]
-        except openslide.lowlevel.OpenSlideError:
-            pass
-        return None
+            except openslide.lowlevel.OpenSlideError:
+                return None
+        bytePath = self._getLargeImagePath()
+        if not isinstance(bytePath, six.binary_type):
+            bytePath = bytePath.encode('utf8')
+        _tiffFile = libtiff_ctypes.TIFF.open(bytePath)
+        _tiffFile.SetDirectory(images[imageKey])
+        img = _tiffFile.read_image()
+        return PIL.Image.fromarray(img)
