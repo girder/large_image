@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## Version 1.3.0
+
 ### Features
 - Added bioformats tile source (#463)
 - Handle OME Tiff files with sub-ifd images (#469)
@@ -12,6 +14,7 @@
 - Show aperio version in internal metadata (#474)
 - Add css classes to metadata on the item page (#472)
 - The Girder web client exports the ItemViewWidget (#483)
+- Read more associated images in openslide formats (#486)
 
 ### Bug Fixes
 - Add a reference to updated time to avoid overcaching associated images (#477)
