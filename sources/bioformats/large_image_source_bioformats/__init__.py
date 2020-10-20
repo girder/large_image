@@ -134,7 +134,7 @@ class BioformatsFileTileSource(FileTileSource):
             raise TileSourceException(
                 'File cannot be opened via bioformats because it has no '
                 'extension to specify the file type (%s).' % largeImagePath)
-        if ext.lower() in ('.jpg', '.jpeg', '.jpe'):
+        if ext.lower() in ('.jpg', '.jpeg', '.jpe', '.png'):
             raise TileSourceException('File will not be opened by bioformats reader')
 
         if not _startJavabridge(self._logger):

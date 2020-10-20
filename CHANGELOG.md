@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changes
+- Don't let bioformats handle pngs (#487)
+
 ## Version 1.3.0
 
 ### Features
