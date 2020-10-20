@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Improvements
+- Include ETag support in some Girder rest requests to reduce data transfer (#488)
+
 ### Changes
 - Don't let bioformats handle pngs (#487)
 

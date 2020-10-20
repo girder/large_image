@@ -17,6 +17,7 @@
 #############################################################################
 
 import cherrypy
+import hashlib
 import math
 import os
 import re
@@ -33,6 +34,7 @@ from girder.models.item import Item
 
 from large_image.constants import TileInputUnits
 from large_image.exceptions import TileGeneralException
+from large_image.cache_util import strhash
 
 from ..models.image_item import ImageItem
 from .. import loadmodelcache
@@ -67,6 +69,27 @@ def _adjustParams(params):
         if ('ipad' in userAgent or 'ipod' in userAgent or 'iphone' in userAgent or
                 re.match('((?!chrome|android).)*safari', userAgent, re.IGNORECASE)):
             params['encoding'] = 'JFIF'
+
+
+def _handleETag(key, item, *args, **kwargs):
+    """
+    Add or check an ETag header.
+
+    :param key: key for making a distinc etag.
+    :param item: item used for the item _id and updated timestamp.
+    :param *args, **kwargs: additional arguments for generating an etag.
+    """
+    etag = hashlib.md5(strhash(key, str(item['_id']), *args, **kwargs).encode()).hexdigest()
+    setResponseHeader('ETag', etag)
+    conditions = [str(x) for x in cherrypy.request.headers.elements('If-Match') or []]
+    if conditions and not (conditions == ['*'] or etag in conditions):
+        raise cherrypy.HTTPError(
+            412, 'If-Match failed: ETag %r did not match %r' % (etag, conditions))
+    conditions = [str(x) for x in cherrypy.request.headers.elements('If-None-Match') or []]
+    if conditions == ['*'] or etag in conditions:
+        raise cherrypy.HTTPRedirect([], 304)
+    # Explicitly set a max-ago to recheck the cahe after a while
+    setResponseHeader('Cache-control', 'max-age=600')
 
 
 class TilesItemResource(ItemResource):
@@ -380,10 +403,7 @@ class TilesItemResource(ItemResource):
         _adjustParams(params)
         item = loadmodelcache.loadModel(
             self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
-        # Explicitly set a expires time to encourage browsers to cache this for
-        # a while.
-        setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
-            cherrypy.serving.response.time + 600))
+        _handleETag('getTile', item, z, x, y, params)
         redirect = params.get('redirect', False)
         if redirect not in ('any', 'exact', 'encoding'):
             redirect = False
@@ -417,10 +437,7 @@ class TilesItemResource(ItemResource):
         _adjustParams(params)
         item = loadmodelcache.loadModel(
             self, 'item', id=itemId, allowCookie=True, level=AccessType.READ)
-        # Explicitly set a expires time to encourage browsers to cache this for
-        # a while.
-        setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
-            cherrypy.serving.response.time + 600))
+        _handleETag('getTileWithFrame', item, frame, z, x, y, params)
         redirect = params.get('redirect', False)
         if redirect not in ('any', 'exact', 'encoding'):
             redirect = False
@@ -467,10 +484,7 @@ class TilesItemResource(ItemResource):
         if overlap < 0:
             raise RestException('Invalid overlap', code=400)
         x, y = [int(xy) for xy in xandy.split('.')[0].split('_')]
-        # Explicitly set a expires time to encourage browsers to cache this for
-        # a while.
-        setResponseHeader('Expires', cherrypy.lib.httputil.HTTPDate(
-            cherrypy.serving.response.time + 600))
+        _handleETag('getDZITile', item, level, xandy, params)
         metadata = self.imageItemModel.getMetadata(item, **params)
         level = int(level)
         maxlevel = int(math.ceil(math.log(max(
@@ -571,6 +585,7 @@ class TilesItemResource(ItemResource):
             ('style', str),
             ('contentDisposition', str),
         ])
+        _handleETag('getTilesThumbnail', item, params)
         try:
             result = self.imageItemModel.getThumbnail(item, **params)
         except TileGeneralException as e:
@@ -691,6 +706,7 @@ class TilesItemResource(ItemResource):
             ('style', str),
             ('contentDisposition', str),
         ])
+        _handleETag('getTilesRegion', item, params)
         try:
             regionData, regionMime = self.imageItemModel.getRegion(
                 item, **params)
@@ -807,6 +823,7 @@ class TilesItemResource(ItemResource):
             ('rangeMax', int),
             ('density', bool),
         ])
+        _handleETag('getHistogram', item, params)
         histRange = None
         if 'rangeMin' in params or 'rangeMax' in params:
             histRange = [params.pop('rangeMin', 0), params.pop('rangeMax', 256)]
@@ -871,6 +888,7 @@ class TilesItemResource(ItemResource):
             ('style', str),
             ('contentDisposition', str),
         ])
+        _handleETag('getAssociatedImage', item, image, params)
         try:
             result = self.imageItemModel.getAssociatedImage(item, image, **params)
         except TileGeneralException as e:
