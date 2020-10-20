@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## Version 1.3.1
+
 ### Improvements
 - Include ETag support in some Girder rest requests to reduce data transfer (#488)
 
@@ -130,5 +132,3 @@ Tile sources are now fully modular and are installed via pip.  File extensions a
 The Girder plugin has been divided into the parts requiring annotations and the parts that are only necessary for large images.  
 
 Python 3.4 support was dropped.
-
-
