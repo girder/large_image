@@ -272,9 +272,30 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         /**
-         * Use geojs's `updateStyleFromArray` to modify the opacities of all elements
-         * in a feature.  This method uses the private attributes `_highlightAnntotation`
-         * and `_highlightElement` to determine which element to modify.
+         * Hide the given annotation/element by settings its opacity to 0.  See
+         * highlightAnnotation for caveats.
+         *
+         * If either argument is not provided, hiding is turned off.
+         *
+         * @param {string?} annotation The id of the annotation to hide
+         * @param {string?} element The id of the element to hide
+         */
+        hideAnnotation: function (annotation, element) {
+            this._hideAnnotation = annotation;
+            this._hideElement = element;
+            _.each(this._annotations, (layer, annotationId) => {
+                const features = layer.features;
+                this._mutateFeaturePropertiesForHighlight(annotationId, features);
+            });
+            this.viewer.scheduleAnimationFrame(this.viewer.draw);
+            return this;
+        },
+
+        /**
+         * Use geojs's `updateStyleFromArray` to modify the opacities of alli
+         * elements in a feature.  This method uses the private attributes
+         * `_highlightAnntotation` and `_highlightElement` to determine which
+         * element to modify.
          */
         _mutateFeaturePropertiesForHighlight: function (annotationId, features) {
             _.each(features, (feature) => {
@@ -289,7 +310,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     annotationId: annotationId,
                     fillOpacity: this._globalAnnotationFillOpacity,
                     highlightannot: this._highlightAnnotation,
-                    highlightelem: this._highlightElement
+                    highlightelem: this._highlightElement,
+                    hideannot: this._hideAnnotation,
+                    hideelem: this._hideElement
                 };
 
                 if (_.isMatch(feature._lastFeatureProp, prop)) {
@@ -304,9 +327,12 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     const id = data[i].id;
                     const fillOpacity = data[i].fillOpacity * this._globalAnnotationFillOpacity;
                     const strokeOpacity = data[i].strokeOpacity;
-                    if (!this._highlightAnnotation ||
-                        (!this._highlightElement && annotationId === this._highlightAnnotation) ||
-                        this._highlightElement === id) {
+                    if (this._hideAnnotation && annotationId === this._hideAnnotation && id === this._hideElement) {
+                        fillOpacityArray[i] = 0;
+                        strokeOpacityArray[i] = 0;
+                    } else if (!this._highlightAnnotation ||
+                            (!this._highlightElement && annotationId === this._highlightAnnotation) ||
+                            this._highlightElement === id) {
                         fillOpacityArray[i] = fillOpacity;
                         strokeOpacityArray[i] = strokeOpacity;
                     } else {

@@ -5,7 +5,10 @@ import * as defaults from './defaults';
 import style from './style';
 
 function convertOne(properties) {
-    return function (annotation) {
+    return function (annotation, key) {
+        if (('' + key).startsWith('_')) {
+            return;
+        }
         const type = annotation.type;
         annotation = _.defaults({}, annotation, defaults[type] || {});
         if (!_.has(geometry, type)) {
@@ -23,7 +26,7 @@ function convertOne(properties) {
 
 export default function convert(json, properties = {}) {
     const features = _.chain(json)
-        .map(convertOne(properties))
+        .mapObject(convertOne(properties))
         .compact()
         .value();
 
