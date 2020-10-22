@@ -11,11 +11,12 @@ function convertOne(properties) {
         if (!_.has(geometry, type)) {
             return;
         }
+        const geom = geometry[type](annotation);
         return {
             type: 'Feature',
             id: annotation.id,
-            geometry: geometry[type](annotation),
-            properties: _.extend({element: annotation}, properties, style(annotation))
+            geometry: { type: geom.type, coordinates: geom.coordinates },
+            properties: _.extend({element: annotation, annotationType: geom.annotationType}, properties, style(annotation))
         };
     };
 }

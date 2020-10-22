@@ -51,6 +51,7 @@ describe('Annotations', function () {
 
             expect(obj.type).toBe('Polygon');
             expect(obj.coordinates.length).toBe(1);
+            expect(obj.annotationType).toBe('rectangle');
             expectClose(
                 obj.coordinates[0], [
                     [7.5, 15], [12.5, 15], [12.5, 25], [7.5, 25], [7.5, 15]
@@ -68,6 +69,7 @@ describe('Annotations', function () {
 
             expect(obj.type).toBe('Polygon');
             expect(obj.coordinates.length).toBe(1);
+            expect(obj.annotationType).toBe('rectangle');
             expectClose(
                 obj.coordinates[0], [
                     [10, 9], [11, 10], [10, 11], [9, 10], [10, 9]
@@ -88,6 +90,7 @@ describe('Annotations', function () {
 
             expect(obj.type).toBe('LineString');
             expect(obj.coordinates.length).toBe(2);
+            expect(obj.annotationType).toBe('line');
             expectClose(
                 obj.coordinates, [
                     [0, 1], [1, 0]
@@ -110,6 +113,7 @@ describe('Annotations', function () {
             expect(obj.type).toBe('Polygon');
             expect(obj.coordinates.length).toBe(1);
             expect(obj.coordinates[0].length).toBe(4);
+            expect(obj.annotationType).toBe('polygon');
             expectClose(
                 obj.coordinates[0], [
                     [0, 1], [1, 0], [1, 1], [0, 1]
@@ -124,6 +128,7 @@ describe('Annotations', function () {
                 center: [1, 2, 0]
             });
             expect(obj.type).toBe('Point');
+            expect(obj.annotationType).toBe('point');
             expect(obj.coordinates).toEqual([1, 2]);
         });
     });
