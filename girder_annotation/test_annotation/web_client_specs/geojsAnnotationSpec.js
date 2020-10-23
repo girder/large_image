@@ -4,7 +4,7 @@
 girderTest.importPlugin('large_image', 'large_image_annotation');
 
 describe('geojs-annotations', function () {
-    var large_image_annotation, geojs;
+    var large_image_annotation, geojs, convert;
     var fillColor = 'rgba(0,0,0,0)';
     var lineColor = 'rgb(0,0,0)';
     var lineWidth = 2;
@@ -12,9 +12,10 @@ describe('geojs-annotations', function () {
     beforeEach(function () {
         large_image_annotation = girder.plugins.large_image_annotation;
         geojs = large_image_annotation.annotations.geojs;
+        convert = large_image_annotation.annotations.convert;
     });
 
-    it('convert', function () {
+    it('convert from', function () {
         var type;
         var coordinates;
 
@@ -42,6 +43,20 @@ describe('geojs-annotations', function () {
             lineColor: lineColor,
             lineWidth: lineWidth
         });
+    });
+
+    it('convert to', function () {
+        var result;
+
+        result = convert({attributes: {type: 'point', center: [0, 0, 0]}});
+        expect(result.type).toBe('FeatureCollection');
+        expect(result.features.length).toBe(1);
+        result = convert({attributes: {type: 'point', center: [0, 0, 0]}, attributes2: {type: 'point', center: [0, 0, 0]}});
+        expect(result.type).toBe('FeatureCollection');
+        expect(result.features.length).toBe(2);
+        result = convert({attributes: {type: 'point', center: [0, 0, 0]}, _attributes: {type: 'point', center: [0, 0, 0]}});
+        expect(result.type).toBe('FeatureCollection');
+        expect(result.features.length).toBe(1);
     });
 
     describe('coordinates', function () {

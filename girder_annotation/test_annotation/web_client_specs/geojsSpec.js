@@ -580,7 +580,7 @@ $(function () {
             });
         });
 
-        describe('highlight annotations', function () {
+        describe('highlight and hide annotations', function () {
             var annotation1, annotation2;
             var element11 = '111111111111111111111111';
             var element12 = '222222222222222222222222';
@@ -691,6 +691,25 @@ $(function () {
 
             it('reset opacities', function () {
                 viewer.highlightAnnotation();
+
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.5, 1);
+            });
+
+            it('hide an element', function () {
+                viewer.hideAnnotation(annotation2.id, element21);
+
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.5, 1, function (data) {
+                    return data.id !== element21;
+                });
+                checkFeatureOpacity(annotation2.id, 0, 0, function (data) {
+                    return data.id === element21;
+                });
+            });
+
+            it('reset opacities', function () {
+                viewer.hideAnnotation();
 
                 checkFeatureOpacity(annotation1.id, 0.5, 1);
                 checkFeatureOpacity(annotation2.id, 0.5, 1);
