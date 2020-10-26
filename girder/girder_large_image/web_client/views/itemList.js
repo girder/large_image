@@ -62,7 +62,7 @@ wrap(ItemListWidget, 'render', function (render) {
             container.append(elem);
             elem.append($('<img class="waiting"/>').attr(
                 'deferred-src', getApiRoot() + '/item/' + item.id +
-                '/tiles/images/' + imageName + '?width=160&height=100'
+                '/tiles/images/' + imageName + '?width=160&height=100&_=' + item.get('updated')
             ));
             elem.attr('extra-image', imageName);
         });
