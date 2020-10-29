@@ -77,6 +77,13 @@ jobs:
       - tox:
           env: py38
       - coverage
+  py39:
+    executor: toxandnode
+    steps:
+      - checkout
+      - tox:
+          env: py39
+      - coverage
   lint_and_docs:
     executor: toxandnode
     steps:
@@ -158,6 +165,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      - py39:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - lint_and_docs:
           filters:
             tags:
@@ -172,6 +186,7 @@ workflows:
             - py36
             - py37
             - py38
+            - py39
             - lint_and_docs
           filters:
             tags:
@@ -186,6 +201,7 @@ workflows:
             - py36
             - py37
             - py38
+            - py39
             - lint_and_docs
           filters:
             tags:
