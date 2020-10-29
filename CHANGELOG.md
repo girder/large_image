@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+- Reduce caching associated images when the parent item changes (#491)
+- Test with Python 3.9 (#493)
+
 ## Version 1.3.1
 
 ### Improvements
