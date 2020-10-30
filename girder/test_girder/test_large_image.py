@@ -224,14 +224,9 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
     present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
     assert present < 3 + len(slowList)
 
-    # wait a bit; the slow job will usually produce one more thumbnail, and
-    # the assetstore teardown will fail if the thumbnail is added during the
-    # teardown process
-    waitend = time.time() + 30
-    while time.time() < waitend:
-        count, removed = ImageItem().removeThumbnailFiles(item, keep=10)
-        if count > present:
-            break
+    # Disable saving thumbnails so a slow process won't create one while the
+    # test is cleaning up.
+    Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 0)
 
 
 @pytest.mark.usefixtures('unbindLargeImage')  # noqa
