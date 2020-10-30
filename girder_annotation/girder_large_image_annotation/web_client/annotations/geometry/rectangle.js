@@ -23,6 +23,7 @@ export default function rectangle(json) {
             [right, bottom],
             [left, bottom],
             [left, top]
-        ], rotate(rotation, center))]
+        ], rotate(rotation, center))],
+        annotationType: 'rectangle'
     };
 }

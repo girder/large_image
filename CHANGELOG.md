@@ -5,6 +5,10 @@
 ### Improvements
 - Reduce caching associated images when the parent item changes (#491)
 - Test with Python 3.9 (#493)
+- Add a hideAnnotation function in the client (#490)
+
+### Changes
+- Include the annotationType to the annotation conversion method in the client (#490)
 
 ## Version 1.3.1
 
