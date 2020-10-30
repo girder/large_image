@@ -26,8 +26,11 @@ commands:
     description: "Upload coverage"
     steps:
       - run:
+          name: Install Codecov client
+          command: pip install codecov==2.1.9
+      - run:
           name: Upload coverage
-          command: bash <(curl -s https://codecov.io/bash) --required --disable search pycov gcov --root project --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml
+          command: codecov --tries 10 --required --disable search pycov gcov --root project --file .tox/coverage/py_coverage.xml -f build/test/coverage/cobertura-coverage.xml
 
 jobs:
   testdocker:
