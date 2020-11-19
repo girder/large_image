@@ -206,6 +206,9 @@ class TilesItemResource(ItemResource):
         for entry in typeList:
             key, dataType, outkey1, outkey2 = (list(entry) + [None] * 2)[:4]
             if key in params:
+                if dataType == 'boolOrInt':
+                    dataType = bool if str(params[key]).lower() in (
+                        'true', 'false', 'on', 'off', 'yes', 'no') else int
                 try:
                     if dataType is bool:
                         results[key] = str(params[key]).lower() in (
@@ -670,6 +673,12 @@ class TilesItemResource(ItemResource):
                'image', required=False,
                enum=['raw', 'tiff_lzw', 'jpeg', 'tiff_adobe_deflate'])
         .param('style', 'JSON-encoded style string', required=False)
+        .param('resample', 'If false, an existing level of the image is used '
+               'for the histogram.  If true, the internal values are '
+               'interpolated to match the specified size as needed.  0-3 for '
+               'a specific interpolation method (0-nearest, 1-lanczos, '
+               '2-bilinear, 3-bicubic)', required=False,
+               enum=['false', 'true', '0', '1', '2', '3'], default='false')
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
@@ -704,6 +713,7 @@ class TilesItemResource(ItemResource):
             ('jpegSubsampling', int),
             ('tiffCompression', str),
             ('style', str),
+            ('resample', 'boolOrInt'),
             ('contentDisposition', str),
         ])
         _handleETag('getTilesRegion', item, params)
@@ -773,8 +783,10 @@ class TilesItemResource(ItemResource):
                default=2048, required=False, dataType='int')
         .param('resample', 'If false, an existing level of the image is used '
                'for the histogram.  If true, the internal values are '
-               'interpolated to match the specified size as needed.',
-               required=False, dataType='boolean', default=False)
+               'interpolated to match the specified size as needed.  0-3 for '
+               'a specific interpolation method (0-nearest, 1-lanczos, '
+               '2-bilinear, 3-bicubic)', required=False,
+               enum=['false', 'true', '0', '1', '2', '3'], default='false')
         .param('frame', 'For multiframe images, the 0-based frame number.  '
                'This is ignored on non-multiframe images.', required=False,
                dataType='int')
@@ -817,7 +829,7 @@ class TilesItemResource(ItemResource):
             ('jpegSubsampling', int),
             ('tiffCompression', str),
             ('style', str),
-            ('resample', bool),
+            ('resample', 'boolOrInt'),
             ('bins', int),
             ('rangeMin', int),
             ('rangeMax', int),
