@@ -6,6 +6,8 @@
 - Reduce caching associated images when the parent item changes (#491)
 - Test with Python 3.9 (#493)
 - Add a hideAnnotation function in the client (#490)
+- Expose more resample options for region and histogram endpoints (#496)
+- Improve OME tiff preferred level calculation for OME tiffs with subifds (#496)
 
 ### Changes
 - Include the annotationType to the annotation conversion method in the client (#490)

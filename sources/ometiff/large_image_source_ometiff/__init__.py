@@ -332,3 +332,27 @@ class OMETiffFileTileSource(TiffFileTileSource):
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                 exception=e, **kwargs)
+
+    def getPreferredLevel(self, level):
+        """
+        Given a desired level (0 is minimum resolution, self.levels - 1 is max
+        resolution), return the level that contains actual data that is no
+        lower resolution.
+
+        :param level: desired level
+        :returns level: a level with actual data that is no lower resolution.
+        """
+        level = max(0, min(level, self.levels - 1))
+        baselevel = level
+        while self._tiffDirectories[level] is None and level < self.levels - 1:
+            try:
+                dirnum = int(self._omeLevels[-1]['TiffData'][0].get('IFD', 0))
+                subdir = self.levels - 1 - level
+                if self._getDirFromCache(dirnum, subdir):
+                    break
+            except Exception:
+                pass
+            level += 1
+        while level - baselevel > self._maxSkippedLevels:
+            level -= self._maxSkippedLevels
+        return level
