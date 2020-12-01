@@ -114,7 +114,7 @@ class BioformatsFileTileSource(FileTileSource):
     _tileSize = 512
     _associatedImageMaxSize = 8192
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -145,7 +145,11 @@ class BioformatsFileTileSource(FileTileSource):
 
         try:
             javabridge.attach()
-            self._bioimage = bioformats.ImageReader(largeImagePath)
+            try:
+                self._bioimage = bioformats.ImageReader(largeImagePath)
+            except AttributeError as exc:
+                self._logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
+                raise TileSourceException('File cannot be opened via Bioformats. (%r)' % exc)
 
             rdr = self._bioimage.rdr
             # Bind additional functions not done by bioformats module.
