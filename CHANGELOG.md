@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## Version 1.3.2
+
 ### Improvements
 - Reduce caching associated images when the parent item changes (#491)
 - Test with Python 3.9 (#493)
@@ -11,6 +13,9 @@
 
 ### Changes
 - Include the annotationType to the annotation conversion method in the client (#490)
+
+### Notes
+- This will be the last version to support Python 2.7 and 3.5.
 
 ## Version 1.3.1
 
