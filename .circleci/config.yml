@@ -45,20 +45,6 @@ jobs:
           command: |
               echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
               docker push girder/tox-and-node:latest
-  py27:
-    executor: toxandnode
-    steps:
-      - checkout
-      - tox:
-          env: py27
-      - coverage
-  py35:
-    executor: toxandnode
-    steps:
-      - checkout
-      - tox:
-          env: py35
-      - coverage
   py36:
     executor: toxandnode
     steps:
@@ -133,20 +119,6 @@ workflows:
                 - master
                 # Create a branch of this name to push to docker hub
                 - testdocker
-      - py27:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore:
-                - gh-pages
-      - py35:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore:
-                - gh-pages
       - py36:
           filters:
             tags:
@@ -184,8 +156,6 @@ workflows:
                 - gh-pages
       - wheels:
           requires:
-            - py27
-            - py35
             - py36
             - py37
             - py38
@@ -199,8 +169,6 @@ workflows:
                 - gh-pages
       - release:
           requires:
-            - py27
-            - py35
             - py36
             - py37
             - py38
