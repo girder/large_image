@@ -3,7 +3,6 @@
 
 import os
 from setuptools import setup, find_packages
-import sys
 
 
 def prerelease_local_scheme(version):
@@ -33,10 +32,7 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
@@ -45,14 +41,10 @@ setup(
     install_requires=[
         'enum34>=1.1.6;python_version<"3.4"',
         'futures;python_version<"3.4"',
-        'girder>=3.0.4' + (',<=3.1.0' if sys.version_info < (3, 6) else ''),
-        'girder-jobs>=3.0.3' + (',<=3.1.0' if sys.version_info < (3, 6) else ''),
+        'girder>=3.0.4',
+        'girder-jobs>=3.0.3',
         'girder-worker[girder]>=0.6.0',
         'large_image>=1.0.0',
-        # Needed for Python 3.5 and Girder
-        'dogpile.cache<1;python_version<"3.6"',
-        # Needed for Python 2.7 and Girder worker
-        'diskcache<5;python_version<"3"',
     ],
     extras_require={
         'tasks': [
@@ -64,7 +56,7 @@ setup(
     license='Apache Software License 2.0',
     long_description='See the large-image package for more details.',
     packages=find_packages(exclude=['test', 'test.*', 'test_girder', 'test_girder.*']),
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
+    python_requires='>=3.6',
     url='https://github.com/girder/large_image',
     zip_safe=False,
     entry_points={

@@ -36,21 +36,17 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Scientific/Engineering',
         'Intended Audience :: Science/Research',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     install_requires=[
         'girder-worker>=0.6.0',
         'girder-worker-utils>=0.8.5',
-        'girder-client<3.1;python_version<"3.6"',
         # Packages required by both producer and consumer side installations
         'six>=1.10.0',
-        # Needed for girder-worker and Python 2.7
-        'diskcache<5;python_version<"3"',
     ],
     extras_require={
         'girder': [
@@ -61,7 +57,7 @@ setup(
             'pyvips',
         ]
     },
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
+    python_requires='>=3.6',
     entry_points={
         'girder_worker_plugins': [
             'large_image_tasks = large_image_tasks:LargeImageTasks',
