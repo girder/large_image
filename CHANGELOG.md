@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Improvements
+- Better release bioformats resources (#502)
+
 ## Version 1.3.2
 
 ### Improvements

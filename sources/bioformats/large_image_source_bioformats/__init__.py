@@ -32,7 +32,6 @@ import logging
 import math
 import numpy
 import os
-import six
 import threading
 import types
 
@@ -54,11 +53,25 @@ except DistributionNotFound:
 
 
 _javabridgeStarted = None
+_openImages = []
 
 
 def _monitor_thread():
     main_thread = threading.main_thread()
     main_thread.join()
+    if len(_openImages):
+        try:
+            javabridge.attach()
+            while len(_openImages):
+                source = _openImages.pop()
+                try:
+                    source._bioimage.close()
+                except Exception:
+                    pass
+                source._bioimage = None
+        finally:
+            if javabridge.get_env():
+                javabridge.detach()
     _stopJavabridge()
 
 
@@ -91,8 +104,7 @@ def _stopJavabridge(*args, **kwargs):
     _javabridgeStarted = None
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class BioformatsFileTileSource(FileTileSource):
+class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to via Bioformats.
     """
@@ -150,6 +162,7 @@ class BioformatsFileTileSource(FileTileSource):
             except AttributeError as exc:
                 self._logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
                 raise TileSourceException('File cannot be opened via Bioformats. (%r)' % exc)
+            _openImages.append(self)
 
             rdr = self._bioimage.rdr
             # Bind additional functions not done by bioformats module.
@@ -245,6 +258,7 @@ class BioformatsFileTileSource(FileTileSource):
             try:
                 javabridge.attach()
                 self._bioimage.close()
+                _openImages.remove(self)
             finally:
                 if javabridge.get_env():
                     javabridge.detach()
@@ -265,7 +279,7 @@ class BioformatsFileTileSource(FileTileSource):
         frameList = []
         nextSeriesNum = 0
         try:
-            for key, value in six.iteritems(seriesMetadata):
+            for key, value in seriesMetadata.items():
                 frameNum = int(value)
                 seriesNum = int(key.split('Series ')[1].split('|')[0]) - 1
                 if seriesNum >= 0 and seriesNum < self._metadata['seriesCount']:
