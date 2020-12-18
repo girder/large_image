@@ -548,7 +548,21 @@ class TiledTiffDirectory(object):
                 frameStartPos = frameBuffer.raw.find(b'\xff\xc2', 2, -2)
                 if frameStartPos == -1:
                     raise IOTiffException('Missing JPEG Start Of Frame marker')
-
+        # If the photometric value is RGB and the JPEG component ids are just
+        # 0, 1, 2, change the component ids to R, G, B to ensure color space
+        # information is preserved.
+        if self._tiffInfo.get('photometric') == libtiff_ctypes.PHOTOMETRIC_RGB:
+            sof = frameBuffer.raw.find(b'\xff\xc0')
+            if sof == -1:
+                sof = frameBuffer.raw.find(b'\xff\xc2')
+            sos = frameBuffer.raw.find(b'\xff\xda')
+            if (sof >= frameStartPos and sos >= frameStartPos and
+                    frameBuffer[sof + 2:sof + 4] == b'\x00\x11' and
+                    frameBuffer[sof + 10:sof + 19:3] == b'\x00\x01\x02' and
+                    frameBuffer[sos + 5:sos + 11:2] == b'\x00\x01\x02'):
+                for idx, val in enumerate(b'RGB'):
+                    frameBuffer[sof + 10 + idx * 3] = val
+                    frameBuffer[sos + 5 + idx * 2] = val
         # Strip the Start / End Of Image markers
         tileData = frameBuffer.raw[frameStartPos:-2]
         return tileData
