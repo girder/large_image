@@ -42,7 +42,7 @@ setup(
     install_requires=[
         'large-image>=1.0.0',
         'openslide-python>=1.1.0',
-        'tifftools',
+        'tifftools>=1.2.0',
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',

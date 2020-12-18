@@ -25,10 +25,7 @@ import openslide
 import PIL
 from pkg_resources import DistributionNotFound, get_distribution
 
-try:
-    import tifftools
-except ImportError:
-    tifftools = None
+import tifftools
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -95,7 +92,7 @@ class OpenslideFileTileSource(FileTileSource):
             raise TileSourceException('File cannot be opened via OpenSlide.')
         except openslide.lowlevel.OpenSlideError:
             raise TileSourceException('File will not be opened via OpenSlide.')
-        if tifftools and libtiff_ctypes:
+        if libtiff_ctypes:
             try:
                 self._tiffinfo = tifftools.read_tiff(largeImagePath)
             except Exception:
@@ -342,9 +339,11 @@ class OpenslideFileTileSource(FileTileSource):
                 elif vendor == 'aperio':
                     if (ifd['tags'].get(tifftools.Tag.NewSubfileType.value) and
                             ifd['tags'][tifftools.Tag.NewSubfileType.value]['data'][0] &
-                            tifftools.Tag.NewSubfileType.bitfield.Page.value):
-                        key = 'label' if ifd['tags'][
-                            tifftools.Tag.NewSubfileType.value]['data'][0] == 1 else 'macro'
+                            tifftools.Tag.NewSubfileType.bitfield.ReducedImage.value):
+                        key = ('label' if ifd['tags'][
+                               tifftools.Tag.NewSubfileType.value]['data'][0] ==
+                               tifftools.Tag.NewSubfileType.bitfield.ReducedImage.value
+                               else 'macro')
                 if key and key not in images:
                     images[key] = ifdidx
         return images
