@@ -4,6 +4,7 @@
 
 ### Improvements
 - Better release bioformats resources (#502)
+- Better handling of tiff files with JPEG compression and RGB colorspace (#503)
 
 ## Version 1.3.2
 
