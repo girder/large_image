@@ -15,6 +15,12 @@ commands:
         type: string
     steps:
       - run:
+          name: Upgrade pip
+          command: pip install -U pip
+      - run:
+          name: Upgrade virtualenv and tox
+          command: pip install -U virtualenv tox
+      - run:
           name: Preinstall phantomjs to work around an npm permission issue
           command: npm install -g phantomjs-prebuilt --unsafe-perm
       - run:
@@ -22,6 +28,65 @@ commands:
           # Piping through cat does less buffering of the output but can
           # consume the exit code
           command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+  upgradepython:
+    description: "Upgrade python"
+    parameters:
+      version:
+        type: string
+    steps:
+      - run:
+          name: Upgrade pyenv
+          command: |
+            rm -rf /opt/circleci/.pyenv
+            curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+            pyenv install --list list
+      - run:
+          name: Use pyenv to install python
+          command: |
+            pyenv install << parameters.version >>
+  allservices:
+    description: "Switch to a python version and start other services"
+    parameters:
+      version:
+        type: string
+      node:
+        type: string
+    steps:
+      - upgradepython:
+          version: << parameters.version >>
+      - run:
+          name: Use pyenv to set python version
+          command: |
+            pyenv versions
+            pyenv global << parameters.version >>
+      - run:
+          name: start mongo
+          command: |
+            docker run --rm -d -p 27017:27017 circleci/mongo:4.0-ram
+      - run:
+          name: start rabbitmq
+          command: |
+            docker run --rm -d -p 5672:5672 rabbitmq
+      - run:
+          name: start memcached
+          command: |
+            docker run --rm -d -p 11211:11211 memcached -m 64
+      - run:
+          name: Use nvm
+          # see https://discuss.circleci.com/t/nvm-does-not-change-node-version-on-machine/28973/14
+          command: |
+            echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
+            echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+      - run:
+          name: Switch node versions
+          command: |
+            nvm install << parameters.node >>
+            nvm alias default  << parameters.node >>
+      - run:
+          name: Check node versions
+          command: |
+            node --version
+            npm --version
   coverage:
     description: "Upload coverage"
     steps:
@@ -46,30 +111,46 @@ jobs:
               echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
               docker push girder/tox-and-node:latest
   py36:
-    executor: toxandnode
+    machine:
+      image: circleci/classic:201808-01
     steps:
       - checkout
+      - allservices:
+          version: 3.6.12
+          node: v12
       - tox:
           env: py36
       - coverage
   py37:
-    executor: toxandnode
+    machine:
+      image: circleci/classic:201808-01
     steps:
       - checkout
+      - allservices:
+          version: 3.7.9
+          node: v12
       - tox:
           env: py37
       - coverage
   py38:
-    executor: toxandnode
+    machine:
+      image: circleci/classic:201808-01
     steps:
       - checkout
+      - allservices:
+          version: 3.8.6
+          node: v12
       - tox:
           env: py38
       - coverage
   py39:
-    executor: toxandnode
+    machine:
+      image: circleci/classic:201808-01
     steps:
       - checkout
+      - allservices:
+          version: 3.9.1
+          node: v12
       - tox:
           env: py39
       - coverage
@@ -79,6 +160,11 @@ jobs:
       - checkout
       - tox:
           env: docs,flake8,lintclient,lintannotationclient
+      - store_artifacts:
+          path: docs/build
+      - persist_to_workspace:
+          root: docs
+          paths: build
   wheels:
     executor: toxandnode
     steps:
@@ -107,6 +193,31 @@ jobs:
       - run:
           name: Release to PyPi
           command: ./.circleci/release_pypi.sh
+  docs-deploy:
+    working_directory: ~/project
+    docker:
+      - image: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: docs/build
+      - run:
+          name: Disable jekyll builds
+          command: touch docs/build/.nojekyll
+      - run:
+          name: Install and configure dependencies
+          command: |
+            npm install -g --silent gh-pages
+            git config user.email "ci-build@kitware.com"
+            git config user.name "ci-build"
+      - add_ssh_keys:
+          fingerprints:
+            - "a4:7a:f8:e9:19:61:88:9b:d8:af:50:b8:32:9f:03:29"
+      - run:
+          name: Deploy docs to gh-pages branch
+          command: |
+            touch package.json
+            gh-pages --dotfiles --message "Update documentation" --dist docs/build --no-history
 
 workflows:
   version: 2
@@ -179,3 +290,17 @@ workflows:
               only: /^v.*/
             branches:
               only: master
+      - docs-deploy:
+          requires:
+            - py36
+            - py37
+            - py38
+            - py39
+            - lint_and_docs
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only:
+                - master
+                - sphinx

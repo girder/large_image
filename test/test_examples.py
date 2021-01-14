@@ -1,11 +1,9 @@
 import os
-import pytest
 import subprocess
 
 from .utilities import externaldata
 
 
-@pytest.mark.skip(reason='exceeds memory allowance on Circle-CI as of 2020-10')
 def test_average_color():
     testDir = os.path.dirname(os.path.realpath(__file__))
     examplesDir = os.path.join(testDir, '..', 'examples')
@@ -33,7 +31,6 @@ def test_average_color_import():
     assert round(mean[2]) == 247
 
 
-@pytest.mark.skip(reason='exceeds memory allowance on Circle-CI as of 2020-10')
 def test_sum_squares():
     testDir = os.path.dirname(os.path.realpath(__file__))
     examplesDir = os.path.join(testDir, '..', 'examples')
