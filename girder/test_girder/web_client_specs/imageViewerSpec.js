@@ -77,6 +77,9 @@ $(function () {
             girderTest.waitForLoad();
         });
         it('remake a large image and then remove the image file', function () {
+            waitsFor(function () {
+                return $('.g-large-image-create').length > 0;
+            }, 'make large image button to appear');
             runs(function () {
                 $('.g-large-image-create').click();
             });
@@ -111,6 +114,9 @@ $(function () {
             girderTest.waitForLoad();
         });
         it('navigate to item and make a large image', function () {
+            waitsFor(function () {
+                return $('a.g-item-list-link').length > 0;
+            }, 'link to appear');
             runs(function () {
                 $('a.g-item-list-link').click();
             });
@@ -124,7 +130,7 @@ $(function () {
             girderTest.waitForLoad();
             // wait for job to complete
             waitsFor(function () {
-                return $('.g-item-image-viewer-select').length !== 0;
+                return $('.g-item-image-viewer-select').length > 0 && $('.g-large-image-remove').length > 0;
             }, 15000);
             girderTest.waitForLoad();
         });
