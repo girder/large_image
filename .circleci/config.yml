@@ -200,7 +200,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: docs/build
+          at: docs
       - run:
           name: Disable jekyll builds
           command: touch docs/build/.nojekyll
