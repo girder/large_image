@@ -18,6 +18,7 @@
 
 import glymur
 import math
+import multiprocessing
 import PIL.Image
 import six
 import warnings
@@ -96,6 +97,7 @@ class OpenjpegFileTileSource(FileTileSource):
             self._openjpeg = glymur.Jp2k(largeImagePath)
         except glymur.jp2box.InvalidJp2kError:
             raise TileSourceException('File cannot be opened via Glymur and OpenJPEG.')
+        glymur.set_option('lib.num_threads', multiprocessing.cpu_count())
         self._openjpegHandles = queue.LifoQueue()
         for _ in range(self._maxOpenHandles - 1):
             self._openjpegHandles.put(None)
