@@ -65,6 +65,7 @@ class MapnikFileTileSource(GDALFileTileSource):
         'image/tiff': SourcePriority.LOWER,
         'image/x-tiff': SourcePriority.LOWER,
     }
+    geospatial = True
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
         """

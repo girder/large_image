@@ -85,6 +85,7 @@ class GDALFileTileSource(FileTileSource):
         'image/tiff': SourcePriority.LOW,
         'image/x-tiff': SourcePriority.LOW,
     }
+    geospatial = True
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
         """

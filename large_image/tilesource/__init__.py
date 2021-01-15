@@ -14,6 +14,30 @@ from ..constants import SourcePriority
 AvailableTileSources = {}
 
 
+def isGeospatial(path):
+    """
+    Check if a path is likely to be a geospatial file.
+
+    :params path: The path to the file
+    :returns: True if geospatial.
+    """
+    try:
+        from osgeo import gdal
+        from osgeo import gdalconst
+    except ImportError:
+        # TODO: log a warning
+        return False
+    try:
+        ds = gdal.Open(path, gdalconst.GA_ReadOnly)
+    except Exception:
+        return False
+    if ds.GetProjection():
+        return True
+    if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
+        return True
+    return False
+
+
 def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTileSources):
     """
     Load all tilesources from entrypoints and add them to the
@@ -34,7 +58,7 @@ def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTil
             pass
 
 
-def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
+def getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs):
     """
     Get a tile source based on a ordered dictionary of known sources and a path
     name or URI.  Additional parameters are passed to the tile source and can
@@ -43,12 +67,15 @@ def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
     :param availableSources: an ordered dictionary of sources to try.
     :param pathOrUri: either a file path or a fixed source via
         large_image://<source>.
-    :returns: a tile source instance or and error.
+    :returns: the name of a tile source that can read the input, or None if
+        there is no such source.
     """
-    sourceObj = pathOrUri
     uriWithoutProtocol = pathOrUri.split('://', 1)[-1]
     isLargeImageUri = pathOrUri.startswith('large_image://')
     extensions = [ext.lower() for ext in os.path.basename(uriWithoutProtocol).split('.')[1:]]
+    properties = {
+        'geospatial': isGeospatial(pathOrUri),
+    }
     sourceList = []
     for sourceName in availableSources:
         sourceExtensions = availableSources[sourceName].extensions
@@ -60,10 +87,29 @@ def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
             priority = SourcePriority.NAMED
         if priority >= SourcePriority.MANUAL:
             continue
-        sourceList.append((priority, sourceName))
-    for _priority, sourceName in sorted(sourceList):
-        if availableSources[sourceName].canRead(sourceObj, *args, **kwargs):
-            return availableSources[sourceName](sourceObj, *args, **kwargs)
+        propertiesClash = any(
+            getattr(availableSources[sourceName], k, False) != v
+            for k, v in properties.items())
+        sourceList.append((propertiesClash, priority, sourceName))
+    for _clash, _priority, sourceName in sorted(sourceList):
+        if availableSources[sourceName].canRead(pathOrUri, *args, **kwargs):
+            return sourceName
+
+
+def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
+    """
+    Get a tile source based on a ordered dictionary of known sources and a path
+    name or URI.  Additional parameters are passed to the tile source and can
+    be used for properties such as encoding.
+
+    :param availableSources: an ordered dictionary of sources to try.
+    :param pathOrUri: either a file path or a fixed source via
+        large_image://<source>.
+    :returns: a tile source instance or and error.
+    """
+    sourceName = getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs)
+    if sourceName:
+        return availableSources[sourceName](pathOrUri, *args, **kwargs)
     raise TileSourceException('No available tilesource for %s' % pathOrUri)
 
 
@@ -79,10 +125,24 @@ def getTileSource(*args, **kwargs):
     return getTileSourceFromDict(AvailableTileSources, *args, **kwargs)
 
 
+def canRead(*args, **kwargs):
+    """
+    Check if large_image can read a path or uri.
+
+    :returns: True if any appropriate source reports it can read the path or
+        uri.
+    """
+    if not len(AvailableTileSources):
+        loadTileSources()
+    if getSourceNameFromDict(AvailableTileSources, *args, **kwargs):
+        return True
+    return False
+
+
 __all__ = [
     'TileSource', 'FileTileSource',
     'exceptions', 'TileGeneralException', 'TileSourceException', 'TileSourceAssetstoreException',
     'TileOutputMimeTypes', 'TILE_FORMAT_IMAGE', 'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY',
-    'AvailableTileSources', 'getTileSource', 'nearPowerOfTwo',
+    'AvailableTileSources', 'getTileSource', 'canRead', 'getSourceNameFromDict', 'nearPowerOfTwo',
     'etreeToDict', 'dictToEtree',
 ]
