@@ -139,6 +139,7 @@ var ImageViewerSelectWidget = View.extend({
 
 wrap(ItemView, 'initialize', function (initialize) {
     this.listenTo(eventStream, 'g:event.large_image.finished_image_item', () => {
+        this.model.unset('largeImage');
         this.model.fetch();
     });
     initialize.apply(this, _.rest(arguments));

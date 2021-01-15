@@ -6,6 +6,9 @@
 - Better release bioformats resources (#502)
 - Better handling of tiff files with JPEG compression and RGB colorspace (#503)
 
+### Bug Fixes
+- Harden updates of the item view after making a large image
+
 ## Version 1.3.2
 
 ### Improvements
@@ -144,10 +147,10 @@
 
 ## Version 1.0.0
 
-This is a substantial refactor from preliminary versions.  Now that setuptools_scm is used for versioning, all merges to master are automatically published to pypi as development versions.  
+This is a substantial refactor from preliminary versions.  Now that setuptools_scm is used for versioning, all merges to master are automatically published to pypi as development versions.
 
 Tile sources are now fully modular and are installed via pip.  File extensions and mime type are now used as part of the order that tile sources are checked, giving more control over which tile source is used by default.
 
-The Girder plugin has been divided into the parts requiring annotations and the parts that are only necessary for large images.  
+The Girder plugin has been divided into the parts requiring annotations and the parts that are only necessary for large images.
 
 Python 3.4 support was dropped.
