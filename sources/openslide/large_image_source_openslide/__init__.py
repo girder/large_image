@@ -157,6 +157,7 @@ class OpenslideFileTileSource(FileTileSource):
                 'svslevel': bestlevel,
                 'scale': scale
             })
+        self._largeImagePath = largeImagePath
 
     def _getTileSize(self):
         """
@@ -371,7 +372,7 @@ class OpenslideFileTileSource(FileTileSource):
                 return self._openslide.associated_images[imageKey]
             except openslide.lowlevel.OpenSlideError:
                 return None
-        bytePath = self._getLargeImagePath()
+        bytePath = self._largeImagePath
         if not isinstance(bytePath, six.binary_type):
             bytePath = bytePath.encode('utf8')
         _tiffFile = libtiff_ctypes.TIFF.open(bytePath)
