@@ -765,7 +765,7 @@ class TiledTiffDirectory(object):
 
         if (not self._tiffInfo.get('istiled') or
                 self._tiffInfo.get('compression') not in (
-                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005) or
+                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005, 34712) or
                 self._tiffInfo.get('bitspersample') != 8):
             return self._getUncompressedTile(tileNum)
 
