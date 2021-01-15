@@ -5,9 +5,11 @@
 ### Improvements
 - Better release bioformats resources (#502)
 - Better handling of tiff files with JPEG compression and RGB colorspace (#503)
+- The openjpeg tile source can decode with parallelism (#511)
 
 ### Bug Fixes
 - Harden updates of the item view after making a large image (#508)
+- Tiles in an unexpected color mode weren't consistently adjusted (#510)
 
 ## Version 1.3.2
 
