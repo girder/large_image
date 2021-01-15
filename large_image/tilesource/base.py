@@ -132,7 +132,7 @@ def _imageToNumpy(image):
         if not isinstance(image, PIL.Image.Image):
             image = PIL.Image.open(BytesIO(image))
         if image.mode not in ('L', 'LA', 'RGB', 'RGBA'):
-            image.convert('RGBA')
+            image = image.convert('RGBA')
         mode = image.mode
         image = numpy.asarray(image)
     else:

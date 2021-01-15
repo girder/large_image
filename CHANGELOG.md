@@ -7,7 +7,7 @@
 - Better handling of tiff files with JPEG compression and RGB colorspace (#503)
 
 ### Bug Fixes
-- Harden updates of the item view after making a large image
+- Harden updates of the item view after making a large image (#508)
 
 ## Version 1.3.2
 
