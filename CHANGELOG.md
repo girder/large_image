@@ -10,6 +10,8 @@
 - Better handling of tiff files with JPEG compression and RGB colorspace (#503)
 - The openjpeg tile source can decode with parallelism (#511)
 - Geospatial tile sources are preferred for geospatial files (#512)
+- Support decoding JP2k compressed tiles in the tiff tile source (#514)
+>>>>>>> For the tiff tile source, allow decoding jp2k tiles.
 
 ### Bug Fixes
 - Harden updates of the item view after making a large image (#508)
