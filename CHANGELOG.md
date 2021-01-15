@@ -2,10 +2,14 @@
 
 ## Unreleased
 
+### Features
+- Added a `canRead` method to the core module (#512)
+
 ### Improvements
 - Better release bioformats resources (#502)
 - Better handling of tiff files with JPEG compression and RGB colorspace (#503)
 - The openjpeg tile source can decode with parallelism (#511)
+- Geospatial tile sources are preferred for geospatial files (#512)
 
 ### Bug Fixes
 - Harden updates of the item view after making a large image (#508)

@@ -19,7 +19,7 @@
 from pkg_resources import DistributionNotFound, get_distribution
 
 from . import tilesource  # noqa
-from .tilesource import getTileSource  # noqa
+from .tilesource import canRead, getTileSource  # noqa
 
 
 try:

@@ -8,6 +8,7 @@ import PIL.ImageChops
 import pytest
 import six
 
+import large_image
 from large_image.exceptions import TileSourceException
 
 import large_image_source_mapnik
@@ -332,3 +333,36 @@ def testGuardAgainstBadLatLong():
     assert bounds['xmax'] == 179.99583333
     assert bounds['ymin'] == -89.99583333
     assert bounds['ymax'] == 90
+
+
+def testTileFromNetCDF():
+    imagePath = utilities.externaldata('data/04091217_ruc.nc.sha512')
+    source = large_image_source_mapnik.MapnikFileTileSource(imagePath)
+    tileMetadata = source.getMetadata()
+
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 93
+    assert tileMetadata['sizeY'] == 65
+    assert tileMetadata['levels'] == 1
+    assert tileMetadata['bounds']['srs'].strip() == '+init=epsg:4326'
+    assert tileMetadata['geospatial']
+
+    # Getting the metadata with a specified projection will be different
+    source = large_image_source_mapnik.MapnikFileTileSource(
+        imagePath, projection='EPSG:3857')
+    tileMetadata = source.getMetadata()
+
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 512
+    assert tileMetadata['sizeY'] == 512
+    assert tileMetadata['levels'] == 2
+    assert tileMetadata['bounds']['srs'] == '+init=epsg:3857'
+    assert tileMetadata['geospatial']
+
+
+def testTileSourceFromNetCDF():
+    imagePath = utilities.externaldata('data/04091217_ruc.nc.sha512')
+    ts = large_image.getTileSource(imagePath)
+    assert 'mapnik' in ts.name
