@@ -92,6 +92,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
         super(TiffFileTileSource, self).__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
+        self._largeImagePath = largeImagePath
 
         try:
             base = TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)

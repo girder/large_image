@@ -83,6 +83,7 @@ class TiffFileTileSource(FileTileSource):
         super(TiffFileTileSource, self).__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
+        self._largeImagePath = largeImagePath
         try:
             alldir = self._scanDirectories()
         except (ValidationTiffException, TiffException) as exc:
@@ -134,7 +135,7 @@ class TiffFileTileSource(FileTileSource):
         self.sizeY = highest.imageHeight
 
     def _scanDirectories(self):
-        largeImagePath = self._getLargeImagePath()
+        largeImagePath = self._largeImagePath
         lastException = None
         # Associated images are smallish TIFF images that have an image
         # description and are not tiled.  They have their own TIFF directory.
@@ -382,7 +383,7 @@ class TiffFileTileSource(FileTileSource):
                 self._directoryCache = {}
             try:
                 result = TiledTiffDirectory(
-                    self._getLargeImagePath(), dirnum, mustBeTiled=None, subDirectoryNum=subdir)
+                    self._largeImagePath, dirnum, mustBeTiled=None, subDirectoryNum=subdir)
             except IOTiffException:
                 result = None
             self._directoryCache[key] = result
