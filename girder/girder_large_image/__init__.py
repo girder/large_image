@@ -104,6 +104,8 @@ def _updateJob(event):
         # don't clear the expected status on success.
         if status != JobStatus.SUCCESS:
             del item['largeImage']['expected']
+        else:
+            return
     notify = item.get('largeImage', {}).get('notify')
     msg = None
     if notify:
