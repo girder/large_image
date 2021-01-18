@@ -122,6 +122,8 @@ jobs:
       - tox:
           env: py36
       - coverage
+      - store_artifacts:
+          path: build/test/artifacts
   py37:
     machine:
       image: circleci/classic:201808-01
@@ -133,6 +135,8 @@ jobs:
       - tox:
           env: py37
       - coverage
+      - store_artifacts:
+          path: build/test/artifacts
   py38:
     machine:
       image: circleci/classic:201808-01
@@ -144,6 +148,8 @@ jobs:
       - tox:
           env: py38
       - coverage
+      - store_artifacts:
+          path: build/test/artifacts
   py39:
     machine:
       image: circleci/classic:201808-01
@@ -155,6 +161,8 @@ jobs:
       - tox:
           env: py39
       - coverage
+      - store_artifacts:
+          path: build/test/artifacts
   lint_and_docs:
     executor: toxandnode
     steps:
