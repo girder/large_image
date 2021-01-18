@@ -28,7 +28,6 @@ import atexit
 import bioformats
 import bioformats.log4j
 import javabridge
-import logging
 import math
 import numpy
 import os
@@ -85,9 +84,11 @@ def _startJavabridge(logger):
         monitor.start()
         try:
             javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
-            bioformats.log4j.basic_config()
-            javabridge.JClassWrapper('loci.common.Log4jTools').setRootLevel(
-                logging.getLevelName(logger.level))
+            # As of bioformat 4.0.0, org.apache.log4j isn't in the bundled
+            # jar file, so setting log levels just produces needless warnings.
+            # bioformats.log4j.basic_config()
+            # javabridge.JClassWrapper('loci.common.Log4jTools').setRootLevel(
+            #     logging.getLevelName(logger.level))
             atexit.register(_stopJavabridge)
             logger.info('Started JVM for Bioformats tile source.')
             _javabridgeStarted = True
