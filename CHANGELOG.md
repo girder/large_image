@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changes
+- The image conversion task has been split into two packages, large_image_converter and large_image_tasks.  The tasks module is used with Girder and Girder Worker for converting images and depends on the converter package.  The converter package can be used as a stand-alone command line tool (#518)
+
 ### Features
 - Added a `canRead` method to the core module (#512)
 
@@ -11,10 +14,9 @@
 - The openjpeg tile source can decode with parallelism (#511)
 - Geospatial tile sources are preferred for geospatial files (#512)
 - Support decoding JP2k compressed tiles in the tiff tile source (#514)
->>>>>>> For the tiff tile source, allow decoding jp2k tiles.
 
 ### Bug Fixes
-- Harden updates of the item view after making a large image (#508)
+- Harden updates of the item view after making a large image (#508, #515)
 - Tiles in an unexpected color mode weren't consistently adjusted (#510)
 
 ## Version 1.3.2

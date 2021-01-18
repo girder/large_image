@@ -12,7 +12,10 @@ twine upload --verbose dist/*
 cd "$ROOTPATH/girder_annotation"
 python setup.py sdist
 twine upload --verbose dist/*
-cd "$ROOTPATH/tasks"
+cd "$ROOTPATH/utilities/converter"
+python setup.py sdist
+twine upload --verbose dist/*
+cd "$ROOTPATH/utilities/tasks"
 python setup.py sdist
 twine upload --verbose dist/*
 cd "$ROOTPATH/sources/bioformats"

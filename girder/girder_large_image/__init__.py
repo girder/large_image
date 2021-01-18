@@ -77,6 +77,8 @@ def _postUpload(event):
         del item['largeImage']['expected']
         item['largeImage']['fileId'] = fileObj['_id']
         item['largeImage']['sourceName'] = 'tiff'
+        if fileObj['name'].endswith('.geo.tiff'):
+            item['largeImage']['sourceName'] = 'gdal'
         Item().save(item)
 
 

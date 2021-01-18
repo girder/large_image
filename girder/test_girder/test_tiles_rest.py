@@ -138,7 +138,7 @@ def _createTestTiles(server, admin, params=None, info=None, error=None):
     return infoDict
 
 
-def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None):
+def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None):
     """
     When we know we need to process a job, we have to use an actual http
     request rather than the normal simulated request to cherrypy.  This is
@@ -148,6 +148,9 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None):
     :param itemId: the id of the item with the file to process.
     :param fileId: the id of the file that should be processed.
     :param jobAction: if 'delete', delete the job immediately.
+    :param data: if not None, pass this as the data to the POST request.  If
+        specified, fileId is ignored (pass as part of the data dictionary if
+        it is required).
     :returns: metadata from the tile if the conversion was successful,
               False if it converted but didn't result in useable tiles, and
               None if it failed.
@@ -158,14 +161,14 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None):
     }
     req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles' % (
         server.boundPort, itemId), headers=headers,
-        data={'fileId': fileId})
+        data={'fileId': fileId} if data is None else data)
     assert req.status_code == 200
     # If we ask to create the item again right away, we should be told that
     # either there is already a job running or the item has already been
     # added
     req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles' % (
         server.boundPort, itemId), headers=headers,
-        data={'fileId': fileId})
+        data={'fileId': fileId} if data is None else data)
     assert req.status_code == 400
     assert ('Item already has' in req.json()['message'] or
             'Item is scheduled' in req.json()['message'])
@@ -1159,3 +1162,21 @@ def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker)
     assert tileMetadata['mm_x'] is None
     assert tileMetadata['mm_y'] is None
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
+
+
+@pytest.mark.usefixtures('unbindLargeImage')  # noqa
+@pytest.mark.usefixtures('girderWorker')  # noqa
+@pytest.mark.plugin('large_image')
+def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+    file = utilities.uploadExternalFile(
+        'data/landcover_sample_1000.tif.sha512', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    fileId = str(file['_id'])
+    # We should already have tile information.  Ask to delete it so we can
+    # force convert it
+    boundServer.request(path='/item/%s/tiles' % itemId, method='DELETE', user=admin)
+    # Ask to do a forced conversion
+    tileMetadata = _postTileViaHttp(boundServer, admin, itemId, None, data={'force': True})
+    assert tileMetadata['levels'] == 3
+    item = Item().load(itemId, force=True)
+    assert item['largeImage']['fileId'] != fileId

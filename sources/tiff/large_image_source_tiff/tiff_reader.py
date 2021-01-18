@@ -222,13 +222,15 @@ class TiledTiffDirectory(object):
             raise ValidationTiffException(
                 'Only RGB and greyscale TIFF files are supported')
 
-        if self._tiffInfo.get('bitspersample') not in (8, 16):
+        if self._tiffInfo.get('bitspersample') not in (8, 16, 32, 64):
             raise ValidationTiffException(
                 'Only 8 and 16 bits-per-sample TIFF files are supported')
 
         if self._tiffInfo.get('sampleformat') not in {
                 None,  # default is still SAMPLEFORMAT_UINT
-                libtiff_ctypes.SAMPLEFORMAT_UINT}:
+                libtiff_ctypes.SAMPLEFORMAT_UINT,
+                libtiff_ctypes.SAMPLEFORMAT_INT,
+                libtiff_ctypes.SAMPLEFORMAT_IEEEFP}:
             raise ValidationTiffException(
                 'Only unsigned int sampled TIFF files are supported')
 
@@ -615,10 +617,27 @@ class TiledTiffDirectory(object):
                 libtiff_ctypes.ORIENTATION_RIGHTBOT,
                 libtiff_ctypes.ORIENTATION_LEFTBOT}:
             tw, th = th, tw
-        image = numpy.ctypeslib.as_array(
-            ctypes.cast(imageBuffer, ctypes.POINTER(
-                ctypes.c_uint16 if self._tiffInfo.get('bitspersample') == 16 else ctypes.c_uint8)),
-            (th, tw, self._tiffInfo.get('samplesperpixel')))
+        format = (
+            self._tiffInfo.get('bitspersample'),
+            self._tiffInfo.get('sampleformat') if self._tiffInfo.get(
+                'sampleformat') is not None else libtiff_ctypes.SAMPLEFORMAT_UINT)
+        formattbl = {
+            (8, libtiff_ctypes.SAMPLEFORMAT_UINT): numpy.uint8,
+            (8, libtiff_ctypes.SAMPLEFORMAT_INT): numpy.int8,
+            (16, libtiff_ctypes.SAMPLEFORMAT_UINT): numpy.uint16,
+            (16, libtiff_ctypes.SAMPLEFORMAT_INT): numpy.int16,
+            (16, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): numpy.float16,
+            (32, libtiff_ctypes.SAMPLEFORMAT_UINT): numpy.uint32,
+            (32, libtiff_ctypes.SAMPLEFORMAT_INT): numpy.int32,
+            (32, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): numpy.float32,
+            (64, libtiff_ctypes.SAMPLEFORMAT_UINT): numpy.uint64,
+            (64, libtiff_ctypes.SAMPLEFORMAT_INT): numpy.int64,
+            (64, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): numpy.float64,
+        }
+        image = numpy.ctypeslib.as_array(ctypes.cast(
+            imageBuffer, ctypes.POINTER(ctypes.c_uint8)), (tileSize, )).view(
+                formattbl[format]).reshape(
+                    (th, tw, self._tiffInfo.get('samplesperpixel')))
         if (self._tiffInfo.get('samplesperpixel') == 3 and
                 self._tiffInfo.get('photometric') == libtiff_ctypes.PHOTOMETRIC_YCBCR):
             if self._tiffInfo.get('bitspersample') == 16:
@@ -766,7 +785,9 @@ class TiledTiffDirectory(object):
         if (not self._tiffInfo.get('istiled') or
                 self._tiffInfo.get('compression') not in (
                     libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005, 34712) or
-                self._tiffInfo.get('bitspersample') != 8):
+                self._tiffInfo.get('bitspersample') != 8 or
+                self._tiffInfo.get('sampleformat') not in {
+                    None, libtiff_ctypes.SAMPLEFORMAT_UINT}):
             return self._getUncompressedTile(tileNum)
 
         imageBuffer = six.BytesIO()
