@@ -4,9 +4,11 @@ import json
 import logging
 import os
 from pkg_resources import DistributionNotFound, get_distribution
+import struct
 from tempfile import TemporaryDirectory
 import time
 
+import numpy
 import tifftools
 
 try:
@@ -117,8 +119,8 @@ def _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
         images.
     Optional parameters that can be specified in kwargs:
     :params tileSize: the horizontal and vertical tile size.
-    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits', or
-        'zstd'.
+    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
+        'zstd', or 'jp2k'.
     :params quality: a jpeg quality passed to vips.  0 is small, 100 is high
         quality.  90 or above is recommended.
     :param level: compression level for zstd, 1-22 (default is 10).
@@ -159,6 +161,111 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
             os.environ['TMPDIR'] = oldtmpdir
         else:
             del os.environ['TMPDIR']
+    if kwargs.get('compression') == 'jp2k':
+        _convert_to_jp2k(outputPath, **kwargs)
+
+
+def _convert_to_jp2k_tile(lock, fptr, dest, offset, length, shape, dtype, jp2kargs):
+    """
+    Read an uncompressed tile from a file and save it as a JP2000 file.
+
+    :param lock: a lock to ensure exclusive access to the file.
+    :param fptr: a pointer to the open file.
+    :param dest: the output path for the jp2k file.
+    :param offset: the location in the input file with the data.
+    :param length: the number of bytes to read.
+    :param shape: a tuple with the shape of the tile to read.  This is usually
+        (height, width, channels).
+    :param dtype: the numpy dtype of the data in the tile.
+    :param jp2kargs: arguments to pass to the compression, such as psnr or
+        cratios.
+    """
+    import glymur
+
+    with lock:
+        fptr.seek(offset)
+        data = fptr.read(length)
+    data = numpy.frombuffer(data, dtype=dtype)
+    data = numpy.reshape(data, shape)
+    glymur.Jp2k(dest, data=data, **jp2kargs)
+
+
+def _convert_to_jp2k(path, **kwargs):
+    """
+    Given a tiled tiff file without compression, convert it to jp2k compression
+    using the gylmur library.  This expects a tiff as written by vips without
+    any subifds.
+
+    :param path: the path of the tiff file.  The file is altered.
+    :param psnr: if set, the target psnr.  0 for lossless.
+    :param cr: is set, the target compression ratio.  1 for lossless.
+    """
+    import concurrent.futures
+    import psutil
+    import threading
+
+    info = tifftools.read_tiff(path)
+    jp2kargs = {}
+    if 'psnr' in kwargs:
+        jp2kargs['psnr'] = [int(kwargs['psnr'])]
+    elif 'cr' in kwargs:
+        jp2kargs['cratios'] = [int(kwargs['cr'])]
+    tilecount = sum(len(ifd['tags'][tifftools.Tag.TileOffsets.value]['data'])
+                    for ifd in info['ifds'])
+    processed = 0
+    lastlog = 0
+    tasks = []
+    lock = threading.Lock()
+    concurrency = psutil.cpu_count(logical=True)
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
+    with open(path, 'r+b') as fptr:
+        for ifd in info['ifds']:
+            ifd['tags'][tifftools.Tag.Compression.value]['data'][0] = (
+                tifftools.constants.Compression.JP2000)
+            shape = (
+                ifd['tags'][tifftools.Tag.TileHeight.value]['data'][0],
+                ifd['tags'][tifftools.Tag.TileLength.value]['data'][0],
+                len(ifd['tags'][tifftools.Tag.BitsPerSample.value]['data']))
+            dtype = numpy.uint16 if ifd['tags'][
+                tifftools.Tag.BitsPerSample.value]['data'][0] == 16 else numpy.uint8
+            for idx, offset in enumerate(ifd['tags'][tifftools.Tag.TileOffsets.value]['data']):
+                tmppath = path + '%d.jp2k' % processed
+                tasks.append((ifd, idx, processed, tmppath, pool.submit(
+                    _convert_to_jp2k_tile, lock, fptr, tmppath, offset,
+                    ifd['tags'][tifftools.Tag.TileByteCounts.value]['data'][idx],
+                    shape, dtype, jp2kargs)))
+                processed += 1
+        while len(tasks):
+            try:
+                tasks[0][-1].result(0.1)
+            except concurrent.futures.TimeoutError:
+                continue
+            ifd, idx, processed, tmppath, task = tasks.pop(0)
+            data = open(tmppath, 'rb').read()
+            os.unlink(tmppath)
+            # Remove first comment marker.  It adds needless bytes
+            compos = data.find(b'\xff\x64')
+            if compos >= 0 and compos + 4 < len(data):
+                comlen = struct.unpack('>H', data[compos + 2:compos + 4])[0]
+                if compos + 2 + comlen + 1 < len(data) and data[compos + 2 + comlen] == 0xff:
+                    data = data[:compos] + data[compos + 2 + comlen:]
+            with lock:
+                fptr.seek(0, os.SEEK_END)
+                ifd['tags'][tifftools.Tag.TileOffsets.value]['data'][idx] = fptr.tell()
+                ifd['tags'][tifftools.Tag.TileByteCounts.value]['data'][idx] = len(data)
+                fptr.write(data)
+            if time.time() - lastlog >= 10 and tilecount > 1:
+                logger.debug('Converted %d of %d tiles to jp2k', processed + 1, tilecount)
+                lastlog = time.time()
+        pool.shutdown(False)
+        fptr.seek(0, os.SEEK_END)
+        for ifd in info['ifds']:
+            ifd['size'] = fptr.tell()
+        info['size'] = fptr.tell()
+    tmppath = path + '.jp2k.tiff'
+    tifftools.write_tiff(info, tmppath, bigtiff=False, allowExisting=True)
+    os.unlink(path)
+    os.rename(tmppath, path)
 
 
 def _output_tiff(inputs, outputPath, lidata, extraImages=None):
@@ -394,6 +501,8 @@ def _vips_parameters(forTiled=True, **kwargs):
     }.items():
         if kwkey in kwargs and kwargs[kwkey] not in {None, ''}:
             convertParams[vkey] = kwargs[kwkey]
+    if convertParams['compression'] == 'jp2k':
+        convertParams['compression'] = 'none'
     if convertParams['predictor'] == 'yes':
         convertParams['predictor'] = 'horizontal'
     if convertParams['compression'] == 'jpeg':

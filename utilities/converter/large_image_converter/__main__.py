@@ -24,12 +24,14 @@ def get_parser():
         '--compression', '-c',
         choices=[
             '', 'jpeg', 'deflate', 'zip', 'lzw', 'zstd', 'packbits', 'jbig',
-            'lzma', 'webp', 'none',
+            'lzma', 'webp', 'jp2k', 'none',
         ],
         help='Internal compression.  Default will use jpeg if the source '
         'appears to be lossy or lzw if lossless.  lzw is the most compatible '
         'lossless mode.  jpeg is the most compatible lossy mode.  jbig and '
-        'lzma may not be available.')
+        'lzma may not be available.  jp2k will first write the file with no '
+        'compression and then rewrite it with jp2k the specified psnr or '
+        'compression ratio.')
     parser.add_argument(
         '--quality', '-q', default=90, type=int,
         help='JPEG compression quality')
@@ -41,6 +43,11 @@ def get_parser():
         '--predictor', '-p', choices=['', 'none', 'horizontal', 'float', 'yes'],
         help='Predictor for some compressions.  Default is horizontal for '
         'non-geospatial data and yes for geospatial.')
+    parser.add_argument(
+        '--psnr', type=int,
+        help='JP2K peak signal to noise ratio.  0 for lossless')
+    parser.add_argument(
+        '--cr', type=int, help='JP2K compression ratio.  1 for lossless')
     parser.add_argument(
         '--tile', '-t', type=int, default=256, help='Tile size',
         dest='tileSize')
