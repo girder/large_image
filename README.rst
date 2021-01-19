@@ -71,7 +71,7 @@ To install all packages from source:
 
 2.  Install all packages and dependencies:
 
-    ``pip install -e .[memcached] -r requirements-dev.txt``
+    ``pip install -e . -r requirements-dev.txt``
 
 
 Tile source prerequisites
@@ -79,7 +79,7 @@ Tile source prerequisites
 
 Many tile sources have complex prerequisites.  These can be installed directly using your system's package manager or from some prebuilt Python wheels for Linux.  The prebuilt wheels are not official packages, but they can be used by instructing pip to use them by preference::
 
-    pip install -e .[memcached] -r requirements-dev.txt --find-links https://girder.github.io/large_image_wheels
+    pip install -e . -r requirements-dev.txt --find-links https://girder.github.io/large_image_wheels
 
 
 Migration from Girder 2 to Girder 3
