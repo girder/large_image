@@ -8,6 +8,7 @@
 ### Features
 - Added a `canRead` method to the core module (#512)
 - Image conversion supports JPEG 2000 (jp2k) compression (#522)
+- Image conversion can now convert images readable by large_image sources but not by vips (#529)
 
 ### Improvements
 - Better release bioformats resources (#502)
