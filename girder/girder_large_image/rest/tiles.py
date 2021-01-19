@@ -151,7 +151,7 @@ class TilesItemResource(ItemResource):
         .param('tileSize', 'Tile size', dataType='int', default=256,
                required=False)
         .param('compression', 'Internal compression format', required=False,
-               enum=['none', 'jpeg', 'deflate', 'lzw', 'zstd', 'packbits', 'webp'])
+               enum=['none', 'jpeg', 'deflate', 'lzw', 'zstd', 'packbits', 'webp', 'jp2k'])
         .param('quality', 'JPEG compression quality where 0 is small and 100 '
                'is highest quality', dataType='int', default=90,
                required=False)
@@ -159,6 +159,11 @@ class TilesItemResource(ItemResource):
                dataType='int', required=False)
         .param('predictor', 'Predictor for deflate (zip) or lzw.',
                required=False, enum=['none', 'horizontal', 'float', 'yes'])
+        .param('psnr', 'JP2K compression target peak-signal-to-noise-ratio '
+               'where 0 is lossless and otherwise higher numbers are higher '
+               'quality', dataType='int', required=False)
+        .param('cr', 'JP2K target compression ratio where 1 is lossless',
+               dataType='int', required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)

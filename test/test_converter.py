@@ -5,9 +5,11 @@ import pytest
 import shutil
 import tifftools
 
+from large_image import constants
+import large_image_source_tiff
+
 import large_image_converter
 import large_image_converter.__main__ as main
-
 
 from . import utilities
 
@@ -127,6 +129,29 @@ def testConvertTiffFloatPixels(tmpdir):
     info = tifftools.read_tiff(outputPath)
     assert (info['ifds'][0]['tags'][tifftools.Tag.SampleFormat.value]['data'][0] ==
             tifftools.constants.SampleFormat.uint.value)
+
+
+def testConvertJp2kCompression(tmpdir):
+    imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath, compression='jp2k')
+    info = tifftools.read_tiff(outputPath)
+    assert (info['ifds'][0]['tags'][tifftools.Tag.Compression.value]['data'][0] ==
+            tifftools.constants.Compression.JP2000.value)
+    source = large_image_source_tiff.TiffFileTileSource(outputPath)
+    image, _ = source.getRegion(
+        output={'maxWidth': 200, 'maxHeight': 200}, format=constants.TILE_FORMAT_NUMPY)
+    assert (image[12][167] == [215, 135, 172]).all()
+
+    outputPath2 = os.path.join(tmpdir, 'out2.tiff')
+    large_image_converter.convert(imagePath, outputPath2, compression='jp2k', psnr=50)
+    assert os.path.getsize(outputPath2) < os.path.getsize(outputPath)
+
+    outputPath3 = os.path.join(tmpdir, 'out3.tiff')
+    large_image_converter.convert(imagePath, outputPath3, compression='jp2k', cr=100)
+    assert os.path.getsize(outputPath3) < os.path.getsize(outputPath)
+    assert os.path.getsize(outputPath3) != os.path.getsize(outputPath2)
+    # ##DWM::
 
 
 def testConverterMain(tmpdir):
