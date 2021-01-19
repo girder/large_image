@@ -98,8 +98,8 @@ Update the tile source name by issuing the Mongo command::
 
 .. _Girder: https://github.com/girder/girder
 
-.. |build-status| image:: https://travis-ci.org/girder/large_image.svg?branch=master
-    :target: https://travis-ci.org/girder/large_image
+.. |build-status| image:: https://circleci.com/gh/girder/large_image.png?style=shield
+    :target: https://circleci.com/gh/girder/large_image
     :alt: Build Status
 
 .. |license-badge| image:: https://img.shields.io/badge/license-Apache%202-blue.svg
