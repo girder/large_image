@@ -313,3 +313,19 @@ workflows:
               only:
                 - master
                 - sphinx
+  periodic:
+    triggers:
+      - schedule:
+          # Run every Monday morning at 3 a.m.
+          cron: "0 3 * * 1"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - py36
+      - py37
+      - py38
+      - py39
+      - lint_and_docs
+      - wheels
