@@ -141,7 +141,10 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     # value needs to be specified if they are True.
     convertParams = _vips_parameters(forTiled, **kwargs)
     status = (', ' + status) if status else ''
-    if type(inputPathOrBuffer) == bytes:
+    if type(inputPathOrBuffer) == pyvips.vimage.Image:
+        source = 'vips image'
+        image = inputPathOrBuffer
+    elif type(inputPathOrBuffer) == bytes:
         source = 'buffer'
         image = pyvips.Image.new_from_buffer(inputPathOrBuffer, '')
     else:
@@ -266,6 +269,59 @@ def _convert_to_jp2k(path, **kwargs):
     tifftools.write_tiff(info, tmppath, bigtiff=False, allowExisting=True)
     os.unlink(path)
     os.rename(tmppath, path)
+
+
+def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
+    """
+    Take a large_image source and convert it by resaving each tiles image with
+    vips.
+
+    :params inputPath: the path to the input file or base file of a set.
+    :params outputPath: the path of the output file.
+    :params tempPath: a temporary file in a temporary directory.
+    :params lidata: data from a large_image tilesource including associated
+        images.
+    """
+    ts = lidata['tilesource']
+    numFrames = len(lidata['metadata'].get('frames', [0]))
+    outputList = []
+    _iterTileSize = 1024
+    for frame in range(numFrames):
+        subOutputPath = tempPath + '-%d-%s.tiff' % (
+            frame + 1, time.strftime('%Y%m%d-%H%M%S'))
+        strips = []
+        for tile in ts.tileIterator(tile_size=dict(width=_iterTileSize), frame=frame):
+            data = tile['tile']
+            dtypeToGValue = {
+                'b': 'char',
+                'B': 'uchar',
+                'd': 'double',
+                'D': 'dpcomplex',
+                'f': 'float',
+                'F': 'complex',
+                'h': 'short',
+                'H': 'ushort',
+                'i': 'int',
+                'I': 'uint',
+            }
+            if data.dtype.char not in dtypeToGValue:
+                data = data.astype('d')
+            vimg = pyvips.Image.new_from_memory(
+                data.data, data.shape[1], data.shape[0], data.shape[2],
+                dtypeToGValue[data.dtype.char])
+            x = tile['x']
+            ty = tile['tile_position']['level_y']
+            if ty >= len(strips):
+                strips.append(vimg)
+            else:
+                strips[ty] = strips[ty].insert(vimg, x, 0, expand=True)
+        img = strips[0]
+        for stripidx in range(1, len(strips)):
+            img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)
+        _convert_via_vips(
+            img, subOutputPath, tempPath, status='%d/%d' % (frame, numFrames), **kwargs)
+        outputList.append(subOutputPath)
+    _output_tiff(outputList, outputPath, lidata)
 
 
 def _output_tiff(inputs, outputPath, lidata, extraImages=None):
@@ -562,7 +618,10 @@ def convert(inputPath, outputPath=None, **kwargs):
             tempPath = os.path.join(tempDir, os.path.basename(outputPath))
             lidata = _data_from_large_image(inputPath, tempPath)
             logger.debug('large_image information for %s: %r' % (inputPath, lidata))
-            _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
+            if not is_vips(inputPath) and lidata:
+                _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
+            else:
+                _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
     return outputPath
 
 

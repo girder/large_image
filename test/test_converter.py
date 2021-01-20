@@ -151,7 +151,15 @@ def testConvertJp2kCompression(tmpdir):
     large_image_converter.convert(imagePath, outputPath3, compression='jp2k', cr=100)
     assert os.path.getsize(outputPath3) < os.path.getsize(outputPath)
     assert os.path.getsize(outputPath3) != os.path.getsize(outputPath2)
-    # ##DWM::
+
+
+def testConvertFromLargeImage(tmpdir):
+    imagePath = utilities.externaldata('data/sample_image.jp2.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath)
+    source = large_image_source_tiff.TiffFileTileSource(outputPath)
+    metadata = source.getMetadata()
+    assert metadata['levels'] == 6
 
 
 def testConverterMain(tmpdir):
