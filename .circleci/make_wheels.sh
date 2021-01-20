@@ -6,6 +6,7 @@ ROOTPATH=`pwd`
 
 pip install --user -U setuptools_scm wheel
 export SETUPTOOLS_SCM_PRETEND_VERSION=`python -m setuptools_scm | sed "s/.* //"`
+if [ ${CIRCLE_BRANCH-:} = "master" ]; then export SETUPTOOLS_SCM_PRETEND_VERSION=`echo $SETUPTOOLS_SCM_PRETEND_VERSION | sed "s/\+.*$//"`; fi
 
 mkdir ~/wheels
 
