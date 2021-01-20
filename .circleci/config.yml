@@ -27,7 +27,8 @@ commands:
           name: Run tests via tox
           # Piping through cat does less buffering of the output but can
           # consume the exit code
-          command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+          # command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
   upgradepython:
     description: "Upgrade python"
     parameters:
@@ -113,7 +114,7 @@ jobs:
               docker push girder/tox-and-node:latest
   py36:
     machine:
-      image: circleci/classic:201808-01
+      image: ubuntu-2004:202010-01
     steps:
       - checkout
       - allservices:
@@ -126,7 +127,7 @@ jobs:
           path: build/test/artifacts
   py37:
     machine:
-      image: circleci/classic:201808-01
+      image: ubuntu-2004:202010-01
     steps:
       - checkout
       - allservices:
@@ -139,7 +140,7 @@ jobs:
           path: build/test/artifacts
   py38:
     machine:
-      image: circleci/classic:201808-01
+      image: ubuntu-2004:202010-01
     steps:
       - checkout
       - allservices:
@@ -152,7 +153,7 @@ jobs:
           path: build/test/artifacts
   py39:
     machine:
-      image: circleci/classic:201808-01
+      image: ubuntu-2004:202010-01
     steps:
       - checkout
       - allservices:
