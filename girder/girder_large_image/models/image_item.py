@@ -239,7 +239,7 @@ class ImageItem(Item):
         :param item: the item with the tile source.
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
-        :param **kwargs: optional arguments.  Some options are encoding,
+        :param kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, tiffCompression, fill.  This is also
             passed to the tile source.
         :returns: thumbData, thumbMime: the image data and the mime type OR
@@ -309,7 +309,7 @@ class ImageItem(Item):
         :param keep: keep this many entries.
         :param sort: the sort method used.  The first (keep) records in this
             sort order are kept.
-        :param **kwargs: additional parameters to determine which files to
+        :param kwargs: additional parameters to determine which files to
             remove.
         :returns: a tuple of (the number of files before removal, the number of
             files removed).
@@ -339,7 +339,7 @@ class ImageItem(Item):
         scaling the results.  Aspect ratio is preserved.
 
         :param item: the item with the tile source.
-        :param **kwargs: optional arguments.  Some options are left, top,
+        :param kwargs: optional arguments.  Some options are left, top,
             right, bottom, regionWidth, regionHeight, units, width, height,
             encoding, jpegQuality, jpegSubsampling, and tiffCompression.  This
             is also passed to the tile source.
@@ -354,7 +354,7 @@ class ImageItem(Item):
         Using a tile source, get a single pixel from the image.
 
         :param item: the item with the tile source.
-        :param **kwargs: optional arguments.  Some options are left, top.
+        :param kwargs: optional arguments.  Some options are left, top.
         :returns: a dictionary of the color channel values, possibly with
             additional information
         """
@@ -366,7 +366,7 @@ class ImageItem(Item):
         Using a tile source, get a histogram of the image.
 
         :param item: the item with the tile source.
-        :param **kwargs: optional arguments.  See the tilesource histogram
+        :param kwargs: optional arguments.  See the tilesource histogram
             method.
         :returns: histogram object.
         """
@@ -398,7 +398,7 @@ class ImageItem(Item):
 
         :param item: the item with the tile source.
         :param imageKey: the key of the associated image to retreive.
-        :param **kwargs: optional arguments.  Some options are width, height,
+        :param kwargs: optional arguments.  Some options are width, height,
             encoding, jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: imageData, imageMime: the image data and the mime type, or
             None if the associated image doesn't exist.

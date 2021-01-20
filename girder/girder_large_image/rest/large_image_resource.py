@@ -118,12 +118,16 @@ def createThumbnailsJob(job):
     """
     Create thumbnails for all of the large image items.
 
-    :param job: the job object including kwargs which contains:
-        spec: an array, each entry of which is the parameter dictionary for
-            the model getThumbnail function.
-        logInterval: the time in seconds between log messages.  This also
-            controls the granularity of cancelling the job.
-        concurrent: the number of threads to use.  0 for the number of cpus.
+    The job object contains::
+
+      - spec: an array, each entry of which is the parameter dictionary
+        for the model getThumbnail function.
+      - logInterval: the time in seconds between log messages.  This
+        also controls the granularity of cancelling the job.
+      - concurrent: the number of threads to use.  0 for the number of
+        cpus.
+
+    :param job: the job object including kwargs.
     """
     job = Job().updateJob(
         job, log='Started creating large image thumbnails\n',
