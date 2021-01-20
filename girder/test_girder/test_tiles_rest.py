@@ -396,11 +396,30 @@ def testTilesFromTest(server, admin, fsAssetstore):
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
 def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):  # noqa
-    server = boundServer
+    # Make sure we don't auto-create a largeImage
+    file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore, name='yb10kx5k.tiff')
+    itemId = str(file['itemId'])
+    resp = boundServer.request(path='/item/%s/tiles' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 400
+    assert 'No large image file' in resp.json['message']
+
+    # Try to create an image, but delete the job and check that it fails.
+    fileId = str(file['_id'])
+    result = _postTileViaHttp(boundServer, admin, itemId, fileId, jobAction='delete')
+    assert result is None
+    # If we end the test here, girder_worker may upload a file that gets
+    # discarded, but do so in a manner that interfers with cleaning up the test
+    # temp directory.  By running other tasks, this is less likely to occur.
+
+    # Creating it again should work
+    tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId)
+    assert tileMetadata['levels'] == 7
+
+    # Create another largeImage and make sure it matches everything we expect
     file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
-    tileMetadata = _postTileViaHttp(server, admin, itemId, fileId)
+    tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId)
     assert tileMetadata['tileWidth'] == 256
     assert tileMetadata['tileHeight'] == 256
     assert tileMetadata['sizeX'] == 10000
@@ -409,61 +428,39 @@ def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):  # noqa
     assert tileMetadata['magnification'] is None
     assert tileMetadata['mm_x'] is None
     assert tileMetadata['mm_y'] is None
-    _testTilesZXY(server, admin, itemId, tileMetadata)
+    _testTilesZXY(boundServer, admin, itemId, tileMetadata)
     # Ask to make this a tile-based item with an missing file ID (there are
     # now two files, so this will now fail).
-    resp = server.request(path='/item/%s/tiles' % itemId, method='POST',
-                          user=admin)
+    resp = boundServer.request(path='/item/%s/tiles' % itemId, method='POST', user=admin)
     assert utilities.respStatus(resp) == 400
     assert 'Missing "fileId"' in resp.json['message']
     # We should be able to delete the tiles
-    resp = server.request(path='/item/%s/tiles' % itemId, method='DELETE',
-                          user=admin)
+    resp = boundServer.request(path='/item/%s/tiles' % itemId, method='DELETE', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json['deleted'] is True
     # We should no longer have tile informaton
-    resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
+    resp = boundServer.request(path='/item/%s/tiles' % itemId, user=admin)
     assert utilities.respStatus(resp) == 400
     assert 'No large image file' in resp.json['message']
     # This should work with a PNG with transparency, too.
     file = utilities.uploadTestFile('yb10kx5ktrans.png', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
-    tileMetadata = _postTileViaHttp(server, admin, itemId, fileId)
+    tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId)
     assert tileMetadata['tileWidth'] == 256
     assert tileMetadata['tileHeight'] == 256
     assert tileMetadata['sizeX'] == 10000
     assert tileMetadata['sizeY'] == 5000
     assert tileMetadata['levels'] == 7
-    _testTilesZXY(server, admin, itemId, tileMetadata)
+    _testTilesZXY(boundServer, admin, itemId, tileMetadata)
     # We should be able to delete the tiles
-    resp = server.request(path='/item/%s/tiles' % itemId, method='DELETE',
-                          user=admin)
+    resp = boundServer.request(path='/item/%s/tiles' % itemId, method='DELETE', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json['deleted'] is True
     # We should no longer have tile information
-    resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
+    resp = boundServer.request(path='/item/%s/tiles' % itemId, user=admin)
     assert utilities.respStatus(resp) == 400
     assert 'No large image file' in resp.json['message']
-    # Make sure we don't auto-create a largeImage
-    file = utilities.uploadTestFile(
-        'yb10kx5k.png', admin, fsAssetstore, name='yb10kx5k.tiff')
-    itemId = str(file['itemId'])
-    resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
-    assert utilities.respStatus(resp) == 400
-    assert 'No large image file' in resp.json['message']
-
-    # Try to create an image, but delete the job and check that it fails.
-    fileId = str(file['_id'])
-    result = _postTileViaHttp(server, admin, itemId, fileId, jobAction='delete')
-    assert result is None
-    # If we end the test here, girder_worker may upload a file that gets
-    # discarded, but do so in a manner that interfers with cleaning up the test
-    # temp directory.  By running another task, this is less likely to occur.
-
-    # Creating it again should work
-    tileMetadata = _postTileViaHttp(server, admin, itemId, fileId)
-    assert tileMetadata['levels'] == 7
 
 
 @pytest.mark.usefixtures('unbindLargeImage')  # noqa
