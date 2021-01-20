@@ -57,10 +57,9 @@ $(function () {
                 $('.g-large-image-create').click();
             });
             girderTest.waitForLoad();
-            // wait for job to complete
             waitsFor(function () {
                 return $('.g-item-image-viewer-select').length !== 0;
-            }, 15000);
+            }, 'job to complete', 15000);
             girderTest.waitForLoad();
         });
     });
@@ -73,7 +72,7 @@ $(function () {
             girderTest.waitForLoad();
             waitsFor(function () {
                 return !$('.g-item-image-viewer-select').length;
-            }, 15000);
+            }, 'select button to vanish', 15000);
             girderTest.waitForLoad();
         });
         it('remake a large image and then remove the image file', function () {
@@ -84,10 +83,9 @@ $(function () {
                 $('.g-large-image-create').click();
             });
             girderTest.waitForLoad();
-            // wait for job to complete
             waitsFor(function () {
                 return $('.g-item-image-viewer-select').length !== 0;
-            }, 15000);
+            }, 'job to complete', 15000);
             girderTest.waitForLoad();
             runs(function () {
                 $('.g-delete-file').click();
@@ -99,7 +97,7 @@ $(function () {
             girderTest.waitForLoad();
             waitsFor(function () {
                 return !$('.g-item-image-viewer-select').length;
-            }, 15000);
+            }, 'select button to vanish', 15000);
             girderTest.waitForLoad();
         });
         it('upload test file', function () {
@@ -128,10 +126,9 @@ $(function () {
                 $('.g-large-image-create').click();
             });
             girderTest.waitForLoad();
-            // wait for job to complete
             waitsFor(function () {
                 return $('.g-item-image-viewer-select').length > 0 && $('.g-large-image-remove').length > 0;
-            }, 15000);
+            }, 'job to complete', 15000);
             girderTest.waitForLoad();
         });
     });

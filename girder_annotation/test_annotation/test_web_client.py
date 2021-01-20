@@ -5,18 +5,17 @@ from pytest_girder.web_client import runWebClientTest
 from girder.models.folder import Folder
 from girder.models.item import Item
 
-from .girder_utilities import girderWorker, unbindLargeImage, unbindAnnotation  # noqa
+from .girder_utilities import unbindLargeImage, unbindAnnotation  # noqa
 
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')  # noqa
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image_annotation')
 @pytest.mark.parametrize('spec', (
     'annotationListSpec.js',
     'geojsAnnotationSpec.js',
     'geojsSpec.js',
 ))
-def testWebClientWithAnnotation(boundServer, fsAssetstore, db, spec, girderWorker):  # noqa
+def testWebClientWithAnnotation(boundServer, fsAssetstore, db, spec):
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
     runWebClientTest(boundServer, spec, 15000)
 
