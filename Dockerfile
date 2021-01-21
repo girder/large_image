@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.7.9 2.7.18 3.5.10 3.6.12 3.8.6 3.9.1"
+    PYTHON_VERSIONS="3.7.9 2.7.18 3.5.10 3.6.12 3.8.7 3.9.1"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -54,10 +54,11 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN pyenv update && \
+    pyenv install --list && \
     echo $PYTHON_VERSIONS | xargs -P `nproc` -n 1 pyenv install && \
     pyenv global $(pyenv versions --bare) && \
-    find $PYENV_ROOT/versions -type d '(' -name '__pycache__' -o -name 'test' -o -name 'tests' ')' -exec rm -rfv '{}' + && \
-    find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + && \
+    find $PYENV_ROOT/versions -type d '(' -name '__pycache__' -o -name 'test' -o -name 'tests' ')' -exec rm -rfv '{}' + >/dev/null && \
+    find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
     echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version
 
 # Create a user that can be used with gosu or chroot when running tox
