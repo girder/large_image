@@ -130,7 +130,7 @@ def _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
     _import_pyvips()
     subOutputPath = tempPath + '-%s.tiff' % (time.strftime('%Y%m%d-%H%M%S'))
     _convert_via_vips(inputPath, subOutputPath, tempPath, **kwargs)
-    _output_tiff([subOutputPath], outputPath, lidata)
+    _output_tiff([subOutputPath], outputPath, lidata, **kwargs)
 
 
 def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
@@ -321,10 +321,10 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
         _convert_via_vips(
             img, subOutputPath, tempPath, status='%d/%d' % (frame, numFrames), **kwargs)
         outputList.append(subOutputPath)
-    _output_tiff(outputList, outputPath, lidata)
+    _output_tiff(outputList, outputPath, lidata, **kwargs)
 
 
-def _output_tiff(inputs, outputPath, lidata, extraImages=None):
+def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
     """
     Given a list of input tiffs and data as parsed by _data_from_large_image,
     generate an output tiff file with the associated images, correct scale, and
@@ -342,7 +342,7 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None):
     description = _make_li_description(
         len(info['ifds']), len(inputs), lidata,
         (len(extraImages) if extraImages else 0) + (len(lidata['images']) if lidata else 0),
-        imgDesc['data'] if imgDesc else None)
+        imgDesc['data'] if imgDesc else None, **kwargs)
     info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value] = {
         'data': description,
         'datatype': tifftools.Datatype.ASCII,
@@ -461,7 +461,8 @@ def json_serial(obj):
 
 
 def _make_li_description(
-        framePyramidSize, numFrames, lidata=None, numAssociatedImages=0, imageDescription=None):
+        framePyramidSize, numFrames, lidata=None, numAssociatedImages=0,
+        imageDescription=None, **kwargs):
     """
     Given the number of frames, the number of levels per frame, the associated
     image list, and any metadata from large_image, construct a json string with
@@ -476,11 +477,15 @@ def _make_li_description(
     """
     results = {
         'large_image_converter': {
-            'conversion_date': time.time(),
+            'conversion_epoch': time.time(),
             'version': __version__,
             'levels': framePyramidSize,
             'frames': numFrames,
             'associated': numAssociatedImages,
+            'arguments': {
+                k: v for k, v in kwargs.items()
+                if not k.startswith('_') and not '_' + k in kwargs and
+                k not in {'overwrite', }},
         },
     }
     if lidata:
@@ -578,11 +583,16 @@ def convert(inputPath, outputPath=None, **kwargs):
     :params tileSize: the horizontal and vertical tile size.
     :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
         'zstd', or 'none'.
-    :params quality: a jpeg quality passed to vips.  0 is small, 100 is high
-        quality.  90 or above is recommended.
-    :param level: compression level for zstd, 1-22 (default is 10).
+    :params quality: a jpeg or webp quality passed to vips.  0 is small, 100 is
+        high quality.  90 or above is recommended.  For webp, 0 is lossless.
+    :param level: compression level for zstd, 1-22 (default is 10) and deflate,
+        1-9.
     :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
-        deflate.
+        deflate.  Default is horizontal.
+    :param psnr: psnr value for jp2k, higher results in large files.  0 is
+        lossless.
+    :param cr: jp2k compression ratio.  1 is lossless, 100 will try to make
+        a file 1% the size of the original, etc.
     Additional optional parameters:
     :param geospatial: if not None, a boolean indicating if this file is
         geospatial.  If not specified or None, this will be checked.
@@ -612,6 +622,7 @@ def convert(inputPath, outputPath=None, **kwargs):
         logger.debug('Is file lossy: %r', lossy)
         eightbit = _is_eightbit(inputPath, tiffinfo)
         logger.debug('Is file 8 bits per samples: %r', eightbit)
+        kwargs['_compression'] = None
         kwargs['compression'] = 'jpeg' if lossy and eightbit else 'lzw'
     if geospatial:
         _generate_geotiff(inputPath, outputPath, **kwargs)

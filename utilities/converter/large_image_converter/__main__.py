@@ -33,24 +33,24 @@ def get_parser():
         'compression and then rewrite it with jp2k the specified psnr or '
         'compression ratio.')
     parser.add_argument(
-        '--quality', '-q', default=90, type=int,
+        '--quality', '-q', type=int,
         help='JPEG or webp compression quality.  For webp, specify 0 for '
-        'lossless.')
+        'lossless.  Default is 90.')
     parser.add_argument(
         '--level', '-l', type=int,
-        help='General compression level.  Used for deflate (zip), zstd, and '
-        'some others.')
+        help='General compression level.  Used for deflate (zip) (1-9), zstd '
+        '(1-22), and some others.')
     parser.add_argument(
         '--predictor', '-p', choices=['', 'none', 'horizontal', 'float', 'yes'],
         help='Predictor for some compressions.  Default is horizontal for '
         'non-geospatial data and yes for geospatial.')
     parser.add_argument(
         '--psnr', type=int,
-        help='JP2K peak signal to noise ratio.  0 for lossless')
+        help='JP2K peak signal to noise ratio.  0 for lossless.')
     parser.add_argument(
-        '--cr', type=int, help='JP2K compression ratio.  1 for lossless')
+        '--cr', type=int, help='JP2K compression ratio.  1 for lossless.')
     parser.add_argument(
-        '--tile', '-t', type=int, default=256, help='Tile size',
+        '--tile', '-t', type=int, help='Tile size.  Default is 256.',
         dest='tileSize')
     parser.add_argument(
         '--overwrite', '-w', action='store_true',
