@@ -34,7 +34,8 @@ def get_parser():
         'compression ratio.')
     parser.add_argument(
         '--quality', '-q', default=90, type=int,
-        help='JPEG compression quality')
+        help='JPEG or webp compression quality.  For webp, specify 0 for '
+        'lossless.')
     parser.add_argument(
         '--level', '-l', type=int,
         help='General compression level.  Used for deflate (zip), zstd, and '

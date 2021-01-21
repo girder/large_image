@@ -68,6 +68,9 @@ def testIsVips():
     ({'compression': 'lzw', 'predictor': 'yes'}, {
         tifftools.Tag.Compression.value: tifftools.constants.Compression.LZW.value
     }),
+    ({'compression': 'webp', 'quality': 0}, {
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.WEBP.value
+    }),
     ({'tileSize': 512}, {
         tifftools.Tag.TileWidth.value: 512
     }),
