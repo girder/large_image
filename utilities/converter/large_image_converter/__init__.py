@@ -559,6 +559,8 @@ def _vips_parameters(forTiled=True, **kwargs):
             convertParams[vkey] = kwargs[kwkey]
     if convertParams['compression'] == 'jp2k':
         convertParams['compression'] = 'none'
+    if convertParams['compression'] == 'webp' and kwargs.get('quality') == 0:
+        convertParams['lossless'] = True
     if convertParams['predictor'] == 'yes':
         convertParams['predictor'] = 'horizontal'
     if convertParams['compression'] == 'jpeg':
