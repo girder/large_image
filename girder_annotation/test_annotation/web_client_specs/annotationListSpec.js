@@ -103,26 +103,18 @@ describe('AnnotationListWidget', function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.png');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.zstd.tiff');
             });
             girderTest.waitForLoad();
         });
-        it('navigate to item and make a large image', function () {
+        it('navigate to item', function () {
             runs(function () {
                 $('a.g-item-list-link').click();
             });
             girderTest.waitForLoad();
             waitsFor(function () {
-                return $('.g-large-image-create').length !== 0;
-            });
-            runs(function () {
-                $('.g-large-image-create').click();
-            });
-            girderTest.waitForLoad();
-            // wait for job to complete
-            waitsFor(function () {
                 return $('.g-item-image-viewer-select').length !== 0;
-            }, 15000);
+            }, 'image to load', 15000);
             girderTest.waitForLoad();
             runs(function () {
                 expect($('.g-annotation-list-container .g-annotation-row').length).toBe(0);
