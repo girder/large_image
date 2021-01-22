@@ -229,7 +229,7 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
     Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 0)
 
 
-@pytest.mark.usefixtures('unbindLargeImage')  # noqa
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.usefixtures('unavailableWorker')  # noqa
 @pytest.mark.plugin('large_image')
 def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):  # noqa

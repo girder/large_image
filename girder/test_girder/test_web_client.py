@@ -5,7 +5,7 @@ from pytest_girder.web_client import runWebClientTest
 from .girder_utilities import girderWorker, unbindLargeImage  # noqa
 
 
-@pytest.mark.usefixtures('unbindLargeImage')  # noqa
+@pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
 @pytest.mark.parametrize('spec', (
