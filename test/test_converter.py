@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 import os
 import pytest
 import shutil
@@ -190,3 +191,13 @@ def testConverterMainNonImageFile(tmpdir):
     with pytest.raises(Exception):
         main.main([imagePath, outputPath])
     assert not os.path.exists(outputPath)
+
+
+def testConverterMainStats(tmpdir):
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    main.main([imagePath, outputPath, '--stats'])
+    info = tifftools.read_tiff(outputPath)
+    desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
+    assert 'conversion_stats' in desc['large_image_converter']

@@ -55,6 +55,11 @@ def get_parser():
     parser.add_argument(
         '--overwrite', '-w', action='store_true',
         help='Overwrite an existing output file')
+    parser.add_argument(
+        '--stats', action='store_true', dest='_stats',
+        help='Add conversion stats (time and size) to the ImageDescription of '
+        'the output file.  This involves writing the file an extra time; the '
+        'stats do not include the extra write.')
     return parser
 
 
@@ -88,6 +93,20 @@ def main(args=sys.argv[1:]):
         logger.error('Failed to generate file')
         return 1
     logger.info('Created %s, %d bytes, %3.1f s', dest, os.path.getsize(dest), end_time - start_time)
+    if opts._stats:
+        import json
+        import tifftools.commands
+
+        info = tifftools.read_tiff(dest)
+        desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
+        desc['large_image_converter']['conversion_stats'] = {
+            'time': end_time - start_time,
+            'filesize': os.path.getsize(dest),
+        }
+        tifftools.commands.tiff_set(dest, overwrite=True, setlist=[(
+            'ImageDescription', json.dumps(
+                desc, separators=(',', ':'), sort_keys=True,
+                default=large_image_converter.json_serial))])
 
 
 if __name__ == '__main__':
