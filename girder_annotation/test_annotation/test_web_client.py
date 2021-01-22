@@ -5,8 +5,6 @@ from pytest_girder.web_client import runWebClientTest
 from girder.models.folder import Folder
 from girder.models.item import Item
 
-from .girder_utilities import unbindLargeImage, unbindAnnotation  # noqa
-
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')

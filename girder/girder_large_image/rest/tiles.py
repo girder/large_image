@@ -179,11 +179,14 @@ class TilesItemResource(ItemResource):
         largeImageFile = File().load(largeImageFileId, force=True, exc=True)
         user = self.getCurrentUser()
         token = self.getCurrentToken()
+        notify = self.boolParam('notify', params, default=True)
+        params.pop('notify', None)
         try:
             return self.imageItemModel.createImageItem(
                 item, largeImageFile, user, token,
                 createJob='always' if self.boolParam('force', params, default=False) else True,
-                notify=self.boolParam('notify', params, default=True))
+                notify=notify,
+                **params)
         except TileGeneralException as e:
             raise RestException(e.args[0])
 

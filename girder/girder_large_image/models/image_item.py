@@ -96,7 +96,7 @@ class ImageItem(Item):
             localPath = File().getLocalFilePath(fileObj)
         except (FilePathException, AttributeError):
             localPath = None
-        job = large_image_tasks.tasks.create_tiff.delay(
+        job = large_image_tasks.tasks.create_tiff.apply_async(kwargs=dict(
             girder_job_title=u'TIFF Conversion: %s' % fileObj['name'],
             girder_job_other_fields={'meta': {
                 'creator': 'large_image',
@@ -110,7 +110,7 @@ class ImageItem(Item):
                 GirderUploadToItem(str(item['_id']), False),
             ],
             **kwargs,
-        )
+        ), countdown=int(kwargs['countdown']) if kwargs.get('countdown') else None)
         return job.job
 
     @classmethod
