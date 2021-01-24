@@ -925,12 +925,12 @@ class TileSource(object):
             False if round(requestedScale, 2) == 1.0 or
             kwargs.get('resample') in (None, False) else kwargs.get('resample'))
         # If we need to resample to make tiles at a non-native resolution,
-        # adjust the tile size and tile overlap paramters appropriately.
+        # adjust the tile size and tile overlap parameters appropriately.
         if resample is not False:
-            tile_size['width'] = max(1, int(round(tile_size['width'] * requestedScale)))
-            tile_size['height'] = max(1, int(round(tile_size['height'] * requestedScale)))
-            tile_overlap['x'] = int(round(tile_overlap['x'] * requestedScale))
-            tile_overlap['y'] = int(round(tile_overlap['y'] * requestedScale))
+            tile_size['width'] = max(1, int(math.ceil(tile_size['width'] * requestedScale)))
+            tile_size['height'] = max(1, int(math.ceil(tile_size['height'] * requestedScale)))
+            tile_overlap['x'] = int(math.ceil(tile_overlap['x'] * requestedScale))
+            tile_overlap['y'] = int(math.ceil(tile_overlap['y'] * requestedScale))
 
         # If the overlapped tiles don't run over the edge, then the functional
         # size of the region is reduced by the overlap.  This factor is stored
