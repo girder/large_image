@@ -21,7 +21,6 @@ from girder_large_image import constants
 from girder_large_image.models.image_item import ImageItem
 
 from . import girder_utilities as utilities
-from .girder_utilities import unavailableWorker, unbindLargeImage  # noqa
 
 
 def _waitForJobToBeRunning(job):
@@ -230,9 +229,8 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('unavailableWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):  # noqa
+def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):
     # Test the large_image/settings end point
     resp = server.request(
         method='DELETE', path='/large_image/tiles/incomplete', user=user)

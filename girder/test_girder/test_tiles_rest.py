@@ -27,7 +27,6 @@ from girder_large_image import getGirderTileSource
 from girder_large_image import loadmodelcache
 
 from . import girder_utilities as utilities
-from .girder_utilities import girderWorker, unbindLargeImage  # noqa
 
 
 def _testTilesZXY(server, admin, itemId, metadata, tileParams=None,
@@ -163,15 +162,6 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None):
         server.boundPort, itemId), headers=headers,
         data={'fileId': fileId} if data is None else data)
     assert req.status_code == 200
-    # If we ask to create the item again right away, we should be told that
-    # either there is already a job running or the item has already been
-    # added
-    req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles' % (
-        server.boundPort, itemId), headers=headers,
-        data={'fileId': fileId} if data is None else data)
-    assert req.status_code == 400
-    assert ('Item already has' in req.json()['message'] or
-            'Item is scheduled' in req.json()['message'])
 
     if jobAction == 'delete':
         Job().remove(Job().find({}, sort=[('_id', SortDir.DESCENDING)])[0])
@@ -187,6 +177,16 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None):
                         'No large image file' in resp.json['message']):
                     break
             time.sleep(0.1)
+    else:
+        # If we ask to create the item again right away, we should be told that
+        # either there is already a job running or the item has already been
+        # added
+        req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles' % (
+            server.boundPort, itemId), headers=headers,
+            data={'fileId': fileId} if data is None else data)
+        assert req.status_code == 400
+        assert ('Item already has' in req.json()['message'] or
+                'Item is scheduled' in req.json()['message'])
 
     starttime = time.time()
     resp = None
@@ -405,9 +405,8 @@ def testTilesFromTest(server, admin, fsAssetstore):
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
@@ -456,9 +455,8 @@ def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):  # noqa
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):
     # Make sure we don't auto-create a largeImage
     file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore, name='yb10kx5k.tiff')
     itemId = str(file['itemId'])
@@ -468,7 +466,8 @@ def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):  # noqa
 
     # Try to create an image, but delete the job and check that it fails.
     fileId = str(file['_id'])
-    result = _postTileViaHttp(boundServer, admin, itemId, fileId, jobAction='delete')
+    result = _postTileViaHttp(boundServer, admin, itemId, fileId, jobAction='delete',
+                              data={'countdown': 10, 'fileId': fileId})
     assert result is None
     # If we end the test here, girder_worker may upload a file that gets
     # discarded, but do so in a manner that interfers with cleaning up the test
@@ -480,9 +479,8 @@ def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):  # noqa
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadTestFile('grey10kx5k.tif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
@@ -499,9 +497,8 @@ def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):  # n
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):
     # Unicode file names shouldn't cause problems when generating tiles.
     file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
     # Our normal testing method doesn't pass through the unicode name
@@ -551,9 +548,8 @@ def testTilesWithUnicodeName(server, admin, fsAssetstore):
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):
     # As of vips 8.2.4, alpha and unusual channels are removed upon
     # conversion to a JPEG-compressed tif file.  Originally, we performed a
     # test to show that these files didn't work.  They now do (though if
@@ -1003,9 +999,8 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesAfterCopyItem(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+def testTilesAfterCopyItem(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
@@ -1149,9 +1144,8 @@ def testTilesInternalMetadata(server, admin, fsAssetstore):
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadTestFile(
         'yb10kx5k.png', admin, fsAssetstore, name='A name with...dots.png')
     itemId = str(file['itemId'])
@@ -1169,9 +1163,8 @@ def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker)
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
-@pytest.mark.usefixtures('girderWorker')  # noqa
 @pytest.mark.plugin('large_image')
-def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):  # noqa
+def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadExternalFile(
         'data/landcover_sample_1000.tif.sha512', admin, fsAssetstore)
     itemId = str(file['itemId'])
@@ -1184,3 +1177,17 @@ def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):  
     assert tileMetadata['levels'] == 3
     item = Item().load(itemId, force=True)
     assert item['largeImage']['fileId'] != fileId
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testTilesFromWithOptions(boundServer, admin, fsAssetstore, girderWorker):
+    file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    fileId = str(file['_id'])
+    tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId, data={'tileSize': 1024})
+    assert tileMetadata['tileWidth'] == 1024
+    assert tileMetadata['tileHeight'] == 1024
+    assert tileMetadata['sizeX'] == 10000
+    assert tileMetadata['sizeY'] == 5000
+    assert tileMetadata['levels'] == 5
