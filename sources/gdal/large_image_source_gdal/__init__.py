@@ -302,7 +302,8 @@ class GDALFileTileSource(FileTileSource):
                 # between -180,0 and +180,0 is used.  Some projections (such as
                 # stereographic) will fail in this case; they must have a
                 # unitsPerPixel specified.
-                equator = pyproj.transform(inProj, outProj, [-180, 180], [0, 0], always_xy=True)
+                equator = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True).transform(
+                    [-180, 180], [0, 0])
                 self.unitsAcrossLevel0 = abs(equator[0][1] - equator[0][0])
                 if not self.unitsAcrossLevel0:
                     raise TileSourceException(
@@ -443,8 +444,8 @@ class GDALFileTileSource(FileTileSource):
                 inProj = self._proj4Proj(nativeSrs)
                 outProj = self._proj4Proj(srs)
                 keys = ('ll', 'ul', 'lr', 'ur')
-                pts = pyproj.itransform(inProj, outProj, [
-                    (bounds[key]['x'], bounds[key]['y']) for key in keys], always_xy=True)
+                pts = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True).itransform([
+                    (bounds[key]['x'], bounds[key]['y']) for key in keys])
                 for idx, pt in enumerate(pts):
                     key = keys[idx]
                     bounds[key]['x'] = pt[0]
@@ -766,14 +767,13 @@ class GDALFileTileSource(FileTileSource):
         else:
             inProj = self._proj4Proj(units)
             outProj = self._proj4Proj(self.projection)
-            pleft, ptop = pyproj.transform(
-                inProj, outProj,
+            transformer = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True)
+            pleft, ptop = transformer.transform(
                 right if left is None else left,
-                bottom if top is None else top, always_xy=True)
-            pright, pbottom = pyproj.transform(
-                inProj, outProj,
+                bottom if top is None else top)
+            pright, pbottom = transformer.transform(
                 left if right is None else right,
-                top if bottom is None else bottom, always_xy=True)
+                top if bottom is None else bottom)
             units = 'projection'
         left = pleft if left is not None else None
         top = ptop if top is not None else None
@@ -893,7 +893,7 @@ class GDALFileTileSource(FileTileSource):
         # convert to the native projection
         inProj = self._proj4Proj(proj)
         outProj = self._proj4Proj(self.getProj4String())
-        px, py = pyproj.transform(inProj, outProj, x, y, always_xy=True)
+        px, py = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True).transform(x, y)
         # convert to native pixel coordinates
         with self._getDatasetLock:
             gt = self.dataset.GetGeoTransform()

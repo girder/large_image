@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-import sys
 
 from large_image.cache_util import cachesClear
 
 from . import utilities
 
 
-@pytest.mark.skipif(sys.version_info < (3, 5), reason='only python >=3.5')
 def testTilesFromBioformats():
     import large_image_source_bioformats
 
@@ -28,7 +26,6 @@ def testTilesFromBioformats():
     cachesClear()
 
 
-@pytest.mark.skipif(sys.version_info < (3, 5), reason='only python >=3.5')
 def testInternalMetadata():
     import large_image_source_bioformats
 
