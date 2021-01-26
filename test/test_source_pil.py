@@ -6,10 +6,15 @@ import re
 from large_image import config
 import large_image_source_pil
 
+from large_image.cache_util import cachesClear
+
 from . import utilities
 
 
 def testTilesFromPIL():
+    # Ensure this test can run in any order
+    cachesClear()
+
     imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
     # Test with different max size options.
     config.setConfig('max_small_image_size', 100)
