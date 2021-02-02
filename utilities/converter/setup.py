@@ -56,6 +56,9 @@ setup(
         'sources': [
             'large_image[sources]',
         ],
+        'stats': [
+            'scikit-image',
+        ],
     },
     packages=find_packages(),
     entry_points={

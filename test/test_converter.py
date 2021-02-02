@@ -201,3 +201,12 @@ def testConverterMainStats(tmpdir):
     info = tifftools.read_tiff(outputPath)
     desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
     assert 'conversion_stats' in desc['large_image_converter']
+
+
+def testConverterMainFullStats(tmpdir):
+    imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    main.main([imagePath, outputPath, '--full-stats'])
+    info = tifftools.read_tiff(outputPath)
+    desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
+    assert 'psnr' in desc['large_image_converter']['conversion_stats']
