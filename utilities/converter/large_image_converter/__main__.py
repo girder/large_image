@@ -7,6 +7,9 @@ import time
 import large_image_converter
 
 
+logger = logging.getLogger('large-image-converter')
+
+
 def get_parser():
     parser = argparse.ArgumentParser(description='Large Image image converter')
     parser.add_argument(
@@ -60,7 +63,98 @@ def get_parser():
         help='Add conversion stats (time and size) to the ImageDescription of '
         'the output file.  This involves writing the file an extra time; the '
         'stats do not include the extra write.')
+    parser.add_argument(
+        '--stats-full', '--full-stats',
+        action='store_const', const='full', dest='_stats',
+        help='Add conversion stats, including noise metrics (PSNR, etc.) to '
+        'the output file.  This takes more time and temporary disk space.')
     return parser
+
+
+def compute_error_metrics(original, altered, results, converterOpts=None):
+    """
+    Compute the amount of error introduced via conversion compared to
+    conversion using a lossless method.  Note that this is not compared to the
+    original, as we may not be able to read that in an efficient way.  This is
+    a very time-consuming way to compute error metrics, since it first
+    reprocesses the input file to a lossless format, then steps through each
+    tile and computes RSME and SSIM errors per tile, producing a weighted-by-
+    number-of-pixels of each of these.  The RSME is used to compute a PSNR
+    value.
+
+    :param original: the original file path.
+    :param altered: the path of compressed file to compare.
+    :param results: a dictionary to store results.  Modified.
+    :param converterOpts: an optional dictionary of parameters used for the
+        original conversion.  Only parameters that would affect the selected
+        pixels are used.
+    """
+    import math
+    from tempfile import TemporaryDirectory
+    import skimage.metrics
+    import numpy
+    import large_image
+
+    lastlog = 0
+    with TemporaryDirectory() as tempDir:
+        tempPath = os.path.join(tempDir, os.path.basename(original))
+        orig = large_image_converter.convert(original, tempPath, compression='lzw')
+        tsOrig = large_image.getTileSource(orig)
+        numFrames = len(tsOrig.getMetadata().get('frames', [0]))
+        tsAlt = large_image.getTileSource(altered)
+        mse = 0
+        ssim = 0
+        ssim_count = 0
+        maxval = 0
+        maxdiff = 0
+        sum = 0
+        count = 0
+        tileSize = 2048
+        for frame in range(numFrames):
+            tiAlt = tsAlt.tileIterator(tile_size=dict(width=tileSize), frame=frame)
+            for tileOrig in tsOrig.tileIterator(tile_size=dict(width=tileSize), frame=frame):
+                tileAlt = next(tiAlt)
+                do = tileOrig['tile'].astype(int)
+                da = tileAlt['tile'].astype(int)
+                maxval = max(maxval, do.max(), da.max())
+                if do.shape[2] > da.shape[2]:
+                    do = do[:, :, :da.shape[2]]
+                if da.shape[2] > do.shape[2]:
+                    da = da[:, :, :do.shape[2]]
+                diff = numpy.absolute(do - da)
+                maxdiff = max(maxdiff, diff.max())
+                sum += diff.sum()
+                count += diff.size
+                last_mse = numpy.mean(diff ** 2)
+                mse += last_mse * diff.size
+                last_ssim = 0
+                try:
+                    last_ssim = skimage.metrics.structural_similarity(
+                        do.astype(float), da.astype(float),
+                        gaussian_weights=True, sigma=1.5, use_sample_covariance=False,
+                        multichannel=do.shape[2] > 1)
+                    ssim += last_ssim * diff.size
+                    ssim_count += diff.size
+                except ValueError:
+                    pass
+                if time.time() - lastlog >= 10:
+                    logger.debug(
+                        'Calculating error (%d/%d): rmse %4.2f ssim %6.4f  '
+                        'last rmse %4.2f ssim %6.4f' % (
+                            tileOrig['tile_position']['position'] + 1,
+                            tileOrig['iterator_range']['position'],
+                            (mse / count) ** 0.5, ssim / ssim_count,
+                            last_mse ** 0.5, last_ssim))
+                    lastlog = time.time()
+        results['maximum_error'] = maxdiff
+        results['average_error'] = sum / count
+        results['rmse'] = (mse / count) ** 0.5
+        results['psnr'] = 10 * math.log10(
+            maxval ** 2 / (mse / count)) if mse else None
+        if ssim_count:
+            results['ssim'] = ssim / ssim_count
+            logger.debug('Calculated error: rmse %4.2f psnr %3.1f ssim %6.4f' % (
+                results['rmse'], results['psnr'] or 0, results['ssim']))
 
 
 def main(args=sys.argv[1:]):
@@ -102,7 +196,19 @@ def main(args=sys.argv[1:]):
         desc['large_image_converter']['conversion_stats'] = {
             'time': end_time - start_time,
             'filesize': os.path.getsize(dest),
+            'original_filesize': os.path.getsize(opts.source),
+            'compression_ratio':
+                desc['large_image_converter'].get('frames', 1) *
+                sum(info['ifds'][0]['tags'][tifftools.Tag.BitsPerSample.value]['data']) / 8 *
+                info['ifds'][0]['tags'][tifftools.Tag.ImageWidth.value]['data'][0] *
+                info['ifds'][0]['tags'][tifftools.Tag.ImageLength.value]['data'][0] /
+                os.path.getsize(dest),
         }
+        if opts._stats == 'full' and opts.compression not in {
+                'deflate', 'zip', 'lzw', 'zstd', 'packbits'}:
+            compute_error_metrics(
+                opts.source, dest, desc['large_image_converter']['conversion_stats'],
+                converterOpts)
         tifftools.commands.tiff_set(dest, overwrite=True, setlist=[(
             'ImageDescription', json.dumps(
                 desc, separators=(',', ':'), sort_keys=True,

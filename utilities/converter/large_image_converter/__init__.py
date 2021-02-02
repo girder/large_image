@@ -307,7 +307,8 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
             if data.dtype.char not in dtypeToGValue:
                 data = data.astype('d')
             vimg = pyvips.Image.new_from_memory(
-                data.data, data.shape[1], data.shape[0], data.shape[2],
+                numpy.ascontiguousarray(data).data,
+                data.shape[1], data.shape[0], data.shape[2],
                 dtypeToGValue[data.dtype.char])
             x = tile['x']
             ty = tile['tile_position']['level_y']
