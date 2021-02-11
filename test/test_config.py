@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from large_image.config import getConfig, setConfig
 
 

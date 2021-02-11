@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -17,14 +15,12 @@
 ##############################################################################
 
 import base64
+import io
 import itertools
 import math
 import numpy
 import PIL.Image
-import six
 from pkg_resources import DistributionNotFound, get_distribution
-from six import BytesIO
-from six.moves import range
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -43,8 +39,7 @@ except DistributionNotFound:
     pass
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class TiffFileTileSource(FileTileSource):
+class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to TIFF files.
     """
@@ -80,7 +75,7 @@ class TiffFileTileSource(FileTileSource):
 
         :param path: a filesystem path for the tile source.
         """
-        super(TiffFileTileSource, self).__init__(path, **kwargs)
+        super().__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
         self._largeImagePath = largeImagePath
@@ -208,7 +203,7 @@ class TiffFileTileSource(FileTileSource):
                 id = 'dir%d' % directoryNum
                 if not len(self._associatedImages):
                     id = 'macro'
-            if not isinstance(id, six.text_type):
+            if not isinstance(id, str):
                 id = id.decode('utf8')
             # Only use this as an associated image if the parsed id is
             # a reasonable length, alphanumeric characters, and the
@@ -298,7 +293,7 @@ class TiffFileTileSource(FileTileSource):
                     else:
                         if 'DataObject' in attr['Array']:
                             subvalues = self._xmlToMetadata(attr['Array'])
-                            for key, subvalue in six.iteritems(subvalues):
+                            for key, subvalue in subvalues.items():
                                 if key not in {'PIM_DP_IMAGE_DATA', }:
                                     values[attr['Name'] + '|' + key] = subvalue
         except Exception:
@@ -321,7 +316,7 @@ class TiffFileTileSource(FileTileSource):
                     results['xml' + (
                         '' if not results.get('xml') else '_' + str(idx))] = self._xmlToMetadata(
                             dir._description_record)
-                for k, v in six.iteritems(dir._tiffInfo):
+                for k, v in dir._tiffInfo.items():
                     if k == 'imagedescription' and hasattr(dir, '_description_record'):
                         continue
                     if isinstance(v, (str, bytes)) and k:
@@ -399,7 +394,7 @@ class TiffFileTileSource(FileTileSource):
                 x / 2, y / 2, z - 1, pilImageAllowed=True, numpyAllowed=False,
                 sparseFallback=sparseFallback, edge=False, **noedge)
             if not isinstance(image, PIL.Image.Image):
-                image = PIL.Image.open(BytesIO(image))
+                image = PIL.Image.open(io.BytesIO(image))
             image = image.crop((
                 self.tileWidth / 2 if x % 2 else 0,
                 self.tileHeight / 2 if y % 2 else 0,
@@ -442,7 +437,7 @@ class TiffFileTileSource(FileTileSource):
                     pilImageAllowed=True, numpyAllowed=False,
                     sparseFallback=True, edge=False, frame=kwargs.get('frame'))
                 if not isinstance(subtile, PIL.Image.Image):
-                    subtile = PIL.Image.open(BytesIO(subtile))
+                    subtile = PIL.Image.open(io.BytesIO(subtile))
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
         return tile.resize((self.tileWidth, self.tileHeight),
@@ -493,7 +488,7 @@ class TiffFileTileSource(FileTileSource):
         # more complex process than read_image.
         for td in self._tiffDirectories:
             if td is not None and imageKey in td._embeddedImages:
-                image = PIL.Image.open(BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
+                image = PIL.Image.open(io.BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
                 return image
         if imageKey in self._associatedImages:
             return PIL.Image.fromarray(self._associatedImages[imageKey])

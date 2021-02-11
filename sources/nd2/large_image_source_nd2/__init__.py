@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -21,12 +19,10 @@ import cachetools
 import math
 import nd2reader
 import numpy
-import six
 import threading
 import types
 import warnings
 
-from six.moves import range
 
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -47,8 +43,7 @@ except DistributionNotFound:
 warnings.filterwarnings('ignore', category=UserWarning, module='nd2reader')
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class ND2FileTileSource(FileTileSource):
+class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to nd2 files and other files the nd2reader library can
     read.
@@ -77,7 +72,7 @@ class ND2FileTileSource(FileTileSource):
 
         :param path: a filesystem path for the tile source.
         """
-        super(ND2FileTileSource, self).__init__(path, **kwargs)
+        super().__init__(path, **kwargs)
 
         self._largeImagePath = self._getLargeImagePath()
 
@@ -158,12 +153,12 @@ class ND2FileTileSource(FileTileSource):
         newdict = {}
         for key, value in olddict.items():
             if value not in (None, b'', ''):
-                if isinstance(key, six.binary_type):
+                if isinstance(key, bytes):
                     key = key.decode('utf8')
                 if (isinstance(value, dict) and len(value) == 1 and
                         list(value.keys())[0] in (b'', '')):
                     value = list(value.values())[0]
-                if isinstance(value, six.binary_type):
+                if isinstance(value, bytes):
                     value = value.decode('utf8')
                 if isinstance(value, dict):
                     value = self._getND2MetadataCleanDict(value)
@@ -176,7 +171,7 @@ class ND2FileTileSource(FileTileSource):
                     if not len(value):
                         continue
                     for idx, entry in enumerate(value):
-                        if isinstance(entry, six.binary_type):
+                        if isinstance(entry, bytes):
                             entry = entry.decode('utf8')
                         if isinstance(entry, dict):
                             entry = self._getND2MetadataCleanDict(entry)
@@ -243,7 +238,7 @@ class ND2FileTileSource(FileTileSource):
 
         :returns: metadata dictonary.
         """
-        result = super(ND2FileTileSource, self).getMetadata()
+        result = super().getMetadata()
 
         sizes = self._nd2.sizes
         # We may want to reformat the frames to standardize this across sources

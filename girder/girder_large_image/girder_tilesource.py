@@ -32,7 +32,7 @@ class GirderTileSource(tilesource.FileTileSource):
             ['largeImage']['fileId'] identifying the Girder file to be used
             for the tile source.
         """
-        super(GirderTileSource, self).__init__(item, *args, **kwargs)
+        super().__init__(item, *args, **kwargs)
         self.item = item
 
     @staticmethod

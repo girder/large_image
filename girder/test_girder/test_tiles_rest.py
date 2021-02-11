@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-
 import math
-import mock
+from unittest import mock
 import os
 import pytest
 import requests
 import shutil
-import six
 import struct
 import time
 
@@ -504,13 +501,13 @@ def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):
     # Our normal testing method doesn't pass through the unicode name
     # properly, so just change it after upload.
     file = File().load(file['_id'], force=True)
-    file['name'] = u'\u0441\u043b\u0430\u0439\u0434'
+    file['name'] = '\u0441\u043b\u0430\u0439\u0434'
     file = File().save(file)
     fileId = str(file['_id'])
 
     itemId = str(file['itemId'])
     item = Item().load(itemId, force=True)
-    item['name'] = u'item \u0441\u043b\u0430\u0439\u0434'
+    item['name'] = 'item \u0441\u043b\u0430\u0439\u0434'
     item = Item().save(item)
 
     tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId)
@@ -530,7 +527,7 @@ def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):
 def testTilesWithUnicodeName(server, admin, fsAssetstore):
     # Unicode file names shouldn't cause problems when accessing ptifs.
     # This requires an appropriate version of the python libtiff module.
-    name = u'\u0441\u043b\u0430\u0439\u0434.ptif'
+    name = '\u0441\u043b\u0430\u0439\u0434.ptif'
     origpath = utilities.externaldata('data/sample_image.ptif.sha512')
     altpath = os.path.join(os.path.dirname(origpath), name)
     if os.path.exists(altpath):
@@ -863,7 +860,7 @@ def testTilesLoadModelCache(server, admin, fsAssetstore):
     tileMetadata = resp.json
     tileMetadata['sparse'] = 5
     _testTilesZXY(server, admin, itemId, tileMetadata, token=token)
-    assert six.next(six.itervalues(loadmodelcache.LoadModelCache))['hits'] > 70
+    assert next(iter(loadmodelcache.LoadModelCache.values()))['hits'] > 70
 
 
 @pytest.mark.usefixtures('unbindLargeImage')

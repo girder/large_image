@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -21,11 +19,9 @@ import cherrypy
 import datetime
 import enum
 import jsonschema
-import six
 import re
 import threading
 import time
-from six.moves import range
 
 from girder import events
 from girder import logger
@@ -43,7 +39,7 @@ from girder_large_image.models.image_item import ImageItem
 from .annotationelement import Annotationelement
 
 
-class AnnotationSchema(object):
+class AnnotationSchema:
     coordSchema = {
         'type': 'array',
         # TODO: validate that z==0 for now
@@ -113,7 +109,7 @@ class AnnotationSchema(object):
     }
     baseShapePatternProperties = {
         '^%s$' % propertyName: {}
-        for propertyName in six.viewkeys(baseShapeSchema['properties'])
+        for propertyName in baseShapeSchema['properties']
         if propertyName != 'type'
     }
 
@@ -248,8 +244,8 @@ class AnnotationSchema(object):
         ]
     }
     baseRectangleShapePatternProperties = {
-        '^%s$' % propertyName: {} for propertyName in six.viewkeys(
-            baseRectangleShapeSchema['allOf'][1]['properties'])
+        '^%s$' % propertyName: {}
+        for propertyName in baseRectangleShapeSchema['allOf'][1]['properties']
         if propertyName != 'type'
     }
     baseRectangleShapePatternProperties.update(baseShapePatternProperties)
@@ -378,7 +374,7 @@ class Annotation(AccessControlledModel):
     validatorAnnotationElement = jsonschema.Draft4Validator(
         AnnotationSchema.annotationElementSchema)
     idRegex = re.compile('^[0-9a-f]{24}$')
-    numberInstance = six.integer_types + (float, )
+    numberInstance = (int, float)
 
     class Skill(enum.Enum):
         NOVICE = 'novice'
@@ -549,7 +545,7 @@ class Annotation(AccessControlledModel):
         self.setPublic(annotation, folder.get('public'), save=False)
 
         # call the super class save method to avoid messing with elements
-        super(Annotation, self).save(annotation)
+        super().save(annotation)
         logger.info('Generated annotation ACL for %s', annotation['_id'])
         return annotation
 
@@ -587,7 +583,7 @@ class Annotation(AccessControlledModel):
             annotation.
         :returns: the matching annotation or none.
         """
-        annotation = super(Annotation, self).load(id, *args, **kwargs)
+        annotation = super().load(id, *args, **kwargs)
         if annotation is None:
             return
 
@@ -607,7 +603,7 @@ class Annotation(AccessControlledModel):
                 if (len(annotation.get('annotation', {}).get('elements')) or
                         retry + 1 == maxRetries):
                     break
-                recheck = super(Annotation, self).load(id, *args, **kwargs)
+                recheck = super().load(id, *args, **kwargs)
                 if (recheck is None or
                         annotation.get('_version') == recheck.get('_version')):
                     break
@@ -640,7 +636,7 @@ class Annotation(AccessControlledModel):
             with self._writeLock:
                 self.collection.delete_one = deleteElements
                 try:
-                    result = super(Annotation, self).remove(annotation, *args, **kwargs)
+                    result = super().remove(annotation, *args, **kwargs)
                 finally:
                     self.collection.delete_one = delete_one
         return result
@@ -717,7 +713,7 @@ class Annotation(AccessControlledModel):
             self.collection.replace_one = replaceElements
             self.collection.insert_one = insertElements
             try:
-                result = super(Annotation, self).save(annotation, *args, **kwargs)
+                result = super().save(annotation, *args, **kwargs)
             finally:
                 self.collection.replace_one = replace_one
                 self.collection.insert_one = insert_one
@@ -773,7 +769,7 @@ class Annotation(AccessControlledModel):
                 if k not in b:
                     return False
                 if k == 'id':
-                    if not isinstance(b[k], six.string_types) or not self.idRegex.match(b[k]):
+                    if not isinstance(b[k], str) or not self.idRegex.match(b[k]):
                         return False
                 elif parentKey != 'label' or k != 'value':
                     if not self._similarElementStructure(a[k], b[k], k):
@@ -996,7 +992,7 @@ class Annotation(AccessControlledModel):
         """
         update = save and '_id' in doc
         save = save and '_id' not in doc
-        doc = super(Annotation, self).setAccessList(doc, access, save=save, **kwargs)
+        doc = super().setAccessList(doc, access, save=save, **kwargs)
         if update:
             self.update({'_id': doc['_id']}, {'$set': {'access': doc['access']}})
         return doc

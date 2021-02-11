@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-
 import json
-import mock
+from unittest import mock
 import os
 import pytest
 import time

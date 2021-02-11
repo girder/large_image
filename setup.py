@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import itertools
 import os
 import platform
 from setuptools import setup, find_packages
-import sys
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -15,6 +13,7 @@ extraReqs = {
 }
 sources = {
     'dummy': ['large-image-source-dummy'],
+    'bioformats': ['large-image-source-bioformats'],
     'gdal': ['large-image-source-gdal'],
     'mapnik': ['large-image-source-mapnik'],
     'nd2': ['large-image-source-nd2'],
@@ -25,10 +24,6 @@ sources = {
     'tiff': ['large-image-source-tiff'],
     'test': ['large-image-source-test'],
 }
-if sys.version_info >= (3, ):
-    sources.update({
-        'bioformats': ['large-image-source-bioformats'],
-    })
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
 extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
@@ -74,7 +69,6 @@ setup(
         'Pillow',
         'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
-        'six>=1.10.0',
     ],
     extras_require=extraReqs,
     include_package_data=True,

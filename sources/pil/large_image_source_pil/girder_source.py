@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -50,7 +48,7 @@ class PILGirderTileSource(PILFileTileSource, GirderTileSource):
             kwargs.get('maxSize', args[1] if len(args) >= 2 else None)))
 
     def getState(self):
-        return super(PILGirderTileSource, self).getState() + ',' + str(
+        return super().getState() + ',' + str(
             self._maxSize)
 
     @methodcache()

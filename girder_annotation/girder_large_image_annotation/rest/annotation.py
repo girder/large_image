@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -39,7 +37,7 @@ from ..models.annotationelement import Annotationelement
 class AnnotationResource(Resource):
 
     def __init__(self):
-        super(AnnotationResource, self).__init__()
+        super().__init__()
 
         self.resourceName = 'annotation'
         self.route('GET', (), self.find)
@@ -483,8 +481,7 @@ class AnnotationResource(Resource):
                     annotationGenerator = self._getAnnotation(user, annotation['_id'], {})()
                 except AccessException:
                     continue
-                for chunk in annotationGenerator:
-                    yield chunk
+                yield from annotationGenerator
                 first = False
             yield b']'
 

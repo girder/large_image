@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
 import cachetools
 import pytest
-import six
 import threading
 
 import large_image.cache_util.cache
@@ -11,7 +8,7 @@ from large_image.cache_util import cached, strhash, Cache, MemCache, \
     methodcache, LruCacheMetaclass, cachesInfo, cachesClear, getTileCache
 
 
-class Fib(object):
+class Fib:
     def num(self, k):
         if k > 2:
             return self.num(k - 1) + self.num(k - 2)
@@ -74,7 +71,7 @@ def testGetTileCacheMemcached():
     assert isinstance(tileCache, MemCache)
 
 
-class TestClass(object):
+class TestClass:
     def testLRUThreadSafety(self):
         # The cachetools LRU cache is not thread safe, and if two threads ask
         # to evict an old value concurrently, the cache will raise a KeyError
@@ -123,8 +120,7 @@ class TestClass(object):
         for sum in sums:
             assert sum == loopSize * (loopSize - 1) / 2 + loopSize * sumDelta
 
-    @six.add_metaclass(LruCacheMetaclass)
-    class ExampleWithMetaclass(object):
+    class ExampleWithMetaclass(metaclass=LruCacheMetaclass):
         cacheName = 'test'
         cacheMaxSize = 4
 

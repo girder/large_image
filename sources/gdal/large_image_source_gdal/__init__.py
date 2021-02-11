@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -21,7 +19,6 @@ import numpy
 import palettable
 import PIL.Image
 import pyproj
-import six
 import struct
 import threading
 from operator import attrgetter
@@ -62,8 +59,7 @@ ProjUnitsAcrossLevel0_MaxSize = 100
 InitPrefix = '+init='
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class GDALFileTileSource(FileTileSource):
+class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
     """
@@ -106,7 +102,7 @@ class GDALFileTileSource(FileTileSource):
             projections that are not latlong (is_geographic is False) must
             specify unitsPerPixel.
         """
-        super(GDALFileTileSource, self).__init__(path, **kwargs)
+        super().__init__(path, **kwargs)
         self._logger = config.getConfig('logger')
         self._bounds = {}
         self._path = self._getLargeImagePath()
@@ -121,7 +117,7 @@ class GDALFileTileSource(FileTileSource):
         self._projection = projection
         if projection and projection.lower().startswith('epsg:'):
             projection = InitPrefix + projection.lower()
-        if projection and not isinstance(projection, six.binary_type):
+        if projection and not isinstance(projection, bytes):
             projection = projection.encode('utf8')
         self.projection = projection
         try:
@@ -332,7 +328,7 @@ class GDALFileTileSource(FileTileSource):
                 kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
 
     def getState(self):
-        return super(GDALFileTileSource, self).getState() + ',%s,%s' % (
+        return super().getState() + ',%s,%s' % (
             self._projection, self._unitsPerPixel)
 
     @staticmethod
@@ -450,7 +446,7 @@ class GDALFileTileSource(FileTileSource):
                     key = keys[idx]
                     bounds[key]['x'] = pt[0]
                     bounds[key]['y'] = pt[1]
-                bounds['srs'] = srs.decode('utf8') if isinstance(srs, six.binary_type) else srs
+                bounds['srs'] = srs.decode('utf8') if isinstance(srs, bytes) else srs
             bounds['xmin'] = min(bounds['ll']['x'], bounds['ul']['x'],
                                  bounds['lr']['x'], bounds['ur']['x'])
             bounds['xmax'] = max(bounds['ll']['x'], bounds['ul']['x'],
@@ -509,7 +505,7 @@ class GDALFileTileSource(FileTileSource):
                     if band.GetMaskBand():
                         info['maskband'] = band.GetMaskBand().GetBand() or None
                     # Only keep values that aren't None or the empty string
-                    infoSet[i + 1] = {k: v for k, v in six.iteritems(info) if v not in (None, '')}
+                    infoSet[i + 1] = {k: v for k, v in info.items() if v not in (None, '')}
             if not cache:
                 return infoSet
             self._bandInfo = infoSet
@@ -702,9 +698,9 @@ class GDALFileTileSource(FileTileSource):
         :returns: a proj4 projection object.  None if the specified projection
             cannot be created.
         """
-        if isinstance(proj, six.binary_type):
+        if isinstance(proj, bytes):
             proj = proj.decode('utf8')
-        if not isinstance(proj, six.text_type):
+        if not isinstance(proj, str):
             return
         if proj.lower().startswith('proj4:'):
             proj = proj.split(':', 1)[1]
@@ -846,7 +842,7 @@ class GDALFileTileSource(FileTileSource):
             left, right = min(left, right), max(left, right)
             top, bottom = min(top, bottom), max(top, bottom)
             units = 'base_pixels'
-        return super(GDALFileTileSource, self)._getRegionBounds(
+        return super()._getRegionBounds(
             metadata, left, top, right, bottom, width, height, units, **kwargs)
 
     @methodcache()
@@ -875,7 +871,7 @@ class GDALFileTileSource(FileTileSource):
             params['output'] = {'maxWidth': width, 'maxHeight': height}
             params['region'] = {'units': 'projection'}
             return self.getRegion(**params)
-        return super(GDALFileTileSource, self).getThumbnail(width, height, levelZero, **kwargs)
+        return super().getThumbnail(width, height, levelZero, **kwargs)
 
     def toNativePixelCoordinates(self, x, y, proj=None, roundResults=True):
         """
@@ -919,7 +915,7 @@ class GDALFileTileSource(FileTileSource):
         # default subdatatset; we may want it to read values from all
         # subdatasets and the main raster bands (if they exist), and label the
         # bands better
-        pixel = super(GDALFileTileSource, self).getPixel(includeTileRecord=True, **kwargs)
+        pixel = super().getPixel(includeTileRecord=True, **kwargs)
         tile = pixel.pop('tile', None)
         if tile:
             # Coordinates in the max level tile

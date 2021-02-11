@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import gc
 import pytest
 import time
@@ -31,7 +29,7 @@ def monitorTileCounts():
     large_image_source_test.TestTileSource.wrapKey = originalWrapKey
 
 
-class LargeImageCachedTilesTest(object):
+class LargeImageCachedTilesTest:
 
     def testTilesFromTest(self, monitorTileCounts):
         # Create a test tile with the default options

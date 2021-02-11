@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import os
 from setuptools import setup, find_packages
-import sys
 
 
 def prerelease_local_scheme(version):
@@ -42,8 +40,7 @@ setup(
     ],
     install_requires=[
         'large-image>=1.0.0',
-        # If we want support for Python 2.x, this will have to change.
-        'python-bioformats>=1.5.2' if sys.version_info >= (3, ) else '',
+        'python-bioformats>=1.5.2',
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',

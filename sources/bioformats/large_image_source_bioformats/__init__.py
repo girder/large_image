@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -137,7 +135,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'height': height} in pixels.  If None, the default max size is
             used.
         """
-        super(BioformatsFileTileSource, self).__init__(path, **kwargs)
+        super().__init__(path, **kwargs)
         self._logger = config.getConfig('logger')
 
         largeImagePath = self._getLargeImagePath()
@@ -399,7 +397,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: metadata dictonary.
 
         """
-        result = super(BioformatsFileTileSource, self).getMetadata()
+        result = super().getMetadata()
         # sizeC, sizeZ, sizeT, sizeXY
         frames = []
         for xy in range(self._metadata['sizeXY']):

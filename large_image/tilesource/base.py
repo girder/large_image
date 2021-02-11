@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+import io
 import json
 import math
 import numpy
@@ -8,11 +7,9 @@ import PIL.Image
 import PIL.ImageColor
 import PIL.ImageDraw
 import random
-import six
 import threading
 import xml.etree.ElementTree
 from collections import defaultdict
-from six import BytesIO
 
 from ..cache_util import getTileCache, strhash, methodcache
 from ..constants import SourcePriority, \
@@ -65,7 +62,7 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
             imageData = b''
         else:
             encoding = TileOutputPILFormat.get(encoding, encoding)
-            output = BytesIO()
+            output = io.BytesIO()
             params = {}
             if encoding == 'JPEG' and image.mode not in ('L', 'RGB'):
                 image = image.convert('RGB' if image.mode != 'LA' else 'L')
@@ -114,7 +111,7 @@ def _imageToPIL(image, setMode=None):
             image = image.astype(numpy.uint8)
         image = PIL.Image.fromarray(image, mode)
     elif not isinstance(image, PIL.Image.Image):
-        image = PIL.Image.open(BytesIO(image))
+        image = PIL.Image.open(io.BytesIO(image))
     if setMode is not None and image.mode != setMode:
         image = image.convert(setMode)
     return image
@@ -130,7 +127,7 @@ def _imageToNumpy(image):
     """
     if not isinstance(image, numpy.ndarray):
         if not isinstance(image, PIL.Image.Image):
-            image = PIL.Image.open(BytesIO(image))
+            image = PIL.Image.open(io.BytesIO(image))
         if image.mode not in ('L', 'LA', 'RGB', 'RGBA'):
             image = image.convert('RGBA')
         mode = image.mode
@@ -183,14 +180,14 @@ def etreeToDict(t):
     if children:
         entries = defaultdict(list)
         for entry in map(etreeToDict, children):
-            for k, v in six.iteritems(entry):
+            for k, v in entry.items():
                 entries[k].append(v)
         d = {tag: {k: v[0] if len(v) == 1 else v
-                   for k, v in six.iteritems(entries)}}
+                   for k, v in entries.items()}}
 
     if t.attrib:
         d[tag].update({(k.split('}', 1)[1] if k.startswith('{') else k): v
-                       for k, v in six.iteritems(t.attrib)})
+                       for k, v in t.attrib.items()})
     text = (t.text or '').strip()
     if text and len(d[tag]):
         d[tag]['text'] = text
@@ -214,12 +211,12 @@ def dictToEtree(d, root=None):
     """
     if root is None:
         if len(d) == 1:
-            k, v = six.next(six.iteritems(d))
+            k, v = next(iter(d.items()))
             root = xml.etree.ElementTree.Element(k)
             dictToEtree(v, root)
             return root
         root = xml.etree.ElementTree.Element('root')
-    for k, v in six.iteritems(d):
+    for k, v in d.items():
         if isinstance(v, list):
             for l in v:
                 elem = xml.etree.ElementTree.SubElement(root, k)
@@ -293,7 +290,7 @@ class LazyTileDict(dict):
         self.alwaysAllowPIL = True
         self.imageKwargs = {}
         self.loaded = False
-        result = super(LazyTileDict, self).__init__(*args, **kwargs)
+        result = super().__init__(*args, **kwargs)
         # We set this initially so that they are listed in known keys using the
         # native dictionary methods
         self['tile'] = None
@@ -463,10 +460,10 @@ class LazyTileDict(dict):
 
             self['tile'] = tileData
             self['format'] = tileFormat
-        return super(LazyTileDict, self).__getitem__(key, *args, **kwargs)
+        return super().__getitem__(key, *args, **kwargs)
 
 
-class TileSource(object):
+class TileSource:
     name = None
     # extensions is a dictionary of known file extensions and the
     # SourcePriority given to each.  It must contain a None key with a priority
@@ -831,9 +828,9 @@ class TileSource(object):
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if ((maxWidth is not None and
-                (not isinstance(maxWidth, six.integer_types) or maxWidth < 0)) or
+                (not isinstance(maxWidth, int) or maxWidth < 0)) or
                 (maxHeight is not None and
-                 (not isinstance(maxHeight, six.integer_types) or maxHeight < 0))):
+                 (not isinstance(maxHeight, int) or maxHeight < 0))):
             raise ValueError(
                 'Invalid output width or height.  Minimum value is 0.')
 
@@ -1350,7 +1347,7 @@ class TileSource(object):
         for entry in style:
             bandidx = 0 if image.shape[2] <= 2 else 1
             band = None
-            if (isinstance(entry.get('band'), six.integer_types) and
+            if (isinstance(entry.get('band'), int) and
                     entry['band'] >= 1 and entry['band'] <= image.shape[2]):
                 bandidx = entry['band'] - 1
             composite = entry.get('composite', 'lighten')
@@ -1480,7 +1477,7 @@ class TileSource(object):
         if hasattr(tile, 'fp') and self._pilFormatMatches(tile):
             tile.fp.seek(0)
             return tile.fp.read()
-        output = BytesIO()
+        output = io.BytesIO()
         params = {}
         if encoding == 'JPEG':
             params['quality'] = self.jpegQuality
@@ -1634,8 +1631,8 @@ class TileSource(object):
             jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: thumbData, thumbMime: the image data and the mime type.
         """
-        if ((width is not None and (not isinstance(width, six.integer_types) or width < 2)) or
-                (height is not None and (not isinstance(height, six.integer_types) or height < 2))):
+        if ((width is not None and (not isinstance(width, int) or width < 2)) or
+                (height is not None and (not isinstance(height, int) or height < 2))):
             raise ValueError('Invalid width or height.  Minimum value is 2.')
         if width is None and height is None:
             width = height = 256
@@ -2244,7 +2241,7 @@ class FileTileSource(TileSource):
 
         :param path: a filesystem path for the tile source.
         """
-        super(FileTileSource, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.largeImagePath = path
 
     @staticmethod

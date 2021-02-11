@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -18,7 +16,6 @@
 
 import datetime
 import json
-import six
 from pkg_resources import DistributionNotFound, get_distribution
 
 import girder
@@ -302,7 +299,7 @@ class LargeImagePlugin(GirderPlugin):
         large_image.config.setConfig('logprint', girder.logprint)
         # Load girder's large_image config
         curConfig = config.getConfig().get('large_image')
-        for key, value in six.iteritems(curConfig or {}):
+        for key, value in (curConfig or {}).items():
             large_image.config.setConfig(key, value)
 
         girder_tilesource.loadGirderTileSources()

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import copy
 import json
 import pytest
@@ -19,7 +17,7 @@ from .test_annotations import sampleAnnotationEmpty, sampleAnnotation, makeLarge
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
-class TestLargeImageAnnotationRest(object):
+class TestLargeImageAnnotationRest:
     def testGetAnnotationSchema(self, server):
         resp = server.request('/annotation/schema')
         assert utilities.respStatus(resp) == 200
@@ -276,7 +274,7 @@ class TestLargeImageAnnotationRest(object):
             return str(item['_id'])
 
         item1 = upload('image1-abcd.ptif', admin)
-        item2 = upload(u'Образец Картина.ptif')
+        item2 = upload('Образец Картина.ptif')
         item3 = upload('image3-ABCD.ptif')
         item4 = upload('image3-ijkl.ptif', user, True)
 
@@ -349,7 +347,7 @@ class TestLargeImageAnnotationRest(object):
         # test filtering by image name with unicode
         resp = server.request('/annotation/images', user=admin, params={
             'limit': 100,
-            'imageName': u'Картина'
+            'imageName': 'Картина'
         })
         assert utilities.respStatus(resp) == 200
         ids = [image['_id'] for image in resp.json]
@@ -594,7 +592,7 @@ class TestLargeImageAnnotationRest(object):
 
 
 @pytest.mark.plugin('large_image_annotation')
-class TestLargeImageAnnotationElementGroups(object):
+class TestLargeImageAnnotationElementGroups:
     def makeAnnot(self, admin):
         publicFolder = utilities.namedFolder(admin, 'Public')
 

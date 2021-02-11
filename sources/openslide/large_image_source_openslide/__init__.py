@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -17,9 +15,6 @@
 ##############################################################################
 
 import math
-import six
-
-from six.moves import range
 
 import openslide
 import PIL
@@ -46,8 +41,7 @@ except DistributionNotFound:
     pass
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class OpenslideFileTileSource(FileTileSource):
+class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to SVS files and other files the openslide library can
     read.
@@ -82,7 +76,7 @@ class OpenslideFileTileSource(FileTileSource):
 
         :param path: a filesystem path for the tile source.
         """
-        super(OpenslideFileTileSource, self).__init__(path, **kwargs)
+        super().__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
 
@@ -373,7 +367,7 @@ class OpenslideFileTileSource(FileTileSource):
             except openslide.lowlevel.OpenSlideError:
                 return None
         bytePath = self._largeImagePath
-        if not isinstance(bytePath, six.binary_type):
+        if not isinstance(bytePath, bytes):
             bytePath = bytePath.encode('utf8')
         _tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         _tiffFile.SetDirectory(images[imageKey])

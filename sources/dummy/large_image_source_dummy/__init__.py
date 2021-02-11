@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -36,7 +34,7 @@ class DummyTileSource(TileSource):
     }
 
     def __init__(self, *args, **kwargs):
-        super(DummyTileSource, self).__init__()
+        super().__init__()
         self.tileWidth = 0
         self.tileHeight = 0
         self.levels = 0
