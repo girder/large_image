@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ###############################################################################
 #  Copyright Kitware Inc.
 #
@@ -16,11 +14,11 @@
 #  limitations under the License.
 ###############################################################################
 
+import functools
 try:
     import resource
 except ImportError:
     resource = None
-import six
 
 from .cachefactory import CacheFactory, pickAvailableCache
 from .. import config
@@ -84,7 +82,7 @@ def methodcache(key=None):
     :param key: if a function, use that for the key, otherwise use self.wrapKey.
     """
     def decorator(func):
-        @six.wraps(func)
+        @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
             if hasattr(self, '_classkey'):
@@ -150,7 +148,7 @@ class LruCacheMetaclass(type):
         timeout = namespace.pop('cacheTimeout', timeout)
         timeout = kwargs.get('cacheTimeout', timeout)
 
-        cls = super(LruCacheMetaclass, metacls).__new__(
+        cls = super().__new__(
             metacls, name, bases, namespace)
         if not cacheName:
             cacheName = cls
@@ -185,7 +183,7 @@ class LruCacheMetaclass(type):
             try:
                 instance = cache[key]
             except KeyError:
-                instance = super(LruCacheMetaclass, cls).__call__(*args, **kwargs)
+                instance = super().__call__(*args, **kwargs)
                 cache[key] = instance
                 instance._classkey = key
 

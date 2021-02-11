@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 import os
-import six
 
 from girder.models.folder import Folder
 from girder.models.upload import Upload
@@ -52,9 +49,9 @@ def getBody(response, text=True):
     data = '' if text else b''
 
     for chunk in response.body:
-        if text and isinstance(chunk, six.binary_type):
+        if text and isinstance(chunk, bytes):
             chunk = chunk.decode('utf8')
-        elif not text and not isinstance(chunk, six.binary_type):
+        elif not text and not isinstance(chunk, bytes):
             chunk = chunk.encode('utf8')
         data += chunk
 

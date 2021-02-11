@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-with open('README.rst', 'r') as fh:
+with open('README.rst') as fh:
     long_desc = fh.read()
 
 
@@ -46,7 +46,6 @@ setup(
         'girder-worker>=0.6.0',
         'girder-worker-utils>=0.8.5',
         # Packages required by both producer and consumer side installations
-        'six>=1.10.0',
     ],
     extras_require={
         'girder': [

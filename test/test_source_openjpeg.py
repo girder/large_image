@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import large_image_source_openjpeg
 
 from . import utilities

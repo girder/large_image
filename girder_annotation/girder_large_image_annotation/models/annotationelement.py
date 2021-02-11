@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -19,9 +17,7 @@
 import datetime
 import math
 import pymongo
-import six
 import time
-from six.moves import range
 
 from girder.constants import AccessType, SortDir
 from girder.models.model_base import Model
@@ -400,7 +396,7 @@ class Annotationelement(Model):
         }
         groups = sorted([
             group for group in self.collection.distinct('element.group', filter=query)
-            if isinstance(group, six.string_types)
+            if isinstance(group, str)
         ])
         query['element.group'] = None
         if self.collection.find_one(query):

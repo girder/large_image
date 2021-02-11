@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 from pkg_resources import iter_entry_points
 

@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-
 from bson import ObjectId
 import copy
 import math
-import mock
+from unittest import mock
 import pytest
 import random
-from six.moves import range
 
 from girder.constants import AccessType
 from girder.exceptions import AccessException, ValidationException
@@ -63,7 +60,7 @@ def makeLargeSampleAnnotation():
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
-class TestLargeImageAnnotation(object):
+class TestLargeImageAnnotation:
     def testAnnotationSchema(self):
         schema = annotation.AnnotationSchema
         assert schema.annotationSchema is not None
@@ -362,7 +359,7 @@ class TestLargeImageAnnotation(object):
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
-class TestLargeImageAnnotationElement(object):
+class TestLargeImageAnnotationElement:
     def testInitialize(self):
         # initialize should be called as we fetch the model
         assert Annotationelement().name == 'annotationelement'
@@ -524,7 +521,7 @@ class TestLargeImageAnnotationElement(object):
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
-class TestLargeImageAnnotationAccessMigration(object):
+class TestLargeImageAnnotationAccessMigration:
     def testMigrateAnnotationAccessControl(self, user, admin):
         publicFolder = utilities.namedFolder(admin, 'Public')
         # create an annotation

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -18,7 +16,7 @@
 
 
 # Constants representing the setting keys for this plugin
-class PluginSettings(object):
+class PluginSettings:
     LARGE_IMAGE_SHOW_THUMBNAILS = 'large_image.show_thumbnails'
     LARGE_IMAGE_SHOW_EXTRA_PUBLIC = 'large_image.show_extra_public'
     LARGE_IMAGE_SHOW_EXTRA = 'large_image.show_extra'

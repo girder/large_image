@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ###############################################################################
 #  Copyright Kitware Inc.
 #
@@ -17,11 +15,11 @@
 ###############################################################################
 
 import ctypes
+import io
 import math
 import numpy
 import os
 import PIL.Image
-import six
 import threading
 
 from functools import partial
@@ -96,7 +94,7 @@ class ValidationTiffException(TiffException):
     pass
 
 
-class TiledTiffDirectory(object):
+class TiledTiffDirectory:
 
     CoreFunctions = [
         'SetDirectory', 'SetSubDirectory', 'GetField',
@@ -163,7 +161,7 @@ class TiledTiffDirectory(object):
                 'TIFF file does not exist: %s' % filePath)
         try:
             bytePath = filePath
-            if not isinstance(bytePath, six.binary_type):
+            if not isinstance(bytePath, bytes):
                 bytePath = filePath.encode('utf8')
             self._tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         except TypeError:
@@ -790,7 +788,7 @@ class TiledTiffDirectory(object):
                     None, libtiff_ctypes.SAMPLEFORMAT_UINT}):
             return self._getUncompressedTile(tileNum)
 
-        imageBuffer = six.BytesIO()
+        imageBuffer = io.BytesIO()
 
         if (self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG and
                 not getattr(self, '_completeJpeg', False)):
@@ -818,7 +816,7 @@ class TiledTiffDirectory(object):
 
         if not meta:
             return
-        if not isinstance(meta, six.string_types):
+        if not isinstance(meta, str):
             meta = meta.decode('utf8', 'ignore')
         try:
             xml = ElementTree.fromstring(meta)

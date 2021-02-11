@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from large_image import getTileSource
 import large_image_source_dummy
 

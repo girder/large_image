@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -16,9 +14,9 @@
 #  limitations under the License.
 #############################################################################
 
+import functools
 import mapnik
 import PIL.Image
-import six
 from osgeo import gdal
 from osgeo import gdalconst
 from pkg_resources import DistributionNotFound, get_distribution
@@ -41,8 +39,7 @@ except DistributionNotFound:
 mapnik.logger.set_severity(mapnik.severity_type.Debug)
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class MapnikFileTileSource(GDALFileTileSource):
+class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
     """
@@ -126,7 +123,7 @@ class MapnikFileTileSource(GDALFileTileSource):
             projections that are not latlong (is_geographic is False) must
             specify unitsPerPixel.
         """
-        super(MapnikFileTileSource, self).__init__(
+        super().__init__(
             path, projection=projection, unitsPerPixel=unitsPerPixel, **kwargs)
 
     def _checkNetCDF(self):
@@ -152,7 +149,7 @@ class MapnikFileTileSource(GDALFileTileSource):
                     'key': parts[1],
                     'format': parts[2],
                 }
-                dataset['values'] = six.moves.reduce(lambda x, y: x * y, dataset['dim'])
+                dataset['values'] = functools.reduce(lambda x, y: x * y, dataset['dim'])
                 datasets[dataset['key']] = dataset
             if not len(datasets) and (not self.dataset.RasterCount or self.dataset.GetProjection()):
                 return False
@@ -175,7 +172,7 @@ class MapnikFileTileSource(GDALFileTileSource):
                     ds['values'],
                     len(ds['dim']),
                     ds['dim'],
-                    ds['key']) for ds in six.itervalues(datasets)])[-1][-1]
+                    ds['key']) for ds in datasets.values()])[-1][-1]
                 # The base netCDF file reports different dimensions than the
                 # subdatasets.  For now, use the "best" subdataset's dimensions
                 dataset = self._netcdf['datasets'][self._netcdf['default']]
@@ -217,7 +214,7 @@ class MapnikFileTileSource(GDALFileTileSource):
 
     def getOneBandInformation(self, band):
         if type(band) is not tuple:
-            bandInfo = super(MapnikFileTileSource, self).getOneBandInformation(band)
+            bandInfo = super().getOneBandInformation(band)
         else:  # netcdf
             with self._getDatasetLock:
                 dataset = self._netcdf['datasets'][band[0]]
@@ -237,7 +234,7 @@ class MapnikFileTileSource(GDALFileTileSource):
         """
         try:
             scheme = style.get('scheme', 'linear')
-            mapnik_scheme = getattr(mapnik, 'COLORIZER_{}'.format(scheme.upper()))
+            mapnik_scheme = getattr(mapnik, f'COLORIZER_{scheme.upper()}')
         except AttributeError:
             mapnik_scheme = mapnik.COLORIZER_DISCRETE
             raise TileSourceException('Scheme has to be either "discrete" or "linear".')
@@ -265,7 +262,7 @@ class MapnikFileTileSource(GDALFileTileSource):
             if not isinstance(colors, list):
                 colors = self.getHexColors(colors)
             else:
-                colors = [color if isinstance(color, six.binary_type) else
+                colors = [color if isinstance(color, bytes) else
                           color.encode('utf8') for color in colors]
             if len(colors) < 2:
                 raise TileSourceException('A palette must have at least 2 colors.')

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -16,9 +14,9 @@
 #  limitations under the License.
 #############################################################################
 
+import io
 import json
 import pymongo
-import six
 
 from girder import logger
 from girder.constants import SortDir
@@ -43,7 +41,7 @@ class ImageItem(Item):
     # We try these sources in this order.  The first entry is the fallback for
     # items that antedate there being multiple options.
     def initialize(self):
-        super(ImageItem, self).initialize()
+        super().initialize()
         self.ensureIndices(['largeImage.fileId'])
         File().ensureIndices([([
             ('isLargeImageThumbnail', pymongo.ASCENDING),
@@ -97,7 +95,7 @@ class ImageItem(Item):
         except (FilePathException, AttributeError):
             localPath = None
         job = large_image_tasks.tasks.create_tiff.apply_async(kwargs=dict(
-            girder_job_title=u'TIFF Conversion: %s' % fileObj['name'],
+            girder_job_title='TIFF Conversion: %s' % fileObj['name'],
             girder_job_other_fields={'meta': {
                 'creator': 'large_image',
                 'itemId': str(item['_id']),
@@ -253,7 +251,7 @@ class ImageItem(Item):
     def _getAndCacheImage(self, item, imageFunc, checkAndCreate, keydict, **kwargs):
         if 'fill' in keydict and (keydict['fill']).lower() == 'none':
             del keydict['fill']
-        keydict = {k: v for k, v in six.viewitems(keydict) if v is not None}
+        keydict = {k: v for k, v in keydict.items() if v is not None}
         key = json.dumps(keydict, sort_keys=True, separators=(',', ':'))
         existing = File().findOne({
             'attachedToType': 'item',
@@ -284,7 +282,7 @@ class ImageItem(Item):
             self.removeThumbnailFiles(item, maxThumbnailFiles - 1)
             # Save the thumbnail as a file
             thumbfile = Upload().uploadFromFile(
-                six.BytesIO(thumbData), size=len(thumbData),
+                io.BytesIO(thumbData), size=len(thumbData),
                 name='_largeImageThumbnail', parentType='item', parent=item,
                 user=None, mimeType=thumbMime, attachParent=True)
             if not len(thumbData) and 'received' in thumbfile:

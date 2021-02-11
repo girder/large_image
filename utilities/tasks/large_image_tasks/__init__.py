@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Top-level package for Large Image Tasks."""
 
 __author__ = """Kitware Inc"""

@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-
 import glob
+import io
 import json
 import os
 import PIL.Image
 import PIL.ImageChops
 import pytest
-import six
 
 import large_image
 from large_image.exceptions import TileSourceException
@@ -30,8 +28,8 @@ def _assertImageMatches(image, testRootName, saveTestImageFailurePath='/tmp'):
         test images, if this value is set, save the image to make it easier
         to determine why it failed.
     """
-    if isinstance(image, six.binary_type):
-        image = PIL.Image.open(six.BytesIO(image))
+    if isinstance(image, bytes):
+        image = PIL.Image.open(io.BytesIO(image))
     image = image.convert('RGBA')
     testDir = os.path.dirname(os.path.realpath(__file__))
     testImagePaths = glob.glob(os.path.join(
@@ -272,7 +270,7 @@ def testProj4Proj():
     proj4Proj = large_image_source_mapnik.MapnikFileTileSource._proj4Proj
 
     proj = proj4Proj(b'epsg:4326')
-    assert proj4Proj(u'epsg:4326').srs == proj.srs
+    assert proj4Proj('epsg:4326').srs == proj.srs
     assert proj4Proj('proj4:EPSG:4326').srs == proj.srs
     assert proj4Proj(4326) is None
 

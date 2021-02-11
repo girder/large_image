@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -19,7 +17,6 @@
 import cachetools
 import hashlib
 import pylibmc
-import six
 import time
 
 from .. import config
@@ -30,8 +27,8 @@ class MemCache(cachetools.Cache):
 
     def __init__(self, url='127.0.0.1', username=None, password=None,
                  getsizeof=None, mustBeAvailable=False):
-        super(MemCache, self).__init__(0, getsizeof=getsizeof)
-        if isinstance(url, six.string_types):
+        super().__init__(0, getsizeof=getsizeof)
+        if isinstance(url, str):
             url = [url]
         # pylibmc used to connect to memcached client.  Set failover behavior.
         # See http://sendapatch.se/projects/pylibmc/behaviors.html

@@ -3,7 +3,6 @@ import math
 import os
 import pytest
 import requests
-import six
 
 
 JFIFHeader = b'\xff\xd8\xff\xe0\x00\x10JFIF'
@@ -54,7 +53,7 @@ def externaldata(
         `{hashvalue}` is replaced with the hashvalue.
     :returns: the path to the downloaded file.
     """
-    if isinstance(sources, six.string_types):
+    if isinstance(sources, str):
         sources = [sources]
     curDir = os.path.dirname(os.path.realpath(__file__))
     if hashpath:

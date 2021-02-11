@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import json
 import numpy
 from xml.etree import ElementTree

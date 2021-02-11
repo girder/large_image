@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -55,7 +53,7 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None):
     return numItems
 
 
-class CacheFactory(object):
+class CacheFactory:
     logged = False
 
     def getCacheSize(self, numItems):

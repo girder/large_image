@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -17,14 +15,13 @@
 ##############################################################################
 
 import glymur
+import io
 import math
 import multiprocessing
 import PIL.Image
-import six
+import queue
 import warnings
 
-from six import BytesIO
-from six.moves import queue
 from xml.etree import ElementTree
 
 from pkg_resources import DistributionNotFound, get_distribution
@@ -45,8 +42,7 @@ except DistributionNotFound:
 warnings.filterwarnings('ignore', category=UserWarning, module='glymur')
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class OpenjpegFileTileSource(FileTileSource):
+class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to jp2 files and other files the openjpeg library can
     read.
@@ -87,7 +83,7 @@ class OpenjpegFileTileSource(FileTileSource):
 
         :param path: a filesystem path for the tile source.
         """
-        super(OpenjpegFileTileSource, self).__init__(path, **kwargs)
+        super().__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()
 
@@ -139,7 +135,7 @@ class OpenjpegFileTileSource(FileTileSource):
                     continue
                 try:
                     self._associatedImages[self._boxToTag[box_id]] = PIL.Image.open(
-                        BytesIO(data))
+                        io.BytesIO(data))
                 except Exception:
                     pass
             if box_id == 'jp2c':
@@ -164,7 +160,7 @@ class OpenjpegFileTileSource(FileTileSource):
         }
 
     def _parseMetadataXml(self, meta):
-        if not isinstance(meta, six.string_types):
+        if not isinstance(meta, str):
             meta = meta.decode('utf8', 'ignore')
         try:
             xml = ElementTree.fromstring(meta)

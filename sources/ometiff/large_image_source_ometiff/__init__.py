@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -20,10 +18,8 @@ import copy
 import math
 import numpy
 import PIL.Image
-import six
 from collections import OrderedDict
 from pkg_resources import DistributionNotFound, get_distribution
-from six.moves import range
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority, TILE_FORMAT_PIL, TILE_FORMAT_NUMPY
@@ -56,19 +52,18 @@ _omeUnitsToMeters = {
     'dm': 1e-1,
     'cm': 1e-2,
     'mm': 1e-3,
-    u'\u00b5m': 1e-6,
+    '\u00b5m': 1e-6,
     'nm': 1e-9,
     'pm': 1e-12,
     'fm': 1e-15,
     'am': 1e-18,
     'zm': 1e-21,
     'ym': 1e-24,
-    u'\u00c5': 1e-10,
+    '\u00c5': 1e-10,
 }
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class OMETiffFileTileSource(TiffFileTileSource):
+class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to TIFF files.
     """
@@ -148,7 +143,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
             zloop = int(zloopinfo.split()[0])
             stepinfo = zloopinfo.split('Step: ')[1].split()
             stepmm = float(stepinfo[0])
-            stepmm *= {u'mm': 1, u'\xb5m': 0.001}[stepinfo[1]]
+            stepmm *= {'mm': 1, '\xb5m': 0.001}[stepinfo[1]]
             planes = len(info['Image']['Pixels']['Plane'])
             for plane in info['Image']['Pixels']['Plane']:
                 if int(plane.get('TheZ', 0)) != 0:
@@ -233,7 +228,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
 
         :returns: metadata dictonary.
         """
-        result = super(OMETiffFileTileSource, self).getMetadata()
+        result = super().getMetadata()
         result['frames'] = copy.deepcopy(self._omebase.get('Plane', self._omebase['TiffData']))
         channels = []
         for img in self._omeinfo['Image']:
@@ -275,15 +270,15 @@ class OMETiffFileTileSource(TiffFileTileSource):
 
         :return: magnification, width of a pixel in mm, height of a pixel in mm.
         """
-        result = super(OMETiffFileTileSource, self).getNativeMagnification()
+        result = super().getNativeMagnification()
         if result['mm_x'] is None and 'PhysicalSizeX' in self._omebase:
             result['mm_x'] = (
                 float(self._omebase['PhysicalSizeX']) * 1e3 *
-                _omeUnitsToMeters[self._omebase.get('PhysicalSizeXUnit', u'\u00b5m')])
+                _omeUnitsToMeters[self._omebase.get('PhysicalSizeXUnit', '\u00b5m')])
         if result['mm_y'] is None and 'PhysicalSizeY' in self._omebase:
             result['mm_y'] = (
                 float(self._omebase['PhysicalSizeY']) * 1e3 *
-                _omeUnitsToMeters[self._omebase.get('PhysicalSizeYUnit', u'\u00b5m')])
+                _omeUnitsToMeters[self._omebase.get('PhysicalSizeYUnit', '\u00b5m')])
         if not result.get('magnification') and result.get('mm_x'):
             result['magnification'] = 0.01 / result['mm_x']
         return result
@@ -293,7 +288,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
                 sparseFallback=False, **kwargs):
         if (z < 0 or z >= len(self._omeLevels) or (
                 self._omeLevels[z] is not None and kwargs.get('frame') in (None, 0, '0', ''))):
-            return super(OMETiffFileTileSource, self).getTile(
+            return super().getTile(
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                 **kwargs)
@@ -313,7 +308,7 @@ class OMETiffFileTileSource(TiffFileTileSource):
                     dir.tileWidth != self.tileWidth or dir.tileHeight != self.tileHeight or
                     abs(dir.imageWidth * scale - self.sizeX) > scale or
                     abs(dir.imageHeight * scale - self.sizeY) > scale):
-                return super(OMETiffFileTileSource, self).getTile(
+                return super().getTile(
                     x, y, z, pilImageAllowed=pilImageAllowed,
                     numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                     **kwargs)

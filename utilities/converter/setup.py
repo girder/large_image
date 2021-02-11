@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-with open('README.rst', 'r') as fh:
+with open('README.rst') as fh:
     long_desc = fh.read()
 
 

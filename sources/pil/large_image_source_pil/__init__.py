@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -20,7 +18,6 @@ import json
 import math
 import numpy
 import os
-import six
 from pkg_resources import DistributionNotFound, get_distribution
 
 import PIL.Image
@@ -61,8 +58,7 @@ def getMaxSize(size=None, maxDefault=4096):
     return maxWidth, maxHeight
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class PILFileTileSource(FileTileSource):
+class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to single image PIL files.
     """
@@ -82,10 +78,10 @@ class PILFileTileSource(FileTileSource):
             'height': height} in pixels.  If None, the default max size is
             used.
         """
-        super(PILFileTileSource, self).__init__(path, **kwargs)
+        super().__init__(path, **kwargs)
 
         self._maxSize = maxSize
-        if isinstance(maxSize, six.string_types):
+        if isinstance(maxSize, str):
             try:
                 maxSize = json.loads(maxSize)
             except Exception:
@@ -103,7 +99,7 @@ class PILFileTileSource(FileTileSource):
             raise TileSourceException('File cannot be opened via PIL.')
         try:
             self._pilImage = PIL.Image.open(largeImagePath)
-        except IOError:
+        except OSError:
             raise TileSourceException('File cannot be opened via PIL.')
         # If this is encoded as a 32-bit integer or a 32-bit float, convert it
         # to an 8-bit integer.  This expects the source value to either have a
@@ -144,7 +140,7 @@ class PILFileTileSource(FileTileSource):
             kwargs.get('maxSize'))
 
     def getState(self):
-        return super(PILFileTileSource, self).getState() + ',' + str(
+        return super().getState() + ',' + str(
             self._maxSize)
 
     def getInternalMetadata(self, **kwargs):

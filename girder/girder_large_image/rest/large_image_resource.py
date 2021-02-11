@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -22,7 +20,6 @@ import json
 import psutil
 import sys
 import time
-from six.moves import range
 
 from girder import logger
 from girder.api import access
@@ -217,7 +214,7 @@ def createThumbnailsJob(job):
 class LargeImageResource(Resource):
 
     def __init__(self):
-        super(LargeImageResource, self).__init__()
+        super().__init__()
 
         self.resourceName = 'large_image'
         self.route('GET', ('cache', ), self.cacheInfo)

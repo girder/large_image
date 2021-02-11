@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -17,7 +15,7 @@
 #############################################################################
 
 
-class SourcePriority(object):
+class SourcePriority:
     NAMED = 0    # Explicitly requested
     PREFERRED = 1
     HIGHER = 2

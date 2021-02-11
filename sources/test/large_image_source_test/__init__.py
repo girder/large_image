@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##############################################################################
 #  Copyright Kitware Inc.
 #
@@ -17,7 +15,6 @@
 ##############################################################################
 
 import colorsys
-import six
 from PIL import Image, ImageDraw, ImageFont
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -39,8 +36,7 @@ _counters = {
 }
 
 
-@six.add_metaclass(LruCacheMetaclass)
-class TestTileSource(TileSource):
+class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'test'
     extensions = {
@@ -69,7 +65,7 @@ class TestTileSource(TileSource):
         if not kwargs.get('encoding'):
             kwargs = kwargs.copy()
             kwargs['encoding'] = 'PNG'
-        super(TestTileSource, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.minLevel = minLevel
         self.maxLevel = maxLevel
@@ -158,7 +154,7 @@ class TestTileSource(TileSource):
                 font='/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
                 size=int(0.15 * min(self.tileWidth, self.tileHeight))
             )
-        except IOError:
+        except OSError:
             imageDrawFont = ImageFont.load_default()
         imageDraw.multiline_text(
             xy=(10, 10),
@@ -180,5 +176,5 @@ class TestTileSource(TileSource):
 
     def getState(self):
         return 'test %r %r %r %r %r %r' % (
-            super(TestTileSource, self).getState(), self.minLevel,
+            super().getState(), self.minLevel,
             self.maxLevel, self.tileWidth, self.tileHeight, self.fractal)

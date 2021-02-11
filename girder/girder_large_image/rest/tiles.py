@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #############################################################################
 #  Copyright Kitware Inc.
 #
@@ -21,7 +19,7 @@ import hashlib
 import math
 import os
 import re
-import six
+import urllib
 
 from girder.api import access, filter_logging
 from girder.api.v1.item import Item as ItemResource
@@ -280,10 +278,10 @@ class TilesItemResource(ItemResource):
         if subname:
             filename += '-' + subname
         filename += '.' + MimeTypeExtensions[mime]
-        if not isinstance(filename, six.text_type):
+        if not isinstance(filename, str):
             filename = filename.decode('utf8', 'ignore')
         safeFilename = filename.encode('ascii', 'ignore').replace(b'"', b'')
-        encodedFilename = six.moves.urllib.parse.quote(filename.encode('utf8', 'ignore'))
+        encodedFilename = urllib.parse.quote(filename.encode('utf8', 'ignore'))
         setResponseHeader(
             'Content-Disposition',
             '%s; filename="%s"; filename*=UTF-8\'\'%s' % (
