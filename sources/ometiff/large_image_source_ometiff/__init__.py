@@ -84,6 +84,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
 
         :param path: a filesystem path for the tile source.
         """
+        # Note this is the super of the parent class, not of this class.
         super(TiffFileTileSource, self).__init__(path, **kwargs)
 
         largeImagePath = self._getLargeImagePath()

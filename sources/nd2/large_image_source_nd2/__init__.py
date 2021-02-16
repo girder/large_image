@@ -302,16 +302,13 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        self._xyzInRange(x, y, z)
+        frame = int(kwargs.get('frame') or 0)
+        self._xyzInRange(x, y, z, frame, len(self._nd2))
         step = int(2 ** (self.levels - 1 - z))
         x0 = x * step * self.tileWidth
         x1 = min((x + 1) * step * self.tileWidth, self.sizeX)
         y0 = y * step * self.tileHeight
         y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
-        frame = kwargs.get('frame')
-        frame = int(frame) if frame else 0
-        if frame < 0 or frame >= len(self._nd2):
-            raise TileSourceException('Frame does not exist')
         with self._tileLock:
             if frame in self._recentFrames:
                 tileframe = self._recentFrames[frame]

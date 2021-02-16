@@ -271,10 +271,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         self._xyzInRange(x, y, z)
-        try:
-            svslevel = self._svslevels[z]
-        except IndexError:
-            raise TileSourceException('z layer does not exist')
+        svslevel = self._svslevels[z]
         # When we read a region from the SVS, we have to ask for it in the
         # SVS level 0 coordinate system.  Our x and y is in tile space at the
         # specifed z level, so the offset in SVS level 0 coordinates has to be
