@@ -53,8 +53,14 @@ def get_parser():
     parser.add_argument(
         '--cr', type=int, help='JP2K compression ratio.  1 for lossless.')
     parser.add_argument(
-        '--tile', '-t', type=int, help='Tile size.  Default is 256.',
-        dest='tileSize')
+        '--tile', '--tile-size', '--tilesize', '--tileSize', '-t', type=int,
+        help='Tile size.  Default is 256.', dest='tileSize')
+    parser.add_argument(
+        '--no-subifds', action='store_false', dest='subifds', default=None,
+        help='When writing multiframe files, do not use subifds.')
+    parser.add_argument(
+        '--subifds', action='store_true', dest='subifds', default=None,
+        help='When writing multiframe files, use subifds.')
     parser.add_argument(
         '--overwrite', '-w', action='store_true',
         help='Overwrite an existing output file')
@@ -114,8 +120,12 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
             tiAlt = tsAlt.tileIterator(tile_size=dict(width=tileSize), frame=frame)
             for tileOrig in tsOrig.tileIterator(tile_size=dict(width=tileSize), frame=frame):
                 tileAlt = next(tiAlt)
-                do = tileOrig['tile'].astype(int)
-                da = tileAlt['tile'].astype(int)
+                do = tileOrig['tile']
+                da = tileAlt['tile']
+                if do.dtype != da.dtype and da.dtype == numpy.uint8:
+                    da = da.astype(int) * 257
+                do = do.astype(int)
+                da = da.astype(int)
                 maxval = max(maxval, do.max(), da.max())
                 if do.shape[2] > da.shape[2]:
                     do = do[:, :, :da.shape[2]]

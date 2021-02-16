@@ -16,6 +16,7 @@
 
 import ctypes
 import io
+import json
 import math
 import numpy
 import os
@@ -818,6 +819,13 @@ class TiledTiffDirectory:
             return
         if not isinstance(meta, str):
             meta = meta.decode('utf8', 'ignore')
+        try:
+            parsed = json.loads(meta)
+            if isinstance(parsed, dict):
+                self._description_record = parsed
+                return True
+        except Exception:
+            pass
         try:
             xml = ElementTree.fromstring(meta)
         except Exception:

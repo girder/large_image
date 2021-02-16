@@ -2,6 +2,7 @@ import datetime
 import fractions
 import json
 import logging
+import math
 import os
 from pkg_resources import DistributionNotFound, get_distribution
 import struct
@@ -107,6 +108,71 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
     gdal.Translate(outputPath, ds, options=cmdopt)
 
 
+def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
+    """
+    Take a source input file with multiple frames and output a multi-pyramidal
+    tiff file.
+
+    :params inputPath: the path to the input file or base file of a set.
+    :params outputPath: the path of the output file.
+    :params tempPath: a temporary file in a temporary directory.
+    :params lidata: data from a large_image tilesource including associated
+        images.
+    Optional parameters that can be specified in kwargs:
+    :params tileSize: the horizontal and vertical tile size.
+    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
+        'zstd', or 'jp2k'.
+    :params quality: a jpeg quality passed to vips.  0 is small, 100 is high
+        quality.  90 or above is recommended.
+    :param level: compression level for zstd, 1-22 (default is 10).
+    :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
+        deflate.
+    """
+    _import_pyvips()
+
+    image = pyvips.Image.new_from_file(inputPath)
+    width = image.width
+    height = image.height
+    pages = 1
+    if 'n-pages' in image.get_fields():
+        pages = image.get_value('n-pages')
+    # Now check if there are other images we need to convert or preserve
+    outputList = []
+    imageSizes = []
+    # Process each image separately to pyramidize it
+    for page in range(pages):
+        subInputPath = inputPath + '[page=%d]' % page
+        subImage = pyvips.Image.new_from_file(subInputPath)
+        imageSizes.append((subImage.width, subImage.height, subInputPath, page))
+        if subImage.width != width or subImage.height != height:
+            if subImage.width * subImage.height <= width * height:
+                continue
+            logger.info('Bigger image found (was %dx%d, now %dx%d)', (
+                width, height, subImage.width, subImage.height))
+            for path in outputList:
+                os.unlink(path)
+            width = subImage.width
+            height = subImage.height
+        subOutputPath = tempPath + '-%d-%s.tiff' % (
+            page + 1, time.strftime('%Y%m%d-%H%M%S'))
+        _convert_via_vips(
+            subInputPath, subOutputPath, tempPath, status='%d/%d' % (page, pages), **kwargs)
+        outputList.append(subOutputPath)
+    extraImages = {}
+    if not lidata or not len(lidata['images']):
+        # If we couldn't extract images from li, try to detect non-primary
+        # images from the original file.  These are any images who size is
+        # not a power of two division of the primary image size
+        possibleSizes = _list_possible_sizes(width, height)
+        for w, h, subInputPath, page in imageSizes:
+            if (w, h) not in possibleSizes:
+                key = 'image_%d' % page
+                savePath = tempPath + '-%s-%s.tiff' % (key, time.strftime('%Y%m%d-%H%M%S'))
+                _convert_via_vips(subInputPath, savePath, tempPath, False)
+                extraImages[key] = savePath
+    _output_tiff(outputList, outputPath, lidata, extraImages, **kwargs)
+
+
 def _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
     """
     Take a source input file, readable by vips, and output a pyramidal tiff
@@ -153,7 +219,11 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     logger.info('Input: %s, Output: %s, Options: %r%s' % (
         source, outputPath, convertParams, status))
     image = image.autorot()
-    image = _vips_cast(image)
+    if convertParams['compression'] not in {'jpeg'}:
+        image = _vips_cast(
+            image,
+            convertParams['compression'] in {'webp'} or (
+                kwargs.get('compression') == 'jp2k' and 'psnr' not in kwargs and 'cr' in kwargs))
     # TODO: revisit the TMPDIR override; this is not thread safe
     oldtmpdir = os.environ.get('TMPDIR')
     os.environ['TMPDIR'] = os.path.dirname(tempPath)
@@ -350,6 +420,33 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
     }
     if lidata:
         _set_resolution(info['ifds'], lidata['metadata'])
+    if len(inputs) > 1:
+        if kwargs.get('subifds') is not False:
+            info['ifds'][0]['tags'][tifftools.Tag.SubIFD.value] = {
+                'ifds': info['ifds'][1:]
+            }
+            info['ifds'][1:] = []
+        for idx, inputPath in enumerate(inputs):
+            if not idx:
+                continue
+            logger.debug('Reading %s' % inputPath)
+            nextInfo = tifftools.read_tiff(inputPath)
+            if lidata:
+                _set_resolution(nextInfo['ifds'], lidata['metadata'])
+                if len(lidata['metadata'].get('frames', [])) > idx:
+                    nextInfo['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value] = {
+                        'data': json.dumps(
+                            {'frame': lidata['metadata']['frames'][idx]},
+                            separators=(',', ':'), sort_keys=True, default=json_serial),
+                        'datatype': tifftools.Datatype.ASCII,
+                    }
+            if kwargs.get('subifds') is not False:
+                nextInfo['ifds'][0]['tags'][tifftools.Tag.SubIFD.value] = {
+                    'ifds': nextInfo['ifds'][1:]
+                }
+                info['ifds'].append(nextInfo['ifds'][0])
+            else:
+                info['ifds'].extend(nextInfo['ifds'])
     assocList = []
     if lidata:
         assocList += list(lidata['images'].items())
@@ -455,6 +552,43 @@ def _is_lossy(path, tiffinfo=None):
         return False
 
 
+def _is_multiframe(path):
+    """
+    Check if a path is a multiframe file.
+
+    :params path: The path to the file
+    :returns: True if multiframe.
+    """
+    _import_pyvips()
+    image = pyvips.Image.new_from_file(path)
+    pages = 1
+    if 'n-pages' in image.get_fields():
+        pages = image.get_value('n-pages')
+    return pages > 1
+
+
+def _list_possible_sizes(width, height):
+    """
+    Given a width and height, return a list of possible sizes that could be
+    reasonable powers-of-two smaller versions of that size.  This includes
+    the values rounded up and down.
+    """
+    results = [(width, height)]
+    pos = 0
+    while pos < len(results):
+        w, h = results[pos]
+        if w > 1 or h > 1:
+            w2f = int(math.floor(w / 2))
+            h2f = int(math.floor(h / 2))
+            w2c = int(math.ceil(w / 2))
+            h2c = int(math.ceil(h / 2))
+            for w2, h2 in [(w2f, h2f), (w2f, h2c), (w2c, h2f), (w2c, h2c)]:
+                if (w2, h2) not in results:
+                    results.append((w2, h2))
+        pos += 1
+    return results
+
+
 def json_serial(obj):
     if isinstance(obj, (datetime.datetime, datetime.date)):
         return obj.isoformat()
@@ -493,26 +627,41 @@ def _make_li_description(
         results['metadata'] = lidata['metadata']
         if len(lidata['metadata'].get('frames', [])) >= 1:
             results['frame'] = lidata['metadata']['frames'][0]
+            if len(lidata['metadata'].get('channels', [])) >= 1:
+                results['channels'] = lidata['metadata']['channels']
         results['internal'] = lidata['internal_metadata']
     if imageDescription:
         results['image_description'] = imageDescription
     return json.dumps(results, separators=(',', ':'), sort_keys=True, default=json_serial)
 
 
-def _vips_cast(image):
+def _vips_cast(image, mustBe8Bit=False):
     """
     Cast a vips image to a format we want.
 
     :param image: a vips image
+    :param mustBe9Bit: if True, then always cast to unsigned 8-bit.
     :returns: a vips image
     """
-    if image.format in {pyvips.BandFormat.UCHAR, pyvips.BandFormat.USHORT}:
+    formats = {
+        pyvips.BandFormat.CHAR: (pyvips.BandFormat.UCHAR, 2**7, 1),
+        pyvips.BandFormat.COMPLEX: (pyvips.BandFormat.USHORT, 0, 65535),
+        pyvips.BandFormat.DOUBLE: (pyvips.BandFormat.USHORT, 0, 65535),
+        pyvips.BandFormat.DPCOMPLEX: (pyvips.BandFormat.USHORT, 0, 65535),
+        pyvips.BandFormat.FLOAT: (pyvips.BandFormat.USHORT, 0, 65535),
+        pyvips.BandFormat.INT: (pyvips.BandFormat.USHORT, 2**31, 2**-16),
+        pyvips.BandFormat.USHORT: (pyvips.BandFormat.UCHAR, 0, 2**-8),
+        pyvips.BandFormat.SHORT: (pyvips.BandFormat.USHORT, 2**15, 1),
+        pyvips.BandFormat.UINT: (pyvips.BandFormat.USHORT, 0, 2**-16),
+    }
+    if image.format not in formats or (image.format == pyvips.BandFormat.USHORT and not mustBe8Bit):
         return image
-    target = pyvips.BandFormat.UCHAR if image.format in {
-        pyvips.BandFormat.CHAR} else pyvips.BandFormat.USHORT
+    target, offset, multiplier = formats[image.format]
+    if mustBe8Bit and target != pyvips.BandFormat.UCHAR:
+        target = pyvips.BandFormat.UCHAR
+        multiplier /= 256
     logger.debug('Casting image from %r to %r' % (image.format, target))
-    image = image.cast(target)
-    # TODO: verify that this doesn't need any scaling
+    image = ((image.cast(pyvips.BandFormat.DOUBLE) + offset) * multiplier).cast(target)
     return image
 
 
@@ -567,6 +716,7 @@ def _vips_parameters(forTiled=True, **kwargs):
         convertParams['compression'] = 'none'
     if convertParams['compression'] == 'webp' and kwargs.get('quality') == 0:
         convertParams['lossless'] = True
+        convertParams.pop('Q', None)
     if convertParams['predictor'] == 'yes':
         convertParams['predictor'] = 'horizontal'
     if convertParams['compression'] == 'jpeg':
@@ -634,6 +784,8 @@ def convert(inputPath, outputPath=None, **kwargs):
             logger.debug('large_image information for %s: %r' % (inputPath, lidata))
             if not is_vips(inputPath) and lidata:
                 _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
+            elif _is_multiframe(inputPath):
+                _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
             else:
                 _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
     return outputPath

@@ -17,10 +17,12 @@
 import base64
 import io
 import itertools
+import json
 import math
 import numpy
 import PIL.Image
 from pkg_resources import DistributionNotFound, get_distribution
+import tifftools
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -68,6 +70,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     # _maxSkippedLevels, such large gaps are composited in stages.
     _maxSkippedLevels = 3
 
+    _maxAssociatedImageSize = 8192
+
     def __init__(self, path, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
@@ -79,6 +83,13 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         largeImagePath = self._getLargeImagePath()
         self._largeImagePath = largeImagePath
+
+        try:
+            self._initWithTiffTools()
+            return
+        except Exception as exc:
+            config.getConfig('logger').debug('Cannot read with tifftools route; %r', exc)
+
         try:
             alldir = self._scanDirectories()
         except (ValidationTiffException, TiffException) as exc:
@@ -180,6 +191,127 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._addAssociatedImage(largeImagePath, directoryNum)
         return alldir
 
+    def _levelFromIfd(self, ifd, baseifd):
+        """
+        Get the level based on information in an ifd and on the full-resolution
+        0-frame ifd.  An exception is raised if the ifd does not seem to
+        represent a possible level.
+
+        :param ifd: an ifd record returned from tifftools.
+        :param baseifd: the ifd record of the full-resolution frame 0.
+        :returns: the level, where self.levels - 1 is full resolution and 0 is
+            the lowest resolution.
+        """
+        sizeX = ifd['tags'][tifftools.Tag.ImageWidth.value]['data'][0]
+        sizeY = ifd['tags'][tifftools.Tag.ImageLength.value]['data'][0]
+        tileWidth = baseifd['tags'][tifftools.Tag.TileWidth.value]['data'][0]
+        tileHeight = baseifd['tags'][tifftools.Tag.TileLength.value]['data'][0]
+        for tag in {
+                tifftools.Tag.SamplesPerPixel.value,
+                tifftools.Tag.BitsPerSample.value,
+                tifftools.Tag.PlanarConfig.value,
+                tifftools.Tag.Photometric.value,
+                tifftools.Tag.Orientation.value,
+                tifftools.Tag.Compression.value,
+                tifftools.Tag.TileWidth.value,
+                tifftools.Tag.TileLength.value,
+        }:
+            if ((tag in ifd['tags'] and tag not in baseifd['tags']) or
+                    (tag not in ifd['tags'] and tag in baseifd['tags']) or
+                    (tag in ifd['tags'] and
+                     ifd['tags'][tag]['data'] != baseifd['tags'][tag]['data'])):
+                raise TileSourceException('IFD does not match first IFD.')
+        sizes = [(self.sizeX, self.sizeY)]
+        for level in range(self.levels - 1, -1, -1):
+            if (sizeX, sizeY) in sizes:
+                return level
+            altsizes = []
+            for w, h in sizes:
+                w2f = int(math.floor(w / 2))
+                h2f = int(math.floor(h / 2))
+                w2c = int(math.ceil(w / 2))
+                h2c = int(math.ceil(h / 2))
+                w2t = int(math.floor((w / 2 + tileWidth - 1) / tileWidth)) * tileWidth
+                h2t = int(math.floor((h / 2 + tileHeight - 1) / tileHeight)) * tileHeight
+                for w2, h2 in [(w2f, h2f), (w2f, h2c), (w2c, h2f), (w2c, h2c), (w2t, h2t)]:
+                    if (w2, h2) not in altsizes:
+                        altsizes.append((w2, h2))
+            sizes = altsizes
+        raise TileSourceException('IFD size is not a power of two smaller than first IFD.')
+
+    def _initWithTiffTools(self):
+        """
+        Use tifftools to read all of the tiff directory information.  Check if
+        the zeroth directory can be validated as a tiled directory.  If so,
+        then check if the remaining directories are either tiled in descending
+        size or have subifds with tiles in descending sizes.  All primary tiled
+        directories are the same size and format; all non-tiled directories are
+        treated as associated images.
+        """
+        dir0 = TiledTiffDirectory(self._largeImagePath, 0)
+        self.tileWidth = dir0.tileWidth
+        self.tileHeight = dir0.tileHeight
+        self.sizeX = dir0.imageWidth
+        self.sizeY = dir0.imageHeight
+        self.levels = int(math.ceil(math.log(max(
+            dir0.imageWidth / dir0.tileWidth,
+            dir0.imageHeight / dir0.tileHeight)) / math.log(2))) + 1
+        info = tifftools.read_tiff(self._largeImagePath)
+        frames = []
+        associated = []  # for now, a list of directories
+        curframe = -1
+        for idx, ifd in enumerate(info['ifds']):
+            # if not tiles, add to associated images
+            if tifftools.Tag.tileWidth.value not in ifd['tags']:
+                associated.append(idx)
+                continue
+            level = self._levelFromIfd(ifd, info['ifds'][0])
+            # if the same resolution as the main image, add a frame
+            if level == self.levels - 1:
+                curframe += 1
+                frames.append({'dirs': [None] * self.levels})
+                frames[-1]['dirs'][-1] = (idx, 0)
+                try:
+                    frameMetadata = json.loads(
+                        ifd['tags'][tifftools.Tag.ImageDescription.value]['data'])
+                    for key in {'channels', 'frame'}:
+                        if key in frameMetadata:
+                            frames[-1][key] = frameMetadata[key]
+                except Exception:
+                    pass
+            # otherwise, add to the first frame missing that level
+            elif level < self.levels - 1 and any(
+                    frame for frame in frames if frame['dirs'][level] is None):
+                frames[next(
+                    idx for idx, frame in enumerate(frames) if frame['dirs'][level] is None
+                )]['dirs'][level] = (idx, 0)
+            else:
+                raise TileSourceException('Tile layers are in a surprising order')
+            # if there are sub ifds, add them
+            if tifftools.Tag.SubIfd.value in ifd['tags']:
+                for subidx, subifds in enumerate(ifd['tags'][tifftools.Tag.SubIfd.value]['ifds']):
+                    if len(subifds) != 1:
+                        raise TileSourceException(
+                            'When stored in subifds, each subifd should be a single ifd.')
+                    level = self._levelFromIfd(subifds[0], info['ifds'][0])
+                    if level < self.levels - 1 and frames[-1]['dirs'][level] is None:
+                        frames[-1]['dirs'][level] = (idx, subidx + 1)
+                    else:
+                        raise TileSourceException('Tile layers are in a surprising order')
+        self._associatedImages = {}
+        for dirNum in associated:
+            self._addAssociatedImage(self._largeImagePath, dirNum)
+        self._frames = frames
+        self._tiffDirectories = [
+            TiledTiffDirectory(
+                self._largeImagePath,
+                frames[0]['dirs'][idx][0],
+                subDirectoryNum=frames[0]['dirs'][idx][1])
+            if frames[0]['dirs'][idx] is not None else None
+            for idx in range(self.levels - 1)]
+        self._tiffDirectories.append(dir0)
+        return True
+
     def _addAssociatedImage(self, largeImagePath, directoryNum, mustBeTiled=False, topImage=None):
         """
         Check if the specified TIFF directory contains an image with a sensible
@@ -209,8 +341,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # a reasonable length, alphanumeric characters, and the
             # image isn't too large.
             if (id.isalnum() and len(id) > 3 and len(id) <= 20 and
-                    associated._pixelInfo['width'] <= 8192 and
-                    associated._pixelInfo['height'] <= 8192):
+                    associated._pixelInfo['width'] <= self._maxAssociatedImageSize and
+                    associated._pixelInfo['height'] <= self._maxAssociatedImageSize):
                 image = associated._tiffFile.read_image()
                 # Optrascan scanners store xml image descriptions in a "tiled
                 # image".  Check if this is the case, and, if so, parse such
@@ -297,9 +429,21 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                 if key not in {'PIM_DP_IMAGE_DATA', }:
                                     values[attr['Name'] + '|' + key] = subvalue
         except Exception:
-            config.getConfig('logger').exception('Here')
             return xml
         return values
+
+    def getMetadata(self):
+        """
+        Return a dictionary of metadata containing levels, sizeX, sizeY,
+        tileWidth, tileHeight, magnification, mm_x, mm_y, and frames.
+
+        :returns: metadata dictonary.
+        """
+        result = super().getMetadata()
+        if hasattr(self, '_frames'):
+            result['frames'] = [frame.get('frame', {}) for frame in self._frames]
+            self._addMetadataFrameInformation(result, self._frames[0].get('channels', None))
+        return result
 
     def getInternalMetadata(self, **kwargs):
         """
@@ -335,10 +479,18 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 sparseFallback=False, **kwargs):
-        self._xyzInRange(x, y, z)
+        frame = int(kwargs.get('frame') or 0)
+        self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
+        if frame > 0:
+            if self._frames[frame]['dirs'][z] is not None:
+                dir = self._getDirFromCache(*self._frames[frame]['dirs'][z])
+            else:
+                dir = None
+        else:
+            dir = self._tiffDirectories[z]
         try:
             allowStyle = True
-            if self._tiffDirectories[z] is None:
+            if dir is None:
                 try:
                     tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
                 except Exception:
@@ -349,7 +501,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 allowStyle = False
                 format = TILE_FORMAT_PIL
             else:
-                tile = self._tiffDirectories[z].getTile(x, y)
+                tile = dir.getTile(x, y)
                 format = 'JPEG'
             if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
@@ -357,8 +509,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 format = TILE_FORMAT_NUMPY
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, applyStyle=allowStyle, **kwargs)
-        except IndexError:
-            raise TileSourceException('z layer does not exist')
         except InvalidOperationTiffException as e:
             raise TileSourceException(e.args[0])
         except IOTiffException as e:
@@ -417,7 +567,11 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         basez = z
         scale = 1
-        while self._tiffDirectories[z] is None:
+        dirlist = self._tiffDirectories
+        frame = int(kwargs.get('frame') or 0)
+        if frame > 0:
+            dirlist = self._frames[frame]['dirs']
+        while dirlist[z] is None:
             scale *= 2
             z += 1
         while z - basez > self._maxSkippedLevels:
