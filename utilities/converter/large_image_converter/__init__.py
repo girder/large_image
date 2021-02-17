@@ -103,9 +103,13 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
         cmdopt += ['-co', 'LEVEL=%s' % options['level']]
     cmd = ['gdal_translate', inputPath, outputPath] + cmdopt
     logger.info('Convert to geotiff: %r' % (cmd))
-    # subprocess.check_call(cmd)
-    ds = gdal.Open(inputPath, gdalconst.GA_ReadOnly)
-    gdal.Translate(outputPath, ds, options=cmdopt)
+    try:
+        # subprocess.check_call(cmd)
+        ds = gdal.Open(inputPath, gdalconst.GA_ReadOnly)
+        gdal.Translate(outputPath, ds, options=cmdopt)
+    except Exception:
+        os.unlink(outputPath)
+        raise
 
 
 def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):

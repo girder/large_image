@@ -11,7 +11,15 @@ logger = logging.getLogger('large-image-converter')
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(description='Large Image image converter')
+    parser = argparse.ArgumentParser(description="""
+Convert files for use with Large Image.
+Output files are written as tiled tiff files.  For geospatial files, these
+conform to the cloud-optimized geospatial tiff format (COG).  For
+non-geospatial, the output image will be either 8- or 16-bits per sample per
+channel.  Some compression formats are always 8-bits per sample (webp, jpeg),
+even if that format could support more and the original image is higher bit
+depth.
+""")
     parser.add_argument(
         '--version', action='version',
         version=large_image_converter.__version__, help='Report version')
@@ -202,7 +210,11 @@ def main(args=sys.argv[1:]):
         import tifftools.commands
 
         info = tifftools.read_tiff(dest)
-        desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
+        try:
+            desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
+        except Exception:
+            logger.debug('Cannot generate statistics.')
+            return
         desc['large_image_converter']['conversion_stats'] = {
             'time': end_time - start_time,
             'filesize': os.path.getsize(dest),
