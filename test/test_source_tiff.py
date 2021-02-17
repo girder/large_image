@@ -659,3 +659,39 @@ def testFromTiffRGBJPEG():
     source = large_image_source_tiff.TiffFileTileSource(imagePath)
     tile = source.getSingleTile()
     assert list(tile['tile'][0, 0]) == [243, 243, 243]
+
+
+def testTilesFromMultiFrameTiff():
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    tileMetadata = source.getMetadata()
+
+    assert tileMetadata['tileWidth'] == 1024
+    assert tileMetadata['tileHeight'] == 1024
+    assert tileMetadata['sizeX'] == 2106
+    assert tileMetadata['sizeY'] == 2016
+    assert tileMetadata['levels'] == 3
+    assert len(tileMetadata['frames']) == 3
+    assert tileMetadata['frames'][1]['Frame'] == 1
+    utilities.checkTilesZXY(source, tileMetadata)
+
+    tile = source.getSingleTile()
+    assert list(tile['tile'][0, 0]) == [7710]
+
+
+def testTilesFromMultiFrameTiffWithSubIFD():
+    imagePath = utilities.externaldata('data/sample.subifd.ome.tif.sha512')
+    source = large_image_source_tiff.TiffFileTileSource(imagePath, frame=1)
+    tileMetadata = source.getMetadata()
+
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 2106
+    assert tileMetadata['sizeY'] == 2016
+    assert tileMetadata['levels'] == 5
+    assert len(tileMetadata['frames']) == 3
+    assert tileMetadata['frames'][1]['Frame'] == 1
+    utilities.checkTilesZXY(source, tileMetadata)
+
+    tile = source.getSingleTile()
+    assert list(tile['tile'][0, 0]) == [7710]

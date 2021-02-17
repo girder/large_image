@@ -121,7 +121,8 @@ def testConvertOMETif(tmpdir):
     # Note: change this when we convert multi-frame files differently
     large_image_converter.convert(imagePath, outputPath)
     info = tifftools.read_tiff(outputPath)
-    assert len(info['ifds']) == 5
+    assert len(info['ifds']) == 3
+    assert len(info['ifds'][0]['tags'][tifftools.Tag.SubIFD.value]['ifds']) == 4
 
 
 def testConvertTiffFloatPixels(tmpdir):
@@ -163,6 +164,32 @@ def testConvertFromLargeImage(tmpdir):
     metadata = source.getMetadata()
     assert metadata['levels'] == 6
 
+
+def testConvertFromMultiframeImage(tmpdir):
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath)
+    source = large_image_source_tiff.TiffFileTileSource(outputPath)
+    metadata = source.getMetadata()
+    assert metadata['levels'] == 5
+    assert len(metadata['frames']) == 3
+    info = tifftools.read_tiff(outputPath)
+    assert len(info['ifds']) == 3
+
+
+def testConvertFromMultiframeImageNoSubIFDS(tmpdir):
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath, subifds=False)
+    source = large_image_source_tiff.TiffFileTileSource(outputPath)
+    metadata = source.getMetadata()
+    assert metadata['levels'] == 5
+    assert len(metadata['frames']) == 3
+    info = tifftools.read_tiff(outputPath)
+    assert len(info['ifds']) == 15
+
+
+# Test main program
 
 def testConverterMain(tmpdir):
     testDir = os.path.dirname(os.path.realpath(__file__))
@@ -208,3 +235,13 @@ def testConverterMainFullStats(tmpdir):
     info = tifftools.read_tiff(outputPath)
     desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
     assert 'psnr' in desc['large_image_converter']['conversion_stats']
+
+
+def testConverterMainFullStatsWithWebp(tmpdir):
+    imagePath = utilities.externaldata('data/d042-353.crop.small.float32.tif.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    main.main([imagePath, outputPath, '--compression', 'webp', '--full-stats'])
+    info = tifftools.read_tiff(outputPath)
+    desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
+    assert 'psnr' in desc['large_image_converter']['conversion_stats']
+    assert desc['large_image_converter']['conversion_stats']['psnr'] < 60
