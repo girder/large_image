@@ -1,3 +1,4 @@
+import concurrent.futures
 import datetime
 import fractions
 import json
@@ -5,8 +6,10 @@ import logging
 import math
 import os
 from pkg_resources import DistributionNotFound, get_distribution
+import psutil
 import struct
 from tempfile import TemporaryDirectory
+import threading
 import time
 
 import numpy
@@ -22,7 +25,7 @@ except DistributionNotFound:
 logger = logging.getLogger('large-image-converter')
 
 
-def _data_from_large_image(path, outputPath):
+def _data_from_large_image(path, outputPath, **kwargs):
     """
     Check if the input file can be read by installed large_image tile sources.
     If so, return the metadata, internal metadata, and extract each associated
@@ -50,6 +53,8 @@ def _data_from_large_image(path, outputPath):
         'images': {},
         'tilesource': ts,
     }
+    tasks = []
+    pool = _get_thread_pool(**kwargs)
     for key in ts.getAssociatedImagesList():
         try:
             img, mime = ts.getAssociatedImage(key)
@@ -57,8 +62,10 @@ def _data_from_large_image(path, outputPath):
             continue
         savePath = outputPath + '-%s-%s.tiff' % (key, time.strftime('%Y%m%d-%H%M%S'))
         # TODO: allow specifying quality separately from main image quality
-        _convert_via_vips(img, savePath, outputPath, mime=mime, forTiled=False)
+        tasks.append((pool.submit(
+            _convert_via_vips, img, savePath, outputPath, mime=mime, forTiled=False), ))
         results['images'][key] = savePath
+    _drain_pool(pool, tasks)
     return results
 
 
@@ -143,6 +150,8 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
     # Now check if there are other images we need to convert or preserve
     outputList = []
     imageSizes = []
+    tasks = []
+    pool = _get_thread_pool(**kwargs)
     # Process each image separately to pyramidize it
     for page in range(pages):
         subInputPath = inputPath + '[page=%d]' % page
@@ -159,8 +168,9 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
             height = subImage.height
         subOutputPath = tempPath + '-%d-%s.tiff' % (
             page + 1, time.strftime('%Y%m%d-%H%M%S'))
-        _convert_via_vips(
-            subInputPath, subOutputPath, tempPath, status='%d/%d' % (page, pages), **kwargs)
+        tasks.append((pool.submit(
+            _convert_via_vips, subInputPath, subOutputPath, tempPath,
+            status='%d/%d' % (page, pages), **kwargs), ))
         outputList.append(subOutputPath)
     extraImages = {}
     if not lidata or not len(lidata['images']):
@@ -172,8 +182,10 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
             if (w, h) not in possibleSizes:
                 key = 'image_%d' % page
                 savePath = tempPath + '-%s-%s.tiff' % (key, time.strftime('%Y%m%d-%H%M%S'))
-                _convert_via_vips(subInputPath, savePath, tempPath, False)
+                tasks.append((pool.submit(
+                    _convert_via_vips, subInputPath, savePath, tempPath, False), ))
                 extraImages[key] = savePath
+    _drain_pool(pool, tasks)
     _output_tiff(outputList, outputPath, lidata, extraImages, **kwargs)
 
 
@@ -267,6 +279,34 @@ def _convert_to_jp2k_tile(lock, fptr, dest, offset, length, shape, dtype, jp2kar
     glymur.Jp2k(dest, data=data, **jp2kargs)
 
 
+def _get_thread_pool(**kwargs):
+    """
+    Allocate a thread pool based on the specifiec concurrency.
+    """
+    concurrency = psutil.cpu_count(logical=True)
+    if kwargs.get('_concurrency'):
+        concurrency = int(kwargs['_concurrency'])
+    return concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
+
+
+def _drain_pool(pool, tasks):
+    """
+    Wait for all tasks in a pool to complete, then shutdown the pool.
+
+    :param pool: a concurrent futures pool.
+    :param tasks: a list contiaining either lists or tuples, the last element
+        of which is a task submitted to the pool.  Altered.
+    """
+    while len(tasks):
+        # This allows better stopping on a SIGTERM
+        try:
+            tasks[0][-1].result(0.1)
+        except concurrent.futures.TimeoutError:
+            continue
+        tasks.pop(0)
+    pool.shutdown(False)
+
+
 def _convert_to_jp2k(path, **kwargs):
     """
     Given a tiled tiff file without compression, convert it to jp2k compression
@@ -277,10 +317,6 @@ def _convert_to_jp2k(path, **kwargs):
     :param psnr: if set, the target psnr.  0 for lossless.
     :param cr: is set, the target compression ratio.  1 for lossless.
     """
-    import concurrent.futures
-    import psutil
-    import threading
-
     info = tifftools.read_tiff(path)
     jp2kargs = {}
     if 'psnr' in kwargs:
@@ -293,8 +329,7 @@ def _convert_to_jp2k(path, **kwargs):
     lastlog = 0
     tasks = []
     lock = threading.Lock()
-    concurrency = psutil.cpu_count(logical=True)
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
+    pool = _get_thread_pool(**kwargs)
     with open(path, 'r+b') as fptr:
         for ifd in info['ifds']:
             ifd['tags'][tifftools.Tag.Compression.value]['data'][0] = (
@@ -360,6 +395,8 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
     numFrames = len(lidata['metadata'].get('frames', [0]))
     outputList = []
     _iterTileSize = 1024
+    tasks = []
+    pool = _get_thread_pool(**kwargs)
     for frame in range(numFrames):
         subOutputPath = tempPath + '-%d-%s.tiff' % (
             frame + 1, time.strftime('%Y%m%d-%H%M%S'))
@@ -393,9 +430,11 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
         img = strips[0]
         for stripidx in range(1, len(strips)):
             img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)
-        _convert_via_vips(
-            img, subOutputPath, tempPath, status='%d/%d' % (frame, numFrames), **kwargs)
+        tasks.append((pool.submit(
+            _convert_via_vips, img, subOutputPath, tempPath,
+            status='%d/%d' % (frame, numFrames), **kwargs), ))
         outputList.append(subOutputPath)
+    _drain_pool(pool, tasks)
     _output_tiff(outputList, outputPath, lidata, **kwargs)
 
 
@@ -507,9 +546,6 @@ def _import_pyvips():
     """
     global pyvips
 
-    # Because of its use of gobject, pyvips should be invoked without
-    # concurrency
-    # os.environ['VIPS_CONCURRENCY'] = '1'
     import pyvips
 
 
@@ -754,6 +790,8 @@ def convert(inputPath, outputPath=None, **kwargs):
 
     :returns: outputPath if successful
     """
+    if kwargs.get('_concurrency'):
+        os.environ['VIPS_CONCURRENCY'] = str(kwargs['_concurrency'])
     geospatial = kwargs.get('geospatial')
     if geospatial is None:
         geospatial = is_geospatial(inputPath)
@@ -784,7 +822,7 @@ def convert(inputPath, outputPath=None, **kwargs):
     else:
         with TemporaryDirectory() as tempDir:
             tempPath = os.path.join(tempDir, os.path.basename(outputPath))
-            lidata = _data_from_large_image(inputPath, tempPath)
+            lidata = _data_from_large_image(inputPath, tempPath, **kwargs)
             logger.debug('large_image information for %s: %r' % (inputPath, lidata))
             if not is_vips(inputPath) and lidata:
                 _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
