@@ -56,24 +56,26 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         annotationAPI: _.constant(true),
 
         /**
-         * Render an annotation model on the image.  Currently,
-         * this is limited to annotation types that can be directly
-         * converted into geojson primatives.
+         * Render an annotation model on the image.  Currently, this is limited
+         * to annotation types that can be directly converted into geojson
+         * primatives.
          *
-         * Internally, this generates a new feature layer for the
-         * annotation that is referenced by the annotation id.
-         * All "elements" contained inside this annotations are
-         * drawn in the referenced layer.
+         * Internally, this generates a new feature layer for the annotation
+         * that is referenced by the annotation id.  All "elements" contained
+         * inside this annotation are drawn in the referenced layer.
          *
          * @param {AnnotationModel} annotation
          * @param {object} [options]
-         * @param {boolean} [options.fetch=true]
-         *   Enable fetching the annotation from the server, including paging
-         *   the results.  If false, it is assumed the elements already
-         *   exist on the annotation object.  This is useful for temporarily
-         *   showing annotations that are not propagated to the server.
+         * @param {boolean} [options.fetch=true] Enable fetching the annotation
+         *   from the server, including paging the results.  If false, it is
+         *   assumed the elements already exist on the annotation object.  This
+         *   is useful for temporarily showing annotations that are not
+         *   propagated to the server.
          */
         drawAnnotation: function (annotation, options) {
+            if (!this.viewer) {
+                return;
+            }
             var geo = window.geo;
             options = _.defaults(options || {}, {fetch: true});
             var geojson = annotation.geojson();
