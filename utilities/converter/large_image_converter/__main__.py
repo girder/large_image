@@ -82,6 +82,11 @@ depth.
         action='store_const', const='full', dest='_stats',
         help='Add conversion stats, including noise metrics (PSNR, etc.) to '
         'the output file.  This takes more time and temporary disk space.')
+    parser.add_argument(
+        '--concurrency', '-j', type=int, dest='_concurrency',
+        help='Maximum processor concurrency.  Some conversion tasks can use'
+        'multiple processors.  By default, all logical processors are used.  '
+        'This is a recommendation and is not strict.')
     return parser
 
 
@@ -149,18 +154,20 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
                 try:
                     last_ssim = skimage.metrics.structural_similarity(
                         do.astype(float), da.astype(float),
+                        data_range=255 if tileOrig['tile'].dtype == numpy.uint8 else 65535,
                         gaussian_weights=True, sigma=1.5, use_sample_covariance=False,
-                        multichannel=do.shape[2] > 1)
+                        multichannel=len(do.shape) > 2)
                     ssim += last_ssim * diff.size
                     ssim_count += diff.size
                 except ValueError:
                     pass
-                if time.time() - lastlog >= 10:
+                if time.time() - lastlog >= 10 and ssim_count:
                     logger.debug(
                         'Calculating error (%d/%d): rmse %4.2f ssim %6.4f  '
                         'last rmse %4.2f ssim %6.4f' % (
-                            tileOrig['tile_position']['position'] + 1,
-                            tileOrig['iterator_range']['position'],
+                            tileOrig['tile_position']['position'] + 1 +
+                            tileOrig['iterator_range']['position'] * frame,
+                            tileOrig['iterator_range']['position'] * numFrames,
                             (mse / count) ** 0.5, ssim / ssim_count,
                             last_mse ** 0.5, last_ssim))
                     lastlog = time.time()

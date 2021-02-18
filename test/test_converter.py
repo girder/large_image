@@ -245,3 +245,10 @@ def testConverterMainFullStatsWithWebp(tmpdir):
     desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
     assert 'psnr' in desc['large_image_converter']['conversion_stats']
     assert desc['large_image_converter']['conversion_stats']['psnr'] < 60
+
+
+def testConverterMainConcurrency(tmpdir):
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    main.main([imagePath, outputPath, '--concurrency', '2'])
+    assert os.path.getsize(outputPath) > 100
