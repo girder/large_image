@@ -49,6 +49,8 @@ coverage.xml
 venv/
 ENV/
 
+.vscode
+
 node_modules/
 
 .*.swp
