@@ -1,6 +1,18 @@
 Large Image |build-status| |codecov-io| |license-badge|
 =======================================================
 
+.. |build-status| image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
+    :target: https://circleci.com/gh/girder/large_image
+    :alt: Build Status
+
+.. |license-badge| image:: https://img.shields.io/badge/license-Apache%202-blue.svg
+    :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
+    :alt: License
+
+.. |codecov-io| image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
+   :target: https://codecov.io/github/girder/large_image?branch=master
+   :alt: codecov.io
+
 Python modules to work with large multiresolution images.
 
 Quick Installation via pip
@@ -62,7 +74,7 @@ Installation
 To install all packages from source:
 
 1.  Clone the repository:
- 
+
     ``git clone https://github.com/girder/large_image.git``
 
     Change to the source directory:
@@ -95,17 +107,4 @@ Update the tile source name by issuing the Mongo command::
 
     db.item.updateMany({"largeImage.sourceName": "svs"}, {$set: {"largeImage.sourceName": "openslide"}})
 
-
 .. _Girder: https://github.com/girder/girder
-
-.. |build-status| image:: https://circleci.com/gh/girder/large_image.png?style=shield
-    :target: https://circleci.com/gh/girder/large_image
-    :alt: Build Status
-
-.. |license-badge| image:: https://img.shields.io/badge/license-Apache%202-blue.svg
-    :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
-    :alt: License
-
-.. |codecov-io| image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
-   :target: https://codecov.io/github/girder/large_image?branch=master
-   :alt: codecov.io

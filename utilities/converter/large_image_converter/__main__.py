@@ -234,7 +234,7 @@ def main(args=sys.argv[1:]):
                 os.path.getsize(dest),
         }
         if opts._stats == 'full' and opts.compression not in {
-                'deflate', 'zip', 'lzw', 'zstd', 'packbits'}:
+                'deflate', 'zip', 'lzw', 'zstd', 'packbits', 'none'}:
             compute_error_metrics(
                 opts.source, dest, desc['large_image_converter']['conversion_stats'],
                 converterOpts)
