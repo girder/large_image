@@ -112,15 +112,15 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
     from tempfile import TemporaryDirectory
     import skimage.metrics
     import numpy
-    import large_image
+    import large_image_source_tiff
 
     lastlog = 0
     with TemporaryDirectory() as tempDir:
-        tempPath = os.path.join(tempDir, os.path.basename(original))
+        tempPath = os.path.join(tempDir, os.path.basename(original) + '.tiff')
         orig = large_image_converter.convert(original, tempPath, compression='lzw')
-        tsOrig = large_image.getTileSource(orig)
+        tsOrig = large_image_source_tiff.TiffFileTileSource(orig)
         numFrames = len(tsOrig.getMetadata().get('frames', [0]))
-        tsAlt = large_image.getTileSource(altered)
+        tsAlt = large_image_source_tiff.TiffFileTileSource(altered)
         mse = 0
         ssim = 0
         ssim_count = 0
