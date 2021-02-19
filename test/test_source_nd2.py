@@ -7,7 +7,7 @@ from . import utilities
 
 def testTilesFromND2():
     imagePath = utilities.externaldata('data/ITGA3Hi_export_crop2.nd2.sha512')
-    source = large_image_source_nd2.ND2FileTileSource(imagePath)
+    source = large_image_source_nd2.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 1024
@@ -29,6 +29,6 @@ def testTilesFromND2():
 
 def testInternalMetadata():
     imagePath = utilities.externaldata('data/ITGA3Hi_export_crop2.nd2.sha512')
-    source = large_image_source_nd2.ND2FileTileSource(imagePath)
+    source = large_image_source_nd2.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'nd2' in metadata

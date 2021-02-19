@@ -141,7 +141,7 @@ def testConvertJp2kCompression(tmpdir):
     info = tifftools.read_tiff(outputPath)
     assert (info['ifds'][0]['tags'][tifftools.Tag.Compression.value]['data'][0] ==
             tifftools.constants.Compression.JP2000.value)
-    source = large_image_source_tiff.TiffFileTileSource(outputPath)
+    source = large_image_source_tiff.open(outputPath)
     image, _ = source.getRegion(
         output={'maxWidth': 200, 'maxHeight': 200}, format=constants.TILE_FORMAT_NUMPY)
     assert (image[12][167] == [215, 135, 172]).all()
@@ -160,7 +160,7 @@ def testConvertFromLargeImage(tmpdir):
     imagePath = utilities.externaldata('data/sample_image.jp2.sha512')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath)
-    source = large_image_source_tiff.TiffFileTileSource(outputPath)
+    source = large_image_source_tiff.open(outputPath)
     metadata = source.getMetadata()
     assert metadata['levels'] == 6
 
@@ -169,7 +169,7 @@ def testConvertFromMultiframeImage(tmpdir):
     imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath)
-    source = large_image_source_tiff.TiffFileTileSource(outputPath)
+    source = large_image_source_tiff.open(outputPath)
     metadata = source.getMetadata()
     assert metadata['levels'] == 5
     assert len(metadata['frames']) == 3
@@ -181,7 +181,7 @@ def testConvertFromMultiframeImageNoSubIFDS(tmpdir):
     imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath, subifds=False)
-    source = large_image_source_tiff.TiffFileTileSource(outputPath)
+    source = large_image_source_tiff.open(outputPath)
     metadata = source.getMetadata()
     assert metadata['levels'] == 5
     assert len(metadata['frames']) == 3

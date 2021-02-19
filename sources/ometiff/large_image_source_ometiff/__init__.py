@@ -353,3 +353,17 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         while level - baselevel > self._maxSkippedLevels:
             level -= self._maxSkippedLevels
         return level
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return OMETiffFileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return OMETiffFileTileSource.canRead(*args, **kwargs)

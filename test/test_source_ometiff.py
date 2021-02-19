@@ -11,7 +11,7 @@ from . import utilities
 
 def testTilesFromOMETiff():
     imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
-    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    source = large_image_source_ometiff.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 1024
@@ -29,7 +29,7 @@ def testTilesFromOMETiff():
 
 def testTilesFromOMETiffWithSubIFD():
     imagePath = utilities.externaldata('data/sample.subifd.ome.tif.sha512')
-    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath, frame=1)
+    source = large_image_source_ometiff.open(imagePath, frame=1)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 256
@@ -47,7 +47,7 @@ def testTilesFromOMETiffWithSubIFD():
 
 def testTilesFromStripOMETiff():
     imagePath = utilities.externaldata('data/DDX58_AXL_EGFR_well2_XY01.ome.tif.sha512')
-    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    source = large_image_source_ometiff.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 1024
@@ -67,7 +67,7 @@ def testTilesFromStripOMETiff():
 
 def testOMETiffAre16Bit():
     imagePath = utilities.externaldata('data/DDX58_AXL_EGFR_well2_XY01.ome.tif.sha512')
-    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    source = large_image_source_ometiff.open(imagePath)
     tile = next(source.tileIterator(format=TILE_FORMAT_NUMPY))['tile']
     assert tile.dtype == numpy.uint16
     assert tile[15][15][0] == 17852
@@ -79,10 +79,10 @@ def testOMETiffAre16Bit():
 
 def testStyleAutoMinMax():
     imagePath = utilities.externaldata('data/DDX58_AXL_EGFR_well2_XY01.ome.tif.sha512')
-    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    source = large_image_source_ometiff.open(imagePath)
     image, _ = source.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
-    sourceB = large_image_source_ometiff.OMETiffFileTileSource(
+    sourceB = large_image_source_ometiff.open(
         imagePath, style=json.dumps({'min': 'auto', 'max': 'auto'}))
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
@@ -96,7 +96,7 @@ def testStyleAutoMinMax():
 
 def testInternalMetadata():
     imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
-    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    source = large_image_source_ometiff.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'omeinfo' in metadata
 
@@ -115,7 +115,7 @@ def testXMLParsing():
     }]
     # Create a source so we can use internal functions for testing
     imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
-    source = large_image_source_ometiff.OMETiffFileTileSource(imagePath)
+    source = large_image_source_ometiff.open(imagePath)
     for sample in samples:
         xml = ElementTree.fromstring(sample['xml'])
         info = etreeToDict(xml)

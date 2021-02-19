@@ -47,3 +47,17 @@ class DummyTileSource(TileSource):
 
     def getTile(self, x, y, z, **kwargs):
         return b''
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return DummyTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return DummyTileSource.canRead(*args, **kwargs)

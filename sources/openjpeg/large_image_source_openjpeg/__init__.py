@@ -14,6 +14,7 @@
 #  limitations under the License.
 ##############################################################################
 
+import builtins
 import glymur
 import io
 import math
@@ -203,7 +204,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if box.length > 16 * 1024 * 1024:
             return
         try:
-            fp = open(self._largeImagePath, 'rb')
+            fp = builtins.open(self._largeImagePath, 'rb')
             headerLength = 16
             fp.seek(box.offset + headerLength)
             data = fp.read(box.length - headerLength)
@@ -255,3 +256,17 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tile = tile[::scale, ::scale]
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return OpenjpegFileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return OpenjpegFileTileSource.canRead(*args, **kwargs)

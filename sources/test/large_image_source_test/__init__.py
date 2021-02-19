@@ -178,3 +178,17 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         return 'test %r %r %r %r %r %r' % (
             super().getState(), self.minLevel,
             self.maxLevel, self.tileWidth, self.tileHeight, self.fractal)
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return TestTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return TestTileSource.canRead(*args, **kwargs)

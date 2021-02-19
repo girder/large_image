@@ -123,6 +123,18 @@ def getTileSource(*args, **kwargs):
     return getTileSourceFromDict(AvailableTileSources, *args, **kwargs)
 
 
+def open(*args, **kwargs):
+    """
+    Alternate name of getTileSource.
+
+    Get a tilesource using the known sources.  If tile sources have not yet
+    been loaded, load them.
+
+    :returns: A tilesource for the passed arguments.
+    """
+    return getTileSource(*args, **kwargs)
+
+
 def canRead(*args, **kwargs):
     """
     Check if large_image can read a path or uri.

@@ -46,7 +46,7 @@ def _assertImageMatches(image, testRootName, saveTestImageFailurePath='/tmp'):
 def testTileFromGeotiffs():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath)
+    source = large_image_source_mapnik.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 256
@@ -68,7 +68,7 @@ def testTileFromGeotiffs():
     assert tileMetadata['bands'][2]['min'] == 0.0
 
     # Getting the metadata with a specified projection will be different
-    source = large_image_source_mapnik.MapnikFileTileSource(
+    source = large_image_source_mapnik.open(
         imagePath, projection='EPSG:3857')
     tileMetadata = source.getMetadata()
 
@@ -84,7 +84,7 @@ def testTileFromGeotiffs():
     assert tileMetadata['bounds']['srs'] == '+init=epsg:3857'
     assert tileMetadata['geospatial']
 
-    source = large_image_source_mapnik.MapnikFileTileSource(
+    source = large_image_source_mapnik.open(
         imagePath, projection='EPSG:3857', style=json.dumps({'band': -1}))
     image = source.getTile(89, 207, 9, encoding='PNG')
     _assertImageMatches(image, 'geotiff_9_89_207')
@@ -96,7 +96,7 @@ def testTileStyleFromGeotiffs():
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
                         'scheme': 'discrete',
                         'palette': 'matplotlib.Plasma_6'})
-    source = large_image_source_mapnik.MapnikFileTileSource(
+    source = large_image_source_mapnik.open(
         imagePath, projection='EPSG:3857', style=style)
     image = source.getTile(22, 51, 7, encoding='PNG')
     _assertImageMatches(image, 'geotiff_style_7_22_51')
@@ -108,7 +108,7 @@ def testTileLinearStyleFromGeotiffs():
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
                         'palette': 'matplotlib.Plasma_6',
                         'scheme': 'linear'})
-    source = large_image_source_mapnik.MapnikFileTileSource(
+    source = large_image_source_mapnik.open(
         imagePath, projection='EPSG:3857', style=style)
     image = source.getTile(22, 51, 7, encoding='PNG')
     _assertImageMatches(image, 'geotiff_style_linear_7_22_51')
@@ -117,7 +117,7 @@ def testTileLinearStyleFromGeotiffs():
 def testTileStyleBadInput():
     def _assertStyleResponse(imagePath, style, message):
         with pytest.raises(TileSourceException, match=message):
-            source = large_image_source_mapnik.MapnikFileTileSource(
+            source = large_image_source_mapnik.open(
                 imagePath, projection='EPSG:3857', style=json.dumps(style))
             source.getTile(22, 51, 7, encoding='PNG')
 
@@ -172,12 +172,12 @@ def testTileStyleBadInput():
 def testThumbnailFromGeotiffs():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath)
+    source = large_image_source_mapnik.open(imagePath)
     # We get a thumbnail without a projection
     image, mimeType = source.getThumbnail(encoding='PNG')
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     # We get a different thumbnail with a projection
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath, projection='EPSG:3857')
+    source = large_image_source_mapnik.open(imagePath, projection='EPSG:3857')
     image2, mimeType = source.getThumbnail(encoding='PNG')
     assert image2[:len(utilities.PNGHeader)] == utilities.PNGHeader
     assert image != image2
@@ -188,7 +188,7 @@ def testPixel():
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
 
     # Test in pixel coordinates
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath)
+    source = large_image_source_mapnik.open(imagePath)
     pixel = source.getPixel(region={'left': 212, 'top': 198})
     assert pixel == {
         'r': 62, 'g': 65, 'b': 66, 'a': 255, 'bands': {1: 62.0, 2: 65.0, 3: 66.0}}
@@ -196,7 +196,7 @@ def testPixel():
     assert pixel == {}
 
     # Test with a projection
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath, projection='EPSG:3857')
+    source = large_image_source_mapnik.open(imagePath, projection='EPSG:3857')
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
     assert pixel == {
         'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
@@ -209,7 +209,7 @@ def testPixel():
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
                         'scheme': 'discrete',
                         'palette': 'matplotlib.Plasma_6'})
-    source = large_image_source_mapnik.MapnikFileTileSource(
+    source = large_image_source_mapnik.open(
         imagePath, projection='EPSG:3857', style=style)
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
     assert pixel == {
@@ -219,14 +219,14 @@ def testPixel():
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
                         'scheme': 'discrete',
                         'palette': ['#0000ff', '#00ff00', '#ff0000']})
-    source = large_image_source_mapnik.MapnikFileTileSource(
+    source = large_image_source_mapnik.open(
         imagePath, projection='EPSG:3857', style=style)
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
     assert pixel == {
         'r': 0, 'g': 255, 'b': 0, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
     # Test with projection units
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath, projection='EPSG:3857')
+    source = large_image_source_mapnik.open(imagePath, projection='EPSG:3857')
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'EPSG:3857'})
     assert pixel == {
         'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
@@ -235,7 +235,7 @@ def testPixel():
         'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
     # When the tile has a different projection, the pixel is the same as
     # the band values.
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath)
+    source = large_image_source_mapnik.open(imagePath)
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'EPSG:3857'})
     assert pixel == {
         'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
@@ -245,13 +245,13 @@ def testSourceErrors():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     with pytest.raises(TileSourceException, match='must not be geographic'):
-        large_image_source_mapnik.MapnikFileTileSource(imagePath, 'EPSG:4326')
+        large_image_source_mapnik.open(imagePath, 'EPSG:4326')
     imagePath = os.path.join(testDir, 'test_files', 'zero_gi.tif')
     with pytest.raises(TileSourceException, match='cannot be opened via'):
-        large_image_source_mapnik.MapnikFileTileSource(imagePath)
+        large_image_source_mapnik.open(imagePath)
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
     with pytest.raises(TileSourceException, match='does not have a projected scale'):
-        large_image_source_mapnik.MapnikFileTileSource(imagePath)
+        large_image_source_mapnik.open(imagePath)
 
 
 def testStereographicProjection():
@@ -260,9 +260,9 @@ def testStereographicProjection():
     # We will fail if we ask for a stereographic projection and don't
     # specify unitsPerPixel
     with pytest.raises(TileSourceException, match='unitsPerPixel must be specified'):
-        large_image_source_mapnik.MapnikFileTileSource(imagePath, 'EPSG:3411')
+        large_image_source_mapnik.open(imagePath, 'EPSG:3411')
     # But will pass if unitsPerPixel is specified
-    large_image_source_mapnik.MapnikFileTileSource(imagePath, 'EPSG:3411', unitsPerPixel=150000)
+    large_image_source_mapnik.open(imagePath, 'EPSG:3411', unitsPerPixel=150000)
 
 
 def testProj4Proj():
@@ -278,7 +278,7 @@ def testProj4Proj():
 def testConvertProjectionUnits():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    tsNoProj = large_image_source_mapnik.MapnikFileTileSource(imagePath)
+    tsNoProj = large_image_source_mapnik.open(imagePath)
 
     result = tsNoProj._convertProjectionUnits(
         -13024380, 3895303, None, None, None, None, 'EPSG:3857')
@@ -313,7 +313,7 @@ def testConvertProjectionUnits():
         tsNoProj._convertProjectionUnits(
             -117.5, None, -117, None, None, None, 'EPSG:4326')
 
-    tsProj = large_image_source_mapnik.MapnikFileTileSource(imagePath, projection='EPSG:3857')
+    tsProj = large_image_source_mapnik.open(imagePath, projection='EPSG:3857')
     result = tsProj._convertProjectionUnits(
         -13024380, 3895303, None, None, None, None, 'EPSG:3857')
     assert result[0] == pytest.approx(-13024380, 1)
@@ -324,7 +324,7 @@ def testConvertProjectionUnits():
 def testGuardAgainstBadLatLong():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'global_dem.tif')
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath)
+    source = large_image_source_mapnik.open(imagePath)
     bounds = source.getBounds(srs='EPSG:4326')
 
     assert bounds['xmin'] == -180.00416667
@@ -335,7 +335,7 @@ def testGuardAgainstBadLatLong():
 
 def testTileFromNetCDF():
     imagePath = utilities.externaldata('data/04091217_ruc.nc.sha512')
-    source = large_image_source_mapnik.MapnikFileTileSource(imagePath)
+    source = large_image_source_mapnik.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 256
@@ -347,7 +347,7 @@ def testTileFromNetCDF():
     assert tileMetadata['geospatial']
 
     # Getting the metadata with a specified projection will be different
-    source = large_image_source_mapnik.MapnikFileTileSource(
+    source = large_image_source_mapnik.open(
         imagePath, projection='EPSG:3857')
     tileMetadata = source.getMetadata()
 

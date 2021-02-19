@@ -9,6 +9,9 @@
 - Added a `canRead` method to the core module (#512)
 - Image conversion supports JPEG 2000 (jp2k) compression (#522)
 - Image conversion can now convert images readable by large_image sources but not by vips (#529)
+- Added an `open` method to the core module as an alias to `getTileSource` (#550)
+- Added an `open` method to each file source module (#550)
+- Numerous improvement to image converversion (#533, #535, #537, #541, #544, #545, #546, #549)
 
 ### Improvements
 - Better release bioformats resources (#502)
@@ -16,10 +19,13 @@
 - The openjpeg tile source can decode with parallelism (#511)
 - Geospatial tile sources are preferred for geospatial files (#512)
 - Support decoding JP2k compressed tiles in the tiff tile source (#514)
+- Hardened tests against transient timing issues (#532, #536)
 
 ### Bug Fixes
 - Harden updates of the item view after making a large image (#508, #515)
 - Tiles in an unexpected color mode weren't consistently adjusted (#510)
+- Harden trying to add an annotation before the viewer is ready (#547)
+- Correctly report the tile size after resampling in the tileIterator (#538)
 
 ## Version 1.3.2
 

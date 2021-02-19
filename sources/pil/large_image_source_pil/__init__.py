@@ -170,3 +170,17 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceException('y is outside layer')
         return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return PILFileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return PILFileTileSource.canRead(*args, **kwargs)

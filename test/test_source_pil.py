@@ -16,12 +16,12 @@ def testTilesFromPIL():
     imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
     # Test with different max size options.
     config.setConfig('max_small_image_size', 100)
-    assert large_image_source_pil.PILFileTileSource.canRead(imagePath) is False
+    assert large_image_source_pil.canRead(imagePath) is False
 
     # Allow images bigger than our test
     config.setConfig('max_small_image_size', 2048)
-    assert large_image_source_pil.PILFileTileSource.canRead(imagePath) is True
-    source = large_image_source_pil.PILFileTileSource(imagePath)
+    assert large_image_source_pil.canRead(imagePath) is True
+    source = large_image_source_pil.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 1790
     assert tileMetadata['tileHeight'] == 1046
@@ -38,20 +38,20 @@ def testTileRedirects():
     # Test redirects, use a JPEG
     imagePath = utilities.externaldata('data/sample_Easy1.jpeg.sha512')
     rawimage = open(imagePath, 'rb').read()
-    source = large_image_source_pil.PILFileTileSource(imagePath)
+    source = large_image_source_pil.open(imagePath)
     # No encoding or redirect should just get a JPEG
     image = source.getTile(0, 0, 0)
     assert image == rawimage
     # quality 75 should work
-    source = large_image_source_pil.PILFileTileSource(imagePath, jpegQuality=95)
+    source = large_image_source_pil.open(imagePath, jpegQuality=95)
     image = source.getTile(0, 0, 0)
     assert image == rawimage
     # redirect with a different quality shouldn't
-    source = large_image_source_pil.PILFileTileSource(imagePath, jpegQuality=75)
+    source = large_image_source_pil.open(imagePath, jpegQuality=75)
     image = source.getTile(0, 0, 0)
     assert image != rawimage
     # redirect with a different encoding shouldn't
-    source = large_image_source_pil.PILFileTileSource(imagePath, encoding='PNG')
+    source = large_image_source_pil.open(imagePath, encoding='PNG')
     image = source.getTile(0, 0, 0)
     assert image != rawimage
 
@@ -62,11 +62,11 @@ def testReadingVariousColorFormats():
              if re.match(r'&test_.*\.png$', name)]
     for name in files:
         imagePath = os.path.join(testDir, 'test_files', name)
-        assert large_image_source_pil.PILFileTileSource.canRead(imagePath) is True
+        assert large_image_source_pil.canRead(imagePath) is True
 
 
 def testInternalMetadata():
     imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
-    source = large_image_source_pil.PILFileTileSource(imagePath)
+    source = large_image_source_pil.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'pil' in metadata
