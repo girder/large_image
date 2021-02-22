@@ -253,9 +253,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.tileHeight = dir0.tileHeight
         self.sizeX = dir0.imageWidth
         self.sizeY = dir0.imageHeight
-        self.levels = int(math.ceil(math.log(max(
+        self.levels = max(1, int(math.ceil(math.log(max(
             dir0.imageWidth / dir0.tileWidth,
-            dir0.imageHeight / dir0.tileHeight)) / math.log(2))) + 1
+            dir0.imageHeight / dir0.tileHeight)) / math.log(2))) + 1)
         info = tifftools.read_tiff(self._largeImagePath)
         frames = []
         associated = []  # for now, a list of directories

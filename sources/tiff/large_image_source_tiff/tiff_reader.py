@@ -608,7 +608,9 @@ class TiledTiffDirectory:
                     ctypes.memset(ctypes.byref(imageBuffer, readSize), 0, tileSize - readSize)
                     readSize = tileSize
         if readSize < tileSize:
-            raise IOTiffException('Read an unexpected number of bytes from an encoded tile')
+            raise IOTiffException(
+                'Read an unexpected number of bytes from an encoded tile' if readSize >= 0 else
+                'Failed to read from an encoded tile')
         tw, th = self._tileWidth, self._tileHeight
         if self._tiffInfo.get('orientation') in {
                 libtiff_ctypes.ORIENTATION_LEFTTOP,
