@@ -9,7 +9,7 @@ def testTilesFromBioformats():
     import large_image_source_bioformats
 
     imagePath = utilities.externaldata('data/HENormalN801.czi.sha512')
-    source = large_image_source_bioformats.BioformatsFileTileSource(imagePath)
+    source = large_image_source_bioformats.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 1024
@@ -28,7 +28,7 @@ def testInternalMetadata():
     import large_image_source_bioformats
 
     imagePath = utilities.externaldata('data/HENormalN801.czi.sha512')
-    source = large_image_source_bioformats.BioformatsFileTileSource(imagePath)
+    source = large_image_source_bioformats.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'sizeColorPlanes' in metadata
 

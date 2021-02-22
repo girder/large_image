@@ -118,9 +118,9 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
     with TemporaryDirectory() as tempDir:
         tempPath = os.path.join(tempDir, os.path.basename(original) + '.tiff')
         orig = large_image_converter.convert(original, tempPath, compression='lzw')
-        tsOrig = large_image_source_tiff.TiffFileTileSource(orig)
+        tsOrig = large_image_source_tiff.open(orig)
         numFrames = len(tsOrig.getMetadata().get('frames', [0]))
-        tsAlt = large_image_source_tiff.TiffFileTileSource(altered)
+        tsAlt = large_image_source_tiff.open(altered)
         mse = 0
         ssim = 0
         ssim_count = 0

@@ -24,11 +24,11 @@ def nestedUpdate(value, nvalue):
 def testTilesFromPTIF():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
-    assert large_image_source_tiff.TiffFileTileSource.canRead(imagePath) is False
+    assert large_image_source_tiff.canRead(imagePath) is False
 
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    assert large_image_source_tiff.TiffFileTileSource.canRead(imagePath) is True
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    assert large_image_source_tiff.canRead(imagePath) is True
+    source = large_image_source_tiff.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 256
     assert tileMetadata['tileHeight'] == 256
@@ -41,7 +41,7 @@ def testTilesFromPTIF():
 
 def testTileIterator():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
 
     # Ask for JPEGS
     tileCount = 0
@@ -74,7 +74,7 @@ def testTileIterator():
 
 def testTileIteratorRetiling():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
 
     # Test retiling to 500 x 400
     tileCount = 0
@@ -157,7 +157,7 @@ def testTileIteratorRetiling():
 
 def testTileIteratorSingleTile():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
 
     # Test getting a single tile
     sourceRegion = {
@@ -206,7 +206,7 @@ def testTileIteratorSingleTile():
 
 def testGetSingleTile():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
 
     sourceRegion = {
         'width': 0.7, 'height': 0.6,
@@ -247,7 +247,7 @@ def testGetSingleTile():
 
 def testTilesFromPTIFJpeg2K():
     imagePath = utilities.externaldata('data/huron.image2_jpeg2k.tif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 256
     assert tileMetadata['tileHeight'] == 256
@@ -260,7 +260,7 @@ def testTilesFromPTIFJpeg2K():
 
 def testThumbnails():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     tileMetadata = source.getMetadata()
     # Now we should be able to get a thumbnail
     image, mimeType = source.getThumbnail()
@@ -338,7 +338,7 @@ def testThumbnails():
 
 def testRegions():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     tileMetadata = source.getMetadata()
 
     # Test bad parameters
@@ -454,7 +454,7 @@ def testRegions():
 
 def testPixel():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
 
     # Test bad parameters
     badParams = [
@@ -476,7 +476,7 @@ def testPixel():
 
 def testTilesAssociatedImages():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
 
     imageList = source.getAssociatedImagesList()
     assert imageList == ['label', 'macro']
@@ -492,7 +492,7 @@ def testTilesAssociatedImages():
 
 def testTilesFromSCN():
     imagePath = utilities.externaldata('data/sample_leica.scn.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 512
     assert tileMetadata['tileHeight'] == 512
@@ -518,7 +518,7 @@ def testOrientations():
     }
     for orient in range(9):
         imagePath = os.path.join(testDir, 'test_files', 'test_orient%d.tif' % orient)
-        source = large_image_source_tiff.TiffFileTileSource(imagePath)
+        source = large_image_source_tiff.open(imagePath)
         image, _ = source.getRegion(
             output={'maxWidth': 100, 'maxHeight': 100}, format=constants.TILE_FORMAT_NUMPY)
         assert image.shape == testResults[orient]['shape']
@@ -532,7 +532,7 @@ def testOrientations():
 
 def testTilesFromMultipleTiledTIF():
     imagePath = utilities.externaldata('data/JK-kidney_H3_4C_1-500sec.tif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 256
     assert tileMetadata['tileHeight'] == 256
@@ -545,11 +545,11 @@ def testTilesFromMultipleTiledTIF():
 
 def testStyleSwapChannels():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     image, _ = source.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
     # swap the green and blue channels
-    sourceB = large_image_source_tiff.TiffFileTileSource(imagePath, style=json.dumps({'bands': [
+    sourceB = large_image_source_tiff.open(imagePath, style=json.dumps({'bands': [
         {'band': 'red', 'palette': ['#000', '#f00']},
         {'band': 'green', 'palette': ['#000', '#00f']},
         {'band': 'blue', 'palette': ['#000', '#0f0']},
@@ -566,11 +566,11 @@ def testStyleSwapChannels():
 
 def testStyleClamp():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(
+    source = large_image_source_tiff.open(
         imagePath, style=json.dumps({'min': 100, 'max': 200, 'clamp': True}))
     image, _ = source.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
-    sourceB = large_image_source_tiff.TiffFileTileSource(
+    sourceB = large_image_source_tiff.open(
         imagePath, style=json.dumps({'min': 100, 'max': 200, 'clamp': False}))
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
@@ -582,11 +582,11 @@ def testStyleClamp():
 
 def testStyleNoData():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(
+    source = large_image_source_tiff.open(
         imagePath, style=json.dumps({'nodata': None}))
     image, _ = source.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
-    sourceB = large_image_source_tiff.TiffFileTileSource(
+    sourceB = large_image_source_tiff.open(
         imagePath, style=json.dumps({'nodata': 101}))
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
@@ -598,7 +598,7 @@ def testStyleNoData():
 
 def testHistogram():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     hist = source.histogram(bins=8, output={'maxWidth': 1024}, resample=False)
     assert len(hist['histogram']) == 3
     assert hist['histogram'][0]['range'] == (0, 256)
@@ -622,7 +622,7 @@ def testHistogram():
 
 def testSingleTileIteratorResample():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     tile = source.getSingleTile()
     assert tile['mm_x'] == 0.00025
     assert tile['width'] == 256
@@ -648,7 +648,7 @@ def testSingleTileIteratorResample():
 
 def testInternalMetadata():
     imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'xml' in metadata
 
@@ -656,14 +656,14 @@ def testInternalMetadata():
 def testFromTiffRGBJPEG():
     imagePath = utilities.externaldata(
         'data/TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     tile = source.getSingleTile()
     assert list(tile['tile'][0, 0]) == [243, 243, 243]
 
 
 def testTilesFromMultiFrameTiff():
     imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath)
+    source = large_image_source_tiff.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 1024
@@ -681,7 +681,7 @@ def testTilesFromMultiFrameTiff():
 
 def testTilesFromMultiFrameTiffWithSubIFD():
     imagePath = utilities.externaldata('data/sample.subifd.ome.tif.sha512')
-    source = large_image_source_tiff.TiffFileTileSource(imagePath, frame=1)
+    source = large_image_source_tiff.open(imagePath, frame=1)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 256

@@ -370,3 +370,17 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         _tiffFile.SetDirectory(images[imageKey])
         img = _tiffFile.read_image()
         return PIL.Image.fromarray(img)
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return OpenslideFileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return OpenslideFileTileSource.canRead(*args, **kwargs)

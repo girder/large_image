@@ -1,9 +1,9 @@
-from large_image import getTileSource
+import large_image
 import large_image_source_dummy
 
 
 def testDummyTileSource():
-    source = large_image_source_dummy.DummyTileSource()
+    source = large_image_source_dummy.open()
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 0
     assert tileMetadata['tileHeight'] == 0
@@ -17,5 +17,5 @@ def testDummyTileSource():
 
 
 def testGetDummyTileSource():
-    source = getTileSource('large_image://dummy')
+    source = large_image.open('large_image://dummy')
     assert isinstance(source, large_image_source_dummy.DummyTileSource)

@@ -13,13 +13,13 @@ from . import utilities
 def testTilesFromSVS():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
-    assert large_image_source_openslide.OpenslideFileTileSource.canRead(imagePath) is False
+    assert large_image_source_openslide.canRead(imagePath) is False
 
     imagePath = utilities.externaldata(
         'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
         'af6f-14fefbbdf7bd.svs.sha512')
-    assert large_image_source_openslide.OpenslideFileTileSource.canRead(imagePath) is True
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    assert large_image_source_openslide.canRead(imagePath) is True
+    source = large_image_source_openslide.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 240
     assert tileMetadata['tileHeight'] == 240
@@ -33,7 +33,7 @@ def testMagnification():
     imagePath = utilities.externaldata(
         'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
         '4a70-9ae3-50e3ab45e242.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     # tileMetadata = source.getMetadata()
     mag = source.getNativeMagnification()
     assert mag['magnification'] == 40.0
@@ -79,7 +79,7 @@ def testTileIterator():
     imagePath = utilities.externaldata(
         'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
         '4a70-9ae3-50e3ab45e242.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     tileCount = 0
     visited = {}
     for tile in source.tileIterator(
@@ -181,7 +181,7 @@ def testGetRegion():
     imagePath = utilities.externaldata(
         'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
         '4a70-9ae3-50e3ab45e242.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     # By default, getRegion gets an image
     image, mimeType = source.getRegion(scale={'magnification': 2.5})
     assert mimeType == 'image/jpeg'
@@ -213,7 +213,7 @@ def testConvertRegionScale():
     imagePath = utilities.externaldata(
         'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
         '4a70-9ae3-50e3ab45e242.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     # If we aren't using pixels as our units and don't specify a target
     # unit, this should do nothing.  This source image is 23021 x 23162
     sourceRegion = {'width': 0.8, 'height': 0.7, 'units': 'fraction'}
@@ -300,7 +300,7 @@ def testConvertPointScale():
     imagePath = utilities.externaldata(
         'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
         '4a70-9ae3-50e3ab45e242.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     point = source.getPointAtAnotherScale((500, 800), {'magnification': 5}, 'mag_pixels')
     assert point == (4000.0, 6400.0)
     point = source.getPointAtAnotherScale(
@@ -316,7 +316,7 @@ def testGetPixel():
     imagePath = utilities.externaldata(
         'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
         '4a70-9ae3-50e3ab45e242.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
 
     pixel = source.getPixel(region={'left': 12125, 'top': 10640})
     assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255}
@@ -336,7 +336,7 @@ def testGetPixel():
 
 def testTilesFromPowerOf3Tiles():
     imagePath = utilities.externaldata('data/G10-3_pelvis_crop-powers-of-3.tif.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 128
     assert tileMetadata['tileHeight'] == 128
@@ -350,7 +350,7 @@ def testRegionsWithMagnification():
     imagePath = utilities.externaldata(
         'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
         'af6f-14fefbbdf7bd.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     params = {'region': {'width': 2000, 'height': 1500},
               'output': {'maxWidth': 1000, 'maxHeight': 1000},
               'encoding': 'PNG'}
@@ -391,7 +391,7 @@ def testTilesAssociatedImages():
     imagePath = utilities.externaldata(
         'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
         'af6f-14fefbbdf7bd.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     imageList = source.getAssociatedImagesList()
     assert imageList == ['label', 'macro', 'thumbnail']
     image, mimeType = source.getAssociatedImage('macro')
@@ -404,7 +404,7 @@ def testTilesFromSmallFile():
     testDir = os.path.dirname(os.path.realpath(__file__))
     # Using a two-channel luminance-alpha tiff should work
     imagePath = os.path.join(testDir, 'test_files', 'small_la.tiff')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 2
     assert tileMetadata['tileHeight'] == 1
@@ -418,21 +418,21 @@ def testEdgeOptions():
     imagePath = utilities.externaldata(
         'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
         'af6f-14fefbbdf7bd.svs.sha512')
-    image = large_image_source_openslide.OpenslideFileTileSource(
+    image = large_image_source_openslide.open(
         imagePath, format=constants.TILE_FORMAT_IMAGE, encoding='PNG',
         edge='crop').getTile(0, 0, 0)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     (width, height) = struct.unpack('!LL', image[16:24])
     assert width == 124
     assert height == 54
-    image = large_image_source_openslide.OpenslideFileTileSource(
+    image = large_image_source_openslide.open(
         imagePath, format=constants.TILE_FORMAT_IMAGE, encoding='PNG',
         edge='#DDD').getTile(0, 0, 0)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     (width, height) = struct.unpack('!LL', image[16:24])
     assert width == 240
     assert height == 240
-    imageB = large_image_source_openslide.OpenslideFileTileSource(
+    imageB = large_image_source_openslide.open(
         imagePath, format=constants.TILE_FORMAT_IMAGE, encoding='PNG',
         edge='yellow').getTile(0, 0, 0)
     assert imageB[:len(utilities.PNGHeader)] == utilities.PNGHeader
@@ -446,6 +446,6 @@ def testInternalMetadata():
     imagePath = utilities.externaldata(
         'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
         '4a70-9ae3-50e3ab45e242.svs.sha512')
-    source = large_image_source_openslide.OpenslideFileTileSource(imagePath)
+    source = large_image_source_openslide.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'openslide' in metadata

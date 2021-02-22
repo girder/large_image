@@ -647,3 +647,17 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if imageKey in self._associatedImages:
             return PIL.Image.fromarray(self._associatedImages[imageKey])
         return None
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return TiffFileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return TiffFileTileSource.canRead(*args, **kwargs)

@@ -5,7 +5,7 @@ from . import utilities
 
 def testTilesFromOpenJPEG():
     imagePath = utilities.externaldata('data/sample_image.jp2.sha512')
-    source = large_image_source_openjpeg.OpenjpegFileTileSource(imagePath)
+    source = large_image_source_openjpeg.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 256
@@ -19,7 +19,7 @@ def testTilesFromOpenJPEG():
 
 def testAssociatedImagesFromOpenJPEG():
     imagePath = utilities.externaldata('data/JK-kidney_B-gal_H3_4C_1-500sec.jp2.sha512')
-    source = large_image_source_openjpeg.OpenjpegFileTileSource(imagePath)
+    source = large_image_source_openjpeg.open(imagePath)
 
     imageList = source.getAssociatedImagesList()
     assert imageList == ['label', 'macro']
@@ -39,7 +39,7 @@ def testBelowLevelTilesFromOpenJPEG():
     large_image_source_openjpeg.OpenjpegFileTileSource._maxTileSize = 64
     # Clear the cache to make sure we use our required max tile size.
     cachesClear()
-    source = large_image_source_openjpeg.OpenjpegFileTileSource(imagePath)
+    source = large_image_source_openjpeg.open(imagePath)
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 64
@@ -56,6 +56,6 @@ def testBelowLevelTilesFromOpenJPEG():
 
 def testInternalMetadata():
     imagePath = utilities.externaldata('data/sample_image.jp2.sha512')
-    source = large_image_source_openjpeg.OpenjpegFileTileSource(imagePath)
+    source = large_image_source_openjpeg.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'ScanInfo' in metadata['xml']

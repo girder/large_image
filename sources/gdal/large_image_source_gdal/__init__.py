@@ -940,3 +940,17 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         except RuntimeError:
                             pass
         return pixel
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return GDALFileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return GDALFileTileSource.canRead(*args, **kwargs)

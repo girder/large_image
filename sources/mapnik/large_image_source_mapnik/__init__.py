@@ -414,3 +414,17 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         if overscan:
             pilimg = pilimg.crop((1, 1, pilimg.width - overscan, pilimg.height - overscan))
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs)
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return MapnikFileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return MapnikFileTileSource.canRead(*args, **kwargs)

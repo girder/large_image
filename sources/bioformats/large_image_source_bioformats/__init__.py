@@ -538,3 +538,17 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if javabridge.get_env():
                     javabridge.detach()
         return large_image.tilesource.base._imageToPIL(image)
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return BioformatsFileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return BioformatsFileTileSource.canRead(*args, **kwargs)

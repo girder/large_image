@@ -318,3 +318,17 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tile = tileframe[y0:y1:step, x0:x1:step].copy()
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
+
+
+def open(*args, **kwargs):
+    """
+    Create an instance of the module class.
+    """
+    return ND2FileTileSource(*args, **kwargs)
+
+
+def canRead(*args, **kwargs):
+    """
+    Check if an input can be read by the module class.
+    """
+    return ND2FileTileSource.canRead(*args, **kwargs)
