@@ -235,11 +235,14 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     logger.info('Input: %s, Output: %s, Options: %r%s' % (
         source, outputPath, convertParams, status))
     image = image.autorot()
-    if convertParams['compression'] not in {'jpeg'}:
+    if (convertParams['compression'] not in {'jpeg'} or
+            image.interpretation != pyvips.Interpretation.SCRGB):
+        # jp2k compression supports more than 8-bits per sample, but the
+        # decompressor claims this is unsupported.
         image = _vips_cast(
             image,
-            convertParams['compression'] in {'webp'} or (
-                kwargs.get('compression') == 'jp2k' and 'psnr' not in kwargs and 'cr' in kwargs))
+            convertParams['compression'] in {'webp', 'jpeg'} or
+            kwargs.get('compression') in {'jp2k'})
     # TODO: revisit the TMPDIR override; this is not thread safe
     oldtmpdir = os.environ.get('TMPDIR')
     os.environ['TMPDIR'] = os.path.dirname(tempPath)

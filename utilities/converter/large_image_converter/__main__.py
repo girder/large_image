@@ -116,6 +116,7 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
 
     lastlog = 0
     with TemporaryDirectory() as tempDir:
+        # TODO: check if the original is geospatial; if so appropriate options
         tempPath = os.path.join(tempDir, os.path.basename(original) + '.tiff')
         orig = large_image_converter.convert(original, tempPath, compression='lzw')
         tsOrig = large_image_source_tiff.open(orig)
