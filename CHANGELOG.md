@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.4.0
 
 ### Changes
 - The image conversion task has been split into two packages, large_image_converter and large_image_tasks.  The tasks module is used with Girder and Girder Worker for converting images and depends on the converter package.  The converter package can be used as a stand-alone command line tool (#518)
