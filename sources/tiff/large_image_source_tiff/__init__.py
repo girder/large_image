@@ -239,7 +239,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             sizes = altsizes
         raise TileSourceException('IFD size is not a power of two smaller than first IFD.')
 
-    def _initWithTiffTools(self):
+    def _initWithTiffTools(self):  # noqa
         """
         Use tifftools to read all of the tiff directory information.  Check if
         the zeroth directory can be validated as a tiled directory.  If so,
@@ -310,6 +310,13 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if frames[0]['dirs'][idx] is not None else None
             for idx in range(self.levels - 1)]
         self._tiffDirectories.append(dir0)
+        missing = [v is None for v in self._tiffDirectories]
+        maxMissing = max(0 if not v else missing.index(False, idx) - idx
+                         for idx, v in enumerate(missing))
+        if maxMissing >= self._maxSkippedLevels:
+            config.getConfig('logger').warning(
+                'Tiff image is missing many lower resolution levels (%d).  '
+                'It will be inefficient to read lower resolution tiles.', maxMissing)
         return True
 
     def _addAssociatedImage(self, largeImagePath, directoryNum, mustBeTiled=False, topImage=None):
