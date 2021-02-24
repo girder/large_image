@@ -564,8 +564,9 @@ def _is_eightbit(path, tiffinfo=None):
     if not tiffinfo:
         return False
     try:
-        if not all(val == tifftools.constants.SampleFormat.uint for val in
-                   tiffinfo['ifds'][0]['tags'][tifftools.Tag.SampleFormat.value]['data']):
+        if (tifftools.Tag.SampleFormat.value in tiffinfo['ifds'][0]['tags'] and
+                not all(val == tifftools.constants.SampleFormat.uint for val in
+                        tiffinfo['ifds'][0]['tags'][tifftools.Tag.SampleFormat.value]['data'])):
             return False
         if tifftools.Tag.BitsPerSample.value in tiffinfo['ifds'][0]['tags'] and not all(
                 val == 8 for val in
