@@ -6,7 +6,6 @@ import PIL
 import PIL.Image
 import PIL.ImageColor
 import PIL.ImageDraw
-import random
 import threading
 import xml.etree.ElementTree
 from collections import defaultdict
@@ -500,6 +499,12 @@ class TileSource:
                     matches the interpretation of the band ('red', 'green',
                     'blue', 'gray', 'alpha').  Note that 'gray' on an RGB or
                     RGBA image will use the green band.
+                frame: if specified, override the frame value for this band.
+                    When used as part of a bands list, this can be used to
+                    composite multiple frames together.  It is most efficient
+                    if at least one band either doesn't specify a frame
+                    parameter or specifies the same frame value as the primary
+                    query.
                 min: the value to map to the first palette value.  Defaults to
                     0.  'auto' to use 0 if the reported minimum and maximum of
                     the band are between [0, 255] or use the reported minimum
@@ -1269,7 +1274,7 @@ class TileSource:
         self._skipStyle = True
         # Divert the tile cache while querying unstyled tiles
         classkey = self._classkey
-        self._classkey = 'nocache' + str(random.random())
+        self._classkey = self._classkey + '__unstyled'
         try:
             self._bandRanges[frame] = self.histogram(
                 dtype=dtype,
@@ -1333,20 +1338,39 @@ class TileSource:
                 value = 255
         return float(value)
 
-    def _applyStyle(self, image, style, frame=None):
+    def _applyStyle(self, image, style, x, y, z, frame=None):
         """
         Apply a style to a numpy image.
 
         :param image: the image to modify.
         :param style: a style object.
+        :param x: the x tile position; used for multi-frame styles.
+        :param y: the y tile position; used for multi-frame styles.
+        :param z: the z tile position; used for multi-frame styles.
         :param frame: the frame to use for auto ranging.
         :returns: a styled image.
         """
         style = style['bands'] if 'bands' in style else [style]
         output = numpy.zeros((image.shape[0], image.shape[1], 4), numpy.float)
+        mainImage = image
+        mainFrame = frame
         for entry in style:
             bandidx = 0 if image.shape[2] <= 2 else 1
             band = None
+            if entry.get('frame') is None or entry.get('frame') == frame:
+                image = mainImage
+                frame = mainFrame
+            else:
+                frame = entry['frame']
+                self._skipStyle = True
+                # Divert the tile cache while querying unstyled tiles
+                classkey = self._classkey
+                self._classkey = self._classkey + '__unstyled'
+                try:
+                    image = self.getTile(x, y, z, frame=frame, numpyAllowed=True)
+                finally:
+                    del self._skipStyle
+                    self._classkey = classkey
             if (isinstance(entry.get('band'), int) and
                     entry['band'] >= 1 and entry['band'] <= image.shape[2]):
                 bandidx = entry['band'] - 1
@@ -1394,13 +1418,16 @@ class TileSource:
                         output[:, :, channel], numpy.where(keep, clrs, 0))
         return output
 
-    def _outputTileNumpyStyle(self, tile, applyStyle, frame=None):
+    def _outputTileNumpyStyle(self, tile, applyStyle, x, y, z, frame=None):
         """
         Convert a tile to a NUMPY array.  Optionally apply the style to a tile.
         Always returns a NUMPY tile.
 
         :param tile: the tile to convert.
         :param applyStyle: if True and there is a style, apply it.
+        :param x: the x tile position; used for multi-frame styles.
+        :param y: the y tile position; used for multi-frame styles.
+        :param z: the z tile position; used for multi-frame styles.
         :param frame: the frame to use for auto-ranging.
         :returns: a numpy array and a target PIL image mode.
         """
@@ -1408,7 +1435,7 @@ class TileSource:
         if applyStyle and getattr(self, 'style', None):
             with self._styleLock:
                 if not getattr(self, '_skipStyle', False):
-                    tile = self._applyStyle(tile, self.style, frame)
+                    tile = self._applyStyle(tile, self.style, x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = numpy.zeros(
                 (self.tileHeight, self.tileWidth, tile.shape[2]),
@@ -1450,7 +1477,7 @@ class TileSource:
         mode = None
         if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
                 (applyStyle and getattr(self, 'style', None)) or isEdge):
-            tile, mode = self._outputTileNumpyStyle(tile, applyStyle, kwargs.get('frame'))
+            tile, mode = self._outputTileNumpyStyle(tile, applyStyle, x, y, z, kwargs.get('frame'))
         if isEdge:
             contentWidth = min(self.tileWidth,
                                sizeX - (maxX - self.tileWidth))

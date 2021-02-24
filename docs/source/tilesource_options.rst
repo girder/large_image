@@ -37,6 +37,8 @@ A band definition is an object which can contain the following keys:
 
 - ``band``: if -1 or None, the greyscale value is used.  Otherwise, a 1-based numerical index into the channels of the image or a string that matches the interpretation of the band ('red', 'green', 'blue', 'gray', 'alpha').  Note that 'gray' on an RGB or RGBA image will use the green band.
 
+- ``frame``: if specified, override the frame parameter used in the tile query for this band.  Note that it is more efficient to have at least one band not specify a frame parameter or use the same value as the basic query.  Defaults to the frame value of the core query.
+
 - ``min``: the value to map to the first palette value.  Defaults to 0.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported minimum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.
 
 - ``max``: the value to map to the last palette value.  Defaults to 255.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported maximum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.

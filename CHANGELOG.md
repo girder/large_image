@@ -1,9 +1,11 @@
 # Change Log
 
-## Version 1.4.0
+## Unreleased
 
-### Changes
-- The image conversion task has been split into two packages, large_image_converter and large_image_tasks.  The tasks module is used with Girder and Girder Worker for converting images and depends on the converter package.  The converter package can be used as a stand-alone command line tool (#518)
+### Features
+- Multiple frames can be composited together with the style option
+
+## Version 1.4.0
 
 ### Features
 - Added a `canRead` method to the core module (#512)
@@ -11,7 +13,7 @@
 - Image conversion can now convert images readable by large_image sources but not by vips (#529)
 - Added an `open` method to the core module as an alias to `getTileSource` (#550)
 - Added an `open` method to each file source module (#550)
-- Numerous improvement to image converversion (#533, #535, #537, #541, #544, #545, #546, #549)
+- Numerous improvement to image conversion (#533, #535, #537, #541, #544, #545, #546, #549)
 
 ### Improvements
 - Better release bioformats resources (#502)
@@ -20,6 +22,9 @@
 - Geospatial tile sources are preferred for geospatial files (#512)
 - Support decoding JP2k compressed tiles in the tiff tile source (#514)
 - Hardened tests against transient timing issues (#532, #536)
+
+### Changes
+- The image conversion task has been split into two packages, large_image_converter and large_image_tasks.  The tasks module is used with Girder and Girder Worker for converting images and depends on the converter package.  The converter package can be used as a stand-alone command line tool (#518)
 
 ### Bug Fixes
 - Harden updates of the item view after making a large image (#508, #515)

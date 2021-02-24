@@ -94,6 +94,40 @@ def testStyleAutoMinMax():
     assert image[240][128][0] < imageB[240][128][0]
 
 
+def testStyleFrame():
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    source = large_image_source_ometiff.open(
+        imagePath, style=json.dumps({'bands': [{
+            'palette': ['#000000', '#0000ff'],
+        }, {
+            'palette': ['#000000', '#00ff00'],
+        }]}))
+    image, _ = source.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
+    sourceB = large_image_source_ometiff.open(
+        imagePath, style=json.dumps({'bands': [{
+            'palette': ['#000000', '#0000ff'],
+        }, {
+            'frame': 1,
+            'palette': ['#000000', '#00ff00'],
+        }]}))
+    imageB, _ = sourceB.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
+    assert numpy.all(image == imageB)
+    assert image.shape == imageB.shape
+    sourceC = large_image_source_ometiff.open(
+        imagePath, style=json.dumps({'bands': [{
+            'palette': ['#000000', '#0000ff'],
+        }, {
+            'frame': 2,
+            'palette': ['#000000', '#00ff00'],
+        }]}))
+    imageC, _ = sourceC.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
+    assert numpy.any(image != imageC)
+    assert image.shape == imageC.shape
+
+
 def testInternalMetadata():
     imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
     source = large_image_source_ometiff.open(imagePath)
