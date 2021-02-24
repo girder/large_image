@@ -55,11 +55,13 @@ if not len(sys.argv[1:]) or '--help' in sys.argv[1:]:
     print("""test_compression.py [(concurrency)] (output directory) (input file ...)""")
     sys.exit(0)
 args = sys.argv[1:]
-concurrency = psutil.cpu_count(logical=True)
+# Set to 1 to disable concurrency, 0 for number of cpus
+concurrency = 1
 if args[0].isdigit():
     concurrency = int(args[0])
+    if not concurrency:
+        concurreny = psutil.cpu_count(logical=True)
     args = args[1:]
-# Set to 1 to disable concurrency
 pool = concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
 tasks = []
 for input in args[1:]:
