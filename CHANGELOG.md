@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Features
-- Multiple frames can be composited together with the style option (#554)
+- Multiple frames can be composited together with the style option (#554, #556)
 
 ### Improvements
 - Warn when opening an inefficient tiff file (#555)
