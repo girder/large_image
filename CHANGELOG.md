@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.4.1
 
 ### Features
 - Multiple frames can be composited together with the style option (#554, #556)
