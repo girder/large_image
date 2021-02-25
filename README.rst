@@ -1,5 +1,5 @@
-Large Image |build-status| |codecov-io| |license-badge|
-=======================================================
+Large Image |build-status| |codecov-io| |license-badge| |doi-badge|
+===================================================================
 
 .. |build-status| image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
     :target: https://circleci.com/gh/girder/large_image
@@ -12,6 +12,9 @@ Large Image |build-status| |codecov-io| |license-badge|
 .. |codecov-io| image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
    :target: https://codecov.io/github/girder/large_image?branch=master
    :alt: codecov.io
+   
+.. |doi-badge| image:: https://zenodo.org/badge/45569214.svg
+   :target: https://zenodo.org/badge/latestdoi/45569214
 
 Python modules to work with large multiresolution images.
 
