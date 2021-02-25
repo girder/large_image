@@ -505,6 +505,9 @@ class TileSource:
                     if at least one band either doesn't specify a frame
                     parameter or specifies the same frame value as the primary
                     query.
+                framedelta: if specified and frame is not specified, override
+                    the frame value for this band by using the current frame
+                    plus this value.
                 min: the value to map to the first palette value.  Defaults to
                     0.  'auto' to use 0 if the reported minimum and maximum of
                     the band are between [0, 255] or use the reported minimum
@@ -1357,11 +1360,13 @@ class TileSource:
         for entry in style:
             bandidx = 0 if image.shape[2] <= 2 else 1
             band = None
-            if entry.get('frame') is None or entry.get('frame') == frame:
+            if ((entry.get('frame') is None and not entry.get('framedelta')) or
+                    entry.get('frame') == frame):
                 image = mainImage
                 frame = mainFrame
             else:
-                frame = entry['frame']
+                frame = entry['frame'] if entry.get('frame') is not None else (
+                    mainFrame + entry['framedelta'])
                 self._skipStyle = True
                 # Divert the tile cache while querying unstyled tiles
                 classkey = self._classkey
