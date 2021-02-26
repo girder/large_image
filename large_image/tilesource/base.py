@@ -1373,6 +1373,7 @@ class TileSource:
                 self._classkey = self._classkey + '__unstyled'
                 try:
                     image = self.getTile(x, y, z, frame=frame, numpyAllowed=True)
+                    image = image[:mainImage.shape[0], :mainImage.shape[1], :mainImage.shape[2]]
                 finally:
                     del self._skipStyle
                     self._classkey = classkey
