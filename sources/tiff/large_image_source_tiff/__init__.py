@@ -447,7 +447,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: metadata dictonary.
         """
         result = super().getMetadata()
-        if hasattr(self, '_frames'):
+        if hasattr(self, '_frames') and len(self._frames) > 1:
             result['frames'] = [frame.get('frame', {}) for frame in self._frames]
             self._addMetadataFrameInformation(result, self._frames[0].get('channels', None))
         return result

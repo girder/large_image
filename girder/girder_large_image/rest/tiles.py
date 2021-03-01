@@ -264,7 +264,7 @@ class TilesItemResource(ItemResource):
         If requested, set the content disposition and a suggested file name.
 
         :param item: an item that includes a name.
-        :param contentDisposition: either 'inline' or 'attachemnt', otherwise
+        :param contentDisposition: either 'inline' or 'attachment', otherwise
             no header is added.
         :param mime: the mimetype of the output image.  Used for the filename
             suffix.

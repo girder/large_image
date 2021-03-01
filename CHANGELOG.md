@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Bug Fixes
+- Fix compositing when using different frame numbers and partial tiles (#557)
+
 ## Version 1.4.1
 
 ### Features
