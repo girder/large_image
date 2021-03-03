@@ -666,6 +666,9 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not hasattr(self, '_warpSRS'):
                 self._warpSRS = (self.getProj4String(),
                                  self.projection.decode('utf8'))
+                if self._warpSRS[1].startswith(InitPrefix) and tuple(
+                        int(p) for p in gdal.__version__.split('.')[:2]) >= (3, 1):
+                    self._warpSRS = (self._warpSRS[0], self._warpSRS[1][len(InitPrefix):])
             with self._getDatasetLock:
                 ds = gdal.Warp(
                     '', self.dataset, format='VRT',

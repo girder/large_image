@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+- Reduce gdal warning about projection strings (#559)
+- Don't report needless frame information for some single frame files (#558)
+
 ### Bug Fixes
 - Fix compositing when using different frame numbers and partial tiles (#557)
 
