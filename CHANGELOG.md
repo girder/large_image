@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Added a Girder endpoint to get metadata on associated images (#561)
+
 ### Improvements
 - Reduce gdal warning about projection strings (#559)
 - Don't report needless frame information for some single frame files (#558)

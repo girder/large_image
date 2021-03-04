@@ -1045,7 +1045,7 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
 
     resp = server.request(path='/item/%s/tiles/images' % itemId, user=admin)
     assert utilities.respStatus(resp) == 200
-    assert resp.json, ['label' == 'macro']
+    assert resp.json == ['label', 'macro']
     resp = server.request(path='/item/%s/tiles/images/label' % itemId,
                           user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
@@ -1059,6 +1059,13 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     (width, height) = struct.unpack('!LL', image[16:24])
     assert max(width, height) == 256
+    resp = server.request(path='/item/%s/tiles/images/label/metadata' % itemId,
+                          user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['sizeX'] == 819
+    assert resp.json['sizeY'] == 800
+    assert resp.json['format'] == 'JPEG'
+    assert resp.json['mode'] == 'RGB'
 
     # Test missing associated image
     resp = server.request(path='/item/%s/tiles/images/nosuchimage' % itemId,
@@ -1066,6 +1073,9 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
     assert image == b''
+    resp = server.request(path='/item/%s/tiles/images/nosuchimage/metadata' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {}
 
     # Test with an image that doesn't have associated images
     file = utilities.uploadExternalFile(
