@@ -27,7 +27,7 @@ var ConfigView = View.extend({
                 value: this.$('.g-large-image-default-viewer').val()
             }, {
                 key: 'large_image.auto_set',
-                value: this.$('.g-large-image-auto-set-on').prop('checked')
+                value: this.$('.g-large-image-auto-set-all').prop('checked') ? 'all' : this.$('.g-large-image-auto-set-on').prop('checked')
             }, {
                 key: 'large_image.max_thumbnail_files',
                 value: +this.$('.g-large-image-max-thumbnail-files').val()
