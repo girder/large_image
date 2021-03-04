@@ -23,7 +23,7 @@ import urllib
 
 from girder.api import access, filter_logging
 from girder.api.v1.item import Item as ItemResource
-from girder.api.describe import describeRoute, Description
+from girder.api.describe import autoDescribeRoute, describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, setRawResponse, setResponseHeader
 from girder.exceptions import RestException
 from girder.models.model_base import AccessType
@@ -117,6 +117,8 @@ class TilesItemResource(ItemResource):
                            self.getAssociatedImagesList)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'images', ':image'),
                            self.getAssociatedImage)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'images', ':image', 'metadata'),
+                           self.getAssociatedImageMetadata)
         apiRoot.item.route('GET', ('test', 'tiles'), self.getTestTilesInfo)
         apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'),
                            self.getTestTile)
@@ -934,3 +936,28 @@ class TilesItemResource(ItemResource):
         setResponseHeader('Content-Type', imageMime)
         setRawResponse()
         return imageData
+
+    @autoDescribeRoute(
+        Description('Get metadata for an image associated with a large image.')
+        .modelParam('itemId', model=Item, level=AccessType.READ)
+        .param('image', 'The key of the associated image.', paramType='path')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public
+    def getAssociatedImageMetadata(self, item, image, params):
+        _handleETag('getAssociatedImageMetadata', item, image)
+        tilesource = self.imageItemModel._loadTileSource(item, **params)
+        pilImage = tilesource._getAssociatedImage(image)
+        if pilImage is None:
+            return {}
+        result = {
+            'sizeX': pilImage.width,
+            'sizeY': pilImage.height,
+            'mode': pilImage.mode,
+        }
+        if pilImage.format:
+            result['format'] = pilImage.format
+        if pilImage.info:
+            result['info'] = pilImage.info
+        return result
