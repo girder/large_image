@@ -24,7 +24,7 @@ import PIL.Image
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
-from large_image.constants import TILE_FORMAT_PIL
+from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
 
@@ -65,8 +65,15 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     cacheName = 'tilesource'
     name = 'pilfile'
-    # No extensions or mime types are explicitly added for the PIL tile source,
-    # as it should always be a fallback source
+
+    # Although PIL is always a fallback source, prefer it to other fallback
+    # sources
+    extensions = {
+        None: SourcePriority.FALLBACK_HIGH
+    }
+    mimeTypes = {
+        None: SourcePriority.FALLBACK_HIGH
+    }
 
     def __init__(self, path, maxSize=None, **kwargs):
         """

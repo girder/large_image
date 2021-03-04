@@ -23,8 +23,9 @@ class SourcePriority:
     MEDIUM = 4
     LOW = 5
     LOWER = 6
-    FALLBACK = 7
-    MANUAL = 8   # Will never be selected automatically
+    FALLBACK_HIGH = 7
+    FALLBACK = 8
+    MANUAL = 9   # Will never be selected automatically
 
 
 TILE_FORMAT_IMAGE = 'image'
