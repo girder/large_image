@@ -144,9 +144,10 @@ def checkForLargeImageFiles(event):
     exts = [ext.split()[0] for ext in file.get('exts') if ext]
     if set(exts[-2:]).intersection(girder_tilesource.KnownExtensions):
         possible = True
-    if not file.get('itemId') or not possible:
+    if not file.get('itemId'):
         return
-    if not Setting().get(constants.PluginSettings.LARGE_IMAGE_AUTO_SET):
+    autoset = Setting().get(constants.PluginSettings.LARGE_IMAGE_AUTO_SET)
+    if not autoset or (not possible and autoset != 'all'):
         return
     item = Item().load(file['itemId'], force=True, exc=False)
     if not item or item.get('largeImage'):
@@ -211,13 +212,22 @@ def handleRemoveFile(event):
 @setting_utilities.validator({
     constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
     constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
-    constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
 })
 def validateBoolean(doc):
     val = doc['value']
     if str(val).lower() not in ('false', 'true', ''):
         raise ValidationException('%s must be a boolean.' % doc['key'], 'value')
     doc['value'] = (str(val).lower() != 'false')
+
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_AUTO_SET,
+})
+def validateBooleanOrAll(doc):
+    val = doc['value']
+    if str(val).lower() not in ('false', 'true', 'all', ''):
+        raise ValidationException('%s must be a boolean or "all".' % doc['key'], 'value')
+    doc['value'] = val if val in {'all'} else (str(val).lower() != 'false')
 
 
 @setting_utilities.validator({

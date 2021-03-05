@@ -15,11 +15,14 @@ form#g-large-image-form(role="form")
       | Uploaded and imported items with files that have MIME-types or extensions that are typical of large images will be set as large image items if they can be used without running a conversion job.
     .g-large-image-auto-set-container
       label.radio-inline
-        input.g-large-image-auto-set-on(type="radio", name="g-large-image-auto-set", checked=settings['large_image.auto_set'] !== false ? 'checked': undefined)
+        input.g-large-image-auto-set-on(type="radio", name="g-large-image-auto-set", checked=settings['large_image.auto_set'] === true ? 'checked' : undefined)
         | Automatically use large images
       label.radio-inline
-        input.g-large-image-auto-set-off(type="radio", name="g-large-image-auto-set", checked=settings['large_image.auto_set'] !== false ? undefined : 'checked')
+        input.g-large-image-auto-set-off(type="radio", name="g-large-image-auto-set", checked=settings['large_image.auto_set'] === false ? 'checked' : undefined)
         | No automatic use
+      label.radio-inline
+        input.g-large-image-auto-set-all(type="radio", name="g-large-image-auto-set", checked=settings['large_image.auto_set'] === 'all' ? 'checked' : undefined)
+        | Automatically try to use all files as large images
   .form-group
     label
       | Maximum size of regular images to use without conversion
