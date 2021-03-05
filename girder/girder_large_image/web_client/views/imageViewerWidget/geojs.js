@@ -144,20 +144,34 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         if (frame !== this._frame && !this._updating) {
             this._updating = true;
             this._frame = frame;
+            this.trigger('g:imageFrameChanging', this, frame);
             this.viewer.onIdle(() => {
-                this._layer2.url(this._baseurl + '?frame=' + frame);
+                this._layer2.url(this.getFrameAndUrl().url);
                 this.viewer.onIdle(() => {
                     this._layer.moveDown();
                     var ltemp = this._layer;
                     this._layer = this._layer2;
                     this._layer2 = ltemp;
                     this._updating = false;
+                    this.trigger('g:imageFrameChanged', this, frame);
                     if (frame !== this._nextframe) {
                         this.frameUpdate(this._nextframe);
                     }
                 });
             });
         }
+    },
+
+    getFrameAndUrl: function () {
+        const frame = this._frame || 0;
+        let url = this._baseurl || this._layer.url();
+        if (frame) {
+            url += (url.indexOf('?') >= 0 ? '&' : '?') + 'frame=' + frame;
+        }
+        return {
+            frame: frame,
+            url: url
+        };
     },
 
     destroy: function () {
