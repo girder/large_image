@@ -4,10 +4,12 @@
 
 ### Features
 - Added a Girder endpoint to get metadata on associated images (#561)
+- Added an option to try all Girder items for use as large images (#562)
 
 ### Improvements
 - Reduce gdal warning about projection strings (#559)
 - Don't report needless frame information for some single frame files (#558)
+- Send Backbone events on frame changes in the viewer (#563)
 
 ### Changes
 - The PIL tilesource priority is slightly higher than other fallback sources (#560)
