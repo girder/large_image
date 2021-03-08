@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.4.2
 
 ### Features
 - Added a Girder endpoint to get metadata on associated images (#561)
