@@ -3,7 +3,10 @@
 ## Unreleased
 
 ### Improvements
-- In Girder, prefer geospatial sources for geospatial data
+- In Girder, prefer geospatial sources for geospatial data (#564)
+
+### Bug Fixes
+- The GDAL source failed when getting band ranges on non-integer data (#565)
 
 ## Version 1.4.2
 
