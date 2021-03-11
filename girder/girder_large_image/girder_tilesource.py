@@ -148,7 +148,14 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):
         loadGirderTileSources()
     if not file:
         file = File().load(item['largeImage']['fileId'], force=True)
+    try:
+        localPath = File().getLocalFilePath(file)
+    except (FilePathException, AttributeError):
+        localPath = None
     extensions = [entry.lower().split()[0] for entry in file['exts'] if entry]
+    properties = {}
+    if localPath:
+        properties['geospatial'] = tilesource.isGeospatial(localPath)
     sourceList = []
     for sourceName in AvailableGirderTileSources:
         if not getattr(AvailableGirderTileSources[sourceName], 'girderSource', False):
@@ -160,8 +167,11 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):
                 priority = min(priority, sourceExtensions[ext])
         if priority >= SourcePriority.MANUAL:
             continue
-        sourceList.append((priority, sourceName))
-    for _priority, sourceName in sorted(sourceList):
+        propertiesClash = any(
+            getattr(AvailableGirderTileSources[sourceName], k, False) != v
+            for k, v in properties.items())
+        sourceList.append((propertiesClash, priority, sourceName))
+    for _clash, _priority, sourceName in sorted(sourceList):
         if AvailableGirderTileSources[sourceName].canRead(item):
             return sourceName
 
