@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.4.3
 
 ### Improvements
 - In Girder, prefer geospatial sources for geospatial data (#564)
