@@ -258,11 +258,16 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 }}
             super(GDALFileTileSource, GDALFileTileSource)._scanForMinMax(
                 self, dtype=dtype, frame=frame, analysisSize=analysisSize, **kwargs)
-        self._bandRanges[frame]['min'] = numpy.append(
-            self._bandRanges[frame]['min'], 0)
-        self._bandRanges[frame]['max'] = numpy.append(
-            self._bandRanges[frame]['max'], numpy.iinfo(self._bandRanges[frame]['max'].dtype).max)
-        return
+        # Add the maximum range of the data type to the end of the band
+        # range list.  This changes autoscaling behavior.  For non-integer
+        # data types, this adds the range [0, 1].
+        self._bandRanges[frame]['min'] = numpy.append(self._bandRanges[frame]['min'], 0)
+        try:
+            # only valid for integer dtypes
+            range_max = numpy.iinfo(self._bandRanges[frame]['max'].dtype).max
+        except ValueError:
+            range_max = 1
+        self._bandRanges[frame]['max'] = numpy.append(self._bandRanges[frame]['max'], range_max)
 
     def _getDriver(self):
         """
