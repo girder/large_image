@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- More untiled tiff files are handles by the bioformats reader (#569)
+
 ## Version 1.4.3
 
 ### Improvements
