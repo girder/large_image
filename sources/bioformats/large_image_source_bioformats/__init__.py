@@ -292,6 +292,15 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._logger.debug('Failed to parse series information: %s', exc)
             rdr.setSeries(0)
             return 1
+        if not len(seriesMetadata):
+            frameList = [[0]]
+            nextSeriesNum = 1
+            for idx in range(1, self._metadata['seriesCount']):
+                rdr.setSeries(idx)
+                if rdr.getSizeX() == self.sizeX and rdr.getSizeY == self.sizeY:
+                    frameList.append([idx])
+                    if nextSeriesNum == idx:
+                        nextSeriesNum = idx + 1
         frameList = [fl for fl in frameList if len(fl)]
         self._metadata['frameSeries'] = [{
             'series': fl,
@@ -303,6 +312,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         firstPossibleAssoc = self._getSeriesStarts(rdr)
         self._metadata['seriesAssociatedImages'] = {}
         for seriesNum in range(firstPossibleAssoc, self._metadata['seriesCount']):
+            if any((seriesNum in series['series']) for series in self._metadata['frameSeries']):
+                continue
             rdr.setSeries(seriesNum)
             info = {
                 'sizeX': rdr.getSizeX(),
