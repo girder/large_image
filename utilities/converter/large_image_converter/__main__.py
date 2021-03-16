@@ -32,6 +32,18 @@ depth.
     parser.add_argument(
         'dest', nargs='?', help='Output path')
     parser.add_argument(
+        '--overwrite', '-w', '-y', action='store_true',
+        help='Overwrite an existing output file')
+    parser.add_argument(
+        '--tile', '--tile-size', '--tilesize', '--tileSize', '-t', type=int,
+        help='Tile size.  Default is 256.', dest='tileSize')
+    parser.add_argument(
+        '--no-subifds', action='store_false', dest='subifds', default=None,
+        help='When writing multiframe files, do not use subifds.')
+    parser.add_argument(
+        '--subifds', action='store_true', dest='subifds', default=None,
+        help='When writing multiframe files, use subifds.')
+    parser.add_argument(
         '--compression', '-c',
         choices=[
             '', 'jpeg', 'deflate', 'zip', 'lzw', 'zstd', 'packbits', 'jbig',
@@ -61,17 +73,10 @@ depth.
     parser.add_argument(
         '--cr', type=int, help='JP2K compression ratio.  1 for lossless.')
     parser.add_argument(
-        '--tile', '--tile-size', '--tilesize', '--tileSize', '-t', type=int,
-        help='Tile size.  Default is 256.', dest='tileSize')
-    parser.add_argument(
-        '--no-subifds', action='store_false', dest='subifds', default=None,
-        help='When writing multiframe files, do not use subifds.')
-    parser.add_argument(
-        '--subifds', action='store_true', dest='subifds', default=None,
-        help='When writing multiframe files, use subifds.')
-    parser.add_argument(
-        '--overwrite', '-w', action='store_true',
-        help='Overwrite an existing output file')
+        '--concurrency', '-j', type=int, dest='_concurrency',
+        help='Maximum processor concurrency.  Some conversion tasks can use '
+        'multiple processors.  By default, all logical processors are used.  '
+        'This is a recommendation and is not strict.')
     parser.add_argument(
         '--stats', action='store_true', dest='_stats',
         help='Add conversion stats (time and size) to the ImageDescription of '
@@ -82,11 +87,6 @@ depth.
         action='store_const', const='full', dest='_stats',
         help='Add conversion stats, including noise metrics (PSNR, etc.) to '
         'the output file.  This takes more time and temporary disk space.')
-    parser.add_argument(
-        '--concurrency', '-j', type=int, dest='_concurrency',
-        help='Maximum processor concurrency.  Some conversion tasks can use'
-        'multiple processors.  By default, all logical processors are used.  '
-        'This is a recommendation and is not strict.')
     return parser
 
 
