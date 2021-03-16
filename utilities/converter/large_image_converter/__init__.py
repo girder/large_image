@@ -282,13 +282,20 @@ def _convert_to_jp2k_tile(lock, fptr, dest, offset, length, shape, dtype, jp2kar
     glymur.Jp2k(dest, data=data, **jp2kargs)
 
 
-def _get_thread_pool(**kwargs):
+def _get_thread_pool(concurrencyMultiplier=1, **kwargs):
     """
-    Allocate a thread pool based on the specifiec concurrency.
+    Allocate a thread pool based on the specific concurrency.
+
+    :param concurrencyMultiplier: if present and the concurrency is not 1,
+        increase the requested concurrency by this amount.  For I/O bound
+        tasks, a concurrency higher than the number of processors is useful.
     """
     concurrency = psutil.cpu_count(logical=True)
     if kwargs.get('_concurrency'):
         concurrency = int(kwargs['_concurrency'])
+    concurrency = max(1, concurrency)
+    if concurrency > 1 and concurrencyMultiplier:
+        concurrency *= concurrencyMultiplier
     return concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
 
 
@@ -383,6 +390,46 @@ def _convert_to_jp2k(path, **kwargs):
     os.rename(tmppath, path)
 
 
+def _convert_large_image_tile(tilelock, strips, tile):
+    """
+    Add a single tile to a list of strips for a vips image so that they can be
+    composited together.
+
+    :param tilelock: a lock for thread safety.
+    :param strips: an array of strips to adds to the final vips image.
+    :param tile: a tileIterator tile.
+    """
+    data = tile['tile']
+    dtypeToGValue = {
+        'b': 'char',
+        'B': 'uchar',
+        'd': 'double',
+        'D': 'dpcomplex',
+        'f': 'float',
+        'F': 'complex',
+        'h': 'short',
+        'H': 'ushort',
+        'i': 'int',
+        'I': 'uint',
+    }
+    if data.dtype.char not in dtypeToGValue:
+        data = data.astype('d')
+    vimg = pyvips.Image.new_from_memory(
+        numpy.ascontiguousarray(data).data,
+        data.shape[1], data.shape[0], data.shape[2],
+        dtypeToGValue[data.dtype.char])
+    x = tile['x']
+    ty = tile['tile_position']['level_y']
+    with tilelock:
+        while len(strips) <= ty:
+            strips.append(None)
+        if strips[ty] is None:
+            strips[ty] = vimg
+            if not x:
+                return
+        strips[ty] = strips[ty].insert(vimg, x, 0, expand=True)
+
+
 def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
     """
     Take a large_image source and convert it by resaving each tiles image with
@@ -404,32 +451,13 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
         subOutputPath = tempPath + '-%d-%s.tiff' % (
             frame + 1, time.strftime('%Y%m%d-%H%M%S'))
         strips = []
+        tilepool = _get_thread_pool(concurrencyMultiplier=2, **kwargs)
+        tilepooltasks = []
+        tilelock = threading.Lock()
         for tile in ts.tileIterator(tile_size=dict(width=_iterTileSize), frame=frame):
-            data = tile['tile']
-            dtypeToGValue = {
-                'b': 'char',
-                'B': 'uchar',
-                'd': 'double',
-                'D': 'dpcomplex',
-                'f': 'float',
-                'F': 'complex',
-                'h': 'short',
-                'H': 'ushort',
-                'i': 'int',
-                'I': 'uint',
-            }
-            if data.dtype.char not in dtypeToGValue:
-                data = data.astype('d')
-            vimg = pyvips.Image.new_from_memory(
-                numpy.ascontiguousarray(data).data,
-                data.shape[1], data.shape[0], data.shape[2],
-                dtypeToGValue[data.dtype.char])
-            x = tile['x']
-            ty = tile['tile_position']['level_y']
-            if ty >= len(strips):
-                strips.append(vimg)
-            else:
-                strips[ty] = strips[ty].insert(vimg, x, 0, expand=True)
+            tilepooltasks.append((tilepool.submit(
+                _convert_large_image_tile, tilelock, strips, tile), ))
+        _drain_pool(tilepool, tilepooltasks)
         img = strips[0]
         for stripidx in range(1, len(strips)):
             img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)
