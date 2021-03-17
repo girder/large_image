@@ -34,13 +34,15 @@ def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90,
     :param inputName: if no output name is specified, and this is specified,
         this is used as the basis of the output name instead of extracting the
         name from the inputFile path.
+    :returns: output path.
     """
     import large_image_converter
 
     logger = logging.getLogger('large-image-converter')
     if not len(logger.handlers):
         logger.addHandler(logging.StreamHandler(sys.stdout))
-    logger.setLevel(logging.INFO)
+    if not logger.level:
+        logger.setLevel(logging.INFO)
 
     inputPath = os.path.abspath(os.path.expanduser(inputFile))
     geospatial = large_image_converter.is_geospatial(inputPath)
@@ -69,3 +71,78 @@ def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90,
         outputPath = renamePath
     logger.info('Created a file of size %d' % os.path.getsize(outputPath))
     return outputPath
+
+
+class JobLogger(logging.Handler):
+    def __init__(self, level=logging.NOTSET, job=None, *args, **kwargs):
+        self._job = job
+        super().__init__(level=level, *args, **kwargs)
+
+    def emit(self, record):
+        from girder_jobs.models.job import Job
+
+        self._job = Job().updateJob(self._job, log=self.format(record).rstrip() + '\n')
+
+
+def convert_image_job(job):
+    import psutil
+    import tempfile
+    from girder.constants import AccessType
+    from girder.models.file import File
+    from girder.models.folder import Folder
+    from girder.models.item import Item
+    from girder.models.upload import Upload
+    from girder.models.user import User
+    from girder_jobs.constants import JobStatus
+    from girder_jobs.models.job import Job
+
+    kwargs = job['kwargs']
+    item = Item().load(kwargs.pop('itemId'), force=True)
+    fileObj = File().load(kwargs.pop('fileId'), force=True)
+    userId = kwargs.pop('userId', None)
+    user = User().load(userId, force=True) if userId else None
+    folder = Folder().load(kwargs.pop('folderId', item['folderId']),
+                           user=user, level=AccessType.WRITE)
+    name = kwargs.pop('name', None)
+    if '_concurrency' not in kwargs:
+        # Default to leaving some overhead for the main process, since this is
+        # running locally
+        kwargs['_concurrency'] = max(1, psutil.cpu_count(logical=True) - 2)
+
+    job = Job().updateJob(
+        job, log='Started large image conversion\n',
+        status=JobStatus.RUNNING)
+    logger = logging.getLogger('large-image-converter')
+    handler = JobLogger(job=job)
+    logger.addHandler(handler)
+    # We could increase the default logging level here
+    # logger.setLevel(logging.DEBUG)
+    try:
+        with tempfile.TemporaryDirectory() as tempdir:
+            dest = create_tiff(
+                inputFile=File().getLocalFilePath(fileObj),
+                inputName=fileObj['name'],
+                outputDir=tempdir,
+                **kwargs,
+            )
+            job = Job().updateJob(job, log='Storing result\n')
+            with open(dest, 'rb') as fobj:
+                Upload().uploadFromFile(
+                    fobj,
+                    size=os.path.getsize(dest),
+                    name=name or os.path.basename(dest),
+                    parentType='folder',
+                    parent=folder,
+                    user=user,
+                )
+    except Exception as exc:
+        status = JobStatus.ERROR
+        logger.exception('Failed in large image conversion')
+        job = Job().updateJob(
+            job, log='Failed in large image conversion (%s)\n' % exc, status=status)
+    else:
+        status = JobStatus.SUCCESS
+        job = Job().updateJob(
+            job, log='Finished large image conversion\n', status=status)
+    finally:
+        logger.removeHandler(handler)
