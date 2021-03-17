@@ -244,15 +244,16 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
             convertParams['compression'] in {'webp', 'jpeg'} or
             kwargs.get('compression') in {'jp2k'})
     # TODO: revisit the TMPDIR override; this is not thread safe
-    oldtmpdir = os.environ.get('TMPDIR')
-    os.environ['TMPDIR'] = os.path.dirname(tempPath)
-    try:
-        image.write_to_file(outputPath, **convertParams)
-    finally:
-        if oldtmpdir is not None:
-            os.environ['TMPDIR'] = oldtmpdir
-        else:
-            del os.environ['TMPDIR']
+    # oldtmpdir = os.environ.get('TMPDIR')
+    # os.environ['TMPDIR'] = os.path.dirname(tempPath)
+    # try:
+    #     image.write_to_file(outputPath, **convertParams)
+    # finally:
+    #     if oldtmpdir is not None:
+    #         os.environ['TMPDIR'] = oldtmpdir
+    #     else:
+    #         del os.environ['TMPDIR']
+    image.write_to_file(outputPath, **convertParams)
     if kwargs.get('compression') == 'jp2k':
         _convert_to_jp2k(outputPath, **kwargs)
 
@@ -418,6 +419,9 @@ def _convert_large_image_tile(tilelock, strips, tile):
         numpy.ascontiguousarray(data).data,
         data.shape[1], data.shape[0], data.shape[2],
         dtypeToGValue[data.dtype.char])
+    vimgTemp = pyvips.Image.new_temp_file('%s.v')
+    vimg.write(vimgTemp)
+    vimg = vimgTemp
     x = tile['x']
     ty = tile['tile_position']['level_y']
     with tilelock:
