@@ -15,6 +15,8 @@ import time
 import numpy
 import tifftools
 
+pyvips = None
+
 try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:
@@ -62,7 +64,7 @@ def _data_from_large_image(path, outputPath, **kwargs):
             continue
         savePath = outputPath + '-%s-%s.tiff' % (key, time.strftime('%Y%m%d-%H%M%S'))
         # TODO: allow specifying quality separately from main image quality
-        tasks.append((pool.submit(
+        _pool_add(tasks, (pool.submit(
             _convert_via_vips, img, savePath, outputPath, mime=mime, forTiled=False), ))
         results['images'][key] = savePath
     _drain_pool(pool, tasks)
@@ -168,7 +170,7 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
             height = subImage.height
         subOutputPath = tempPath + '-%d-%s.tiff' % (
             page + 1, time.strftime('%Y%m%d-%H%M%S'))
-        tasks.append((pool.submit(
+        _pool_add(tasks, (pool.submit(
             _convert_via_vips, subInputPath, subOutputPath, tempPath,
             status='%d/%d' % (page, pages), **kwargs), ))
         outputList.append(subOutputPath)
@@ -182,7 +184,7 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
             if (w, h) not in possibleSizes:
                 key = 'image_%d' % page
                 savePath = tempPath + '-%s-%s.tiff' % (key, time.strftime('%Y%m%d-%H%M%S'))
-                tasks.append((pool.submit(
+                _pool_add(tasks, (pool.submit(
                     _convert_via_vips, subInputPath, savePath, tempPath, False), ))
                 extraImages[key] = savePath
     _drain_pool(pool, tasks)
@@ -217,10 +219,22 @@ def _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
 
 def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
                       status=None, **kwargs):
-    # This is equivalent to a vips command line of
-    #  vips tiffsave <input path> <output path>
-    # followed by the convert params in the form of --<key>[=<value>] where no
-    # value needs to be specified if they are True.
+    """
+    Convert a file, buffer, or vips image to a tiff file.  This is equivalent
+    to a vips command line of
+      vips tiffsave <input path> <output path>
+    followed by the convert params in the form of --<key>[=<value>] where no
+    value needs to be specified if they are True.
+
+    :param inputPathOrBuffer: a file path, bytes object, or vips image.
+    :param outputPath: the name of the file to save.
+    :param tempPath: a directory where temporary files may be stored.  vips
+        also stores files in TMPDIR
+    :param forTiled: True if the output should be tiled, false if not.
+    :param status: an optional additional string to add to log messages.
+    :param **kwargs: addition arguments that get passed to _vips_parameters
+        and _convert_to_jp2k.
+    """
     convertParams = _vips_parameters(forTiled, **kwargs)
     status = (', ' + status) if status else ''
     if type(inputPathOrBuffer) == pyvips.vimage.Image:
@@ -298,6 +312,24 @@ def _get_thread_pool(concurrencyMultiplier=1, **kwargs):
     if concurrency > 1 and concurrencyMultiplier:
         concurrency *= concurrencyMultiplier
     return concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
+
+
+def _pool_add(tasks, newtask):
+    """
+    Add a new task to a pool, then drain any finished tasks at the start of the
+    pool.
+
+    :param tasks: a list contiaining either lists or tuples, the last element
+        of which is a task submitted to the pool.  Altered.
+    :param newtask: a list or tuple to add to the pool.
+    """
+    tasks.append(newtask)
+    while len(tasks):
+        try:
+            tasks[0][-1].result(0)
+        except concurrent.futures.TimeoutError:
+            break
+        tasks.pop(0)
 
 
 def _drain_pool(pool, tasks):
@@ -452,22 +484,23 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
     tasks = []
     pool = _get_thread_pool(**kwargs)
     for frame in range(numFrames):
+        logger.info('Processing frame %d/%d', frame + 1, numFrames)
         subOutputPath = tempPath + '-%d-%s.tiff' % (
             frame + 1, time.strftime('%Y%m%d-%H%M%S'))
         strips = []
-        tilepool = _get_thread_pool(concurrencyMultiplier=2, **kwargs)
+        tilepool = _get_thread_pool(concurrencyMultiplier=2 if not frame else 1, **kwargs)
         tilepooltasks = []
         tilelock = threading.Lock()
         for tile in ts.tileIterator(tile_size=dict(width=_iterTileSize), frame=frame):
-            tilepooltasks.append((tilepool.submit(
+            _pool_add(tilepooltasks, (tilepool.submit(
                 _convert_large_image_tile, tilelock, strips, tile), ))
         _drain_pool(tilepool, tilepooltasks)
         img = strips[0]
         for stripidx in range(1, len(strips)):
             img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)
-        tasks.append((pool.submit(
+        _pool_add(tasks, (pool.submit(
             _convert_via_vips, img, subOutputPath, tempPath,
-            status='%d/%d' % (frame, numFrames), **kwargs), ))
+            status='%d/%d' % (frame + 1, numFrames), **kwargs), ))
         outputList.append(subOutputPath)
     _drain_pool(pool, tasks)
     _output_tiff(outputList, outputPath, lidata, **kwargs)
@@ -581,7 +614,8 @@ def _import_pyvips():
     """
     global pyvips
 
-    import pyvips
+    if pyvips is None:
+        import pyvips
 
 
 def _is_eightbit(path, tiffinfo=None):
@@ -666,6 +700,13 @@ def _list_possible_sizes(width, height):
 
 
 def json_serial(obj):
+    """
+    Fallback serializier for json.  This serializes datetime objects to iso
+    format.
+
+    :param obj: an object to serialize.
+    :returns: a serialized string.
+    """
     if isinstance(obj, (datetime.datetime, datetime.date)):
         return obj.isoformat()
     return str(obj)
@@ -859,7 +900,8 @@ def convert(inputPath, outputPath=None, **kwargs):
         with TemporaryDirectory() as tempDir:
             tempPath = os.path.join(tempDir, os.path.basename(outputPath))
             lidata = _data_from_large_image(inputPath, tempPath, **kwargs)
-            logger.debug('large_image information for %s: %r' % (inputPath, lidata))
+            logger.log(logging.DEBUG - 1, 'large_image information for %s: %r',
+                       inputPath, lidata)
             if not is_vips(inputPath) and lidata:
                 _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
             elif _is_multiframe(inputPath):
