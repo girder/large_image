@@ -466,6 +466,36 @@ def _convert_large_image_tile(tilelock, strips, tile):
         strips[ty] = strips[ty].insert(vimg, x, 0, expand=True)
 
 
+def _convert_large_image_frame(frame, numFrames, ts, frameOutputPath, tempPath, **kwargs):
+    """
+    Convert a single frame from a large_image source.  This parallelizes tile
+    reads.  Once all tiles are converted to a composited vips image, a tiff
+    file is generated.
+
+    :param frame: the 0-based frame number.
+    :param numFrames: the total number of frames; used for logging.
+    :param ts: the open tile source.
+    :param frameOutputPath: the destination name for the tiff file.
+    :params tempPath: a temporary file in a temporary directory.
+    """
+    # The iterator tile size is a balance between memory use and fewer calls
+    # and file handles.
+    _iterTileSize = 4096
+    logger.info('Processing frame %d/%d', frame + 1, numFrames)
+    strips = []
+    pool = _get_thread_pool(**kwargs)
+    tasks = []
+    tilelock = threading.Lock()
+    for tile in ts.tileIterator(tile_size=dict(width=_iterTileSize), frame=frame):
+        _pool_add(tasks, (pool.submit(_convert_large_image_tile, tilelock, strips, tile), ))
+    _drain_pool(pool, tasks)
+    img = strips[0]
+    for stripidx in range(1, len(strips)):
+        img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)
+    _convert_via_vips(
+        img, frameOutputPath, tempPath, status='%d/%d' % (frame + 1, numFrames), **kwargs)
+
+
 def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
     """
     Take a large_image source and convert it by resaving each tiles image with
@@ -480,28 +510,15 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
     ts = lidata['tilesource']
     numFrames = len(lidata['metadata'].get('frames', [0]))
     outputList = []
-    _iterTileSize = 1024
     tasks = []
     pool = _get_thread_pool(**kwargs)
     for frame in range(numFrames):
-        logger.info('Processing frame %d/%d', frame + 1, numFrames)
-        subOutputPath = tempPath + '-%d-%s.tiff' % (
+        frameOutputPath = tempPath + '-%d-%s.tiff' % (
             frame + 1, time.strftime('%Y%m%d-%H%M%S'))
-        strips = []
-        tilepool = _get_thread_pool(concurrencyMultiplier=2 if not frame else 1, **kwargs)
-        tilepooltasks = []
-        tilelock = threading.Lock()
-        for tile in ts.tileIterator(tile_size=dict(width=_iterTileSize), frame=frame):
-            _pool_add(tilepooltasks, (tilepool.submit(
-                _convert_large_image_tile, tilelock, strips, tile), ))
-        _drain_pool(tilepool, tilepooltasks)
-        img = strips[0]
-        for stripidx in range(1, len(strips)):
-            img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)
         _pool_add(tasks, (pool.submit(
-            _convert_via_vips, img, subOutputPath, tempPath,
-            status='%d/%d' % (frame + 1, numFrames), **kwargs), ))
-        outputList.append(subOutputPath)
+            _convert_large_image_frame, frame, numFrames, ts, frameOutputPath,
+            tempPath, **kwargs), ))
+        outputList.append(frameOutputPath)
     _drain_pool(pool, tasks)
     _output_tiff(outputList, outputPath, lidata, **kwargs)
 
