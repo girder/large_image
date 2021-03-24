@@ -65,10 +65,12 @@ RUN pyenv update && \
 RUN groupadd -r tox --gid=999 && \
     useradd -m -r -g tox --uid=999 tox
 
-RUN pyenv local ${PYTHON_VERSIONS%% *} && \
+RUN for ver in $PYTHON_VERSIONS; do \
+    pyenv local $ver && \
     python -m pip install -U pip && \
-    python -m pip install tox && \
-    pyenv local --unset && \
+    python -m pip install tox wheel && \
+    pyenv local --unset; \
+    done && \
     pyenv rehash
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
