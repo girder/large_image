@@ -111,7 +111,7 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
     if 'level' in options:
         cmdopt += ['-co', 'LEVEL=%s' % options['level']]
     cmd = ['gdal_translate', inputPath, outputPath] + cmdopt
-    logger.info('Convert to geotiff: %r' % (cmd))
+    logger.info('Convert to geotiff: %r', cmd)
     try:
         # subprocess.check_call(cmd)
         ds = gdal.Open(inputPath, gdalconst.GA_ReadOnly)
@@ -162,8 +162,8 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
         if subImage.width != width or subImage.height != height:
             if subImage.width * subImage.height <= width * height:
                 continue
-            logger.info('Bigger image found (was %dx%d, now %dx%d)', (
-                width, height, subImage.width, subImage.height))
+            logger.info('Bigger image found (was %dx%d, now %dx%d)',
+                        width, height, subImage.width, subImage.height)
             for path in outputList:
                 os.unlink(path)
             width = subImage.width
@@ -246,8 +246,8 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     else:
         source = inputPathOrBuffer
         image = pyvips.Image.new_from_file(inputPathOrBuffer)
-    logger.info('Input: %s, Output: %s, Options: %r%s' % (
-        source, outputPath, convertParams, status))
+    logger.info('Input: %s, Output: %s, Options: %r%s',
+                source, outputPath, convertParams, status)
     image = image.autorot()
     if (convertParams['compression'] not in {'jpeg'} or
             image.interpretation != pyvips.Interpretation.SCRGB):
@@ -535,7 +535,7 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
     :param extraImages: an optional dictionary of keys and paths to add as
         extra associated images.
     """
-    logger.debug('Reading %s' % inputs[0])
+    logger.debug('Reading %s', inputs[0])
     info = tifftools.read_tiff(inputs[0])
     imgDesc = info['ifds'][0]['tags'].get(tifftools.Tag.ImageDescription.value)
     description = _make_li_description(
@@ -557,7 +557,7 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
         for idx, inputPath in enumerate(inputs):
             if not idx:
                 continue
-            logger.debug('Reading %s' % inputPath)
+            logger.debug('Reading %s', inputPath)
             nextInfo = tifftools.read_tiff(inputPath)
             if lidata:
                 _set_resolution(nextInfo['ifds'], lidata['metadata'])
@@ -581,14 +581,14 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
     if extraImages:
         assocList += list(extraImages.items())
     for key, assocPath in assocList:
-        logger.debug('Reading %s' % assocPath)
+        logger.debug('Reading %s', assocPath)
         assocInfo = tifftools.read_tiff(assocPath)
         assocInfo['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value] = {
             'data': key,
             'datatype': tifftools.Datatype.ASCII,
         }
         info['ifds'] += assocInfo['ifds']
-    logger.debug('Writing %s' % outputPath)
+    logger.debug('Writing %s', outputPath)
     tifftools.write_tiff(info, outputPath, bigEndian=False, bigtiff=False, allowExisting=True)
 
 
@@ -794,7 +794,7 @@ def _vips_cast(image, mustBe8Bit=False):
     if mustBe8Bit and target != pyvips.BandFormat.UCHAR:
         target = pyvips.BandFormat.UCHAR
         multiplier /= 256
-    logger.debug('Casting image from %r to %r' % (image.format, target))
+    logger.debug('Casting image from %r to %r', image.format, target)
     image = ((image.cast(pyvips.BandFormat.DOUBLE) + offset) * multiplier).cast(target)
     return image
 
