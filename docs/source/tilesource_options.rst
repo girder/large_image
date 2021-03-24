@@ -51,7 +51,7 @@ A band definition is an object which can contain the following keys:
 
 - ``composite``: either 'lighten' or 'multiply'.  Defaults to 'lighten' for all except the alpha band.
 
-- ``clamp``: either True to clamp values outside of the [min, max] to the ends of the palette or False to make outside values transparent.
+- ``clamp``: either True to clamp (also called clip or crop) values outside of the [min, max] to the ends of the palette or False to make outside values transparent.
 
 Note that some tile sources add additional options to the ``style`` parameter.
 
