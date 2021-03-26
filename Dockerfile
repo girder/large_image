@@ -60,7 +60,7 @@ RUN pyenv update && \
     find $PYENV_ROOT/versions -type d '(' -name '__pycache__' -o -name 'test' -o -name 'tests' ')' -exec rm -rfv '{}' + >/dev/null && \
     find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
     echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
-    rm -rf /tmp/* /var/tmp/* \
+    rm -rf /tmp/* /var/tmp/*
 
 RUN for ver in $PYTHON_VERSIONS; do \
     pyenv local $ver && \
