@@ -59,22 +59,24 @@ RUN pyenv update && \
     pyenv global $(pyenv versions --bare) && \
     find $PYENV_ROOT/versions -type d '(' -name '__pycache__' -o -name 'test' -o -name 'tests' ')' -exec rm -rfv '{}' + >/dev/null && \
     find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
-    echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version
+    echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
+    rm -rf /tmp/* /var/tmp/* \
+
+RUN for ver in $PYTHON_VERSIONS; do \
+    pyenv local $ver && \
+    python -m pip install --no-cache-dir -U pip && \
+    python -m pip install --no-cache-dir tox wheel && \
+    pyenv local --unset; \
+    done && \
+    pyenv rehash && \
+    rm -rf /tmp/* /var/tmp/*
 
 # Create a user that can be used with gosu or chroot when running tox
 RUN groupadd -r tox --gid=999 && \
     useradd -m -r -g tox --uid=999 tox
 
-RUN for ver in $PYTHON_VERSIONS; do \
-    pyenv local $ver && \
-    python -m pip install -U pip && \
-    python -m pip install tox wheel && \
-    pyenv local --unset; \
-    done && \
-    pyenv rehash
-
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
     apt-get install -y nodejs && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /app
