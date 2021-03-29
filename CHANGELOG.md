@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Features
+- Allow converting a single frame of a multiframe image (#579)
+- Add a convert endpoint to the Girder plugin (#578)
+
 ### Improvements
 - More untiled tiff files are handles by the bioformats reader (#569)
 
