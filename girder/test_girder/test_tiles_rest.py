@@ -14,14 +14,14 @@ from girder.models.setting import Setting
 from girder.models.token import Token
 from girder.models.user import User
 
+from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
-
-from girder_large_image.models.image_item import ImageItem
 
 from large_image import getTileSource
 from girder_large_image import constants
 from girder_large_image import getGirderTileSource
 from girder_large_image import loadmodelcache
+from girder_large_image.models.image_item import ImageItem
 
 from . import girder_utilities as utilities
 
@@ -134,7 +134,7 @@ def _createTestTiles(server, admin, params=None, info=None, error=None):
     return infoDict
 
 
-def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None):
+def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None, convert=False):
     """
     When we know we need to process a job, we have to use an actual http
     request rather than the normal simulated request to cherrypy.  This is
@@ -1198,3 +1198,66 @@ def testTilesFromWithOptions(boundServer, admin, fsAssetstore, girderWorker):
     assert tileMetadata['sizeX'] == 10000
     assert tileMetadata['sizeY'] == 5000
     assert tileMetadata['levels'] == 5
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testTilesConvertLocal(boundServer, admin, fsAssetstore):
+    file = utilities.uploadTestFile('grey10kx5k.tif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+
+    headers = {
+        'Accept': 'application/json',
+        'Girder-Token': str(Token().createToken(admin)['_id'])
+    }
+    req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles/convert' % (
+        boundServer.boundPort, itemId), headers=headers)
+    assert req.status_code == 200
+    job = req.json()
+    while job['status'] not in (JobStatus.SUCCESS, JobStatus.ERROR, JobStatus.CANCELED):
+        time.sleep(0.1)
+        job = Job().load(job['_id'], force=True)
+    item = Item().findOne({'name': 'grey10kx5k.tiff'}, sort=[('created', SortDir.DESCENDING)])
+    itemId = item['_id']
+    tileMetadata = ImageItem().getMetadata(item)
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 10000
+    assert tileMetadata['sizeY'] == 5000
+    assert tileMetadata['levels'] == 7
+    assert tileMetadata['magnification'] is None
+    assert tileMetadata['mm_x'] is None
+    assert tileMetadata['mm_y'] is None
+    _testTilesZXY(boundServer, admin, itemId, tileMetadata)
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testTilesConvertRemote(boundServer, admin, fsAssetstore, girderWorker):
+    file = utilities.uploadTestFile('grey10kx5k.tif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+
+    headers = {
+        'Accept': 'application/json',
+        'Girder-Token': str(Token().createToken(admin)['_id'])
+    }
+    req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles/convert' % (
+        boundServer.boundPort, itemId), headers=headers,
+        data={'localJob': 'false'})
+    assert req.status_code == 200
+    job = req.json()
+    while job['status'] not in (JobStatus.SUCCESS, JobStatus.ERROR, JobStatus.CANCELED):
+        time.sleep(0.1)
+        job = Job().load(job['_id'], force=True)
+    item = Item().findOne({'name': 'grey10kx5k.tiff'}, sort=[('created', SortDir.DESCENDING)])
+    itemId = item['_id']
+    tileMetadata = ImageItem().getMetadata(item)
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 10000
+    assert tileMetadata['sizeY'] == 5000
+    assert tileMetadata['levels'] == 7
+    assert tileMetadata['magnification'] is None
+    assert tileMetadata['mm_x'] is None
+    assert tileMetadata['mm_y'] is None
+    _testTilesZXY(boundServer, admin, itemId, tileMetadata)

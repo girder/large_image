@@ -25,8 +25,8 @@ from girder.api import access, filter_logging
 from girder.api.v1.item import Item as ItemResource
 from girder.api.describe import autoDescribeRoute, describeRoute, Description
 from girder.api.rest import filtermodel, loadmodel, setRawResponse, setResponseHeader
+from girder.constants import AccessType
 from girder.exceptions import RestException
-from girder.models.model_base import AccessType
 from girder.models.file import File
 from girder.models.item import Item
 
@@ -99,6 +99,7 @@ class TilesItemResource(ItemResource):
 
         self.resourceName = 'item'
         apiRoot.item.route('POST', (':itemId', 'tiles'), self.createTiles)
+        apiRoot.item.route('POST', (':itemId', 'tiles', 'convert'), self.convertImage)
         apiRoot.item.route('GET', (':itemId', 'tiles'), self.getTilesInfo)
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'),
@@ -139,10 +140,9 @@ class TilesItemResource(ItemResource):
 
     @describeRoute(
         Description('Create a large image for this item.')
-        .param('itemId', 'The ID of the item.', paramType='path')
-        .param('fileId', 'The ID of the source file containing the image. '
-                         'Required if there is more than one file in the item.',
-               required=False)
+        .param('itemId', 'The source item.', paramType='path')
+        .param('fileId', 'The source file containing the image.  Required if '
+               'there is more than one file in the item.', required=False)
         .param('force', 'Always use a job to create the large image.',
                dataType='boolean', default=False, required=False)
         .param('notify', 'If a job is required to create the large image, '
@@ -187,6 +187,62 @@ class TilesItemResource(ItemResource):
                 createJob='always' if self.boolParam('force', params, default=False) else True,
                 notify=notify,
                 **params)
+        except TileGeneralException as e:
+            raise RestException(e.args[0])
+
+    @describeRoute(
+        Description('Create a new large image item based on an existing item')
+        .notes('This can be used to make an item that is a different internal '
+               'format than the original item.')
+        .param('itemId', 'The source item.', paramType='path')
+        .param('fileId', 'The source file containing the image.  Required if '
+               'there is more than one file in the item.', required=False)
+        .param('folderId', 'The destination folder.', required=False)
+        .param('name', 'A new name for the output item.', required=False)
+        .param('localJob', 'If true, run as a local job; if false, run via '
+               'the remote worker', dataType='boolean', default=True,
+               required=False)
+        .param('tileSize', 'Tile size', dataType='int', default=256,
+               required=False)
+        .param('frame', 'Single frame number.  If the source is a multiframe '
+               'image and this value is specified, only the selected frame is '
+               'included in the result.', dataType='int', default=None,
+               required=False)
+        .param('compression', 'Internal compression format', required=False,
+               enum=['none', 'jpeg', 'deflate', 'lzw', 'zstd', 'packbits', 'webp', 'jp2k'])
+        .param('quality', 'JPEG compression quality where 0 is small and 100 '
+               'is highest quality', dataType='int', default=90,
+               required=False)
+        .param('level', 'Compression level for deflate (zip) or zstd.',
+               dataType='int', required=False)
+        .param('predictor', 'Predictor for deflate (zip) or lzw.',
+               required=False, enum=['none', 'horizontal', 'float', 'yes'])
+        .param('psnr', 'JP2K compression target peak-signal-to-noise-ratio '
+               'where 0 is lossless and otherwise higher numbers are higher '
+               'quality', dataType='int', required=False)
+        .param('cr', 'JP2K target compression ratio where 1 is lossless',
+               dataType='int', required=False)
+    )
+    @access.user
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    @filtermodel(model='job', plugin='jobs')
+    def convertImage(self, item, params):
+        largeImageFileId = params.get('fileId')
+        if largeImageFileId is None:
+            files = list(Item().childFiles(item=item, limit=2))
+            if len(files) == 1:
+                largeImageFileId = str(files[0]['_id'])
+        if not largeImageFileId:
+            raise RestException('Missing "fileId" parameter.')
+        largeImageFile = File().load(largeImageFileId, force=True, exc=True)
+        user = self.getCurrentUser()
+        token = self.getCurrentToken()
+        params.pop('notify', None)
+        localJob = self.boolParam('localJob', params, default=True)
+        params.pop('localJob', None)
+        try:
+            return self.imageItemModel.convertImage(
+                item, largeImageFile, user, token, localJob=localJob, **params)
         except TileGeneralException as e:
             raise RestException(e.args[0])
 

@@ -55,12 +55,12 @@ class ImageItem(Item):
         if 'fileId' in item.setdefault('largeImage', {}):
             raise TileGeneralException('Item already has largeImage set.')
         if fileObj['itemId'] != item['_id']:
-            raise TileGeneralException('The provided file must be in the '
-                                       'provided item.')
+            raise TileGeneralException(
+                'The provided file must be in the provided item.')
         if (item['largeImage'].get('expected') is True and
                 'jobId' in item['largeImage']):
-            raise TileGeneralException('Item is scheduled to generate a '
-                                       'largeImage.')
+            raise TileGeneralException(
+                'Item is scheduled to generate a largeImage.')
 
         item['largeImage'].pop('expected', None)
         item['largeImage'].pop('sourceName', None)
@@ -106,6 +106,63 @@ class ImageItem(Item):
             outputDir=TemporaryDirectory(),
             girder_result_hooks=[
                 GirderUploadToItem(str(item['_id']), False),
+            ],
+            **kwargs,
+        ), countdown=int(kwargs['countdown']) if kwargs.get('countdown') else None)
+        return job.job
+
+    def convertImage(self, item, fileObj, user=None, token=None, localJob=True, **kwargs):
+        if fileObj['itemId'] != item['_id']:
+            raise TileGeneralException(
+                'The provided file must be in the provided item.')
+        if not localJob:
+            return self._convertImageViaWorker(item, fileObj, user, token, **kwargs)
+        # local job
+        job = Job().createLocalJob(
+            module='large_image_tasks.tasks',
+            function='convert_image_job',
+            kwargs={
+                'itemId': str(item['_id']),
+                'fileId': str(fileObj['_id']),
+                'userId': str(user['_id']) if user else None,
+                **kwargs,
+            },
+            title='Convert a file to a large image file.',
+            type='large_image_convert_image',
+            user=user,
+            public=True,
+            asynchronous=True,
+        )
+        Job().scheduleJob(job)
+        return job
+
+    def _convertImageViaWorker(
+            self, item, fileObj, user=None, token=None, folderId=None,
+            name=None, **kwargs):
+        import large_image_tasks.tasks
+        from girder_worker_utils.transforms.girder_io import GirderUploadToFolder
+        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
+        from girder_worker_utils.transforms.common import TemporaryDirectory
+
+        try:
+            localPath = File().getLocalFilePath(fileObj)
+        except (FilePathException, AttributeError):
+            localPath = None
+        job = large_image_tasks.tasks.create_tiff.apply_async(kwargs=dict(
+            girder_job_title='TIFF Conversion: %s' % fileObj['name'],
+            girder_job_other_fields={'meta': {
+                'creator': 'large_image',
+                'itemId': str(item['_id']),
+                'task': 'convertImage',
+            }},
+            inputFile=GirderFileIdAllowDirect(str(fileObj['_id']), fileObj['name'], localPath),
+            inputName=fileObj['name'],
+            outputDir=TemporaryDirectory(),
+            girder_result_hooks=[
+                GirderUploadToFolder(
+                    str(folderId if folderId else item['folderId']),
+                    upload_kwargs=dict(filename=name),
+                ),
             ],
             **kwargs,
         ), countdown=int(kwargs['countdown']) if kwargs.get('countdown') else None)
