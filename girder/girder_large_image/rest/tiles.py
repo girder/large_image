@@ -204,10 +204,9 @@ class TilesItemResource(ItemResource):
                required=False)
         .param('tileSize', 'Tile size', dataType='int', default=256,
                required=False)
-        .param('frame', 'Single frame number.  If the source is a multiframe '
-               'image and this value is specified, only the selected frame is '
-               'included in the result.', dataType='int', default=None,
-               required=False)
+        .param('onlyFrame', 'Only convert a specific 0-based frame of a '
+               'multiframe file.  If not specified, all frames are converted.',
+               dataType='int', required=False)
         .param('compression', 'Internal compression format', required=False,
                enum=['none', 'jpeg', 'deflate', 'lzw', 'zstd', 'packbits', 'webp', 'jp2k'])
         .param('quality', 'JPEG compression quality where 0 is small and 100 '

@@ -44,6 +44,10 @@ depth.
         '--subifds', action='store_true', dest='subifds', default=None,
         help='When writing multiframe files, use subifds.')
     parser.add_argument(
+        '--frame', dest='onlyFrame', default=None, type=int,
+        help='When handling a multiframe file, only output a single frame.  '
+        'This is the zero-based frame number.')
+    parser.add_argument(
         '--compression', '-c',
         choices=[
             '', 'jpeg', 'deflate', 'zip', 'lzw', 'zstd', 'packbits', 'jbig',

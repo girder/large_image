@@ -189,6 +189,17 @@ def testConvertFromMultiframeImageNoSubIFDS(tmpdir):
     assert len(info['ifds']) == 15
 
 
+def testConvertFromMultiframeImageOnlyOneFrame(tmpdir):
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath, onlyFrame=2)
+    source = large_image_source_tiff.open(outputPath)
+    metadata = source.getMetadata()
+    assert metadata['levels'] == 5
+    info = tifftools.read_tiff(outputPath)
+    assert len(info['ifds']) == 5
+
+
 # Test main program
 
 def testConverterMain(tmpdir):

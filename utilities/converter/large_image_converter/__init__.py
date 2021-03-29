@@ -154,6 +154,8 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
     imageSizes = []
     tasks = []
     pool = _get_thread_pool(**kwargs)
+    onlyFrame = int(kwargs.get('onlyFrame')) if str(kwargs.get('onlyFrame')).isdigit() else None
+    frame = 0
     # Process each image separately to pyramidize it
     for page in range(pages):
         subInputPath = inputPath + '[page=%d]' % page
@@ -168,6 +170,9 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
                 os.unlink(path)
             width = subImage.width
             height = subImage.height
+        frame += 1
+        if onlyFrame is not None and onlyFrame + 1 != frame:
+            continue
         subOutputPath = tempPath + '-%d-%s.tiff' % (
             page + 1, time.strftime('%Y%m%d-%H%M%S'))
         _pool_add(tasks, (pool.submit(
@@ -512,7 +517,12 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
     outputList = []
     tasks = []
     pool = _get_thread_pool(**kwargs)
-    for frame in range(numFrames):
+    startFrame = 0
+    endFrame = numFrames
+    if kwargs.get('onlyFrame') is not None and str(kwargs.get('onlyFrame')):
+        startFrame = int(kwargs.get('onlyFrame'))
+        endFrame = startFrame + 1
+    for frame in range(startFrame, endFrame):
         frameOutputPath = tempPath + '-%d-%s.tiff' % (
             frame + 1, time.strftime('%Y%m%d-%H%M%S'))
         _pool_add(tasks, (pool.submit(
