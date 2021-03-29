@@ -48,6 +48,15 @@ depth.
         help='When handling a multiframe file, only output a single frame.  '
         'This is the zero-based frame number.')
     parser.add_argument(
+        '--format', default=None,
+        choices=['tiff', 'aperio'],
+        help='Output format.  The default is a standardized pyramidal tiff or '
+        'COG geotiff.  Other formats may not be available for all input '
+        'options and will change some defaults.  '
+        'Aperio (svs) defaults to no-subifds.  If there is no label image, a '
+        'cropped square thumbnail is used in its place if the source image '
+        'can be read by anyt of the known tile sources.')
+    parser.add_argument(
         '--compression', '-c',
         choices=[
             '', 'jpeg', 'deflate', 'zip', 'lzw', 'zstd', 'packbits', 'jbig',

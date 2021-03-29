@@ -207,6 +207,8 @@ class TilesItemResource(ItemResource):
         .param('onlyFrame', 'Only convert a specific 0-based frame of a '
                'multiframe file.  If not specified, all frames are converted.',
                dataType='int', required=False)
+        .param('format', 'File format', required=False,
+               enum=['tiff', 'aperio'])
         .param('compression', 'Internal compression format', required=False,
                enum=['none', 'jpeg', 'deflate', 'lzw', 'zstd', 'packbits', 'webp', 'jp2k'])
         .param('quality', 'JPEG compression quality where 0 is small and 100 '

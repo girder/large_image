@@ -47,7 +47,8 @@ def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90,
     inputPath = os.path.abspath(os.path.expanduser(inputFile))
     geospatial = large_image_converter.is_geospatial(inputPath)
     inputName = kwargs.get('inputName', os.path.basename(inputPath))
-    suffix = '.tiff' if not geospatial else '.geo.tiff'
+    suffix = large_image_converter.format_hook('adjust_params', geospatial, kwargs, **kwargs)
+    suffix = suffix or ('.tiff' if not geospatial else '.geo.tiff')
     if not outputName:
         outputName = os.path.splitext(inputName)[0] + suffix
         if outputName.endswith('.geo' + suffix):

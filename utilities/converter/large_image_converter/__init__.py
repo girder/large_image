@@ -15,6 +15,10 @@ import time
 import numpy
 import tifftools
 
+import large_image
+
+from . import format_aperio
+
 pyvips = None
 
 try:
@@ -25,6 +29,11 @@ except DistributionNotFound:
 
 
 logger = logging.getLogger('large-image-converter')
+
+
+FormatModules = {
+    'aperio': format_aperio,
+}
 
 
 def _data_from_large_image(path, outputPath, **kwargs):
@@ -39,11 +48,6 @@ def _data_from_large_image(path, outputPath, **kwargs):
         is a dictionary of keys and paths.  Returns None if the path is not
         readable by large_image.
     """
-    try:
-        import large_image
-    except ImportError:
-        return
-
     _import_pyvips()
     try:
         ts = large_image.getTileSource(path)
@@ -193,7 +197,7 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
                     _convert_via_vips, subInputPath, savePath, tempPath, False), ))
                 extraImages[key] = savePath
     _drain_pool(pool, tasks)
-    _output_tiff(outputList, outputPath, lidata, extraImages, **kwargs)
+    _output_tiff(outputList, outputPath, tempPath, lidata, extraImages, **kwargs)
 
 
 def _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
@@ -219,7 +223,7 @@ def _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
     _import_pyvips()
     subOutputPath = tempPath + '-%s.tiff' % (time.strftime('%Y%m%d-%H%M%S'))
     _convert_via_vips(inputPath, subOutputPath, tempPath, **kwargs)
-    _output_tiff([subOutputPath], outputPath, lidata, **kwargs)
+    _output_tiff([subOutputPath], outputPath, tempPath, lidata, **kwargs)
 
 
 def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
@@ -254,6 +258,11 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     logger.info('Input: %s, Output: %s, Options: %r%s',
                 source, outputPath, convertParams, status)
     image = image.autorot()
+    adjusted = format_hook('modify_vips_image_before_output', image, convertParams, **kwargs)
+    if adjusted is False:
+        return
+    elif adjusted:
+        image = adjusted
     if (convertParams['compression'] not in {'jpeg'} or
             image.interpretation != pyvips.Interpretation.SCRGB):
         # jp2k compression supports more than 8-bits per sample, but the
@@ -383,7 +392,7 @@ def _convert_to_jp2k(path, **kwargs):
             ifd['tags'][tifftools.Tag.Compression.value]['data'][0] = (
                 tifftools.constants.Compression.JP2000)
             shape = (
-                ifd['tags'][tifftools.Tag.TileHeight.value]['data'][0],
+                ifd['tags'][tifftools.Tag.TileWidth.value]['data'][0],
                 ifd['tags'][tifftools.Tag.TileLength.value]['data'][0],
                 len(ifd['tags'][tifftools.Tag.BitsPerSample.value]['data']))
             dtype = numpy.uint16 if ifd['tags'][
@@ -530,10 +539,10 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
             tempPath, **kwargs), ))
         outputList.append(frameOutputPath)
     _drain_pool(pool, tasks)
-    _output_tiff(outputList, outputPath, lidata, **kwargs)
+    _output_tiff(outputList, outputPath, tempPath, lidata, **kwargs)
 
 
-def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
+def _output_tiff(inputs, outputPath, tempPath, lidata, extraImages=None, **kwargs):
     """
     Given a list of input tiffs and data as parsed by _data_from_large_image,
     generate an output tiff file with the associated images, correct scale, and
@@ -541,12 +550,14 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
 
     :param inputs: a list of pyramidal input files.
     :param outputPath: the final destination.
+    :params tempPath: a temporary file in a temporary directory.
     :param lidata: large_image data including metadata and associated images.
     :param extraImages: an optional dictionary of keys and paths to add as
         extra associated images.
     """
     logger.debug('Reading %s', inputs[0])
     info = tifftools.read_tiff(inputs[0])
+    ifdIndices = [0]
     imgDesc = info['ifds'][0]['tags'].get(tifftools.Tag.ImageDescription.value)
     description = _make_li_description(
         len(info['ifds']), len(inputs), lidata,
@@ -578,6 +589,7 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
                             separators=(',', ':'), sort_keys=True, default=json_serial),
                         'datatype': tifftools.Datatype.ASCII,
                     }
+            ifdIndices.append(len(info['ifds']))
             if kwargs.get('subifds') is not False:
                 nextInfo['ifds'][0]['tags'][tifftools.Tag.SubIFD.value] = {
                     'ifds': nextInfo['ifds'][1:]
@@ -585,6 +597,7 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
                 info['ifds'].append(nextInfo['ifds'][0])
             else:
                 info['ifds'].extend(nextInfo['ifds'])
+    ifdIndices.append(len(info['ifds']))
     assocList = []
     if lidata:
         assocList += list(lidata['images'].items())
@@ -598,6 +611,9 @@ def _output_tiff(inputs, outputPath, lidata, extraImages=None, **kwargs):
             'datatype': tifftools.Datatype.ASCII,
         }
         info['ifds'] += assocInfo['ifds']
+    if format_hook('modify_tiff_before_write', info, ifdIndices, tempPath,
+                   lidata, **kwargs) is False:
+        return
     logger.debug('Writing %s', outputPath)
     tifftools.write_tiff(info, outputPath, bigEndian=False, bigtiff=False, allowExisting=True)
 
@@ -868,6 +884,21 @@ def _vips_parameters(forTiled=True, **kwargs):
     return convertParams
 
 
+def format_hook(funcname, *args, **kwargs):
+    """
+    Call a function specific to a file format.
+
+    :param funcname: name of the function.
+    :param *args, **kwargs: parameters to pass to the function.
+    :returns: dependent on the function.  False to indicate no further
+        processing should be done.
+    """
+    format = str(kwargs.get('format')).lower()
+    func = getattr(FormatModules.get(format, {}), funcname, None)
+    if callable(func):
+        return func(*args, **kwargs)
+
+
 def convert(inputPath, outputPath=None, **kwargs):
     """
     Take a source input file and output a pyramidal tiff file.
@@ -899,8 +930,11 @@ def convert(inputPath, outputPath=None, **kwargs):
     geospatial = kwargs.get('geospatial')
     if geospatial is None:
         geospatial = is_geospatial(inputPath)
+    suffix = format_hook('adjust_params', geospatial, kwargs, **kwargs)
+    if suffix is False:
+        return
+    suffix = suffix or ('.tiff' if not geospatial else '.geo.tiff')
     if not outputPath:
-        suffix = '.tiff' if not geospatial else '.geo.tiff'
         outputPath = os.path.splitext(inputPath)[0] + suffix
         if outputPath.endswith('.geo' + suffix):
             outputPath = outputPath[:len(outputPath) - len(suffix) - 4] + suffix

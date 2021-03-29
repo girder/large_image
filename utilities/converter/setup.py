@@ -44,6 +44,7 @@ setup(
     ],
     install_requires=[
         'gdal',
+        'large_image_source_tiff',
         'numpy',
         'psutil',
         'pyvips',
