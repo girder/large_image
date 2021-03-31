@@ -43,6 +43,7 @@ RUN apt-get update && \
       locales \
       make \
       software-properties-common \
+      ssh \
       tk-dev \
       vim \
       wget \
