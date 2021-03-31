@@ -37,8 +37,8 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
         are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY, TILE_FORMAT_IMAGE).
     :param tiffCompression: the compression format to use when encoding a TIFF.
     :returns:
-        imageData: the image data in the specified format and encoding.
-        imageFormatOrMimeType: the image mime type if the format is
+        :imageData: the image data in the specified format and encoding.
+        :imageFormatOrMimeType: the image mime type if the format is
             TILE_FORMAT_IMAGE, or the format of the image data if it is
             anything else.
     """
@@ -493,40 +493,42 @@ class TileSource:
         :param style: if None, use the default style for the file.  Otherwise,
             this is a string with a json-encoded dictionary.  The style can
             contain the following keys:
-                band: if -1 or None, and if style is specified at all, the
+
+                :band: if -1 or None, and if style is specified at all, the
                     greyscale value is used.  Otherwise, a 1-based numerical
                     index into the channels of the image or a string that
                     matches the interpretation of the band ('red', 'green',
                     'blue', 'gray', 'alpha').  Note that 'gray' on an RGB or
                     RGBA image will use the green band.
-                frame: if specified, override the frame value for this band.
+                :frame: if specified, override the frame value for this band.
                     When used as part of a bands list, this can be used to
                     composite multiple frames together.  It is most efficient
                     if at least one band either doesn't specify a frame
                     parameter or specifies the same frame value as the primary
                     query.
-                framedelta: if specified and frame is not specified, override
+                :framedelta: if specified and frame is not specified, override
                     the frame value for this band by using the current frame
                     plus this value.
-                min: the value to map to the first palette value.  Defaults to
+                :min: the value to map to the first palette value.  Defaults to
                     0.  'auto' to use 0 if the reported minimum and maximum of
                     the band are between [0, 255] or use the reported minimum
                     otherwise.  'min' or 'max' to always uses the reported
                     minimum or maximum.
-                max: the value to map to the last palette value.  Defaults to
+                :max: the value to map to the last palette value.  Defaults to
                     255.  'auto' to use 0 if the reported minimum and maximum
                     of the band are between [0, 255] or use the reported
                     maximum otherwise.  'min' or 'max' to always uses the
                     reported minimum or maximum.
-                palette: a list of two or more color strings, where color
+                :palette: a list of two or more color strings, where color
                     strings are of the form #RRGGBB, #RRGGBBAA, #RGB, #RGBA.
-                nodata: the value to use for missing data.  null or unset to
+                :nodata: the value to use for missing data.  null or unset to
                     not use a nodata value.
-                composite: either 'lighten' or 'multiply'.  Defaults to
+                :composite: either 'lighten' or 'multiply'.  Defaults to
                     'lighten' for all except the alpha band.
-                clamp: either True to clamp (also called clip or crop) values
+                :clamp: either True to clamp (also called clip or crop) values
                     outside of the [min, max] to the ends of the palette or
                     False to make outside values transparent.
+
             Alternately, the style object can contain a single key of 'bands',
             which has a value which is a list of style dictionaries as above,
             excepting that each must have a band that is not -1.  Bands are
@@ -617,7 +619,7 @@ class TileSource:
         :param units: the units used for the scale.
         :param desiredMagnification: the output from getMagnificationForLevel
             for the desired magnification used to convert mag_pixels and mm.
-        :param **kwargs: optional parameters.
+        :param kwargs: optional parameters.
         :returns: (scaleX, scaleY) scaling parameters in the horizontal and
             vertical directions.
         """
@@ -679,7 +681,7 @@ class TileSource:
             for the desired magnification used to convert mag_pixels and mm.
         :param cropToImage: if True, don't return region coordinates outside of
             the image.
-        :param **kwargs: optional parameters.  These are passed to
+        :param kwargs: optional parameters.  These are passed to
             _scaleFromUnits and may include unitsWH.
         :returns: left, top, right, bottom bounds in pixels.
         """
@@ -753,34 +755,42 @@ class TileSource:
             in the desired output encoding (regardless of subparameters).
             Otherwise, TILE_FORMAT_NUMPY is returned.
         :param region: a dictionary of optional values which specify the part
-                of the image to process.
-            left: the left edge (inclusive) of the region to process.
-            top: the top edge (inclusive) of the region to process.
-            right: the right edge (exclusive) of the region to process.
-            bottom: the bottom edge (exclusive) of the region to process.
-            width: the width of the region to process.
-            height: the height of the region to process.
-            units: either 'base_pixels' (default), 'pixels', 'mm', or
+            of the image to process.
+
+            :left: the left edge (inclusive) of the region to process.
+            :top: the top edge (inclusive) of the region to process.
+            :right: the right edge (exclusive) of the region to process.
+            :bottom: the bottom edge (exclusive) of the region to process.
+            :width: the width of the region to process.
+            :height: the height of the region to process.
+            :units: either 'base_pixels' (default), 'pixels', 'mm', or
                 'fraction'.  base_pixels are in maximum resolution pixels.
                 pixels is in the specified magnification pixels.  mm is in the
                 specified magnification scale.  fraction is a scale of 0 to 1.
                 pixels and mm are only available if the magnification and mm
                 per pixel are defined for the image.
-            unitsWH: if not specified, this is the same as `units`.  Otherwise,
-                these units will be used for the width and height if specified.
+            :unitsWH: if not specified, this is the same as `units`.
+                Otherwise, these units will be used for the width and height if
+                specified.
+
         :param output: a dictionary of optional values which specify the size
                 of the output.
-            maxWidth: maximum width in pixels.
-            maxHeight: maximum height in pixels.
+
+            :maxWidth: maximum width in pixels.
+            :maxHeight: maximum height in pixels.
+
         :param scale: a dictionary of optional values which specify the scale
-                of the region and / or output.  This applies to region if
-                pixels or mm are used for units.  It applies to output if
-                neither output maxWidth nor maxHeight is specified.  It
-            magnification: the magnification ratio.
-            mm_x: the horizontal size of a pixel in millimeters.
-            mm_y: the vertical size of a pixel in millimeters.
-            exact: if True, only a level that matches exactly will be returned.
-                This is only applied if magnification, mm_x, or mm_y is used.
+            of the region and / or output.  This applies to region if
+            pixels or mm are used for units.  It applies to output if
+            neither output maxWidth nor maxHeight is specified.
+
+            :magnification: the magnification ratio.
+            :mm_x: the horizontal size of a pixel in millimeters.
+            :mm_y: the vertical size of a pixel in millimeters.
+            :exact: if True, only a level that matches exactly will be
+                returned.  This is only applied if magnification, mm_x, or mm_y
+                is used.
+
         :param tile_position: if present, either a number to only yield the
             (tile_position)th tile [0 to (xmax - min) * (ymax - ymin)) that the
             iterator would yield, or a dictionary of {region_x, region_y} to
@@ -789,48 +799,57 @@ class TileSource:
             dictionary of {level_x, level_y} to yield that specific tile if it
             is in the region.
         :param tile_size: if present, retile the output to the specified tile
-                size.  If only width or only height is specified, the resultant
-                tiles will be square.  This is a dictionary containing at least
-                one of:
-            width: the desired tile width.
-            height: the desired tile height.
+            size.  If only width or only height is specified, the resultant
+            tiles will be square.  This is a dictionary containing at least
+            one of:
+
+            :width: the desired tile width.
+            :height: the desired tile height.
+
         :param tile_overlap: if present, retile the output adding a symmetric
-                overlap to the tiles.  If either x or y is not specified, it
-                defaults to zero.  The overlap does not change the tile size,
-                only the stride of the tiles.  This is a dictionary containing:
-            x: the horizontal overlap in pixels.
-            y: the vertical overlap in pixels.
-            edges: if True, then the edge tiles will exclude the overlap
+            overlap to the tiles.  If either x or y is not specified, it
+            defaults to zero.  The overlap does not change the tile size,
+            only the stride of the tiles.  This is a dictionary containing:
+
+            :x: the horizontal overlap in pixels.
+            :y: the vertical overlap in pixels.
+            :edges: if True, then the edge tiles will exclude the overlap
                 distance.  If unset or False, the edge tiles are full size.
-        :param **kwargs: optional arguments.  Some options are encoding,
+
+        :param kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, tiffCompression, frame.
         :returns: a dictionary of information needed for the tile iterator.
-                This is None if no tiles will be returned.  Otherwise, this
-                contains:
-            region: a dictionary of the source region information:
-                width, height: the total output of the iterator in pixels.
+            This is None if no tiles will be returned.  Otherwise, this
+            contains:
+
+            :region: a dictionary of the source region information:
+
+                :width, height: the total output of the iterator in pixels.
                     This may be larger than the requested resolution (given by
                     output width and output height) if there isn't an exact
                     match between the requested resolution and available native
                     tiles.
-                left, top, right, bottom: the coordinates within the image of
+                :left, top, right, bottom: the coordinates within the image of
                     the region returned in the level pixel space.
-            xmin, ymin, xmax, ymax: the tiles that will be included during the
+
+            :xmin, ymin, xmax, ymax: the tiles that will be included during the
                 iteration: [xmin, xmax) and [ymin, ymax).
-            mode: either 'RGB' or 'RGBA'.  This determines the color space used
-                for tiles.
-            level: the tile level used for iteration.
-            metadata: tile source metadata (from getMetadata)
-            output: a dictionary of the output resolution information.
-                width, height: the requested output resolution in pixels.  If
+            :mode: either 'RGB' or 'RGBA'.  This determines the color space
+                used for tiles.
+            :level: the tile level used for iteration.
+            :metadata: tile source metadata (from getMetadata)
+            :output: a dictionary of the output resolution information.
+
+                :width, height: the requested output resolution in pixels.  If
                     this is different that region width and region height, then
                     the original request was asking for a different scale than
                     is being delivered.
-            frame: the frame value for the base image.
-            format: a tuple of allowed output formats.
-            encoding: if the output format is TILE_FORMAT_IMAGE, the desired
+
+            :frame: the frame value for the base image.
+            :format: a tuple of allowed output formats.
+            :encoding: if the output format is TILE_FORMAT_IMAGE, the desired
                 encoding.
-            requestedScale: the scale needed to convert from the region width
+            :requestedScale: the scale needed to convert from the region width
                 and height to the output width and height.
         """
         maxWidth = kwargs.get('output', {}).get('maxWidth')
@@ -987,42 +1006,50 @@ class TileSource:
         """
         Given tile iterator information, iterate through the tiles.
         Each tile is returned as part of a dictionary that includes
-            x, y: (left, top) coordinate in current magnification pixels
-            width, height: size of current tile in current magnification pixels
-            tile: cropped tile image
-            format: format of the tile.  One of TILE_FORMAT_NUMPY,
+
+            :x, y: (left, top) coordinate in current magnification pixels
+            :width, height: size of current tile in current magnification
+                pixels
+            :tile: cropped tile image
+            :format: format of the tile.  One of TILE_FORMAT_NUMPY,
                 TILE_FORMAT_PIL, or TILE_FORMAT_IMAGE.  TILE_FORMAT_IMAGE is
                 only returned if it was explicitly allowed and the tile is
                 already in the correct image encoding.
-            level: level of the current tile
-            level_x, level_y: the tile reference number within the level.
+            :level: level of the current tile
+            :level_x, level_y: the tile reference number within the level.
                 Tiles are numbered (0, 0), (1, 0), (2, 0), etc.  The 0th tile
                 yielded may not be (0, 0) if a region is specified.
-            tile_position: a dictionary of the tile position within the
-                    iterator, containing:
-                level_x, level_y: the tile reference number within the level.
-                region_x, region_y: 0, 0 is the first tile in the full
+            :tile_position: a dictionary of the tile position within the
+                iterator, containing:
+
+                :level_x, level_y: the tile reference number within the level.
+                :region_x, region_y: 0, 0 is the first tile in the full
                     iteration (when not restricting the iteration to a single
                     tile).
-                position: a 0-based value for the tile within the full
+                :position: a 0-based value for the tile within the full
                     iteration.
-            iterator_range: a dictionary of the output range of the iterator:
-                level_x_min, level_y_min, level_x_max, level_y_max: the tiles
-                    that are be included during the full iteration:
-                    [layer_x_min, layer_x_max) and [layer_y_min, layer_y_max).
-                region_x_max, region_y_max: the number of tiles included during
+
+            :iterator_range: a dictionary of the output range of the iterator:
+
+                :level_x_min, level_x_max: the tiles that are be included
+                    during the full iteration: [layer_x_min, layer_x_max).
+                :level_y_min, level_y_max: the tiles that are be included
+                    during the full iteration: [layer_y_min, layer_y_max).
+                :region_x_max, region_y_max: the number of tiles included during
                     the full iteration.   This is layer_x_max - layer_x_min,
                     layer_y_max - layer_y_min.
-                position: the total number of tiles included in the full
+                :position: the total number of tiles included in the full
                     iteration.  This is region_x_max * region_y_max.
-            magnification: magnification of the current tile
-            mm_x, mm_y: size of the current tile pixel in millimeters.
-            gx, gy: (left, top) coordinates in maximum-resolution pixels
-            gwidth, gheight: size of of the current tile in maximum-resolution
+
+            :magnification: magnification of the current tile
+            :mm_x, mm_y: size of the current tile pixel in millimeters.
+            :gx, gy: (left, top) coordinates in maximum-resolution pixels
+            :gwidth, gheight: size of of the current tile in maximum-resolution
                 pixels.
-            tile_overlap: the amount of overlap with neighboring tiles (left,
+            :tile_overlap: the amount of overlap with neighboring tiles (left,
                 top, right, and bottom).  Overlap never extends outside of the
                 requested region.
+
         If a region that includes partial tiles is requested, those tiles are
         cropped appropriately.  Most images will have tiles that get cropped
         along the right and bottom egdes in any case.
@@ -1166,7 +1193,7 @@ class TileSource:
             if 'encoding', then a matching encoding matches regardless of
             quality options, otherwise, only match if the encoding and quality
             options match.
-        :param **kwargs: additional parameters to use in determining format.
+        :param kwargs: additional parameters to use in determining format.
         """
         encoding = TileOutputPILFormat.get(self.encoding, self.encoding)
         if match == 'any' and encoding in ('PNG', 'JPEG'):
@@ -1210,8 +1237,8 @@ class TileSource:
         :param range: if None, use the computed min and (max + 1).  Otherwise,
             this is the range passed to numpy.histogram.  Note this is only
             accessible via kwargs as it otherwise overloads the range function.
-        :param *args: parameters to pass to the tileIterator.
-        :param **kwargs: parameters to pass to the tileIterator.
+        :param args: parameters to pass to the tileIterator.
+        :param kwargs: parameters to pass to the tileIterator.
         """
         kwargs = kwargs.copy()
         histRange = kwargs.pop('range', None)
@@ -1541,26 +1568,41 @@ class TileSource:
 
     def getMetadata(self):
         """
-        Return metadata about this tile source.  In addition to the keys that
-        are listed in this template function, tile sources that expose multiple
-        frames will also contain:
-        - frames: a list of frames.  Each frame entry is a dictionary with
-          - Frame: a 0-values frame index (the location in the list)
-          - Channel (optional): the name of the channel, if known
-          - IndexC (optional if unique): a 0-based index into the channel list
-          - IndexT (optional if unique): a 0-based index for time values
-          - IndexZ (optional if unique): a 0-based index for z values
-          - IndexXY (optional if unique): a 0-based index for view (xy) values
-          - Index: a 0-based index of non-channel unique sets.  If the frames
-              vary only by channel and are adjacent, they will have the same
-              index.
-        - IndexRange: a dictionary of the number of unique index values from
-            frames if greater than 1 (e.g., if an entry like IndexXY is not
-            present, then all frames either do not have that value or have a
-            value of 0).
-        - channels (optional): if known, a list of channel names
-        - channelmap (optional): if known, a dictionary of channel names with
-            their offset into the channel list.
+        Return metadata about this tile source.  This contains
+
+            :levels: number of tile levels in this image.
+            :sizeX: width of the image in pixels.
+            :sizeY: height of the image in pixels.
+            :tileWidth: width of a tile in pixels.
+            :tileHeight: height of a tile in pixels.
+            :magnification: if known, the magnificaiton of the image.
+            :mm_x: if known, the width of a pixel in millimeters.
+            :mm_y: if known, the height of a pixel in millimeters.
+
+            In addition to the keys that listed above, tile sources that expose
+            multiple frames will also contain
+
+            :frames: a list of frames.  Each frame entry is a dictionary with
+
+                :Frame: a 0-values frame index (the location in the list)
+                :Channel: optional.  The name of the channel, if known
+                :IndexC: optional if unique.  A 0-based index into the channel
+                    list
+                :IndexT: optional if unique.  A 0-based index for time values
+                :IndexZ: optional if unique.  A 0-based index for z values
+                :IndexXY: optional if unique.  A 0-based index for view (xy)
+                    values
+                :Index: a 0-based index of non-channel unique sets.  If the
+                    frames vary only by channel and are adjacent, they will
+                    have the same index.
+
+            :IndexRange: a dictionary of the number of unique index values from
+                frames if greater than 1 (e.g., if an entry like IndexXY is not
+                present, then all frames either do not have that value or have
+                a value of 0).
+            :channels: optional.  If known, a list of channel names
+            :channelmap: optional.  If known, a dictionary of channel names
+                with their offset into the channel list.
         """
         mag = self.getNativeMagnification()
         return {
@@ -1663,7 +1705,7 @@ class TileSource:
         :param height: maximum height in pixels.
         :param levelZero: if true, always use the level zero tile.  Otherwise,
             the thumbnail is generated so that it is never upsampled.
-        :param **kwargs: optional arguments.  Some options are encoding,
+        :param kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: thumbData, thumbMime: the image data and the mime type.
         """
@@ -1723,31 +1765,37 @@ class TileSource:
         Convert a region from one scale to another.
 
         :param sourceRegion: a dictionary of optional values which specify the
-                part of an image to process.
-            left: the left edge (inclusive) of the region to process.
-            top: the top edge (inclusive) of the region to process.
-            right: the right edge (exclusive) of the region to process.
-            bottom: the bottom edge (exclusive) of the region to process.
-            width: the width of the region to process.
-            height: the height of the region to process.
-            units: either 'base_pixels' (default), 'pixels', 'mm', or
+            part of an image to process.
+
+            :left: the left edge (inclusive) of the region to process.
+            :top: the top edge (inclusive) of the region to process.
+            :right: the right edge (exclusive) of the region to process.
+            :bottom: the bottom edge (exclusive) of the region to process.
+            :width: the width of the region to process.
+            :height: the height of the region to process.
+            :units: either 'base_pixels' (default), 'pixels', 'mm', or
                 'fraction'.  base_pixels are in maximum resolution pixels.
                 pixels is in the specified magnification pixels.  mm is in the
                 specified magnification scale.  fraction is a scale of 0 to 1.
                 pixels and mm are only available if the magnification and mm
                 per pixel are defined for the image.
+
         :param sourceScale: a dictionary of optional values which specify the
-                scale of the source region.  Required if the sourceRegion is
-                in "mag_pixels" units.
-            magnification: the magnification ratio.
-            mm_x: the horizontal size of a pixel in millimeters.
-            mm_y: the vertical size of a pixel in millimeters.
+            scale of the source region.  Required if the sourceRegion is
+            in "mag_pixels" units.
+
+            :magnification: the magnification ratio.
+            :mm_x: the horizontal size of a pixel in millimeters.
+            :mm_y: the vertical size of a pixel in millimeters.
+
         :param targetScale: a dictionary of optional values which specify the
-                scale of the target region.  Required in targetUnits is in
-                "mag_pixels" units.
-            magnification: the magnification ratio.
-            mm_x: the horizontal size of a pixel in millimeters.
-            mm_y: the vertical size of a pixel in millimeters.
+            scale of the target region.  Required in targetUnits is in
+            "mag_pixels" units.
+
+            :magnification: the magnification ratio.
+            :mm_x: the horizontal size of a pixel in millimeters.
+            :mm_y: the vertical size of a pixel in millimeters.
+
         :param targetUnits: if not None, convert the region to these units.
             Otherwise, the units are will either be the sourceRegion units if
             those are not "mag_pixels" or base_pixels.  If "mag_pixels", the
@@ -1811,7 +1859,7 @@ class TileSource:
             Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
             TILE_FORMAT_IMAGE).  If TILE_FORMAT_IMAGE, encoding may be
             specified.
-        :param **kwargs: optional arguments.  Some options are region, output,
+        :param kwargs: optional arguments.  Some options are region, output,
             encoding, jpegQuality, jpegSubsampling, tiffCompression, fill.  See
             tileIterator.
         :returns: regionData, formatOrRegionMime: the image data and either the
@@ -1954,7 +2002,8 @@ class TileSource:
         Get the level for a specific magnification or pixel size.  If the
         magnification is unknown or no level is sufficient resolution, and an
         exact match is not requested, the highest level will be returned.
-          If none of magnification, mm_x, and mm_y are specified, the maximum
+
+        If none of magnification, mm_x, and mm_y are specified, the maximum
         level is returned.  If more than one of these values is given, an
         average of those given will be used (exact will require all of them to
         match).
@@ -2004,39 +2053,46 @@ class TileSource:
         """
         Iterate on all tiles in the specified region at the specified scale.
         Each tile is returned as part of a dictionary that includes
-            x, y: (left, top) coordinates in current magnification pixels
-            width, height: size of current tile in current magnification pixels
-            tile: cropped tile image
-            format: format of the tile
-            level: level of the current tile
-            level_x, level_y: the tile reference number within the level.
+
+            :x, y: (left, top) coordinates in current magnification pixels
+            :width, height: size of current tile in current magnification pixels
+            :tile: cropped tile image
+            :format: format of the tile
+            :level: level of the current tile
+            :level_x, level_y: the tile reference number within the level.
                 Tiles are numbered (0, 0), (1, 0), (2, 0), etc.  The 0th tile
                 yielded may not be (0, 0) if a region is specified.
-            tile_position: a dictionary of the tile position within the
-                    iterator, containing:
-                level_x, level_y: the tile reference number within the level.
-                region_x, region_y: 0, 0 is the first tile in the full
+            :tile_position: a dictionary of the tile position within the
+                iterator, containing:
+
+                :level_x, level_y: the tile reference number within the level.
+                :region_x, region_y: 0, 0 is the first tile in the full
                     iteration (when not restricting the iteration to a single
                     tile).
-                position: a 0-based value for the tile within the full
+                :position: a 0-based value for the tile within the full
                     iteration.
-            iterator_range: a dictionary of the output range of the iterator:
-                level_x_min, level_y_min, level_x_max, level_y_max: the tiles
-                    that are be included during the full iteration:
-                    [layer_x_min, layer_x_max) and [layer_y_min, layer_y_max).
-                region_x_max, region_y_max: the number of tiles included during
+
+            :iterator_range: a dictionary of the output range of the iterator:
+
+                :level_x_min, level_x_max: the tiles that are be included
+                    during the full iteration: [layer_x_min, layer_x_max).
+                :level_y_min, level_y_max: the tiles that are be included
+                    during the full iteration: [layer_y_min, layer_y_max).
+                :region_x_max, region_y_max: the number of tiles included during
                     the full iteration.   This is layer_x_max - layer_x_min,
                     layer_y_max - layer_y_min.
-                position: the total number of tiles included in the full
+                :position: the total number of tiles included in the full
                     iteration.  This is region_x_max * region_y_max.
-            magnification: magnification of the current tile
-            mm_x, mm_y: size of the current tile pixel in millimeters.
-            gx, gy: (left, top) coordinates in maximum-resolution pixels
-            gwidth, gheight: size of of the current tile in maximum-resolution
+
+            :magnification: magnification of the current tile
+            :mm_x, mm_y: size of the current tile pixel in millimeters.
+            :gx, gy: (left, top) coordinates in maximum-resolution pixels
+            :gwidth, gheight: size of of the current tile in maximum-resolution
                 pixels.
-            tile_overlap: the amount of overlap with neighboring tiles (left,
+            :tile_overlap: the amount of overlap with neighboring tiles (left,
                 top, right, and bottom).  Overlap never extends outside of the
                 requested region.
+
         If a region that includes partial tiles is requested, those tiles are
         cropped appropriately.  Most images will have tiles that get cropped
         along the right and bottom edges in any case.  If an exact
@@ -2050,45 +2106,53 @@ class TileSource:
             BILINEAR, or BICUBIC to resample tiles that are not the target
             output size.  Tiles that are resampled will have additional
             dictionary entries of:
-                scaled: the scaling factor that was applied (less than 1 is
-                    downsampled).
-                tile_x, tile_y: (left, top) coordinates before scaling
-                tile_width, tile_height: size of the current tile before
-                    scaling.
-                tile_magnification: magnification of the current tile before
-                    scaling.
-                tile_mm_x, tile_mm_y: size of a pixel in a tile in millimeters
-                    before scaling.
+
+            :scaled: the scaling factor that was applied (less than 1 is
+                downsampled).
+            :tile_x, tile_y: (left, top) coordinates before scaling
+            :tile_width, tile_height: size of the current tile before
+                scaling.
+            :tile_magnification: magnification of the current tile before
+                scaling.
+            :tile_mm_x, tile_mm_y: size of a pixel in a tile in millimeters
+                before scaling.
+
             Note that scipy.misc.imresize uses PIL internally.
         :param region: a dictionary of optional values which specify the part
-                of the image to process.
-            left: the left edge (inclusive) of the region to process.
-            top: the top edge (inclusive) of the region to process.
-            right: the right edge (exclusive) of the region to process.
-            bottom: the bottom edge (exclusive) of the region to process.
-            width: the width of the region to process.
-            height: the height of the region to process.
-            units: either 'base_pixels' (default), 'pixels', 'mm', or
+            of the image to process:
+
+            :left: the left edge (inclusive) of the region to process.
+            :top: the top edge (inclusive) of the region to process.
+            :right: the right edge (exclusive) of the region to process.
+            :bottom: the bottom edge (exclusive) of the region to process.
+            :width: the width of the region to process.
+            :height: the height of the region to process.
+            :units: either 'base_pixels' (default), 'pixels', 'mm', or
                 'fraction'.  base_pixels are in maximum resolution pixels.
                 pixels is in the specified magnification pixels.  mm is in the
                 specified magnification scale.  fraction is a scale of 0 to 1.
                 pixels and mm are only available if the magnification and mm
                 per pixel are defined for the image.
+
         :param output: a dictionary of optional values which specify the size
-                of the output.
-            maxWidth: maximum width in pixels.  If either maxWidth or maxHeight
+            of the output.
+
+            :maxWidth: maximum width in pixels.  If either maxWidth or maxHeight
                 is specified, magnification, mm_x, and mm_y are ignored.
-            maxHeight: maximum height in pixels.
+            :maxHeight: maximum height in pixels.
+
         :param scale: a dictionary of optional values which specify the scale
-                of the region and / or output.  This applies to region if
-                pixels or mm are used for inits.  It applies to output if
-                neither output maxWidth nor maxHeight is specified.
-            magnification: the magnification ratio.  Only used is maxWidth and
+            of the region and / or output.  This applies to region if
+            pixels or mm are used for inits.  It applies to output if
+            neither output maxWidth nor maxHeight is specified.
+
+            :magnification: the magnification ratio.  Only used is maxWidth and
                 maxHeight are not specified or None.
-            mm_x: the horizontal size of a pixel in millimeters.
-            mm_y: the vertical size of a pixel in millimeters.
-            exact: if True, only a level that matches exactly will be returned.
+            :mm_x: the horizontal size of a pixel in millimeters.
+            :mm_y: the vertical size of a pixel in millimeters.
+            :exact: if True, only a level that matches exactly will be returned.
                 This is only applied if magnification, mm_x, or mm_y is used.
+
         :param tile_position: if present, either a number to only yield the
             (tile_position)th tile [0 to (xmax - min) * (ymax - ymin)) that the
             iterator would yield, or a dictionary of {region_x, region_y} to
@@ -2097,23 +2161,28 @@ class TileSource:
             dictionary of {level_x, level_y} to yield that specific tile if it
             is in the region.
         :param tile_size: if present, retile the output to the specified tile
-                size.  If only width or only height is specified, the resultant
-                tiles will be square.  This is a dictionary containing at least
-                one of:
-            width: the desired tile width.
-            height: the desired tile height.
+            size.  If only width or only height is specified, the resultant
+            tiles will be square.  This is a dictionary containing at least
+            one of:
+
+            :width: the desired tile width.
+            :height: the desired tile height.
+
         :param tile_overlap: if present, retile the output adding a symmetric
-                overlap to the tiles.  If either x or y is not specified, it
-                defaults to zero.  The overlap does not change the tile size,
-                only the stride of the tiles.  This is a dictionary containing:
-            x: the horizontal overlap in pixels.
-            y: the vertical overlap in pixels.
-            edges: if True, then the edge tiles will exclude the overlap
+            overlap to the tiles.  If either x or y is not specified, it
+            defaults to zero.  The overlap does not change the tile size,
+            only the stride of the tiles.  This is a dictionary containing:
+
+            :x: the horizontal overlap in pixels.
+            :y: the vertical overlap in pixels.
+            :edges: if True, then the edge tiles will exclude the overlap
                 distance.  If unset or False, the edge tiles are full size.
-                    The overlap is conceptually split between the two sides of
+
+                The overlap is conceptually split between the two sides of
                 the tile.  This is only relevant to where overlap is reported
                 or if edges is True
-                    As an example, suppose an image that is 8 pixels across
+
+                As an example, suppose an image that is 8 pixels across
                 (01234567) and a tile size of 5 is requested with an overlap of
                 4.  If the edges option is False (the default), the following
                 tiles are returned: 01234, 12345, 23456, 34567.  Each tile
@@ -2121,6 +2190,7 @@ class TileSource:
                 is 012, 3, 4, 567.  If the edges option is True, the tiles
                 returned are: 012, 0123, 01234, 12345, 23456, 34567, 4567, 567,
                 with the non-overlapped area of each as 0, 1, 2, 3, 4, 5, 6, 7.
+
         :param encoding: if format includes TILE_FORMAT_IMAGE, a valid PIL
             encoding (typically 'PNG', 'JPEG', or 'TIFF').  Must also be in the
             TileOutputMimeTypes map.
@@ -2130,7 +2200,7 @@ class TileSource:
         :param tiffCompression: the compression format when encoding a TIFF.
             This is usually 'raw', 'tiff_lzw', 'jpeg', or 'tiff_adobe_deflate'.
             Some of these are aliased: 'none', 'lzw', 'deflate'.
-        :param **kwargs: optional arguments.
+        :param kwargs: optional arguments.
         :yields: an iterator that returns a dictionary as listed above.
         """
         if not isinstance(format, tuple):
@@ -2217,7 +2287,7 @@ class TileSource:
         Return an associated image.
 
         :param imageKey: the key of the associated image to retrieve.
-        :param **kwargs: optional arguments.  Some options are width, height,
+        :param kwargs: optional arguments.  Some options are width, height,
             encoding, jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: imageData, imageMime: the image data and the mime type, or
             None if the associated image doesn't exist.
@@ -2239,9 +2309,10 @@ class TileSource:
     def getPixel(self, includeTileRecord=False, **kwargs):
         """
         Get a single pixel from the current tile source.
+
         :param includeTileRecord: if True, include the tile used for computing
             the pixel in the response.
-        :param **kwargs: optional arguments.  Some options are region, output,
+        :param kwargs: optional arguments.  Some options are region, output,
             encoding, jpegQuality, jpegSubsampling, tiffCompression, fill.  See
             tileIterator.
         :returns: a dictionary with the value of the pixel for each channel on

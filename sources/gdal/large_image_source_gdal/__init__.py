@@ -740,7 +740,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param units: either 'projection', a string starting with 'proj4:',
             'epsg:', or '+proj=' or a enumerated value like 'wgs84', or one of
             the super's values.
-        :param **kwargs: optional parameters.
+        :param kwargs: optional parameters.
         :returns: left, top, right, bottom, units.  The new bounds in the
             either pixel or class projection units.
         """
@@ -808,7 +808,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param units: either 'projection', a string starting with 'proj4:',
             'epsg:' or a enumarted value like 'wgs84', or one of the super's
             values.
-        :param **kwargs: optional parameters.  See above.
+        :param kwargs: optional parameters.  See above.
         :returns: left, top, right, bottom bounds in pixels.
         """
         units = TileInputUnits.get(units.lower() if units else units, units)
@@ -865,7 +865,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param height: maximum height in pixels.
         :param levelZero: if true, always use the level zero tile.  Otherwise,
             the thumbnail is generated so that it is never upsampled.
-        :param **kwargs: optional arguments.  Some options are encoding,
+        :param kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: thumbData, thumbMime: the image data and the mime type.
         """
@@ -912,7 +912,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def getPixel(self, **kwargs):
         """
         Get a single pixel from the current tile source.
-        :param **kwargs: optional arguments.  Some options are region, output,
+
+        :param kwargs: optional arguments.  Some options are region, output,
             encoding, jpegQuality, jpegSubsampling, tiffCompression, fill.  See
             tileIterator.
         :returns: a dictionary with the value of the pixel for each channel on
