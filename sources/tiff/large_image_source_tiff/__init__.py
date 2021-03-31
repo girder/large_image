@@ -319,6 +319,36 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'It will be inefficient to read lower resolution tiles.', maxMissing)
         return True
 
+    def _reorient_numpy_image(self, image, orientation):
+        """
+        Reorient a numpy image array based on a tiff orientation.
+
+        :param image: the numpy array to reorient.
+        :param orientation: one of the tiff orientation constants.
+        :returns: an image with top-left orientation.
+        """
+        if len(image.shape) == 2:
+            image = numpy.resize(image, (image.shape[0], image.shape[1], 1))
+        if orientation in {
+                tifftools.constants.Orientation.LeftTop.value,
+                tifftools.constants.Orientation.RightTop.value,
+                tifftools.constants.Orientation.LeftBottom.value,
+                tifftools.constants.Orientation.RightBottom.value}:
+            image = image.transpose(1, 0, 2)
+        if orientation in {
+                tifftools.constants.Orientation.BottomLeft.value,
+                tifftools.constants.Orientation.BottomRight.value,
+                tifftools.constants.Orientation.LeftBottom.value,
+                tifftools.constants.Orientation.RightBottom.value}:
+            image = image[::-1, ::, ::]
+        if orientation in {
+                tifftools.constants.Orientation.TopRight.value,
+                tifftools.constants.Orientation.BottomRight.value,
+                tifftools.constants.Orientation.RightTop.value,
+                tifftools.constants.Orientation.RightBottom.value}:
+            image = image[::, ::-1, ::]
+        return image
+
     def _addAssociatedImage(self, largeImagePath, directoryNum, mustBeTiled=False, topImage=None):
         """
         Check if the specified TIFF directory contains an image with a sensible
@@ -335,9 +365,11 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             associated = TiledTiffDirectory(largeImagePath, directoryNum, mustBeTiled)
             id = ''
-            if associated._tiffInfo.get('imagedescription'):
-                id = associated._tiffInfo.get(
-                    'imagedescription').strip().split(None, 1)[0].lower()
+            desc = associated._tiffInfo.get('imagedescription')
+            if desc:
+                id = desc.strip().split(None, 1)[0].lower()
+                if b'\n' in desc:
+                    id = desc.split(b'\n', 1)[1].strip().split(None, 1)[0].lower() or id
             elif mustBeTiled:
                 id = 'dir%d' % directoryNum
                 if not len(self._associatedImages):
@@ -357,6 +389,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if image.tobytes()[:6] == b'<?xml ':
                     self._parseImageXml(image.tobytes().rsplit(b'>', 1)[0] + b'>', topImage)
                     return
+                image = self._reorient_numpy_image(image, associated._tiffInfo.get('orientation'))
                 self._associatedImages[id] = image
         except (TiffException, AttributeError):
             # If we can't validate or read an associated image or it has no
@@ -374,8 +407,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         Parse metadata stored in arbitrary xml and associate it with a specific
         image.
 
-        :params xml: the xml as a string or bytes object.
-        :params topImage: the image to add metadata to.
+        :param xml: the xml as a string or bytes object.
+        :param topImage: the image to add metadata to.
         """
         if not topImage or topImage.pixelInfo.get('magnificaiton'):
             return

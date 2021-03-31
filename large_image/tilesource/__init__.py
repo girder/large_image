@@ -16,7 +16,7 @@ def isGeospatial(path):
     """
     Check if a path is likely to be a geospatial file.
 
-    :params path: The path to the file
+    :param path: The path to the file
     :returns: True if geospatial.
     """
     try:

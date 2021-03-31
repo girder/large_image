@@ -4,6 +4,7 @@ import pytest
 import shutil
 import tifftools
 
+import large_image
 from large_image import constants
 import large_image_source_tiff
 
@@ -198,6 +199,23 @@ def testConvertFromMultiframeImageOnlyOneFrame(tmpdir):
     assert metadata['levels'] == 5
     info = tifftools.read_tiff(outputPath)
     assert len(info['ifds']) == 5
+
+
+def testConvertToAperio(tmpdir):
+    imagePath = utilities.externaldata('data/huron.image2_jpeg2k.tif.sha512')
+    outputPath = os.path.join(tmpdir, 'out.svs')
+    large_image_converter.convert(imagePath, outputPath, format='aperio')
+    source = large_image.open(outputPath)
+    assert 'openslide' in source.name
+    assert 'label' in source.getAssociatedImagesList()
+
+
+def testConvertMultiframeToAperio(tmpdir):
+    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath, format='aperio', compression='jp2k')
+    source = large_image.open(outputPath)
+    assert 'label' in source.getAssociatedImagesList()
 
 
 # Test main program
