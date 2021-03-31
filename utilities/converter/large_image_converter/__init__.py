@@ -241,7 +241,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
         also stores files in TMPDIR
     :param forTiled: True if the output should be tiled, false if not.
     :param status: an optional additional string to add to log messages.
-    :param **kwargs: addition arguments that get passed to _vips_parameters
+    :param kwargs: addition arguments that get passed to _vips_parameters
         and _convert_to_jp2k.
     """
     convertParams = _vips_parameters(forTiled, **kwargs)
@@ -891,7 +891,8 @@ def format_hook(funcname, *args, **kwargs):
     Call a function specific to a file format.
 
     :param funcname: name of the function.
-    :param *args, **kwargs: parameters to pass to the function.
+    :param args: parameters to pass to the function.
+    :param kwargs: parameters to pass to the function.
     :returns: dependent on the function.  False to indicate no further
         processing should be done.
     """

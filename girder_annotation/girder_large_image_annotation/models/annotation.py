@@ -1003,6 +1003,7 @@ class Annotation(AccessControlledModel):
         least (1) a minimum age in days and (2) not the most recent inactive
         versions.  Also remove any annotation elements that don't have
         associated annotations and are a minimum age in days.
+
         :param remove: if False, just report on what would be done.  If true,
             actually remove the annotations and compact the collections.
         :param minAgeInDays: only work on annotations that are at least this
