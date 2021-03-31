@@ -15,6 +15,7 @@ large_image also works as a Girder plugin with optional annotation support.
    :caption: Contents:
 
    tilesource_options
+   image_conversion
    large_image/modules
    large_image_source_dummy/modules
    large_image_source_gdal/modules

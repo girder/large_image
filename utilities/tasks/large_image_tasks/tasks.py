@@ -16,15 +16,15 @@ def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90,
     Take a source input file, readable by vips, and output a pyramidal tiff
     file.
 
-    :params inputFile: the path to the input file or base file of a set.
-    :params outputName: the name of the output file.  If None, the name is
+    :param inputFile: the path to the input file or base file of a set.
+    :param outputName: the name of the output file.  If None, the name is
         based on the input name and current date and time.  May be a full path.
-    :params outputDir: the location to store the output.  If unspecified, the
+    :param outputDir: the location to store the output.  If unspecified, the
         inputFile's directory is used.  If the outputName is a fully qualified
         path, this is ignored.
-    :params quality: a jpeg quality passed to vips.  0 is small, 100 is high
+    :param quality: a jpeg quality passed to vips.  0 is small, 100 is high
         quality.  90 or above is recommended.
-    :params tileSize: the horizontal and vertical tile size.
+    :param tileSize: the horizontal and vertical tile size.
     Optional parameters that can be specified in kwargs:
     :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits', or
         'zstd'.

@@ -10,6 +10,8 @@ pip install -e . -r requirements-dev.txt --find-links https://girder.github.io/l
 popd
 # git clean -fxd .
 
+large_image_converter --help > source/large_image_converter.txt
+
 sphinx-apidoc -f -o source/large_image ../large_image
 sphinx-apidoc -f -o source/large_image_source_dummy ../sources/dummy/large_image_source_dummy
 sphinx-apidoc -f -o source/large_image_source_gdal ../sources/gdal/large_image_source_gdal

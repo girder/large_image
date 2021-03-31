@@ -407,8 +407,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         Parse metadata stored in arbitrary xml and associate it with a specific
         image.
 
-        :params xml: the xml as a string or bytes object.
-        :params topImage: the image to add metadata to.
+        :param xml: the xml as a string or bytes object.
+        :param topImage: the image to add metadata to.
         """
         if not topImage or topImage.pixelInfo.get('magnificaiton'):
             return

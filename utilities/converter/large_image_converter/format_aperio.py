@@ -131,7 +131,7 @@ def create_thumbnail_and_label(tempPath, info, ifdCount, needsLabel, labelPositi
     """
     Create a thumbnail and, optionally, label image for the aperio file.
 
-    :params tempPath: a temporary file in a temporary directory.
+    :param tempPath: a temporary file in a temporary directory.
     :param info: the tifftools info that will be written to the tiff tile;
         modified.
     :param ifdCount: the number of ifds in the first tiled image.  This is 1 if
@@ -224,7 +224,7 @@ def modify_tiff_before_write(info, ifdIndices, tempPath, lidata, **kwargs):
         modified.
     :param ifdIndices: the 0-based index of the full resolution ifd of each
         frame followed by the ifd of the first associated image.
-    :params tempPath: a temporary file in a temporary directory.
+    :param tempPath: a temporary file in a temporary directory.
     :param lidata: large_image data including metadata and associated images.
     """
     liDesc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])

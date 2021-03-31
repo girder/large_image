@@ -80,12 +80,12 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
     Take a source input file, readable by gdal, and output a cloud-optimized
     geotiff file.  See https://gdal.org/drivers/raster/cog.html.
 
-    :params inputPath: the path to the input file or base file of a set.
-    :params outputPath: the path of the output file.
+    :param inputPath: the path to the input file or base file of a set.
+    :param outputPath: the path of the output file.
     Optional parameters that can be specified in kwargs:
-    :params tileSize: the horizontal and vertical tile size.
+    :param tileSize: the horizontal and vertical tile size.
     :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', or 'zstd'.
-    :params quality: a jpeg quality passed to vips.  0 is small, 100 is high
+    :param quality: a jpeg quality passed to vips.  0 is small, 100 is high
         quality.  90 or above is recommended.
     :param level: compression level for zstd, 1-22 (default is 10).
     :param predictor: one of 'none', 'horizontal', 'float', or 'yes' used for
@@ -130,16 +130,16 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
     Take a source input file with multiple frames and output a multi-pyramidal
     tiff file.
 
-    :params inputPath: the path to the input file or base file of a set.
-    :params outputPath: the path of the output file.
-    :params tempPath: a temporary file in a temporary directory.
-    :params lidata: data from a large_image tilesource including associated
+    :param inputPath: the path to the input file or base file of a set.
+    :param outputPath: the path of the output file.
+    :param tempPath: a temporary file in a temporary directory.
+    :param lidata: data from a large_image tilesource including associated
         images.
     Optional parameters that can be specified in kwargs:
-    :params tileSize: the horizontal and vertical tile size.
+    :param tileSize: the horizontal and vertical tile size.
     :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
         'zstd', or 'jp2k'.
-    :params quality: a jpeg quality passed to vips.  0 is small, 100 is high
+    :param quality: a jpeg quality passed to vips.  0 is small, 100 is high
         quality.  90 or above is recommended.
     :param level: compression level for zstd, 1-22 (default is 10).
     :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
@@ -205,16 +205,16 @@ def _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
     Take a source input file, readable by vips, and output a pyramidal tiff
     file.
 
-    :params inputPath: the path to the input file or base file of a set.
-    :params outputPath: the path of the output file.
-    :params tempPath: a temporary file in a temporary directory.
-    :params lidata: data from a large_image tilesource including associated
+    :param inputPath: the path to the input file or base file of a set.
+    :param outputPath: the path of the output file.
+    :param tempPath: a temporary file in a temporary directory.
+    :param lidata: data from a large_image tilesource including associated
         images.
     Optional parameters that can be specified in kwargs:
-    :params tileSize: the horizontal and vertical tile size.
+    :param tileSize: the horizontal and vertical tile size.
     :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
         'zstd', or 'jp2k'.
-    :params quality: a jpeg quality passed to vips.  0 is small, 100 is high
+    :param quality: a jpeg quality passed to vips.  0 is small, 100 is high
         quality.  90 or above is recommended.
     :param level: compression level for zstd, 1-22 (default is 10).
     :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
@@ -490,7 +490,7 @@ def _convert_large_image_frame(frame, numFrames, ts, frameOutputPath, tempPath, 
     :param numFrames: the total number of frames; used for logging.
     :param ts: the open tile source.
     :param frameOutputPath: the destination name for the tiff file.
-    :params tempPath: a temporary file in a temporary directory.
+    :param tempPath: a temporary file in a temporary directory.
     """
     # The iterator tile size is a balance between memory use and fewer calls
     # and file handles.
@@ -515,10 +515,10 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
     Take a large_image source and convert it by resaving each tiles image with
     vips.
 
-    :params inputPath: the path to the input file or base file of a set.
-    :params outputPath: the path of the output file.
-    :params tempPath: a temporary file in a temporary directory.
-    :params lidata: data from a large_image tilesource including associated
+    :param inputPath: the path to the input file or base file of a set.
+    :param outputPath: the path of the output file.
+    :param tempPath: a temporary file in a temporary directory.
+    :param lidata: data from a large_image tilesource including associated
         images.
     """
     ts = lidata['tilesource']
@@ -550,7 +550,7 @@ def _output_tiff(inputs, outputPath, tempPath, lidata, extraImages=None, **kwarg
 
     :param inputs: a list of pyramidal input files.
     :param outputPath: the final destination.
-    :params tempPath: a temporary file in a temporary directory.
+    :param tempPath: a temporary file in a temporary directory.
     :param lidata: large_image data including metadata and associated images.
     :param extraImages: an optional dictionary of keys and paths to add as
         extra associated images.
@@ -666,8 +666,8 @@ def _is_eightbit(path, tiffinfo=None):
     Check if a path has an unsigned 8-bit per sample data size.  If any known
     channel is otherwise or this is unknown, this returns False.
 
-    :params path: The path to the file
-    :params tiffinfo: data extracted from tifftools.read_tiff(path).
+    :param path: The path to the file
+    :param tiffinfo: data extracted from tifftools.read_tiff(path).
     :returns: True if known to be 8 bits per sample.
     """
     if not tiffinfo:
@@ -691,8 +691,8 @@ def _is_lossy(path, tiffinfo=None):
     Check if a path uses lossy compression.  This imperfectly just checks if
     the file is a TIFF and stored in one of the JPEG formats.
 
-    :params path: The path to the file
-    :params tiffinfo: data extracted from tifftools.read_tiff(path).
+    :param path: The path to the file
+    :param tiffinfo: data extracted from tifftools.read_tiff(path).
     :returns: True if known to be lossy.
     """
     if not tiffinfo:
@@ -709,7 +709,7 @@ def _is_multiframe(path):
     """
     Check if a path is a multiframe file.
 
-    :params path: The path to the file
+    :param path: The path to the file
     :returns: True if multiframe.
     """
     _import_pyvips()
@@ -831,8 +831,10 @@ def _vips_parameters(forTiled=True, **kwargs):
 
     :param forTiled: True if this is for a tiled image.  False for an
         associated image.
+
     Optional parameters that can be specified in kwargs:
-    :params tileSize: the horizontal and vertical tile size.
+
+    :param tileSize: the horizontal and vertical tile size.
     :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
         'zstd', or 'none'.
     :param quality: a jpeg quality passed to vips.  0 is small, 100 is high
@@ -903,25 +905,40 @@ def convert(inputPath, outputPath=None, **kwargs):
     """
     Take a source input file and output a pyramidal tiff file.
 
-    :params inputPath: the path to the input file or base file of a set.
-    :params outputPath: the path of the output file.
+    :param inputPath: the path to the input file or base file of a set.
+    :param outputPath: the path of the output file.
+
     Optional parameters that can be specified in kwargs:
-    :params tileSize: the horizontal and vertical tile size.
+
+    :param tileSize: the horizontal and vertical tile size.
+    :param format: one of 'tiff' or 'aperio'.  Default is 'tiff'.
+    :param onlyFrame: None for all frames or the 0-based frame number to just
+        convert a single frame of the source.
     :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
         'zstd', or 'none'.
-    :params quality: a jpeg or webp quality passed to vips.  0 is small, 100 is
+    :param quality: a jpeg or webp quality passed to vips.  0 is small, 100 is
         high quality.  90 or above is recommended.  For webp, 0 is lossless.
     :param level: compression level for zstd, 1-22 (default is 10) and deflate,
         1-9.
-    :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
-        deflate.  Default is horizontal.
+    :param predictor: one of 'none', 'horizontal', 'float', or 'yes' used for
+        lzw and deflate.  Default is horizontal for non-geospatial data and yes
+        for geospatial.
     :param psnr: psnr value for jp2k, higher results in large files.  0 is
         lossless.
     :param cr: jp2k compression ratio.  1 is lossless, 100 will try to make
         a file 1% the size of the original, etc.
+    :param subifds: if True (the default), when creating a multi-frame file,
+        store lower resolution tiles in sub-ifds.  If False, store all data in
+        primary ifds.
+    :param overwrite: if not True, throw an exception if the output path
+        already exists.
+
     Additional optional parameters:
+
     :param geospatial: if not None, a boolean indicating if this file is
         geospatial.  If not specified or None, this will be checked.
+    :param _concurrency: the number of cpus to use during conversion.  None to
+        use the logical cpu count.
 
     :returns: outputPath if successful
     """
@@ -976,7 +993,7 @@ def is_geospatial(path):
     """
     Check if a path is likely to be a geospatial file.
 
-    :params path: The path to the file
+    :param path: The path to the file
     :returns: True if geospatial.
     """
     try:
@@ -999,7 +1016,7 @@ def is_vips(path):
     """
     Check if a path is readable by vips.
 
-    :params path: The path to the file
+    :param path: The path to the file
     :returns: True if readable by vips.
     """
     _import_pyvips()

@@ -39,7 +39,7 @@ A band definition is an object which can contain the following keys:
 
 - ``frame``: if specified, override the frame parameter used in the tile query for this band.  Note that it is more efficient to have at least one band not specify a frame parameter or use the same value as the basic query.  Defaults to the frame value of the core query.
 
-- ``frameidelta``: if specified, and ``frame`` is not specified, override the frame parameter used in the tile query for this band by adding the value to the current frame number.  If many different frames are being requested, all with the same ``framedelta``, this is more efficient than varying the ``frame`` within the style.
+- ``framedelta``: if specified, and ``frame`` is not specified, override the frame parameter used in the tile query for this band by adding the value to the current frame number.  If many different frames are being requested, all with the same ``framedelta``, this is more efficient than varying the ``frame`` within the style.
 
 - ``min``: the value to map to the first palette value.  Defaults to 0.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported minimum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.
 

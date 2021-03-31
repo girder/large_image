@@ -60,4 +60,6 @@ node_modules/
 .eslintcache
 test/externaldata
 
-docs/source
+docs/source/*
+!docs/source/*.py
+!docs/source/*.rst

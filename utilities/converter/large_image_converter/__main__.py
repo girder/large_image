@@ -54,8 +54,8 @@ depth.
         'COG geotiff.  Other formats may not be available for all input '
         'options and will change some defaults.  '
         'Aperio (svs) defaults to no-subifds.  If there is no label image, a '
-        'cropped square thumbnail is used in its place if the source image '
-        'can be read by anyt of the known tile sources.')
+        'cropped nearly square thumbnail is used in its place if the source '
+        'image can be read by any of the known tile sources.')
     parser.add_argument(
         '--compression', '-c',
         choices=[
