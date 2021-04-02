@@ -13,6 +13,7 @@ from large_image.exceptions import TileSourceException
 import large_image_source_gdal
 
 from . import utilities
+from .datastore import datastore
 
 
 def _assertImageMatches(image, testRootName, saveTestImageFailurePath='/tmp'):
@@ -289,7 +290,7 @@ def testGuardAgainstBadLatLong():
 
 
 def testPalettizedGeotiff():
-    imagePath = utilities.externaldata('data/landcover_sample_1000.tif.sha512')
+    imagePath = datastore.fetch('landcover_sample_1000.tif')
     source = large_image_source_gdal.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 256
@@ -325,7 +326,7 @@ def testPalettizedGeotiff():
 
 
 def testRetileProjection():
-    imagePath = utilities.externaldata('data/landcover_sample_1000.tif.sha512')
+    imagePath = datastore.fetch('landcover_sample_1000.tif')
     ts = large_image_source_gdal.open(imagePath, projection='EPSG:3857')
     ti = ts.getSingleTile(tile_size=dict(width=1000, height=1000), tile_position=1000)
     assert ti['tile'].size == 3000000
@@ -342,7 +343,7 @@ def testInternalMetadata():
 
 
 def testGetRegionWithProjection():
-    imagePath = utilities.externaldata('data/landcover_sample_1000.tif.sha512')
+    imagePath = datastore.fetch('landcover_sample_1000.tif')
     ts = large_image_source_gdal.open(imagePath, projection='EPSG:3857')
     region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                              format=constants.TILE_FORMAT_NUMPY)

@@ -7,13 +7,14 @@ import large_image_source_pil
 from large_image.cache_util import cachesClear
 
 from . import utilities
+from .datastore import datastore
 
 
 def testTilesFromPIL():
     # Ensure this test can run in any order
     cachesClear()
 
-    imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
+    imagePath = datastore.fetch('sample_Easy1.png')
     # Test with different max size options.
     config.setConfig('max_small_image_size', 100)
     assert large_image_source_pil.canRead(imagePath) is False
@@ -36,7 +37,7 @@ def testTilesFromPIL():
 
 def testTileRedirects():
     # Test redirects, use a JPEG
-    imagePath = utilities.externaldata('data/sample_Easy1.jpeg.sha512')
+    imagePath = datastore.fetch('sample_Easy1.jpeg')
     rawimage = open(imagePath, 'rb').read()
     source = large_image_source_pil.open(imagePath)
     # No encoding or redirect should just get a JPEG
@@ -66,7 +67,7 @@ def testReadingVariousColorFormats():
 
 
 def testInternalMetadata():
-    imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
+    imagePath = datastore.fetch('sample_Easy1.png')
     source = large_image_source_pil.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'pil' in metadata

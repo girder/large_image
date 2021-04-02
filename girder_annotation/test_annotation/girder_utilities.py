@@ -3,7 +3,7 @@ import os
 from girder.models.folder import Folder
 from girder.models.upload import Upload
 
-from test.utilities import externaldata
+from test.datastore import datastore
 
 
 def namedFolder(user, folderName='Public'):
@@ -24,7 +24,7 @@ def uploadFile(filePath, user, assetstore, folderName='Public', name=None):
 
 
 def uploadExternalFile(hashPath, user, assetstore, folderName='Public', name=None):
-    imagePath = externaldata(hashPath)
+    imagePath = datastore.fetch(hashPath)
     return uploadFile(imagePath, user=user, assetstore=assetstore, folderName=folderName, name=name)
 
 

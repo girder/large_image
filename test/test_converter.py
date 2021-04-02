@@ -11,7 +11,7 @@ import large_image_source_tiff
 import large_image_converter
 import large_image_converter.__main__ as main
 
-from . import utilities
+from .datastore import datastore
 
 
 def testIsGeospatial():
@@ -19,9 +19,9 @@ def testIsGeospatial():
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     assert large_image_converter.is_geospatial(imagePath) is True
 
-    imagePath = utilities.externaldata(
-        'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
-        'af6f-14fefbbdf7bd.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
+        'af6f-14fefbbdf7bd.svs')
     assert large_image_converter.is_geospatial(imagePath) is False
 
     testDir = os.path.dirname(os.path.realpath(__file__))
@@ -30,12 +30,12 @@ def testIsGeospatial():
 
 
 def testIsVips():
-    imagePath = utilities.externaldata(
-        'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
-        'af6f-14fefbbdf7bd.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
+        'af6f-14fefbbdf7bd.svs')
     assert large_image_converter.is_vips(imagePath) is True
 
-    imagePath = utilities.externaldata('data/HENormalN801.czi.sha512')
+    imagePath = datastore.fetch('HENormalN801.czi')
     assert large_image_converter.is_vips(imagePath) is False
 
 
@@ -98,7 +98,7 @@ def testConvertGeospatial(tmpdir):
 
 
 def testConvertPTIF(tmpdir):
-    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    imagePath = datastore.fetch('sample_image.ptif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath, compression='jpeg', quality=50)
     info = tifftools.read_tiff(outputPath)
@@ -117,7 +117,7 @@ def testConvertOverwrite(tmpdir):
 
 
 def testConvertOMETif(tmpdir):
-    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    imagePath = datastore.fetch('sample.ome.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     # Note: change this when we convert multi-frame files differently
     large_image_converter.convert(imagePath, outputPath)
@@ -127,7 +127,7 @@ def testConvertOMETif(tmpdir):
 
 
 def testConvertTiffFloatPixels(tmpdir):
-    imagePath = utilities.externaldata('data/d042-353.crop.small.float32.tif.sha512')
+    imagePath = datastore.fetch('d042-353.crop.small.float32.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath)
     info = tifftools.read_tiff(outputPath)
@@ -136,7 +136,7 @@ def testConvertTiffFloatPixels(tmpdir):
 
 
 def testConvertJp2kCompression(tmpdir):
-    imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
+    imagePath = datastore.fetch('sample_Easy1.png')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath, compression='jp2k')
     info = tifftools.read_tiff(outputPath)
@@ -158,7 +158,7 @@ def testConvertJp2kCompression(tmpdir):
 
 
 def testConvertFromLargeImage(tmpdir):
-    imagePath = utilities.externaldata('data/sample_image.jp2.sha512')
+    imagePath = datastore.fetch('sample_image.jp2')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath)
     source = large_image_source_tiff.open(outputPath)
@@ -167,7 +167,7 @@ def testConvertFromLargeImage(tmpdir):
 
 
 def testConvertFromMultiframeImage(tmpdir):
-    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    imagePath = datastore.fetch('sample.ome.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath)
     source = large_image_source_tiff.open(outputPath)
@@ -179,7 +179,7 @@ def testConvertFromMultiframeImage(tmpdir):
 
 
 def testConvertFromMultiframeImageNoSubIFDS(tmpdir):
-    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    imagePath = datastore.fetch('sample.ome.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath, subifds=False)
     source = large_image_source_tiff.open(outputPath)
@@ -191,7 +191,7 @@ def testConvertFromMultiframeImageNoSubIFDS(tmpdir):
 
 
 def testConvertFromMultiframeImageOnlyOneFrame(tmpdir):
-    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    imagePath = datastore.fetch('sample.ome.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath, onlyFrame=2)
     source = large_image_source_tiff.open(outputPath)
@@ -202,7 +202,7 @@ def testConvertFromMultiframeImageOnlyOneFrame(tmpdir):
 
 
 def testConvertToAperio(tmpdir):
-    imagePath = utilities.externaldata('data/huron.image2_jpeg2k.tif.sha512')
+    imagePath = datastore.fetch('huron.image2_jpeg2k.tif')
     outputPath = os.path.join(tmpdir, 'out.svs')
     large_image_converter.convert(imagePath, outputPath, format='aperio')
     source = large_image.open(outputPath)
@@ -211,7 +211,7 @@ def testConvertToAperio(tmpdir):
 
 
 def testConvertMultiframeToAperio(tmpdir):
-    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    imagePath = datastore.fetch('sample.ome.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     large_image_converter.convert(imagePath, outputPath, format='aperio', compression='jp2k')
     source = large_image.open(outputPath)
@@ -258,7 +258,7 @@ def testConverterMainStats(tmpdir):
 
 
 def testConverterMainFullStats(tmpdir):
-    imagePath = utilities.externaldata('data/sample_Easy1.png.sha512')
+    imagePath = datastore.fetch('sample_Easy1.png')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     main.main([imagePath, outputPath, '--full-stats'])
     info = tifftools.read_tiff(outputPath)
@@ -267,7 +267,7 @@ def testConverterMainFullStats(tmpdir):
 
 
 def testConverterMainFullStatsWithWebp(tmpdir):
-    imagePath = utilities.externaldata('data/d042-353.crop.small.float32.tif.sha512')
+    imagePath = datastore.fetch('d042-353.crop.small.float32.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     main.main([imagePath, outputPath, '--compression', 'webp', '--full-stats'])
     info = tifftools.read_tiff(outputPath)
@@ -277,7 +277,7 @@ def testConverterMainFullStatsWithWebp(tmpdir):
 
 
 def testConverterMainConcurrency(tmpdir):
-    imagePath = utilities.externaldata('data/sample.ome.tif.sha512')
+    imagePath = datastore.fetch('sample.ome.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')
     main.main([imagePath, outputPath, '--concurrency', '2'])
     assert os.path.getsize(outputPath) > 100

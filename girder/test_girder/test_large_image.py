@@ -115,7 +115,7 @@ def testSettings(server):
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testThumbnailFileJob(server, admin, user, fsAssetstore):
-    file = utilities.uploadExternalFile('data/sample_image.ptif.sha512', admin, fsAssetstore)
+    file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
 
     # We should report zero thumbnails
@@ -299,7 +299,7 @@ def testCaches(server, admin):
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testAssociateImageCaching(server, admin, user, fsAssetstore):
-    file = utilities.uploadExternalFile('data/sample_image.ptif.sha512', admin, fsAssetstore)
+    file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     resp = server.request(path='/item/%s/tiles/images/label' % itemId,
                           user=admin, isJson=False)
@@ -334,7 +334,7 @@ def testListSources(server):
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testGetLargeImagePath(server, admin, fsAssetstore):
-    file = utilities.uploadExternalFile('data/sample_image.ptif.sha512', admin, fsAssetstore)
+    file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     item = Item().load(itemId, user=admin)
     ts = ImageItem().tileSource(item)

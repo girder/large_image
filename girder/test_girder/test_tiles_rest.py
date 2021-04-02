@@ -208,7 +208,7 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None, c
 @pytest.mark.plugin('large_image')
 def testTilesFromPTIF(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
     # We should already have tile information.  Ask to delete it so we can
@@ -327,7 +327,7 @@ def testTilesFromPTIF(server, admin, fsAssetstore):
 def testTilesFromTest(server, admin, fsAssetstore):
     publicFolder = utilities.namedFolder(admin, 'Public')
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     items = [{'itemId': str(file['itemId']), 'fileId': str(file['_id'])}]
     # We should already have tile information.  Ask to delete it so we can
     # do other tests
@@ -528,7 +528,7 @@ def testTilesWithUnicodeName(server, admin, fsAssetstore):
     # Unicode file names shouldn't cause problems when accessing ptifs.
     # This requires an appropriate version of the python libtiff module.
     name = '\u0441\u043b\u0430\u0439\u0434.ptif'
-    origpath = utilities.externaldata('data/sample_image.ptif.sha512')
+    origpath = utilities.datastore.fetch('sample_image.ptif')
     altpath = os.path.join(os.path.dirname(origpath), name)
     if os.path.exists(altpath):
         os.unlink(altpath)
@@ -568,7 +568,7 @@ def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):
 @pytest.mark.plugin('large_image')
 def testThumbnails(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
     # We should already have tile information.  Ask to delete it so we can
@@ -667,7 +667,7 @@ def testThumbnails(server, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testContentDisposition(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
 
     params = {'encoding': 'PNG', 'width': 200}
@@ -704,7 +704,7 @@ def testContentDisposition(server, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testRegions(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     # Get metadata to use in our tests
     resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
@@ -788,7 +788,7 @@ def testRegions(server, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testPixel(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
 
     # Test bad parameters
@@ -823,7 +823,7 @@ def testPixel(server, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testGetTileSource(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     # We should have access via getGirderTileSource
     source = getGirderTileSource(itemId, user=admin)
@@ -831,7 +831,7 @@ def testGetTileSource(server, admin, fsAssetstore):
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
 
     # We can also use a file with getTileSource.  The user is ignored.
-    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    imagePath = utilities.datastore.fetch('sample_image.ptif')
     source = getTileSource(imagePath, user=admin, encoding='PNG')
     image, mime = source.getThumbnail(encoding='JPEG', width=200)
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
@@ -851,7 +851,7 @@ def testTilesLoadModelCache(server, admin, fsAssetstore):
     loadmodelcache.invalidateLoadModelCache()
     token = str(Token().createToken(admin)['_id'])
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     # Now the tile request should tell us about the file.  These are
     # specific to our test file
@@ -868,7 +868,7 @@ def testTilesLoadModelCache(server, admin, fsAssetstore):
 def testTilesModelLookupCache(server, user, admin, fsAssetstore):
     User().load = mock.Mock(wraps=User().load)
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     token = str(Token().createToken(user)['_id'])
     lastCount = User().load.call_count
@@ -887,7 +887,7 @@ def testTilesModelLookupCache(server, user, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testTilesDZIEndpoints(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
     assert utilities.respStatus(resp) == 200
@@ -1013,7 +1013,7 @@ def testTilesAfterCopyItem(boundServer, admin, fsAssetstore, girderWorker):
 @pytest.mark.plugin('large_image')
 def testTilesAutoSetOption(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore,
+        'sample_image.ptif', admin, fsAssetstore,
         name='sample_image.PTIF')
     itemId = str(file['itemId'])
     # We should already have tile information.
@@ -1022,7 +1022,7 @@ def testTilesAutoSetOption(server, admin, fsAssetstore):
     # Turn off auto-set and try again
     Setting().set(constants.PluginSettings.LARGE_IMAGE_AUTO_SET, 'false')
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
     assert utilities.respStatus(resp) == 400
@@ -1030,7 +1030,7 @@ def testTilesAutoSetOption(server, admin, fsAssetstore):
     # Turn it back on
     Setting().set(constants.PluginSettings.LARGE_IMAGE_AUTO_SET, 'true')
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
     assert utilities.respStatus(resp) == 200
@@ -1040,7 +1040,7 @@ def testTilesAutoSetOption(server, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testTilesAssociatedImages(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
 
     resp = server.request(path='/item/%s/tiles/images' % itemId, user=admin)
@@ -1079,7 +1079,7 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
 
     # Test with an image that doesn't have associated images
     file = utilities.uploadExternalFile(
-        'data/sample_Easy1.png.sha512', admin, fsAssetstore)
+        'sample_Easy1.png', admin, fsAssetstore)
     itemId = str(file['itemId'])
     resp = server.request(path='/item/%s/tiles' % itemId, method='POST', user=admin)
     assert utilities.respStatus(resp) == 200
@@ -1098,7 +1098,7 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testTilesWithFrameNumbers(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample.ome.tif.sha512', admin, fsAssetstore)
+        'sample.ome.tif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     # Test that we can get frames via either tiles/zxy or tiles/fzxy and
     # that the frames are different
@@ -1129,7 +1129,7 @@ def testTilesWithFrameNumbers(server, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testTilesHistogram(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     resp = server.request(
         path='/item/%s/tiles/histogram' % itemId,
@@ -1144,7 +1144,7 @@ def testTilesHistogram(server, admin, fsAssetstore):
 @pytest.mark.plugin('large_image')
 def testTilesInternalMetadata(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
-        'data/sample_image.ptif.sha512', admin, fsAssetstore)
+        'sample_image.ptif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     resp = server.request(path='/item/%s/tiles/internal_metadata' % itemId)
     assert resp.json['tilesource'] == 'tiff'
@@ -1173,7 +1173,7 @@ def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker)
 @pytest.mark.plugin('large_image')
 def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadExternalFile(
-        'data/landcover_sample_1000.tif.sha512', admin, fsAssetstore)
+        'landcover_sample_1000.tif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
     # We should already have tile information.  Ask to delete it so we can

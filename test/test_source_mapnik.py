@@ -12,6 +12,7 @@ from large_image.exceptions import TileSourceException
 import large_image_source_mapnik
 
 from . import utilities
+from .datastore import datastore
 
 
 def _assertImageMatches(image, testRootName, saveTestImageFailurePath='/tmp'):
@@ -334,7 +335,7 @@ def testGuardAgainstBadLatLong():
 
 
 def testTileFromNetCDF():
-    imagePath = utilities.externaldata('data/04091217_ruc.nc.sha512')
+    imagePath = datastore.fetch('04091217_ruc.nc')
     source = large_image_source_mapnik.open(imagePath)
     tileMetadata = source.getMetadata()
 
@@ -361,6 +362,6 @@ def testTileFromNetCDF():
 
 
 def testTileSourceFromNetCDF():
-    imagePath = utilities.externaldata('data/04091217_ruc.nc.sha512')
+    imagePath = datastore.fetch('04091217_ruc.nc')
     ts = large_image.getTileSource(imagePath)
     assert 'mapnik' in ts.name
