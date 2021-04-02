@@ -9,6 +9,10 @@
 
 ### Improvements
 - More untiled tiff files are handles by the bioformats reader (#569)
+- Expose a concurrent option on endpoints for converting images (#583)
+
+### Changes
+- Exceptions on cached items are no longer within the KeyError context (#584)
 
 ## Version 1.4.3
 
