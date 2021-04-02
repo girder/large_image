@@ -181,11 +181,15 @@ class LruCacheMetaclass(type):
         key = cls.__name__ + ' ' + key
         with cacheLock:
             try:
-                instance = cache[key]
+                return cache[key]
             except KeyError:
-                instance = super().__call__(*args, **kwargs)
-                cache[key] = instance
-                instance._classkey = key
+                # By passing and handling the cache miss outside of the
+                # exception, any exceptions while trying to populate the cache
+                # will not be reported in the cache exception context.
+                pass
+            instance = super().__call__(*args, **kwargs)
+            cache[key] = instance
+            instance._classkey = key
 
         return instance
 
