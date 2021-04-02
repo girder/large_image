@@ -164,11 +164,16 @@ class TilesItemResource(ItemResource):
                'quality', dataType='int', required=False)
         .param('cr', 'JP2K target compression ratio where 1 is lossless',
                dataType='int', required=False)
+        .param('concurrent', 'Suggested number of maximum concurrent '
+               'processes to use during conversion.  Default is 2 less than '
+               'the logical number of cpus.', dataType='int', required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     @filtermodel(model='job', plugin='jobs')
     def createTiles(self, item, params):
+        if 'concurrent' in params:
+            params['_concurrency'] = params.pop('concurrent')
         largeImageFileId = params.get('fileId')
         if largeImageFileId is None:
             files = list(Item().childFiles(item=item, limit=2))
@@ -223,11 +228,16 @@ class TilesItemResource(ItemResource):
                'quality', dataType='int', required=False)
         .param('cr', 'JP2K target compression ratio where 1 is lossless',
                dataType='int', required=False)
+        .param('concurrent', 'Suggested number of maximum concurrent '
+               'processes to use during conversion.  Default is 2 less than '
+               'the logical number of cpus.', dataType='int', required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     @filtermodel(model='job', plugin='jobs')
     def convertImage(self, item, params):
+        if 'concurrent' in params:
+            params['_concurrency'] = params.pop('concurrent')
         largeImageFileId = params.get('fileId')
         if largeImageFileId is None:
             files = list(Item().childFiles(item=item, limit=2))
