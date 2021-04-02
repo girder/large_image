@@ -11,6 +11,7 @@ import large_image_source_test
 from large_image_source_tiff.tiff_reader import TiledTiffDirectory
 
 from . import utilities
+from .datastore import datastore
 
 
 @pytest.fixture
@@ -87,9 +88,9 @@ class LargeImageCachedTilesTest:
         assert large_image_source_test._counters['tiles'] == counter3
 
     def testLargeRegion(self):
-        imagePath = utilities.externaldata(
-            'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
-            '4a70-9ae3-50e3ab45e242.svs.sha512')
+        imagePath = datastore.fetch(
+            'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+            '4a70-9ae3-50e3ab45e242.svs')
         source = large_image.getTileSource(imagePath)
         tileMetadata = source.getMetadata()
         params = {
@@ -121,7 +122,7 @@ class LargeImageCachedTilesTest:
             self.initCount += 1
             orig_init(*args, **kwargs)
 
-        imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+        imagePath = datastore.fetch('sample_image.ptif')
         cachesClear()
         gc.collect(2)
         TiledTiffDirectory.__del__ = countDelete

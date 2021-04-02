@@ -264,7 +264,7 @@ class TestLargeImageAnnotationRest:
 
         def upload(name, user=user, private=False):
             file = utilities.uploadExternalFile(
-                'data/sample_image.ptif.sha512', admin, fsAssetstore, name=name)
+                'sample_image.ptif', admin, fsAssetstore, name=name)
             item = Item().load(file['itemId'], level=AccessType.READ, user=admin)
 
             create_annotation(item, user)

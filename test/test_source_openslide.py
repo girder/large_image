@@ -8,6 +8,7 @@ from large_image import constants
 import large_image_source_openslide
 
 from . import utilities
+from .datastore import datastore
 
 
 def testTilesFromSVS():
@@ -15,9 +16,9 @@ def testTilesFromSVS():
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
     assert large_image_source_openslide.canRead(imagePath) is False
 
-    imagePath = utilities.externaldata(
-        'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
-        'af6f-14fefbbdf7bd.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
+        'af6f-14fefbbdf7bd.svs')
     assert large_image_source_openslide.canRead(imagePath) is True
     source = large_image_source_openslide.open(imagePath)
     tileMetadata = source.getMetadata()
@@ -30,9 +31,9 @@ def testTilesFromSVS():
 
 
 def testMagnification():
-    imagePath = utilities.externaldata(
-        'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
-        '4a70-9ae3-50e3ab45e242.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs')
     source = large_image_source_openslide.open(imagePath)
     # tileMetadata = source.getMetadata()
     mag = source.getNativeMagnification()
@@ -76,9 +77,9 @@ def testMagnification():
 
 
 def testTileIterator():
-    imagePath = utilities.externaldata(
-        'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
-        '4a70-9ae3-50e3ab45e242.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs')
     source = large_image_source_openslide.open(imagePath)
     tileCount = 0
     visited = {}
@@ -178,9 +179,9 @@ def testTileIterator():
 
 
 def testGetRegion():
-    imagePath = utilities.externaldata(
-        'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
-        '4a70-9ae3-50e3ab45e242.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs')
     source = large_image_source_openslide.open(imagePath)
     # By default, getRegion gets an image
     image, mimeType = source.getRegion(scale={'magnification': 2.5})
@@ -210,9 +211,9 @@ def testGetRegion():
 
 
 def testConvertRegionScale():
-    imagePath = utilities.externaldata(
-        'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
-        '4a70-9ae3-50e3ab45e242.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs')
     source = large_image_source_openslide.open(imagePath)
     # If we aren't using pixels as our units and don't specify a target
     # unit, this should do nothing.  This source image is 23021 x 23162
@@ -297,9 +298,9 @@ def testConvertRegionScale():
 
 
 def testConvertPointScale():
-    imagePath = utilities.externaldata(
-        'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
-        '4a70-9ae3-50e3ab45e242.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs')
     source = large_image_source_openslide.open(imagePath)
     point = source.getPointAtAnotherScale((500, 800), {'magnification': 5}, 'mag_pixels')
     assert point == (4000.0, 6400.0)
@@ -313,9 +314,9 @@ def testConvertPointScale():
 
 
 def testGetPixel():
-    imagePath = utilities.externaldata(
-        'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
-        '4a70-9ae3-50e3ab45e242.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs')
     source = large_image_source_openslide.open(imagePath)
 
     pixel = source.getPixel(region={'left': 12125, 'top': 10640})
@@ -335,7 +336,7 @@ def testGetPixel():
 
 
 def testTilesFromPowerOf3Tiles():
-    imagePath = utilities.externaldata('data/G10-3_pelvis_crop-powers-of-3.tif.sha512')
+    imagePath = datastore.fetch('G10-3_pelvis_crop-powers-of-3.tif')
     source = large_image_source_openslide.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 128
@@ -347,9 +348,9 @@ def testTilesFromPowerOf3Tiles():
 
 
 def testRegionsWithMagnification():
-    imagePath = utilities.externaldata(
-        'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
-        'af6f-14fefbbdf7bd.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
+        'af6f-14fefbbdf7bd.svs')
     source = large_image_source_openslide.open(imagePath)
     params = {'region': {'width': 2000, 'height': 1500},
               'output': {'maxWidth': 1000, 'maxHeight': 1000},
@@ -388,9 +389,9 @@ def testRegionsWithMagnification():
 
 
 def testTilesAssociatedImages():
-    imagePath = utilities.externaldata(
-        'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
-        'af6f-14fefbbdf7bd.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
+        'af6f-14fefbbdf7bd.svs')
     source = large_image_source_openslide.open(imagePath)
     imageList = source.getAssociatedImagesList()
     assert imageList == ['label', 'macro', 'thumbnail']
@@ -415,9 +416,9 @@ def testTilesFromSmallFile():
 
 
 def testEdgeOptions():
-    imagePath = utilities.externaldata(
-        'data/sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
-        'af6f-14fefbbdf7bd.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
+        'af6f-14fefbbdf7bd.svs')
     image = large_image_source_openslide.open(
         imagePath, format=constants.TILE_FORMAT_IMAGE, encoding='PNG',
         edge='crop').getTile(0, 0, 0)
@@ -443,9 +444,9 @@ def testEdgeOptions():
 
 
 def testInternalMetadata():
-    imagePath = utilities.externaldata(
-        'data/sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
-        '4a70-9ae3-50e3ab45e242.svs.sha512')
+    imagePath = datastore.fetch(
+        'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs')
     source = large_image_source_openslide.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'openslide' in metadata

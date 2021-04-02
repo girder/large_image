@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from .utilities import externaldata
+from .datastore import datastore
 
 
 def test_average_color():
@@ -9,7 +9,7 @@ def test_average_color():
     examplesDir = os.path.join(testDir, '..', 'examples')
     prog = 'average_color.py'
 
-    imagePath = externaldata('data/sample_image.ptif.sha512')
+    imagePath = datastore.fetch('sample_image.ptif')
     process = subprocess.Popen([
         'python', prog, imagePath, '-m', '1.25'],
         shell=False, stdout=subprocess.PIPE, cwd=examplesDir)
@@ -24,7 +24,7 @@ def test_average_color():
 def test_average_color_import():
     from examples.average_color import average_color
 
-    imagePath = externaldata('data/sample_image.ptif.sha512')
+    imagePath = datastore.fetch('sample_image.ptif')
     mean = average_color(imagePath, 1.25)
     assert round(mean[0]) == 245
     assert round(mean[1]) == 247
@@ -36,7 +36,7 @@ def test_sum_squares():
     examplesDir = os.path.join(testDir, '..', 'examples')
     prog = 'sumsquare_color.py'
 
-    imagePath = externaldata('data/sample_image.ptif.sha512')
+    imagePath = datastore.fetch('sample_image.ptif')
     process = subprocess.Popen([
         'python', prog, imagePath, '-m', '2.5'],
         shell=False, stdout=subprocess.PIPE, cwd=examplesDir)
@@ -55,7 +55,7 @@ def test_sum_squares():
 def test_sum_squares_import():
     from examples.sumsquare_color import sum_squares
 
-    imagePath = externaldata('data/sample_image.ptif.sha512')
+    imagePath = datastore.fetch('sample_image.ptif')
     firstColor = sum_squares(imagePath, 2.5).tolist()
     finalColor = sum_squares(
         imagePath, 2.5, tile_width=800, tile_height=423, overlap_x=40,

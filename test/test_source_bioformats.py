@@ -3,12 +3,13 @@ import pytest
 from large_image.cache_util import cachesClear
 
 from . import utilities
+from .datastore import datastore
 
 
 def testTilesFromBioformats():
     import large_image_source_bioformats
 
-    imagePath = utilities.externaldata('data/HENormalN801.czi.sha512')
+    imagePath = datastore.fetch('HENormalN801.czi')
     source = large_image_source_bioformats.open(imagePath)
     tileMetadata = source.getMetadata()
 
@@ -27,7 +28,7 @@ def testTilesFromBioformats():
 def testInternalMetadata():
     import large_image_source_bioformats
 
-    imagePath = utilities.externaldata('data/HENormalN801.czi.sha512')
+    imagePath = datastore.fetch('HENormalN801.czi')
     source = large_image_source_bioformats.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'sizeColorPlanes' in metadata

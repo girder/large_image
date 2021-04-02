@@ -3,7 +3,7 @@ import os
 import large_image
 from large_image.tilesource import nearPowerOfTwo
 
-from . import utilities
+from .datastore import datastore
 
 
 def testNearPowerOfTwo():
@@ -21,5 +21,5 @@ def testCanRead():
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
     assert large_image.canRead(imagePath) is False
 
-    imagePath = utilities.externaldata('data/sample_image.ptif.sha512')
+    imagePath = datastore.fetch('sample_image.ptif')
     assert large_image.canRead(imagePath) is True

@@ -1,10 +1,11 @@
 import large_image_source_openjpeg
 
 from . import utilities
+from .datastore import datastore
 
 
 def testTilesFromOpenJPEG():
-    imagePath = utilities.externaldata('data/sample_image.jp2.sha512')
+    imagePath = datastore.fetch('sample_image.jp2')
     source = large_image_source_openjpeg.open(imagePath)
     tileMetadata = source.getMetadata()
 
@@ -18,7 +19,7 @@ def testTilesFromOpenJPEG():
 
 
 def testAssociatedImagesFromOpenJPEG():
-    imagePath = utilities.externaldata('data/JK-kidney_B-gal_H3_4C_1-500sec.jp2.sha512')
+    imagePath = datastore.fetch('JK-kidney_B-gal_H3_4C_1-500sec.jp2')
     source = large_image_source_openjpeg.open(imagePath)
 
     imageList = source.getAssociatedImagesList()
@@ -32,7 +33,7 @@ def testAssociatedImagesFromOpenJPEG():
 def testBelowLevelTilesFromOpenJPEG():
     from large_image.cache_util import cachesClear
 
-    imagePath = utilities.externaldata('data/JK-kidney_B-gal_H3_4C_1-500sec.jp2.sha512')
+    imagePath = datastore.fetch('JK-kidney_B-gal_H3_4C_1-500sec.jp2')
     origMin = large_image_source_openjpeg.OpenjpegFileTileSource._minTileSize
     origMax = large_image_source_openjpeg.OpenjpegFileTileSource._maxTileSize
     large_image_source_openjpeg.OpenjpegFileTileSource._minTileSize = 64
@@ -55,7 +56,7 @@ def testBelowLevelTilesFromOpenJPEG():
 
 
 def testInternalMetadata():
-    imagePath = utilities.externaldata('data/sample_image.jp2.sha512')
+    imagePath = datastore.fetch('sample_image.jp2')
     source = large_image_source_openjpeg.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'ScanInfo' in metadata['xml']
