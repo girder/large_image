@@ -19,6 +19,7 @@ import cherrypy
 import datetime
 import enum
 import jsonschema
+import numpy
 import re
 import threading
 import time
@@ -38,6 +39,9 @@ from girder_large_image.models.image_item import ImageItem
 
 from .annotationelement import Annotationelement
 
+# Some arrays longer than this are validated using numpy rather than jsonschema
+VALIDATE_ARRAY_LENGTH = 1000
+
 
 class AnnotationSchema:
     coordSchema = {
@@ -50,8 +54,19 @@ class AnnotationSchema:
         'maxItems': 3,
         'name': 'Coordinate',
         # TODO: define origin for 3D images
-        'description': 'An X, Y, Z coordinate tuple, in base layer pixel'
-                       ' coordinates, where the origin is the upper-left.'
+        'description': 'An X, Y, Z coordinate tuple, in base layer pixel '
+                       'coordinates, where the origin is the upper-left.'
+    }
+    coordValueSchema = {
+        'type': 'array',
+        'items': {
+            'type': 'number'
+        },
+        'minItems': 4,
+        'maxItems': 4,
+        'name': 'CoordinateWithValue',
+        'description': 'An X, Y, Z, value coordinate tuple, in base layer '
+                       'pixel coordinates, where the origin is the upper-left.'
     }
 
     colorSchema = {
@@ -65,7 +80,19 @@ class AnnotationSchema:
         # TODO: make rgb and rgba spec validate that rgb is [0-255] and a is
         # [0-1], rather than just checking if they are digits and such.
         'pattern': r'^(#[0-9a-fA-F]{3,6}|rgb\(\d+,\s*\d+,\s*\d+\)|'
-                   r'rgba\(\d+,\s*\d+,\s*\d+,\s*(\d?\.|)\d+\))$'
+                   r'rgba\(\d+,\s*\d+,\s*\d+,\s*(\d?\.|)\d+\))$',
+    }
+
+    colorRangeSchema = {
+        'type': 'array',
+        'items': colorSchema,
+        'description': 'A list of colors',
+    }
+
+    rangeValueSchema = {
+        'type': 'array',
+        'items': {'type': 'number'},
+        'description': 'A weakly monotonic list of range values',
     }
 
     baseShapeSchema = {
@@ -309,9 +336,117 @@ class AnnotationSchema:
         ]
     }
 
+    heatmapSchema = {
+        'allOf': [
+            baseShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['heatmap']
+                    },
+                    'points': {
+                        'type': 'array',
+                        'items': coordValueSchema,
+                    },
+                    'radius': {
+                        'type': 'number',
+                        'minimum': 0,
+                        'exclusiveMinimum': True,
+                    },
+                    'colorRange': colorRangeSchema,
+                    'rangeValues': rangeValueSchema,
+                    'normalizeRange': {
+                        'type': 'boolean',
+                        'description':
+                            'If true, rangeValues are on a scale of 0 to 1 '
+                            'and map to the minimum and maximum values on the '
+                            'data.  If false (the default), the rangeValues '
+                            'are the actual data values.',
+                    },
+                },
+                'required': ['type', 'points'],
+                'patternProperties': baseShapePatternProperties,
+                'additionalProperties': False,
+                'description':
+                    'ColorRange and rangeValues should have a one-to-one '
+                    'correspondence.',
+            }
+        ]
+    }
+
+    griddataSchema = {
+        'allOf': [
+            baseShapeSchema,
+            {
+                'type': 'object',
+                'properties': {
+                    'type': {
+                        'type': 'string',
+                        'enum': ['griddata']
+                    },
+                    'origin': coordSchema,
+                    'dx': {
+                        'type': 'number',
+                        'description': 'grid spacing in the x direction',
+                    },
+                    'dy': {
+                        'type': 'number',
+                        'description': 'grid spacing in the y direction',
+                    },
+                    'gridWidth': {
+                        'type': 'integer',
+                        'minimum': 1,
+                        'description': 'The number of values across the width of the grid',
+                    },
+                    'values': {
+                        'type': 'array',
+                        'items': {'type': 'number'},
+                        'description':
+                            'The values of the grid.  This must have a '
+                            'multiple of gridWidth entries',
+                    },
+                    'interpretation': {
+                        'type': 'string',
+                        'enum': ['heatmap', 'contour', 'choropleth']
+                    },
+                    'radius': {
+                        'type': 'number',
+                        'minimum': 0,
+                        'exclusiveMinimum': True,
+                        'description': 'radius used for heatmap interpretation',
+                    },
+                    'colorRange': colorRangeSchema,
+                    'rangeValues': rangeValueSchema,
+                    'normalizeRange': {
+                        'type': 'boolean',
+                        'description':
+                            'If true, rangeValues are on a scale of 0 to 1 '
+                            'and map to the minimum and maximum values on the '
+                            'data.  If false (the default), the rangeValues '
+                            'are the actual data values.',
+                    },
+                    'stepped': {'type': 'boolean'},
+                    'minColor': colorSchema,
+                    'maxColor': colorSchema,
+                },
+                'required': ['type', 'values', 'gridWidth'],
+                'patternProperties': baseShapePatternProperties,
+                'additionalProperties': False,
+                'description':
+                    'ColorRange and rangeValues should have a one-to-one '
+                    'correspondence except for stepped contours where '
+                    'rangeValues needs one more entry than colorRange.  '
+                    'minColor and maxColor are the colors applies to values '
+                    'beyond the ranges in rangeValues.',
+            }
+        ]
+    }
+
     annotationElementSchema = {
         '$schema': 'http://json-schema.org/schema#',
-        # Shape subtypes are mutually exclusive, so for  efficiency, don't use
+        # Shape subtypes are mutually exclusive, so for efficiency, don't use
         # 'oneOf'
         'anyOf': [
             # If we include the baseShapeSchema, then shapes that are as-yet
@@ -320,6 +455,8 @@ class AnnotationSchema:
             arrowShapeSchema,
             circleShapeSchema,
             ellipseShapeSchema,
+            griddataSchema,
+            heatmapSchema,
             pointShapeSchema,
             polylineShapeSchema,
             rectangleShapeSchema,
@@ -776,7 +913,7 @@ class Annotation(AccessControlledModel):
                         return False
         elif isinstance(a, list):
             if len(a) != len(b):
-                if parentKey != 'points' or len(a) < 3 or len(b) < 3:
+                if parentKey not in {'points', 'values'} or len(a) < 3 or len(b) < 3:
                     return False
                 # If this is an array of points, let it pass
                 for idx in range(len(b)):
@@ -811,9 +948,24 @@ class Annotation(AccessControlledModel):
             for element in elements:
                 if isinstance(element.get('id'), ObjectId):
                     element['id'] = str(element['id'])
+                # Handle elements with large arrays by checking that a
+                # conversion to a numpy array works
+                key = None
+                if len(element.get('points', element.get('values', []))) > VALIDATE_ARRAY_LENGTH:
+                    key = 'points' if 'points' in element else 'values'
+                    try:
+                        # Check if the entire array converts in an obvious
+                        # manner
+                        numpy.array(element[key], dtype=float)
+                        keydata = element[key]
+                        element[key] = element[key][:VALIDATE_ARRAY_LENGTH]
+                    except Exception:
+                        key = None
                 if not self._similarElementStructure(element, lastValidatedElement):
                     self.validatorAnnotationElement.validate(element)
                     lastValidatedElement = element
+                if key:
+                    element[key] = keydata
             annot['elements'] = elements
         except jsonschema.ValidationError as exp:
             raise ValidationException(exp)

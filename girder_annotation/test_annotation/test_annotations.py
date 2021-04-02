@@ -356,6 +356,45 @@ class TestLargeImageAnnotation:
         check = Annotation().load(annot['_id'], force=True)
         assert len(check['annotation']['elements']) > 0
 
+    def testHeatmapAnnotation(self, db, admin, fsAssetstore):
+        item = Item().createItem('sample', admin, utilities.namedFolder(admin, 'Public'))
+        annotation = {
+            'name': 'testAnnotation',
+            'elements': [{
+                'type': 'heatmap',
+                'points': [[random.random() for _ in range(4)] for _ in range(10240)]
+            }]
+        }
+        annot = Annotation().createAnnotation(item, admin, annotation)
+        assert Annotation().load(annot['_id'], user=admin) is not None
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
+        result = Annotation().remove(annot)
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        assert result.deleted_count == 1
+        assert Annotation().load(annot['_id'], user=admin) is None
+
+    def testGridHeatmapAnnotation(self, db, admin, fsAssetstore):
+        item = Item().createItem('sample', admin, utilities.namedFolder(admin, 'Public'))
+        annotation = {
+            'name': 'testAnnotation',
+            'elements': [{
+                'type': 'griddata',
+                'interpretation': 'heatmap',
+                'origin': [30, 40, 50],
+                'dx': 3,
+                'dy': 4,
+                'gridWidth': 128,
+                'values': [random.random() for _ in range(10240)]
+            }]
+        }
+        annot = Annotation().createAnnotation(item, admin, annotation)
+        assert Annotation().load(annot['_id'], user=admin) is not None
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, False)
+        result = Annotation().remove(annot)
+        Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
+        assert result.deleted_count == 1
+        assert Annotation().load(annot['_id'], user=admin) is None
+
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')

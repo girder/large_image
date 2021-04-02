@@ -15,13 +15,23 @@
 ##############################################################################
 
 import datetime
+import io
 import math
+import pickle
 import pymongo
 import time
 
 from girder.constants import AccessType, SortDir
+from girder.models.file import File
+from girder.models.item import Item
 from girder.models.model_base import Model
+from girder.models.upload import Upload
 from girder import logger
+
+# Some annotation elements can be very large.  If they pass a size threshold,
+# store part of them in an associated file.  This is slower, so don't do it for
+# small ones.
+MAX_ELEMENT_DOCUMENT = 10000
 
 
 class Annotationelement(Model):
@@ -135,7 +145,7 @@ class Annotationelement(Model):
             element for element in self.yieldElements(
                 annotation, region, annotation['_elementQuery'])]
 
-    def yieldElements(self, annotation, region=None, info=None):
+    def yieldElements(self, annotation, region=None, info=None):  # noqa
         """
         Given an annotation, fetch the elements from the database.
 
@@ -200,7 +210,7 @@ class Annotationelement(Model):
         queryLimit = maxDetails if maxDetails and (not limit or maxDetails < limit) else limit
         offset = int(region['offset']) if region.get('offset') else 0
         logger.debug('element query %r for %r', query, region)
-        fields = {'_id': True, 'element': True, 'bbox.details': True}
+        fields = {'_id': True, 'element': True, 'bbox.details': True, 'datafile': True}
         centroids = str(region.get('centroids')).lower() == 'true'
         if centroids:
             # fields = {'_id': True, 'element': True, 'bbox': True}
@@ -251,6 +261,18 @@ class Annotationelement(Model):
                 ]
                 details += 1
             else:
+                if entry.get('datafile'):
+                    datafile = entry['datafile']
+                    data = io.BytesIO()
+                    chunksize = 1024 ** 2
+                    with File().open(File().load(datafile['fileId'], force=True)) as fptr:
+                        while True:
+                            chunk = fptr.read(chunksize)
+                            if not len(chunk):
+                                break
+                            data.write(chunk)
+                    data.seek(0)
+                    element[datafile['key']] = pickle.load(data)
                 yield element
                 details += entry.get('bbox', {}).get('details', 1)
             count += 1
@@ -272,6 +294,12 @@ class Annotationelement(Model):
         """
         assert query
 
+        attachedQuery = query.copy()
+        attachedQuery['datafile'] = {'$exists': True}
+        for element in self.collection.find(attachedQuery):
+            file = File().load(element['datafile']['fileId'], force=True)
+            if file:
+                File().remove(file)
         self.collection.bulk_write([pymongo.DeleteMany(query)], ordered=False)
 
     def removeElements(self, annotation):
@@ -316,13 +344,26 @@ class Annotationelement(Model):
         """
         bbox = {}
         if 'points' in element:
-            bbox['lowx'] = min(p[0] for p in element['points'])
-            bbox['lowy'] = min(p[1] for p in element['points'])
-            bbox['lowz'] = min(p[2] for p in element['points'])
-            bbox['highx'] = max(p[0] for p in element['points'])
-            bbox['highy'] = max(p[1] for p in element['points'])
-            bbox['highz'] = max(p[2] for p in element['points'])
-            bbox['details'] = len(element['points'])
+            key = 'points'
+            bbox['lowx'] = min(p[0] for p in element[key])
+            bbox['lowy'] = min(p[1] for p in element[key])
+            bbox['lowz'] = min(p[2] for p in element[key])
+            bbox['highx'] = max(p[0] for p in element[key])
+            bbox['highy'] = max(p[1] for p in element[key])
+            bbox['highz'] = max(p[2] for p in element[key])
+            bbox['details'] = len(element[key])
+        elif element.get('type') == 'griddata':
+            x0, y0, z = element['origin']
+            isElements = element.get('interpretation') == 'choropleth'
+            x1 = x0 + element['dx'] * (element['gridWidth'] - (1 if not isElements else 0))
+            y1 = y0 + element['dy'] * (math.ceil(len(element['values']) / element['gridWidth']) -
+                                       (1 if not isElements else 0))
+            bbox['lowx'] = min(x0, x1)
+            bbox['lowy'] = min(y0, y1)
+            bbox['lowz'] = bbox['highz'] = z
+            bbox['highx'] = max(x0, x1)
+            bbox['highy'] = max(y0, y1)
+            bbox['details'] = len(element['values'])
         else:
             center = element['center']
             bbox['lowz'] = bbox['highz'] = center[2]
@@ -360,6 +401,29 @@ class Annotationelement(Model):
         # simplify to points
         return bbox
 
+    def saveElementAsFile(self, annotation, entries):
+        """
+        If an element has a large points or values array, save that array to an
+        attached file.
+
+        :param annotation: the parent annotation.
+        :param entries: the database entries document.  Modified.
+        """
+        item = Item().load(annotation['itemId'], force=True)
+        element = entries[0]['element'].copy()
+        entries[0]['element'] = element
+        key = 'points' if 'points' in element else 'values'
+        # Use the highest protocol support by all python versions we support
+        data = pickle.dumps(element.pop(key), protocol=4)
+        elementFile = Upload().uploadFromFile(
+            io.BytesIO(data), size=len(data), name='_annotationElementData',
+            parentType='item', parent=item, user=None,
+            mimeType='application/json', attachParent=True)
+        entries[0]['datafile'] = {
+            'key': key,
+            'fileId': elementFile['_id'],
+        }
+
     def updateElements(self, annotation):
         """
         Given an annotation, extract the elements from it and update the
@@ -383,6 +447,9 @@ class Annotationelement(Model):
                 'element': element
             } for element in elements[chunk:chunk + chunkSize]]
             prepTime = time.time() - chunkStartTime
+            if (len(entries) == 1 and len(entries[0]['element'].get(
+                    'points', entries[0]['element'].get('values', []))) > MAX_ELEMENT_DOCUMENT):
+                self.saveElementAsFile(annotation, entries)
             res = self.collection.insert_many(entries)
             for pos, entry in enumerate(entries):
                 if 'id' not in entry['element']:
