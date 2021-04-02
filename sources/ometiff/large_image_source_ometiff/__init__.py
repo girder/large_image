@@ -197,9 +197,14 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                     len(self._omebase['TiffData']) == 1) and
                     (len(self._omebase.get('Plane', [])) or
                      len(self._omebase.get('Channel', [])))):
-                if not len(self._omebase['TiffData']) or self._omebase['TiffData'][0] == {}:
-                    self._omebase['TiffData'] = self._omebase.get(
-                        'Plane', self._omebase.get('Channel'))
+                if (not len(self._omebase['TiffData']) or
+                        self._omebase['TiffData'][0] == {} or
+                        int(self._omebase['TiffData'][0].get('PlaneCount', 0)) == 1):
+                    planes = copy.deepcopy(self._omebase.get(
+                        'Plane', self._omebase.get('Channel')))
+                    for idx, plane in enumerate(planes):
+                        plane['IndexC'] = idx
+                    self._omebase['TiffData'] = planes
                 elif (int(self._omebase['TiffData'][0].get('PlaneCount', 0)) ==
                         len(self._omebase.get('Plane', self._omebase.get('Channel', [])))):
                     planes = copy.deepcopy(self._omebase.get('Plane', self._omebase.get('Channel')))
@@ -219,7 +224,6 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceException(
                     'OME Tiff contains frames that contain multiple planes')
         except (KeyError, ValueError, IndexError):
-            print('B')
             raise TileSourceException('OME Tiff does not contain an expected record')
 
     def getMetadata(self):
@@ -239,7 +243,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                     break
             except Exception:
                 pass
-        if len(set(channels)) != len(channels):
+        if len(set(channels)) != len(channels) and (
+                len(channels) <= 1 or len(channels) > len(result['frames'])):
             channels = []
         # Standardize "TheX" to "IndexX" values
         reftbl = OrderedDict([
