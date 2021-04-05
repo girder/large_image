@@ -44,6 +44,8 @@ def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90,
     if not logger.level:
         logger.setLevel(logging.INFO)
 
+    if '_concurrency' not in kwargs:
+        kwargs['_concurrency'] = -2
     inputPath = os.path.abspath(os.path.expanduser(inputFile))
     geospatial = large_image_converter.is_geospatial(inputPath)
     inputName = kwargs.get('inputName', os.path.basename(inputPath))
@@ -86,7 +88,6 @@ class JobLogger(logging.Handler):
 
 
 def convert_image_job(job):
-    import psutil
     import tempfile
     from girder.constants import AccessType
     from girder.models.file import File
@@ -105,10 +106,6 @@ def convert_image_job(job):
     folder = Folder().load(kwargs.pop('folderId', item['folderId']),
                            user=user, level=AccessType.WRITE)
     name = kwargs.pop('name', None)
-    if '_concurrency' not in kwargs:
-        # Default to leaving some overhead for the main process, since this is
-        # running locally
-        kwargs['_concurrency'] = max(1, psutil.cpu_count(logical=True) - 2)
 
     job = Job().updateJob(
         job, log='Started large image conversion\n',

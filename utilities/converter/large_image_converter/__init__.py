@@ -35,6 +35,10 @@ FormatModules = {
     'aperio': format_aperio,
 }
 
+# Estimated maximum memory use per frame conversion.  Used to limit concurrent
+# frame conversions.
+FrameMemoryEstimate = 3 * 1024 ** 3
+
 
 def _data_from_large_image(path, outputPath, **kwargs):
     """
@@ -157,7 +161,7 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
     outputList = []
     imageSizes = []
     tasks = []
-    pool = _get_thread_pool(**kwargs)
+    pool = _get_thread_pool(memoryLimit=FrameMemoryEstimate, **kwargs)
     onlyFrame = int(kwargs.get('onlyFrame')) if str(kwargs.get('onlyFrame')).isdigit() else None
     frame = 0
     # Process each image separately to pyramidize it
@@ -311,20 +315,31 @@ def _convert_to_jp2k_tile(lock, fptr, dest, offset, length, shape, dtype, jp2kar
     glymur.Jp2k(dest, data=data, **jp2kargs)
 
 
-def _get_thread_pool(concurrencyMultiplier=1, **kwargs):
+def _concurrency_to_value(_concurrency=None, **kwargs):
+    """
+    Convert the _concurrency value to a number of cpus.
+
+    :param _concurrency: a positive value for a set number of cpus.  <= 0 for
+        the number of logical cpus less that amount.  None is the same as 0.
+    :returns: the number of cpus.
+    """
+    _concurrency = int(_concurrency) if str(_concurrency).isdigit() else 0
+    if _concurrency > 0:
+        return _concurrency
+    return max(1, psutil.cpu_count(logical=True) + _concurrency)
+
+
+def _get_thread_pool(memoryLimit=None, **kwargs):
     """
     Allocate a thread pool based on the specific concurrency.
 
-    :param concurrencyMultiplier: if present and the concurrency is not 1,
-        increase the requested concurrency by this amount.  For I/O bound
-        tasks, a concurrency higher than the number of processors is useful.
+    :param memoryLimit: if not None, limit the concurrency to no more than one
+        process per memoryLimit bytes of total memory.
     """
-    concurrency = psutil.cpu_count(logical=True)
-    if kwargs.get('_concurrency'):
-        concurrency = int(kwargs['_concurrency'])
+    concurrency = _concurrency_to_value(**kwargs)
+    if memoryLimit:
+        concurrency = min(concurrency, psutil.virtual_memory().total // memoryLimit)
     concurrency = max(1, concurrency)
-    if concurrency > 1 and concurrencyMultiplier:
-        concurrency *= concurrencyMultiplier
     return concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
 
 
@@ -525,7 +540,7 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
     numFrames = len(lidata['metadata'].get('frames', [0]))
     outputList = []
     tasks = []
-    pool = _get_thread_pool(**kwargs)
+    pool = _get_thread_pool(memoryLimit=FrameMemoryEstimate, **kwargs)
     startFrame = 0
     endFrame = numFrames
     if kwargs.get('onlyFrame') is not None and str(kwargs.get('onlyFrame')):
@@ -944,7 +959,7 @@ def convert(inputPath, outputPath=None, **kwargs):
     :returns: outputPath if successful
     """
     if kwargs.get('_concurrency'):
-        os.environ['VIPS_CONCURRENCY'] = str(kwargs['_concurrency'])
+        os.environ['VIPS_CONCURRENCY'] = str(_concurrency_to_value(**kwargs))
     geospatial = kwargs.get('geospatial')
     if geospatial is None:
         geospatial = is_geospatial(inputPath)
