@@ -165,8 +165,9 @@ class TilesItemResource(ItemResource):
         .param('cr', 'JP2K target compression ratio where 1 is lossless',
                dataType='int', required=False)
         .param('concurrent', 'Suggested number of maximum concurrent '
-               'processes to use during conversion.  Default is 2 less than '
-               'the logical number of cpus.', dataType='int', required=False)
+               'processes to use during conversion.  Values <= 0 use the '
+               'number of logical cpus less that value.  Default is -2.',
+               dataType='int', required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -229,8 +230,9 @@ class TilesItemResource(ItemResource):
         .param('cr', 'JP2K target compression ratio where 1 is lossless',
                dataType='int', required=False)
         .param('concurrent', 'Suggested number of maximum concurrent '
-               'processes to use during conversion.  Default is 2 less than '
-               'the logical number of cpus.', dataType='int', required=False)
+               'processes to use during conversion.  Values <= 0 use the '
+               'number of logical cpus less that value.  Default is -2.',
+               dataType='int', required=False)
     )
     @access.user
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)

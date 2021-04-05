@@ -88,8 +88,9 @@ depth.
     parser.add_argument(
         '--concurrency', '-j', type=int, dest='_concurrency',
         help='Maximum processor concurrency.  Some conversion tasks can use '
-        'multiple processors.  By default, all logical processors are used.  '
-        'This is a recommendation and is not strict.')
+        'multiple processors.  A value <= 0 will use the number of logical '
+        'processors less that number.  This is a recommendation and is not '
+        'strict.  Default is 0.')
     parser.add_argument(
         '--stats', action='store_true', dest='_stats',
         help='Add conversion stats (time and size) to the ImageDescription of '
