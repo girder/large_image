@@ -10,6 +10,8 @@
 ### Improvements
 - More untiled tiff files are handles by the bioformats reader (#569)
 - Expose a concurrent option on endpoints for converting images (#583)
+- Better concurrency use in image conversion (#587)
+- Handle more OME tiffs (#585)
 
 ### Changes
 - Exceptions on cached items are no longer within the KeyError context (#584)
