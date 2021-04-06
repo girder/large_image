@@ -130,7 +130,52 @@ function convertGridToHeatmap(record, properties, layer) {
     return [heatmap];
 }
 
+/**
+ * Convert a griddata heatmap contour to a geojs feature.
+ *
+ * @param record: the griddata contour annotation element.
+ * @param properties: a property map of additional data, such as the original
+ *      annotation id.
+ * @param layer: the layer where this may be added.
+ */
+function convertGridToContour(record, properties, layer) {
+    let min = record.values[0] || 0;
+    let max = min;
+    for (let i = 1; i < record.values.length; i += 1) {
+        if (record.values[i] > max) {
+            max = record.values[i];
+        }
+        if (record.values[i] < max) {
+            min = record.values[i];
+        }
+    }
+    if (min >= 0) {
+        min = -1; /* any negative number will do */
+    }
+    const contour = layer.createFeature('contour', {
+        style: {
+            value: (d) => d || 0
+        },
+        contour: {
+            gridWidth: record.gridWidth,
+            x0: (record.origin || [])[0] || 0,
+            y0: (record.origin || [])[1] || 0,
+            dx: record.dx || 1,
+            dy: record.dy || 1,
+            stepped: false,
+            colorRange: [
+                record.minColor || {r: 0, g: 0, b: 1, a: 1},
+                record.zeroColor || {r: 0, g: 0, b: 0, a: 0},
+                record.maxColor || {r: 1, g: 1, b: 0, a: 1}
+            ],
+            rangeValues: [min, 0, Math.max(0, max)]
+        }
+    }).data(record.values);
+    return [contour];
+}
+
 const converters = {
+    griddata_contour: convertGridToContour,
     griddata_heatmap: convertGridToHeatmap,
     heatmap: convertHeatmap
 };
