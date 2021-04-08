@@ -355,7 +355,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: The proj4 string or None.
         """
         with self._getDatasetLock:
-            wkt = self.dataset.GetProjection()
+            wkt = self.dataset.GetProjection() or self.dataset.GetGCPProjection()
         if not wkt:
             if hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}:
                 return InitPrefix + 'epsg:4326'
@@ -398,6 +398,20 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'mm_y': scale * 100 if scale else None,
         }
 
+    def _getGeoTransform(self):
+        """
+        Get the GeoTransform.  If GCPs are used, get the appropriate transform
+        for those.
+
+        :returns: a six-component array with the transform
+        """
+        with self._getDatasetLock:
+            gt = self.dataset.GetGeoTransform()
+            if (not self.dataset.GetProjection() and
+                    self.dataset.GetGCPProjection() and self.dataset.GetGCPs()):
+                gt = gdal.GCPsToGeoTransform(self.dataset.GetGCPs())
+        return gt
+
     def getBounds(self, srs=None):
         """
         Returns bounds of the image.
@@ -407,8 +421,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             used.  None if we don't know the original projection.
         """
         if srs not in self._bounds:
-            with self._getDatasetLock:
-                gt = self.dataset.GetGeoTransform()
+            gt = self._getGeoTransform()
             nativeSrs = self.getProj4String()
             if not nativeSrs:
                 self._bounds[srs] = None
@@ -522,7 +535,10 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def getMetadata(self):
         with self._getDatasetLock:
             metadata = {
-                'geospatial': bool(self.dataset.GetProjection() or hasattr(self, '_netcdf')),
+                'geospatial': bool(
+                    self.dataset.GetProjection() or
+                    (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
+                    hasattr(self, '_netcdf')),
                 'levels': self.levels,
                 'sizeX': self.sizeX,
                 'sizeY': self.sizeY,
@@ -564,8 +580,13 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             result['fileList'] = self.dataset.GetFileList()
             result['RasterXSize'] = self.dataset.RasterXSize
             result['RasterYSize'] = self.dataset.RasterYSize
-            result['GeoTransform'] = self.dataset.GetGeoTransform()
+            result['GeoTransform'] = self._getGeoTransform()
+            result['Projection'] = self.dataset.GetProjection()
             result['GCPProjection'] = self.dataset.GetGCPProjection()
+            result['GCPs'] = None if not self.dataset.GetGCPs() else [
+                {'id': gcp.Id, 'line': gcp.GCPLine, 'pixel': gcp.GCPPixel,
+                 'x': gcp.GCPX, 'y': gcp.GCPY, 'z': gcp.GCPZ}
+                for gcp in self.dataset.GetGCPs()]
             result['Metadata'] = self.dataset.GetMetadata_List()
             for key in ['IMAGE_STRUCTURE', 'SUBDATASETS', 'GEOLOCATION', 'RPC']:
                 metadatalist = self.dataset.GetMetadata_List(key)
@@ -899,8 +920,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         outProj = self._proj4Proj(self.getProj4String())
         px, py = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True).transform(x, y)
         # convert to native pixel coordinates
-        with self._getDatasetLock:
-            gt = self.dataset.GetGeoTransform()
+        gt = self._getGeoTransform()
         d = gt[2] * gt[4] - gt[1] * gt[5]
         x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
         y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
