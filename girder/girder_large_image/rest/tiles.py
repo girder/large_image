@@ -766,11 +766,11 @@ class TilesItemResource(ItemResource):
                      'tiff_adobe_deflate'])
         .param('style', 'JSON-encoded style string', required=False)
         .param('resample', 'If false, an existing level of the image is used '
-               'for the histogram.  If true, the internal values are '
+               'for the region.  If true, the internal values are '
                'interpolated to match the specified size as needed.  0-3 for '
                'a specific interpolation method (0-nearest, 1-lanczos, '
                '2-bilinear, 3-bicubic)', required=False,
-               enum=['false', 'true', '0', '1', '2', '3'], default='false')
+               enum=['false', 'true', '0', '1', '2', '3'])
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
