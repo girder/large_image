@@ -355,7 +355,10 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: The proj4 string or None.
         """
         with self._getDatasetLock:
-            wkt = self.dataset.GetProjection() or self.dataset.GetGCPProjection()
+            if self.dataset.GetGCPs() and self.dataset.GetGCPProjection():
+                wkt = self.dataset.GetGCPProjection()
+            else:
+                wkt = self.dataset.GetProjection()
         if not wkt:
             if hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}:
                 return InitPrefix + 'epsg:4326'
@@ -407,8 +410,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         with self._getDatasetLock:
             gt = self.dataset.GetGeoTransform()
-            if (not self.dataset.GetProjection() and
-                    self.dataset.GetGCPProjection() and self.dataset.GetGCPs()):
+            if (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()):
                 gt = gdal.GCPsToGeoTransform(self.dataset.GetGCPs())
         return gt
 
@@ -582,11 +584,13 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             result['RasterYSize'] = self.dataset.RasterYSize
             result['GeoTransform'] = self._getGeoTransform()
             result['Projection'] = self.dataset.GetProjection()
+            result['proj4Projection'] = self.getProj4String()
             result['GCPProjection'] = self.dataset.GetGCPProjection()
-            result['GCPs'] = None if not self.dataset.GetGCPs() else [
-                {'id': gcp.Id, 'line': gcp.GCPLine, 'pixel': gcp.GCPPixel,
-                 'x': gcp.GCPX, 'y': gcp.GCPY, 'z': gcp.GCPZ}
-                for gcp in self.dataset.GetGCPs()]
+            if self.dataset.GetGCPs():
+                result['GCPs'] = [{
+                    'id': gcp.Id, 'line': gcp.GCPLine, 'pixel': gcp.GCPPixel,
+                    'x': gcp.GCPX, 'y': gcp.GCPY, 'z': gcp.GCPZ}
+                    for gcp in self.dataset.GetGCPs()]
             result['Metadata'] = self.dataset.GetMetadata_List()
             for key in ['IMAGE_STRUCTURE', 'SUBDATASETS', 'GEOLOCATION', 'RPC']:
                 metadatalist = self.dataset.GetMetadata_List(key)

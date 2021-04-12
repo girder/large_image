@@ -6,6 +6,7 @@
 - Allow converting a single frame of a multiframe image (#579)
 - Add a convert endpoint to the Girder plugin (#578)
 - Added support for creating Aperio svs files (#580)
+- Added support for geospatial files with GCP (#588)
 
 ### Improvements
 - More untiled tiff files are handles by the bioformats reader (#569)
