@@ -121,7 +121,7 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
     }.update(yes_no)
     options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
     cmdopt = ['-of', 'COG']
-    cmdopt += ['-co', 'BIGTIFF=%d' % options[big_tiff['bigTiff']]]
+    cmdopt += ['-co', 'BIGTIFF=%d' % big_tiff[options['bigTiff']]]
     cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
     cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
     cmdopt += ['-co', 'QUALITY=%s' % options['quality']]
