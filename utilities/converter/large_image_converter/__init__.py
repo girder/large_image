@@ -106,15 +106,18 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
         'predictor': 'yes',
         'bigTiff': 'yes',
     }
-    predictor = {
+    yes_no = {
         'none': 'NO',
-        'horizontal': 'STANDARD',
-        'float': 'FLOATING_POINT',
+        'no': 'NO',
         'yes': 'YES',
     }
+    predictor = {
+        'horizontal': 'STANDARD',
+        'float': 'FLOATING_POINT',
+    }.update(yes_no)
     options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
     cmdopt = ['-of', 'COG']
-    cmdopt += ['-co', 'BIGTIFF=%d' % predictor[options['bigTiff']]]
+    cmdopt += ['-co', 'BIGTIFF=%d' % predictor[yes_no['bigTiff']]]
     cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
     cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
     cmdopt += ['-co', 'QUALITY=%s' % options['quality']]
