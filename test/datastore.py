@@ -36,6 +36,9 @@ registry = {
     # Thematic landcover sample
     # Source: landcover_sample_1000.tif
     'landcover_sample_1000.tif': 'sha512:0a1e8c4cf29174b19ddece9a2deb7230a31e819ee78b5ec264feda6356abf60d63763106f1ddad9dd04106d383fd0867bf2db55be0552c30f38ffb530bf72dec',  # noqa
+    # Geospatial image defined by GCP
+    # Source: extracted from a public landsat image
+    'region_gcp.tiff': 'sha512:b49d753c0a04888882da60917a6578707ad2d6f5a8f1de3b21b2ae498ad6140ee8a1779a4690cc24fa7b1cbae46e86c3529d2fbd88f392a344fbe549b4447f23',  # noqa
     # Multiframe OME tif
     # Source: sample.ome.tif
     'sample.ome.tif': 'sha512:a65ad3d67bbc8f56eb3aa7c7d6a43326e50fdef7c0a0c7ace2b477c2dfda2e810c1acc148be2ee2da9a9aa7b0195032938f36da4117a7c3f46302d4fbb1e8173',  # noqa

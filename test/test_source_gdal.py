@@ -348,3 +348,29 @@ def testGetRegionWithProjection():
     region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                              format=constants.TILE_FORMAT_NUMPY)
     assert region.shape == (1024, 1024, 4)
+
+
+def testGCPProjection():
+    imagePath = datastore.fetch('region_gcp.tiff')
+    source = large_image_source_gdal.open(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 1204
+    assert tileMetadata['sizeY'] == 512
+    assert tileMetadata['levels'] == 4
+    assert tileMetadata['geospatial']
+
+    source = large_image_source_gdal.open(imagePath, projection='EPSG:3857')
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 524288
+    assert tileMetadata['sizeY'] == 524288
+    assert tileMetadata['levels'] == 12
+    assert tileMetadata['bounds']['xmax'] == pytest.approx(-10753925, 1)
+    assert tileMetadata['bounds']['xmin'] == pytest.approx(-10871650, 1)
+    assert tileMetadata['bounds']['ymax'] == pytest.approx(3949393, 1)
+    assert tileMetadata['bounds']['ymin'] == pytest.approx(3899358, 1)
+    assert tileMetadata['bounds']['srs'] == '+init=epsg:3857'
+    assert tileMetadata['geospatial']
