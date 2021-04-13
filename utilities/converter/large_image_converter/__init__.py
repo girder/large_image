@@ -94,7 +94,7 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
     :param level: compression level for zstd, 1-22 (default is 10).
     :param predictor: one of 'none', 'horizontal', 'float', or 'yes' used for
         lzw and deflate.
-    :param bigTiff: either 'yes' or 'no'
+    :param bigTiff: either 'yes', 'no', 'needed', or 'safer'. Default 'safer'.
     """
     from osgeo import gdal
     from osgeo import gdalconst
@@ -104,7 +104,7 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
         'compression': 'lzw',
         'quality': 90,
         'predictor': 'yes',
-        'bigTiff': 'yes',
+        'bigTiff': 'safer',
     }
     yes_no = {
         'none': 'NO',
@@ -115,9 +115,13 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
         'horizontal': 'STANDARD',
         'float': 'FLOATING_POINT',
     }.update(yes_no)
+    big_tiff = {
+        'needed': 'IF_NEEDED',
+        'safer': 'IF_SAFER',
+    }.update(yes_no)
     options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
     cmdopt = ['-of', 'COG']
-    cmdopt += ['-co', 'BIGTIFF=%d' % options[yes_no['bigTiff']]]
+    cmdopt += ['-co', 'BIGTIFF=%d' % options[big_tiff['bigTiff']]]
     cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
     cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
     cmdopt += ['-co', 'QUALITY=%s' % options['quality']]
