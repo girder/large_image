@@ -311,7 +311,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         if subdir:
             scale = int(2 ** subdir)
             if (dir is None or
-                    dir.tileWidth != self.tileWidth or dir.tileHeight != self.tileHeight or
+                    (dir.tileWidth != self.tileWidth and dir.tileWidth != dir.imageWidth) or
+                    (dir.tileHeight != self.tileHeight and dir.tileHeight != dir.imageHeight) or
                     abs(dir.imageWidth * scale - self.sizeX) > scale or
                     abs(dir.imageHeight * scale - self.sizeY) > scale):
                 return super().getTile(
