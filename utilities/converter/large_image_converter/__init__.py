@@ -98,26 +98,7 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
     from osgeo import gdal
     from osgeo import gdalconst
 
-    options = {
-        'tileSize': 256,
-        'compression': 'lzw',
-        'quality': 90,
-        'predictor': 'yes',
-    }
-    predictor = {
-        'none': 'NO',
-        'horizontal': 'STANDARD',
-        'float': 'FLOATING_POINT',
-        'yes': 'YES',
-    }
-    options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
-    cmdopt = ['-of', 'COG', '-co', 'BIGTIFF=YES']
-    cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
-    cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
-    cmdopt += ['-co', 'QUALITY=%s' % options['quality']]
-    cmdopt += ['-co', 'PREDICTOR=%s' % predictor[options['predictor']]]
-    if 'level' in options:
-        cmdopt += ['-co', 'LEVEL=%s' % options['level']]
+    cmdopt = large_image.tilesource.base._gdalParameters(**kwargs)
     cmd = ['gdal_translate', inputPath, outputPath] + cmdopt
     logger.info('Convert to geotiff: %r', cmd)
     try:
@@ -245,10 +226,10 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
         also stores files in TMPDIR
     :param forTiled: True if the output should be tiled, false if not.
     :param status: an optional additional string to add to log messages.
-    :param kwargs: addition arguments that get passed to _vips_parameters
+    :param kwargs: addition arguments that get passed to _vipsParameters
         and _convert_to_jp2k.
     """
-    convertParams = _vips_parameters(forTiled, **kwargs)
+    convertParams = large_image.tilesource.base._vipsParameters(forTiled, **kwargs)
     status = (', ' + status) if status else ''
     if type(inputPathOrBuffer) == pyvips.vimage.Image:
         source = 'vips image'
@@ -271,7 +252,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
             image.interpretation != pyvips.Interpretation.SCRGB):
         # jp2k compression supports more than 8-bits per sample, but the
         # decompressor claims this is unsupported.
-        image = _vips_cast(
+        image = large_image.tilesource.base._vipsCast(
             image,
             convertParams['compression'] in {'webp', 'jpeg'} or
             kwargs.get('compression') in {'jp2k'})
@@ -462,24 +443,12 @@ def _convert_large_image_tile(tilelock, strips, tile):
     :param tile: a tileIterator tile.
     """
     data = tile['tile']
-    dtypeToGValue = {
-        'b': 'char',
-        'B': 'uchar',
-        'd': 'double',
-        'D': 'dpcomplex',
-        'f': 'float',
-        'F': 'complex',
-        'h': 'short',
-        'H': 'ushort',
-        'i': 'int',
-        'I': 'uint',
-    }
-    if data.dtype.char not in dtypeToGValue:
+    if data.dtype.char not in large_image.constants.dtypeToGValue:
         data = data.astype('d')
     vimg = pyvips.Image.new_from_memory(
         numpy.ascontiguousarray(data).data,
         data.shape[1], data.shape[0], data.shape[2],
-        dtypeToGValue[data.dtype.char])
+        large_image.constants.dtypeToGValue[data.dtype.char])
     vimgTemp = pyvips.Image.new_temp_file('%s.v')
     vimg.write(vimgTemp)
     vimg = vimgTemp
@@ -808,97 +777,6 @@ def _make_li_description(
     if imageDescription:
         results['image_description'] = imageDescription
     return json.dumps(results, separators=(',', ':'), sort_keys=True, default=json_serial)
-
-
-def _vips_cast(image, mustBe8Bit=False):
-    """
-    Cast a vips image to a format we want.
-
-    :param image: a vips image
-    :param mustBe9Bit: if True, then always cast to unsigned 8-bit.
-    :returns: a vips image
-    """
-    formats = {
-        pyvips.BandFormat.CHAR: (pyvips.BandFormat.UCHAR, 2**7, 1),
-        pyvips.BandFormat.COMPLEX: (pyvips.BandFormat.USHORT, 0, 65535),
-        pyvips.BandFormat.DOUBLE: (pyvips.BandFormat.USHORT, 0, 65535),
-        pyvips.BandFormat.DPCOMPLEX: (pyvips.BandFormat.USHORT, 0, 65535),
-        pyvips.BandFormat.FLOAT: (pyvips.BandFormat.USHORT, 0, 65535),
-        pyvips.BandFormat.INT: (pyvips.BandFormat.USHORT, 2**31, 2**-16),
-        pyvips.BandFormat.USHORT: (pyvips.BandFormat.UCHAR, 0, 2**-8),
-        pyvips.BandFormat.SHORT: (pyvips.BandFormat.USHORT, 2**15, 1),
-        pyvips.BandFormat.UINT: (pyvips.BandFormat.USHORT, 0, 2**-16),
-    }
-    if image.format not in formats or (image.format == pyvips.BandFormat.USHORT and not mustBe8Bit):
-        return image
-    target, offset, multiplier = formats[image.format]
-    if mustBe8Bit and target != pyvips.BandFormat.UCHAR:
-        target = pyvips.BandFormat.UCHAR
-        multiplier /= 256
-    logger.debug('Casting image from %r to %r', image.format, target)
-    image = ((image.cast(pyvips.BandFormat.DOUBLE) + offset) * multiplier).cast(target)
-    return image
-
-
-def _vips_parameters(forTiled=True, **kwargs):
-    """
-    Return a dictionary of vips conversion parameters.
-
-    :param forTiled: True if this is for a tiled image.  False for an
-        associated image.
-
-    Optional parameters that can be specified in kwargs:
-
-    :param tileSize: the horizontal and vertical tile size.
-    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
-        'zstd', or 'none'.
-    :param quality: a jpeg quality passed to vips.  0 is small, 100 is high
-        quality.  90 or above is recommended.
-    :param level: compression level for zstd, 1-22 (default is 10).
-    :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
-        deflate.
-    :returns: a dictionary of parameters.
-    """
-    if not forTiled:
-        convertParams = {
-            'compression': 'jpeg',
-            'Q': 90,
-            'predictor': 'horizontal',
-            'tile': False,
-        }
-        if 'mime' in kwargs and kwargs.get('mime') != 'image/jpeg':
-            convertParams['compression'] = 'lzw'
-        return convertParams
-    convertParams = {
-        'tile': True,
-        'tile_width': 256,
-        'tile_height': 256,
-        'pyramid': True,
-        'bigtiff': True,
-        'compression': 'jpeg',
-        'Q': 90,
-        'predictor': 'horizontal',
-    }
-    for vkey, kwkey in {
-        'tile_width': 'tileSize',
-        'tile_height': 'tileSize',
-        'compression': 'compression',
-        'Q': 'quality',
-        'level': 'level',
-        'predictor': 'predictor',
-    }.items():
-        if kwkey in kwargs and kwargs[kwkey] not in {None, ''}:
-            convertParams[vkey] = kwargs[kwkey]
-    if convertParams['compression'] == 'jp2k':
-        convertParams['compression'] = 'none'
-    if convertParams['compression'] == 'webp' and kwargs.get('quality') == 0:
-        convertParams['lossless'] = True
-        convertParams.pop('Q', None)
-    if convertParams['predictor'] == 'yes':
-        convertParams['predictor'] = 'horizontal'
-    if convertParams['compression'] == 'jpeg':
-        convertParams['rgbjpeg'] = True
-    return convertParams
 
 
 def format_hook(funcname, *args, **kwargs):

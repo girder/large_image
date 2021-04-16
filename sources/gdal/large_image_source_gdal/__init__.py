@@ -16,10 +16,13 @@
 
 import math
 import numpy
+import os
 import palettable
+import pathlib
 import PIL.Image
 import pyproj
 import struct
+import tempfile
 import threading
 from operator import attrgetter
 from osgeo import gdal
@@ -28,8 +31,10 @@ from osgeo import gdalconst
 from osgeo import osr
 from pkg_resources import DistributionNotFound, get_distribution
 
+import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache, CacheProperties
-from large_image.constants import SourcePriority, TileInputUnits, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL
+from large_image.constants import (
+    SourcePriority, TileInputUnits, TileOutputMimeTypes, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL)
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
 
@@ -876,6 +881,31 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return super()._getRegionBounds(
             metadata, left, top, right, bottom, width, height, units, **kwargs)
 
+    def pixelToProjection(self, x, y, level=None):
+        """
+        Convert from pixels back to projection coordinates.
+
+        :param x, y: base pixel coordinates.
+        :param level: the level of the pixel.  None for maximum level.
+        :returns: x, y in projection coordinates.
+        """
+        if level is None:
+            level = self.levels - 1
+        if not self.projection:
+            x *= 2 ** (self.levels - 1 - level)
+            y *= 2 ** (self.levels - 1 - level)
+            gt = self._getGeoTransform()
+            px = gt[0] + gt[1] * x + gt[2] * y
+            py = gt[3] + gt[4] * x + gt[5] * y
+            return px, py
+        xScale = 2 ** level * self.tileWidth
+        yScale = 2 ** level * self.tileHeight
+        x = x / xScale - 0.5
+        y = 0.5 - y / yScale
+        x = x * self.unitsAcrossLevel0 + self.projectionOrigin[0]
+        y = y * self.unitsAcrossLevel0 + self.projectionOrigin[1]
+        return x, y
+
     @methodcache()
     def getThumbnail(self, width=None, height=None, **kwargs):
         """
@@ -971,6 +1001,66 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         except RuntimeError:
                             pass
         return pixel
+
+    def _encodeTiledImageFromVips(self, vimg, iterInfo, image, **kwargs):
+        """
+        Save a vips image as a tiled tiff.
+
+        :param vimg: a vips image.
+        :param iterInfo: information about the region based on the tile
+            iterator.
+        :param image: a record with partial vips images and the current output
+            size.
+
+        Additional parameters are available.
+
+        :param compression: the internal compression format.  This can handle
+            a variety of options similar to the converter utility.
+        :returns: a pathlib.Path of the output file and the output mime type.
+        """
+        convertParams = large_image.tilesource.base._vipsParameters(
+            defaultCompression='lzw', **kwargs)
+        convertParams.pop('pyramid', None)
+        vimg = large_image.tilesource.base._vipsCast(
+            vimg, convertParams['compression'] in {'webp', 'jpeg'})
+        gdalParams = large_image.tilesource.base._gdalParameters(
+            defaultCompression='lzw', **kwargs)
+        for ch in range(image['channels']):
+            gdalParams += [
+                '-b' if ch not in (1, 3) or ch + 1 != image['channels'] else '-mask', str(ch + 1)]
+        tl = self.pixelToProjection(
+            iterInfo['region']['left'], iterInfo['region']['top'], iterInfo['level'])
+        br = self.pixelToProjection(
+            iterInfo['region']['right'], iterInfo['region']['bottom'], iterInfo['level'])
+        gdalParams += [
+            '-a_srs',
+            iterInfo['metadata']['bounds']['srs'],
+            '-a_ullr',
+            str(tl[0]),
+            str(tl[1]),
+            str(br[0]),
+            str(br[1]),
+        ]
+        fd, tempPath = tempfile.mkstemp('.tiff', 'tiledRegion_')
+        os.close(fd)
+        fd, outputPath = tempfile.mkstemp('.tiff', 'tiledGeoRegion_')
+        os.close(fd)
+        try:
+            vimg.write_to_file(tempPath, **convertParams)
+            ds = gdal.Open(tempPath, gdalconst.GA_ReadOnly)
+            gdal.Translate(outputPath, ds, options=gdalParams)
+            os.unlink(tempPath)
+        except Exception as exc:
+            try:
+                os.unlink(tempPath)
+            except Exception:
+                pass
+            try:
+                os.unlink(outputPath)
+            except Exception:
+                pass
+            raise exc
+        return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
 
 
 def open(*args, **kwargs):

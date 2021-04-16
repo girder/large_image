@@ -783,6 +783,15 @@ def testRegions(server, admin, fsAssetstore):
     assert width == 500
     assert height == 375
 
+    # Get a tiled image
+    params = {'regionWidth': 1000, 'regionHeight': 1000,
+              'left': 48000, 'top': 3000, 'encoding': 'TILED'}
+    resp = server.request(path='/item/%s/tiles/region' % itemId,
+                          user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+    image = origImage = utilities.getBody(resp, text=False)
+    assert image[:len(utilities.BigTIFFHeader)] == utilities.BigTIFFHeader
+
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')

@@ -6,6 +6,7 @@ JFIFHeader = b'\xff\xd8\xff\xe0\x00\x10JFIF'
 JPEGHeader = b'\xff\xd8\xff'
 PNGHeader = b'\x89PNG'
 TIFFHeader = b'II\x2a\x00'
+BigTIFFHeader = b'II\x2b\x00'
 
 
 def checkTilesZXY(source, metadata, tileParams=None, imgHeader=JPEGHeader):

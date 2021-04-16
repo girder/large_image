@@ -18,6 +18,7 @@ import cherrypy
 import hashlib
 import math
 import os
+import pathlib
 import re
 import urllib
 
@@ -29,6 +30,7 @@ from girder.constants import AccessType
 from girder.exceptions import RestException
 from girder.models.file import File
 from girder.models.item import Item
+from girder.utility.progress import setResponseTimeLimit
 
 from large_image.constants import TileInputUnits
 from large_image.exceptions import TileGeneralException
@@ -627,7 +629,6 @@ class TilesItemResource(ItemResource):
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def deleteTiles(self, item, params):
         deleted = self.imageItemModel.delete(item)
-        # TODO: a better response
         return {
             'deleted': deleted
         }
@@ -654,8 +655,11 @@ class TilesItemResource(ItemResource):
         .param('frame', 'For multiframe images, the 0-based frame number.  '
                'This is ignored on non-multiframe images.', required=False,
                dataType='int')
-        .param('encoding', 'Thumbnail output encoding', required=False,
-               enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
+        .param('encoding', 'Output image encoding.  TILED generates a tiled '
+               'tiff without the upper limit on image size the other options '
+               'have.  For geospatial sources, TILED will also have '
+               'appropriate tagging.', required=False,
+               enum=['JPEG', 'PNG', 'TIFF', 'TILED'], default='JPEG')
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
@@ -752,8 +756,11 @@ class TilesItemResource(ItemResource):
         .param('frame', 'For multiframe images, the 0-based frame number.  '
                'This is ignored on non-multiframe images.', required=False,
                dataType='int')
-        .param('encoding', 'Output image encoding', required=False,
-               enum=['JPEG', 'PNG', 'TIFF'], default='JPEG')
+        .param('encoding', 'Output image encoding.  TILED generates a tiled '
+               'tiff without the upper limit on image size the other options '
+               'have.  For geospatial sources, TILED will also have '
+               'appropriate tagging.', required=False,
+               enum=['JPEG', 'PNG', 'TIFF', 'TILED'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
                required=False, dataType='int', default=95)
         .param('jpegSubsampling', 'Chroma subsampling used for generating '
@@ -809,6 +816,7 @@ class TilesItemResource(ItemResource):
             ('contentDisposition', str),
         ])
         _handleETag('getTilesRegion', item, params)
+        setResponseTimeLimit(86400)
         try:
             regionData, regionMime = self.imageItemModel.getRegion(
                 item, **params)
@@ -819,6 +827,20 @@ class TilesItemResource(ItemResource):
         self._setContentDisposition(
             item, params.get('contentDisposition'), regionMime, 'region')
         setResponseHeader('Content-Type', regionMime)
+        if isinstance(regionData, pathlib.Path):
+            BUF_SIZE = 65536
+
+            def stream():
+                try:
+                    with regionData.open('rb') as f:
+                        while True:
+                            data = f.read(BUF_SIZE)
+                            if not data:
+                                break
+                            yield data
+                finally:
+                    regionData.unlink()
+            return stream
         setRawResponse()
         return regionData
 
