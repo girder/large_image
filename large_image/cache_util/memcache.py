@@ -112,14 +112,17 @@ class MemCache(cachetools.Cache):
         hashedKey = hashlib.sha256(key.encode()).hexdigest()
         try:
             self._client[hashedKey] = value
-        except TypeError:
+        except (TypeError, KeyError) as exc:
+            valueSize = value.shape if hasattr(value, 'shape') else (
+                value.size if hasattr(value, 'size') else (
+                    len(value) if hasattr(value, '__len__') else None))
+            valueRepr = repr(value)
+            if len(valueRepr) > 500:
+                valueRepr = valueRepr[:500] + '...'
             self.logError(
-                TypeError, config.getConfig('logprint').error,
-                'Failed to save value %r with key %s' % (value, hashedKey))
-        except KeyError:
-            self.logError(
-                KeyError, config.getConfig('logprint').error,
-                'Failed to save value %s with key %s' % (value, hashedKey))
+                exc.__class__, config.getConfig('logprint').error,
+                '%s: Failed to save value %s (size %r) with key %s' % (
+                    exc.__class__.__name__, valueRepr, valueSize, hashedKey))
         except pylibmc.ServerDown:
             self.logError(pylibmc.ServerDown, config.getConfig('logprint').info,
                           'Memcached ServerDown')
