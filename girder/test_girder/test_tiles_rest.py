@@ -836,14 +836,6 @@ def testGetTileSource(server, admin, fsAssetstore):
     image, mime = source.getThumbnail(encoding='JPEG', width=200)
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
 
-    # Test the level0 thumbnail code path
-    image, mime = source.getThumbnail(
-        encoding='PNG', width=200, height=100, levelZero=True, fill='blue')
-    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
-    (width, height) = struct.unpack('!LL', image[16:24])
-    assert width == 200
-    assert height == 100
-
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')

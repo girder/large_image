@@ -1694,17 +1694,16 @@ class TileSource:
         return TileOutputMimeTypes.get(self.encoding, 'image/jpeg')
 
     @methodcache()
-    def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
+    def getThumbnail(self, width=None, height=None, **kwargs):
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is
         preserved.  If neither width nor height is given, a default value is
         used.  If both are given, the thumbnail will be no larger than either
-        size.
+        size.  A thumbnail has the same options as a region except that it
+        always includes the entire image and has a default size of 256 x 256.
 
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
-        :param levelZero: if true, always use the level zero tile.  Otherwise,
-            the thumbnail is generated so that it is never upsampled.
         :param kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: thumbData, thumbMime: the image data and the mime type.
@@ -1714,35 +1713,10 @@ class TileSource:
             raise ValueError('Invalid width or height.  Minimum value is 2.')
         if width is None and height is None:
             width = height = 256
-        # There are two code paths for generating thumbnails.  If
-        # alwaysUseLevelZero is True, then the the thumbnail is generated more
-        # swiftly, but may look poor.  We may want to add a parameter for this
-        # option, or only use the high-quality results.
-        if not levelZero:
-            params = dict(kwargs)
-            params['output'] = {'maxWidth': width, 'maxHeight': height}
-            params.pop('region', None)
-            return self.getRegion(**params)
-        metadata = self.getMetadata()
-        tileData = self.getTile(0, 0, 0)
-        image = _imageToPIL(tileData)
-        imageWidth = int(math.floor(
-            metadata['sizeX'] * 2 ** -(metadata['levels'] - 1)))
-        imageHeight = int(math.floor(
-            metadata['sizeY'] * 2 ** -(metadata['levels'] - 1)))
-        image = image.crop((0, 0, imageWidth, imageHeight))
-
-        if width or height:
-            maxWidth, maxHeight = width, height
-            width, height, calcScale = self._calculateWidthHeight(
-                width, height, imageWidth, imageHeight)
-
-            image = image.resize(
-                (width, height),
-                PIL.Image.BICUBIC if width > imageWidth else PIL.Image.LANCZOS)
-            if kwargs.get('fill') and maxWidth and maxHeight:
-                image = _letterboxImage(image, maxWidth, maxHeight, kwargs['fill'])
-        return _encodeImage(image, **kwargs)
+        params = dict(kwargs)
+        params['output'] = {'maxWidth': width, 'maxHeight': height}
+        params.pop('region', None)
+        return self.getRegion(**params)
 
     def getPreferredLevel(self, level):
         """
