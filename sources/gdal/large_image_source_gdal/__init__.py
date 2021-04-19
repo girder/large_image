@@ -879,17 +879,17 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             metadata, left, top, right, bottom, width, height, units, **kwargs)
 
     @methodcache()
-    def getThumbnail(self, width=None, height=None, levelZero=False, **kwargs):
+    def getThumbnail(self, width=None, height=None, **kwargs):
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is
         preserved.  If neither width nor height is given, a default value is
         used.  If both are given, the thumbnail will be no larger than either
-        size.
+        size.  A thumbnail has the same options as a region except that it
+        always includes the entire image if there is no projection and has a
+        default size of 256 x 256.
 
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
-        :param levelZero: if true, always use the level zero tile.  Otherwise,
-            the thumbnail is generated so that it is never upsampled.
         :param kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: thumbData, thumbMime: the image data and the mime type.
@@ -904,7 +904,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             params['output'] = {'maxWidth': width, 'maxHeight': height}
             params['region'] = {'units': 'projection'}
             return self.getRegion(**params)
-        return super().getThumbnail(width, height, levelZero, **kwargs)
+        return super().getThumbnail(width, height, **kwargs)
 
     def toNativePixelCoordinates(self, x, y, proj=None, roundResults=True):
         """
