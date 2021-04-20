@@ -34,7 +34,8 @@ from pkg_resources import DistributionNotFound, get_distribution
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache, CacheProperties
 from large_image.constants import (
-    SourcePriority, TileInputUnits, TileOutputMimeTypes, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL)
+    SourcePriority, TileInputUnits, TileOutputMimeTypes,
+    TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, TILE_FORMAT_IMAGE)
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
 
@@ -1055,6 +1056,64 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 os.unlink(tempPath)
             except Exception:
                 pass
+            try:
+                os.unlink(outputPath)
+            except Exception:
+                pass
+            raise exc
+        return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
+
+    def getRegion(self, format=(TILE_FORMAT_IMAGE, ), **kwargs):
+        """
+        Get a rectangular region from the current tile source.  Aspect ratio is
+        preserved.  If neither width nor height is given, the original size of
+        the highest resolution level is used.  If both are given, the returned
+        image will be no larger than either size.
+
+        :param format: the desired format or a tuple of allowed formats.
+            Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
+            TILE_FORMAT_IMAGE).  If TILE_FORMAT_IMAGE, encoding may be
+            specified.
+        :param kwargs: optional arguments.  Some options are region, output,
+            encoding, jpegQuality, jpegSubsampling, tiffCompression, fill.  See
+            tileIterator.
+        :returns: regionData, formatOrRegionMime: the image data and either the
+            mime type, if the format is TILE_FORMAT_IMAGE, or the format.
+        """
+        if not isinstance(format, (tuple, set, list)):
+            format = (format, )
+        # The tile iterator handles determining the output region
+        iterInfo = self._tileIteratorInfo(**kwargs)
+        # Only use gdal.Warp of the original image if the region has not been
+        # styled.
+        useGDALWarp = (
+            iterInfo and
+            not self._jsonstyle and
+            TILE_FORMAT_IMAGE in format and
+            kwargs.get('encoding') == 'TILED')
+        if not useGDALWarp:
+            return super().getRegion(format, **kwargs)
+        srs = self.projection or self.getProj4String()
+        tl = self.pixelToProjection(
+            iterInfo['region']['left'], iterInfo['region']['top'], iterInfo['level'])
+        br = self.pixelToProjection(
+            iterInfo['region']['right'], iterInfo['region']['bottom'], iterInfo['level'])
+        outWidth = iterInfo['output']['width']
+        outHeight = iterInfo['output']['height']
+        gdalParams = large_image.tilesource.base._gdalParameters(
+            defaultCompression='lzw', **kwargs)
+        gdalParams += [
+            '-t_srs', srs,
+            '-te', str(tl[0]), str(br[1]), str(br[0]), str(tl[1]),
+            '-ts', str(int(math.floor(outWidth))), str(int(math.floor(outHeight))),
+        ]
+        fd, outputPath = tempfile.mkstemp('.tiff', 'tiledGeoRegion_')
+        os.close(fd)
+        try:
+            self.logger.info('Using gdal warp %r' % gdalParams)
+            ds = gdal.Open(self._path, gdalconst.GA_ReadOnly)
+            gdal.Warp(outputPath, ds, options=gdalParams)
+        except Exception as exc:
             try:
                 os.unlink(outputPath)
             except Exception:

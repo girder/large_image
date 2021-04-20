@@ -435,3 +435,64 @@ def testGetTiledRegion16Bit():
     assert tileMetadata['bounds']['ymin'] == pytest.approx(3899358, 1)
     assert '+proj=merc' in tileMetadata['bounds']['srs']
     region.unlink()
+
+
+def testGetTiledRegionWithStyle():
+    imagePath = datastore.fetch('landcover_sample_1000.tif')
+    ts = large_image_source_gdal.open(imagePath, style='{"bands":[]}')
+    region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
+                             encoding='TILED')
+    result = large_image_source_gdal.open(str(region))
+    tileMetadata = result.getMetadata()
+    assert tileMetadata['bounds']['xmax'] == pytest.approx(2006547, 1)
+    assert tileMetadata['bounds']['xmin'] == pytest.approx(1319547, 1)
+    assert tileMetadata['bounds']['ymax'] == pytest.approx(2658548, 1)
+    assert tileMetadata['bounds']['ymin'] == pytest.approx(2149548, 1)
+    assert '+proj=aea' in tileMetadata['bounds']['srs']
+    region.unlink()
+
+
+def testGetTiledRegionWithProjectionAndStyle():
+    imagePath = datastore.fetch('landcover_sample_1000.tif')
+    ts = large_image_source_gdal.open(imagePath, projection='EPSG:3857', style='{"bands":[]}')
+    # This gets the whole world
+    region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
+                             encoding='TILED')
+    result = large_image_source_gdal.open(str(region))
+    tileMetadata = result.getMetadata()
+    assert tileMetadata['bounds']['xmax'] == pytest.approx(20037508, 1)
+    assert tileMetadata['bounds']['xmin'] == pytest.approx(-20037508, 1)
+    assert tileMetadata['bounds']['ymax'] == pytest.approx(20037508, 1)
+    assert tileMetadata['bounds']['ymin'] == pytest.approx(-20037508, 1)
+    assert '+proj=merc' in tileMetadata['bounds']['srs']
+    region.unlink()
+
+    # Ask for a smaller part
+    region, _ = ts.getRegion(
+        output=dict(maxWidth=1024, maxHeight=1024),
+        region=dict(left=-8622811, right=-8192317, bottom=5294998,
+                    top=5477835, units='projection'),
+        encoding='TILED')
+    result = large_image_source_gdal.open(str(region))
+    tileMetadata = result.getMetadata()
+    assert tileMetadata['bounds']['xmax'] == pytest.approx(-8192215, 1)
+    assert tileMetadata['bounds']['xmin'] == pytest.approx(-8622708, 1)
+    assert tileMetadata['bounds']['ymax'] == pytest.approx(5477783, 1)
+    assert tileMetadata['bounds']['ymin'] == pytest.approx(5294946, 1)
+    assert '+proj=merc' in tileMetadata['bounds']['srs']
+    region.unlink()
+
+
+def testGetTiledRegion16BitWithStyle():
+    imagePath = datastore.fetch('region_gcp.tiff')
+    ts = large_image_source_gdal.open(imagePath, style='{"bands":[]}')
+    region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
+                             encoding='TILED')
+    result = large_image_source_gdal.open(str(region))
+    tileMetadata = result.getMetadata()
+    assert tileMetadata['bounds']['xmax'] == pytest.approx(-10753925, 1)
+    assert tileMetadata['bounds']['xmin'] == pytest.approx(-10871650, 1)
+    assert tileMetadata['bounds']['ymax'] == pytest.approx(3949393, 1)
+    assert tileMetadata['bounds']['ymin'] == pytest.approx(3899358, 1)
+    assert '+proj=merc' in tileMetadata['bounds']['srs']
+    region.unlink()
