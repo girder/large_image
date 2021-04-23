@@ -682,8 +682,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # more complex process than read_image.
         for td in self._tiffDirectories:
             if td is not None and imageKey in td._embeddedImages:
-                image = PIL.Image.open(io.BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
-                return image
+                return PIL.Image.open(io.BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
         if imageKey in self._associatedImages:
             return PIL.Image.fromarray(self._associatedImages[imageKey])
         return None

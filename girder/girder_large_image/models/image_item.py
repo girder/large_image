@@ -160,7 +160,7 @@ class ImageItem(Item):
             outputDir=TemporaryDirectory(),
             girder_result_hooks=[
                 GirderUploadToFolder(
-                    str(folderId if folderId else item['folderId']),
+                    str(folderId or item['folderId']),
                     upload_kwargs=dict(filename=name),
                 ),
             ],

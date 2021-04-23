@@ -97,10 +97,9 @@ class AnnotationResource(Resource):
             (
                 'annotation.name', 'annotation.description', 'access', 'groups', '_version'
             ) + Annotation().baseFields)
-        annotations = Annotation().findWithPermissions(
+        return Annotation().findWithPermissions(
             query, sort=sort, fields=fields, user=self.getCurrentUser(),
             level=AccessType.READ, limit=limit, offset=offset)
-        return annotations
 
     @describeRoute(
         Description('Get the official Annotation schema')

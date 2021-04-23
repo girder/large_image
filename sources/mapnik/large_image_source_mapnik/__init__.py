@@ -209,8 +209,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         except ValueError:
             raise TileSourceException(
                 'Minimum and maximum values should be numbers, "auto", "min", or "max".')
-        sequence = [float(start + i * step) for i in range(count)]
-        return sequence
+        return [float(start + i * step) for i in range(count)]
 
     def getOneBandInformation(self, band):
         if type(band) is not tuple:

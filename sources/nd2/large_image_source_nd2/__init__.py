@@ -109,7 +109,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             pass
         frames = self._nd2.sizes.get('c', 1) * self._nd2.metadata.get(
             'total_images_per_channel', 0)
-        self._framecount = frames if frames else None
+        self._framecount = frames or None
         self._nd2.iter_axes = sorted(
             [a for a in self._nd2.axes if a not in {'x', 'y', 'v'}], reverse=True)
         if frames and len(self._nd2) != frames and 'v' in self._nd2.axes:
@@ -164,8 +164,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     value = self._getND2MetadataCleanDict(value)
                     if not len(value):
                         continue
-                if (isinstance(value, types.GeneratorType) or
-                        isinstance(value, (numpy.ndarray, array.array, range))):
+                if isinstance(value, (types.GeneratorType, numpy.ndarray, array.array, range)):
                     value = list(value)
                 if isinstance(value, list):
                     if not len(value):
@@ -182,8 +181,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def _getND2Metadata(self):
         self._metadata = self._nd2.metadata.copy()
         for key, value in self._metadata.items():
-            if (isinstance(value, types.GeneratorType) or
-                    isinstance(value, (numpy.ndarray, array.array, range))):
+            if isinstance(value, (types.GeneratorType, numpy.ndarray, array.array, range)):
                 value = list(value)
             self._metadata[key] = value
         for key in {
@@ -201,8 +199,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 value = getattr(self._nd2.parser._raw_metadata, key, None)
             except AttributeError:
                 continue
-            if (isinstance(value, types.GeneratorType) or
-                    isinstance(value, (numpy.ndarray, array.array, range))):
+            if isinstance(value, (types.GeneratorType, numpy.ndarray, array.array, range)):
                 value = list(value)
             if isinstance(value, dict):
                 value = self._getND2MetadataCleanDict(value)

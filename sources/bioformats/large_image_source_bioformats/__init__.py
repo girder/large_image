@@ -374,8 +374,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'y': ['Scaling|Distance|Value #2'],
         }
         magkeys = ['Information|Instrument|Objective|NominalMagnification #1']
+        units = 1e3
         for axis in {'x', 'y'}:
-            units = 1e3
             for key in valuekeys[axis]:
                 if metadata.get(key):
                     self._magnification['mm_' + axis] = float(metadata[key]) * units
