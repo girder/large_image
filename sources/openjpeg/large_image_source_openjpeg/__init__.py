@@ -207,8 +207,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             fp = builtins.open(self._largeImagePath, 'rb')
             headerLength = 16
             fp.seek(box.offset + headerLength)
-            data = fp.read(box.length - headerLength)
-            return data
+            return fp.read(box.length - headerLength)
         except Exception:
             pass
 

@@ -424,11 +424,12 @@ class LargeImageResource(Resource):
     def listSources(self, params):
         results = {}
         for key, source in girder_tilesource.AvailableGirderTileSources.items():
-            results[key] = {}
-            results[key]['extensions'] = {
-                k if k else 'default': v for k, v in source.extensions.items()}
-            results[key]['mimeTypes'] = {
-                k if k else 'default': v for k, v in source.mimeTypes.items()}
+            results[key] = {
+                'extensions': {
+                    k or 'default': v for k, v in source.extensions.items()},
+                'mimeTypes': {
+                    k or 'default': v for k, v in source.mimeTypes.items()},
+            }
             for cls in source.__mro__:
                 try:
                     if sys.modules[cls.__module__].__version__:

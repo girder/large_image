@@ -53,7 +53,6 @@ def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTil
         except Exception:
             config.getConfig('logprint').exception(
                 'Failed to loaded tile source %s' % entryPoint.name)
-            pass
 
 
 def getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs):

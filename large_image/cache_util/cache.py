@@ -134,7 +134,7 @@ class LruCacheMetaclass(type):
         maxSize = CacheProperties.get(cacheName, {}).get('cacheMaxSize', None)
         if (maxSize is None and cacheName in CacheProperties and
                 'maxItems' in CacheProperties[cacheName] and
-                'itemExpectedSize' in CacheProperties[cacheName] and 'itemExpectedSize'):
+                CacheProperties[cacheName].get('itemExpectedSize')):
             maxSize = pickAvailableCache(
                 CacheProperties[cacheName]['itemExpectedSize'],
                 maxItems=CacheProperties[cacheName]['maxItems'])

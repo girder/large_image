@@ -253,7 +253,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         ])
         for frame in result['frames']:
             for key in reftbl:
-                if key in frame and not reftbl[key] in frame:
+                if key in frame and reftbl[key] not in frame:
                     frame[reftbl[key]] = int(frame[key])
         self._addMetadataFrameInformation(result, channels)
         return result
@@ -266,9 +266,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: a dictionary of data or None.
         """
-        result = {}
-        result['omeinfo'] = self._omeinfo
-        return result
+        return {'omeinfo': self._omeinfo}
 
     def getNativeMagnification(self):
         """

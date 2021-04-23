@@ -84,10 +84,7 @@ class Annotationelement(Model):
                 {'annotationId': 'version_sequence'})
             if versionObject is None:
                 startingId = self.collection.find_one({}, sort=[('_version', SortDir.DESCENDING)])
-                if startingId:
-                    startingId = startingId['_version'] + 1
-                else:
-                    startingId = 0
+                startingId = startingId['_version'] + 1 if startingId else 0
                 self.versionId = self.collection.insert_one(
                     {'annotationId': 'version_sequence', '_version': startingId}
                 ).inserted_id
@@ -319,12 +316,12 @@ class Annotationelement(Model):
         """
         bbox = {}
         if 'points' in element:
-            bbox['lowx'] = min([p[0] for p in element['points']])
-            bbox['lowy'] = min([p[1] for p in element['points']])
-            bbox['lowz'] = min([p[2] for p in element['points']])
-            bbox['highx'] = max([p[0] for p in element['points']])
-            bbox['highy'] = max([p[1] for p in element['points']])
-            bbox['highz'] = max([p[2] for p in element['points']])
+            bbox['lowx'] = min(p[0] for p in element['points'])
+            bbox['lowy'] = min(p[1] for p in element['points'])
+            bbox['lowz'] = min(p[2] for p in element['points'])
+            bbox['highx'] = max(p[0] for p in element['points'])
+            bbox['highy'] = max(p[1] for p in element['points'])
+            bbox['highz'] = max(p[2] for p in element['points'])
             bbox['details'] = len(element['points'])
         else:
             center = element['center']

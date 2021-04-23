@@ -61,8 +61,7 @@ class CacheFactory:
             defaultPortion = 32
             try:
                 portion = int(config.getConfig('cache_python_memory_portion', defaultPortion))
-                if portion < 3:
-                    portion = 3
+                portion = max(portion, 3)
             except ValueError:
                 portion = defaultPortion
             numItems = pickAvailableCache(256**2 * 4 * 2, portion)

@@ -68,13 +68,11 @@ def modify_tiled_ifd(info, ifd, idx, ifdIndices, lidata, liDesc, **kwargs):
         'Converter': 'large_image_converter',
         'ConverterVersion': liDesc['large_image_converter']['version'],
         'ConverterEpoch': liDesc['large_image_converter']['conversion_epoch'],
+        'MPP': (lidata['metadata']['mm_x'] * 1000
+                if lidata and lidata['metadata'].get('mm_x') else None),
+        'AppMag': (lidata['metadata']['magnification']
+                   if lidata and lidata['metadata'].get('magnification') else None),
     }
-    metadata['MPP'] = (
-        lidata['metadata']['mm_x'] * 1000
-        if lidata and lidata['metadata'].get('mm_x') else None)
-    metadata['AppMag'] = (
-        lidata['metadata']['magnification']
-        if lidata and (lidata or {})['metadata'].get('magnification') else None)
     compressionTag = ifd['tags'][tifftools.Tag.Compression.value]
     if compressionTag['data'][0] == tifftools.constants.Compression.JP2000:
         compressionTag['data'][0] = tifftools.constants.Compression.JP2kRGB
