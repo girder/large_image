@@ -41,6 +41,7 @@ setup(
     install_requires=[
         'large-image>=1.0.0',
         'nd2reader>=3.3',
+        'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
