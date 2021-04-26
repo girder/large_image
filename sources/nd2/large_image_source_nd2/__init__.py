@@ -81,7 +81,8 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._nd2 = nd2reader.ND2Reader(self._largeImagePath)
         except (UnicodeDecodeError,
                 nd2reader.exceptions.InvalidVersionError,
-                nd2reader.exceptions.EmptyFileError):
+                nd2reader.exceptions.EmptyFileError,
+                nd2reader.exceptions.InvalidFileType):
             raise TileSourceException('File cannot be opened via nd2reader.')
         self._logger = config.getConfig('logger')
         self._tileLock = threading.RLock()
