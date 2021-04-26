@@ -40,7 +40,7 @@ setup(
     ],
     install_requires=[
         'large-image>=1.0.0',
-        'nd2reader>=3.2',
+        'nd2reader>=3.3',
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
