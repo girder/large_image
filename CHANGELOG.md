@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.5.0
 
 ### Features
 - Allow converting a single frame of a multiframe image (#579)
@@ -18,6 +18,9 @@
 ### Changes
 - Exceptions on cached items are no longer within the KeyError context (#584)
 - Simplified thumbnail generation by removing the level-0 option (#593)
+
+### Bug Fixes
+- Updated dependencies to work with changes to the nd2reader (#596)
 
 ## Version 1.4.3
 
