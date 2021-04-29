@@ -13,7 +13,7 @@ Large Image |build-status| |codecov-io| |license-badge| |doi-badge|
    :target: https://codecov.io/github/girder/large_image?branch=master
    :alt: codecov.io
    
-.. |doi-badge| image:: https://zenodo.org/badge/45569214.svg
+.. |doi-badge| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4723355-blue
    :target: https://zenodo.org/badge/latestdoi/45569214
 
 Python modules to work with large multiresolution images.
