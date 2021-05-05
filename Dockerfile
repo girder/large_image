@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.7.10 2.7.18 3.5.10 3.6.13 3.8.9 3.9.4"
+    PYTHON_VERSIONS="3.9.5 3.8.10 3.7.10 3.6.13"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
