@@ -360,7 +360,6 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return None
         if images[imageKey] == 'openslide':
             try:
-                print('YYYYYYY')
                 return self._openslide.associated_images[imageKey]
             except openslide.lowlevel.OpenSlideError:
                 return None
