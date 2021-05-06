@@ -16,6 +16,7 @@
 
 import io
 import json
+import pickle
 import pymongo
 
 from girder import logger
@@ -43,11 +44,18 @@ class ImageItem(Item):
     def initialize(self):
         super().initialize()
         self.ensureIndices(['largeImage.fileId'])
-        File().ensureIndices([([
-            ('isLargeImageThumbnail', pymongo.ASCENDING),
-            ('attachedToType', pymongo.ASCENDING),
-            ('attachedToId', pymongo.ASCENDING),
-        ], {})])
+        File().ensureIndices([
+            ([
+                ('isLargeImageThumbnail', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('attachedToId', pymongo.ASCENDING),
+            ], {}),
+            ([
+                ('isLargeImageData', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('attachedToId', pymongo.ASCENDING),
+            ], {}),
+        ])
 
     def createImageItem(self, item, fileObj, user=None, token=None,
                         createJob=True, notify=False, **kwargs):
@@ -302,10 +310,11 @@ class ImageItem(Item):
         """
         # check if a thumbnail file exists with a particular key
         keydict = dict(kwargs, width=width, height=height)
-        return self._getAndCacheImage(
+        return self._getAndCacheImageOrData(
             item, 'getThumbnail', checkAndCreate, keydict, width=width, height=height, **kwargs)
 
-    def _getAndCacheImage(self, item, imageFunc, checkAndCreate, keydict, **kwargs):
+    def _getAndCacheImageOrData(
+            self, item, imageFunc, checkAndCreate, keydict, pickleCache=False, **kwargs):
         if 'fill' in keydict and (keydict['fill']).lower() == 'none':
             del keydict['fill']
         keydict = {k: v for k, v in keydict.items() if v is not None}
@@ -313,7 +322,7 @@ class ImageItem(Item):
         existing = File().findOne({
             'attachedToType': 'item',
             'attachedToId': item['_id'],
-            'isLargeImageThumbnail': True,
+            'isLargeImageThumbnail' if not pickleCache else 'isLargeImageData': True,
             'thumbnailKey': key
         })
         if existing:
@@ -323,38 +332,45 @@ class ImageItem(Item):
                 contentDisposition = 'inline'
             else:
                 contentDisposition = kwargs['contentDisposition']
+            if pickleCache:
+                data = File().open(existing).read()
+                return pickle.loads(data), 'application/octet-stream'
             return File().download(existing, contentDisposition=contentDisposition)
         tileSource = self._loadTileSource(item, **kwargs)
         result = getattr(tileSource, imageFunc)(**kwargs)
         if result is None:
-            thumbData, thumbMime = b'', 'application/octet-stream'
+            imageData, imageMime = b'', 'application/octet-stream'
+        elif pickleCache:
+            imageData, imageMime = result, 'application/octet-stream'
         else:
-            thumbData, thumbMime = result
-        # The logic on which files to save could be more sophisticated.
-        maxThumbnailFiles = int(Setting().get(
-            constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
-        saveFile = maxThumbnailFiles > 0
-        if saveFile:
+            imageData, imageMime = result
+        saveFile = True
+        if not pickleCache:
+            # The logic on which files to save could be more sophisticated.
+            maxThumbnailFiles = int(Setting().get(
+                constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
+            saveFile = maxThumbnailFiles > 0
             # Make sure we don't exceed the desired number of thumbnails
             self.removeThumbnailFiles(item, maxThumbnailFiles - 1)
-            # Save the thumbnail as a file
-            thumbfile = Upload().uploadFromFile(
-                io.BytesIO(thumbData), size=len(thumbData),
+        if saveFile:
+            dataStored = imageData if not pickleCache else pickle.dumps(imageData, protocol=4)
+            # Save the data as a file
+            datafile = Upload().uploadFromFile(
+                io.BytesIO(dataStored), size=len(dataStored),
                 name='_largeImageThumbnail', parentType='item', parent=item,
-                user=None, mimeType=thumbMime, attachParent=True)
-            if not len(thumbData) and 'received' in thumbfile:
-                thumbfile = Upload().finalizeUpload(
-                    thumbfile, Assetstore().load(thumbfile['assetstoreId']))
-            thumbfile.update({
-                'isLargeImageThumbnail': True,
+                user=None, mimeType=imageMime, attachParent=True)
+            if not len(dataStored) and 'received' in datafile:
+                datafile = Upload().finalizeUpload(
+                    datafile, Assetstore().load(datafile['assetstoreId']))
+            datafile.update({
+                'isLargeImageThumbnail' if not pickleCache else 'isLargeImageData': True,
                 'thumbnailKey': key,
             })
             # Ideally, we would check that the file is still wanted before we
             # save it.  This is probably impossible without true transactions in
             # Mongo.
-            File().save(thumbfile)
-        # Return the data
-        return thumbData, thumbMime
+            File().save(datafile)
+        return imageData, imageMime
 
     def removeThumbnailFiles(self, item, keep=0, sort=None, **kwargs):
         """
@@ -369,23 +385,27 @@ class ImageItem(Item):
         :returns: a tuple of (the number of files before removal, the number of
             files removed).
         """
+        keys = ['isLargeImageThumbnail']
+        if not keep:
+            keys.append('isLargeImageData')
         if not sort:
             sort = [('_id', SortDir.DESCENDING)]
-        query = {
-            'attachedToType': 'item',
-            'attachedToId': item['_id'],
-            'isLargeImageThumbnail': True,
-        }
-        query.update(kwargs)
-        present = 0
-        removed = 0
-        for file in File().find(query, sort=sort):
-            present += 1
-            if keep > 0:
-                keep -= 1
-                continue
-            File().remove(file)
-            removed += 1
+        for key in keys:
+            query = {
+                'attachedToType': 'item',
+                'attachedToId': item['_id'],
+                key: True,
+            }
+            query.update(kwargs)
+            present = 0
+            removed = 0
+            for file in File().find(query, sort=sort):
+                present += 1
+                if keep > 0:
+                    keep -= 1
+                    continue
+                File().remove(file)
+                removed += 1
         return (present, removed)
 
     def getRegion(self, item, **kwargs):
@@ -425,8 +445,15 @@ class ImageItem(Item):
             method.
         :returns: histogram object.
         """
-        tileSource = self._loadTileSource(item, **kwargs)
-        return tileSource.histogram(**kwargs)
+        if kwargs.get('range') is not None:
+            tileSource = self._loadTileSource(item, **kwargs)
+            result = tileSource.histogram(**kwargs)
+        else:
+            imageKey = 'histogram'
+            result = self._getAndCacheImageOrData(
+                item, 'histogram', False, dict(kwargs, imageKey=imageKey),
+                imageKey=imageKey, pickleCache=True, **kwargs)[0]
+        return result
 
     def tileSource(self, item, **kwargs):
         """
@@ -459,5 +486,5 @@ class ImageItem(Item):
             None if the associated image doesn't exist.
         """
         keydict = dict(kwargs, imageKey=imageKey)
-        return self._getAndCacheImage(
+        return self._getAndCacheImageOrData(
             item, 'getAssociatedImage', checkAndCreate, keydict, imageKey=imageKey, **kwargs)

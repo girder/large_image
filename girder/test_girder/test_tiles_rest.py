@@ -1130,6 +1130,27 @@ def testTilesHistogram(server, admin, fsAssetstore):
     assert len(resp.json[0]['hist']) == 256
     assert resp.json[1]['samples'] == 2801664
     assert resp.json[1]['hist'][128] == 176
+    # A second query will fetch it from cache
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False})
+    assert len(resp.json) == 3
+    assert len(resp.json[0]['hist']) == 256
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testTilesHistogramWithRange(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample_image.ptif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False, 'rangeMin': 10, 'rangeMax': 240})
+    assert len(resp.json) == 3
+    assert len(resp.json[0]['hist']) == 256
+    assert resp.json[1]['samples'] == 685979
+    assert resp.json[1]['hist'][128] == 186
 
 
 @pytest.mark.usefixtures('unbindLargeImage')

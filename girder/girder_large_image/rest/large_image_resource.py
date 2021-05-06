@@ -226,8 +226,9 @@ class LargeImageResource(Resource):
         self.route('DELETE', ('thumbnails',), self.deleteThumbnails)
         self.route('GET', ('associated_images',), self.countAssociatedImages)
         self.route('DELETE', ('associated_images',), self.deleteAssociatedImages)
-        self.route('DELETE', ('tiles', 'incomplete'),
-                   self.deleteIncompleteTiles)
+        self.route('GET', ('histograms',), self.countHistograms)
+        self.route('DELETE', ('histograms',), self.deleteHistograms)
+        self.route('DELETE', ('tiles', 'incomplete'), self.deleteIncompleteTiles)
 
     @describeRoute(
         Description('Clear tile source caches to release resources and file handles.')
@@ -438,3 +439,32 @@ class LargeImageResource(Resource):
                 except Exception:
                     pass
         return results
+
+    @describeRoute(
+        Description('Count the number of cached histograms for large_image items.')
+    )
+    @access.admin
+    def countHistograms(self, params):
+        query = {
+            'isLargeImageData': True,
+            'attachedToType': 'item',
+            'thumbnailKey': {'$regex': '"imageKey":"histogram"'},
+        }
+        count = File().find(query).count()
+        return count
+
+    @describeRoute(
+        Description('Delete cached histograms from large_image items.')
+    )
+    @access.admin
+    def deleteHistograms(self, params):
+        query = {
+            'isLargeImageData': True,
+            'attachedToType': 'item',
+            'thumbnailKey': {'$regex': '"imageKey":"histogram"'},
+        }
+        removed = 0
+        for file in File().find(query):
+            File().remove(file)
+            removed += 1
+        return removed
