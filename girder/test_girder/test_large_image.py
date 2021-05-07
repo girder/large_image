@@ -354,3 +354,30 @@ def testGetLargeImagePath(server, admin, fsAssetstore):
         path = ts._getLargeImagePath()
         assert path == abspath
         file = File().save(origFile)
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testHistogramCaching(server, admin, user, fsAssetstore):
+    file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    resp = server.request(path='/item/%s/tiles/histogram' % itemId,
+                          user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    # Test GET histograms
+    resp = server.request(path='/large_image/histograms', user=user)
+    assert utilities.respStatus(resp) == 403
+    resp = server.request(path='/large_image/histograms', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 1
+    # Test DELETE histograms
+    resp = server.request(
+        method='DELETE', path='/large_image/histograms', user=user)
+    assert utilities.respStatus(resp) == 403
+    resp = server.request(
+        method='DELETE', path='/large_image/histograms', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 1
+    resp = server.request(path='/large_image/histograms', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 0

@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- Cache histogram requests (#598)
+
 ## Version 1.5.0
 
 ### Features

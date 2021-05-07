@@ -1219,6 +1219,7 @@ class TileSource:
         # compatibility could be an issue.
         return False
 
+    @methodcache()
     def histogram(self, dtype=None, onlyMinMax=False, bins=256,
                   density=False, format=None, *args, **kwargs):
         """
