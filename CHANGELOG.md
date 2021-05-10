@@ -5,6 +5,9 @@
 ### Improvements
 - Cache histogram requests (#598)
 
+### Bug Fixes
+- The nd2reader module now requires files to have an nd2 extension (#599)
+
 ## Version 1.5.0
 
 ### Features
