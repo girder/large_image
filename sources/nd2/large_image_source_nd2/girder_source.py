@@ -26,3 +26,8 @@ class ND2GirderTileSource(ND2FileTileSource, GirderTileSource):
 
     cacheName = 'tilesource'
     name = 'nd2'
+
+    def mayHaveAdjacentFiles(self, largeImageFile):
+        # As of nd2reader 3.3.0, the extension is required to be nd2.  Set this
+        # to true to ensure the extension appears as expected.
+        return True
