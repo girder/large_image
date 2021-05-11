@@ -5,6 +5,9 @@
 ### Improvements
 - Cache histogram requests (#598)
 
+### Changes
+- Use float rather than numpy.float (#600)
+
 ### Bug Fixes
 - The nd2reader module now requires files to have an nd2 extension (#599)
 
