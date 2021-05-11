@@ -1290,7 +1290,7 @@ class TileSource:
             if entry['hist'] is not None:
                 entry['samples'] = numpy.sum(entry['hist'])
                 if density:
-                    entry['hist'] = entry['hist'].astype(numpy.float) / entry['samples']
+                    entry['hist'] = entry['hist'].astype(float) / entry['samples']
         return results
 
     def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, **kwargs):
@@ -1382,7 +1382,7 @@ class TileSource:
         :returns: a styled image.
         """
         style = style['bands'] if 'bands' in style else [style]
-        output = numpy.zeros((image.shape[0], image.shape[1], 4), numpy.float)
+        output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
         mainImage = image
         mainFrame = frame
         for entry in style:
