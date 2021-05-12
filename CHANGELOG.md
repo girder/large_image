@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Allow setting the cache memory portion and maximum for tilesources (#601)
+
 ### Improvements
 - Cache histogram requests (#598)
 
