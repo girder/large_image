@@ -137,7 +137,8 @@ class LruCacheMetaclass(type):
                 CacheProperties[cacheName].get('itemExpectedSize')):
             maxSize = pickAvailableCache(
                 CacheProperties[cacheName]['itemExpectedSize'],
-                maxItems=CacheProperties[cacheName]['maxItems'])
+                maxItems=CacheProperties[cacheName]['maxItems'],
+                cacheName=cacheName)
         maxSize = namespace.pop('cacheMaxSize', maxSize)
         maxSize = kwargs.get('cacheMaxSize', maxSize)
         if maxSize is None:
@@ -154,10 +155,10 @@ class LruCacheMetaclass(type):
             cacheName = cls
 
         if LruCacheMetaclass.namedCaches.get(cacheName) is None:
-            cache, cacheLock = CacheFactory().getCache(maxSize)
+            cache, cacheLock = CacheFactory().getCache(maxSize, cacheName=cacheName)
             LruCacheMetaclass.namedCaches[cacheName] = (cache, cacheLock)
             config.getConfig('logger').info(
-                'Created LRU Cache for %r with %d maximum size' % (cacheName, maxSize))
+                'Created LRU Cache for %r with %d maximum size' % (cacheName, cache.maxsize))
         else:
             (cache, cacheLock) = LruCacheMetaclass.namedCaches[cacheName]
 
@@ -204,7 +205,7 @@ def getTileCache():
 
     if _tileCache is None:
         # Decide whether to use Memcached or cachetools
-        _tileCache, _tileLock = CacheFactory().getCache()
+        _tileCache, _tileLock = CacheFactory().getCache(cacheName='tileCache')
     return _tileCache, _tileLock
 
 

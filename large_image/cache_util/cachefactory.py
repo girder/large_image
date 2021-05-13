@@ -30,7 +30,7 @@ except ImportError:
     MemCache = None
 
 
-def pickAvailableCache(sizeEach, portion=8, maxItems=None):
+def pickAvailableCache(sizeEach, portion=8, maxItems=None, cacheName=None):
     """
     Given an estimated size of an item, return how many of those items would
     fit in a fixed portion of the available virtual memory.
@@ -39,9 +39,17 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None):
     :param portion: the inverse fraction of the memory which can be used.
     :param maxItems: if specified, the number of items is never more than this
         value.
+    :param cacheName: if specified, the portion can be affected by the
+        configuration.
     :return: the number of items that should be cached.  Always at least two,
         unless maxItems is less.
     """
+    if cacheName:
+        portion = max(portion, int(config.getConfig(
+            f'cache_{cacheName}_memory_portion', portion)))
+        configMaxItems = int(config.getConfig(f'cache_{cacheName}_maximum', 0))
+        if configMaxItems > 0:
+            maxItems = configMaxItems
     # Estimate usage based on (1 / portion) of the total virtual memory.
     if psutil:
         memory = psutil.virtual_memory().total
@@ -56,18 +64,28 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None):
 class CacheFactory:
     logged = False
 
-    def getCacheSize(self, numItems):
+    def getCacheSize(self, numItems, cacheName=None):
         if numItems is None:
             defaultPortion = 32
             try:
-                portion = int(config.getConfig('cache_python_memory_portion', defaultPortion))
-                portion = max(portion, 3)
+                portion = int(config.getConfig('cache_python_memory_portion', 0))
+                if cacheName:
+                    portion = max(portion, int(config.getConfig(
+                        f'cache_{cacheName}_memory_portion', portion)))
+                portion = max(portion or defaultPortion, 3)
             except ValueError:
                 portion = defaultPortion
             numItems = pickAvailableCache(256**2 * 4 * 2, portion)
+        if cacheName:
+            try:
+                maxItems = int(config.getConfig(f'cache_{cacheName}_maximum', 0))
+                if maxItems > 0:
+                    numItems = min(numItems, max(maxItems, 3))
+            except ValueError:
+                pass
         return numItems
 
-    def getCache(self, numItems=None):
+    def getCache(self, numItems=None, cacheName=None):
         # memcached is the fallback default, if available.
         cacheBackend = config.getConfig('cache_backend', 'python')
         if cacheBackend:
@@ -96,7 +114,7 @@ class CacheFactory:
                 cache = None
         if cache is None:  # fallback backend
             cacheBackend = 'python'
-            cache = LRUCache(self.getCacheSize(numItems))
+            cache = LRUCache(self.getCacheSize(numItems, cacheName=cacheName))
             cacheLock = threading.Lock()
         if numItems is None and not CacheFactory.logged:
             config.getConfig('logprint').info('Using %s for large_image caching' % cacheBackend)
