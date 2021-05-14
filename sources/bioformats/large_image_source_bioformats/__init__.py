@@ -34,6 +34,7 @@ import types
 
 from pkg_resources import DistributionNotFound, get_distribution
 
+from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority, TILE_FORMAT_NUMPY
 from large_image.exceptions import TileSourceException
