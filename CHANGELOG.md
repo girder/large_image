@@ -8,6 +8,8 @@
 
 ### Improvements
 - Cache histogram requests (#598)
+- Allow configuring bioformats ignored extensions (#603)
+- Tilesources always have self.logger for logging (#602)
 
 ### Changes
 - Use float rather than numpy.float (#600)
