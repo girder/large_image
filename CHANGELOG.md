@@ -4,6 +4,7 @@
 
 ### Features
 - Allow setting the cache memory portion and maximum for tilesources (#601)
+- Add heatmap and griddata to the annotation schema (#589)
 
 ### Improvements
 - Cache histogram requests (#598)
@@ -13,6 +14,7 @@
 
 ### Bug Fixes
 - The nd2reader module now requires files to have an nd2 extension (#599)
+- Fix the progress bar when uploading annotations (#589)
 
 ## Version 1.5.0
 
