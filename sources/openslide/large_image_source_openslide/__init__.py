@@ -22,7 +22,6 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 import tifftools
 
-from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority, TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
@@ -104,7 +103,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                    'dimensions.' % (
                        self._openslide.dimensions[0],
                        self._openslide.dimensions[1], self.sizeX, self.sizeY))
-            config.getConfig('logger').info(msg)
+            self.logger.info(msg)
 
         self._getTileSize()
 
@@ -145,7 +144,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     self.tileHeight * scale > maxSize):
                 msg = ('OpenSlide has no small-scale tiles (level %d is at %d '
                        'scale)' % (level, scale))
-                config.getConfig('logger').info(msg)
+                self.logger.info(msg)
                 raise TileSourceException(msg)
             self._svslevels.append({
                 'svslevel': bestlevel,

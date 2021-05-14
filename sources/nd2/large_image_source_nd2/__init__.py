@@ -26,7 +26,6 @@ import warnings
 
 from pkg_resources import DistributionNotFound, get_distribution
 
-from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority, TILE_FORMAT_NUMPY
 from large_image.exceptions import TileSourceException
@@ -84,7 +83,6 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 nd2reader.exceptions.EmptyFileError,
                 nd2reader.exceptions.InvalidFileType):
             raise TileSourceException('File cannot be opened via nd2reader.')
-        self._logger = config.getConfig('logger')
         self._tileLock = threading.RLock()
         self._recentFrames = cachetools.LRUCache(maxsize=6)
         self.sizeX = self._nd2.metadata['width']

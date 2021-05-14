@@ -534,6 +534,7 @@ class TileSource:
             excepting that each must have a band that is not -1.  Bands are
             composited in the order listed.
         """
+        self.logger = config.getConfig('logger')
         self.cache, self.cache_lock = getTileCache()
 
         self.tileWidth = None
@@ -1072,7 +1073,7 @@ class TileSource:
         format = iterInfo['format']
         encoding = iterInfo['encoding']
 
-        config.getConfig('logger').debug(
+        self.logger.debug(
             'Fetching region of an image with a source size of %d x %d; '
             'getting %d tiles',
             regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
@@ -1315,7 +1316,7 @@ class TileSource:
                 resample=False,
                 frame=frame, **kwargs)
             if self._bandRanges[frame]:
-                config.getConfig('logger').info('Style range is %r' % self._bandRanges[frame])
+                self.logger.info('Style range is %r' % self._bandRanges[frame])
         finally:
             del self._skipStyle
             self._classkey = classkey
@@ -1339,8 +1340,7 @@ class TileSource:
             try:
                 value = float(value)
             except ValueError:
-                config.getConfig('logger').warn(
-                    'Style min/max value of %r is not valid; using "auto"', value)
+                self.logger.warn('Style min/max value of %r is not valid; using "auto"', value)
                 value = 'auto'
         if value in {'min', 'max', 'auto'} and frame not in self._bandRanges:
             self._scanForMinMax(dtype, frame)

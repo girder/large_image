@@ -34,7 +34,6 @@ import types
 
 from pkg_resources import DistributionNotFound, get_distribution
 
-from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority, TILE_FORMAT_NUMPY
 from large_image.exceptions import TileSourceException
@@ -136,7 +135,6 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             used.
         """
         super().__init__(path, **kwargs)
-        self._logger = config.getConfig('logger')
 
         largeImagePath = self._getLargeImagePath()
 
@@ -148,7 +146,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if ext.lower() in ('.jpg', '.jpeg', '.jpe', '.png'):
             raise TileSourceException('File will not be opened by bioformats reader')
 
-        if not _startJavabridge(self._logger):
+        if not _startJavabridge(self.logger):
             raise TileSourceException(
                 'File cannot be opened by bioformats reader because javabridge failed to start')
 
@@ -159,7 +157,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 self._bioimage = bioformats.ImageReader(largeImagePath)
             except AttributeError as exc:
-                self._logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
+                self.logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
                 raise TileSourceException('File cannot be opened via Bioformats. (%r)' % exc)
             _openImages.append(self)
 
@@ -236,10 +234,10 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._computeMagnification()
         except javabridge.JavaException as exc:
             es = javabridge.to_string(exc.throwable)
-            self._logger.debug('File cannot be opened via Bioformats. (%s)' % es)
+            self.logger.debug('File cannot be opened via Bioformats. (%s)' % es)
             raise TileSourceException('File cannot be opened via Bioformats. (%s)' % es)
         except AttributeError:
-            self._logger.exception('The bioformats reader threw an unhandled exception.')
+            self.logger.exception('The bioformats reader threw an unhandled exception.')
             raise TileSourceException('The bioformats reader threw an unhandled exception.')
         finally:
             if javabridge.get_env():
@@ -289,7 +287,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         frameList[frameNum].sort()
                     nextSeriesNum = max(nextSeriesNum, seriesNum + 1)
         except Exception as exc:
-            self._logger.debug('Failed to parse series information: %s', exc)
+            self.logger.debug('Failed to parse series information: %s', exc)
             rdr.setSeries(0)
             return 1
         if not len(seriesMetadata):

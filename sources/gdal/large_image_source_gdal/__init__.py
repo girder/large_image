@@ -28,7 +28,6 @@ from osgeo import gdalconst
 from osgeo import osr
 from pkg_resources import DistributionNotFound, get_distribution
 
-from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, CacheProperties
 from large_image.constants import SourcePriority, TileInputUnits, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
@@ -103,7 +102,6 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             specify unitsPerPixel.
         """
         super().__init__(path, **kwargs)
-        self._logger = config.getConfig('logger')
         self._bounds = {}
         self._path = self._getLargeImagePath()
         try:
@@ -225,7 +223,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     'composite': 'multiply',
                     'palette': ['#ffffff00', '#ffffffff'],
                 })
-            self._logger.debug('Using style %r', style)
+            self.logger.debug('Using style %r', style)
             self.style = {'bands': style}
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
@@ -494,7 +492,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         # fetch those separately
                         info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
                     except RuntimeError:
-                        self._logger.info('Failed to get statistics for band %d', i + 1)
+                        self.logger.info('Failed to get statistics for band %d', i + 1)
                     info['nodata'] = band.GetNoDataValue()
                     info['scale'] = band.GetScale()
                     info['offset'] = band.GetOffset()
