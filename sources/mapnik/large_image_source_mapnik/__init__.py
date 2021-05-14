@@ -21,7 +21,6 @@ from osgeo import gdal
 from osgeo import gdalconst
 from pkg_resources import DistributionNotFound, get_distribution
 
-from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import SourcePriority, TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
@@ -327,7 +326,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         bands = self.getBandInformation()
         if not len(style):
             style.append({'band': -1})
-        config.getConfig('logger').debug(
+        self.logger.debug(
             'mapnik addTile specified style: %r, used style %r',
             getattr(self, 'style', None), style)
         for styleBand in style:

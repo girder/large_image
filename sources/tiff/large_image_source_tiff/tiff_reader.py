@@ -122,6 +122,7 @@ class TiledTiffDirectory:
         :raises: InvalidOperationTiffException or IOTiffException or
         ValidationTiffException
         """
+        self.logger = config.getConfig('logger')
         # create local cache to store Jpeg tables and getTileByteCountsType
         self.cache = LRUCache(10)
         self._mustBeTiled = mustBeTiled
@@ -131,7 +132,7 @@ class TiledTiffDirectory:
 
         self._open(filePath, directoryNum, subDirectoryNum)
         self._loadMetadata()
-        config.getConfig('logger').debug(
+        self.logger.debug(
             'TiffDirectory %d:%d Information %r',
             directoryNum, subDirectoryNum or 0, self._tiffInfo)
         try:
@@ -295,7 +296,7 @@ class TiledTiffDirectory:
                 if value is not None:
                     info[field] = value
             except TypeError as err:
-                config.getConfig('logger').debug(
+                self.logger.debug(
                     'Loading field "%s" in directory number %d resulted in TypeError - "%s"',
                     field, self._directoryNum, err)
 
