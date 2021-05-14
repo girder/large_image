@@ -146,11 +146,90 @@ A Rectangle Grid is a rectangle which contains regular subdivisions, such as tha
 }
 ```
 
+### Heatmap
+
+A list of points with values that is interpreted as a heatmap so that near by values aggregate together when viewed.
+
+```
+{
+    "type": "heatmap",                 # Exact string.  Required
+    <id, label>                        # Optional general shape properties
+    "points": [                        # A list of coordinate-value entries.  Each is x, y, z, value.
+        [32320, 48416, 0, 0.192],
+        [40864, 109568, 0, 0.87],
+        [53472, 63392, 0, 0.262],
+        [23232, 96096, 0, 0.364],
+        [10976, 93376, 0, 0.2],
+        [42368, 65248, 0, 0.054]
+    ],
+    "radius": 25,                      # Positive number.  Optional.  The size of the gaussian plot spread,
+    "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"],  # A list of colors corresponding to the
+                                       # rangeValues.  Optional
+    "rangeValues: [0, 1],              # A list of range values corresponding to the colorRange list
+                                       # and possibly normalized to a scale of [0, 1].  Optional
+    "normalizeRange": true             # If true, the rangeValues are normalized to [0, 1].  If false, the
+                                       # rangeValues are in the value domain.  Defaults to true.  Optional
+}
+```
+
+### Grid Data
+
+For evenly spaced data that is interpreted as a heatmap, contour, or choropleth, a grid with a list of values can be specified.
+
+```
+{
+    "type": "griddata",                # Exact string.  Required
+    <id, label>                        # Optional general shape properties
+    "interpretation": "contour",       # One of heatmap, contour, or choropleth
+    "gridWidth": 6,                    # Number of values across the grid.  Required
+    "origin": [0, 0, 0],               # Origin including fized x value.  Optional
+    "dx": 32,                          # Grid spacing in x.  Optional
+    "dy": 32,                          # Grid spacing in y.  Optional
+    "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"], # A list of colors corresponding to the
+                                       # rangeValues.  Optional
+    "rangeValues: [0, 1],              # A list of range values corresponding to the colorRange list.  This
+                                       # should have the same number of entries as colorRange unless a contour
+                                       # where stepped is true.  Possibly normalized to a scale of [0, 1].
+                                       # Optional
+    "normalizeRange": false,           # If true, the rangeValues are normalized to [0, 1].  If false, the
+                                       # rangeValues are in the value domain.  Defaults to true.  Optional
+    "minColor": "rgba(0, 0, 255, 1)",  # The color of data below the minimum range.  Optional
+    "maxColor": "rgba(255, 255, 0, 1)", # The color of data above the maximum range.  Optional
+    "stepped": true,                   # For contours, whether discrete colors or continuous colors should be used.  Default false.  Optional
+    "values": [
+        0.508,
+        0.806,
+        0.311,
+        0.402,
+        0.535,
+        0.661,
+        0.866,
+        0.31,
+        0.241,
+        0.63,
+        0.555,
+        0.067,
+        0.668,
+        0.164,
+        0.512,
+        0.647,
+        0.501,
+        0.637,
+        0.498,
+        0.658,
+        0.332,
+        0.431,
+        0.053,
+        0.531
+    ]
+}
+```
+
 ## Component Values
 
 ### Colors
 
-Colors are specified using a css-like string.  Specifically, values of the form `#RRGGBB` and `#RGB` are allowed where `R`, `G`, and `B` are case-insensitive hexadecimal digits.  Additonally, values of the form `rgb(123, 123, 123)` and `rgba(123, 123, 123, 0.123)` are allowed, where the colors are specified on a [0-255]  integer scale, and the opacity is specified as a [0-1] floating-point number.
+Colors are specified using a css-like string.  Specifically, values of the form `#RRGGBB` and `#RGB` are allowed where `R`, `G`, and `B` are case-insensitive hexadecimal digits.  Additionally, values of the form `rgb(123, 123, 123)` and `rgba(123, 123, 123, 0.123)` are allowed, where the colors are specified on a [0-255]  integer scale, and the opacity is specified as a [0-1] floating-point number.
 
 ### Coordinates
 

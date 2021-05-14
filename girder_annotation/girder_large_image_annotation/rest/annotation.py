@@ -490,10 +490,12 @@ class AnnotationResource(Resource):
     @autoDescribeRoute(
         Description('Create multiple annotations on an item.')
         .modelParam('id', model=Item, level=AccessType.WRITE)
-        .jsonParam('annotations', 'A JSON list of annotation model records or '
-                   'annotations.  If these are complete models, the value of '
-                   'the "annotation" key is used and the other information is '
-                   'ignored (such as original creator ID).', paramType='body')
+        # Use param instead of jsonParam; it lets us use ujson which is much
+        # faster
+        .param('annotations', 'A JSON list of annotation model records or '
+               'annotations.  If these are complete models, the value of '
+               'the "annotation" key is used and the other information is '
+               'ignored (such as original creator ID).', paramType='body')
         .errorResponse('ID was invalid.')
         .errorResponse('Write access was denied for the item.', 403)
         .errorResponse('Invalid JSON passed in request body.')
@@ -502,6 +504,9 @@ class AnnotationResource(Resource):
     @access.user
     def createItemAnnotations(self, item, annotations):
         user = self.getCurrentUser()
+        if hasattr(annotations, 'read'):
+            annotations = annotations.read().decode('utf8')
+            annotations = ujson.loads(annotations)
         if not isinstance(annotations, list):
             annotations = [annotations]
         for entry in annotations:

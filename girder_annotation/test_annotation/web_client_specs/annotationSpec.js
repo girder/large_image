@@ -131,6 +131,79 @@ describe('Annotations', function () {
             expect(obj.annotationType).toBe('point');
             expect(obj.coordinates).toEqual([1, 2]);
         });
+
+        describe('heatmapColorTable', function () {
+            var values = [0.508, 0.806, 0.311, 0.402, 0.535, 0.661, 0.866, 0.31, 0.241, 0.63, 0.555, 0.067, 0.668, 0.164, 0.512, 0.647, 0.501, 0.637, 0.498, 0.658, 0.332, 0.431, 0.053, 0.531];
+            var tests = [{
+                name: 'no parameters',
+                record: {},
+                result: {
+                    min: 0,
+                    max: null,
+                    color: {'0': {r: 0, g: 0, b: 0, a: 0}, '1': {r: 1, g: 1, b: 0, a: 1}}
+                }
+            }, {
+                name: 'normalize range, one value',
+                record: {normalizeRange: true, colorRange: ['red'], rangeValues: [0.5]},
+                result: {
+                    min: 0,
+                    max: null,
+                    color: {'0': {r: 0, g: 0, b: 0, a: 0}, '1': {r: 1, g: 1, b: 0, a: 1}, '0.5': 'red'}
+                }
+            }, {
+                name: 'normalize range, several values',
+                record: {
+                    normalizeRange: true,
+                    colorRange: ['blue', 'red', 'green', 'white', 'black'],
+                    rangeValues: [-1, -0.2, 0.5, 1.1, 2]},
+                result: {
+                    min: 0,
+                    max: null,
+                    color: {'0': 'red', '0.5': 'green', '1': 'white'}
+                }
+            }, {
+                name: 'no normalize range',
+                record: {},
+                result: {
+                    min: 0,
+                    max: null,
+                    color: {'0': {r: 0, g: 0, b: 0, a: 0}, '1': {r: 1, g: 1, b: 0, a: 1}}
+                }
+            }, {
+                name: 'set range',
+                record: {colorRange: ['red', 'blue'], rangeValues: [0, 1]},
+                result: {
+                    min: 0,
+                    max: 1,
+                    color: {'0': 'red', '1': 'blue'}
+                }
+            }, {
+                name: 'set range, more values',
+                record: {colorRange: ['red', 'blue', 'green'], rangeValues: [0, 0.2, 0.8]},
+                result: {
+                    min: 0,
+                    max: 0.8,
+                    color: {'0': 'red', '0.25': 'blue', '1': 'green'}
+                }
+            }, {
+                name: 'set range, more range',
+                record: {colorRange: ['red', 'blue'], rangeValues: [0.8, 0.8]},
+                result: {
+                    min: 0.8,
+                    max: 0.8,
+                    color: {'0': {r: 0, g: 0, b: 0, a: 0}, '1': 'red'}
+                }
+            }];
+            tests.forEach(function (test) {
+                it(test.name, function () {
+                    var heatmapColorTable = largeImageAnnotation.annotations.convertFeatures.heatmapColorTable;
+                    var obj = heatmapColorTable(test.record, values);
+                    expect(obj.min).toBe(test.result.min);
+                    expect(obj.max).toBe(test.result.max);
+                    expect(obj.color).toEqual(test.result.color);
+                });
+            });
+        });
     });
 
     describe('style', function () {

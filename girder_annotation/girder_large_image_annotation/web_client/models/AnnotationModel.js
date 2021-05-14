@@ -4,6 +4,7 @@ import { restRequest } from '@girder/core/rest';
 
 import ElementCollection from '../collections/ElementCollection';
 import convert from '../annotations/convert';
+import { convertFeatures } from '../annotations/convertFeatures';
 
 import style from '../annotations/style.js';
 
@@ -346,6 +347,18 @@ export default AccessControlledModel.extend({
         const json = this.get('annotation') || {};
         const elements = json.elements || [];
         return convert(elements, {annotation: this.id});
+    },
+
+    /**
+     * Return annotations that cannot be represented as geojson as geojs
+     * features specifications.
+     *
+     * @param webglLayer: the parent feature layer.
+     */
+    non_geojson(layer) {
+        const json = this.get('annotation') || {};
+        const elements = json.elements || [];
+        return convertFeatures(elements, {annotation: this.id}, layer);
     },
 
     /**

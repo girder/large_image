@@ -152,6 +152,20 @@ const AnnotationListWidget = View.extend({
         var parent = new FileModel();
         parent.updateContents = (data) => {
             restRequest({
+                xhr: () => {
+                    var xhr = new window.XMLHttpRequest();
+                    xhr.upload.addEventListener('progress', (evt) => {
+                        if (evt.lengthComputable) {
+                            this._uploadWidget.currentFile.trigger('g:upload.progress', {
+                                startByte: 0,
+                                loaded: evt.loaded,
+                                total: evt.total,
+                                file: this._uploadWidget.files[this._uploadWidget.currentIndex]
+                            });
+                        }
+                    }, false);
+                    return xhr;
+                },
                 url: `annotation/item/${this.model.id}`,
                 method: 'POST',
                 data: data,
@@ -159,12 +173,7 @@ const AnnotationListWidget = View.extend({
                 processData: false
             }).done((resp) => {
                 parent.name = this.model.name();
-                parent.trigger('g:upload.progress', {
-                    startByte: 0,
-                    loaded: data.size,
-                    total: data.size,
-                    file: parent
-                });
+                this._uploadWidget.overallProgress += data.size;
                 this._uploadWidget.parent = this._makeUploadParent();
                 parent.trigger('g:upload.complete');
             }).fail((resp) => {

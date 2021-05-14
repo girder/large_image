@@ -57,8 +57,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
         /**
          * Render an annotation model on the image.  Currently, this is limited
-         * to annotation types that can be directly converted into geojson
-         * primatives.
+         * to annotation types that can be (1) directly converted into geojson
+         * primatives, OR (2) be represented as heatmaps.
          *
          * Internally, this generates a new feature layer for the annotation
          * that is referenced by the annotation id.  All "elements" contained
@@ -84,7 +84,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             if (present) {
                 _.each(this._annotations[annotation.id].features, (feature, idx) => {
                     if (idx || !annotation._centroids || feature.data().length !== annotation._centroids.data.length) {
-                        this.featureLayer.deleteFeature(feature);
+                        if (feature._ownLayer) {
+                            feature.layer().map().deleteLayer(feature.layer());
+                        } else {
+                            this.featureLayer.deleteFeature(feature);
+                        }
                     } else {
                         centroidFeature = feature;
                     }
@@ -189,6 +193,12 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             this._featureOpacity[annotation.id] = {};
             geo.createFileReader('jsonReader', {layer: this.featureLayer})
                 .read(geojson, (features) => {
+                    if (features.length === 0) {
+                        features = annotation.non_geojson(this.featureLayer);
+                        if (features.length) {
+                            this.featureLayer.map().draw();
+                        }
+                    }
                     _.each(features || [], (feature) => {
                         var events = geo.event.feature;
                         featureList.push(feature);
@@ -371,10 +381,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         /**
-         * Remove an annotation from the image.  This simply
-         * finds a layer with the given id and removes it because
-         * each annotation is contained in its own layer.  If
-         * the annotation is not drawn, this is a noop.
+         * Remove an annotation from the image.  If the annotation is not
+         * drawn, this does nothing.
          *
          * @param {AnnotationModel} annotation
          */
@@ -388,7 +396,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             );
             if (_.has(this._annotations, annotation.id)) {
                 _.each(this._annotations[annotation.id].features, (feature) => {
-                    this.featureLayer.deleteFeature(feature);
+                    if (feature._ownLayer) {
+                        feature.layer().map().deleteLayer(feature.layer());
+                    } else {
+                        this.featureLayer.deleteFeature(feature);
+                    }
                 });
                 delete this._annotations[annotation.id];
                 delete this._featureOpacity[annotation.id];
@@ -484,6 +496,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             if (this.featureLayer) {
                 this.featureLayer.opacity(opacity);
             }
+            Object.values(this._annotations).forEach((annot) => annot.features.forEach((feature) => {
+                if (feature._ownLayer) {
+                    feature.layer().opacity(opacity);
+                }
+            }));
             return this;
         },
 
