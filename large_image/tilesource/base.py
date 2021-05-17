@@ -2,18 +2,21 @@ import io
 import json
 import math
 import numpy
+import os
+import pathlib
 import PIL
 import PIL.Image
 import PIL.ImageColor
 import PIL.ImageDraw
+import tempfile
 import threading
 import xml.etree.ElementTree
 from collections import defaultdict
 
 from ..cache_util import getTileCache, strhash, methodcache
-from ..constants import SourcePriority, \
-    TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, \
-    TileOutputMimeTypes, TileOutputPILFormat, TileInputUnits
+from ..constants import (
+    SourcePriority, TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
+    TileOutputMimeTypes, TileOutputPILFormat, TileInputUnits, dtypeToGValue)
 from .. import config
 from .. import exceptions
 
@@ -68,7 +71,7 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
             if encoding == 'JPEG':
                 params['quality'] = jpegQuality
                 params['subsampling'] = jpegSubsampling
-            elif encoding == 'TIFF':
+            elif encoding in {'TIFF', 'TILED'}:
                 params['compression'] = {
                     'none': 'raw',
                     'lzw': 'tiff_lzw',
@@ -161,6 +164,152 @@ def _letterboxImage(image, width, height, fill):
     result = PIL.Image.new(image.mode, (width, height), color)
     result.paste(image, (int((width - image.width) / 2), int((height - image.height) / 2)))
     return result
+
+
+def _vipsCast(image, mustBe8Bit=False, originalScale=None):
+    """
+    Cast a vips image to a format we want.
+
+    :param image: a vips image
+    :param mustBe9Bit: if True, then always cast to unsigned 8-bit.
+    :param originalScale:
+    # ##DWM::
+    :returns: a vips image
+    """
+    import pyvips
+
+    formats = {
+        pyvips.BandFormat.CHAR: (pyvips.BandFormat.UCHAR, 2**7, 1),
+        pyvips.BandFormat.COMPLEX: (pyvips.BandFormat.USHORT, 0, 65535),
+        pyvips.BandFormat.DOUBLE: (pyvips.BandFormat.USHORT, 0, 65535),
+        pyvips.BandFormat.DPCOMPLEX: (pyvips.BandFormat.USHORT, 0, 65535),
+        pyvips.BandFormat.FLOAT: (pyvips.BandFormat.USHORT, 0, 65535),
+        pyvips.BandFormat.INT: (pyvips.BandFormat.USHORT, 2**31, 2**-16),
+        pyvips.BandFormat.USHORT: (pyvips.BandFormat.UCHAR, 0, 2**-8),
+        pyvips.BandFormat.SHORT: (pyvips.BandFormat.USHORT, 2**15, 1),
+        pyvips.BandFormat.UINT: (pyvips.BandFormat.USHORT, 0, 2**-16),
+    }
+    if image.format not in formats or (image.format == pyvips.BandFormat.USHORT and not mustBe8Bit):
+        return image
+    target, offset, multiplier = formats[image.format]
+    if image.format == pyvips.BandFormat.DOUBLE:
+        maxVal = image.max()
+        # These thresholds are higher than 256 and 65536 because bicubic and
+        # other interpolations can cause value spikes
+        if maxVal >= 2 and maxVal < 2**9:
+            multiplier = 256
+        elif maxVal >= 256 and maxVal < 2**17:
+            multiplier = 1
+    if mustBe8Bit and target != pyvips.BandFormat.UCHAR:
+        target = pyvips.BandFormat.UCHAR
+        multiplier /= 256
+    # logger.debug('Casting image from %r to %r', image.format, target)
+    image = ((image.cast(pyvips.BandFormat.DOUBLE) + offset) * multiplier).cast(target)
+    return image
+
+
+def _gdalParameters(defaultCompression=None, **kwargs):
+    """
+    Return an array of gdal translation parameters.
+
+    :param defaultCompression: if not specified, use this value.
+
+    Optional parameters that can be specified in kwargs:
+
+    :param tileSize: the horizontal and vertical tile size.
+    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
+        'zstd', or 'none'.
+    :param quality: a jpeg quality passed to gdal.  0 is small, 100 is high
+        quality.  90 or above is recommended.
+    :param level: compression level for zstd, 1-22 (default is 10).
+    :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
+        deflate.
+    :returns: a dictionary of parameters.
+    """
+    options = {
+        'tileSize': 256,
+        'compression': 'lzw',
+        'quality': 90,
+        'predictor': 'yes',
+    }
+    predictor = {
+        'none': 'NO',
+        'horizontal': 'STANDARD',
+        'float': 'FLOATING_POINT',
+        'yes': 'YES',
+    }
+    options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
+    cmdopt = ['-of', 'COG', '-co', 'BIGTIFF=IF_SAFER']
+    cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
+    cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
+    cmdopt += ['-co', 'QUALITY=%s' % options['quality']]
+    cmdopt += ['-co', 'PREDICTOR=%s' % predictor[options['predictor']]]
+    if 'level' in options:
+        cmdopt += ['-co', 'LEVEL=%s' % options['level']]
+    return cmdopt
+
+
+def _vipsParameters(forTiled=True, defaultCompression=None, **kwargs):
+    """
+    Return a dictionary of vips conversion parameters.
+
+    :param forTiled: True if this is for a tiled image.  False for an
+        associated image.
+    :param defaultCompression: if not specified, use this value.
+
+    Optional parameters that can be specified in kwargs:
+
+    :param tileSize: the horizontal and vertical tile size.
+    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
+        'zstd', or 'none'.
+    :param quality: a jpeg quality passed to vips.  0 is small, 100 is high
+        quality.  90 or above is recommended.
+    :param level: compression level for zstd, 1-22 (default is 10).
+    :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
+        deflate.
+    :returns: a dictionary of parameters.
+    """
+    if not forTiled:
+        convertParams = {
+            'compression': defaultCompression or 'jpeg',
+            'Q': 90,
+            'predictor': 'horizontal',
+            'tile': False,
+        }
+        if 'mime' in kwargs and kwargs.get('mime') != 'image/jpeg':
+            convertParams['compression'] = 'lzw'
+        return convertParams
+    convertParams = {
+        'tile': True,
+        'tile_width': 256,
+        'tile_height': 256,
+        'pyramid': True,
+        'bigtiff': True,
+        'compression': defaultCompression or 'jpeg',
+        'Q': 90,
+        'predictor': 'horizontal',
+    }
+    for vkey, kwkeys in {
+        'tile_width': {'tileSize'},
+        'tile_height': {'tileSize'},
+        'compression': {'compression', 'tiffCompression'},
+        'Q': {'quality', 'jpegQuality'},
+        'level': {'level'},
+        'predictor': {'predictor'},
+    }.items():
+        for kwkey in kwkeys:
+            if kwkey in kwargs and kwargs[kwkey] not in {None, ''}:
+                convertParams[vkey] = kwargs[kwkey]
+    if convertParams['compression'] == 'jp2k':
+        convertParams['compression'] = 'none'
+    if convertParams['compression'] == 'webp' and kwargs.get('quality') == 0:
+        convertParams['lossless'] = True
+        convertParams.pop('Q', None)
+    if convertParams['predictor'] == 'yes':
+        convertParams['predictor'] = 'horizontal'
+    if convertParams['compression'] == 'jpeg':
+        convertParams['rgbjpeg'] = True
+    return convertParams
 
 
 def etreeToDict(t):
@@ -485,7 +634,7 @@ class TileSource:
         :param jpegQuality: when serving jpegs, use this quality.
         :param jpegSubsampling: when serving jpegs, use this subsampling (0 is
             full chroma, 1 is half, 2 is quarter).
-        :param encoding: 'JPEG', 'PNG', or 'TIFF'.
+        :param encoding: 'JPEG', 'PNG', 'TIFF', or 'TILED'.
         :param edge: False to leave edge tiles whole, True or 'crop' to crop
             edge tiles, otherwise, an #rrggbb color to fill edges.
         :param tiffCompression: the compression format to use when encoding a
@@ -970,7 +1119,7 @@ class TileSource:
                              'ymin': ymin, 'ymax': ymax})
 
         # Use RGB for JPEG, RGBA for PNG
-        mode = 'RGBA' if kwargs.get('encoding') in ('PNG', 'TIFF') else 'RGB'
+        mode = 'RGBA' if kwargs.get('encoding') in {'PNG', 'TIFF', 'TILED'} else 'RGB'
 
         info = {
             'region': {
@@ -1543,7 +1692,7 @@ class TileSource:
         if encoding == 'JPEG':
             params['quality'] = self.jpegQuality
             params['subsampling'] = self.jpegSubsampling
-        elif encoding == 'TIFF':
+        elif encoding in {'TIFF', 'TILED'}:
             params['compression'] = self.tiffCompression
         tile.save(output, encoding, **params)
         return output.getvalue()
@@ -1856,19 +2005,11 @@ class TileSource:
         mode = None if TILE_FORMAT_NUMPY in format else iterInfo['mode']
         outWidth = iterInfo['output']['width']
         outHeight = iterInfo['output']['height']
+        tiled = TILE_FORMAT_IMAGE in format and kwargs.get('encoding') == 'TILED'
         image = None
         for tile in self._tileIterator(iterInfo):
             # Add each tile to the image
             subimage, _ = _imageToNumpy(tile['tile'])
-            if image is None:
-                try:
-                    image = numpy.zeros(
-                        (regionHeight, regionWidth, subimage.shape[2]),
-                        dtype=subimage.dtype)
-                except MemoryError:
-                    raise exceptions.TileSourceException(
-                        'Insufficient memory to get region of %d x %d pixels.' % (
-                            regionWidth, regionHeight))
             x0, y0 = tile['x'] - left, tile['y'] - top
             if x0 < 0:
                 subimage = subimage[:, -x0:]
@@ -1878,15 +2019,13 @@ class TileSource:
                 y0 = 0
             subimage = subimage[:min(subimage.shape[0], regionHeight - y0),
                                 :min(subimage.shape[1], regionWidth - x0)]
-            if subimage.shape[2] > image.shape[2]:
-                newimage = numpy.ones((image.shape[0], image.shape[1], subimage.shape[2]))
-                newimage[:, :, :image.shape[2]] = image
-                image = newimage
-            image[y0:y0 + subimage.shape[0], x0:x0 + subimage.shape[1],
-                  :subimage.shape[2]] = subimage
+            image = self._addRegionTileToImage(
+                image, subimage, x0, y0, regionWidth, regionHeight, tiled, tile, **kwargs)
         # Scale if we need to
         outWidth = int(math.floor(outWidth))
         outHeight = int(math.floor(outHeight))
+        if tiled:
+            return self._encodeTiledImage(image, outWidth, outHeight, iterInfo, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
             image = _imageToPIL(image, mode).resize(
                 (outWidth, outHeight),
@@ -1897,6 +2036,200 @@ class TileSource:
         if kwargs.get('fill') and maxWidth and maxHeight:
             image = _letterboxImage(_imageToPIL(image, mode), maxWidth, maxHeight, kwargs['fill'])
         return _encodeImage(image, format=format, **kwargs)
+
+    def _addRegionTileToImage(
+            self, image, subimage, x, y, width, height, tiled=False, tile=None, **kwargs):
+        """
+        Add a subtile to a larger image.
+
+        :param image: the output image record.  None for not created yet.
+        :param subimage: a numpy array with the sub-image to add.
+        :param x: the location of the upper left point of the sub-image within
+            the output image.
+        :param y: the location of the upper left point of the sub-image within
+            the output image.
+        :param width: the output image size.
+        :param height: the output image size.
+        :param tiled: true to generate a tiled output image.
+        :param tile: the original tile record with the current scale, etc.
+        :returns: the output image record.
+        """
+        if tiled:
+            return self._addRegionTileToTiled(image, subimage, x, y, width, height, tile, **kwargs)
+        if image is None:
+            try:
+                image = numpy.zeros(
+                    (height, width, subimage.shape[2]),
+                    dtype=subimage.dtype)
+            except MemoryError:
+                raise exceptions.TileSourceException(
+                    'Insufficient memory to get region of %d x %d pixels.' % (
+                        width, height))
+        if subimage.shape[2] > image.shape[2]:
+            newimage = numpy.ones((image.shape[0], image.shape[1], subimage.shape[2]))
+            newimage[:, :, :image.shape[2]] = image
+            image = newimage
+        image[y:y + subimage.shape[0], x:x + subimage.shape[1],
+              :subimage.shape[2]] = subimage
+        return image
+
+    def _vipsAddAlphaBand(self, vimg, *otherImages):
+        """
+        Add an alpha band to a vips image.  The alpha value is either 1, 255,
+        or 65535 depending on the max value in the image and any other images
+        passed for reference.
+
+        :param vimg: the image to modify.
+        :param otherImages: a list of other images to use for determining the
+            alpha value.
+        :returns: the original image with an alpha band.
+        """
+        maxValue = vimg.max()
+        for img in otherImages:
+            maxValue = max(maxValue, img.max())
+        alpha = 1
+        if maxValue >= 2 and maxValue < 2**9:
+            alpha = 255
+        elif maxValue >= 2**8 and maxValue < 2**17:
+            alpha = 65535
+        return vimg.bandjoin(alpha)
+
+    def _addRegionTileToTiled(self, image, subimage, x, y, width, height, tile=None, **kwargs):
+        """
+        Add a subtile to a vips image.
+
+        :param image: an object with information on the output.
+        :param subimage: a numpy array with the sub-image to add.
+        :param x: the location of the upper left point of the sub-image within
+            the output image.
+        :param y: the location of the upper left point of the sub-image within
+            the output image.
+        :param width: the output image size.
+        :param height: the output image size.
+        :param tile: the original tile record with the current scale, etc.
+        :returns: the output object.
+        """
+        import pyvips
+
+        if subimage.dtype.char not in dtypeToGValue:
+            subimage = subimage.astype('d')
+        vimgMem = pyvips.Image.new_from_memory(
+            numpy.ascontiguousarray(subimage).data,
+            subimage.shape[1], subimage.shape[0], subimage.shape[2],
+            dtypeToGValue[subimage.dtype.char])
+        vimg = pyvips.Image.new_temp_file('%s.v')
+        vimgMem.write(vimg)
+        if image is None:
+            image = {
+                'width': width,
+                'height': height,
+                'mm_x': tile.get('mm_x') if tile else None,
+                'mm_y': tile.get('mm_y') if tile else None,
+                'magnification': tile.get('magnification') if tile else None,
+                'channels': subimage.shape[2],
+                'strips': {},
+            }
+        if y not in image['strips']:
+            image['strips'][y] = vimg
+            if not x:
+                return image
+        if image['strips'][y].bands + 1 == vimg.bands:
+            image['strips'][y] = self._vipsAddAlphaBand(image['strips'][y], vimg)
+        elif vimg.bands + 1 == image['strips'][y].bands:
+            vimg = self._vipsAddAlphaBand(vimg, image['strips'][y])
+        image['strips'][y] = image['strips'][y].insert(vimg, x, 0, expand=True)
+        return image
+
+    def _encodeTiledImage(self, image, outWidth, outHeight, iterInfo, **kwargs):
+        """
+        Given an image record of a set of vips image strips, generate a tiled
+        tiff file at the specified output size.
+
+        :param image: a record with partial vips images and the current output
+            size.
+        :param outWidth: the output size after scaling and before any
+            letterboxing.
+        :param outHeight: the output size after scaling and before any
+            letterboxing.
+        :param iterInfo: information about the region based on the tile
+            iterator.
+
+        Additional parameters are available.
+
+        :param fill: a color to use in letterboxing.
+        :param maxWidth: the output size if letterboxing is applied.
+        :param maxHeight: the output size if letterboxing is applied.
+        :param compression: the internal compression format.  This can handle
+            a variety of options similar to the converter utility.
+        :returns: a pathlib.Path of the output file and the output mime type.
+        """
+        vimg = image['strips'][0]
+        for y in sorted(image['strips'].keys())[1:]:
+            if image['strips'][y].bands + 1 == vimg.bands:
+                image['strips'][y] = self._vipsAddAlphaBand(image['strips'][y], vimg)
+            elif vimg.bands + 1 == image['strips'][y].bands:
+                vimg = self._vipsAddAlphaBand(vimg, image['strips'][y])
+            vimg = vimg.insert(image['strips'][y], 0, y, expand=True)
+
+        if outWidth != image['width'] or outHeight != image['height']:
+            scale = outWidth / image['width']
+            vimg = vimg.resize(outWidth / image['width'], vscale=outHeight / image['height'])
+            image['width'] = outWidth
+            image['height'] = outHeight
+            image['mm_x'] = image['mm_x'] / scale if image['mm_x'] else image['mm_x']
+            image['mm_y'] = image['mm_y'] / scale if image['mm_y'] else image['mm_y']
+            image['magnification'] = (
+                image['magnification'] * scale
+                if image['magnification'] else image['magnification'])
+        return self._encodeTiledImageFromVips(vimg, iterInfo, image, **kwargs)
+
+    def _encodeTiledImageFromVips(self, vimg, iterInfo, image, **kwargs):
+        """
+        Save a vips image as a tiled tiff.
+
+        :param vimg: a vips image.
+        :param iterInfo: information about the region based on the tile
+            iterator.
+        :param image: a record with partial vips images and the current output
+            size.
+
+        Additional parameters are available.
+
+        :param compression: the internal compression format.  This can handle
+            a variety of options similar to the converter utility.
+        :returns: a pathlib.Path of the output file and the output mime type.
+        """
+        import pyvips
+
+        convertParams = _vipsParameters(defaultCompression='lzw', **kwargs)
+        vimg = _vipsCast(vimg, convertParams['compression'] in {'webp', 'jpeg'})
+        maxWidth = kwargs.get('output', {}).get('maxWidth')
+        maxHeight = kwargs.get('output', {}).get('maxHeight')
+        if (kwargs.get('fill') and str(kwargs.get('fill')).lower() != 'none' and
+                maxWidth and maxHeight and
+                (maxWidth > image['width'] or maxHeight > image['height'])):
+            color = PIL.ImageColor.getcolor(
+                kwargs.get('fill'), ['L', 'LA', 'RGB', 'RGBA'][vimg.bands - 1])
+            lbimage = pyvips.Image.black(maxWidth, maxHeight, bands=vimg.bands)
+            lbimage = lbimage.cast(vimg.format)
+            lbimage = lbimage.draw_rect(
+                [c * (257 if vimg.format == pyvips.BandFormat.USHORT else 1) for c in color],
+                0, 0, maxWidth, maxHeight, fill=True)
+            vimg = lbimage.insert(
+                vimg, (maxWidth - image['width']) // 2, (maxHeight - image['height']) // 2)
+        if image['mm_x'] and image['mm_y']:
+            vimg = vimg.copy(xres=1 / image['mm_x'], yres=1 / image['mm_y'])
+        fd, outputPath = tempfile.mkstemp('.tiff', 'tiledRegion_')
+        os.close(fd)
+        try:
+            vimg.write_to_file(outputPath, **convertParams)
+            return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
+        except Exception as exc:
+            try:
+                pathlib.Path(outputPath).unlink()
+            except Exception:
+                pass
+            raise exc
 
     def getRegionAtAnotherScale(self, sourceRegion, sourceScale=None,
                                 targetScale=None, targetUnits=None, **kwargs):
@@ -2167,8 +2500,8 @@ class TileSource:
                 with the non-overlapped area of each as 0, 1, 2, 3, 4, 5, 6, 7.
 
         :param encoding: if format includes TILE_FORMAT_IMAGE, a valid PIL
-            encoding (typically 'PNG', 'JPEG', or 'TIFF').  Must also be in the
-            TileOutputMimeTypes map.
+            encoding (typically 'PNG', 'JPEG', or 'TIFF') or 'TILED' (identical
+            to TIFF).  Must also be in the TileOutputMimeTypes map.
         :param jpegQuality: the quality to use when encoding a JPEG.
         :param jpegSubsampling: the subsampling level to use when encoding a
             JPEG.

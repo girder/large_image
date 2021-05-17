@@ -5,6 +5,7 @@
 ### Features
 - Allow setting the cache memory portion and maximum for tilesources (#601)
 - Add heatmap and griddata to the annotation schema (#589)
+- Regions can be output as tiled tiffs with scale or geospatial metadata (#594)
 
 ### Improvements
 - Cache histogram requests (#598)

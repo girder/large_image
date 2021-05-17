@@ -1,8 +1,10 @@
+import io
 import json
 import numpy
 import os
 import pytest
 import struct
+import tifftools
 
 from large_image import constants
 import large_image_source_tiff
@@ -337,34 +339,36 @@ def testThumbnails():
             source.getThumbnail(**entry[0])
 
 
+@pytest.mark.parametrize('badParams,errMessage', [
+    ({'encoding': 'invalid', 'width': 10}, 'Invalid encoding'),
+    ({'output': {'maxWidth': 'invalid'}}, 'ValueError'),
+    ({'output': {'maxWidth': -5}}, 'Invalid output width or height'),
+    ({'output': {'maxWidth': None, 'maxHeight': 'invalid'}}, 'ValueError'),
+    ({'output': {'maxWidth': None, 'maxHeight': -5}}, 'Invalid output width or height'),
+    ({'jpegQuality': 'invalid'}, 'ValueError'),
+    ({'jpegSubsampling': 'invalid'}, 'TypeError'),
+    ({'region': {'left': 'invalid'}}, 'TypeError'),
+    ({'region': {'right': 'invalid'}}, 'TypeError'),
+    ({'region': {'top': 'invalid'}}, 'TypeError'),
+    ({'region': {'bottom': 'invalid'}}, 'TypeError'),
+    ({'region': {'width': 'invalid'}}, 'TypeError'),
+    ({'region': {'height': 'invalid'}}, 'TypeError'),
+    ({'region': {'units': 'invalid'}}, 'Invalid units'),
+    ({'region': {'unitsWH': 'invalid'}}, 'Invalid units'),
+])
+def testRegionBadParameters(badParams, errMessage):
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image_source_tiff.open(imagePath)
+    with pytest.raises(Exception):
+        params = {'output': {'maxWidth': 400}}
+        nestedUpdate(params, badParams)
+        source.getRegion(**params)
+
+
 def testRegions():
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image_source_tiff.open(imagePath)
     tileMetadata = source.getMetadata()
-
-    # Test bad parameters
-    badParams = [
-        ({'encoding': 'invalid', 'width': 10}, 'Invalid encoding'),
-        ({'output': {'maxWidth': 'invalid'}}, 'ValueError'),
-        ({'output': {'maxWidth': -5}}, 'Invalid output width or height'),
-        ({'output': {'maxWidth': None, 'maxHeight': 'invalid'}}, 'ValueError'),
-        ({'output': {'maxWidth': None, 'maxHeight': -5}}, 'Invalid output width or height'),
-        ({'jpegQuality': 'invalid'}, 'ValueError'),
-        ({'jpegSubsampling': 'invalid'}, 'TypeError'),
-        ({'region': {'left': 'invalid'}}, 'TypeError'),
-        ({'region': {'right': 'invalid'}}, 'TypeError'),
-        ({'region': {'top': 'invalid'}}, 'TypeError'),
-        ({'region': {'bottom': 'invalid'}}, 'TypeError'),
-        ({'region': {'width': 'invalid'}}, 'TypeError'),
-        ({'region': {'height': 'invalid'}}, 'TypeError'),
-        ({'region': {'units': 'invalid'}}, 'Invalid units'),
-        ({'region': {'unitsWH': 'invalid'}}, 'Invalid units'),
-    ]
-    for entry in badParams:
-        with pytest.raises(Exception):
-            params = {'output': {'maxWidth': 400}}
-            nestedUpdate(params, entry[0])
-            source.getRegion(**params)
 
     # Get a small region for testing.  Our test file is sparse, so
     # initially get a region where there is full information.
@@ -451,6 +455,53 @@ def testRegions():
     assert width == 500
     assert height == 500
     assert image != nextimage
+
+
+def testRegionTiledOutputIsTiled():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image_source_tiff.open(imagePath)
+
+    # TIFF isn't tiled and has only one layer
+    params = {'output': {'maxWidth': 500, 'maxHeight': 500},
+              'encoding': 'TIFF'}
+    image, mimeType = source.getRegion(**params)
+    info = tifftools.read_tiff(io.BytesIO(image))
+    assert len(info['ifds']) == 1
+    assert tifftools.Tag.StripOffsets.value in info['ifds'][0]['tags']
+    assert tifftools.Tag.TileOffsets.value not in info['ifds'][0]['tags']
+
+    # TILED is tiled and has multiple layers
+    params = {'output': {'maxWidth': 500, 'maxHeight': 500},
+              'encoding': 'TILED'}
+    image, mimeType = source.getRegion(**params)
+    info = tifftools.read_tiff(image)
+    assert len(info['ifds']) == 2
+    assert tifftools.Tag.StripOffsets.value not in info['ifds'][0]['tags']
+    assert tifftools.Tag.TileOffsets.value in info['ifds'][0]['tags']
+    os.unlink(image)
+
+    # Bigger outputs should have more layers
+    params = {'output': {'maxWidth': 3000, 'maxHeight': 3000},
+              'encoding': 'TILED'}
+    image, mimeType = source.getRegion(**params)
+    info = tifftools.read_tiff(image)
+    assert len(info['ifds']) == 5
+    assert tifftools.Tag.StripOffsets.value not in info['ifds'][0]['tags']
+    assert tifftools.Tag.TileOffsets.value in info['ifds'][0]['tags']
+    os.unlink(image)
+
+
+def testRegionTiledOutputLetterbox():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image_source_tiff.open(imagePath)
+    params = {'output': {'maxWidth': 500, 'maxHeight': 500},
+              'fill': 'pink',
+              'encoding': 'TILED'}
+    image, mimeType = source.getRegion(**params)
+    result = large_image_source_tiff.open(str(image))
+    assert result.sizeX == 500
+    assert result.sizeY == 500
+    os.unlink(image)
 
 
 def testPixel():

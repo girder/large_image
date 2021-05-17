@@ -42,11 +42,12 @@ TileOutputMimeTypes = {
     'JPEG': 'image/jpeg',
     'PNG': 'image/png',
     'TIFF': 'image/tiff',
+    # TILED indicates the region output should be generated as a tiled TIFF
+    'TILED': 'image/tiff',
 }
 TileOutputPILFormat = {
     'JFIF': 'JPEG'
 }
-
 
 TileInputUnits = {
     None: 'base_pixels',
@@ -63,4 +64,18 @@ TileInputUnits = {
     'millimeter': 'mm',
     'millimeters': 'mm',
     'fraction': 'fraction',
+}
+
+# numpy dtype to pyvips GValue
+dtypeToGValue = {
+    'b': 'char',
+    'B': 'uchar',
+    'd': 'double',
+    'D': 'dpcomplex',
+    'f': 'float',
+    'F': 'complex',
+    'h': 'short',
+    'H': 'ushort',
+    'i': 'int',
+    'I': 'uint',
 }

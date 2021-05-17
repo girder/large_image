@@ -4,7 +4,7 @@ from girder.models.folder import Folder
 from girder.models.upload import Upload
 
 from test.datastore import datastore
-from test.utilities import JFIFHeader, JPEGHeader, PNGHeader  # noqa
+from test.utilities import JFIFHeader, JPEGHeader, PNGHeader, TIFFHeader, BigTIFFHeader  # noqa
 
 
 def namedFolder(user, folderName='Public'):
