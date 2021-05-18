@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.6.0
 
 ### Features
 - Allow setting the cache memory portion and maximum for tilesources (#601)
