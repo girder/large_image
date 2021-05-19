@@ -332,7 +332,7 @@ class TilesItemResource(ItemResource):
         except TileGeneralException as e:
             raise RestException(e.args[0], code=400)
 
-    def _setContentDisposition(self, item, contentDisposition, mime, subname):
+    def _setContentDisposition(self, item, contentDisposition, mime, subname, fullFilename=None):
         """
         If requested, set the content disposition and a suggested file name.
 
@@ -342,15 +342,20 @@ class TilesItemResource(ItemResource):
         :param mime: the mimetype of the output image.  Used for the filename
             suffix.
         :param subname: a subname to append to the item name.
+        :param fullFilename: if specified, use this instead of the item name
+            and the subname.
         """
         if (not item or not item.get('name') or
                 mime not in MimeTypeExtensions or
                 contentDisposition not in ('inline', 'attachment')):
             return
-        filename = os.path.splitext(item['name'])[0]
-        if subname:
-            filename += '-' + subname
-        filename += '.' + MimeTypeExtensions[mime]
+        if fullFilename:
+            filename = fullFilename
+        else:
+            filename = os.path.splitext(item['name'])[0]
+            if subname:
+                filename += '-' + subname
+            filename += '.' + MimeTypeExtensions[mime]
         if not isinstance(filename, str):
             filename = filename.decode('utf8', 'ignore')
         safeFilename = filename.encode('ascii', 'ignore').replace(b'"', b'')
@@ -663,6 +668,8 @@ class TilesItemResource(ItemResource):
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .param('contentDispositionFilename', 'Specify the filename used in '
+               'the Content-Disposition response header.', required=False)
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
@@ -682,6 +689,7 @@ class TilesItemResource(ItemResource):
             ('encoding', str),
             ('style', str),
             ('contentDisposition', str),
+            ('contentDispositionFileName', str)
         ])
         _handleETag('getTilesThumbnail', item, params)
         try:
@@ -694,7 +702,8 @@ class TilesItemResource(ItemResource):
             return result
         thumbData, thumbMime = result
         self._setContentDisposition(
-            item, params.get('contentDisposition'), thumbMime, 'thumbnail')
+            item, params.get('contentDisposition'), thumbMime, 'thumbnail',
+            params.get('contentDispositionFilename'))
         setResponseHeader('Content-Type', thumbMime)
         setRawResponse()
         return thumbData
@@ -781,6 +790,8 @@ class TilesItemResource(ItemResource):
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .param('contentDispositionFilename', 'Specify the filename used in '
+               'the Content-Disposition response header.', required=False)
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
@@ -814,6 +825,7 @@ class TilesItemResource(ItemResource):
             ('style', str),
             ('resample', 'boolOrInt'),
             ('contentDisposition', str),
+            ('contentDispositionFileName', str)
         ])
         _handleETag('getTilesRegion', item, params)
         setResponseTimeLimit(86400)
@@ -825,7 +837,8 @@ class TilesItemResource(ItemResource):
         except ValueError as e:
             raise RestException('Value Error: %s' % e.args[0])
         self._setContentDisposition(
-            item, params.get('contentDisposition'), regionMime, 'region')
+            item, params.get('contentDisposition'), regionMime, 'region',
+            params.get('contentDispositionFilename'))
         setResponseHeader('Content-Type', regionMime)
         if isinstance(regionData, pathlib.Path):
             BUF_SIZE = 65536
@@ -994,6 +1007,8 @@ class TilesItemResource(ItemResource):
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
+        .param('contentDispositionFilename', 'Specify the filename used in '
+               'the Content-Disposition response header.', required=False)
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
@@ -1013,6 +1028,7 @@ class TilesItemResource(ItemResource):
             ('encoding', str),
             ('style', str),
             ('contentDisposition', str),
+            ('contentDispositionFileName', str)
         ])
         _handleETag('getAssociatedImage', item, image, params)
         try:
@@ -1023,7 +1039,8 @@ class TilesItemResource(ItemResource):
             return result
         imageData, imageMime = result
         self._setContentDisposition(
-            item, params.get('contentDisposition'), imageMime, image)
+            item, params.get('contentDisposition'), imageMime, image,
+            params.get('contentDispositionFilename'))
         setResponseHeader('Content-Type', imageMime)
         setRawResponse()
         return imageData
