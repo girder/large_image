@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- Allow specifying content disposition filenames in Girder RESET endpoints (#604)
+
 ## Version 1.6.0
 
 ### Features

@@ -702,6 +702,23 @@ def testContentDisposition(server, admin, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testContentDispositionFilename(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample_image.ptif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+
+    params = {'encoding': 'PNG', 'width': 200}
+    path = '/item/%s/tiles/thumbnail' % itemId
+    params['contentDisposition'] = 'attachment'
+    params['contentDispositionFilename'] = 'sample.jpg'
+    resp = server.request(path=path, user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+    assert resp.headers['Content-Disposition'].startswith('attachment')
+    assert resp.headers['Content-Disposition'].endswith('.jpg')
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testRegions(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
         'sample_image.ptif', admin, fsAssetstore)
