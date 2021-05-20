@@ -196,7 +196,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 continue
             try:
                 value = getattr(self._nd2.parser._raw_metadata, key, None)
-            except AttributeError:
+            except (AttributeError, TypeError):
                 continue
             if isinstance(value, (types.GeneratorType, numpy.ndarray, array.array, range)):
                 value = list(value)
@@ -259,7 +259,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 frame['Index' + (axis.upper() if axis != 'v' else 'XY')] = (
                     idx // basis) % sizes[axis]
                 basis *= sizes.get(axis, 1)
-            if 'z_coordinates' in self._metadata:
+            if self._metadata.get('z_coordinates'):
                 frame['PositionZ'] = self._metadata['z_coordinates'][ref.get('z', 0)]
             frames.append(frame)
             if self._framecount and len(frames) == self._framecount:
