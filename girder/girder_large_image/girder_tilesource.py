@@ -37,7 +37,7 @@ class GirderTileSource(tilesource.FileTileSource):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        return '%s,%s,%s,%s,%s,%s,%s,%s' % (
+        return '%s,%s,%s,%s,%s,%s,%s,__STYLESTART__,%s,__STYLEEND__' % (
             args[0]['largeImage']['fileId'],
             args[0]['updated'],
             kwargs.get('encoding', 'JPEG'),
@@ -48,7 +48,9 @@ class GirderTileSource(tilesource.FileTileSource):
             kwargs.get('style', None))
 
     def getState(self):
-        return '%s,%s,%s,%s,%s,%s,%s,%s' % (
+        if hasattr(self, '_classkey'):
+            return self._classkey
+        return '%s,%s,%s,%s,%s,%s,%s,__STYLESTART__,%s,__STYLEEND__' % (
             self.item['largeImage']['fileId'],
             self.item['updated'],
             self.encoding,
