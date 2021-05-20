@@ -77,6 +77,8 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
                     'lzw': 'tiff_lzw',
                     'deflate': 'tiff_adobe_deflate',
                 }.get(tiffCompression, tiffCompression)
+            elif encoding == 'PNG':
+                params['compress_level'] = 2
             image.save(output, encoding, **params)
             imageData = output.getvalue()
     return imageData, imageFormatOrMimeType
@@ -1534,7 +1536,7 @@ class TileSource:
                 value = 255
         return float(value)
 
-    def _applyStyle(self, image, style, x, y, z, frame=None):
+    def _applyStyle(self, image, style, x, y, z, frame=None):  # noqa
         """
         Apply a style to a numpy image.
 
@@ -1608,7 +1610,13 @@ class TileSource:
             if not clamp:
                 keep = keep & (band >= 0) & (band <= 1)
             for channel in range(4):
-                clrs = numpy.interp(band, palettebase, palette[:, channel])
+                if numpy.all(palette[:, channel] == palette[0, channel]):
+                    if ((palette[0, channel] == 0 and composite != 'multiply') or
+                            (palette[0, channel] == 255 and composite == 'multiply')):
+                        continue
+                    clrs = numpy.full(band.shape, palette[0, channel], dtype=band.dtype)
+                else:
+                    clrs = numpy.interp(band, palettebase, palette[:, channel])
                 if composite == 'multiply':
                     output[:, :, channel] = numpy.multiply(
                         output[:, :, channel], numpy.where(keep, clrs / 255, 1))
@@ -1619,8 +1627,8 @@ class TileSource:
 
     def _outputTileNumpyStyle(self, tile, applyStyle, x, y, z, frame=None):
         """
-        Convert a tile to a NUMPY array.  Optionally apply the style to a tile.
-        Always returns a NUMPY tile.
+        Convert a tile to a numpy array.  Optionally apply the style to a tile.
+        Always returns a numpy tile.
 
         :param tile: the tile to convert.
         :param applyStyle: if True and there is a style, apply it.
@@ -1656,7 +1664,7 @@ class TileSource:
         :param y: tile y value.  Used for cropping or edge adjustment.
         :param z: tile z (level) value.  Used for cropping or edge adjustment.
         :param pilImageAllowed: True if a PIL image may be returned.
-        :param numpyAllowed: True if a NUMPY image may be returned.  'always'
+        :param numpyAllowed: True if a numpy image may be returned.  'always'
             to return a numpy array.
         :param applyStyle: if True and there is a style, apply it.
         :returns: either a numpy array, a PIL image, or a memory object with an
