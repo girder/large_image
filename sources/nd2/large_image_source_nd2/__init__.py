@@ -305,13 +305,20 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x1 = min((x + 1) * step * self.tileWidth, self.sizeX)
         y0 = y * step * self.tileHeight
         y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
-        with self._tileLock:
-            if frame in self._recentFrames:
+        if getattr(self, 'style', None) and not getattr(self, '_skipStyle', False):
+            with self._tileLock:
+                if 0 not in self._recentFrames:
+                    self._recentFrames[0] = self._nd2[0]
+                tileframe = self._recentFrames[0]
+                tile = tileframe[0:1, 0:1].copy()
+            tile = numpy.zeros(
+                tuple([self.tileHeight, self.tileWidth] + list(tile.shape[2:])), dtype=tile.dtype)
+        else:
+            with self._tileLock:
+                if frame not in self._recentFrames:
+                    self._recentFrames[frame] = self._nd2[frame]
                 tileframe = self._recentFrames[frame]
-            else:
-                tileframe = self._nd2[frame]
-                self._recentFrames[frame] = tileframe
-            tile = tileframe[y0:y1:step, x0:x1:step].copy()
+                tile = tileframe[y0:y1:step, x0:x1:step].copy()
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
