@@ -173,7 +173,6 @@ def _vipsCast(image, mustBe8Bit=False, originalScale=None):
     :param image: a vips image
     :param mustBe9Bit: if True, then always cast to unsigned 8-bit.
     :param originalScale:
-    # ##DWM::
     :returns: a vips image
     """
     import pyvips
@@ -716,10 +715,13 @@ class TileSource:
         return strhash(
             kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
-            kwargs.get('edge', False), kwargs.get('style', None))
+            kwargs.get('edge', False),
+            '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
 
     def getState(self):
-        return '%s,%s,%s,%s,%s,%s' % (
+        if hasattr(self, '_classkey'):
+            return self._classkey
+        return '%s,%s,%s,%s,%s,__STYLESTART__,%s,__STYLEEND__' % (
             self.encoding,
             self.jpegQuality,
             self.jpegSubsampling,
@@ -1443,6 +1445,20 @@ class TileSource:
                     entry['hist'] = entry['hist'].astype(float) / entry['samples']
         return results
 
+    def _unstyledClassKey(self):
+        """
+        Create a class key that doesn't use style.  If already created, just
+        return the created value.
+        """
+        if not hasattr(self, '_classkey_unstyled'):
+            key = self._classkey
+            if '__STYLEEND__' in key:
+                parts = key.split('__STYLEEND__', 1)
+                key = key.split('__STYLESTART__', 1)[0] + parts[1]
+            key += '__unstyled'
+            self._classkey_unstyled = key
+        return self._classkey_unstyled
+
     def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, **kwargs):
         """
         Scan the image at a lower resolution to find the minimum and maximum
@@ -1455,7 +1471,7 @@ class TileSource:
         self._skipStyle = True
         # Divert the tile cache while querying unstyled tiles
         classkey = self._classkey
-        self._classkey = self._classkey + '__unstyled'
+        self._classkey = self._unstyledClassKey()
         try:
             self._bandRanges[frame] = self.histogram(
                 dtype=dtype,
@@ -1547,7 +1563,7 @@ class TileSource:
                 self._skipStyle = True
                 # Divert the tile cache while querying unstyled tiles
                 classkey = self._classkey
-                self._classkey = self._classkey + '__unstyled'
+                self._classkey = self._unstyledClassKey()
                 try:
                     image = self.getTile(x, y, z, frame=frame, numpyAllowed=True)
                     image = image[:mainImage.shape[0], :mainImage.shape[1], :mainImage.shape[2]]
@@ -2664,10 +2680,13 @@ class FileTileSource(TileSource):
         return strhash(
             args[0], kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
-            kwargs.get('edge', False), kwargs.get('style', None))
+            kwargs.get('edge', False),
+            '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
 
     def getState(self):
-        return '%s,%s,%s,%s,%s,%s,%s' % (
+        if hasattr(self, '_classkey'):
+            return self._classkey
+        return '%s,%s,%s,%s,%s,%s,__STYLESTART__,%s,__STYLE_END__' % (
             self._getLargeImagePath(),
             self.encoding,
             self.jpegQuality,
