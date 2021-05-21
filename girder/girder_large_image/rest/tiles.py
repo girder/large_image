@@ -88,8 +88,8 @@ def _handleETag(key, item, *args, **kwargs):
     conditions = [str(x) for x in cherrypy.request.headers.elements('If-None-Match') or []]
     if conditions == ['*'] or etag in conditions:
         raise cherrypy.HTTPRedirect([], 304)
-    # Explicitly set a max-ago to recheck the cahe after a while
-    setResponseHeader('Cache-control', 'max-age=600')
+    # Explicitly set a max-age to recheck the cahe after a while
+    setResponseHeader('Cache-control', 'max-age=3600')
 
 
 class TilesItemResource(ItemResource):
