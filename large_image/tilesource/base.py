@@ -1616,7 +1616,10 @@ class TileSource:
                         continue
                     clrs = numpy.full(band.shape, palette[0, channel], dtype=band.dtype)
                 else:
-                    clrs = numpy.interp(band, palettebase, palette[:, channel])
+                    # Don't recompute if the palette is repeated two channels
+                    # in a row.
+                    if not channel or numpy.any(palette[:, channel] != palette[:, channel - 1]):
+                        clrs = numpy.interp(band, palettebase, palette[:, channel])
                 if composite == 'multiply':
                     output[:, :, channel] = numpy.multiply(
                         output[:, :, channel], numpy.where(keep, clrs / 255, 1))
