@@ -317,7 +317,7 @@ class ImageItem(Item):
             self, item, imageFunc, checkAndCreate, keydict, pickleCache=False, **kwargs):
         if 'fill' in keydict and (keydict['fill']).lower() == 'none':
             del keydict['fill']
-        keydict = {k: v for k, v in keydict.items() if v is not None}
+        keydict = {k: v for k, v in keydict.items() if v is not None and not k.startswith('_')}
         key = json.dumps(keydict, sort_keys=True, separators=(',', ':'))
         existing = File().findOne({
             'attachedToType': 'item',
