@@ -6,6 +6,9 @@ import View from '@girder/core/views/View';
 var ImageViewerWidget = View.extend({
     initialize: function (settings) {
         this.itemId = settings.itemId;
+        // optional query parameters, such as {encoding: 'PNG'}, may be
+        // undefined or null
+        this.tileQueryDefaults = settings.tileQueryDefaults;
 
         return restRequest({
             type: 'GET',
@@ -31,6 +34,9 @@ var ImageViewerWidget = View.extend({
      * @param {object} [query]: optional query parameters to add to the url.
      */
     _getTileUrl: function (level, x, y, query) {
+        if (this.tileQueryDefaults) {
+            query = $.extend({}, this.tileQueryDefaults, query || {});
+        }
         var url = getApiRoot() + '/item/' + this.itemId + '/tiles/zxy/' +
             level + '/' + x + '/' + y;
         if (query) {
