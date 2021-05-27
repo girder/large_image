@@ -5,8 +5,12 @@
 ### Improvements
 - Allow specifying content disposition filenames in Girder RESET endpoints (#604)
 - Improve caching of unstyled tiles when compositing styled types (#605)
-- Speed up compositing some styled tiles (#606)
+- Speed up compositing some styled tiles (#606, #609)
 - Handle some nd2 files with missing metadata (#608)
+- Allow setting default tile query parameters in the Girder client (#611)
+
+### Changes
+- Don't use underscore parameters in image caching keys (#610)
 
 ## Version 1.6.0
 
