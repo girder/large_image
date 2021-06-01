@@ -1,9 +1,9 @@
 # Change Log
 
-## Unreleased
+## Version 1.6.1
 
 ### Improvements
-- Allow specifying content disposition filenames in Girder RESET endpoints (#604)
+- Allow specifying content disposition filenames in Girder REST endpoints (#604)
 - Improve caching of unstyled tiles when compositing styled types (#605)
 - Speed up compositing some styled tiles (#606, #609)
 - Handle some nd2 files with missing metadata (#608)
