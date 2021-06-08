@@ -88,7 +88,7 @@ def _handleETag(key, item, *args, **kwargs):
     conditions = [str(x) for x in cherrypy.request.headers.elements('If-None-Match') or []]
     if conditions == ['*'] or etag in conditions:
         raise cherrypy.HTTPRedirect([], 304)
-    # Explicitly set a max-age to recheck the cahe after a while
+    # Explicitly set a max-age to recheck the cache after a while
     setResponseHeader('Cache-control', 'max-age=3600')
 
 
@@ -448,7 +448,7 @@ class TilesItemResource(ItemResource):
         .param y: the Y coordinate of the tile (0 is the top).
         :param imageArgs: additional arguments to use when fetching image data.
         :param mayRedirect: if True or one of 'any', 'encoding', or 'exact',
-            allow return a response whcih may be a redirect.
+            allow return a response which may be a redirect.
         :return: a function that returns the raw image data.
         """
         try:

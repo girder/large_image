@@ -138,7 +138,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 scale = int(round(svsAvailableLevels[svslevel]['width'] / levelW))
             # If there are no tiles at a particular level, we have to read a
             # larger area of a higher resolution level.  If such an area would
-            # be excessively large, we could have memroy issues, so raise an
+            # be excessively large, we could have memory issues, so raise an
             # error.
             if (self.tileWidth * scale > maxSize or
                     self.tileHeight * scale > maxSize):
@@ -273,7 +273,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         svslevel = self._svslevels[z]
         # When we read a region from the SVS, we have to ask for it in the
         # SVS level 0 coordinate system.  Our x and y is in tile space at the
-        # specifed z level, so the offset in SVS level 0 coordinates has to be
+        # specified z level, so the offset in SVS level 0 coordinates has to be
         # scaled by the tile size and by the z level.
         scale = 2 ** (self.levels - 1 - z)
         offsetx = x * self.tileWidth * scale

@@ -479,7 +479,7 @@ class ImageItem(Item):
         Return an associated image.
 
         :param item: the item with the tile source.
-        :param imageKey: the key of the associated image to retreive.
+        :param imageKey: the key of the associated image to retrieve.
         :param kwargs: optional arguments.  Some options are width, height,
             encoding, jpegQuality, jpegSubsampling, and tiffCompression.
         :returns: imageData, imageMime: the image data and the mime type, or

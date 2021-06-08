@@ -33,7 +33,7 @@ All shapes have the following properties.  If a property is not listed, it is no
     "id": "0123456789abcdef01234567", # String, 24 lowercase hexadecimal digits.  Optional.
     "label": {                        # Object.  Optional
       "value": "This is a label",     # String.  Optional
-      "visability": "hidden",         # String.  One of "always", "hidden", "onhover".  Optional
+      "visibility": "hidden",         # String.  One of "always", "hidden", "onhover".  Optional
       "fontSize": 3.4,                # Number.  Optional
       "color": "#0000FF"              # String.  See note about colors.  Optional
     },
@@ -254,7 +254,7 @@ A sample that shows off a valid annotation:
     "type": "point",
     "label": {
       "value": "This is a label",
-      "visability": "hidden",
+      "visibility": "hidden",
       "fontSize": 3.4
     },
     "lineColor": "#000000",

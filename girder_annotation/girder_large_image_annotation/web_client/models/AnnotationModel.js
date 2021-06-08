@@ -11,7 +11,7 @@ import style from '../annotations/style.js';
 /**
  * Define a backbone model representing an annotation.
  * An annotation contains zero or more "elements" or
- * geometric primatives that are represented in the
+ * geometric primitives that are represented in the
  * embedded "elements" attribute.  This attribute is
  * an "ElementCollection" that triggers events when
  * any of the "ElementModel"'s contained within change.
@@ -54,7 +54,7 @@ export default AccessControlledModel.extend({
     },
 
     /**
-     * Fetch the centroids and unpack the bianry data.
+     * Fetch the centroids and unpack the binary data.
      */
     fetchCentroids: function () {
         var url = (this.altUrl || this.resourceName) + '/' + this.get('_id');

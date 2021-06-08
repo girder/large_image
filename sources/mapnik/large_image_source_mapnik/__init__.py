@@ -74,7 +74,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             'EPSG:<epsg number>'.  If a string and case-insensitively prefixed
             with 'proj4:', that prefix is removed.  For instance,
             'proj4:EPSG:3857', 'PROJ4:+init=epsg:3857', and '+init=epsg:3857',
-            and 'EPSG:3857' are all equivilant.
+            and 'EPSG:3857' are all equivalent.
         :param style: if None, use the default style for the file.  Otherwise,
             this is a string with a json-encoded dictionary.  The style is
             ignored if it does not contain 'band' or 'bands'.  The style can
@@ -359,7 +359,8 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 # specified longitude and once offset to ensure that we cover
                 # [-180, 180].  This is done by altering the projection's
                 # prime meridian by 360 degrees.  If none of the dataset is in
-                # the range of [-180, 180], this does't apply the shift either.
+                # the range of [-180, 180], this doesn't apply the shift
+                # either.
                 self._repeatLongitude = None
                 if self._proj4Proj(layerSrs).crs.is_geographic:
                     bounds = self.getBounds()

@@ -446,7 +446,7 @@ class TestLargeImageAnnotationElement:
         publicFolder = utilities.namedFolder(admin, 'Public')
         item = Item().createItem('sample', admin, publicFolder)
         largeSample = makeLargeSampleAnnotation()
-        # Use a copy of largeSample so we don't just have a referecne to it
+        # Use a copy of largeSample so we don't just have a reference to it
         annot = Annotation().createAnnotation(item, admin, largeSample.copy())
         # Clear existing element data, the get elements
         annot.pop('elements', None)
@@ -496,7 +496,7 @@ class TestLargeImageAnnotationElement:
         publicFolder = utilities.namedFolder(admin, 'Public')
         item = Item().createItem('sample', admin, publicFolder)
         largeSample = makeLargeSampleAnnotation()
-        # Use a copy of largeSample so we don't just have a referecne to it
+        # Use a copy of largeSample so we don't just have a reference to it
         annot = Annotation().createAnnotation(item, admin, largeSample.copy())
         # Clear existing element data, the get elements
         annot.pop('elements', None)

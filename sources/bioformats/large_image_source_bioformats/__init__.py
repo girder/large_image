@@ -408,7 +408,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         Return a dictionary of metadata containing levels, sizeX, sizeY,
         tileWidth, tileHeight, magnification, mm_x, mm_y, and frames.
 
-        :returns: metadata dictonary.
+        :returns: metadata dictionary.
 
         """
         result = super().getMetadata()
