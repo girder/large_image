@@ -312,7 +312,7 @@ class Annotationelement(Model):
 
     def removeOldElements(self, annotation, oldversion=None):
         """
-        Remove all elements related to the specified annoation.
+        Remove all elements related to the specified annotation.
 
         :param annotation: the annotation to remove elements from.
         :param oldversion: if present, remove versions up to this number.  If

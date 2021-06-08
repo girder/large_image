@@ -70,7 +70,7 @@ Limitations and Future Development
 
 There are some limitations that may be improved with additional development.
 
-- For some multi-image files, such as OME Tiff files that cannot be read by an existing large_image tile source, the specific channel, z-value, or time step is not converted to readily useable metadata.
+- For some multi-image files, such as OME Tiff files that cannot be read by an existing large_image tile source, the specific channel, z-value, or time step is not converted to readily usable metadata.
 
 - Whether the original file is stored in a lossy or lossless format is not always determined.  If unknown, the output defaults to lossless, which may be needlessly large.
 

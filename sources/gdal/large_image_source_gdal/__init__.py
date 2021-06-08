@@ -99,7 +99,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'EPSG:<epsg number>'.  If a string and case-insensitively prefixed
             with 'proj4:', that prefix is removed.  For instance,
             'proj4:EPSG:3857', 'PROJ4:+init=epsg:3857', and '+init=epsg:3857',
-            and 'EPSG:3857' are all equivilant.
+            and 'EPSG:3857' are all equivalent.
         :param unitsPerPixel: The size of a pixel at the 0 tile size.  Ignored
             if the projection is None.  For projections, None uses the default,
             which is the distance between (-180,0) and (180,0) in EPSG:4326

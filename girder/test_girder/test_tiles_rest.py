@@ -148,7 +148,7 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None, c
         specified, fileId is ignored (pass as part of the data dictionary if
         it is required).
     :returns: metadata from the tile if the conversion was successful,
-              False if it converted but didn't result in useable tiles, and
+              False if it converted but didn't result in usable tiles, and
               None if it failed.
     """
     headers = {
@@ -426,7 +426,7 @@ def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):
     resp = boundServer.request(path='/item/%s/tiles' % itemId, method='DELETE', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json['deleted'] is True
-    # We should no longer have tile informaton
+    # We should no longer have tile information
     resp = boundServer.request(path='/item/%s/tiles' % itemId, user=admin)
     assert utilities.respStatus(resp) == 400
     assert 'No large image file' in resp.json['message']

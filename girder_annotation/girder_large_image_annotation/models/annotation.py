@@ -500,7 +500,7 @@ class Annotation(AccessControlledModel):
     """
     This model is used to represent an annotation that is associated with an
     item.  The annotation can contain any number of annotationelements, which
-    are included because they reference this annoation as a parent.  The
+    are included because they reference this annotation as a parent.  The
     annotation acts like these are a native part of it, though they are each
     stored as independent models to (eventually) permit faster spatial
     searching.
@@ -896,7 +896,7 @@ class Annotation(AccessControlledModel):
         """
         # This function exceeds the recommended complexity, but since it is
         # needs to be relatively fast, breaking it into smaller functions is
-        # probably undesireable.
+        # probably undesirable.
         if type(a) != type(b):
             return False
         if isinstance(a, dict):

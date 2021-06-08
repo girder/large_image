@@ -813,7 +813,7 @@ class TileSource:
         Given a set of arguments that can include left, right, top, bottom,
         width, height, and units, generate actual pixel values for left, top,
         right, and bottom.  If left, top, right, or bottom are negative they
-        are interpretted as an offset from the right or bottom edge of the
+        are interpreted as an offset from the right or bottom edge of the
         image.
 
         :param metadata: the metadata associated with this source.
@@ -1206,7 +1206,7 @@ class TileSource:
 
         If a region that includes partial tiles is requested, those tiles are
         cropped appropriately.  Most images will have tiles that get cropped
-        along the right and bottom egdes in any case.
+        along the right and bottom edges in any case.
 
         :param iterInfo: tile iterator information.  See _tileIteratorInfo.
         :yields: an iterator that returns a dictionary as listed above.
