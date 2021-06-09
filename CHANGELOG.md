@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Improvements
-- Better reporting of memcached cache
+- Better reporting of memcached cache (#613)
 
 ## Version 1.6.1
 
