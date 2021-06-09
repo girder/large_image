@@ -229,6 +229,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     :param kwargs: addition arguments that get passed to _vipsParameters
         and _convert_to_jp2k.
     """
+    _import_pyvips()
     convertParams = large_image.tilesource.base._vipsParameters(forTiled, **kwargs)
     status = (', ' + status) if status else ''
     if type(inputPathOrBuffer) == pyvips.vimage.Image:

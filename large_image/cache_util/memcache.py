@@ -51,6 +51,8 @@ class MemCache(cachetools.Cache):
             # Try to set a value; this will throw an error if the server is
             # unreachable, so we don't bother trying to use it.
             self._client['large_image_cache_test'] = time.time()
+        self._clientParams = (url, dict(
+            binary=True, username=username, password=password, behaviors=behaviors))
         self.lastError = {}
         self.throttleErrors = 10  # seconds between logging errors
 
@@ -129,8 +131,35 @@ class MemCache(cachetools.Cache):
         except pylibmc.TooBig:
             pass
         except pylibmc.Error as exc:
-            # memcached won't cache items larger than 1 Mb, but this returns a
-            # 'SUCCESS' error.  Raise other errors.
+            # memcached won't cache items larger than 1 Mb (or a configured
+            # size), but this returns a 'SUCCESS' error.  Raise other errors.
             if 'SUCCESS' not in repr(exc.args):
                 self.logError(pylibmc.Error, config.getConfig('logprint').exception,
                               'pylibmc exception')
+
+    @property
+    def curritems(self):
+        return self._getStat('curr_items')
+
+    @property
+    def currsize(self):
+        return self._getStat('bytes')
+
+    @property
+    def maxsize(self):
+        return self._getStat('limit_maxbytes')
+
+    def _blockingClient(self):
+        self._clientParams[1]['behaviors']['no_block'] = False
+        return pylibmc.Client(self._clientParams[0], **self._clientParams[1])
+
+    def _getStat(self, key):
+        try:
+            stats = self._blockingClient().get_stats()
+            value = sum(int(s[key]) for server, s in stats)
+        except Exception:
+            return None
+        return value
+
+    def clear(self):
+        self._client.flush_all()
