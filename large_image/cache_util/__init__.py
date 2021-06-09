@@ -38,12 +38,11 @@ def cachesClear(*args, **kwargs):
             LruCacheMetaclass.namedCaches[name][0].clear()
     if isTileCacheSetup():
         tileCache, tileLock = getTileCache()
-        if isinstance(tileCache, LRUCache):
-            try:
-                with tileLock:
-                    tileCache.clear()
-            except Exception:
-                pass
+        try:
+            with tileLock:
+                tileCache.clear()
+        except Exception:
+            pass
 
 
 def cachesInfo(*args, **kwargs):
@@ -63,17 +62,16 @@ def cachesInfo(*args, **kwargs):
             }
     if isTileCacheSetup():
         tileCache, tileLock = getTileCache()
-        if isinstance(tileCache, LRUCache):
-            try:
-                with tileLock:
-                    info['tileCache'] = {
-                        'maxsize': tileCache.maxsize,
-                        'used': tileCache.currsize
-                    }
-            except Exception:
-                pass
-    # It would be nice to include memcached, but pylibmc's client.get_stats()
-    # doesn't seem to work.
+        try:
+            with tileLock:
+                info['tileCache'] = {
+                    'maxsize': tileCache.maxsize,
+                    'used': tileCache.currsize,
+                    'items': getattr(tileCache, 'curritems' if hasattr(
+                        tileCache, 'curritems') else 'currsize', None)
+                }
+        except Exception:
+            pass
     return info
 
 

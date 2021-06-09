@@ -141,8 +141,8 @@ class TestClass:
         large_image.cache_util.cache._tileLock = None
         config.setConfig('cache_backend', 'memcached')
         getTileCache()
-        # memcached won't show that it is present
-        assert 'tileCache' not in cachesInfo()
+        # memcached shows an items record as well
+        assert 'items' in cachesInfo()['tileCache']
 
     def testCachesClear(self):
         large_image.cache_util.cache._tileCache = None

@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- Better reporting of memcached cache
+
 ## Version 1.6.1
 
 ### Improvements

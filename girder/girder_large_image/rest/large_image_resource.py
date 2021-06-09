@@ -238,6 +238,11 @@ class LargeImageResource(Resource):
         before = cache_util.cachesInfo()
         cache_util.cachesClear()
         after = cache_util.cachesInfo()
+        # Add a small delay to give the memcached time to clear
+        stoptime = time.time() + 5
+        while time.time() < stoptime and any(after[key]['used'] for key in after):
+            time.sleep(0.1)
+            after = cache_util.cachesInfo()
         return {'cacheCleared': datetime.datetime.utcnow(), 'before': before, 'after': after}
 
     @describeRoute(
