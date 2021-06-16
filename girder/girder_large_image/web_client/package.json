@@ -21,7 +21,7 @@
         "hammerjs": "^2.0.8",
         "js-yaml": "^3.14.0",
         "sinon": "^2.1.0",
-        "slideatlas-viewer": "4.0.3"
+        "slideatlas-viewer": "^4.4.1"
     },
     "main": "./index.js",
     "girderPlugin": {
