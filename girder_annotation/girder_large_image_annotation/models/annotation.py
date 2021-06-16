@@ -95,6 +95,11 @@ class AnnotationSchema:
         'description': 'A weakly monotonic list of range values',
     }
 
+    userSchema = {
+        'type': 'object',
+        'additionalProperties': True
+    }
+
     baseShapeSchema = {
         '$schema': 'http://json-schema.org/schema#',
         'id': '/girder/plugins/large_image/models/base_shape',
@@ -105,6 +110,8 @@ class AnnotationSchema:
                 'pattern': '^[0-9a-f]{24}$',
             },
             'type': {'type': 'string'},
+            # schema free field for users to extend annotations
+            'user': userSchema,
             'label': {
                 'type': 'object',
                 'properties': {

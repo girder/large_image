@@ -1,9 +1,17 @@
 import $ from 'jquery';
 
+import Backbone from 'backbone';
+import { parseQueryString, splitRoute } from '@girder/core/misc';
+
 import ImageViewerWidget from './base';
 
 var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
+        if (!CanvasRenderingContext2D.prototype.resetTransform) {
+            window.CanvasRenderingContext2D.prototype.resetTransform = function () {
+                return this.setTransform(1, 0, 0, 1, 0, 0);
+            };
+        }
         let root = '/static/built';
         try {
             root = __webpack_public_path__ || root; // eslint-disable-line
@@ -22,7 +30,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
             $.ajax({ // like $.getScript, but allow caching
-                url: root + '/plugins/large_image/extra/slideatlas/sa-all.min.js',
+                url: root + '/plugins/large_image/extra/slideatlas/sa-all.max.js',
                 dataType: 'script',
                 cache: true
             }))
@@ -62,23 +70,56 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
             root = __webpack_public_path__ || root; // eslint-disable-line
         } catch (err) { }
         root = root.replace(/\/$/, '');
-        window.$(this.el).saViewer({
+
+        var tileSource = {
+            height: this.sizeY,
+            width: this.sizeX,
+            tileWidth: this.tileWidth,
+            tileHeight: this.tileHeight,
+            minLevel: 0,
+            maxLevel: this.levels - 1,
+            units: 'mm',
+            spacing: [this.metadata.mm_x, this.metadata.mm_y],
+            getTileUrl: (level, x, y, z) => {
+                // Drop the "z" argument
+                return this._getTileUrl(level, x, y);
+            }
+        };
+        if (!this.metadata.mm_x) {
+            // tileSource.units = 'pixels';
+            tileSource.spacing = [1, 1];
+        }
+        window.SA.SAViewer(window.$(this.el), {
             zoomWidget: true,
             drawWidget: true,
             prefixUrl: root + '/plugins/large_image/extra/slideatlas/img/',
-            tileSource: {
-                height: this.sizeY,
-                width: this.sizeX,
-                tileSize: this.tileWidth,
-                minLevel: 0,
-                maxLevel: this.levels - 1,
-                getTileUrl: (level, x, y, z) => {
-                    // Drop the "z" argument
-                    return this._getTileUrl(level, x, y);
-                }
-            }
+            tileSource: tileSource
         });
         this.viewer = this.el.saViewer;
+
+        this.girderGui = new window.SAM.LayerPanel(this.viewer, this.itemId);
+        $(this.el).css({position: 'relative'});
+        window.SA.SAFullScreenButton($(this.el))
+            .css({'position': 'absolute', 'left': '2px', 'top': '2px'});
+        window.SA.GirderView = this;
+
+        // Set the view from the URL if bounds are specified.
+        var curRoute = Backbone.history.fragment,
+            routeParts = splitRoute(curRoute),
+            queryString = parseQueryString(routeParts.name);
+
+        if (queryString.bounds) {
+            var rot = 0;
+            if (queryString.rotate) {
+                rot = parseInt(queryString.rotate);
+            }
+            var bds = queryString.bounds.split(',');
+            var x0 = parseInt(bds[0]);
+            var y0 = parseInt(bds[1]);
+            var x1 = parseInt(bds[2]);
+            var y1 = parseInt(bds[3]);
+            this.viewer.SetCamera([(x0 + x1) * 0.5, (y0 + y1) * 0.5], rot, (y1 - y0));
+        }
 
         this.trigger('g:imageRendered', this);
         return this;
