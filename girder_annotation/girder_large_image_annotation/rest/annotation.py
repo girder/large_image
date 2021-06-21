@@ -156,7 +156,7 @@ class AnnotationResource(Resource):
         """
         Get a generator function that will yield the json of an annotation.
 
-        :param user: the user that needs read access on the annoation and its
+        :param user: the user that needs read access on the annotation and its
             parent item.
         :param id: the annotation id.
         :param params: paging and region parameters for the annotation.
