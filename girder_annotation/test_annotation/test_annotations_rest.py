@@ -1,18 +1,17 @@
 import copy
 import json
-import pytest
 import struct
+
+import pytest
+from girder_large_image import constants
+from girder_large_image_annotation.models.annotation import Annotation
 
 from girder.constants import AccessType
 from girder.models.item import Item
 from girder.models.setting import Setting
 
-from girder_large_image_annotation.models.annotation import Annotation
-
-from girder_large_image import constants
-
 from . import girder_utilities as utilities
-from .test_annotations import sampleAnnotationEmpty, sampleAnnotation, makeLargeSampleAnnotation
+from .test_annotations import makeLargeSampleAnnotation, sampleAnnotation, sampleAnnotationEmpty
 
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')

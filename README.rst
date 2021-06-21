@@ -12,7 +12,7 @@ Large Image |build-status| |codecov-io| |license-badge| |doi-badge|
 .. |codecov-io| image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
    :target: https://codecov.io/github/girder/large_image?branch=master
    :alt: codecov.io
-   
+
 .. |doi-badge| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4723355-blue
    :target: https://zenodo.org/badge/latestdoi/45569214
 

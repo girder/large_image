@@ -1,5 +1,6 @@
-import large_image
 import large_image_source_dummy
+
+import large_image
 
 
 def testDummyTileSource():

@@ -1,25 +1,24 @@
 import io
 import json
 import math
-import numpy
 import os
 import pathlib
-import PIL
-import PIL.Image
-import PIL.ImageColor
-import PIL.ImageDraw
 import tempfile
 import threading
 import xml.etree.ElementTree
 from collections import defaultdict
 
-from ..cache_util import getTileCache, strhash, methodcache
-from ..constants import (
-    SourcePriority, TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
-    TileOutputMimeTypes, TileOutputPILFormat, TileInputUnits, dtypeToGValue)
-from .. import config
-from .. import exceptions
+import numpy
+import PIL
+import PIL.Image
+import PIL.ImageColor
+import PIL.ImageDraw
 
+from .. import config, exceptions
+from ..cache_util import getTileCache, methodcache, strhash
+from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
+                         SourcePriority, TileInputUnits, TileOutputMimeTypes,
+                         TileOutputPILFormat, dtypeToGValue)
 
 # Turn off decompression warning check
 PIL.Image.MAX_IMAGE_PIXELS = None
@@ -1507,7 +1506,7 @@ class TileSource:
             try:
                 value = float(value)
             except ValueError:
-                self.logger.warn('Style min/max value of %r is not valid; using "auto"', value)
+                self.logger.warning('Style min/max value of %r is not valid; using "auto"', value)
                 value = 'auto'
         if value in {'min', 'max', 'auto'} and frame not in self._bandRanges:
             self._scanForMinMax(dtype, frame)

@@ -85,4 +85,3 @@ python setup.py sdist
 cp "$ROOTPATH/README.rst" .
 pip wheel . --no-deps -w dist
 twine upload --verbose dist/*
-

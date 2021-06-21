@@ -17,26 +17,25 @@
 import concurrent.futures
 import datetime
 import json
-import psutil
 import sys
 import time
 
-from girder import logger
-from girder.api import access
-from girder.api.describe import describeRoute, Description
-from girder.api.rest import Resource
-from girder.exceptions import RestException
-from girder.models.setting import Setting
-from girder.models.file import File
-from girder.models.item import Item
+import psutil
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
-from large_image.exceptions import TileGeneralException
+from girder import logger
+from girder.api import access
+from girder.api.describe import Description, describeRoute
+from girder.api.rest import Resource
+from girder.exceptions import RestException
+from girder.models.file import File
+from girder.models.item import Item
+from girder.models.setting import Setting
 from large_image import cache_util
+from large_image.exceptions import TileGeneralException
 
-from .. import constants
-from .. import girder_tilesource
+from .. import constants, girder_tilesource
 from ..models.image_item import ImageItem
 
 

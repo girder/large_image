@@ -1,12 +1,10 @@
 from girder.constants import AccessType
-from girder.exceptions import ValidationException, FilePathException
+from girder.exceptions import FilePathException, ValidationException
 from girder.models.file import File
 from girder.models.item import Item
-
-from large_image.constants import SourcePriority
-from large_image.exceptions import TileSourceException, TileSourceAssetstoreException
 from large_image import tilesource
-
+from large_image.constants import SourcePriority
+from large_image.exceptions import TileSourceAssetstoreException, TileSourceException
 
 AvailableGirderTileSources = {}
 KnownMimeTypes = set()

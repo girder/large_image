@@ -21,5 +21,3 @@ pylibmc>=1.5.1
 
 # External dependencies
 pip>=9
-
-

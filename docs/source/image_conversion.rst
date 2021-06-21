@@ -7,4 +7,3 @@ Installing the ``large-image-converter`` module adds a ``large_image_converter``
 
 .. include:: large_image_converter.txt
    :literal:
-

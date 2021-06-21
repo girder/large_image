@@ -19,7 +19,6 @@ from pkg_resources import DistributionNotFound, get_distribution
 from . import tilesource  # noqa
 from .tilesource import canRead, getTileSource, open  # noqa
 
-
 try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:

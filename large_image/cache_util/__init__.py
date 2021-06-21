@@ -16,14 +16,16 @@
 
 import atexit
 
-from .cache import (LruCacheMetaclass, strhash, methodcache, getTileCache,
-                    isTileCacheSetup, CacheProperties)
+from .cache import (CacheProperties, LruCacheMetaclass, getTileCache,
+                    isTileCacheSetup, methodcache, strhash)
+
 try:
     from .memcache import MemCache
 except ImportError:
     MemCache = None
+from cachetools import Cache, LRUCache, cached
+
 from .cachefactory import CacheFactory, pickAvailableCache
-from cachetools import cached, Cache, LRUCache
 
 
 @atexit.register

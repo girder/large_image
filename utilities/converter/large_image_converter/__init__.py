@@ -5,15 +5,15 @@ import json
 import logging
 import math
 import os
-from pkg_resources import DistributionNotFound, get_distribution
-import psutil
 import struct
-from tempfile import TemporaryDirectory
 import threading
 import time
+from tempfile import TemporaryDirectory
 
 import numpy
+import psutil
 import tifftools
+from pkg_resources import DistributionNotFound, get_distribution
 
 import large_image
 
@@ -95,8 +95,7 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
     :param predictor: one of 'none', 'horizontal', 'float', or 'yes' used for
         lzw and deflate.
     """
-    from osgeo import gdal
-    from osgeo import gdalconst
+    from osgeo import gdal, gdalconst
 
     cmdopt = large_image.tilesource.base._gdalParameters(**kwargs)
     cmd = ['gdal_translate', inputPath, outputPath] + cmdopt
@@ -892,8 +891,7 @@ def is_geospatial(path):
     :returns: True if geospatial.
     """
     try:
-        from osgeo import gdal
-        from osgeo import gdalconst
+        from osgeo import gdal, gdalconst
     except ImportError:
         logger.warning('Cannot import GDAL.')
         return False

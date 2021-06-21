@@ -1,6 +1,5 @@
-import pytest
-
 import large_image_source_nd2
+import pytest
 
 from . import utilities
 from .datastore import datastore

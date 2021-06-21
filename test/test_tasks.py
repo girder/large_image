@@ -1,8 +1,8 @@
 import os
-import pytest
 import shutil
 import tempfile
 
+import pytest
 from large_image_tasks import tasks
 
 

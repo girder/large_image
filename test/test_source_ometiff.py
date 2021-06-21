@@ -1,10 +1,11 @@
 import json
-import numpy
 from xml.etree import ElementTree
 
-from large_image.constants import TILE_FORMAT_NUMPY
-from large_image.tilesource import etreeToDict, dictToEtree
 import large_image_source_ometiff
+import numpy
+
+from large_image.constants import TILE_FORMAT_NUMPY
+from large_image.tilesource import dictToEtree, etreeToDict
 
 from . import utilities
 from .datastore import datastore

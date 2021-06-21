@@ -15,30 +15,27 @@
 #############################################################################
 
 import math
-import numpy
 import os
-import palettable
 import pathlib
-import PIL.Image
-import pyproj
 import struct
 import tempfile
 import threading
 from operator import attrgetter
-from osgeo import gdal
-from osgeo import gdal_array
-from osgeo import gdalconst
-from osgeo import osr
+
+import numpy
+import palettable
+import PIL.Image
+import pyproj
+from osgeo import gdal, gdal_array, gdalconst, osr
 from pkg_resources import DistributionNotFound, get_distribution
 
 import large_image
-from large_image.cache_util import LruCacheMetaclass, methodcache, CacheProperties
-from large_image.constants import (
-    SourcePriority, TileInputUnits, TileOutputMimeTypes,
-    TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, TILE_FORMAT_IMAGE)
+from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
+from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
+                                   TILE_FORMAT_PIL, SourcePriority,
+                                   TileInputUnits, TileOutputMimeTypes)
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
-
 
 try:
     __version__ = get_distribution(__name__).version

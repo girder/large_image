@@ -1,11 +1,13 @@
+import threading
+
 import cachetools
 import pytest
-import threading
 
 import large_image.cache_util.cache
 from large_image import config
-from large_image.cache_util import cached, strhash, Cache, MemCache, \
-    methodcache, LruCacheMetaclass, cachesInfo, cachesClear, getTileCache
+from large_image.cache_util import (Cache, LruCacheMetaclass, MemCache, cached,
+                                    cachesClear, cachesInfo, getTileCache,
+                                    methodcache, strhash)
 
 
 class Fib:

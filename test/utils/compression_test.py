@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+
 import concurrent.futures
 import itertools
 import os
-import psutil
 import subprocess
 import sys
+
+import psutil
 
 os.environ['GDAL_PAM_PROXY_DIR'] = '/tmp/gdal'
 

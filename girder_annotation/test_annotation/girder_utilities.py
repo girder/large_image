@@ -1,9 +1,8 @@
 import os
+from test.datastore import datastore
 
 from girder.models.folder import Folder
 from girder.models.upload import Upload
-
-from test.datastore import datastore
 
 
 def namedFolder(user, folderName='Public'):

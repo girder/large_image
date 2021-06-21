@@ -14,7 +14,6 @@
 #  limitations under the License.
 #############################################################################
 
-import cherrypy
 import hashlib
 import math
 import os
@@ -22,23 +21,23 @@ import pathlib
 import re
 import urllib
 
+import cherrypy
+
 from girder.api import access, filter_logging
-from girder.api.v1.item import Item as ItemResource
-from girder.api.describe import autoDescribeRoute, describeRoute, Description
+from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import filtermodel, loadmodel, setRawResponse, setResponseHeader
+from girder.api.v1.item import Item as ItemResource
 from girder.constants import AccessType
 from girder.exceptions import RestException
 from girder.models.file import File
 from girder.models.item import Item
 from girder.utility.progress import setResponseTimeLimit
-
+from large_image.cache_util import strhash
 from large_image.constants import TileInputUnits
 from large_image.exceptions import TileGeneralException
-from large_image.cache_util import strhash
 
-from ..models.image_item import ImageItem
 from .. import loadmodelcache
-
+from ..models.image_item import ImageItem
 
 MimeTypeExtensions = {
     'image/jpeg': 'jpg',

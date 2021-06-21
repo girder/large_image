@@ -18,12 +18,11 @@ import math
 
 import openslide
 import PIL
+import tifftools
 from pkg_resources import DistributionNotFound, get_distribution
 
-import tifftools
-
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import SourcePriority, TILE_FORMAT_PIL
+from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 

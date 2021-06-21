@@ -15,8 +15,9 @@
 #############################################################################
 
 
-import threading
 import math
+import threading
+
 try:
     import psutil
 except ImportError:
@@ -24,6 +25,7 @@ except ImportError:
 from cachetools import LRUCache
 
 from .. import config
+
 try:
     from .memcache import MemCache
 except ImportError:

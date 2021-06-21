@@ -1,9 +1,9 @@
 import os
 import re
 
-from large_image import config
 import large_image_source_pil
 
+from large_image import config
 from large_image.cache_util import cachesClear
 
 from . import utilities

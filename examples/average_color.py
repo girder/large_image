@@ -2,6 +2,7 @@
 # tiles at a specific magnification, reporting the average color of each tile.
 
 import argparse
+
 import numpy
 
 import large_image

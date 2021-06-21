@@ -1,11 +1,11 @@
 import os
-import pytest
 import subprocess
+
+import pytest
+from girder_worker.girder_plugin.constants import PluginSettings as WorkerSettings
 
 from girder import events
 from girder.models.setting import Setting
-
-from girder_worker.girder_plugin.constants import PluginSettings as WorkerSettings
 
 
 @pytest.fixture

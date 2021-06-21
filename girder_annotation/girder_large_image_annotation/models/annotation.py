@@ -14,28 +14,27 @@
 #  limitations under the License.
 ##############################################################################
 
-from bson import ObjectId
-import cherrypy
 import datetime
 import enum
-import jsonschema
-import numpy
 import re
 import threading
 import time
 
-from girder import events
-from girder import logger
-from girder.constants import AccessType, SortDir
-from girder.exceptions import AccessException, ValidationException
-from girder.models.model_base import AccessControlledModel
-from girder.models.folder import Folder
-from girder.models.item import Item
-from girder.models.setting import Setting
-from girder.models.user import User
-
+import cherrypy
+import jsonschema
+import numpy
+from bson import ObjectId
 from girder_large_image import constants
 from girder_large_image.models.image_item import ImageItem
+
+from girder import events, logger
+from girder.constants import AccessType, SortDir
+from girder.exceptions import AccessException, ValidationException
+from girder.models.folder import Folder
+from girder.models.item import Item
+from girder.models.model_base import AccessControlledModel
+from girder.models.setting import Setting
+from girder.models.user import User
 
 from .annotationelement import Annotationelement
 

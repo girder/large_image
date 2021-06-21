@@ -15,18 +15,16 @@
 #############################################################################
 
 import functools
+
 import mapnik
 import PIL.Image
-from osgeo import gdal
-from osgeo import gdalconst
+from large_image_source_gdal import GDALFileTileSource, InitPrefix
+from osgeo import gdal, gdalconst
 from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import SourcePriority, TILE_FORMAT_PIL
+from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceException
-
-from large_image_source_gdal import GDALFileTileSource, InitPrefix
-
 
 try:
     __version__ = get_distribution(__name__).version

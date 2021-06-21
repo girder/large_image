@@ -1,15 +1,15 @@
 import json
 import os
-import pytest
 import shutil
+
+import large_image_converter
+import large_image_converter.__main__ as main
+import large_image_source_tiff
+import pytest
 import tifftools
 
 import large_image
 from large_image import constants
-import large_image_source_tiff
-
-import large_image_converter
-import large_image_converter.__main__ as main
 
 from .datastore import datastore
 

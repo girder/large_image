@@ -19,7 +19,6 @@ from pkg_resources import DistributionNotFound, get_distribution
 from large_image.constants import SourcePriority
 from large_image.tilesource import TileSource
 
-
 try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:

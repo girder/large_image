@@ -14,8 +14,9 @@
 #  limitations under the License.
 #############################################################################
 
-import cherrypy
 import time
+
+import cherrypy
 
 from girder.api.rest import getCurrentToken
 from girder.utility.model_importer import ModelImporter

@@ -89,14 +89,16 @@ class JobLogger(logging.Handler):
 
 def convert_image_job(job):
     import tempfile
+
+    from girder_jobs.constants import JobStatus
+    from girder_jobs.models.job import Job
+
     from girder.constants import AccessType
     from girder.models.file import File
     from girder.models.folder import Folder
     from girder.models.item import Item
     from girder.models.upload import Upload
     from girder.models.user import User
-    from girder_jobs.constants import JobStatus
-    from girder_jobs.models.job import Job
 
     kwargs = job['kwargs']
     item = Item().load(kwargs.pop('itemId'), force=True)

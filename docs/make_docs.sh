@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e 
+set -e
 
 cd "$(dirname $0)"
 stat make_docs.sh

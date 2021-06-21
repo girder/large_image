@@ -1,14 +1,14 @@
 import gc
-import pytest
 import time
+
+import large_image_source_test
+import pytest
+from large_image_source_tiff.tiff_reader import TiledTiffDirectory
 
 import large_image
 import large_image.cache_util.cache
 from large_image import config
 from large_image.cache_util import cachesClear
-
-import large_image_source_test
-from large_image_source_tiff.tiff_reader import TiledTiffDirectory
 
 from . import utilities
 from .datastore import datastore
