@@ -1,7 +1,10 @@
+#!/usr/bin/env python
+
 import json
 import os
-import pandas
 import sys
+
+import pandas
 import tifftools
 
 if not len(sys.argv[1:]) or '--help' in sys.argv[1:]:

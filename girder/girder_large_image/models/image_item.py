@@ -17,7 +17,10 @@
 import io
 import json
 import pickle
+
 import pymongo
+from girder_jobs.constants import JobStatus
+from girder_jobs.models.job import Job
 
 from girder import logger
 from girder.constants import SortDir
@@ -27,15 +30,11 @@ from girder.models.file import File
 from girder.models.item import Item
 from girder.models.setting import Setting
 from girder.models.upload import Upload
-from girder_jobs.constants import JobStatus
-from girder_jobs.models.job import Job
-
 from large_image.cache_util import getTileCache, strhash
 from large_image.constants import TileOutputMimeTypes
 from large_image.exceptions import TileGeneralException, TileSourceException
 
-from .. import constants
-from .. import girder_tilesource
+from .. import constants, girder_tilesource
 
 
 class ImageItem(Item):
@@ -94,9 +93,9 @@ class ImageItem(Item):
 
     def _createLargeImageJob(self, item, fileObj, user, token, **kwargs):
         import large_image_tasks.tasks
-        from girder_worker_utils.transforms.girder_io import GirderUploadToItem
-        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
         from girder_worker_utils.transforms.common import TemporaryDirectory
+        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
+        from girder_worker_utils.transforms.girder_io import GirderUploadToItem
 
         try:
             localPath = File().getLocalFilePath(fileObj)
@@ -148,9 +147,9 @@ class ImageItem(Item):
             self, item, fileObj, user=None, token=None, folderId=None,
             name=None, **kwargs):
         import large_image_tasks.tasks
-        from girder_worker_utils.transforms.girder_io import GirderUploadToFolder
-        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
         from girder_worker_utils.transforms.common import TemporaryDirectory
+        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
+        from girder_worker_utils.transforms.girder_io import GirderUploadToFolder
 
         try:
             localPath = File().getLocalFilePath(fileObj)
@@ -222,7 +221,7 @@ class ImageItem(Item):
             # tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
             # but, instead, log that the original source no longer works are
             # reraise the exception
-            logger.warn('The original tile source for item %s is not working' % item['_id'])
+            logger.warning('The original tile source for item %s is not working' % item['_id'])
             raise
         return tileSource
 

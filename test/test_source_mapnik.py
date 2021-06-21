@@ -2,14 +2,14 @@ import glob
 import io
 import json
 import os
+
+import large_image_source_mapnik
 import PIL.Image
 import PIL.ImageChops
 import pytest
 
 import large_image
 from large_image.exceptions import TileSourceException
-
-import large_image_source_mapnik
 
 from . import utilities
 from .datastore import datastore

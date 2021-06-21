@@ -15,10 +15,9 @@
 ##############################################################################
 
 import cherrypy
-
 from girder_large_image.girder_tilesource import GirderTileSource
-from . import BioformatsFileTileSource, _stopJavabridge
 
+from . import BioformatsFileTileSource, _stopJavabridge
 
 cherrypy.engine.subscribe('stop', _stopJavabridge)
 

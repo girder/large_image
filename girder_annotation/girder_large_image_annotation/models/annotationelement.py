@@ -18,15 +18,16 @@ import datetime
 import io
 import math
 import pickle
-import pymongo
 import time
 
+import pymongo
+
+from girder import logger
 from girder.constants import AccessType, SortDir
 from girder.models.file import File
 from girder.models.item import Item
 from girder.models.model_base import Model
 from girder.models.upload import Upload
-from girder import logger
 
 # Some annotation elements can be very large.  If they pass a size threshold,
 # store part of them in an associated file.  This is slower, so don't do it for

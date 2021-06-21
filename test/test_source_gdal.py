@@ -1,16 +1,16 @@
 import glob
 import io
 import json
-import numpy
 import os
+
+import large_image_source_gdal
+import numpy
 import PIL.Image
 import PIL.ImageChops
 import pytest
 
 from large_image import constants
 from large_image.exceptions import TileSourceException
-
-import large_image_source_gdal
 
 from . import utilities
 from .datastore import datastore

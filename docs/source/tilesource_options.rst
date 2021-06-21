@@ -82,5 +82,3 @@ This used a precomputed sixteen entry greyscale palette, computed as ``(value / 
     "#BABABA", "#C5C5C5", "#D0D0D0", "#DADADA",
     "#E4E4E4", "#EDEDED", "#F6F6F6", "#FFFFFF"
   ]}
-
-

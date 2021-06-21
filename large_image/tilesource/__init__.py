@@ -1,13 +1,13 @@
 import os
+
 from pkg_resources import iter_entry_points
 
-from .base import TileSource, FileTileSource, TileOutputMimeTypes, \
-    TILE_FORMAT_IMAGE, TILE_FORMAT_PIL, TILE_FORMAT_NUMPY, nearPowerOfTwo, \
-    etreeToDict, dictToEtree
-from ..exceptions import TileGeneralException, TileSourceException, TileSourceAssetstoreException
 from .. import config
 from ..constants import SourcePriority
-
+from ..exceptions import TileGeneralException, TileSourceAssetstoreException, TileSourceException
+from .base import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
+                   FileTileSource, TileOutputMimeTypes, TileSource,
+                   dictToEtree, etreeToDict, nearPowerOfTwo)
 
 AvailableTileSources = {}
 
@@ -20,8 +20,7 @@ def isGeospatial(path):
     :returns: True if geospatial.
     """
     try:
-        from osgeo import gdal
-        from osgeo import gdalconst
+        from osgeo import gdal, gdalconst
     except ImportError:
         # TODO: log a warning
         return False

@@ -6,7 +6,6 @@ import time
 
 import large_image_converter
 
-
 logger = logging.getLogger('large-image-converter')
 
 
@@ -124,9 +123,10 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
     """
     import math
     from tempfile import TemporaryDirectory
-    import skimage.metrics
-    import numpy
+
     import large_image_source_tiff
+    import numpy
+    import skimage.metrics
 
     lastlog = 0
     with TemporaryDirectory() as tempDir:
@@ -229,6 +229,7 @@ def main(args=sys.argv[1:]):
     logger.info('Created %s, %d bytes, %3.1f s', dest, os.path.getsize(dest), end_time - start_time)
     if opts._stats:
         import json
+
         import tifftools.commands
 
         info = tifftools.read_tiff(dest)

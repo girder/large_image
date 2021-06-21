@@ -14,10 +14,11 @@
 #  limitations under the License.
 #############################################################################
 
-import cachetools
 import hashlib
-import pylibmc
 import time
+
+import cachetools
+import pylibmc
 
 from .. import config
 

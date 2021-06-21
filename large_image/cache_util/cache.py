@@ -15,14 +15,14 @@
 ###############################################################################
 
 import functools
+
 try:
     import resource
 except ImportError:
     resource = None
 
-from .cachefactory import CacheFactory, pickAvailableCache
 from .. import config
-
+from .cachefactory import CacheFactory, pickAvailableCache
 
 _tileCache = None
 _tileLock = None

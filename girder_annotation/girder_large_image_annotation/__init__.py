@@ -24,8 +24,8 @@ from . import constants
 from .models.annotation import Annotation
 from .rest.annotation import AnnotationResource
 
-
 # Validators
+
 
 @setting_utilities.validator({
     constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY,

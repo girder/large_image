@@ -18,16 +18,16 @@ import ctypes
 import io
 import json
 import math
-import numpy
 import os
-import PIL.Image
 import threading
-
 from functools import partial
 from xml.etree import ElementTree
 
+import numpy
+import PIL.Image
+
 from large_image import config
-from large_image.cache_util import LRUCache, strhash, methodcache
+from large_image.cache_util import LRUCache, methodcache, strhash
 from large_image.tilesource import etreeToDict
 
 try:
@@ -40,7 +40,7 @@ except ValueError as exc:
     # ImportError.  We convert this to an ImportError, so that we will print a
     # more lucid error message and just fail to load this one tile source
     # instead of failing to load the whole plugin.
-    config.getConfig('logger').warn(
+    config.getConfig('logger').warning(
         'Failed to import libtiff; try upgrading the python module (%s)' % exc)
     raise ImportError(str(exc))
 

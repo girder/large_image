@@ -16,21 +16,22 @@
 
 import json
 import struct
-import ujson
 
 import cherrypy
+import ujson
 
 from girder import logger
 from girder.api import access
-from girder.api.describe import describeRoute, autoDescribeRoute, Description
-from girder.api.rest import Resource, loadmodel, filtermodel, setResponseHeader
+from girder.api.describe import Description, autoDescribeRoute, describeRoute
+from girder.api.rest import Resource, filtermodel, loadmodel, setResponseHeader
 from girder.constants import AccessType, SortDir, TokenScope
-from girder.exceptions import ValidationException, RestException, AccessException
+from girder.exceptions import AccessException, RestException, ValidationException
 from girder.models.item import Item
 from girder.models.user import User
 from girder.utility import JsonEncoder
 from girder.utility.progress import setResponseTimeLimit
-from ..models.annotation import AnnotationSchema, Annotation
+
+from ..models.annotation import Annotation, AnnotationSchema
 from ..models.annotationelement import Annotationelement
 
 

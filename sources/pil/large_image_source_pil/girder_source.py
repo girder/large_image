@@ -15,15 +15,13 @@
 #############################################################################
 
 import cherrypy
+from girder_large_image.constants import PluginSettings
+from girder_large_image.girder_tilesource import GirderTileSource
 
 from girder.models.setting import Setting
-
 from large_image.cache_util import methodcache
 from large_image.constants import TILE_FORMAT_PIL
 from large_image.exceptions import TileSourceException
-
-from girder_large_image.constants import PluginSettings
-from girder_large_image.girder_tilesource import GirderTileSource
 
 from . import PILFileTileSource
 

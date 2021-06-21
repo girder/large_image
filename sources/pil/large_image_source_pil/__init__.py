@@ -16,18 +16,17 @@
 
 import json
 import math
-import numpy
 import os
-from pkg_resources import DistributionNotFound, get_distribution
 
+import numpy
 import PIL.Image
+from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
-
 
 try:
     __version__ = get_distribution(__name__).version

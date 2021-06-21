@@ -23,24 +23,23 @@
 #   IFormatReader.html for interface details.
 
 import atexit
-import bioformats
-import bioformats.log4j
-import javabridge
 import math
-import numpy
 import os
 import threading
 import types
 
+import bioformats
+import bioformats.log4j
+import javabridge
+import numpy
 from pkg_resources import DistributionNotFound, get_distribution
 
+import large_image.tilesource.base
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import SourcePriority, TILE_FORMAT_NUMPY
+from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
-import large_image.tilesource.base
-
 
 try:
     __version__ = get_distribution(__name__).version

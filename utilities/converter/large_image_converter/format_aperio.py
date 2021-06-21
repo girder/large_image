@@ -1,10 +1,10 @@
 import json
 import math
 
+import large_image_source_tiff
 import tifftools
 
 import large_image
-import large_image_source_tiff
 
 AperioHeader = 'Aperio Image Library v10.0.0\n'
 FullHeaderStart = '{width}x{height} [0,0 {width}x{height}] ({tileSize}x{tileSize})'

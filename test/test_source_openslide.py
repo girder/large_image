@@ -1,11 +1,12 @@
-import numpy
 import os
-import PIL.Image
-import pytest
 import struct
 
-from large_image import constants
 import large_image_source_openslide
+import numpy
+import PIL.Image
+import pytest
+
+from large_image import constants
 
 from . import utilities
 from .datastore import datastore

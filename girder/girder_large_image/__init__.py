@@ -16,9 +16,13 @@
 
 import datetime
 import json
+
+from girder_jobs.constants import JobStatus
+from girder_jobs.models.job import Job
 from pkg_resources import DistributionNotFound, get_distribution
 
 import girder
+import large_image
 from girder import events
 from girder.constants import AccessType
 from girder.exceptions import ValidationException
@@ -28,22 +32,15 @@ from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.plugin import GirderPlugin, getPlugin
 from girder.settings import SettingDefault
-from girder.utility import config
-from girder.utility import setting_utilities
+from girder.utility import config, setting_utilities
 from girder.utility.model_importer import ModelImporter
-from girder_jobs.constants import JobStatus
-from girder_jobs.models.job import Job
 
-import large_image
-
-from . import constants
-from . import girder_tilesource
+from . import constants, girder_tilesource
 from .girder_tilesource import getGirderTileSource  # noqa
 from .loadmodelcache import invalidateLoadModelCache
 from .models.image_item import ImageItem
 from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
-
 
 try:
     __version__ = get_distribution(__name__).version

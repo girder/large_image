@@ -1,6 +1,6 @@
 import math
-import pytest
 
+import pytest
 
 JFIFHeader = b'\xff\xd8\xff\xe0\x00\x10JFIF'
 JPEGHeader = b'\xff\xd8\xff'

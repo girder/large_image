@@ -15,22 +15,20 @@
 ##############################################################################
 
 import array
-import cachetools
 import math
-import nd2reader
-import numpy
 import threading
 import types
 import warnings
 
-
+import cachetools
+import nd2reader
+import numpy
 from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import SourcePriority, TILE_FORMAT_NUMPY
+from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceException
 from large_image.tilesource import FileTileSource
-
 
 try:
     __version__ = get_distribution(__name__).version

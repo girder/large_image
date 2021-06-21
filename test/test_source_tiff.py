@@ -1,13 +1,14 @@
 import io
 import json
-import numpy
 import os
-import pytest
 import struct
+
+import large_image_source_tiff
+import numpy
+import pytest
 import tifftools
 
 from large_image import constants
-import large_image_source_tiff
 
 from . import utilities
 from .datastore import datastore

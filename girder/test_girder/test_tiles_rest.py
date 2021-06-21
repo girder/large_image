@@ -1,11 +1,16 @@
 import math
-from unittest import mock
 import os
-import pytest
-import requests
 import shutil
 import struct
 import time
+from unittest import mock
+
+import pytest
+import requests
+from girder_jobs.constants import JobStatus
+from girder_jobs.models.job import Job
+from girder_large_image import constants, getGirderTileSource, loadmodelcache
+from girder_large_image.models.image_item import ImageItem
 
 from girder.constants import SortDir
 from girder.models.file import File
@@ -13,15 +18,7 @@ from girder.models.item import Item
 from girder.models.setting import Setting
 from girder.models.token import Token
 from girder.models.user import User
-
-from girder_jobs.constants import JobStatus
-from girder_jobs.models.job import Job
-
 from large_image import getTileSource
-from girder_large_image import constants
-from girder_large_image import getGirderTileSource
-from girder_large_image import loadmodelcache
-from girder_large_image.models.image_item import ImageItem
 
 from . import girder_utilities as utilities
 

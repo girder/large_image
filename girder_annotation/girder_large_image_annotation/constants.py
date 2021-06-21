@@ -17,5 +17,4 @@
 
 from girder_large_image.constants import PluginSettings
 
-
 PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY = 'large_image.annotation_history'

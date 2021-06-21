@@ -49,7 +49,6 @@ For the Girder plugin, these can also be set in the ``girder.cfg`` file in a ``l
   cache_tilesource_maximum = 0
   # The PIL tilesource won't read images larger than the max small images size
   max_small_image_size = 4096
-  # The bioformats tilesource won't read files that end in a comma-separated 
+  # The bioformats tilesource won't read files that end in a comma-separated
   # list of extensions
   source_bioformats_ignored_extensions = '.jpg,.jpeg,.jpe,.png,.tif,.tiff'
-

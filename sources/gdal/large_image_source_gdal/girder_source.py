@@ -16,12 +16,13 @@
 
 import re
 from distutils.version import StrictVersion
+
+from girder_large_image.girder_tilesource import GirderTileSource
 from osgeo import gdal
 
 from girder import logger
 from girder.models.file import File
 
-from girder_large_image.girder_tilesource import GirderTileSource
 from . import GDALFileTileSource
 
 
