@@ -58,7 +58,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         /**
          * Render an annotation model on the image.  Currently, this is limited
          * to annotation types that can be (1) directly converted into geojson
-         * primatives, OR (2) be represented as heatmaps.
+         * primitives, OR (2) be represented as heatmaps.
          *
          * Internally, this generates a new feature layer for the annotation
          * that is referenced by the annotation id.  All "elements" contained
