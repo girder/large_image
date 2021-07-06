@@ -1393,6 +1393,15 @@ class TileSource:
             accessible via kwargs as it otherwise overloads the range function.
         :param args: parameters to pass to the tileIterator.
         :param kwargs: parameters to pass to the tileIterator.
+        :returns: if onlyMinMax is true, this is a dictionary with keys min and
+            max, each of which is a numpy array with the minimum and maximum of
+            all of the bands.  If onlyMinMax is False, this is a dictionary
+            with a single key 'histogram' that contains a list of histograms
+            per band.  Each entry is a dictionary with min, max, range, hist,
+            and bin_edges.  range is [min, (max + 1)].  hist is the counts
+            (normalized if density is True) for each bin.  bin_edges is an
+            array one longer than the hist array that contains the boundaries
+            between bins.
         """
         kwargs = kwargs.copy()
         histRange = kwargs.pop('range', None)
