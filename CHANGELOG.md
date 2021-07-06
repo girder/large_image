@@ -1,9 +1,13 @@
 # Change Log
 
-## Unreleased
+## Version 1.6.2
 
 ### Improvements
 - Better reporting of memcached cache (#613)
+- Better handle whether proj string need the +init prefix (#620)
+
+### Changes
+- Avoid a bad version of Pillow (#619)
 
 ## Version 1.6.1
 

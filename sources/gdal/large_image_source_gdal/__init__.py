@@ -59,6 +59,7 @@ ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
 InitPrefix = '+init='
+NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else InitPrefix
 
 
 class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -117,7 +118,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.tileHeight = self.tileSize
         self._projection = projection
         if projection and projection.lower().startswith('epsg:'):
-            projection = InitPrefix + projection.lower()
+            projection = NeededInitPrefix + projection.lower()
         if projection and not isinstance(projection, bytes):
             projection = projection.encode('utf8')
         self.projection = projection
@@ -288,7 +289,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Initialize aspects of the class when a projection is set.
         """
-        inProj = self._proj4Proj(InitPrefix + 'epsg:4326')
+        inProj = self._proj4Proj(NeededInitPrefix + 'epsg:4326')
         # Since we already converted to bytes decoding is safe here
         outProj = self._proj4Proj(self.projection)
         if outProj.crs.is_geographic:
@@ -362,7 +363,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 wkt = self.dataset.GetProjection()
         if not wkt:
             if hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}:
-                return InitPrefix + 'epsg:4326'
+                return NeededInitPrefix + 'epsg:4326'
             return
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
@@ -375,7 +376,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: the pixel size in meters or None.
         """
-        bounds = self.getBounds(InitPrefix + 'epsg:4326')
+        bounds = self.getBounds(NeededInitPrefix + 'epsg:4326')
         if not bounds:
             return
         geod = pyproj.Geod(ellps='WGS84')
@@ -739,7 +740,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if proj.lower().startswith('proj4:'):
             proj = proj.split(':', 1)[1]
         if proj.lower().startswith('epsg:'):
-            proj = InitPrefix + proj.lower()
+            proj = NeededInitPrefix + proj.lower()
         try:
             if proj.startswith(InitPrefix) and int(pyproj.proj_version_str.split('.')[0]) >= 6:
                 proj = proj[len(InitPrefix):]

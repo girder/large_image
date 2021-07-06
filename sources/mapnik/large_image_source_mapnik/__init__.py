@@ -36,6 +36,14 @@ except DistributionNotFound:
 mapnik.logger.set_severity(mapnik.severity_type.Debug)
 
 
+try:
+    mapnik.Projection('epsg:3857')
+    NeededInitPrefix = ''
+except RuntimeError:
+    mapnik.Projection(InitPrefix + 'epsg:3857')
+    NeededInitPrefix = InitPrefix
+
+
 class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
@@ -120,6 +128,8 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             projections that are not latlong (is_geographic is False) must
             specify unitsPerPixel.
         """
+        if projection and projection.lower().startswith('epsg'):
+            projection = NeededInitPrefix + projection.lower()
         super().__init__(
             path, projection=projection, unitsPerPixel=unitsPerPixel, **kwargs)
 
@@ -156,7 +166,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             }
         if not len(datasets):
             try:
-                self.getBounds(InitPrefix + 'epsg:3857')
+                self.getBounds(NeededInitPrefix + 'epsg:3857')
             except RuntimeError:
                 self._bounds.clear()
                 del self._netcdf

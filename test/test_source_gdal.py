@@ -83,7 +83,7 @@ def testTileFromGeotiffs():
     assert tileMetadata['bounds']['xmin'] == pytest.approx(-13184900, 1)
     assert tileMetadata['bounds']['ymax'] == pytest.approx(4059661, 1)
     assert tileMetadata['bounds']['ymin'] == pytest.approx(3777034, 1)
-    assert tileMetadata['bounds']['srs'] == '+init=epsg:3857'
+    assert tileMetadata['bounds']['srs'] == 'epsg:3857'
     assert tileMetadata['geospatial']
 
     source = large_image_source_gdal.open(
@@ -316,7 +316,7 @@ def testPalettizedGeotiff():
     assert tileMetadata['bounds']['xmin'] == pytest.approx(-8909162, 1)
     assert tileMetadata['bounds']['ymax'] == pytest.approx(5755717, 1)
     assert tileMetadata['bounds']['ymin'] == pytest.approx(4876273, 1)
-    assert tileMetadata['bounds']['srs'] == '+init=epsg:3857'
+    assert tileMetadata['bounds']['srs'] == 'epsg:3857'
     assert tileMetadata['geospatial']
     image = source.getTile(37, 46, 7)
     image = PIL.Image.open(io.BytesIO(image))
@@ -372,7 +372,7 @@ def testGCPProjection():
     assert tileMetadata['bounds']['xmin'] == pytest.approx(-10871650, 1)
     assert tileMetadata['bounds']['ymax'] == pytest.approx(3949393, 1)
     assert tileMetadata['bounds']['ymin'] == pytest.approx(3899358, 1)
-    assert tileMetadata['bounds']['srs'] == '+init=epsg:3857'
+    assert tileMetadata['bounds']['srs'] == 'epsg:3857'
     assert tileMetadata['geospatial']
 
 
