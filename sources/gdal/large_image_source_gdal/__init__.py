@@ -480,7 +480,17 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._bounds[srs] = bounds
         return self._bounds[srs]
 
-    def getBandInformation(self, dataset=None):
+    def getBandInformation(self, statistics=True, dataset=None, **kwargs):
+        """
+        Get information about each band in the image.
+
+        :param statistics: if True, compute statistics if they don't already
+            exist.  Ignored: always treated as True.
+        :param dataset: the dataset.  If None, use the main dataset.
+        :returns: a list of one dictionary per band.  Each dictionary contains
+            known values such as interpretation, min, max, mean, stdev, nodata,
+            scale, offset, units, categories, colortable, maskband.
+        """
         if not getattr(self, '_bandInfo', None) or dataset:
             with self._getDatasetLock:
                 cache = not dataset
@@ -532,9 +542,6 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 return infoSet
             self._bandInfo = infoSet
         return self._bandInfo
-
-    def getOneBandInformation(self, band):
-        return self.getBandInformation()[band]
 
     def getMetadata(self):
         with self._getDatasetLock:

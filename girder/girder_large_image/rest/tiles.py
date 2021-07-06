@@ -103,29 +103,22 @@ class TilesItemResource(ItemResource):
         apiRoot.item.route('POST', (':itemId', 'tiles', 'convert'), self.convertImage)
         apiRoot.item.route('GET', (':itemId', 'tiles'), self.getTilesInfo)
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
-        apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'),
-                           self.getTilesThumbnail)
-        apiRoot.item.route('GET', (':itemId', 'tiles', 'region'),
-                           self.getTilesRegion)
-        apiRoot.item.route('GET', (':itemId', 'tiles', 'pixel'),
-                           self.getTilesPixel)
-        apiRoot.item.route('GET', (':itemId', 'tiles', 'histogram'),
-                           self.getHistogram)
-        apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'),
-                           self.getTile)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'), self.getTilesThumbnail)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'region'), self.getTilesRegion)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'pixel'), self.getTilesPixel)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'histogram'), self.getHistogram)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'bands'), self.getBandInformation)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'zxy', ':z', ':x', ':y'), self.getTile)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'fzxy', ':frame', ':z', ':x', ':y'),
                            self.getTileWithFrame)
-        apiRoot.item.route('GET', (':itemId', 'tiles', 'images'),
-                           self.getAssociatedImagesList)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'images'), self.getAssociatedImagesList)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'images', ':image'),
                            self.getAssociatedImage)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'images', ':image', 'metadata'),
                            self.getAssociatedImageMetadata)
         apiRoot.item.route('GET', ('test', 'tiles'), self.getTestTilesInfo)
-        apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'),
-                           self.getTestTile)
-        apiRoot.item.route('GET', (':itemId', 'tiles', 'dzi.dzi'),
-                           self.getDZIInfo)
+        apiRoot.item.route('GET', ('test', 'tiles', 'zxy', ':z', ':x', ':y'), self.getTestTile)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'dzi.dzi'), self.getDZIInfo)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'dzi_files', ':level', ':xandy'),
                            self.getDZITile)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'internal_metadata'),
@@ -975,6 +968,26 @@ class TilesItemResource(ItemResource):
             for key in {'min', 'max', 'samples'}:
                 if key in entry:
                     entry[key] = float(entry[key])
+        return result
+
+    @describeRoute(
+        Description('Get band information for a large image item.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('frame', 'For multiframe images, the 0-based frame number.  '
+               'This is ignored on non-multiframe images.', required=False,
+               dataType='int')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def getBandInformation(self, item, params):
+        _adjustParams(params)
+        params = self._parseParams(params, True, [
+            ('frame', int),
+        ])
+        _handleETag('getBandInformation', item, params)
+        result = self.imageItemModel.getBandInformation(item)
         return result
 
     @describeRoute(

@@ -454,6 +454,19 @@ class ImageItem(Item):
                 imageKey=imageKey, pickleCache=True, **kwargs)[0]
         return result
 
+    def getBandInformation(self, item, statistics=True, **kwargs):
+        """
+        Using a tile source, get band information of the image.
+
+        :param item: the item with the tile source.
+        :param kwargs: optional arguments.  See the tilesource
+            getBandInformation method.
+        :returns: band information.
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        result = tileSource.getBandInformation(statistics=statistics)
+        return result
+
     def tileSource(self, item, **kwargs):
         """
         Get a tile source for an item.

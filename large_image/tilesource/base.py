@@ -1417,15 +1417,40 @@ class TileSource:
                 numpy.amin(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
             tilemax = numpy.array([
                 numpy.amax(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
+            tilesum = numpy.array([
+                numpy.sum(tile[:, :, idx]) for idx in range(tile.shape[2])], float)
+            tilesum2 = numpy.array([
+                numpy.sum(numpy.array(tile[:, :, idx], float) ** 2)
+                for idx in range(tile.shape[2])], float)
+            tilecount = tile.shape[0] * tile.shape[1]
             if results is None:
-                results = {'min': tilemin, 'max': tilemax}
-            results['min'] = numpy.minimum(results['min'], tilemin)
-            results['max'] = numpy.maximum(results['max'], tilemax)
+                results = {
+                    'min': tilemin,
+                    'max': tilemax,
+                    'sum': tilesum,
+                    'sum2': tilesum2,
+                    'count': tilecount
+                }
+            else:
+                results['min'] = numpy.minimum(results['min'], tilemin)
+                results['max'] = numpy.maximum(results['max'], tilemax)
+                results['sum'] += tilesum
+                results['sum2'] += tilesum2
+                results['count'] += tilecount
+        results['mean'] = results['sum'] / results['count']
+        results['stdev'] = numpy.maximum(
+            results['sum2'] / results['count'] - results['mean'] ** 2,
+            [0] * results['sum2'].shape[0]) ** 0.5
+        results.pop('sum', None)
+        results.pop('sum2', None)
+        results.pop('count', None)
         if results is None or onlyMinMax:
             return results
         results['histogram'] = [{
             'min': results['min'][idx],
             'max': results['max'][idx],
+            'mean': results['mean'][idx],
+            'stdev': results['stdev'][idx],
             'range': ((results['min'][idx], results['max'][idx] + 1)
                       if histRange is None else histRange),
             'hist': None,
@@ -1788,6 +1813,9 @@ class TileSource:
             :channels: optional.  If known, a list of channel names
             :channelmap: optional.  If known, a dictionary of channel names
                 with their offset into the channel list.
+
+        Note that this does nto include band information, though some tile
+        sources may do so.
         """
         mag = self.getNativeMagnification()
         return {
@@ -1850,6 +1878,57 @@ class TileSource:
         :returns: a dictionary of data or None.
         """
         return None
+
+    def getOneBandInformation(self, band):
+        """
+        Get band information for a single band.
+
+        :param band: a 0-based band.
+        :returns: a dictionary of band information.  See getBandInformation.
+        """
+        return self.getBandInformation()[band]
+
+    def getBandInformation(self, statistics=False, **kwargs):
+        """
+        Get information about each band in the image.
+
+        :param statistics: if True, compute statistics if they don't already
+            exist.
+        :returns: a list of one dictionary per band.  Each dictionary contains
+            known values such as interpretation, min, max, mean, stdev.
+        """
+        if not getattr(self, '_bandInfo', None):
+            bandInterp = {
+                1: ['gray'],
+                2: ['gray', 'alpha'],
+                3: ['red', 'green', 'blue'],
+                4: ['red', 'green', 'blue', 'alpha']}
+            if not statistics:
+                if not getattr(self, '_bandInfoNoStats', None):
+                    tile = self.getSingleTile()['tile']
+                    bands = tile.shape[2] if len(tile.shape) > 2 else 1
+                    interp = bandInterp.get(bands, 3)
+                    bandInfo = [{'interpretation': interp[idx] if idx < len(interp) else 'unknown'}
+                                for idx in range(bands)]
+                    self._bandInfoNoStats = bandInfo
+                return self._bandInfoNoStats
+            analysisSize = 2048
+            histogram = self.histogram(
+                onlyMinMax=True,
+                output={'maxWidth': min(self.sizeX, analysisSize),
+                        'maxHeight': min(self.sizeY, analysisSize)},
+                resample=False,
+                **kwargs)
+            bands = histogram['min'].shape[0]
+            interp = bandInterp.get(bands, 3)
+            bandInfo = [{'interpretation': interp[idx] if idx < len(interp) else 'unknown'}
+                        for idx in range(bands)]
+            for key in {'min', 'max', 'mean', 'stdev'}:
+                if key in histogram:
+                    for idx in range(bands):
+                        bandInfo[idx][key] = histogram[key][idx]
+            self._bandInfo = bandInfo
+        return self._bandInfo
 
     def _xyzInRange(self, x, y, z, frame=None, numFrames=None):
         """
