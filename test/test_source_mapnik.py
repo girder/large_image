@@ -82,7 +82,7 @@ def testTileFromGeotiffs():
     assert tileMetadata['bounds']['xmin'] == pytest.approx(-13184900, 1)
     assert tileMetadata['bounds']['ymax'] == pytest.approx(4059661, 1)
     assert tileMetadata['bounds']['ymin'] == pytest.approx(3777034, 1)
-    assert tileMetadata['bounds']['srs'] == '+init=epsg:3857'
+    assert tileMetadata['bounds']['srs'] in ('+init=epsg:3857', 'epsg:3857')
     assert tileMetadata['geospatial']
 
     source = large_image_source_mapnik.open(
@@ -344,7 +344,7 @@ def testTileFromNetCDF():
     assert tileMetadata['sizeX'] == 93
     assert tileMetadata['sizeY'] == 65
     assert tileMetadata['levels'] == 1
-    assert tileMetadata['bounds']['srs'].strip() == '+init=epsg:4326'
+    assert tileMetadata['bounds']['srs'].strip() == 'epsg:4326'
     assert tileMetadata['geospatial']
 
     # Getting the metadata with a specified projection will be different
@@ -357,7 +357,7 @@ def testTileFromNetCDF():
     assert tileMetadata['sizeX'] == 512
     assert tileMetadata['sizeY'] == 512
     assert tileMetadata['levels'] == 2
-    assert tileMetadata['bounds']['srs'] == '+init=epsg:3857'
+    assert tileMetadata['bounds']['srs'] in ('+init=epsg:3857', 'epsg:3857')
     assert tileMetadata['geospatial']
 
 
