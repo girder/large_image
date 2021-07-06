@@ -40,7 +40,6 @@ try:
     mapnik.Projection('epsg:3857')
     NeededInitPrefix = ''
 except RuntimeError:
-    mapnik.Projection(InitPrefix + 'epsg:3857')
     NeededInitPrefix = InitPrefix
 
 
