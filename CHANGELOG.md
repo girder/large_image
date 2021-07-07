@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Features
+- Provide band information on all tile sources (#622)
+
 ## Version 1.6.2
 
 ### Improvements

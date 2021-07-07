@@ -71,3 +71,15 @@ def testInternalMetadata():
     source = large_image_source_pil.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'pil' in metadata
+
+
+def testGetBandInformation():
+    imagePath = datastore.fetch('sample_Easy1.png')
+    source = large_image_source_pil.open(imagePath)
+    bandInfo = source.getBandInformation(False)
+    assert len(bandInfo) == 4
+    assert bandInfo[0] == {'interpretation': 'red'}
+
+    bandInfo = source.getBandInformation(True)
+    assert len(bandInfo) == 4
+    assert 'mean' in bandInfo[0]

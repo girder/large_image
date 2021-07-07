@@ -226,7 +226,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 if not dataset.get('bands'):
                     if not dataset.get('dataset'):
                         dataset['dataset'] = gdal.Open(dataset['name'], gdalconst.GA_ReadOnly)
-                    dataset['bands'] = self.getBandInformation(dataset['dataset'])
+                    dataset['bands'] = self.getBandInformation(dataset=dataset['dataset'])
                 bandInfo = dataset['bands'][band[1]]
         return bandInfo
 

@@ -1188,6 +1188,19 @@ def testTilesInternalMetadata(server, admin, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testTilesBandInformation(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample_Easy1.png', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    server.request(path='/item/%s/tiles' % itemId, method='POST', user=admin)
+    resp = server.request(path='/item/%s/tiles/bands' % itemId)
+    assert len(resp.json) == 4
+    assert resp.json[0]['interpretation'] == 'red'
+    assert 'mean' in resp.json[0]
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadTestFile(
         'yb10kx5k.png', admin, fsAssetstore, name='A name with...dots.png')
