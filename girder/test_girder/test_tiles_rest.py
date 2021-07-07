@@ -1201,6 +1201,19 @@ def testTilesBandInformation(server, admin, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testTilesBandInformationWithFrames(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample.ome.tif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    resp = server.request(path='/item/%s/tiles/bands' % itemId)
+    assert len(resp.json) == 1
+    resp2 = server.request(path='/item/%s/tiles/bands' % itemId, params={'frame': 1})
+    assert len(resp2.json) == 1
+    assert resp != resp2
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadTestFile(
         'yb10kx5k.png', admin, fsAssetstore, name='A name with...dots.png')
