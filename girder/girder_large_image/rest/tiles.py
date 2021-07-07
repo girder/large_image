@@ -987,7 +987,7 @@ class TilesItemResource(ItemResource):
             ('frame', int),
         ])
         _handleETag('getBandInformation', item, params)
-        result = self.imageItemModel.getBandInformation(item)
+        result = self.imageItemModel.getBandInformation(item, **params)
         return result
 
     @describeRoute(

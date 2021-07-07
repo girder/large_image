@@ -464,7 +464,7 @@ class ImageItem(Item):
         :returns: band information.
         """
         tileSource = self._loadTileSource(item, **kwargs)
-        result = tileSource.getBandInformation(statistics=statistics)
+        result = tileSource.getBandInformation(statistics=statistics, **kwargs)
         return result
 
     def tileSource(self, item, **kwargs):
