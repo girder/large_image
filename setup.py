@@ -66,7 +66,7 @@ setup(
         # We don't pin the version of Pillow, as anything newer than 3.0
         # probably works, though we'd rather have the latest.  8.3.0 won't
         # save jpeg compressed tiffs properly.
-        'Pillow!=8.3.0',
+        'Pillow!=8.3.0,!=8.3.1',
         'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
     ],
