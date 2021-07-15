@@ -651,7 +651,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         baselevel = level
         while self._tiffDirectories[level] is None and level < self.levels - 1:
             level += 1
-        while level - baselevel > self._maxSkippedLevels:
+        while level - baselevel >= self._maxSkippedLevels:
             level -= self._maxSkippedLevels
         return level
 
