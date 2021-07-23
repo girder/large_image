@@ -105,6 +105,7 @@ class TilesItemResource(ItemResource):
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'), self.getTilesThumbnail)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'region'), self.getTilesRegion)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'unroll_frames'), self.unrollFrames)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'pixel'), self.getTilesPixel)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'histogram'), self.getHistogram)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'bands'), self.getBandInformation)
@@ -1081,3 +1082,149 @@ class TilesItemResource(ItemResource):
         if pilImage.info:
             result['info'] = pilImage.info
         return result
+
+    @describeRoute(
+        Description('Get any region of a large image item, optionally scaling '
+                    'it.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('framesAcross', 'How many frames across', required=False, dataType='int')
+        # ##DWM:: add frameList
+        .param('left', 'The left column (0-based) of the region to process.  '
+               'Negative values are offsets from the right edge.',
+               required=False, dataType='float')
+        .param('top', 'The top row (0-based) of the region to process.  '
+               'Negative values are offsets from the bottom edge.',
+               required=False, dataType='float')
+        .param('right', 'The right column (0-based from the left) of the '
+               'region to process.  The region will not include this column.  '
+               'Negative values are offsets from the right edge.',
+               required=False, dataType='float')
+        .param('bottom', 'The bottom row (0-based from the top) of the region '
+               'to process.  The region will not include this row.  Negative '
+               'values are offsets from the bottom edge.',
+               required=False, dataType='float')
+        .param('regionWidth', 'The width of the region to process.',
+               required=False, dataType='float')
+        .param('regionHeight', 'The height of the region to process.',
+               required=False, dataType='float')
+        .param('units', 'Units used for left, top, right, bottom, '
+               'regionWidth, and regionHeight.  base_pixels are pixels at the '
+               'maximum resolution, pixels and mm are at the specified '
+               'magnfication, fraction is a scale of [0-1].', required=False,
+               enum=sorted(set(TileInputUnits.values())),
+               default='base_pixels')
+
+        .param('width', 'The maximum width of the output image in pixels.',
+               required=False, dataType='int')
+        .param('height', 'The maximum height of the output image in pixels.',
+               required=False, dataType='int')
+        .param('fill', 'A fill color.  If output dimensions are specified and '
+               'fill is specified and not "none", the output image is padded '
+               'on either the sides or the top and bottom to the requested '
+               'output size.  Most css colors are accepted.', required=False)
+        .param('magnification', 'Magnification of the output image.  If '
+               'neither width for height is specified, the magnification, '
+               'mm_x, and mm_y parameters are used to select the output size.',
+               required=False, dataType='float')
+        .param('mm_x', 'The size of the output pixels in millimeters',
+               required=False, dataType='float')
+        .param('mm_y', 'The size of the output pixels in millimeters',
+               required=False, dataType='float')
+        .param('exact', 'If magnification, mm_x, or mm_y are specified, they '
+               'must match an existing level of the image exactly.',
+               required=False, dataType='boolean', default=False)
+        .param('frame', 'For multiframe images, the 0-based frame number.  '
+               'This is ignored on non-multiframe images.', required=False,
+               dataType='int')
+        .param('encoding', 'Output image encoding.  TILED generates a tiled '
+               'tiff without the upper limit on image size the other options '
+               'have.  For geospatial sources, TILED will also have '
+               'appropriate tagging.', required=False,
+               enum=['JPEG', 'PNG', 'TIFF', 'TILED'], default='JPEG')
+        .param('jpegQuality', 'Quality used for generating JPEG images',
+               required=False, dataType='int', default=95)
+        .param('jpegSubsampling', 'Chroma subsampling used for generating '
+               'JPEG images.  0, 1, and 2 are full, half, and quarter '
+               'resolution chroma respectively.', required=False,
+               enum=['0', '1', '2'], dataType='int', default='0')
+        .param('tiffCompression', 'Compression method when storing a TIFF '
+               'image', required=False,
+               enum=['none', 'raw', 'lzw', 'tiff_lzw', 'jpeg', 'deflate',
+                     'tiff_adobe_deflate'])
+        .param('style', 'JSON-encoded style string', required=False)
+        .param('resample', 'If false, an existing level of the image is used '
+               'for the region.  If true, the internal values are '
+               'interpolated to match the specified size as needed.  0-3 for '
+               'a specific interpolation method (0-nearest, 1-lanczos, '
+               '2-bilinear, 3-bicubic)', required=False,
+               enum=['false', 'true', '0', '1', '2', '3'])
+        .param('contentDisposition', 'Specify the Content-Disposition response '
+               'header disposition-type value.', required=False,
+               enum=['inline', 'attachment'])
+        .param('contentDispositionFilename', 'Specify the filename used in '
+               'the Content-Disposition response header.', required=False)
+        .produces(ImageMimeTypes)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Insufficient memory.')
+    )
+    @access.public(cookie=True)
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def unrollFrames(self, item, params):
+        _adjustParams(params)
+        params = self._parseParams(params, True, [
+            ('framesAcross', int),
+            ('left', float, 'region', 'left'),
+            ('top', float, 'region', 'top'),
+            ('right', float, 'region', 'right'),
+            ('bottom', float, 'region', 'bottom'),
+            ('regionWidth', float, 'region', 'width'),
+            ('regionHeight', float, 'region', 'height'),
+            ('units', str, 'region', 'units'),
+            ('unitsWH', str, 'region', 'unitsWH'),
+            ('width', int, 'output', 'maxWidth'),
+            ('height', int, 'output', 'maxHeight'),
+            ('fill', str),
+            ('magnification', float, 'scale', 'magnification'),
+            ('mm_x', float, 'scale', 'mm_x'),
+            ('mm_y', float, 'scale', 'mm_y'),
+            ('exact', bool, 'scale', 'exact'),
+            ('frame', int),
+            ('encoding', str),
+            ('jpegQuality', int),
+            ('jpegSubsampling', int),
+            ('tiffCompression', str),
+            ('style', str),
+            ('resample', 'boolOrInt'),
+            ('contentDisposition', str),
+            ('contentDispositionFileName', str)
+        ])
+        _handleETag('unrollFrames', item, params)
+        setResponseTimeLimit(86400)
+        try:
+            regionData, regionMime = self.imageItemModel.unrollFrames(
+                item, **params)
+        except TileGeneralException as e:
+            raise RestException(e.args[0])
+        except ValueError as e:
+            raise RestException('Value Error: %s' % e.args[0])
+        self._setContentDisposition(
+            item, params.get('contentDisposition'), regionMime, 'unroll',
+            params.get('contentDispositionFilename'))
+        setResponseHeader('Content-Type', regionMime)
+        if isinstance(regionData, pathlib.Path):
+            BUF_SIZE = 65536
+
+            def stream():
+                try:
+                    with regionData.open('rb') as f:
+                        while True:
+                            data = f.read(BUF_SIZE)
+                            if not data:
+                                break
+                            yield data
+                finally:
+                    regionData.unlink()
+            return stream
+        setRawResponse()
+        return regionData

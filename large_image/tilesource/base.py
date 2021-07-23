@@ -1527,13 +1527,24 @@ class TileSource:
             return _encodeImage(image, format=format, **kwargs)
         regionWidth = iterInfo['region']['width']
         regionHeight = iterInfo['region']['height']
-        top = iterInfo['region']['top']
-        left = iterInfo['region']['left']
-        mode = None if TILE_FORMAT_NUMPY in format else iterInfo['mode']
         outWidth = iterInfo['output']['width']
         outHeight = iterInfo['output']['height']
         tiled = TILE_FORMAT_IMAGE in format and kwargs.get('encoding') == 'TILED'
         image = None
+        image = self._getRegionFromIterator(image, iterInfo, tiled, **kwargs)
+        return self._getRegionFinish(
+            image, iterInfo, format, regionWidth, regionHeight, outWidth,
+            outHeight, tiled, **kwargs)
+
+    def _getRegionFromIterator(self, image, iterInfo, tiled, outputWidth=None,
+                               outputHeight=None, offsetX=0, offsetY=0, **kwargs):
+        # ##DWM::
+        top = iterInfo['region']['top']
+        left = iterInfo['region']['left']
+        regionWidth = iterInfo['region']['width']
+        regionHeight = iterInfo['region']['height']
+        outputWidth = outputWidth or regionWidth
+        outputHeight = outputHeight or regionHeight
         for tile in self._tileIterator(iterInfo):
             # Add each tile to the image
             subimage, _ = _imageToNumpy(tile['tile'])
@@ -1547,7 +1558,14 @@ class TileSource:
             subimage = subimage[:min(subimage.shape[0], regionHeight - y0),
                                 :min(subimage.shape[1], regionWidth - x0)]
             image = self._addRegionTileToImage(
-                image, subimage, x0, y0, regionWidth, regionHeight, tiled, tile, **kwargs)
+                image, subimage, x0 + offsetX, y0 + offsetY, outputWidth,
+                outputHeight, tiled, tile, **kwargs)
+        return image
+
+    def _getRegionFinish(self, image, iterInfo, format, regionWidth,
+                         regionHeight, outWidth, outHeight, tiled, **kwargs):
+        # ##DWM::
+        mode = None if TILE_FORMAT_NUMPY in format else iterInfo['mode']
         # Scale if we need to
         outWidth = int(math.floor(outWidth))
         outHeight = int(math.floor(outHeight))
@@ -1563,6 +1581,49 @@ class TileSource:
         if kwargs.get('fill') and maxWidth and maxHeight:
             image = _letterboxImage(_imageToPIL(image, mode), maxWidth, maxHeight, kwargs['fill'])
         return _encodeImage(image, format=format, **kwargs)
+
+    def unrollFrames(self, format=(TILE_FORMAT_IMAGE, ), frameList=None,
+                     framesAcross=None, **kwargs):
+        kwargs = kwargs.copy()
+        kwargs.pop('tile_position', None)
+        kwargs.pop('frame', None)
+        numFrames = len(self.getMetadata().get('frames', [0]))
+        if frameList:
+            frameList = [f for f in frameList if f >= 0 and f < numFrames]
+        if not frameList:
+            frameList = list(range(numFrames))
+        if len(frameList) == 1:
+            return self.getRegion(format=format, frame=frameList[0], **kwargs)
+        if not framesAcross:
+            framesAcross = int(math.ceil(len(frameList) ** 0.5))
+        framesAcross = min(len(frameList), framesAcross)
+        framesHigh = int(math.ceil(len(frameList) / framesAcross))
+        if not isinstance(format, (tuple, set, list)):
+            format = (format, )
+        iterInfo = self._tileIteratorInfo(frame=frameList[0], **kwargs)
+        if iterInfo is None:
+            image = PIL.Image.new('RGB', (0, 0))
+            return _encodeImage(image, format=format, **kwargs)
+        regionWidth = iterInfo['region']['width']
+        regionHeight = iterInfo['region']['height']
+        buildWidth = regionWidth * framesAcross
+        buildHeight = regionHeight * framesHigh
+        outWidth = iterInfo['output']['width'] * framesAcross
+        outHeight = iterInfo['output']['height'] * framesHigh
+        tiled = TILE_FORMAT_IMAGE in format and kwargs.get('encoding') == 'TILED'
+        image = None
+        for idx, frame in enumerate(frameList):
+            frameIterInfo = self._tileIteratorInfo(frame=frame, **kwargs)
+            offsetX = (idx % framesAcross) * regionWidth
+            offsetY = (idx // framesAcross) * regionHeight
+            print('frame', idx, frame, offsetX, offsetY)  # ##DWM::
+            image = self._getRegionFromIterator(
+                image, frameIterInfo, tiled, frame=frame, outputWidth=buildWidth,
+                outputHeight=buildHeight, offsetX=offsetX, offsetY=offsetY,
+                **kwargs)
+        return self._getRegionFinish(
+            image, iterInfo, format, buildWidth, buildHeight, outWidth,
+            outHeight, tiled, **kwargs)
 
     def _addRegionTileToImage(
             self, image, subimage, x, y, width, height, tiled=False, tile=None, **kwargs):

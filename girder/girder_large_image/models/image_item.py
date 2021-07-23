@@ -423,6 +423,23 @@ class ImageItem(Item):
         regionData, regionMime = tileSource.getRegion(**kwargs)
         return regionData, regionMime
 
+    def unrollFrames(self, item, **kwargs):
+        """
+        Using a tile source, get an arbitrary region of the image, optionally
+        scaling the results.  Aspect ratio is preserved.
+        # ##DWM::
+
+        :param item: the item with the tile source.
+        :param kwargs: optional arguments.  Some options are left, top,
+            right, bottom, regionWidth, regionHeight, units, width, height,
+            encoding, jpegQuality, jpegSubsampling, and tiffCompression.  This
+            is also passed to the tile source.
+        :returns: regionData, regionMime: the image data and the mime type.
+        """
+        tileSource = self._loadTileSource(item, **kwargs)
+        regionData, regionMime = tileSource.unrollFrames(**kwargs)
+        return regionData, regionMime
+
     def getPixel(self, item, **kwargs):
         """
         Using a tile source, get a single pixel from the image.
