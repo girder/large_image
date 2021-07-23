@@ -105,7 +105,7 @@ class TilesItemResource(ItemResource):
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'), self.getTilesThumbnail)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'region'), self.getTilesRegion)
-        apiRoot.item.route('GET', (':itemId', 'tiles', 'unroll_frames'), self.unrollFrames)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames'), self.tileFrames)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'pixel'), self.getTilesPixel)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'histogram'), self.getHistogram)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'bands'), self.getBandInformation)
@@ -1088,7 +1088,9 @@ class TilesItemResource(ItemResource):
                     'it.')
         .param('itemId', 'The ID of the item.', paramType='path')
         .param('framesAcross', 'How many frames across', required=False, dataType='int')
-        # ##DWM:: add frameList
+        .param('frameList', 'Comma-separated list of frames', required=False)
+        .param('cache', 'Cache the results for future use', required=False,
+               dataType='boolean', default=False)
         .param('left', 'The left column (0-based) of the region to process.  '
                'Negative values are offsets from the right edge.',
                required=False, dataType='float')
@@ -1170,10 +1172,14 @@ class TilesItemResource(ItemResource):
     )
     @access.public(cookie=True)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
-    def unrollFrames(self, item, params):
+    def tileFrames(self, item, params):
+        cache = params.pop('cache', False)
+        checkAndCreate = False if cache else 'nosave'
         _adjustParams(params)
+
         params = self._parseParams(params, True, [
             ('framesAcross', int),
+            ('frameList', str),
             ('left', float, 'region', 'left'),
             ('top', float, 'region', 'top'),
             ('right', float, 'region', 'right'),
@@ -1199,17 +1205,24 @@ class TilesItemResource(ItemResource):
             ('contentDisposition', str),
             ('contentDispositionFileName', str)
         ])
-        _handleETag('unrollFrames', item, params)
+        _handleETag('tileFrames', item, params)
+        if 'frameList' in params:
+            params['frameList'] = [
+                int(f.strip()) for f in str(params['frameList']).lstrip(
+                    '[').rstrip(']').split(',')]
         setResponseTimeLimit(86400)
         try:
-            regionData, regionMime = self.imageItemModel.unrollFrames(
-                item, **params)
+            result = self.imageItemModel.tileFrames(
+                item, checkAndCreate=checkAndCreate, **params)
         except TileGeneralException as e:
             raise RestException(e.args[0])
         except ValueError as e:
             raise RestException('Value Error: %s' % e.args[0])
+        if not isinstance(result, tuple):
+            return result
+        regionData, regionMime = result
         self._setContentDisposition(
-            item, params.get('contentDisposition'), regionMime, 'unroll',
+            item, params.get('contentDisposition'), regionMime, 'tileframes',
             params.get('contentDispositionFilename'))
         setResponseHeader('Content-Type', regionMime)
         if isinstance(regionData, pathlib.Path):

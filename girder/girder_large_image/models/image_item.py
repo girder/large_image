@@ -299,6 +299,10 @@ class ImageItem(Item):
         size.
 
         :param item: the item with the tile source.
+        :param checkAndCreate: if the thumbnail is already cached, just return
+            True.  If it does not, create, cache, and return it.  If 'nosave',
+            return values from the cache, but do not store new results in the
+            cache.
         :param width: maximum width in pixels.
         :param height: maximum height in pixels.
         :param kwargs: optional arguments.  Some options are encoding,
@@ -325,7 +329,7 @@ class ImageItem(Item):
             'thumbnailKey': key
         })
         if existing:
-            if checkAndCreate:
+            if checkAndCreate and checkAndCreate != 'nosave':
                 return True
             if kwargs.get('contentDisposition') != 'attachment':
                 contentDisposition = 'inline'
@@ -351,7 +355,7 @@ class ImageItem(Item):
             saveFile = maxThumbnailFiles > 0
             # Make sure we don't exceed the desired number of thumbnails
             self.removeThumbnailFiles(item, maxThumbnailFiles - 1)
-        if saveFile:
+        if saveFile and checkAndCreate != 'nosave':
             dataStored = imageData if not pickleCache else pickle.dumps(imageData, protocol=4)
             # Save the data as a file
             datafile = Upload().uploadFromFile(
@@ -423,22 +427,26 @@ class ImageItem(Item):
         regionData, regionMime = tileSource.getRegion(**kwargs)
         return regionData, regionMime
 
-    def unrollFrames(self, item, **kwargs):
+    def tileFrames(self, item, checkAndCreate='nosave', **kwargs):
         """
-        Using a tile source, get an arbitrary region of the image, optionally
-        scaling the results.  Aspect ratio is preserved.
-        # ##DWM::
+        Given the parameters for getRegion, plus a list of frames and the
+        number of frames across, make a larger image composed of a region from
+        each listed frame composited together.
 
         :param item: the item with the tile source.
+        :param checkAndCreate: if False, use the cache.  If True and the result
+            is already cached, just return True.  If it does not, create,
+            cache, and return it.  If 'nosave', return values from the cache,
+            but do not store new results in the cache.
         :param kwargs: optional arguments.  Some options are left, top,
             right, bottom, regionWidth, regionHeight, units, width, height,
             encoding, jpegQuality, jpegSubsampling, and tiffCompression.  This
-            is also passed to the tile source.
+            is also passed to the tile source.  These also include frameList
+            and framesAcross.
         :returns: regionData, regionMime: the image data and the mime type.
         """
-        tileSource = self._loadTileSource(item, **kwargs)
-        regionData, regionMime = tileSource.unrollFrames(**kwargs)
-        return regionData, regionMime
+        return self._getAndCacheImageOrData(
+            item, 'tileFrames', checkAndCreate, dict(kwargs), **kwargs)
 
     def getPixel(self, item, **kwargs):
         """
