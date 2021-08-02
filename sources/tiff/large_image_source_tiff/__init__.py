@@ -314,10 +314,12 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         missing = [v is None for v in self._tiffDirectories]
         maxMissing = max(0 if not v else missing.index(False, idx) - idx
                          for idx, v in enumerate(missing))
+        self._skippedLevels = maxMissing
         if maxMissing >= self._maxSkippedLevels:
             config.getConfig('logger').warning(
                 'Tiff image is missing many lower resolution levels (%d).  '
                 'It will be inefficient to read lower resolution tiles.', maxMissing)
+            self._inefficientWarning = True
         return True
 
     def _reorient_numpy_image(self, image, orientation):
