@@ -748,3 +748,18 @@ def testTilesFromMultiFrameTiffWithSubIFD():
 
     tile = source.getSingleTile()
     assert list(tile['tile'][0, 0]) == [7710]
+
+
+def testTilesFromMissingLayer():
+    imagePath = datastore.fetch('one_layer_missing_tiles.tiff')
+    source = large_image_source_tiff.open(imagePath)
+    tileMetadata = source.getMetadata()
+
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 5477
+    assert tileMetadata['sizeY'] == 4515
+    assert tileMetadata['levels'] == 6
+    with pytest.raises(Exception):
+        utilities.checkTilesZXY(source, tileMetadata)
+    utilities.checkTilesZXY(source, tileMetadata, {'sparseFallback': True})

@@ -143,7 +143,8 @@ class LazyTileDict(dict):
                     y0 = 0
                 tileData = tileData[:min(tileData.shape[0], self.height - y0),
                                     :min(tileData.shape[1], self.width - x0)]
-                retile[y0:y0 + tileData.shape[0], x0:x0 + tileData.shape[1]] = tileData
+                retile[y0:y0 + tileData.shape[0], x0:x0 + tileData.shape[1]] = tileData[
+                    :, :, :retile.shape[2]]
         return retile
 
     def __getitem__(self, key, *args, **kwargs):
