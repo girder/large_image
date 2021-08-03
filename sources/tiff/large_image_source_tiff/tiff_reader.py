@@ -503,7 +503,7 @@ class TiledTiffDirectory:
         # long to an int
         return int(rawTileSizes[tileNum])
 
-    def _getJpegFrame(self, tileNum, entire=False):
+    def _getJpegFrame(self, tileNum, entire=False):  # noqa
         """
         Get the raw encoded JPEG image frame from a tile.
 
@@ -517,6 +517,8 @@ class TiledTiffDirectory:
         """
         # This raises an InvalidOperationTiffException if the tile doesn't exist
         rawTileSize = self._getJpegFrameSize(tileNum)
+        if rawTileSize <= 0:
+            raise IOTiffException('No raw tile data')
 
         frameBuffer = ctypes.create_string_buffer(rawTileSize)
 

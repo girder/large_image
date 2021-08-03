@@ -66,6 +66,9 @@ registry = {
     # Typical SVS file with 240x240 tiles
     # Source: sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs
     'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs': 'sha512:5580c2b5a5360d279d102f1eb5b0e646a4943e362ec1d47f2db01f8e9e52b302e51692171198d0d35c7fa9ec9f5b8e445ef91fa7ea0bdb05ead31ab49e0118f9',  # noqa
+    # One layer tiff with missing tiles
+    # Source: one_layer_missing_tiles.tiff
+    'one_layer_missing_tiles.tiff': 'sha512:53d52abbb82d312b114407d2974fa0a4116c3b50875c5b360798b5d529cbb67596b1dff7d8feceb319d0b4377d12d023b64e374ea3df37f795c5a940afaa4cd5',  # noqa
 }
 
 

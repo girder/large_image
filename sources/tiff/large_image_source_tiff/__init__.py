@@ -535,7 +535,10 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             allowStyle = True
             if dir is None:
                 try:
-                    tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
+                    if not kwargs.get('inSparseFallback'):
+                        tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
+                    else:
+                        raise IOTiffException('Missing z level %d' % z)
                 except Exception:
                     if sparseFallback:
                         raise IOTiffException('Missing z level %d' % z)
@@ -580,20 +583,25 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def getTileIOTiffException(self, x, y, z, pilImageAllowed=False,
                                numpyAllowed=False, sparseFallback=False,
                                exception=None, **kwargs):
-        if sparseFallback and z:
-            noedge = kwargs.copy()
-            noedge.pop('edge', None)
-            image = self.getTile(
-                x / 2, y / 2, z - 1, pilImageAllowed=True, numpyAllowed=False,
-                sparseFallback=sparseFallback, edge=False, **noedge)
-            if not isinstance(image, PIL.Image.Image):
-                image = PIL.Image.open(io.BytesIO(image))
-            image = image.crop((
-                self.tileWidth / 2 if x % 2 else 0,
-                self.tileHeight / 2 if y % 2 else 0,
-                self.tileWidth if x % 2 else self.tileWidth / 2,
-                self.tileHeight if y % 2 else self.tileHeight / 2))
-            image = image.resize((self.tileWidth, self.tileHeight))
+        if sparseFallback:
+            if z:
+                noedge = kwargs.copy()
+                noedge.pop('edge', None)
+                noedge['inSparseFallback'] = True
+                image = self.getTile(
+                    x // 2, y // 2, z - 1, pilImageAllowed=True, numpyAllowed=False,
+                    sparseFallback=sparseFallback, edge=False,
+                    **noedge)
+                if not isinstance(image, PIL.Image.Image):
+                    image = PIL.Image.open(io.BytesIO(image))
+                image = image.crop((
+                    self.tileWidth / 2 if x % 2 else 0,
+                    self.tileHeight / 2 if y % 2 else 0,
+                    self.tileWidth if x % 2 else self.tileWidth / 2,
+                    self.tileHeight if y % 2 else self.tileHeight / 2))
+                image = image.resize((self.tileWidth, self.tileHeight))
+            else:
+                image = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
             return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
                                     numpyAllowed, applyStyle=False, **kwargs)
         raise TileSourceException('Internal I/O failure: %s' % exception.args[0])

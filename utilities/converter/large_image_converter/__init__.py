@@ -461,6 +461,12 @@ def _convert_large_image_tile(tilelock, strips, tile):
             strips[ty] = vimg
             if not x:
                 return
+        print('A', vimg.bands, strips[ty].bands)
+        if vimg.bands > strips[ty].bands:
+            vimg = vimg[:strips[ty].bands]
+        elif strips[ty].bands > vimg.bands:
+            strips[ty] = strips[ty][:vimg.bands]
+        print('B', vimg.bands, strips[ty].bands)
         strips[ty] = strips[ty].insert(vimg, x, 0, expand=True)
 
 
@@ -795,7 +801,7 @@ def format_hook(funcname, *args, **kwargs):
         return func(*args, **kwargs)
 
 
-def convert(inputPath, outputPath=None, **kwargs):
+def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
     """
     Take a source input file and output a pyramidal tiff file.
 
@@ -879,7 +885,11 @@ def convert(inputPath, outputPath=None, **kwargs):
             elif _is_multiframe(inputPath):
                 _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
             else:
-                _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
+                try:
+                    _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
+                except Exception:
+                    if lidata:
+                        _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
     return outputPath
 
 

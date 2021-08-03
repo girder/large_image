@@ -281,3 +281,11 @@ def testConverterMainConcurrency(tmpdir):
     outputPath = os.path.join(tmpdir, 'out.tiff')
     main.main([imagePath, outputPath, '--concurrency', '2'])
     assert os.path.getsize(outputPath) > 100
+
+
+def testConverterMissingTiles(tmpdir):
+    imagePath = datastore.fetch('one_layer_missing_tiles.tiff')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath)
+    info = tifftools.read_tiff(outputPath)
+    assert len(info['ifds']) == 6
