@@ -15,45 +15,54 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+      # general utilities \
+      software-properties-common \
+      # as specified by \
+      # https://github.com/pyenv/pyenv/wiki#suggested-build-environment
       build-essential \
-      bzip2 \
-      ca-certificates \
       curl \
-      dirmngr \
-      fonts-dejavu \
-      fuse \
-      git \
-      gosu \
-      gpg-agent \
-      less \
       libbz2-dev \
       libffi-dev \
-      libldap2-dev \
       liblzma-dev \
-      libmagic-dev \
-      libncurses5-dev \
       libncursesw5-dev \
       libreadline-dev \
-      libsasl2-dev \
       libsqlite3-dev \
       libssl-dev \
       libxml2-dev \
       libxmlsec1-dev \
       llvm \
-      locales \
       make \
-      software-properties-common \
-      ssh \
       tk-dev \
-      vim \
       wget \
       xz-utils \
       zlib1g-dev \
+      # for curl \
+      ca-certificates \
+      # girder convenience
+      fuse \
+      libldap2-dev \
+      libsasl2-dev \
+      # developer convenience \
+      bzip2 \
+      dirmngr \
+      git \
+      gpg-agent \
+      less \
+      locales \
+      ssh \
+      vim \
+      # From upstream \
+      gosu \
+      # testing convenience \
+      fonts-dejavu \
+      libmagic-dev \
+      # shrink docker image \
+      rdfind \
       && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/*
 
 RUN pyenv update && \
     pyenv install --list && \
@@ -63,7 +72,9 @@ RUN pyenv update && \
     find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
     echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
-    rm -rf /tmp/* /var/tmp/*
+    rm -rf /tmp/* /var/tmp/* && \
+    # This makes duplicate python library files hardlinks of each other \
+    rdfind -minsize 1048576 -makehardlinks true -makeresultsfile false /.pyenv
 
 RUN for ver in $PYTHON_VERSIONS; do \
     pyenv local $ver && \
