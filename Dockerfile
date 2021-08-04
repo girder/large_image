@@ -52,6 +52,7 @@ RUN apt-get update && \
       && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
+    find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN pyenv update && \
@@ -61,6 +62,7 @@ RUN pyenv update && \
     find $PYENV_ROOT/versions -type d '(' -name '__pycache__' -o -name 'test' -o -name 'tests' ')' -exec rm -rfv '{}' + >/dev/null && \
     find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
     echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
+    find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/*
 
 RUN for ver in $PYTHON_VERSIONS; do \
@@ -70,6 +72,7 @@ RUN for ver in $PYTHON_VERSIONS; do \
     pyenv local --unset; \
     done && \
     pyenv rehash && \
+    find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/*
 
 # Create a user that can be used with gosu or chroot when running tox
@@ -78,6 +81,7 @@ RUN groupadd -r tox --gid=999 && \
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
     apt-get install -y nodejs && \
+    find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /app
