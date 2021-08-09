@@ -322,6 +322,12 @@ def testThumbnails():
     assert width == 180
     assert height == 180
     assert image != nextimage
+    nextimage, mimeType = source.getThumbnail(
+        encoding='PNG', width=180, height=180, fill='corner:black')
+    (width, height) = struct.unpack('!LL', nextimage[16:24])
+    assert width == 180
+    assert height == 180
+    assert image != nextimage
     # Test bad parameters
     badParams = [
         ({'encoding': 'invalid'}, 'Invalid encoding'),
@@ -763,3 +769,50 @@ def testTilesFromMissingLayer():
     with pytest.raises(Exception):
         utilities.checkTilesZXY(source, tileMetadata)
     utilities.checkTilesZXY(source, tileMetadata, {'sparseFallback': True})
+
+
+def testTileFrames():
+    imagePath = datastore.fetch('sample.ome.tif')
+    source = large_image_source_tiff.open(imagePath)
+
+    params = {'encoding': 'PNG', 'output': {'maxWidth': 200, 'maxHeight': 200}}
+    image, mimeType = source.tileFrames(**params)
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 400
+    assert height == 382
+
+    params['fill'] = 'corner:black'
+    image, mimeType = source.tileFrames(**params)
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 400
+    assert height == 400
+
+    params['framesAcross'] = 3
+    image, mimeType = source.tileFrames(**params)
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 600
+    assert height == 200
+
+    params['frameList'] = [0, 2]
+    image, mimeType = source.tileFrames(**params)
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 400
+    assert height == 200
+
+    params['frameList'] = [0]
+    image, mimeType = source.tileFrames(**params)
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    (width, height) = struct.unpack('!LL', image[16:24])
+    assert width == 200
+    assert height == 200
+
+    params.pop('frameList')
+    params['encoding'] = 'TILED'
+    image, mimeType = source.tileFrames(**params)
+    info = tifftools.read_tiff(image)
+    assert len(info['ifds']) == 3
+    os.unlink(image)

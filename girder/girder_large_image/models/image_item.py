@@ -355,7 +355,8 @@ class ImageItem(Item):
             saveFile = maxThumbnailFiles > 0
             # Make sure we don't exceed the desired number of thumbnails
             self.removeThumbnailFiles(item, maxThumbnailFiles - 1)
-        if saveFile and checkAndCreate != 'nosave':
+        if (saveFile and checkAndCreate != 'nosave' and (
+                pickleCache or isinstance(imageData, bytes))):
             dataStored = imageData if not pickleCache else pickle.dumps(imageData, protocol=4)
             # Save the data as a file
             datafile = Upload().uploadFromFile(

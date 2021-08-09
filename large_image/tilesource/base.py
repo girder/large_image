@@ -1740,6 +1740,8 @@ class TileSource:
                 corner, fill = True, fill.split(':', 1)[1]
             color = PIL.ImageColor.getcolor(
                 fill, ['L', 'LA', 'RGB', 'RGBA'][vimg.bands - 1])
+            if isinstance(color, int):
+                color = [color]
             lbimage = pyvips.Image.black(maxWidth, maxHeight, bands=vimg.bands)
             lbimage = lbimage.cast(vimg.format)
             lbimage = lbimage.draw_rect(

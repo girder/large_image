@@ -803,7 +803,7 @@ def testRegions(server, admin, fsAssetstore):
     resp = server.request(path='/item/%s/tiles/region' % itemId,
                           user=admin, isJson=False, params=params)
     assert utilities.respStatus(resp) == 200
-    image = origImage = utilities.getBody(resp, text=False)
+    image = utilities.getBody(resp, text=False)
     assert image[:len(utilities.BigTIFFHeader)] == utilities.BigTIFFHeader
 
 
@@ -1323,3 +1323,34 @@ def testTilesConvertRemote(boundServer, admin, fsAssetstore, girderWorker):
     assert tileMetadata['mm_x'] is None
     assert tileMetadata['mm_y'] is None
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testTileFrames(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample.ome.tif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    params = {
+        'width': 200,
+        'height': 200}
+    resp = server.request(path='/item/%s/tiles/tile_frames' % itemId,
+                          user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+
+    params['cache'] = 'true'
+    resp = server.request(path='/item/%s/tiles/tile_frames' % itemId,
+                          user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+
+    resp = server.request(path='/item/%s/tiles/tile_frames' % itemId,
+                          user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+
+    params['encoding'] = 'TILED'
+    params['frameList'] = '0,2'
+    resp = server.request(path='/item/%s/tiles/tile_frames' % itemId,
+                          user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+    image = utilities.getBody(resp, text=False)
+    assert image[:len(utilities.BigTIFFHeader)] == utilities.BigTIFFHeader
