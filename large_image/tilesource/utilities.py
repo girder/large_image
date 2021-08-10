@@ -151,11 +151,16 @@ def _letterboxImage(image, width, height, fill):
     if ((image.width >= width and image.height >= height) or
             not fill or str(fill).lower() == 'none'):
         return image
+    corner = False
+    if fill.lower().startswith('corner:'):
+        corner, fill = True, fill.split(':', 1)[1]
     color = PIL.ImageColor.getcolor(fill, image.mode)
     width = max(width, image.width)
     height = max(height, image.height)
     result = PIL.Image.new(image.mode, (width, height), color)
-    result.paste(image, (int((width - image.width) / 2), int((height - image.height) / 2)))
+    result.paste(image, (
+        int((width - image.width) / 2) if not corner else 0,
+        int((height - image.height) / 2) if not corner else 0))
     return result
 
 
