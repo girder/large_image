@@ -461,12 +461,10 @@ def _convert_large_image_tile(tilelock, strips, tile):
             strips[ty] = vimg
             if not x:
                 return
-        print('A', vimg.bands, strips[ty].bands)
         if vimg.bands > strips[ty].bands:
             vimg = vimg[:strips[ty].bands]
         elif strips[ty].bands > vimg.bands:
             strips[ty] = strips[ty][:vimg.bands]
-        print('B', vimg.bands, strips[ty].bands)
         strips[ty] = strips[ty].insert(vimg, x, 0, expand=True)
 
 
