@@ -16,6 +16,7 @@
 
 import colorsys
 import itertools
+import math
 
 from PIL import Image, ImageDraw, ImageFont
 from pkg_resources import DistributionNotFound, get_distribution
@@ -83,11 +84,12 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                       if not sizeX else sizeX)
         self.sizeY = (((2 ** self.maxLevel) * self.tileHeight)
                       if not sizeY else sizeY)
+        self.maxLevel = int(math.ceil(math.log2(max(
+            self.sizeX / self.tileWidth, self.sizeY / self.tileHeight))))
         self.frameSpec = frames or None
         self.monochrome = bool(monochrome)
         # Used for reporting tile information
         self.levels = self.maxLevel + 1
-        print(frames)
         if frames:
             frameList = []
             counts = [int(part) for part in str(frames).split(',')]
@@ -177,7 +179,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             fFraction = float(frame) / (len(self._frames) - 1)
 
         backgroundColor = colorsys.hsv_to_rgb(
-            h=(0.9 * xFraction),
+            h=(0.99 * xFraction),
             s=(0.3 + (0.7 * fFraction)),
             v=(0.3 + (0.7 * yFraction)),
         )
