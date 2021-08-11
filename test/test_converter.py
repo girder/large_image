@@ -289,3 +289,26 @@ def testConverterMissingTiles(tmpdir):
     large_image_converter.convert(imagePath, outputPath)
     info = tifftools.read_tiff(outputPath)
     assert len(info['ifds']) == 6
+
+
+def testConvertFromTestSourceFrames(tmpdir):
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert('large_image://test?maxLevel=3&frames=4', outputPath)
+    source = large_image_source_tiff.open(outputPath)
+    metadata = source.getMetadata()
+    assert metadata['levels'] == 4
+    assert len(metadata['frames']) == 4
+    info = tifftools.read_tiff(outputPath)
+    assert len(info['ifds']) == 4
+
+
+def testConvertFromTestSourceFrameArray(tmpdir):
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(
+        'large_image://test?maxLevel=3&frames=2,3&monochrome=true', outputPath)
+    source = large_image_source_tiff.open(outputPath)
+    metadata = source.getMetadata()
+    assert metadata['levels'] == 4
+    assert len(metadata['frames']) == 6
+    info = tifftools.read_tiff(outputPath)
+    assert len(info['ifds']) == 6

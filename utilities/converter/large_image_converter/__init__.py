@@ -53,10 +53,19 @@ def _data_from_large_image(path, outputPath, **kwargs):
         readable by large_image.
     """
     _import_pyvips()
-    try:
-        ts = large_image.getTileSource(path)
-    except Exception:
-        return
+    if not path.startswith('large_image://test'):
+        try:
+            ts = large_image.getTileSource(path)
+        except Exception:
+            return
+    else:
+        import urllib.parse
+
+        tsparams = {
+            k: int(v[0]) if v[0].isdigit() else v[0]
+            for k, v in urllib.parse.parse_qs(
+                path.split('?', 1)[1] if '?' in path else '').items()}
+        ts = large_image.getTileSource('large_image://test', **tsparams)
     results = {
         'metadata': ts.getMetadata(),
         'internal_metadata': ts.getInternalMetadata(),

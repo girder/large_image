@@ -212,7 +212,7 @@ def main(args=sys.argv[1:]):
     except ImportError:
         pass
     logger.debug('Command line options: %r' % opts)
-    if not os.path.isfile(opts.source):
+    if not os.path.isfile(opts.source) and not opts.source.startswith('large_image://test'):
         logger.error('Source is not a file (%s)', opts.source)
         return 1
     if opts.compression == 'zip':

@@ -265,6 +265,9 @@ class TilesItemResource(ItemResource):
             ('sizeX', int),
             ('sizeY', int),
             ('fractal', lambda val: val == 'true'),
+            ('frame', int),
+            ('frames', str),
+            ('monochrome', lambda val: val == 'true'),
             ('encoding', str),
         ])
 

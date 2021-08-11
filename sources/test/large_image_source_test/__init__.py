@@ -15,6 +15,7 @@
 ##############################################################################
 
 import colorsys
+import itertools
 
 from PIL import Image, ImageDraw, ImageFont
 from pkg_resources import DistributionNotFound, get_distribution
@@ -45,7 +46,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
 
     def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
-                 fractal=False, **kwargs):
+                 fractal=False, frames=None, monochrome=False, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -57,10 +58,13 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         :param tileHeight: tile height in pixels
         :param sizeX: image width in pixels at maximum level.  Computed from
             maxLevel and tileWidth if None.
-        :param sizeY: image height in pixels at maximum level.  Computer from
+        :param sizeY: image height in pixels at maximum level.  Computed from
             maxLevel and tileHeight if None.
         :param fractal: if True, and the tile size is square and a power of
             two, draw a simple fractal on the tiles.
+        :param frames: if present, this is either a single number for generic
+            frames, or comma-separated list of c,z,t,xy.
+        :param monochrome: if True, return single channel tiles.
         """
         if not kwargs.get('encoding'):
             kwargs = kwargs.copy()
@@ -76,17 +80,46 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         self.fractal = (fractal and self.tileWidth == self.tileHeight and
                         not (self.tileWidth & (self.tileWidth - 1)))
         self.sizeX = (((2 ** self.maxLevel) * self.tileWidth)
-                      if sizeX is None else sizeX)
+                      if not sizeX else sizeX)
         self.sizeY = (((2 ** self.maxLevel) * self.tileHeight)
-                      if sizeY is None else sizeY)
+                      if not sizeY else sizeY)
+        self.frameSpec = frames or None
+        self.monochrome = bool(monochrome)
         # Used for reporting tile information
         self.levels = self.maxLevel + 1
+        print(frames)
+        if frames:
+            frameList = []
+            counts = [int(part) for part in str(frames).split(',')]
+            self._framesParts = len(counts)
+            for fidx in itertools.product(*(range(part) for part in counts[::-1])):
+                curframe = {}
+                if len(fidx) > 1:
+                    for idx, (k, v) in enumerate(zip([
+                            'IndexC', 'IndexZ', 'IndexT', 'IndexXY'], list(fidx)[::-1])):
+                        if counts[idx] > 1:
+                            curframe[k] = v
+                else:
+                    curframe['Index'] = fidx[0]
+                frameList.append(curframe)
+            if len(frameList) > 1:
+                self._frames = frameList
 
     @classmethod
     def canRead(cls, *args, **kwargs):
         return True
 
     def fractalTile(self, image, x, y, widthCount, color=(0, 0, 0)):
+        """
+        Draw a simple fractal in a tile image.
+
+        :param image: a Pil image to draw on.  Modified.
+        :param x: the tile x position
+        :param y: the tile y position
+        :param widthCount: 2 ** z; the number of tiles across for a "full size"
+            image at this z level.
+        :param color: an rgb tuple on a scale of [0-255].
+        """
         imageDraw = ImageDraw.Draw(image)
         x *= self.tileWidth
         y *= self.tileHeight
@@ -105,6 +138,19 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                             ], color, None)
             sq //= 2
 
+    def getMetadata(self):
+        """
+        Return a dictionary of metadata containing levels, sizeX, sizeY,
+        tileWidth, tileHeight, magnification, mm_x, mm_y, and frames.
+
+        :returns: metadata dictionary.
+        """
+        result = super().getMetadata()
+        if hasattr(self, '_frames') and len(self._frames) > 1:
+            result['frames'] = self._frames
+            self._addMetadataFrameInformation(result)
+        return result
+
     def getInternalMetadata(self, **kwargs):
         """
         Return additional known metadata about the tile source.  Data returned
@@ -113,27 +159,26 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
 
         :returns: a dictionary of data or None.
         """
-        return {'fractal': self.fractal}
+        return {'fractal': self.fractal, 'monochrome': self.monochrome}
 
     @methodcache()
     def getTile(self, x, y, z, *args, **kwargs):
         widthCount = 2 ** z
+        frame = int(kwargs.get('frame') or 0)
+        self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
 
-        if not (0 <= x < float(self.sizeX) / self.tileWidth * 2 ** (
-                z - self.maxLevel)):
-            raise TileSourceException('x is outside layer')
-        if not (0 <= y < float(self.sizeY) / self.tileHeight * 2 ** (
-                z - self.maxLevel)):
-            raise TileSourceException('y is outside layer')
         if not (self.minLevel <= z <= self.maxLevel):
             raise TileSourceException('z layer does not exist')
 
         xFraction = float(x) / (widthCount - 1) if z != 0 else 0
         yFraction = float(y) / (widthCount - 1) if z != 0 else 0
+        fFraction = yFraction
+        if hasattr(self, '_frames'):
+            fFraction = float(frame) / (len(self._frames) - 1)
 
         backgroundColor = colorsys.hsv_to_rgb(
             h=(0.9 * xFraction),
-            s=(0.3 + (0.7 * yFraction)),
+            s=(0.3 + (0.7 * fFraction)),
             v=(0.3 + (0.7 * yFraction)),
         )
         rgbColor = tuple(int(val * 255) for val in backgroundColor)
@@ -148,21 +193,34 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         if self.fractal:
             self.fractalTile(image, x, y, widthCount, rgbColor)
 
+        fontsize = 0.15
+        text = 'x=%d\ny=%d\nz=%d' % (x, y, z)
+        if hasattr(self, '_frames'):
+            if self._framesParts == 1:
+                text += '\nf=%d' % frame
+            else:
+                for k1, k2 in [('C', 'IndexC'), ('Z', 'IndexZ'),
+                               ('T', 'IndexT'), ('XY', 'IndexXY')]:
+                    if k2 in self._frames[frame]:
+                        text += '\n%s=%d' % (k1, self._frames[frame][k2])
+                fontsize = min(fontsize, 0.8 / len(text.split('\n')))
         try:
             # the font size should fill the whole tile
             imageDrawFont = ImageFont.truetype(
                 font='/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
-                size=int(0.15 * min(self.tileWidth, self.tileHeight))
+                size=int(fontsize * min(self.tileWidth, self.tileHeight))
             )
         except OSError:
             imageDrawFont = ImageFont.load_default()
         imageDraw.multiline_text(
             xy=(10, 10),
-            text='x=%d\ny=%d\nz=%d' % (x, y, z),
+            text=text,
             fill=(0, 0, 0),
             font=imageDrawFont
         )
         _counters['tiles'] += 1
+        if self.monochrome:
+            image = image.convert('L')
         return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, **kwargs)
 
     @staticmethod
@@ -172,12 +230,15 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                 *args, **kwargs),
             kwargs.get('minLevel'), kwargs.get('maxLevel'),
             kwargs.get('tileWidth'), kwargs.get('tileHeight'),
-            kwargs.get('fractal'))
+            kwargs.get('fractal'), kwargs.get('sizeX'), kwargs.get('sizeY'),
+            kwargs.get('frames'), kwargs.get('monochrome'),
+        )
 
     def getState(self):
-        return 'test %r %r %r %r %r %r' % (
-            super().getState(), self.minLevel,
-            self.maxLevel, self.tileWidth, self.tileHeight, self.fractal)
+        return 'test %r %r %r %r %r %r %r %r %r %r' % (
+            super().getState(), self.minLevel, self.maxLevel, self.tileWidth,
+            self.tileHeight, self.fractal, self.sizeX, self.sizeY,
+            self.frameSpec, self.monochrome)
 
 
 def open(*args, **kwargs):
