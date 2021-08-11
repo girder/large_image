@@ -4,6 +4,12 @@
 
 ### Features
 - Provide band information on all tile sources (#622, #623)
+- Add a tileFrames method to tile sources and appropriate endpoints to composite regions from multiple frames to a single output image (#629)
+- The test tile source now support frames (#631)
+
+### Improvements
+- Better handle TIFFs with missing levels and tiles (#624, #627)
+- Better report inefficient TIFFs (#626)
 
 ## Version 1.6.2
 
