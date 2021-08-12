@@ -165,21 +165,20 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, *args, **kwargs):
-        widthCount = 2 ** z
         frame = int(kwargs.get('frame') or 0)
         self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
 
         if not (self.minLevel <= z <= self.maxLevel):
             raise TileSourceException('z layer does not exist')
 
-        xFraction = float(x) / (widthCount - 1) if z != 0 else 0
-        yFraction = float(y) / (widthCount - 1) if z != 0 else 0
+        xFraction = (x + 0.5) * self.tileWidth * 2 ** (self.levels - 1 - z) / self.sizeX
+        yFraction = (y + 0.5) * self.tileHeight * 2 ** (self.levels - 1 - z) / self.sizeY
         fFraction = yFraction
         if hasattr(self, '_frames'):
             fFraction = float(frame) / (len(self._frames) - 1)
 
         backgroundColor = colorsys.hsv_to_rgb(
-            h=(0.99 * xFraction),
+            h=xFraction,
             s=(0.3 + (0.7 * fFraction)),
             v=(0.3 + (0.7 * yFraction)),
         )
@@ -193,7 +192,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         imageDraw = ImageDraw.Draw(image)
 
         if self.fractal:
-            self.fractalTile(image, x, y, widthCount, rgbColor)
+            self.fractalTile(image, x, y, 2 ** z, rgbColor)
 
         fontsize = 0.15
         text = 'x=%d\ny=%d\nz=%d' % (x, y, z)
