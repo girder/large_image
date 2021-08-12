@@ -7,6 +7,7 @@ import d3 from 'd3';
 import { restRequest } from '@girder/core/rest';
 
 import ImageViewerWidget from './base';
+import setFrameQuad from './setFrameQuad.js';
 
 window.hammerjs = Hammer;
 window.d3 = d3;
@@ -77,6 +78,16 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this.viewer = geo.map(params.map);
             params.layer.autoshareRenderer = false;
             this._layer = this.viewer.createLayer('osm', params.layer);
+            if (this.metadata.frames && this.metadata.frames.length > 1) {
+                setFrameQuad(this.metadata, this._layer, {
+                    // allow more and larger textures is slower, balancing
+                    // performance and appearance
+                    // maxTextures: 16,
+                    // maxTotalTexturePixels: 256 * 1024 * 1024,
+                    baseUrl: this._getTileUrl('{z}', '{x}', '{y}').split('/tiles/')[0] + '/tiles'
+                });
+                this._layer.setFrameQuad(0);
+            }
         } else {
             params = {
                 keepLower: false,
@@ -134,19 +145,40 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             if (frame === 0) {
                 return;
             }
-            // use two layers to get smooth transitions
-            this._layer2 = this.viewer.createLayer('osm', this._layer._options);
-            this._layer2.moveDown();
-            this._baseurl = this._layer.url();
             this._frame = 0;
+            this._baseurl = this._layer.url();
+            let quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
+            if (!quadLoaded) {
+                // use two layers to get smooth transitions until we load
+                // background quads.
+                this._layer2 = this.viewer.createLayer('osm', this._layer._options);
+                this._layer2.moveDown();
+                setFrameQuad((this._layer.setFrameQuad.status || {}).tileinfo, this._layer2, (this._layer.setFrameQuad.status || {}).options);
+                this._layer2.setFrameQuad(0);
+            }
         }
         this._nextframe = frame;
         if (frame !== this._frame && !this._updating) {
-            this._updating = true;
             this._frame = frame;
             this.trigger('g:imageFrameChanging', this, frame);
+            let quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
+            if (quadLoaded) {
+                if (this._layer2) {
+                    this.viewer.deleteLayer(this._layer2);
+                    delete this._layer2;
+                }
+                this._layer.url(this.getFrameAndUrl().url);
+                this._layer.setFrameQuad(frame);
+                this._layer.frame = frame;
+                this.trigger('g:imageFrameChanged', this, frame);
+                return;
+            }
+
+            this._updating = true;
             this.viewer.onIdle(() => {
                 this._layer2.url(this.getFrameAndUrl().url);
+                this._layer2.setFrameQuad(frame);
+                this._layer2.frame = frame;
                 this.viewer.onIdle(() => {
                     this._layer.moveDown();
                     var ltemp = this._layer;
