@@ -57,6 +57,7 @@ def testBadMemcachedUrl():
         cache['(2,)']
 
 
+@pytest.mark.singular
 def testGetTileCachePython():
     large_image.cache_util.cache._tileCache = None
     large_image.cache_util.cache._tileLock = None
@@ -65,6 +66,7 @@ def testGetTileCachePython():
     assert isinstance(tileCache, cachetools.LRUCache)
 
 
+@pytest.mark.singular
 def testGetTileCacheMemcached():
     large_image.cache_util.cache._tileCache = None
     large_image.cache_util.cache._tileLock = None
@@ -129,6 +131,7 @@ class TestClass:
         def __init__(self, arg):
             pass
 
+    @pytest.mark.singular
     def testCachesInfo(self):
         large_image.cache_util.cache._tileCache = None
         large_image.cache_util.cache._tileLock = None
@@ -146,6 +149,7 @@ class TestClass:
         # memcached shows an items record as well
         assert 'items' in cachesInfo()['tileCache']
 
+    @pytest.mark.singular
     def testCachesClear(self):
         large_image.cache_util.cache._tileCache = None
         large_image.cache_util.cache._tileLock = None

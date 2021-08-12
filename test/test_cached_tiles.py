@@ -32,6 +32,7 @@ def monitorTileCounts():
 
 class LargeImageCachedTilesTest:
 
+    @pytest.mark.singular
     def testTilesFromTest(self, monitorTileCounts):
         # Create a test tile with the default options
         params = {'encoding': 'JPEG'}
@@ -87,6 +88,7 @@ class LargeImageCachedTilesTest:
         utilities.checkTilesZXY(source, meta, params, utilities.PNGHeader)
         assert large_image_source_test._counters['tiles'] == counter3
 
+    @pytest.mark.singular
     def testLargeRegion(self):
         imagePath = datastore.fetch(
             'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
@@ -107,6 +109,7 @@ class LargeImageCachedTilesTest:
         image, mimeType = source.getRegion(**params)
         assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
 
+    @pytest.mark.singular
     def testTiffClosed(self):
         # test the Tiff files are properly closed.
         orig_del = TiledTiffDirectory.__del__
