@@ -17,6 +17,7 @@
 import concurrent.futures
 import datetime
 import json
+import re
 import sys
 import time
 
@@ -276,12 +277,15 @@ class LargeImageResource(Resource):
     @describeRoute(
         Description('Count the number of cached associated image files for '
                     'large_image items.')
+        .param('imageKey', 'If specific, only include images with the '
+               'specified key', required=False)
     )
     @access.admin
     def countAssociatedImages(self, params):
-        return self._countCachedImages(None, associatedImages=True)
+        return self._countCachedImages(
+            None, associatedImages=True, imageKey=params.get('imageKey'))
 
-    def _countCachedImages(self, spec, associatedImages=False):
+    def _countCachedImages(self, spec, associatedImages=False, imageKey=None):
         if spec is not None:
             try:
                 spec = json.loads(spec)
@@ -299,7 +303,10 @@ class LargeImageResource(Resource):
             if entry is not None:
                 query['thumbnailKey'] = entry
             elif associatedImages:
-                query['thumbnailKey'] = {'$regex': '"imageKey":'}
+                if imageKey and re.match(r'^[0-9A-Za-z].*$', imageKey):
+                    query['thumbnailKey'] = {'$regex': '"imageKey":"%s"' % imageKey}
+                else:
+                    query['thumbnailKey'] = {'$regex': '"imageKey":'}
             count += File().find(query).count()
         return count
 
@@ -362,12 +369,15 @@ class LargeImageResource(Resource):
 
     @describeRoute(
         Description('Delete cached associated image files from large_image items.')
+        .param('imageKey', 'If specific, only include images with the '
+               'specified key', required=False)
     )
     @access.admin
     def deleteAssociatedImages(self, params):
-        return self._deleteCachedImages(None, associatedImages=True)
+        return self._deleteCachedImages(
+            None, associatedImages=True, imageKey=params.get('imageKey'))
 
-    def _deleteCachedImages(self, spec, associatedImages=False):
+    def _deleteCachedImages(self, spec, associatedImages=False, imageKey=None):
         if spec is not None:
             try:
                 spec = json.loads(spec)
@@ -385,7 +395,10 @@ class LargeImageResource(Resource):
             if entry is not None:
                 query['thumbnailKey'] = entry
             elif associatedImages:
-                query['thumbnailKey'] = {'$regex': '"imageKey":'}
+                if imageKey and re.match(r'^[0-9A-Za-z].*$', imageKey):
+                    query['thumbnailKey'] = {'$regex': '"imageKey":"%s"' % imageKey}
+                else:
+                    query['thumbnailKey'] = {'$regex': '"imageKey":'}
             for file in File().find(query):
                 File().remove(file)
                 removed += 1
