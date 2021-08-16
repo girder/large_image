@@ -326,7 +326,7 @@ class ImageItem(Item):
             'attachedToType': 'item',
             'attachedToId': item['_id'],
             'isLargeImageThumbnail' if not pickleCache else 'isLargeImageData': True,
-            'thumbnailKey': key
+            'thumbnailKey': key,
         })
         if existing:
             if checkAndCreate and checkAndCreate != 'nosave':
@@ -354,7 +354,8 @@ class ImageItem(Item):
                 constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
             saveFile = maxThumbnailFiles > 0
             # Make sure we don't exceed the desired number of thumbnails
-            self.removeThumbnailFiles(item, maxThumbnailFiles - 1)
+            self.removeThumbnailFiles(
+                item, maxThumbnailFiles - 1, imageKey=keydict.get('imageKey') or 'none')
         if (saveFile and checkAndCreate != 'nosave' and (
                 pickleCache or isinstance(imageData, bytes))):
             dataStored = imageData if not pickleCache else pickle.dumps(imageData, protocol=4)
@@ -376,7 +377,7 @@ class ImageItem(Item):
             File().save(datafile)
         return imageData, imageMime
 
-    def removeThumbnailFiles(self, item, keep=0, sort=None, **kwargs):
+    def removeThumbnailFiles(self, item, keep=0, sort=None, imageKey=None, **kwargs):
         """
         Remove all large image thumbnails from an item.
 
@@ -384,6 +385,8 @@ class ImageItem(Item):
         :param keep: keep this many entries.
         :param sort: the sort method used.  The first (keep) records in this
             sort order are kept.
+        :param imageKey: None for the basic thumbnail, otherwise an associated
+            imageKey.
         :param kwargs: additional parameters to determine which files to
             remove.
         :returns: a tuple of (the number of files before removal, the number of
@@ -400,6 +403,11 @@ class ImageItem(Item):
                 'attachedToId': item['_id'],
                 key: True,
             }
+            if imageKey and key == 'isLargeImageThumbnail':
+                if imageKey == 'none':
+                    query['thumbnailKey'] = {'not': {'$regex': '"imageKey":'}}
+                else:
+                    query['thumbnailKey'] = {'$regex': '"imageKey":"%s"' % imageKey}
             query.update(kwargs)
             present = 0
             removed = 0
@@ -446,8 +454,10 @@ class ImageItem(Item):
             and framesAcross.
         :returns: regionData, regionMime: the image data and the mime type.
         """
+        imageKey = 'tileFrames'
         return self._getAndCacheImageOrData(
-            item, 'tileFrames', checkAndCreate, dict(kwargs), **kwargs)
+            item, 'tileFrames', checkAndCreate,
+            dict(kwargs, imageKey=imageKey), **kwargs)
 
     def getPixel(self, item, **kwargs):
         """
@@ -477,7 +487,7 @@ class ImageItem(Item):
             imageKey = 'histogram'
             result = self._getAndCacheImageOrData(
                 item, 'histogram', False, dict(kwargs, imageKey=imageKey),
-                imageKey=imageKey, pickleCache=True, **kwargs)[0]
+                pickleCache=True, **kwargs)[0]
         return result
 
     def getBandInformation(self, item, statistics=True, **kwargs):

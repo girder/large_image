@@ -308,10 +308,23 @@ def testAssociateImageCaching(server, admin, user, fsAssetstore):
     resp = server.request(path='/large_image/associated_images', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json == 1
+    resp = server.request(path='/large_image/associated_images', user=admin, params={
+        'imageKey': 'label'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 1
+    resp = server.request(path='/large_image/associated_images', user=admin, params={
+        'imageKey': 'macro'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 0
     # Test DELETE associated_images
     resp = server.request(
         method='DELETE', path='/large_image/associated_images', user=user)
     assert utilities.respStatus(resp) == 403
+    resp = server.request(
+        method='DELETE', path='/large_image/associated_images', user=admin, params={
+            'imageKey': 'macro'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == 0
     resp = server.request(
         method='DELETE', path='/large_image/associated_images', user=admin)
     assert utilities.respStatus(resp) == 200

@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- More control over associated image caching
+
 ## Version 1.7.0
 
 ### Features
