@@ -456,8 +456,18 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     yBound = 90.0
                 except RuntimeError:
                     yBound = 89.999999
-                for key in ('ll', 'ul', 'lr', 'ur'):
+                keys = ('ll', 'ul', 'lr', 'ur')
+                for key in keys:
                     bounds[key]['y'] = max(min(bounds[key]['y'], yBound), -yBound)
+                while any(bounds[key]['x'] > 180 for key in keys):
+                    for key in keys:
+                        bounds[key]['x'] -= 360
+                while any(bounds[key]['x'] < -180 for key in keys):
+                    for key in keys:
+                        bounds[key]['x'] += 360
+                if any(bounds[key]['x'] >= 180 for key in keys):
+                    bounds['ul']['x'] = bounds['ll']['x'] = -180
+                    bounds['ur']['x'] = bounds['lr']['x'] = 180
             if srs and srs != nativeSrs:
                 inProj = self._proj4Proj(nativeSrs)
                 outProj = self._proj4Proj(srs)

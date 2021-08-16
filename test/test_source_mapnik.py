@@ -328,8 +328,8 @@ def testGuardAgainstBadLatLong():
     source = large_image_source_mapnik.open(imagePath)
     bounds = source.getBounds(srs='EPSG:4326')
 
-    assert bounds['xmin'] == -180.00416667
-    assert bounds['xmax'] == 179.99583333
+    assert bounds['xmin'] == -180
+    assert bounds['xmax'] == 180
     assert bounds['ymin'] == -89.99583333
     assert bounds['ymax'] == 90
 

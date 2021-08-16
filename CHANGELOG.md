@@ -3,7 +3,8 @@
 ## Unreleased
 
 ### Improvements
-- More control over associated image caching
+- More control over associated image caching (#638)
+- Better handling some geospatial bounds (#639)
 
 ## Version 1.7.0
 
