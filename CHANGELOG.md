@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.7.1
 
 ### Improvements
 - More control over associated image caching (#638)
