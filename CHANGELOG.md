@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Features
+- Deepzoom tile source (#641)
+
 ## Version 1.7.1
 
 ### Improvements

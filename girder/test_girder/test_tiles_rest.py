@@ -398,6 +398,7 @@ def testTilesFromTest(server, admin, fsAssetstore):
         _createTestTiles(server, admin, {key: badParams[key]}, error=err)
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):
@@ -448,6 +449,7 @@ def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):
     assert 'No large image file' in resp.json['message']
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):
@@ -472,6 +474,7 @@ def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):
     assert tileMetadata['levels'] == 7
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):
@@ -490,6 +493,7 @@ def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):
@@ -541,6 +545,7 @@ def testTilesWithUnicodeName(server, admin, fsAssetstore):
     assert tileMetadata['sizeY'] == 12288
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):
@@ -1010,6 +1015,7 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
     assert height == 260
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesAfterCopyItem(boundServer, admin, fsAssetstore, girderWorker):
@@ -1212,6 +1218,7 @@ def testTilesBandInformationWithFrames(server, admin, fsAssetstore):
     assert resp != resp2
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker):
@@ -1231,6 +1238,7 @@ def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker)
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):
@@ -1248,6 +1256,7 @@ def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):
     assert item['largeImage']['fileId'] != fileId
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromWithOptions(boundServer, admin, fsAssetstore, girderWorker):
@@ -1293,6 +1302,7 @@ def testTilesConvertLocal(boundServer, admin, fsAssetstore):
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesConvertRemote(boundServer, admin, fsAssetstore, girderWorker):
