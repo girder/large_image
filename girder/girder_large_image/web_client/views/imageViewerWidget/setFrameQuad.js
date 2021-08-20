@@ -55,14 +55,14 @@ function setFrameQuad(tileinfo, layer, options) {
     try {
         maxTextureSize = layer.renderer()._maxTextureSize || layer.renderer().constructor._maxTextureSize;
     } catch (err) { }
-    let w = tileinfo.sizeX,
+    const w = tileinfo.sizeX,
         h = tileinfo.sizeY,
-        numFrames = (tileinfo.frames || []).length || 1,
-        texSize = maxTextureSize || 16384,
-        textures = options.maxTextures || 1,
         maxTotalPixels = options.maxTotalTexturePixels || 1073741824,
         alignment = options.alignment || 16;
-    let frames = [];
+    let numFrames = (tileinfo.frames || []).length || 1,
+        texSize = maxTextureSize || 16384,
+        textures = options.maxTextures || 1;
+    const frames = [];
     for (let fidx = options.frameBase || 0; fidx < numFrames; fidx += options.frameStride || 1) {
         frames.push(fidx);
     }
@@ -81,8 +81,8 @@ function setFrameQuad(tileinfo, layer, options) {
     /* Iterate in case we can reduce the number of textures or the texture
      * size */
     while (true) {
-        let f = Math.ceil(numFrames / textures); // frames per texture
-        let texScale2 = texSize ** 2 / f / w / h;
+        const f = Math.ceil(numFrames / textures); // frames per texture
+        const texScale2 = texSize ** 2 / f / w / h;
         // frames across the texture
         fhorz = Math.ceil(texSize / (Math.floor(w * texScale2 ** 0.5 / alignment) * alignment));
         fvert = Math.ceil(texSize / (Math.floor(h * texScale2 ** 0.5 / alignment) * alignment));
@@ -90,7 +90,7 @@ function setFrameQuad(tileinfo, layer, options) {
         fw = Math.floor(texSize / fhorz / alignment) * alignment;
         fh = Math.floor(texSize / fvert / alignment) * alignment;
         if (options.maxFrameSize) {
-            let maxFrameSize = Math.floor(options.maxFrameSize / alignment) * alignment;
+            const maxFrameSize = Math.floor(options.maxFrameSize / alignment) * alignment;
             fw = Math.min(fw, maxFrameSize);
             fh = Math.min(fh, maxFrameSize);
         }
@@ -119,10 +119,10 @@ function setFrameQuad(tileinfo, layer, options) {
         break;
     }
     // used area of each tile
-    let usedw = Math.floor(w / Math.max(w / fw, h / fh)),
+    const usedw = Math.floor(w / Math.max(w / fw, h / fh)),
         usedh = Math.floor(h / Math.max(w / fw, h / fh));
     // get the set of texture images
-    let status = {
+    const status = {
         tileinfo: tileinfo,
         options: options,
         images: [],
@@ -137,11 +137,11 @@ function setFrameQuad(tileinfo, layer, options) {
     }
     frames.forEach((frame, idx) => { status.framesToIdx[frame] = idx; });
     for (let idx = 0; idx < textures; idx += 1) {
-        let img = new Image();
+        const img = new Image();
         if (options.baseUrl.indexOf(':') >= 0 && options.baseUrl.indexOf('/') === options.baseUrl.indexOf(':') + 1) {
             img.crossOrigin = options.crossOrigin || 'anonymous';
         }
-        let frameList = frames.slice(idx * fhorz * fvert, (idx + 1) * fhorz * fvert);
+        const frameList = frames.slice(idx * fhorz * fvert, (idx + 1) * fhorz * fvert);
         let src = `${options.baseUrl}/tile_frames?framesAcross=${fhorz}&width=${fw}&height=${fh}&fill=corner:black&exact=false`;
         if (frameList.length !== (tileinfo.frames || []).length) {
             src += `&frameList=${frameList.join(',')}`;
@@ -167,11 +167,11 @@ function setFrameQuad(tileinfo, layer, options) {
         }
         status.images.push(img);
         // the last image can have fewer frames than the other images
-        let f = frameList.length;
-        let ivert = Math.ceil(f / fhorz),
+        const f = frameList.length;
+        const ivert = Math.ceil(f / fhorz),
             ihorz = Math.min(f, fhorz);
         frameList.forEach((frame, fidx) => {
-            let quad = {
+            const quad = {
                 // z = -1 to place under other tile layers
                 ul: {x: 0, y: 0, z: -1},
                 // y coordinate is inverted
