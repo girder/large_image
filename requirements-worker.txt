@@ -1,4 +1,5 @@
 -e sources/bioformats
+-e sources/deepzoom
 -e sources/dummy
 -e sources/gdal
 -e sources/nd2

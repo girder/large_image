@@ -10,6 +10,8 @@ stat make_docs.sh
 large_image_converter --help > source/large_image_converter.txt
 
 sphinx-apidoc -f -o source/large_image ../large_image
+sphinx-apidoc -f -o source/large_image_source_bioformats ../sources/bioformats/large_image_source_bioformats
+sphinx-apidoc -f -o source/large_image_source_deepzoom ../sources/deepzoom/large_image_source_deepzoom
 sphinx-apidoc -f -o source/large_image_source_dummy ../sources/dummy/large_image_source_dummy
 sphinx-apidoc -f -o source/large_image_source_gdal ../sources/gdal/large_image_source_gdal
 sphinx-apidoc -f -o source/large_image_source_mapnik ../sources/mapnik/large_image_source_mapnik

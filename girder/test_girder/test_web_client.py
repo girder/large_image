@@ -4,6 +4,7 @@ import pytest
 from pytest_girder.web_client import runWebClientTest
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 @pytest.mark.parametrize('spec', (
