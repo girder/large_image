@@ -234,11 +234,11 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if z < self._minlevel:
             scale = int(2 ** (self._minlevel - z))
             step = int(2 ** (self.levels - 1 - self._minlevel))
-        # possible open the file multiple times so multiple threads can access
+        # possibly open the file multiple times so multiple threads can access
         # it concurrently.
         while True:
             try:
-                # A timeout prevents uniterupptable waits on some platforms
+                # A timeout prevents uninterupptable waits on some platforms
                 openjpegHandle = self._openjpegHandles.get(timeout=1.0)
                 break
             except queue.Empty:
