@@ -854,6 +854,7 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
     geospatial = kwargs.get('geospatial')
     if geospatial is None:
         geospatial = is_geospatial(inputPath)
+        logger.debug('Is file geospatial: %r', geospatial)
     suffix = format_hook('adjust_params', geospatial, kwargs, **kwargs)
     if suffix is False:
         return
@@ -871,16 +872,16 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
         tiffinfo = tifftools.read_tiff(inputPath)
     except Exception:
         tiffinfo = None
+    eightbit = _is_eightbit(inputPath, tiffinfo)
     if not kwargs.get('compression', None):
         kwargs = kwargs.copy()
         lossy = _is_lossy(inputPath, tiffinfo)
         logger.debug('Is file lossy: %r', lossy)
-        eightbit = _is_eightbit(inputPath, tiffinfo)
         logger.debug('Is file 8 bits per samples: %r', eightbit)
         kwargs['_compression'] = None
         kwargs['compression'] = 'jpeg' if lossy and eightbit else 'lzw'
     if geospatial:
-        _generate_geotiff(inputPath, outputPath, **kwargs)
+        _generate_geotiff(inputPath, outputPath, eightbit=eightbit or None, **kwargs)
     else:
         with TemporaryDirectory() as tempDir:
             tempPath = os.path.join(tempDir, os.path.basename(outputPath))
@@ -917,7 +918,10 @@ def is_geospatial(path):
         ds = gdal.Open(path, gdalconst.GA_ReadOnly)
     except Exception:
         return False
-    if ds and (ds.GetProjection() or ds.GetDriver().ShortName in {'NITF', 'netCDF'}):
+    if ds and (
+            (ds.GetGCPs() and ds.GetGCPProjection()) or
+            ds.GetProjection() or
+            ds.GetDriver().ShortName in {'NITF', 'netCDF'}):
         return True
     return False
 

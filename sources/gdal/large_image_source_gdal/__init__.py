@@ -71,6 +71,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     name = 'gdalfile'
     extensions = {
         None: SourcePriority.MEDIUM,
+        'geotiff': SourcePriority.PREFERRED,
         # National Imagery Transmission Format
         'ntf': SourcePriority.PREFERRED,
         'nitf': SourcePriority.PREFERRED,

@@ -205,11 +205,13 @@ def _vipsCast(image, mustBe8Bit=False, originalScale=None):
     return image
 
 
-def _gdalParameters(defaultCompression=None, **kwargs):
+def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
     """
     Return an array of gdal translation parameters.
 
     :param defaultCompression: if not specified, use this value.
+    :param eightbit: True or False to indicate that the bit depth per sample is
+        known.  None for unknown.
 
     Optional parameters that can be specified in kwargs:
 
@@ -227,8 +229,9 @@ def _gdalParameters(defaultCompression=None, **kwargs):
         'tileSize': 256,
         'compression': 'lzw',
         'quality': 90,
-        'predictor': 'yes',
     }
+    if eightbit is not None:
+        options['predictor'] = 'yes' if eightbit else 'none'
     predictor = {
         'none': 'NO',
         'horizontal': 'STANDARD',
@@ -240,7 +243,8 @@ def _gdalParameters(defaultCompression=None, **kwargs):
     cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
     cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
     cmdopt += ['-co', 'QUALITY=%s' % options['quality']]
-    cmdopt += ['-co', 'PREDICTOR=%s' % predictor[options['predictor']]]
+    if 'predictor' in options:
+        cmdopt += ['-co', 'PREDICTOR=%s' % predictor[options['predictor']]]
     if 'level' in options:
         cmdopt += ['-co', 'LEVEL=%s' % options['level']]
     return cmdopt
