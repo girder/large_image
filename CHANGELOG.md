@@ -5,6 +5,9 @@
 ### Features
 - Deepzoom tile source (#641)
 
+### Bug Fixes
+- Harden tile source detection (#644)
+
 ## Version 1.7.1
 
 ### Improvements

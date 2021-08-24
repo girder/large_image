@@ -160,7 +160,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             javabridge.attach()
             try:
                 self._bioimage = bioformats.ImageReader(largeImagePath)
-            except AttributeError as exc:
+            except (AttributeError, FileNotFoundError) as exc:
                 self.logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
                 raise TileSourceException('File cannot be opened via Bioformats. (%r)' % exc)
             _openImages.append(self)

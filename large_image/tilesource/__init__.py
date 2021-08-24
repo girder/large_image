@@ -28,6 +28,8 @@ def isGeospatial(path):
         ds = gdal.Open(path, gdalconst.GA_ReadOnly)
     except Exception:
         return False
+    if ds.GetGCPs() and ds.GetGCPProjection():
+        return True
     if ds.GetProjection():
         return True
     if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
