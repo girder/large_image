@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Features
-- Deepzoom tile source (#641)
+- Deepzoom tile source (#641, #647)
 
 ### Bug Fixes
 - Harden tile source detection (#644)
