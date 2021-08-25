@@ -28,6 +28,15 @@ Configuration parameters:
 - ``source_bioformats_ignored_extensions``: The bioformats tilesource can read some files that are better read by other tilesources or ignored.  Since reading these files is suboptimal, by default files with particular extensions are ignored by the bioformats tilesource.  This defaults to ``.jpg,.jpeg,.jpe,.png,.tif,.tiff``.
 
 
+Configuration from Python
+-------------------------
+
+As an example, configuration parameters can be set via python code like::
+
+  import large_image
+
+  large_image.config.setConfig('max_small_image_size', 8192)
+
 Configuration within the Girder Plugin
 --------------------------------------
 
@@ -52,3 +61,23 @@ For the Girder plugin, these can also be set in the ``girder.cfg`` file in a ``l
   # The bioformats tilesource won't read files that end in a comma-separated
   # list of extensions
   source_bioformats_ignored_extensions = '.jpg,.jpeg,.jpe,.png,.tif,.tiff'
+
+Logging from Python
+-------------------
+
+The log levels can be adjusted in the standard Python manner::
+
+  import logging
+  import large_image
+
+  logger = logging.getLogger('large_image')
+  logger.setLevel(logging.CRITICAL)
+
+Alternately, a different logger can be specified via ``setConfig`` in the ``logger`` and ``logprint`` settings::
+
+  import logging
+  import large_image
+
+  logger = logging.getLogger(__name__)
+  large_image.config.setConfig('logger', logger)
+  large_image.config.setConfig('logprint', logger)
