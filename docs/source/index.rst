@@ -6,7 +6,7 @@
 large_image
 ===========
 
-large_image is a set of python modules to work with large multiresolution images.  To use, you need the core module ``large-image``, plus one or more tile sources (named ``large-image-source-*``).  Optionally, if you have an image that can't be read by one of the tile sources, the image can be converted using ``large-image-tasks`` and then read with ``large-image-source-tiff``.
+large_image is a set of python modules to work with large multiresolution images.  To use, you need the core module ``large-image``, plus one or more tile sources (named ``large-image-source-*``).  Optionally, if you have an image that can't be read by one of the tile sources, the image can be converted using ``large-image-converter`` and then read with ``large-image-source-tiff``.
 
 large_image also works as a Girder plugin with optional annotation support.
 
