@@ -133,9 +133,6 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         parameters.
 
         :param path: the associated file path.
-        :param maxSize: either a number or an object with {'width': (width),
-            'height': height} in pixels.  If None, the default max size is
-            used.
         """
         super().__init__(path, **kwargs)
 
