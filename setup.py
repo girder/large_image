@@ -11,8 +11,9 @@ extraReqs = {
     'memcached': ['pylibmc>=1.5.1'] if platform.system() != 'Windows' else [],
 }
 sources = {
-    'dummy': ['large-image-source-dummy'],
     'bioformats': ['large-image-source-bioformats'],
+    'deepzoom': ['large-image-source-deepzoom'],
+    'dummy': ['large-image-source-dummy'],
     'gdal': ['large-image-source-gdal'],
     'mapnik': ['large-image-source-mapnik'],
     'nd2': ['large-image-source-nd2'],
@@ -20,8 +21,8 @@ sources = {
     'openjpeg': ['large-image-source-openjpeg'],
     'openslide': ['large-image-source-openslide'],
     'pil': ['large-image-source-pil'],
-    'tiff': ['large-image-source-tiff'],
     'test': ['large-image-source-test'],
+    'tiff': ['large-image-source-tiff'],
 }
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
