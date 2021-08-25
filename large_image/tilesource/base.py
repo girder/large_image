@@ -26,17 +26,21 @@ from .utilities import (_encodeImage, _gdalParameters,  # noqa: F401
 
 class TileSource:
     name = None
-    # extensions is a dictionary of known file extensions and the
-    # SourcePriority given to each.  It must contain a None key with a priority
-    # for the tile source when the extension does not match.
+    """Name of the tile source"""
+
     extensions = {
         None: SourcePriority.FALLBACK
     }
-    # mimeTypes are common mime-types handleds by the source.  They can be used
-    # in place of or in additional to extensions
+    """A dictionary of known file extensions and the ``SourcePriority`` given
+    to each.  It must contain a None key with a priority for the tile source
+    when the extension does not match."""
+
     mimeTypes = {
         None: SourcePriority.FALLBACK
     }
+    """A dictionary of common mime-types handled by the source and the
+    ``SourcePriority`` given to each.  This are used in place of or in
+    additional to extensions."""
 
     def __init__(self, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
                  tiffCompression='raw', edge=False, style=None, *args,
@@ -126,6 +130,12 @@ class TileSource:
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
+        """
+        Return a string hash used as a key in the recently-used cache for tile
+        sources.
+
+        :returns: a string hash value.
+        """
         return strhash(
             kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
@@ -133,6 +143,12 @@ class TileSource:
             '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
 
     def getState(self):
+        """
+        Return a string reflecting the state of the tile source.  This is used
+        as part of a cache key when hashing function return values.
+
+        :returns: a string hash value of the source state.
+        """
         if hasattr(self, '_classkey'):
             return self._classkey
         return '%s,%s,%s,%s,%s,__STYLESTART__,%s,__STYLEEND__' % (
@@ -144,6 +160,14 @@ class TileSource:
             self._jsonstyle)
 
     def wrapKey(self, *args, **kwargs):
+        """
+        Return a key for a tile source and function parameters that can be used
+        as a unique cache key.
+
+        :param args: arguments to add to the hash.
+        :param kwaths: arguments to add to the hash.
+        :returns: a cache key.
+        """
         return strhash(self.getState()) + strhash(*args, **kwargs)
 
     def _calculateWidthHeight(self, width, height, regionWidth, regionHeight):
@@ -1365,9 +1389,35 @@ class TileSource:
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 sparseFallback=False, frame=None):
+        """
+        Get a tile from a tile source, returning it as an binary image, a PIL
+        image, or a numpy array.
+
+        :param x: the 0-based x position of the tile on the specified z level.
+            0 is left.
+        :param y: the 0-based y position of the tile on the specified z level.
+            0 is top.
+        :param z: the z level of the tile.  May range from [0, self.levels],
+            where 0 is the lowest resolution, single tile for the whole source.
+        :param pilImageAllowed: True if a PIL image may be returned.
+        :param numpyAllowed: True if a numpy image may be returned.  'always'
+            to return a numpy array.
+        :param sparseFallback: if False and a tile doesn't exist, raise an
+            error.  If True, check if a lower resolution tile exists, and, if
+            so, interpolate the needed data for this tile.
+        :param frame: the frame number within the tile source.  None is the
+            same as 0 for multi-frame sources.
+        :returns: either a numpy array, a PIL image, or a memory object with an
+            image file.
+        """
         raise NotImplementedError()
 
     def getTileMimeType(self):
+        """
+        Return the default mimetype for image tiles.
+
+        :returns: the mime type of the tile.
+        """
         return TileOutputMimeTypes.get(self.encoding, 'image/jpeg')
 
     @methodcache()
