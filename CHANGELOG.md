@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.8.0
 
 ### Features
 - Deepzoom tile source (#641, #647)
