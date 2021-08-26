@@ -29,7 +29,7 @@ commands:
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
           command: tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
-  upgradepython:
+  switchpython:
     description: "Upgrade python"
     parameters:
       version:
@@ -45,6 +45,11 @@ commands:
           name: Use pyenv to install python
           command: |
             pyenv install << parameters.version >>
+      - run:
+          name: Use pyenv to set python version
+          command: |
+            pyenv versions
+            pyenv global << parameters.version >>
   allservices:
     description: "Switch to a python version and start other services"
     parameters:
@@ -53,13 +58,8 @@ commands:
       node:
         type: string
     steps:
-      - upgradepython:
+      - switchpython:
           version: << parameters.version >>
-      - run:
-          name: Use pyenv to set python version
-          command: |
-            pyenv versions
-            pyenv global << parameters.version >>
       - run:
           name: start mongo
           command: |
@@ -118,7 +118,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.6.12
+          version: 3.6.14
           node: v12
       - tox:
           env: py36
@@ -131,7 +131,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.7.9
+          version: 3.7.11
           node: v12
       - tox:
           env: py37
@@ -144,7 +144,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.8.6
+          version: 3.8.11
           node: v12
       - tox:
           env: py38
@@ -157,7 +157,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.9.1
+          version: 3.9.6
           node: v12
       - tox:
           env: py39
