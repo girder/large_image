@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Bug Fixes
-- getBandInformation could fail on high bands in some cases
+- getBandInformation could fail on high bands in some cases (#651)
 
 ## Version 1.8.0
 
