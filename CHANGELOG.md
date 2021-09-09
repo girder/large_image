@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Bug Fixes
+- getBandInformation could fail on high bands in some cases
+
 ## Version 1.8.0
 
 ### Features
