@@ -1344,7 +1344,7 @@ class TileSource:
                 if not getattr(self, '_bandInfoNoStats', None):
                     tile = self.getSingleTile()['tile']
                     bands = tile.shape[2] if len(tile.shape) > 2 else 1
-                    interp = bandInterp.get(bands, 3)
+                    interp = bandInterp.get(bands, bandInterp[3])
                     bandInfo = [{'interpretation': interp[idx] if idx < len(interp) else 'unknown'}
                                 for idx in range(bands)]
                     self._bandInfoNoStats = bandInfo
