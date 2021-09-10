@@ -25,7 +25,7 @@ Configuration parameters:
 
 - ``max_small_image_size``: The PIL tilesource is used for small images if they are no more than this many pixels along their maximum dimension.
 
-- ``source_bioformats_ignored_extensions``: The bioformats tilesource can read some files that are better read by other tilesources or ignored.  Since reading these files is suboptimal, by default files with particular extensions are ignored by the bioformats tilesource.  This defaults to ``.jpg,.jpeg,.jpe,.png,.tif,.tiff``.
+- ``source_bioformats_ignored_extensions``: The bioformats tilesource can read some files that are better read by other tilesources or ignored.  Since reading these files is suboptimal, by default files with particular extensions are ignored by the bioformats tilesource.  This defaults to ``.jpg,.jpeg,.jpe,.png,.tif,.tiff,.ndpi``.
 
 
 Configuration from Python
@@ -60,7 +60,7 @@ For the Girder plugin, these can also be set in the ``girder.cfg`` file in a ``l
   max_small_image_size = 4096
   # The bioformats tilesource won't read files that end in a comma-separated
   # list of extensions
-  source_bioformats_ignored_extensions = '.jpg,.jpeg,.jpe,.png,.tif,.tiff'
+  source_bioformats_ignored_extensions = '.jpg,.jpeg,.jpe,.png,.tif,.tiff,.ndpi'
 
 Logging from Python
 -------------------
