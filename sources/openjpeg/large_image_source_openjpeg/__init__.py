@@ -19,6 +19,7 @@ import io
 import math
 import multiprocessing
 import queue
+import struct
 import warnings
 from xml.etree import ElementTree
 
@@ -90,7 +91,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._pixelInfo = {}
         try:
             self._openjpeg = glymur.Jp2k(largeImagePath)
-        except glymur.jp2box.InvalidJp2kError:
+        except (glymur.jp2box.InvalidJp2kError, struct.error):
             raise TileSourceException('File cannot be opened via Glymur and OpenJPEG.')
         glymur.set_option('lib.num_threads', multiprocessing.cpu_count())
         self._openjpegHandles = queue.LifoQueue()

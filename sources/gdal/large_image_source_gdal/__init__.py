@@ -134,10 +134,12 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             scale = self.getPixelSizeInMeters()
         except RuntimeError:
             raise TileSourceException('File cannot be opened via GDAL.')
-        if not scale and not is_netcdf:
+        if (self.projection or self._getDriver() in {
+            'PNG',
+        }) and not scale and not is_netcdf:
             raise TileSourceException(
                 'File does not have a projected scale, so will not be '
-                'opened via GDAL.')
+                'opened via GDAL with a projection.')
         self.sourceLevels = self.levels = int(max(0, math.ceil(max(
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1)
