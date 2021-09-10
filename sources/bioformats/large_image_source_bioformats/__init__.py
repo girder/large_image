@@ -52,7 +52,8 @@ _javabridgeStarted = None
 _openImages = []
 
 
-config.ConfigValues['source_bioformats_ignored_extensions'] = '.jpg,.jpeg,.jpe,.png,.tif,.tiff'
+config.ConfigValues['source_bioformats_ignored_extensions'] = \
+    '.jpg,.jpeg,.jpe,.png,.tif,.tiff,.ndpi'
 
 
 def _monitor_thread():
