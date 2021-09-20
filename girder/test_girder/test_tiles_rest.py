@@ -481,7 +481,8 @@ def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):
     file = utilities.uploadTestFile('grey10kx5k.tif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     fileId = str(file['_id'])
-    tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId)
+    boundServer.request(path='/item/%s/tiles' % itemId, method='DELETE', user=admin)
+    tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId, data={'force': True})
     assert tileMetadata['tileWidth'] == 256
     assert tileMetadata['tileHeight'] == 256
     assert tileMetadata['sizeX'] == 10000
