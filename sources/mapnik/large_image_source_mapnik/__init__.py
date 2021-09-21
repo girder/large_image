@@ -24,7 +24,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError
 
 try:
     __version__ = get_distribution(__name__).version
@@ -213,7 +213,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         try:
             step = (float(stop) - float(start)) / (float(count) - 1)
         except ValueError:
-            raise TileSourceException(
+            raise TileSourceError(
                 'Minimum and maximum values should be numbers, "auto", "min", or "max".')
         return [float(start + i * step) for i in range(count)]
 
@@ -242,7 +242,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             mapnik_scheme = getattr(mapnik, f'COLORIZER_{scheme.upper()}')
         except AttributeError:
             mapnik_scheme = mapnik.COLORIZER_DISCRETE
-            raise TileSourceException('Scheme has to be either "discrete" or "linear".')
+            raise TileSourceError('Scheme has to be either "discrete" or "linear".')
         colorizer = mapnik.RasterColorizer(mapnik_scheme, mapnik.Color(0, 0, 0, 0))
         bandInfo = self.getOneBandInformation(style['band'])
         minimum = style.get('min', 0)
@@ -270,13 +270,13 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 colors = [color if isinstance(color, bytes) else
                           color.encode('utf8') for color in colors]
             if len(colors) < 2:
-                raise TileSourceException('A palette must have at least 2 colors.')
+                raise TileSourceError('A palette must have at least 2 colors.')
             values = self.interpolateMinMax(minimum, maximum, len(colors))
             for value, color in sorted(zip(values, colors)):
                 try:
                     colorizer.add_stop(value, mapnik.Color(color))
                 except RuntimeError:
-                    raise TileSourceException('Mapnik failed to parse color %r.' % color)
+                    raise TileSourceError('Mapnik failed to parse color %r.' % color)
 
         return colorizer
 

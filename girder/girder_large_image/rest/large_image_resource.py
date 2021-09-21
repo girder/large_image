@@ -34,7 +34,7 @@ from girder.models.file import File
 from girder.models.item import Item
 from girder.models.setting import Setting
 from large_image import cache_util
-from large_image.exceptions import TileGeneralException
+from large_image.exceptions import TileGeneralError
 
 from .. import constants, girder_tilesource
 from ..models.image_item import ImageItem
@@ -56,7 +56,7 @@ def createThumbnailsJobTask(item, spec):
             else:
                 result = ImageItem().getThumbnail(item, checkAndCreate=True, **entry)
             status['checked' if result is True else 'created'] += 1
-        except TileGeneralException as exc:
+        except TileGeneralError as exc:
             status['failed'] += 1
             status['lastFailed'] = str(item['_id'])
             logger.info('Failed to get thumbnail for item %s: %r' % (item['_id'], exc))

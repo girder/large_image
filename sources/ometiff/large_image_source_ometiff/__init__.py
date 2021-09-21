@@ -16,6 +16,7 @@
 
 import copy
 import math
+import os
 from collections import OrderedDict
 
 import numpy
@@ -29,7 +30,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 
 try:
     __version__ = get_distribution(__name__).version
@@ -94,10 +95,12 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         try:
             base = TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
         except TiffException:
-            raise TileSourceException('Not a recognized OME Tiff')
+            if not os.path.isfile(self._largeImagePath):
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
+            raise TileSourceError('Not a recognized OME Tiff')
         info = getattr(base, '_description_record', None)
         if not info or not info.get('OME'):
-            raise TileSourceException('Not an OME Tiff')
+            raise TileSourceError('Not an OME Tiff')
         self._omeinfo = info['OME']
         self._checkForOMEZLoop(largeImagePath)
         self._parseOMEInfo()
@@ -217,15 +220,15 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 self._omebase['TiffData'] = [self._omebase['TiffData']]
             if len({entry.get('UUID', {}).get('FileName', '')
                     for entry in self._omebase['TiffData']}) > 1:
-                raise TileSourceException('OME Tiff references multiple files')
+                raise TileSourceError('OME Tiff references multiple files')
             if (len(self._omebase['TiffData']) != int(self._omebase['SizeC']) *
                     int(self._omebase['SizeT']) * int(self._omebase['SizeZ']) or
                     len(self._omebase['TiffData']) != len(
                         self._omebase.get('Plane', self._omebase['TiffData']))):
-                raise TileSourceException(
+                raise TileSourceError(
                     'OME Tiff contains frames that contain multiple planes')
         except (KeyError, ValueError, IndexError):
-            raise TileSourceException('OME Tiff does not contain an expected record')
+            raise TileSourceError('OME Tiff does not contain an expected record')
 
     def getMetadata(self):
         """
@@ -299,7 +302,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 **kwargs)
         frame = int(kwargs.get('frame') or 0)
         if frame < 0 or frame >= len(self._omebase['TiffData']):
-            raise TileSourceException('Frame does not exist')
+            raise TileSourceError('Frame does not exist')
         subdir = None
         if self._omeLevels[z] is not None:
             dirnum = int(self._omeLevels[z]['TiffData'][frame].get('IFD', frame))
@@ -328,9 +331,9 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, **kwargs)
         except InvalidOperationTiffException as e:
-            raise TileSourceException(e.args[0])
+            raise TileSourceError(e.args[0])
         except IOTiffException as e:
-            return self.getTileIOTiffException(
+            return self.getTileIOTiffError(
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                 exception=e, **kwargs)

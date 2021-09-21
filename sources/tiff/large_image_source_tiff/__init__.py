@@ -19,6 +19,7 @@ import io
 import itertools
 import json
 import math
+import os
 
 import numpy
 import PIL.Image
@@ -28,7 +29,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
 from .tiff_reader import (InvalidOperationTiffException, IOTiffException,
@@ -99,10 +100,12 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         # If there are no tiled images, raise an exception.
         if not len(alldir):
+            if not os.path.isfile(largeImagePath):
+                raise TileSourceFileNotFoundError(largeImagePath) from None
             msg = "File %s didn't meet requirements for tile source: %s" % (
                 largeImagePath, lastException)
             config.getConfig('logger').debug(msg)
-            raise TileSourceException(msg)
+            raise TileSourceError(msg)
         # Sort the known directories by image area (width * height).  Given
         # equal area, sort by the level.
         alldir.sort()
@@ -128,7 +131,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 continue
             directories[level] = td
         if not len(directories) or (len(directories) < 2 and max(directories.keys()) + 1 > 4):
-            raise TileSourceException(
+            raise TileSourceError(
                 'Tiff image must have at least two levels.')
 
         # Sort the directories so that the highest resolution is the last one;
@@ -221,7 +224,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     (tag not in ifd['tags'] and tag in baseifd['tags']) or
                     (tag in ifd['tags'] and
                      ifd['tags'][tag]['data'] != baseifd['tags'][tag]['data'])):
-                raise TileSourceException('IFD does not match first IFD.')
+                raise TileSourceError('IFD does not match first IFD.')
         sizes = [(self.sizeX, self.sizeY)]
         for level in range(self.levels - 1, -1, -1):
             if (sizeX, sizeY) in sizes:
@@ -238,7 +241,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     if (w2, h2) not in altsizes:
                         altsizes.append((w2, h2))
             sizes = altsizes
-        raise TileSourceException('IFD size is not a power of two smaller than first IFD.')
+        raise TileSourceError('IFD size is not a power of two smaller than first IFD.')
 
     def _initWithTiffTools(self):  # noqa
         """
@@ -287,18 +290,18 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     idx for idx, frame in enumerate(frames) if frame['dirs'][level] is None
                 )]['dirs'][level] = (idx, 0)
             else:
-                raise TileSourceException('Tile layers are in a surprising order')
+                raise TileSourceError('Tile layers are in a surprising order')
             # if there are sub ifds, add them
             if tifftools.Tag.SubIfd.value in ifd['tags']:
                 for subidx, subifds in enumerate(ifd['tags'][tifftools.Tag.SubIfd.value]['ifds']):
                     if len(subifds) != 1:
-                        raise TileSourceException(
+                        raise TileSourceError(
                             'When stored in subifds, each subifd should be a single ifd.')
                     level = self._levelFromIfd(subifds[0], info['ifds'][0])
                     if level < self.levels - 1 and frames[-1]['dirs'][level] is None:
                         frames[-1]['dirs'][level] = (idx, subidx + 1)
                     else:
-                        raise TileSourceException('Tile layers are in a surprising order')
+                        raise TileSourceError('Tile layers are in a surprising order')
         self._associatedImages = {}
         for dirNum in associated:
             self._addAssociatedImage(self._largeImagePath, dirNum)
@@ -556,9 +559,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, applyStyle=allowStyle, **kwargs)
         except InvalidOperationTiffException as e:
-            raise TileSourceException(e.args[0])
+            raise TileSourceError(e.args[0])
         except IOTiffException as e:
-            return self.getTileIOTiffException(
+            return self.getTileIOTiffError(
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                 exception=e, **kwargs)
@@ -580,9 +583,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._directoryCache[key] = result
         return result
 
-    def getTileIOTiffException(self, x, y, z, pilImageAllowed=False,
-                               numpyAllowed=False, sparseFallback=False,
-                               exception=None, **kwargs):
+    def getTileIOTiffError(self, x, y, z, pilImageAllowed=False,
+                           numpyAllowed=False, sparseFallback=False,
+                           exception=None, **kwargs):
         if sparseFallback:
             if z:
                 noedge = kwargs.copy()
@@ -604,7 +607,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 image = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
             return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
                                     numpyAllowed, applyStyle=False, **kwargs)
-        raise TileSourceException('Internal I/O failure: %s' % exception.args[0])
+        raise TileSourceError('Internal I/O failure: %s' % exception.args[0])
 
     def getTileFromEmptyDirectory(self, x, y, z, **kwargs):
         """

@@ -15,6 +15,7 @@
 ##############################################################################
 
 import math
+import os
 
 import openslide
 import PIL
@@ -23,7 +24,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
 try:
@@ -67,7 +68,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'image/x-tiff': SourcePriority.MEDIUM,
     }
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -76,23 +77,25 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
-        largeImagePath = self._getLargeImagePath()
+        self._largeImagePath = self._getLargeImagePath()
 
         try:
-            self._openslide = openslide.OpenSlide(largeImagePath)
+            self._openslide = openslide.OpenSlide(self._largeImagePath)
         except openslide.lowlevel.OpenSlideUnsupportedFormatError:
-            raise TileSourceException('File cannot be opened via OpenSlide.')
+            if not os.path.isfile(self._largeImagePath):
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
+            raise TileSourceError('File cannot be opened via OpenSlide.')
         except openslide.lowlevel.OpenSlideError:
-            raise TileSourceException('File will not be opened via OpenSlide.')
+            raise TileSourceError('File will not be opened via OpenSlide.')
         if libtiff_ctypes:
             try:
-                self._tiffinfo = tifftools.read_tiff(largeImagePath)
+                self._tiffinfo = tifftools.read_tiff(self._largeImagePath)
             except Exception:
                 pass
 
-        svsAvailableLevels = self._getAvailableLevels(largeImagePath)
+        svsAvailableLevels = self._getAvailableLevels(self._largeImagePath)
         if not len(svsAvailableLevels):
-            raise TileSourceException('OpenSlide image size is invalid.')
+            raise TileSourceError('OpenSlide image size is invalid.')
         self.sizeX = svsAvailableLevels[0]['width']
         self.sizeY = svsAvailableLevels[0]['height']
         if (self.sizeX != self._openslide.dimensions[0] or
@@ -110,7 +113,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1
         if self.levels < 1:
-            raise TileSourceException(
+            raise TileSourceError(
                 'OpenSlide image must have at least one level.')
         self._svslevels = []
         # Precompute which SVS level should be used for our tile levels.  SVS
@@ -144,12 +147,11 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 msg = ('OpenSlide has no small-scale tiles (level %d is at %d '
                        'scale)' % (level, scale))
                 self.logger.info(msg)
-                raise TileSourceException(msg)
+                raise TileSourceError(msg)
             self._svslevels.append({
                 'svslevel': bestlevel,
                 'scale': scale
             })
-        self._largeImagePath = largeImagePath
 
     def _getTileSize(self):
         """
@@ -286,7 +288,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 (self.tileWidth * svslevel['scale'],
                  self.tileHeight * svslevel['scale']))
         except openslide.lowlevel.OpenSlideError as exc:
-            raise TileSourceException(
+            raise TileSourceError(
                 'Failed to get OpenSlide region (%r).' % exc)
         # Always scale to the svs level 0 tile size.
         if svslevel['scale'] != 1:

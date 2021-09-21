@@ -1,10 +1,23 @@
-class TileGeneralException(Exception):
+import errno
+
+
+class TileGeneralError(Exception):
     pass
 
 
-class TileSourceException(TileGeneralException):
+class TileSourceError(TileGeneralError):
     pass
 
 
-class TileSourceAssetstoreException(TileSourceException):
+class TileSourceAssetstoreError(TileSourceError):
     pass
+
+
+class TileSourceFileNotFoundError(TileSourceError, FileNotFoundError):
+    def __init__(self, *args, **kwargs):
+        return super().__init__(errno.ENOENT, *args, **kwargs)
+
+
+TileGeneralException = TileGeneralError
+TileSourceException = TileSourceError
+TileSourceAssetstoreException = TileSourceAssetstoreError

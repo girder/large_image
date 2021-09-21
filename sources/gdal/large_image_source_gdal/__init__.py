@@ -34,7 +34,7 @@ from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcac
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, SourcePriority,
                                    TileInputUnits, TileOutputMimeTypes)
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceException, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 
 try:
@@ -112,6 +112,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             self.dataset = gdal.Open(self._path, gdalconst.GA_ReadOnly)
         except RuntimeError:
+            if not os.path.isfile(self._path):
+                raise TileSourceFileNotFoundError(self._path) from None
             raise TileSourceException('File cannot be opened via GDAL')
         self._getDatasetLock = threading.RLock()
         self.tileSize = 256
@@ -128,6 +130,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
                 self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
         except AttributeError:
+            if not os.path.isfile(self._path):
+                raise TileSourceFileNotFoundError(self._path) from None
             raise TileSourceException('File cannot be opened via GDAL.')
         is_netcdf = self._checkNetCDF()
         try:

@@ -23,7 +23,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError
 from large_image.tilesource import TileSource
 
 try:
@@ -169,7 +169,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
 
         if not (self.minLevel <= z <= self.maxLevel):
-            raise TileSourceException('z layer does not exist')
+            raise TileSourceError('z layer does not exist')
 
         xFraction = (x + 0.5) * self.tileWidth * 2 ** (self.levels - 1 - z) / self.sizeX
         yFraction = (y + 0.5) * self.tileHeight * 2 ** (self.levels - 1 - z) / self.sizeY
