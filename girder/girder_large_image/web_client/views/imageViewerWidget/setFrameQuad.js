@@ -26,7 +26,7 @@
  *   of the image.
  * @param {number} [options.maxTextureSize] Limit the maximum texture size to a
  *   square of this size.  The size is also limited by the WebGL maximum
- *   size for webgl-based layers or 16384 for canvas-based layers.
+ *   size for webgl-based layers or 8192 for canvas-based layers.
  * @param {number} [options.maxTextures=1] If more than one, allow multiple
  *   textures to increase the size of the individual frames.  The number of
  *   textures will be capped by ``maxTotalTexturePixels`` as well as this
@@ -60,7 +60,7 @@ function setFrameQuad(tileinfo, layer, options) {
         maxTotalPixels = options.maxTotalTexturePixels || 1073741824,
         alignment = options.alignment || 16;
     let numFrames = (tileinfo.frames || []).length || 1,
-        texSize = maxTextureSize || 16384,
+        texSize = maxTextureSize || 8192,
         textures = options.maxTextures || 1;
     const frames = [];
     for (let fidx = options.frameBase || 0; fidx < numFrames; fidx += options.frameStride || 1) {
