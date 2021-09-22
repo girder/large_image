@@ -1,11 +1,50 @@
 import os
+import re
 
 import pytest
 
 import large_image
 from large_image.tilesource import nearPowerOfTwo
 
-from .datastore import datastore
+from . import utilities
+from .datastore import datastore, registry
+
+# In general, if there is something in skipTiles, the reader should be improved
+# to either indicate that the file can't be read or changed to handle reading
+# with correct exceptions.
+SourceAndFiles = {
+    'bioformats': {
+        'read': r'\.(czi|jp2|svs|scn)$',
+        # We need to modify the bioformats reader similar to tiff's
+        # getTileFromEmptyDirectory
+        'skipTiles': r'(JK-kidney_B|TCGA-AA-A02O|TCGA-DU-6399|sample_jp2k_33003|\.scn$)'},
+    'deepzoom': {},
+    'dummy': {'any': True, 'skipTiles': r''},
+    'gdal': {
+        'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
+        'skipTiles': r'\.*nc$'},
+    'mapnik': {
+        'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
+        # we should only test this with a projection
+        'skipTiles': r''},
+    'nd2': {'read': r'\.(nd2)$'},
+    'ometiff': {'read': r'\.(ome\.tif.*)$'},
+    'openjpeg': {'read': r'\.(jp2)$'},
+    'openslide': {
+        'read': r'\.(ptif|svs|tif.*)$',
+        'noread': r'(DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop)',
+        'skipTiles': r'one_layer_missing'},
+    'pil': {
+        'read': r'\.(jpeg|png|tif.*)$',
+        'noread': r'(G10-3|JK-kidney|d042-353|huron|sample.*ome|one_layer_missing)'},
+    'test': {'any': True, 'skipTiles': r''},
+    'tiff': {
+        'read': r'\.(ptif|scn|svs|tif.*)$',
+        'noread': r'(DDX58_AXL|G10-3_pelvis_crop|d042-353\.crop\.small\.float|landcover_sample)',
+        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
+}
 
 
 def testNearPowerOfTwo():
@@ -27,23 +66,46 @@ def testCanRead():
     assert large_image.canRead(imagePath) is True
 
 
-@pytest.mark.parametrize('source', [
-    'bioformats',
-    'deepzoom',
-    # 'dummy', # exclude - no files
-    'gdal',
-    'mapnik',
-    'nd2',
-    'ometiff',
-    'openjpeg',
-    'openslide',
-    'pil',
-    # 'test', # exclude - no files
-    'tiff',
-])
+@pytest.mark.parametrize('source', [k for k, v in SourceAndFiles.items() if not v.get('any')])
 def testSourcesFileNotFound(source):
     large_image.tilesource.loadTileSources()
     with pytest.raises(large_image.exceptions.TileSourceFileNotFoundError):
         large_image.tilesource.AvailableTileSources[source]('nosuchfile')
     with pytest.raises(large_image.exceptions.TileSourceFileNotFoundError):
         large_image.tilesource.AvailableTileSources[source]('nosuchfile.ext')
+
+
+@pytest.mark.parametrize('filename', registry)
+@pytest.mark.parametrize('source', SourceAndFiles)
+def testSourcesCanRead(source, filename):
+    sourceInfo = SourceAndFiles[source]
+    canRead = sourceInfo.get('any') or (
+        re.search(sourceInfo.get('read', r'^$'), filename) and
+        not re.search(sourceInfo.get('noread', r'^$'), filename))
+    imagePath = datastore.fetch(filename)
+    large_image.tilesource.loadTileSources()
+    sourceClass = large_image.tilesource.AvailableTileSources[source]
+    assert bool(sourceClass.canRead(imagePath)) is bool(canRead)
+
+
+@pytest.mark.parametrize('filename', registry)
+@pytest.mark.parametrize('source', SourceAndFiles)
+def testSourcesTiles(source, filename):
+    sourceInfo = SourceAndFiles[source]
+    canRead = sourceInfo.get('any') or (
+        re.search(sourceInfo.get('read', r'^$'), filename) and
+        not re.search(sourceInfo.get('noread', r'^$'), filename))
+    if not canRead:
+        return
+    if re.search(sourceInfo.get('skipTiles', r'^$'), filename):
+        return
+    imagePath = datastore.fetch(filename)
+    large_image.tilesource.loadTileSources()
+    sourceClass = large_image.tilesource.AvailableTileSources[source]
+    ts = sourceClass(imagePath)
+    tileMetadata = ts.getMetadata()
+    utilities.checkTilesZXY(ts, tileMetadata)
+    if len(tileMetadata.get('frames', [])) > 1:
+        tsf = sourceClass(imagePath, frame=len(tileMetadata['frames']) - 1)
+        tileMetadata = tsf.getMetadata()
+        utilities.checkTilesZXY(tsf, tileMetadata)
