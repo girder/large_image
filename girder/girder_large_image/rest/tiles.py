@@ -34,7 +34,7 @@ from girder.models.item import Item
 from girder.utility.progress import setResponseTimeLimit
 from large_image.cache_util import strhash
 from large_image.constants import TileInputUnits
-from large_image.exceptions import TileGeneralException
+from large_image.exceptions import TileGeneralError
 
 from .. import loadmodelcache
 from ..models.image_item import ImageItem
@@ -188,7 +188,7 @@ class TilesItemResource(ItemResource):
                 createJob='always' if self.boolParam('force', params, default=False) else True,
                 notify=notify,
                 **params)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0])
 
     @describeRoute(
@@ -251,7 +251,7 @@ class TilesItemResource(ItemResource):
         try:
             return self.imageItemModel.convertImage(
                 item, largeImageFile, user, token, localJob=localJob, **params)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0])
 
     @classmethod
@@ -325,7 +325,7 @@ class TilesItemResource(ItemResource):
         """
         try:
             return self.imageItemModel.getMetadata(item, **imageArgs)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0], code=400)
 
     def _setContentDisposition(self, item, contentDisposition, mime, subname, fullFilename=None):
@@ -383,7 +383,7 @@ class TilesItemResource(ItemResource):
     def getInternalMetadata(self, item, params):
         try:
             return self.imageItemModel.getInternalMetadata(item, **params)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0], code=400)
 
     @describeRoute(
@@ -462,7 +462,7 @@ class TilesItemResource(ItemResource):
             try:
                 tileData, tileMime = self.imageItemModel.getTile(
                     item, x, y, z, mayRedirect=mayRedirect, **imageArgs)
-            except TileGeneralException as e:
+            except TileGeneralError as e:
                 raise RestException(e.args[0], code=404)
         setResponseHeader('Content-Type', tileMime)
         setRawResponse()
@@ -690,7 +690,7 @@ class TilesItemResource(ItemResource):
         _handleETag('getTilesThumbnail', item, params)
         try:
             result = self.imageItemModel.getThumbnail(item, **params)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0])
         except ValueError as e:
             raise RestException('Value Error: %s' % e.args[0])
@@ -828,7 +828,7 @@ class TilesItemResource(ItemResource):
         try:
             regionData, regionMime = self.imageItemModel.getRegion(
                 item, **params)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0])
         except ValueError as e:
             raise RestException('Value Error: %s' % e.args[0])
@@ -884,7 +884,7 @@ class TilesItemResource(ItemResource):
         ])
         try:
             pixel = self.imageItemModel.getPixel(item, **params)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0])
         except ValueError as e:
             raise RestException('Value Error: %s' % e.args[0])
@@ -1005,7 +1005,7 @@ class TilesItemResource(ItemResource):
     def getAssociatedImagesList(self, item, params):
         try:
             return self.imageItemModel.getAssociatedImagesList(item)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0], code=400)
 
     @describeRoute(
@@ -1049,7 +1049,7 @@ class TilesItemResource(ItemResource):
         _handleETag('getAssociatedImage', item, image, params)
         try:
             result = self.imageItemModel.getAssociatedImage(item, image, **params)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0], code=400)
         if not isinstance(result, tuple):
             return result
@@ -1217,7 +1217,7 @@ class TilesItemResource(ItemResource):
         try:
             result = self.imageItemModel.tileFrames(
                 item, checkAndCreate=checkAndCreate, **params)
-        except TileGeneralException as e:
+        except TileGeneralError as e:
             raise RestException(e.args[0])
         except ValueError as e:
             raise RestException('Value Error: %s' % e.args[0])

@@ -32,7 +32,7 @@ from girder.models.setting import Setting
 from girder.models.upload import Upload
 from large_image.cache_util import getTileCache, strhash
 from large_image.constants import TileOutputMimeTypes
-from large_image.exceptions import TileGeneralException, TileSourceException
+from large_image.exceptions import TileGeneralError, TileSourceError
 
 from .. import constants, girder_tilesource
 
@@ -60,13 +60,13 @@ class ImageItem(Item):
                         createJob=True, notify=False, **kwargs):
         # Using setdefault ensures that 'largeImage' is in the item
         if 'fileId' in item.setdefault('largeImage', {}):
-            raise TileGeneralException('Item already has largeImage set.')
+            raise TileGeneralError('Item already has largeImage set.')
         if fileObj['itemId'] != item['_id']:
-            raise TileGeneralException(
+            raise TileGeneralError(
                 'The provided file must be in the provided item.')
         if (item['largeImage'].get('expected') is True and
                 'jobId' in item['largeImage']):
-            raise TileGeneralException(
+            raise TileGeneralError(
                 'Item is scheduled to generate a largeImage.')
 
         item['largeImage'].pop('expected', None)
@@ -79,7 +79,7 @@ class ImageItem(Item):
             item['largeImage']['sourceName'] = sourceName
         if not sourceName or createJob == 'always':
             if not createJob:
-                raise TileGeneralException(
+                raise TileGeneralError(
                     'A job must be used to generate a largeImage.')
             # No source was successful
             del item['largeImage']['fileId']
@@ -120,7 +120,7 @@ class ImageItem(Item):
 
     def convertImage(self, item, fileObj, user=None, token=None, localJob=True, **kwargs):
         if fileObj['itemId'] != item['_id']:
-            raise TileGeneralException(
+            raise TileGeneralError(
                 'The provided file must be in the provided item.')
         if not localJob:
             return self._convertImageViaWorker(item, fileObj, user, token, **kwargs)
@@ -187,7 +187,7 @@ class ImageItem(Item):
         sourceName = item['largeImage']['sourceName']
         try:
             sourceClass = girder_tilesource.AvailableGirderTileSources[sourceName]
-        except TileSourceException:
+        except TileSourceError:
             return None
         classHash = sourceClass.getLRUHash(item, **kwargs)
         tileHash = sourceClass.__name__ + ' ' + classHash + ' ' + strhash(
@@ -206,17 +206,17 @@ class ImageItem(Item):
     @classmethod
     def _loadTileSource(cls, item, **kwargs):
         if 'largeImage' not in item:
-            raise TileSourceException('No large image file in this item.')
+            raise TileSourceError('No large image file in this item.')
         if item['largeImage'].get('expected'):
-            raise TileSourceException('The large image file for this item is '
-                                      'still pending creation.')
+            raise TileSourceError('The large image file for this item is '
+                                  'still pending creation.')
 
         sourceName = item['largeImage']['sourceName']
         try:
             # First try to use the tilesource we recorded as the preferred one.
             # This is faster than trying to find the best source each time.
             tileSource = girder_tilesource.AvailableGirderTileSources[sourceName](item, **kwargs)
-        except TileSourceException:
+        except TileSourceError:
             # We could try any source
             # tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
             # but, instead, log that the original source no longer works are

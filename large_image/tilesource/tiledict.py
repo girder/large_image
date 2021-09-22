@@ -210,7 +210,7 @@ class LazyTileDict(dict):
                         tileData, **self.imageKwargs)
                     tileFormat = TILE_FORMAT_IMAGE
                 if tileFormat not in self.format:
-                    raise exceptions.TileSourceException(
+                    raise exceptions.TileSourceError(
                         'Cannot yield tiles in desired format %r' % (
                             self.format, ))
             else:

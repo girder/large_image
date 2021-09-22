@@ -10,7 +10,7 @@ import PIL.ImageChops
 import pytest
 
 from large_image import constants
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError
 
 from . import utilities
 from .datastore import datastore
@@ -106,7 +106,7 @@ def testTileLinearStyleFromGeotiffs():
 
 def testTileStyleBadInput():
     def _assertStyleResponse(imagePath, style, message):
-        with pytest.raises(TileSourceException, match=message):
+        with pytest.raises(TileSourceError, match=message):
             source = large_image_source_gdal.open(
                 imagePath, projection='EPSG:3857', style=json.dumps(style), encoding='PNG')
             source.getTile(22, 51, 7)
@@ -200,13 +200,13 @@ def testPixel():
 def testSourceErrors():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    with pytest.raises(TileSourceException, match='must not be geographic'):
+    with pytest.raises(TileSourceError, match='must not be geographic'):
         large_image_source_gdal.open(imagePath, 'EPSG:4326')
     imagePath = os.path.join(testDir, 'test_files', 'zero_gi.tif')
-    with pytest.raises(TileSourceException, match='cannot be opened via'):
+    with pytest.raises(TileSourceError, match='cannot be opened via'):
         large_image_source_gdal.open(imagePath)
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
-    with pytest.raises(TileSourceException, match='does not have a projected scale'):
+    with pytest.raises(TileSourceError, match='does not have a projected scale'):
         large_image_source_gdal.open(imagePath)
 
 
@@ -215,7 +215,7 @@ def testStereographicProjection():
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     # We will fail if we ask for a stereographic projection and don't
     # specify unitsPerPixel
-    with pytest.raises(TileSourceException, match='unitsPerPixel must be specified'):
+    with pytest.raises(TileSourceError, match='unitsPerPixel must be specified'):
         large_image_source_gdal.open(imagePath, 'EPSG:3411')
     # But will pass if unitsPerPixel is specified
     large_image_source_gdal.open(imagePath, 'EPSG:3411', unitsPerPixel=150000)
@@ -265,7 +265,7 @@ def testConvertProjectionUnits():
     assert result[1] == pytest.approx(149, 1)
     assert result[2:] == (None, None, 'base_pixels')
 
-    with pytest.raises(TileSourceException, match='Cannot convert'):
+    with pytest.raises(TileSourceError, match='Cannot convert'):
         tsNoProj._convertProjectionUnits(
             -117.5, None, -117, None, None, None, 'EPSG:4326')
 

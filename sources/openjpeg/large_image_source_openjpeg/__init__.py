@@ -18,6 +18,7 @@ import builtins
 import io
 import math
 import multiprocessing
+import os
 import queue
 import struct
 import warnings
@@ -29,7 +30,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, etreeToDict
 
 try:
@@ -92,7 +93,11 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             self._openjpeg = glymur.Jp2k(largeImagePath)
         except (glymur.jp2box.InvalidJp2kError, struct.error):
-            raise TileSourceException('File cannot be opened via Glymur and OpenJPEG.')
+            raise TileSourceError('File cannot be opened via Glymur and OpenJPEG.')
+        except FileNotFoundError:
+            if not os.path.isfile(self._largeImagePath):
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
+            raise
         glymur.set_option('lib.num_threads', multiprocessing.cpu_count())
         self._openjpegHandles = queue.LifoQueue()
         for _ in range(self._maxOpenHandles - 1):
@@ -101,7 +106,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             self.sizeY, self.sizeX = self._openjpeg.shape[:2]
         except IndexError:
-            raise TileSourceException('File cannot be opened via Glymur and OpenJPEG.')
+            raise TileSourceError('File cannot be opened via Glymur and OpenJPEG.')
         self.levels = int(self._openjpeg.codestream.segment[2].num_res) + 1
         self._minlevel = 0
         self.tileWidth = self.tileHeight = 2 ** int(math.ceil(max(

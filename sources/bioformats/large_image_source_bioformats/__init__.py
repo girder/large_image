@@ -38,7 +38,7 @@ import large_image.tilesource.base
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
 try:
@@ -141,15 +141,17 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         ext = os.path.splitext(largeImagePath)[1]
         if not ext:
-            raise TileSourceException(
+            if not os.path.isfile(largeImagePath):
+                raise TileSourceFileNotFoundError(largeImagePath) from None
+            raise TileSourceError(
                 'File cannot be opened via bioformats because it has no '
                 'extension to specify the file type (%s).' % largeImagePath)
         if ext.lower() in (config.getConfig(
                 'source_bioformats_ignored_extensions') or '.png').split(','):
-            raise TileSourceException('File will not be opened by bioformats reader')
+            raise TileSourceError('File will not be opened by bioformats reader')
 
         if not _startJavabridge(self.logger):
-            raise TileSourceException(
+            raise TileSourceError(
                 'File cannot be opened by bioformats reader because javabridge failed to start')
 
         self._tileLock = threading.RLock()
@@ -159,8 +161,10 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 self._bioimage = bioformats.ImageReader(largeImagePath)
             except (AttributeError, FileNotFoundError) as exc:
+                if not os.path.isfile(largeImagePath):
+                    raise TileSourceFileNotFoundError(largeImagePath) from None
                 self.logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
-                raise TileSourceException('File cannot be opened via Bioformats. (%r)' % exc)
+                raise TileSourceError('File cannot be opened via Bioformats. (%r)' % exc)
             _openImages.append(self)
 
             rdr = self._bioimage.rdr
@@ -237,20 +241,20 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except javabridge.JavaException as exc:
             es = javabridge.to_string(exc.throwable)
             self.logger.debug('File cannot be opened via Bioformats. (%s)' % es)
-            raise TileSourceException('File cannot be opened via Bioformats. (%s)' % es)
+            raise TileSourceError('File cannot be opened via Bioformats. (%s)' % es)
         except AttributeError:
             self.logger.exception('The bioformats reader threw an unhandled exception.')
-            raise TileSourceException('The bioformats reader threw an unhandled exception.')
+            raise TileSourceError('The bioformats reader threw an unhandled exception.')
         finally:
             if javabridge.get_env():
                 javabridge.detach()
 
         if self.levels < 1:
-            raise TileSourceException(
+            raise TileSourceError(
                 'OpenSlide image must have at least one level.')
 
         if self.sizeX <= 0 or self.sizeY <= 0:
-            raise TileSourceException('Bioformats tile size is invalid.')
+            raise TileSourceError('Bioformats tile size is invalid.')
 
     def __del__(self):
         if getattr(self, '_bioimage', None) is not None:
@@ -455,7 +459,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             fxy = (frame // self._metadata['sizeC'] //
                    self._metadata['sizeZ'] // self._metadata['sizeT'])
             if frame < 0 or fxy > self._metadata['sizeXY']:
-                raise TileSourceException('Frame does not exist')
+                raise TileSourceError('Frame does not exist')
             fseries = self._metadata['frameSeries'][fxy]
         seriesLevel = self.levels - 1 - z
         scale = 1
@@ -491,7 +495,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 format = TILE_FORMAT_NUMPY
             except javabridge.JavaException as exc:
                 es = javabridge.to_string(exc.throwable)
-                raise TileSourceException('Failed to get Bioformat region (%s, %r).' % (es, (
+                raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
                     fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx, offsety, width, height)))
             finally:
                 if javabridge.get_env():
@@ -543,7 +547,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     XYWH=(0, 0, info['sizeX'], info['sizeY']))
             except javabridge.JavaException as exc:
                 es = javabridge.to_string(exc.throwable)
-                raise TileSourceException('Failed to get Bioformat series (%s, %r).' % (es, (
+                raise TileSourceError('Failed to get Bioformat series (%s, %r).' % (es, (
                     series, info['sizeX'], info['sizeY'])))
             finally:
                 if javabridge.get_env():

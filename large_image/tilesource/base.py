@@ -126,7 +126,7 @@ class TileSource:
                 if not isinstance(self.style, dict):
                     raise TypeError
             except TypeError:
-                raise exceptions.TileSourceException('Style is not a valid json object.')
+                raise exceptions.TileSourceError('Style is not a valid json object.')
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -1374,17 +1374,17 @@ class TileSource:
         exception if not.
         """
         if z < 0 or z >= self.levels:
-            raise exceptions.TileSourceException('z layer does not exist')
+            raise exceptions.TileSourceError('z layer does not exist')
         scale = 2 ** (self.levels - 1 - z)
         offsetx = x * self.tileWidth * scale
         if not (0 <= offsetx < self.sizeX):
-            raise exceptions.TileSourceException('x is outside layer')
+            raise exceptions.TileSourceError('x is outside layer')
         offsety = y * self.tileHeight * scale
         if not (0 <= offsety < self.sizeY):
-            raise exceptions.TileSourceException('y is outside layer')
+            raise exceptions.TileSourceError('y is outside layer')
         if frame is not None and numFrames is not None:
             if frame < 0 or frame >= numFrames:
-                raise exceptions.TileSourceException('Frame does not exist')
+                raise exceptions.TileSourceError('Frame does not exist')
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
@@ -1639,7 +1639,7 @@ class TileSource:
                     (height, width, subimage.shape[2]),
                     dtype=subimage.dtype)
             except MemoryError:
-                raise exceptions.TileSourceException(
+                raise exceptions.TileSourceError(
                     'Insufficient memory to get region of %d x %d pixels.' % (
                         width, height))
         if subimage.shape[2] > image.shape[2]:
@@ -2342,5 +2342,5 @@ class FileTileSource(TileSource):
         try:
             cls(path, *args, **kwargs)
             return True
-        except exceptions.TileSourceException:
+        except exceptions.TileSourceError:
             return False

@@ -25,7 +25,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 
 try:
@@ -91,7 +91,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 maxSize = json.loads(maxSize)
             except Exception:
-                raise TileSourceException(
+                raise TileSourceError(
                     'maxSize must be None, an integer, a dictionary, or a '
                     'JSON string that converts to one of those.')
         self.maxSize = maxSize
@@ -102,11 +102,13 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # instances, mirax (mrxs) files look like JPEGs, but opening them as
         # such misses most of the data.
         if os.path.splitext(largeImagePath)[1] in ('.mrxs', ):
-            raise TileSourceException('File cannot be opened via PIL.')
+            raise TileSourceError('File cannot be opened via PIL.')
         try:
             self._pilImage = PIL.Image.open(largeImagePath)
         except OSError:
-            raise TileSourceException('File cannot be opened via PIL.')
+            if not os.path.isfile(largeImagePath):
+                raise TileSourceFileNotFoundError(largeImagePath) from None
+            raise TileSourceError('File cannot be opened via PIL.')
         # If this is encoded as a 32-bit integer or a 32-bit float, convert it
         # to an 8-bit integer.  This expects the source value to either have a
         # maximum of 1, 2^8-1, 2^16-1, 2^24-1, or 2^32-1, and scales it to
@@ -125,10 +127,10 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = 1
         # Throw an exception if too big
         if self.tileWidth <= 0 or self.tileHeight <= 0:
-            raise TileSourceException('PIL tile size is invalid.')
+            raise TileSourceError('PIL tile size is invalid.')
         maxWidth, maxHeight = getMaxSize(maxSize, self.defaultMaxSize())
         if self.tileWidth > maxWidth or self.tileHeight > maxHeight:
-            raise TileSourceException('PIL tile size is too large.')
+            raise TileSourceError('PIL tile size is too large.')
 
     def defaultMaxSize(self):
         """
@@ -169,11 +171,11 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 mayRedirect=False, **kwargs):
         if z != 0:
-            raise TileSourceException('z layer does not exist')
+            raise TileSourceError('z layer does not exist')
         if x != 0:
-            raise TileSourceException('x is outside layer')
+            raise TileSourceError('x is outside layer')
         if y != 0:
-            raise TileSourceException('y is outside layer')
+            raise TileSourceError('y is outside layer')
         return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

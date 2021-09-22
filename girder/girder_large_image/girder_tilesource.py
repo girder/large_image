@@ -4,7 +4,7 @@ from girder.models.file import File
 from girder.models.item import Item
 from large_image import tilesource
 from large_image.constants import SourcePriority
-from large_image.exceptions import TileSourceAssetstoreException, TileSourceException
+from large_image.exceptions import TileSourceAssetstoreError, TileSourceError
 
 AvailableGirderTileSources = {}
 KnownMimeTypes = set()
@@ -101,13 +101,13 @@ class GirderTileSource(tilesource.FileTileSource):
                 try:
                     largeImagePath = File().getLocalFilePath(largeImageFile)
                 except AttributeError as e:
-                    raise TileSourceException(
+                    raise TileSourceError(
                         'No local file path for this file: %s' % e.args[0])
             return largeImagePath
-        except (TileSourceAssetstoreException, FilePathException):
+        except (TileSourceAssetstoreError, FilePathException):
             raise
-        except (KeyError, ValidationException, TileSourceException) as e:
-            raise TileSourceException(
+        except (KeyError, ValidationException, TileSourceError) as e:
+            raise TileSourceError(
                 'No large image file in this item: %s' % e.args[0])
 
 

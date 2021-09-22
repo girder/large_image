@@ -10,7 +10,7 @@ import PIL.Image
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, etreeToDict
 
 
@@ -45,12 +45,16 @@ class DeepzoomFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             with builtins.open(self._largeImagePath) as fptr:
                 if fptr.read(1024).strip()[:5] != '<?xml':
-                    raise TileSourceException('File cannot be opened via deepzoom reader.')
+                    raise TileSourceError('File cannot be opened via deepzoom reader.')
                 fptr.seek(0)
             xml = ElementTree.parse(self._largeImagePath).getroot()
             self._info = etreeToDict(xml)['Image']
         except (ElementTree.ParseError, KeyError, UnicodeDecodeError):
-            raise TileSourceException('File cannot be opened via Deepzoom reader.')
+            raise TileSourceError('File cannot be opened via Deepzoom reader.')
+        except FileNotFoundError:
+            if not os.path.isfile(self._largeImagePath):
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
+            raise
         # We should now have a dictionary like
         # {'Format': 'png',   # or 'jpeg'
         #  'Overlap': '1',

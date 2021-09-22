@@ -4,7 +4,10 @@ from pkg_resources import iter_entry_points
 
 from .. import config
 from ..constants import SourcePriority
-from ..exceptions import TileGeneralException, TileSourceAssetstoreException, TileSourceException
+from ..exceptions import (TileGeneralError, TileGeneralException,
+                          TileSourceAssetstoreError,
+                          TileSourceAssetstoreException, TileSourceError,
+                          TileSourceException, TileSourceFileNotFoundError)
 from .base import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                    FileTileSource, TileOutputMimeTypes, TileSource,
                    dictToEtree, etreeToDict, nearPowerOfTwo)
@@ -108,7 +111,7 @@ def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
     sourceName = getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs)
     if sourceName:
         return availableSources[sourceName](pathOrUri, *args, **kwargs)
-    raise TileSourceException('No available tilesource for %s' % pathOrUri)
+    raise TileSourceError('No available tilesource for %s' % pathOrUri)
 
 
 def getTileSource(*args, **kwargs):
@@ -151,7 +154,9 @@ def canRead(*args, **kwargs):
 
 __all__ = [
     'TileSource', 'FileTileSource',
-    'exceptions', 'TileGeneralException', 'TileSourceException', 'TileSourceAssetstoreException',
+    'exceptions', 'TileGeneralError', 'TileSourceError',
+    'TileSourceAssetstoreError', 'TileSourceFileNotFoundError',
+    'TileGeneralException', 'TileSourceException', 'TileSourceAssetstoreException',
     'TileOutputMimeTypes', 'TILE_FORMAT_IMAGE', 'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY',
     'AvailableTileSources', 'getTileSource', 'canRead', 'getSourceNameFromDict', 'nearPowerOfTwo',
     'etreeToDict', 'dictToEtree',

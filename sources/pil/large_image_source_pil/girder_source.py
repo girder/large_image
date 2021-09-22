@@ -21,7 +21,7 @@ from girder_large_image.girder_tilesource import GirderTileSource
 from girder.models.setting import Setting
 from large_image.cache_util import methodcache
 from large_image.constants import TILE_FORMAT_PIL
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError
 
 from . import PILFileTileSource
 
@@ -53,11 +53,11 @@ class PILGirderTileSource(PILFileTileSource, GirderTileSource):
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 mayRedirect=False, **kwargs):
         if z != 0:
-            raise TileSourceException('z layer does not exist')
+            raise TileSourceError('z layer does not exist')
         if x != 0:
-            raise TileSourceException('x is outside layer')
+            raise TileSourceError('x is outside layer')
         if y != 0:
-            raise TileSourceException('y is outside layer')
+            raise TileSourceError('y is outside layer')
         if (mayRedirect and not pilImageAllowed and not numpyAllowed and
                 cherrypy.request and
                 self._pilFormatMatches(self._pilImage, mayRedirect, **kwargs)):

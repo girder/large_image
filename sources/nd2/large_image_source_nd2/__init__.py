@@ -16,6 +16,7 @@
 
 import array
 import math
+import os
 import threading
 import types
 import warnings
@@ -27,7 +28,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
-from large_image.exceptions import TileSourceException
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 
 try:
@@ -80,7 +81,9 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 nd2reader.exceptions.InvalidVersionError,
                 nd2reader.exceptions.EmptyFileError,
                 nd2reader.exceptions.InvalidFileType):
-            raise TileSourceException('File cannot be opened via nd2reader.')
+            if not os.path.isfile(self._largeImagePath):
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
+            raise TileSourceError('File cannot be opened via nd2reader.')
         self._tileLock = threading.RLock()
         self._recentFrames = cachetools.LRUCache(maxsize=6)
         self.sizeX = self._nd2.metadata['width']
