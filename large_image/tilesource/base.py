@@ -1320,7 +1320,7 @@ class TileSource:
         """
         Get band information for a single band.
 
-        :param band: a 0-based band.
+        :param band: a 1-based band.
         :returns: a dictionary of band information.  See getBandInformation.
         """
         return self.getBandInformation()[band]
@@ -1331,8 +1331,9 @@ class TileSource:
 
         :param statistics: if True, compute statistics if they don't already
             exist.
-        :returns: a list of one dictionary per band.  Each dictionary contains
-            known values such as interpretation, min, max, mean, stdev.
+        :returns: a dictionary of one dictionary per band.  Each dictionary
+            contains known values such as interpretation, min, max, mean,
+            stdev.
         """
         if not getattr(self, '_bandInfo', None):
             bandInterp = {
@@ -1345,8 +1346,9 @@ class TileSource:
                     tile = self.getSingleTile()['tile']
                     bands = tile.shape[2] if len(tile.shape) > 2 else 1
                     interp = bandInterp.get(bands, bandInterp[3])
-                    bandInfo = [{'interpretation': interp[idx] if idx < len(interp) else 'unknown'}
-                                for idx in range(bands)]
+                    bandInfo = {
+                        idx + 1: {'interpretation': interp[idx] if idx < len(interp)
+                                  else 'unknown'} for idx in range(bands)}
                     self._bandInfoNoStats = bandInfo
                 return self._bandInfoNoStats
             analysisSize = 2048
@@ -1358,12 +1360,13 @@ class TileSource:
                 **kwargs)
             bands = histogram['min'].shape[0]
             interp = bandInterp.get(bands, 3)
-            bandInfo = [{'interpretation': interp[idx] if idx < len(interp) else 'unknown'}
-                        for idx in range(bands)]
+            bandInfo = {
+                idx + 1: {'interpretation': interp[idx] if idx < len(interp)
+                          else 'unknown'} for idx in range(bands)}
             for key in {'min', 'max', 'mean', 'stdev'}:
                 if key in histogram:
                     for idx in range(bands):
-                        bandInfo[idx][key] = histogram[key][idx]
+                        bandInfo[idx + 1][key] = histogram[key][idx]
             self._bandInfo = bandInfo
         return self._bandInfo
 

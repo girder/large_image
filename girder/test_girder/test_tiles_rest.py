@@ -1202,8 +1202,8 @@ def testTilesBandInformation(server, admin, fsAssetstore):
     server.request(path='/item/%s/tiles' % itemId, method='POST', user=admin)
     resp = server.request(path='/item/%s/tiles/bands' % itemId)
     assert len(resp.json) == 4
-    assert resp.json[0]['interpretation'] == 'red'
-    assert 'mean' in resp.json[0]
+    assert resp.json['1']['interpretation'] == 'red'
+    assert 'mean' in resp.json['1']
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
