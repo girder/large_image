@@ -90,21 +90,29 @@ def testSourcesCanRead(source, filename):
 
 @pytest.mark.parametrize('filename', registry)
 @pytest.mark.parametrize('source', SourceAndFiles)
-def testSourcesTiles(source, filename):
+def testSourcesTilesAndMethods(source, filename):
     sourceInfo = SourceAndFiles[source]
     canRead = sourceInfo.get('any') or (
         re.search(sourceInfo.get('read', r'^$'), filename) and
         not re.search(sourceInfo.get('noread', r'^$'), filename))
     if not canRead:
-        return
+        pytest.skip('source does not work with this file')
     if re.search(sourceInfo.get('skipTiles', r'^$'), filename):
-        return
+        pytest.skip('source fails tile tests from this file')
     imagePath = datastore.fetch(filename)
     large_image.tilesource.loadTileSources()
     sourceClass = large_image.tilesource.AvailableTileSources[source]
     ts = sourceClass(imagePath)
     tileMetadata = ts.getMetadata()
     utilities.checkTilesZXY(ts, tileMetadata)
+    # All of these should succeed
+    assert ts.getInternalMetadata() is not None
+    assert ts.getOneBandInformation(1) is not None
+    assert len(ts.getBandInformation()) >= 1
+    # Histograms are too slow to test in this way
+    #  assert len(ts.histogram()['histogram']) >= 1
+    #  assert ts.histogram(onlyMinMax=True)['min'][0] is not None
+    # Test multiple frames if they exist
     if len(tileMetadata.get('frames', [])) > 1:
         tsf = sourceClass(imagePath, frame=len(tileMetadata['frames']) - 1)
         tileMetadata = tsf.getMetadata()
