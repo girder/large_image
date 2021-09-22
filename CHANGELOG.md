@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+- Allow GDAL source to read non-geospatial files (#655)
+- Rename Exceptions to Errors, improve file-not-found errors (#657)
+
 ### Bug Fixes
 - getBandInformation could fail on high bands in some cases (#651)
 
