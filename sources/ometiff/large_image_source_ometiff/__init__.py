@@ -206,6 +206,9 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                         int(self._omebase['TiffData'][0].get('PlaneCount', 0)) == 1):
                     planes = copy.deepcopy(self._omebase.get(
                         'Plane', self._omebase.get('Channel')))
+                    if isinstance(planes, dict):
+                        planes = [planes]
+                        self._omebase['SizeC'] = 1
                     for idx, plane in enumerate(planes):
                         plane['IndexC'] = idx
                     self._omebase['TiffData'] = planes
@@ -227,7 +230,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                         self._omebase.get('Plane', self._omebase['TiffData']))):
                 raise TileSourceError(
                     'OME Tiff contains frames that contain multiple planes')
-        except (KeyError, ValueError, IndexError):
+        except (KeyError, ValueError, IndexError, TypeError):
             raise TileSourceError('OME Tiff does not contain an expected record')
 
     def getMetadata(self):
