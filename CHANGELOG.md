@@ -10,6 +10,7 @@
 ### Bug Fixes
 - getBandInformation could fail on high bands in some cases (#651)
 - Band information should always be 1-indexed (#659)
+- Use GDAL to subset a non-geospatial image (#662)
 
 ## Version 1.8.0
 
