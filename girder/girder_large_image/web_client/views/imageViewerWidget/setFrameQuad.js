@@ -84,8 +84,8 @@ function setFrameQuad(tileinfo, layer, options) {
         const f = Math.ceil(numFrames / textures); // frames per texture
         const texScale2 = texSize ** 2 / f / w / h;
         // frames across the texture
-        fhorz = Math.ceil(texSize / (Math.floor(w * texScale2 ** 0.5 / alignment) * alignment));
-        fvert = Math.ceil(texSize / (Math.floor(h * texScale2 ** 0.5 / alignment) * alignment));
+        fhorz = Math.ceil(texSize / (Math.ceil(w * texScale2 ** 0.5 / alignment) * alignment));
+        fvert = Math.ceil(texSize / (Math.ceil(h * texScale2 ** 0.5 / alignment) * alignment));
         // tile sizes
         fw = Math.floor(texSize / fhorz / alignment) * alignment;
         fh = Math.floor(texSize / fvert / alignment) * alignment;
