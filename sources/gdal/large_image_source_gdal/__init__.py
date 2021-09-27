@@ -1124,11 +1124,13 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         outHeight = iterInfo['output']['height']
         gdalParams = large_image.tilesource.base._gdalParameters(
             defaultCompression='lzw', **kwargs)
+        gdalParams += ['-t_srs', srs] if srs is not None else [
+            '-to', 'SRC_METHOD=NO_GEOTRANSFORM']
         gdalParams += [
-            '-t_srs', srs,
             '-te', str(tl[0]), str(br[1]), str(br[0]), str(tl[1]),
             '-ts', str(int(math.floor(outWidth))), str(int(math.floor(outHeight))),
         ]
+
         fd, outputPath = tempfile.mkstemp('.tiff', 'tiledGeoRegion_')
         os.close(fd)
         try:
