@@ -5,6 +5,7 @@ import json
 import logging
 import math
 import os
+import re
 import struct
 import threading
 import time
@@ -38,6 +39,25 @@ FormatModules = {
 # Estimated maximum memory use per frame conversion.  Used to limit concurrent
 # frame conversions.
 FrameMemoryEstimate = 3 * 1024 ** 3
+
+
+def _use_associated_image(key, **kwargs):
+    """
+    Check if an associated image key should be used.  If a list of images to
+    keep was specified, it must match at least one of the regex in that list.
+    If a list of images to exclude was specified, it must not any regex in that
+    list.  The exclude list takes priority.
+    """
+    if kwargs.get('_exclude_associated'):
+        for exp in kwargs['_exclude_associated']:
+            if re.match(exp, key):
+                return False
+    if kwargs.get('_keep_associated'):
+        for exp in kwargs['_keep_associated']:
+            if re.match(exp, key):
+                return True
+        return False
+    return True
 
 
 def _data_from_large_image(path, outputPath, **kwargs):
@@ -75,6 +95,8 @@ def _data_from_large_image(path, outputPath, **kwargs):
     tasks = []
     pool = _get_thread_pool(**kwargs)
     for key in ts.getAssociatedImagesList():
+        if not _use_associated_image(key, **kwargs):
+            continue
         try:
             img, mime = ts.getAssociatedImage(key)
         except Exception:
@@ -185,6 +207,8 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
         for w, h, subInputPath, page in imageSizes:
             if (w, h) not in possibleSizes:
                 key = 'image_%d' % page
+                if not _use_associated_image(key, **kwargs):
+                    continue
                 savePath = tempPath + '-%s-%s.tiff' % (key, time.strftime('%Y%m%d-%H%M%S'))
                 _pool_add(tasks, (pool.submit(
                     _convert_via_vips, subInputPath, savePath, tempPath, False), ))
@@ -601,7 +625,6 @@ def _output_tiff(inputs, outputPath, tempPath, lidata, extraImages=None, **kwarg
     if extraImages:
         assocList += list(extraImages.items())
     for key, assocPath in assocList:
-        logger.debug('Reading %s', assocPath)
         assocInfo = tifftools.read_tiff(assocPath)
         assocInfo['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value] = {
             'data': key,

@@ -85,6 +85,15 @@ depth.
     parser.add_argument(
         '--cr', type=int, help='JP2K compression ratio.  1 for lossless.')
     parser.add_argument(
+        '--only-associated', dest='_keep_associated', action='append',
+        help='Only keep associated images with the specified keys.  The value '
+        'is used as a matching regex.')
+    parser.add_argument(
+        '--exclude-associated', dest='_exclude_associated', action='append',
+        help='Exclude associated images with the specified keys.  The value '
+        'is used as a matching regex.  If a key is specified for both '
+        'exclusion and inclusion, it will be excluded.')
+    parser.add_argument(
         '--concurrency', '-j', type=int, dest='_concurrency',
         help='Maximum processor concurrency.  Some conversion tasks can use '
         'multiple processors.  A value <= 0 will use the number of logical '
