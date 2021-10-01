@@ -362,6 +362,8 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 return self._openslide.associated_images[imageKey]
             except openslide.lowlevel.OpenSlideError:
+                # Reopen handle after a lowlevel error
+                self._openslide = openslide.OpenSlide(self._largeImagePath)
                 return None
         bytePath = self._largeImagePath
         if not isinstance(bytePath, bytes):
