@@ -6,6 +6,7 @@
 - Allow GDAL source to read non-geospatial files (#655)
 - Rename Exceptions to Errors, improve file-not-found errors (#657)
 - More robust OME TIFF handling (#660)
+- large-image-converter can exclude specified associated images (#663)
 
 ### Bug Fixes
 - getBandInformation could fail on high bands in some cases (#651)
