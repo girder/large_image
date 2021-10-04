@@ -31,10 +31,10 @@ wrap(ItemView, 'render', function (render) {
 
 var ImageViewerSelectWidget = View.extend({
     events: {
-        'change select': function (event) {
+        'change select.image-viewer-control': function (event) {
             this._selectViewer(event.target.value);
         },
-        'keyup select': function (event) {
+        'keyup select.image-viewer-control': function (event) {
             this._selectViewer(event.target.value);
         },
         'input #image-frame,#image-frame-number': function (event) {
@@ -60,7 +60,7 @@ var ImageViewerSelectWidget = View.extend({
         if (_.findWhere(largeImageConfig.viewers, {name: name}) === undefined) {
             name = largeImageConfig.viewers[0].name;
         }
-        this.$('select.form-control').val(name);
+        this.$('select.form-control.image-viewer-control').val(name);
         this._selectViewer(name);
         return this;
     },
