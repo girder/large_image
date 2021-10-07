@@ -1,5 +1,10 @@
 # Change Log
 
+## Version 1.8.3
+
+### Improvements
+- Better handle item changes with tile caching (#666)
+
 ## Version 1.8.2
 
 ### Improvements

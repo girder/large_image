@@ -6,6 +6,11 @@ import View from '@girder/core/views/View';
 var ImageViewerWidget = View.extend({
     initialize: function (settings) {
         this.itemId = settings.itemId;
+        let item = (settings.model || {}).attributes || {};
+        this.updated = item.updated || item.created;
+        if (this.updated) {
+            this.updated = this.updated.replace(/:/g, '-').replace(/\+/g, '_');
+        }
         // optional query parameters, such as {encoding: 'PNG'}, may be
         // undefined or null
         this.tileQueryDefaults = settings.tileQueryDefaults;
@@ -39,6 +44,9 @@ var ImageViewerWidget = View.extend({
         }
         var url = getApiRoot() + '/item/' + this.itemId + '/tiles/zxy/' +
             level + '/' + x + '/' + y;
+        if (this.updated) {
+            query = $.extend({_: this.updated}, query);
+        }
         if (query) {
             url += '?' + $.param(query);
         }
