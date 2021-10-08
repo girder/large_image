@@ -21,6 +21,12 @@ import threading
 import types
 import warnings
 
+# Work around an issue in the PIMS package (can be removed once pims is
+# released for Python 3.10)
+if True:
+    import collections.abc
+    collections.Iterable = collections.abc.Iterable
+
 import cachetools
 import nd2reader
 import numpy
@@ -75,6 +81,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._largeImagePath = str(self._getLargeImagePath())
 
         self._pixelInfo = {}
+
         try:
             self._nd2 = nd2reader.ND2Reader(self._largeImagePath)
         except (UnicodeDecodeError,
