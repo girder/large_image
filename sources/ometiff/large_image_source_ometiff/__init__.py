@@ -79,6 +79,10 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         'ome': SourcePriority.PREFERRED,
     }
 
+    # The expect number of pixels that would need to be read to read the worst-
+    # case tile.
+    _maxUntiledChunk = 512 * 1024 * 1024
+
     def __init__(self, path, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
@@ -123,6 +127,12 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
                 if entry else None
                 for entry in self._omeLevels]
+            self._checkForInefficientDirectories(warn=False)
+            _maxChunk = min(base.imageWidth, base.tileWidth * self._skippedLevels ** 2) * \
+                min(base.imageHeight, base.tileHeight * self._skippedLevels ** 2)
+            if _maxChunk > self._maxUntiledChunk:
+                raise TileSourceError(
+                    'Untiled image is too large to access with the OME Tiff source')
         self.tileWidth = base.tileWidth
         self.tileHeight = base.tileHeight
         self.levels = len(self._tiffDirectories)
@@ -133,6 +143,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         # images as associated images.  This would require enumerating tiff
         # directories not mentioned by the ome list.
         self._associatedImages = {}
+        self._checkForInefficientDirectories()
 
     def _checkForOMEZLoop(self, largeImagePath):
         """
