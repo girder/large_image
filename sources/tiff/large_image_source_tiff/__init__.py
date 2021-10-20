@@ -143,6 +143,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = len(self._tiffDirectories)
         self.sizeX = highest.imageWidth
         self.sizeY = highest.imageHeight
+        self._checkForInefficientDirectories()
 
     def _scanDirectories(self):
         largeImagePath = self._largeImagePath
@@ -314,16 +315,25 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if frames[0]['dirs'][idx] is not None else None
             for idx in range(self.levels - 1)]
         self._tiffDirectories.append(dir0)
+        self._checkForInefficientDirectories()
+        return True
+
+    def _checkForInefficientDirectories(self, warn=True):
+        """
+        Raise a warning for inefficient files.
+
+        :param warn: if True and inefficient, emit a warning.
+        """
         missing = [v is None for v in self._tiffDirectories]
         maxMissing = max(0 if not v else missing.index(False, idx) - idx
                          for idx, v in enumerate(missing))
         self._skippedLevels = maxMissing
         if maxMissing >= self._maxSkippedLevels:
-            config.getConfig('logger').warning(
-                'Tiff image is missing many lower resolution levels (%d).  '
-                'It will be inefficient to read lower resolution tiles.', maxMissing)
+            if warn:
+                config.getConfig('logger').warning(
+                    'Tiff image is missing many lower resolution levels (%d).  '
+                    'It will be inefficient to read lower resolution tiles.', maxMissing)
             self._inefficientWarning = True
-        return True
 
     def _reorient_numpy_image(self, image, orientation):
         """
@@ -631,8 +641,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         while z - basez > self._maxSkippedLevels:
             z -= self._maxSkippedLevels
             scale = int(scale / 2 ** self._maxSkippedLevels)
-        tile = PIL.Image.new(
-            'RGBA', (self.tileWidth * scale, self.tileHeight * scale))
+        tile = PIL.Image.new('RGBA', (
+            min(self.sizeX, self.tileWidth * scale), min(self.sizeY, self.tileHeight * scale)))
         maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
         maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
         for newX in range(scale):
