@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- Improve warnings on inefficient tiff files ([#668](../../pull/668))
+- Add more options to setFrameQuad ([#669](../../pull/669))
+
 ## Version 1.8.3
 
 ### Improvements
