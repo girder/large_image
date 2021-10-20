@@ -22,8 +22,16 @@
  *   include framesAcross or frameList.  You must specify 'cache=true' if
  *   that is desired.
  * @param {number} [options.frameBase=0] Starting frame number used.
- * @param {number} [options.frameStride=1] Only use ever ``frameStride`` frame
+ * @param {number} [options.frameStride=1] Only use every ``frameStride`` frame
  *   of the image.
+ * @param {number} [options.frameGroup=1] If above 1 and multiple textures are
+ *   used, each texture will have an even multiple of the group size number of
+ *   frames.  This helps control where texture loading transitions occur.
+ * @param {number} [options.frameGroupFactor=4] If ``frameGroup`` would reduce
+ *   the size of the tile images beyond this factor, don't use it.
+ * @param {number} [options.frameGroupStride=1] If ``frameGroup`` is above 1
+ *  and multiple textures are used, then the frames are reordered based on this
+ *  stride value.
  * @param {number} [options.maxTextureSize] Limit the maximum texture size to a
  *   square of this size.  The size is also limited by the WebGL maximum
  *   size for webgl-based layers or 8192 for canvas-based layers.
@@ -63,8 +71,12 @@ function setFrameQuad(tileinfo, layer, options) {
         texSize = maxTextureSize || 8192,
         textures = options.maxTextures || 1;
     const frames = [];
-    for (let fidx = options.frameBase || 0; fidx < numFrames; fidx += options.frameStride || 1) {
-        frames.push(fidx);
+    for (let fds = 0; fds < (options.frameGroupStride || 1); fds += 1) {
+        for (let fidx = (options.frameBase || 0) + fds * (options.frameStride || 1);
+            fidx < numFrames;
+            fidx += (options.frameStride || 1) * (options.frameGroupStride || 1)) {
+            frames.push(fidx);
+        }
     }
     numFrames = frames.length;
     if (numFrames === 0 || !Object.getOwnPropertyDescriptor(layer, 'baseQuad')) {
@@ -77,11 +89,17 @@ function setFrameQuad(tileinfo, layer, options) {
     while (textures && texSize ** 2 * textures > maxTotalPixels) {
         textures -= 1;
     }
-    let fw, fh, fhorz, fvert;
+    let fw, fh, fhorz, fvert, fperframe;
     /* Iterate in case we can reduce the number of textures or the texture
      * size */
     while (true) {
-        const f = Math.ceil(numFrames / textures); // frames per texture
+        let f = Math.ceil(numFrames / textures); // frames per texture
+        if ((options.frameGroup || 1) > 1) {
+            const fg = Math.ceil(f / options.frameGroup) * options.frameGroup;
+            if (fg / f <= (options.frameGroupFactor || 4)) {
+                f = fg;
+            }
+        }
         const texScale2 = texSize ** 2 / f / w / h;
         // frames across the texture
         fhorz = Math.ceil(texSize / (Math.ceil(w * texScale2 ** 0.5 / alignment) * alignment));
@@ -100,15 +118,22 @@ function setFrameQuad(tileinfo, layer, options) {
         if (fh > h) {
             fh = Math.ceil(h / alignment) * alignment;
         }
-        // shrink one dimension so account for aspect ratio
+        // shrink one dimension to account for aspect ratio
         fw = Math.min(Math.ceil(fw * w / h / alignment) * alignment, fw);
         fh = Math.min(Math.ceil(fw * h / w / alignment) * alignment, fh);
         // recompute frames across the texture
         fhorz = Math.floor(texSize / fw);
         fvert = Math.min(Math.floor(texSize / fh), Math.ceil(numFrames / fhorz));
-        // check if we are not using all textires or are using less than a
+        fperframe = fhorz * fvert;
+        if (textures > 1 && (options.frameGroup || 1) > 1) {
+            fperframe = Math.floor(fperframe / options.frameGroup) * options.frameGroup;
+            if (textures * fperframe < numFrames && fhorz * fvert * textures >= numFrames) {
+                fperframe = fhorz * fvert;
+            }
+        }
+        // check if we are not using all textures or are using less than a
         // quarter of one texture.  If not, stop, if so, reduce and recalculate
-        if (textures > 1 && numFrames <= fhorz * fvert * (textures - 1)) {
+        if (textures > 1 && numFrames <= fperframe * (textures - 1)) {
             textures -= 1;
             continue;
         }
@@ -141,7 +166,7 @@ function setFrameQuad(tileinfo, layer, options) {
         if (options.baseUrl.indexOf(':') >= 0 && options.baseUrl.indexOf('/') === options.baseUrl.indexOf(':') + 1) {
             img.crossOrigin = options.crossOrigin || 'anonymous';
         }
-        const frameList = frames.slice(idx * fhorz * fvert, (idx + 1) * fhorz * fvert);
+        const frameList = frames.slice(idx * fperframe, (idx + 1) * fperframe);
         let src = `${options.baseUrl}/tile_frames?framesAcross=${fhorz}&width=${fw}&height=${fh}&fill=corner:black&exact=false`;
         if (frameList.length !== (tileinfo.frames || []).length) {
             src += `&frameList=${frameList.join(',')}`;
