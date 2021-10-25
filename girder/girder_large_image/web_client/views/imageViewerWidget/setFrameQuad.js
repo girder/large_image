@@ -53,6 +53,8 @@
  *   height of an individual frame to this value.
  * @param {string} [options.crossOrigin] If specified, use this as the
  *   crossOrigin policy for images.
+ * @param {string} [options.progress] If specified, a function to call whenever
+ *   a texture image is loaded.
  */
 function setFrameQuad(tileinfo, layer, options) {
     layer.setFrameQuad = function () { };
@@ -106,6 +108,7 @@ function setFrameQuad(tileinfo, layer, options) {
         fvert = Math.ceil(texSize / (Math.ceil(h * texScale2 ** 0.5 / alignment) * alignment));
         // tile sizes
         fw = Math.floor(texSize / fhorz / alignment) * alignment;
+        fvert = Math.max(Math.ceil(f / Math.floor(texSize / fw)), fvert);
         fh = Math.floor(texSize / fvert / alignment) * alignment;
         if (options.maxFrameSize) {
             const maxFrameSize = Math.floor(options.maxFrameSize / alignment) * alignment;
@@ -119,7 +122,7 @@ function setFrameQuad(tileinfo, layer, options) {
             fh = Math.ceil(h / alignment) * alignment;
         }
         // shrink one dimension to account for aspect ratio
-        fw = Math.min(Math.ceil(fw * w / h / alignment) * alignment, fw);
+        fw = Math.min(Math.ceil(fh * w / h / alignment) * alignment, fw);
         fh = Math.min(Math.ceil(fw * h / w / alignment) * alignment, fh);
         // recompute frames across the texture
         fhorz = Math.floor(texSize / fw);
@@ -154,7 +157,8 @@ function setFrameQuad(tileinfo, layer, options) {
         src: [],
         quads: [],
         frames: frames,
-        framesToIdx: {}
+        framesToIdx: {},
+        loadedCount: 0
     };
     if (tileinfo.tileWidth && tileinfo.tileHeight) {
         // report that tiles below this level are not needed
@@ -178,15 +182,27 @@ function setFrameQuad(tileinfo, layer, options) {
         status.src.push(src);
         if (idx === textures - 1) {
             img.onload = function () {
+                status.loadedCount += 1;
                 status.loaded = true;
                 if (layer._options && layer._options.minLevel !== undefined && (options.adjustMinLevel === undefined || options.adjustMinLevel) && status.minLevel && status.minLevel > layer._options.minLevel) {
                     layer._options.minLevel = Math.min(layer._options.maxLevel, status.minLevel);
+                }
+                if (options.progress) {
+                    try {
+                        options.progress(status);
+                    } catch (err) {}
                 }
             };
         } else {
             ((idx) => {
                 img.onload = function () {
+                    status.loadedCount += 1;
                     status.images[idx + 1].src = status.src[idx + 1];
+                    if (options.progress) {
+                        try {
+                            options.progress(status);
+                        } catch (err) {}
+                    }
                 };
             })(idx);
         }

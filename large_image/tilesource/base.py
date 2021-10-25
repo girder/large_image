@@ -5,6 +5,7 @@ import os
 import pathlib
 import tempfile
 import threading
+import time
 
 import numpy
 import PIL
@@ -1839,6 +1840,7 @@ class TileSource:
         :returns: regionData, formatOrRegionMime: the image data and either the
             mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
+        lastlog = time.time()
         kwargs = kwargs.copy()
         kwargs.pop('tile_position', None)
         kwargs.pop('frame', None)
@@ -1874,7 +1876,15 @@ class TileSource:
             subimage, _ = self.getRegion(format=TILE_FORMAT_NUMPY, frame=frame, **kwargs)
             offsetX = (idx % framesAcross) * frameWidth
             offsetY = (idx // framesAcross) * frameHeight
-            self.logger.debug('Tiling frame %r', [idx, frame, offsetX, offsetY])
+            if time.time() - lastlog > 10:
+                self.logger.info(
+                    'Tiling frame %d (%d/%d), offset %dx%d',
+                    frame, idx, len(frameList), offsetX, offsetY)
+                lastlog = time.time()
+            else:
+                self.logger.debug(
+                    'Tiling frame %d (%d/%d), offset %dx%d',
+                    frame, idx, len(frameList), offsetX, offsetY)
             image = self._addRegionTileToImage(
                 image, subimage, offsetX, offsetY, outWidth, outHeight, tiled,
                 tile=tile, **kwargs)
