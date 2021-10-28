@@ -1,20 +1,5 @@
-###############################################################################
-#  Copyright Kitware Inc.
-#
-#  Licensed under the Apache License, Version 2.0 ( the "License" );
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-###############################################################################
-
 import functools
+import threading
 
 try:
     import resource
@@ -26,6 +11,8 @@ from .cachefactory import CacheFactory, pickAvailableCache
 
 _tileCache = None
 _tileLock = None
+
+_cacheLockKeyToken = '_cacheLock_key'
 
 
 # If we have a resource module, ask to use as many file handles as the hard
@@ -182,16 +169,35 @@ class LruCacheMetaclass(type):
         key = cls.__name__ + ' ' + key
         with cacheLock:
             try:
-                return cache[key]
+                result = cache[key]
+                if (not isinstance(result, tuple) or len(result) != 2 or
+                        result[0] != _cacheLockKeyToken):
+                    return result
+                cacheLockForKey = result[1]
             except KeyError:
                 # By passing and handling the cache miss outside of the
                 # exception, any exceptions while trying to populate the cache
                 # will not be reported in the cache exception context.
-                pass
-            instance = super().__call__(*args, **kwargs)
-            cache[key] = instance
+                cacheLockForKey = threading.Lock()
+                cache[key] = (_cacheLockKeyToken, cacheLockForKey)
+        with cacheLockForKey:
+            with cacheLock:
+                try:
+                    result = cache[key]
+                    if (not isinstance(result, tuple) or len(result) != 2 or
+                            result[0] != _cacheLockKeyToken):
+                        return result
+                except KeyError:
+                    pass
+            try:
+                instance = super().__call__(*args, **kwargs)
+            except Exception:
+                with cacheLock:
+                    del cache[key]
+                raise
             instance._classkey = key
-
+            with cacheLock:
+                cache[key] = instance
         return instance
 
 

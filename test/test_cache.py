@@ -1,4 +1,6 @@
+import concurrent.futures
 import threading
+import time
 
 import cachetools
 import pytest
@@ -129,10 +131,12 @@ class TestClass:
         cacheMaxSize = 4
 
         def __init__(self, arg):
-            pass
+            if isinstance(arg, (int, float)):
+                time.sleep(arg)
 
     @pytest.mark.singular
     def testCachesInfo(self):
+        cachesClear()
         large_image.cache_util.cache._tileCache = None
         large_image.cache_util.cache._tileLock = None
         assert cachesInfo()['test']['used'] == 0
@@ -150,7 +154,20 @@ class TestClass:
         assert 'items' in cachesInfo()['tileCache']
 
     @pytest.mark.singular
+    def testCachesKeyLock(self):
+        cachesClear()
+        assert cachesInfo()['test']['used'] == 0
+        starttime = time.time()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            executor.map(self.ExampleWithMetaclass, [3, 3, 2])
+        endtime = time.time()
+        # This really should be close to 3
+        assert endtime - starttime < 6
+        assert cachesInfo()['test']['used'] == 2
+
+    @pytest.mark.singular
     def testCachesClear(self):
+        cachesClear()
         large_image.cache_util.cache._tileCache = None
         large_image.cache_util.cache._tileLock = None
         config.setConfig('cache_backend', 'python')
