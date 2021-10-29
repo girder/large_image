@@ -5,7 +5,7 @@ executors:
     docker:
       - image: girder/tox-and-node
       - image: memcached
-      - image: circleci/mongo:4.0-ram
+      - image: circleci/mongo:5.0-ram
       - image: rabbitmq
 commands:
   tox:
