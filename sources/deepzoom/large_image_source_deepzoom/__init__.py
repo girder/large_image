@@ -7,7 +7,6 @@ from xml.etree import ElementTree
 
 import PIL.Image
 
-from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
@@ -37,10 +36,9 @@ class DeepzoomFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :param path: a filesystem path for the tile source.
         """
-        super(DeepzoomFileTileSource, self).__init__(path, **kwargs)
+        super().__init__(path, **kwargs)
 
         self._largeImagePath = self._getLargeImagePath()
-        self._logger = config.getConfig('logger')
         # Read the root dzi file and check that the expected image files exist
         try:
             with builtins.open(self._largeImagePath) as fptr:
