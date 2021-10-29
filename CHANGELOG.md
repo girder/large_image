@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.8.4
 
 ### Improvements
 - Improve warnings on inefficient tiff files ([#668](../../pull/668))
@@ -15,7 +15,7 @@
 ## Version 1.8.2
 
 ### Improvements
-- Make the image viewer control class more precise ([#665](../../pull/665))
+- Make the image viewer control css class more precise ([#665](../../pull/665))
 
 ## Version 1.8.1
 
