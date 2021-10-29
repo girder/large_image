@@ -96,6 +96,8 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-deepzoom``: A tile source for reading Deepzoom tiles.
 
+  - ``large-image-source-multi``: A tile source for compisiting other tile sources into a single multi-frame source.
+
   - ``large-image-source-test``: A tile source that generates test tiles, including a simple fractal pattern.  Useful for testing extreme zoom levels.
 
   - ``large-image-source-dummy``: A tile source that does nothing.
