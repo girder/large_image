@@ -34,7 +34,7 @@ from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcac
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, SourcePriority,
                                    TileInputUnits, TileOutputMimeTypes)
-from large_image.exceptions import TileSourceException, TileSourceFileNotFoundError
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 
 try:
@@ -114,7 +114,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except RuntimeError:
             if not os.path.isfile(self._path):
                 raise TileSourceFileNotFoundError(self._path) from None
-            raise TileSourceException('File cannot be opened via GDAL')
+            raise TileSourceError('File cannot be opened via GDAL')
         self._getDatasetLock = threading.RLock()
         self.tileSize = 256
         self.tileWidth = self.tileSize
@@ -132,16 +132,16 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except AttributeError:
             if not os.path.isfile(self._path):
                 raise TileSourceFileNotFoundError(self._path) from None
-            raise TileSourceException('File cannot be opened via GDAL.')
+            raise TileSourceError('File cannot be opened via GDAL.')
         is_netcdf = self._checkNetCDF()
         try:
             scale = self.getPixelSizeInMeters()
         except RuntimeError:
-            raise TileSourceException('File cannot be opened via GDAL.')
+            raise TileSourceError('File cannot be opened via GDAL.')
         if (self.projection or self._getDriver() in {
             'PNG',
         }) and not scale and not is_netcdf:
-            raise TileSourceException(
+            raise TileSourceError(
                 'File does not have a projected scale, so will not be '
                 'opened via GDAL with a projection.')
         self.sourceLevels = self.levels = int(max(0, math.ceil(max(
@@ -300,7 +300,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Since we already converted to bytes decoding is safe here
         outProj = self._proj4Proj(self.projection)
         if outProj.crs.is_geographic:
-            raise TileSourceException(
+            raise TileSourceError(
                 'Projection must not be geographic (it needs to use linear '
                 'units, not longitude/latitude).')
         if unitsPerPixel:
@@ -316,7 +316,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     [-180, 180], [0, 0])
                 self.unitsAcrossLevel0 = abs(equator[0][1] - equator[0][0])
                 if not self.unitsAcrossLevel0:
-                    raise TileSourceException(
+                    raise TileSourceError(
                         'unitsPerPixel must be specified for this projection')
                 if len(ProjUnitsAcrossLevel0) >= ProjUnitsAcrossLevel0_MaxSize:
                     ProjUnitsAcrossLevel0.clear()
@@ -355,7 +355,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             return attrgetter(palette)(palettable).hex_colors
         except AttributeError:
-            raise TileSourceException('Palette is not a valid palettable path.')
+            raise TileSourceError('Palette is not a valid palettable path.')
 
     def getProj4String(self):
         """
@@ -690,7 +690,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             band = int(band)
         if band != -1 and band not in bands:
             if exc:
-                raise TileSourceException(
+                raise TileSourceError(
                     'Band has to be a positive integer, -1, or a band '
                     'interpretation found in the source.')
             return None
@@ -805,7 +805,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if bottom is None and top is not None and height is not None:
                 bottom = top + height
         if (left is None and right is None) or (top is None and bottom is None):
-            raise TileSourceException(
+            raise TileSourceError(
                 'Cannot convert from projection unless at least one of '
                 'left and right and at least one of top and bottom is '
                 'specified.')
