@@ -5,6 +5,7 @@
 ### Improvements
 - Improve warnings on inefficient tiff files ([#668](../../pull/668))
 - Add more options to setFrameQuad ([#669](../../pull/669), [#670](../../pull/670))
+- Improved concurrency of opening multiple distinct tile sources ([#671](../../pull/671))
 
 ## Version 1.8.3
 
