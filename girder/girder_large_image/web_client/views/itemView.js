@@ -51,3 +51,5 @@ wrap(ItemView, 'render', function (render) {
     }, this);
     render.call(this);
 });
+
+export default ItemView;

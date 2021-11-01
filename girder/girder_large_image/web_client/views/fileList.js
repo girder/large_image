@@ -72,3 +72,5 @@ wrap(FileListWidget, 'render', function (render) {
     });
     return this;
 });
+
+export default FileListWidget;
