@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- Better Girder client exports ([#674](../../pull/674))
+
 ## Version 1.8.4
 
 ### Improvements

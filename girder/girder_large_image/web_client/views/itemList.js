@@ -113,3 +113,5 @@ wrap(ItemListWidget, 'render', function (render) {
         return this;
     });
 });
+
+export default ItemListWidget;
