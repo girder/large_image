@@ -25,8 +25,11 @@ from operator import attrgetter
 import numpy
 import palettable
 import PIL.Image
-import pyproj
-from osgeo import gdal, gdal_array, gdalconst, osr
+from osgeo import gdal, gdal_array, gdalconst, osr  # noqa I001
+# pyproj stopped supporting older pythons, so its database is aging; as such,
+# if on those older versions of python if it is imported before gdal, there can
+# be a database version conflect; importing after gdal avoids this.
+import pyproj  # noqa I001
 from pkg_resources import DistributionNotFound, get_distribution
 
 import large_image

@@ -1,5 +1,10 @@
 # Change Log
 
+## Version 1.8.6
+
+### Bug Fixes
+- A change in the Glymur library affected how missing files were handled ([#675](../../pull/675))
+
 ## Version 1.8.5
 
 ### Improvements
