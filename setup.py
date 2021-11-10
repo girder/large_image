@@ -9,6 +9,7 @@ with open('README.rst') as readme_file:
 
 extraReqs = {
     'memcached': ['pylibmc>=1.5.1'] if platform.system() != 'Windows' else [],
+    'converter': ['large-image-converter'],
 }
 sources = {
     'bioformats': ['large-image-source-bioformats'],
