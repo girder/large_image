@@ -93,11 +93,10 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         # Note this is the super of the parent class, not of this class.
         super(TiffFileTileSource, self).__init__(path, **kwargs)
 
-        largeImagePath = self._getLargeImagePath()
-        self._largeImagePath = largeImagePath
+        self._largeImagePath = str(self._getLargeImagePath())
 
         try:
-            base = TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
+            base = TiledTiffDirectory(self._largeImagePath, 0, mustBeTiled=None)
         except TiffException:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
@@ -106,7 +105,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         if not info or not info.get('OME'):
             raise TileSourceError('Not an OME Tiff')
         self._omeinfo = info['OME']
-        self._checkForOMEZLoop(largeImagePath)
+        self._checkForOMEZLoop(self._largeImagePath)
         self._parseOMEInfo()
         omeimages = [
             entry['Pixels'] for entry in self._omeinfo['Image'] if
@@ -119,12 +118,12 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         self._omeLevels = [omebylevel.get(key) for key in range(max(omebylevel.keys()) + 1)]
         if base._tiffInfo.get('istiled'):
             self._tiffDirectories = [
-                TiledTiffDirectory(largeImagePath, int(entry['TiffData'][0].get('IFD', 0)))
+                TiledTiffDirectory(self._largeImagePath, int(entry['TiffData'][0].get('IFD', 0)))
                 if entry else None
                 for entry in self._omeLevels]
         else:
             self._tiffDirectories = [
-                TiledTiffDirectory(largeImagePath, 0, mustBeTiled=None)
+                TiledTiffDirectory(self._largeImagePath, 0, mustBeTiled=None)
                 if entry else None
                 for entry in self._omeLevels]
             self._checkForInefficientDirectories(warn=False)

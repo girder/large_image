@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 
 import pytest
 
@@ -86,6 +87,19 @@ def testSourcesCanRead(source, filename):
     large_image.tilesource.loadTileSources()
     sourceClass = large_image.tilesource.AvailableTileSources[source]
     assert bool(sourceClass.canRead(imagePath)) is bool(canRead)
+
+
+@pytest.mark.parametrize('filename', registry)
+@pytest.mark.parametrize('source', SourceAndFiles)
+def testSourcesCanReadPath(source, filename):
+    sourceInfo = SourceAndFiles[source]
+    canRead = sourceInfo.get('any') or (
+        re.search(sourceInfo.get('read', r'^$'), filename) and
+        not re.search(sourceInfo.get('noread', r'^$'), filename))
+    imagePath = datastore.fetch(filename)
+    large_image.tilesource.loadTileSources()
+    sourceClass = large_image.tilesource.AvailableTileSources[source]
+    assert bool(sourceClass.canRead(Path(imagePath))) is bool(canRead)
 
 
 @pytest.mark.parametrize('filename', registry)

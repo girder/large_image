@@ -111,12 +111,12 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
         self._bounds = {}
-        self._path = self._getLargeImagePath()
+        self._largeImagePath = str(self._getLargeImagePath())
         try:
-            self.dataset = gdal.Open(self._path, gdalconst.GA_ReadOnly)
+            self.dataset = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
         except RuntimeError:
-            if not os.path.isfile(self._path):
-                raise TileSourceFileNotFoundError(self._path) from None
+            if not os.path.isfile(self._largeImagePath):
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via GDAL')
         self._getDatasetLock = threading.RLock()
         self.tileSize = 256
@@ -133,8 +133,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
                 self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
         except AttributeError:
-            if not os.path.isfile(self._path):
-                raise TileSourceFileNotFoundError(self._path) from None
+            if not os.path.isfile(self._largeImagePath):
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via GDAL.')
         is_netcdf = self._checkNetCDF()
         try:
@@ -1138,7 +1138,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         os.close(fd)
         try:
             self.logger.info('Using gdal warp %r' % gdalParams)
-            ds = gdal.Open(self._path, gdalconst.GA_ReadOnly)
+            ds = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
             gdal.Warp(outputPath, ds, options=gdalParams)
         except Exception as exc:
             try:

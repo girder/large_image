@@ -77,7 +77,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
-        self._largeImagePath = self._getLargeImagePath()
+        self._largeImagePath = str(self._getLargeImagePath())
 
         try:
             self._openslide = openslide.OpenSlide(self._largeImagePath)

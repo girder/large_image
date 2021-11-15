@@ -83,8 +83,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
-        largeImagePath = self._getLargeImagePath()
-        self._largeImagePath = largeImagePath
+        self._largeImagePath = str(self._getLargeImagePath())
 
         try:
             self._initWithTiffTools()
@@ -100,10 +99,10 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         # If there are no tiled images, raise an exception.
         if not len(alldir):
-            if not os.path.isfile(largeImagePath):
-                raise TileSourceFileNotFoundError(largeImagePath) from None
+            if not os.path.isfile(self._largeImagePath):
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = "File %s didn't meet requirements for tile source: %s" % (
-                largeImagePath, lastException)
+                self._largeImagePath, lastException)
             config.getConfig('logger').debug(msg)
             raise TileSourceError(msg)
         # Sort the known directories by image area (width * height).  Given
@@ -120,7 +119,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if (td.tileWidth != highest.tileWidth or
                     td.tileHeight != highest.tileHeight):
                 if not len(self._associatedImages):
-                    self._addAssociatedImage(largeImagePath, tdir[-2], True, highest)
+                    self._addAssociatedImage(self._largeImagePath, tdir[-2], True, highest)
                 continue
             # If a layer's image is not a multiple of the tile size, it should
             # be near a power of two of the highest resolution image.
@@ -146,7 +145,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkForInefficientDirectories()
 
     def _scanDirectories(self):
-        largeImagePath = self._largeImagePath
         lastException = None
         # Associated images are smallish TIFF images that have an image
         # description and are not tiled.  They have their own TIFF directory.
@@ -164,7 +162,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for directoryNum in itertools.count():  # pragma: no branch
             try:
                 if dir is None:
-                    dir = TiledTiffDirectory(largeImagePath, directoryNum, validate=False)
+                    dir = TiledTiffDirectory(self._largeImagePath, directoryNum, validate=False)
                 else:
                     dir._setDirectory(directoryNum)
                     dir._loadMetadata()
@@ -193,7 +191,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not alldir and lastException:
             raise lastException
         for directoryNum in associatedDirs:
-            self._addAssociatedImage(largeImagePath, directoryNum)
+            self._addAssociatedImage(self._largeImagePath, directoryNum)
         return alldir
 
     def _levelFromIfd(self, ifd, baseifd):
