@@ -137,7 +137,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
-        largeImagePath = self._getLargeImagePath()
+        largeImagePath = str(self._getLargeImagePath())
 
         ext = os.path.splitext(largeImagePath)[1]
         if not ext:

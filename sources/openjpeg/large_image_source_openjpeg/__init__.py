@@ -86,12 +86,10 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
-        largeImagePath = self._getLargeImagePath()
-
-        self._largeImagePath = largeImagePath
+        self._largeImagePath = str(self._getLargeImagePath())
         self._pixelInfo = {}
         try:
-            self._openjpeg = glymur.Jp2k(largeImagePath)
+            self._openjpeg = glymur.Jp2k(self._largeImagePath)
             if not self._openjpeg.shape:
                 if not os.path.isfile(self._largeImagePath):
                     raise FileNotFoundError()

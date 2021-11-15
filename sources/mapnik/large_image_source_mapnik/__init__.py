@@ -310,7 +310,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         m.append_style(styleName, style)
         lyr = mapnik.Layer('layer')
         lyr.srs = layerSrs
-        gdalpath = self._path
+        gdalpath = self._largeImagePath
         gdalband = band
         if hasattr(self, '_netcdf') and type(band) is tuple:
             gdalband = band[1]
