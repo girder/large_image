@@ -24,7 +24,7 @@ from girder_jobs.models.job import Job
 
 from girder import logger
 from girder.constants import SortDir
-from girder.exceptions import FilePathException, ValidationException
+from girder.exceptions import FilePathException, GirderException, ValidationException
 from girder.models.assetstore import Assetstore
 from girder.models.file import File
 from girder.models.item import Item
@@ -360,21 +360,24 @@ class ImageItem(Item):
                 pickleCache or isinstance(imageData, bytes))):
             dataStored = imageData if not pickleCache else pickle.dumps(imageData, protocol=4)
             # Save the data as a file
-            datafile = Upload().uploadFromFile(
-                io.BytesIO(dataStored), size=len(dataStored),
-                name='_largeImageThumbnail', parentType='item', parent=item,
-                user=None, mimeType=imageMime, attachParent=True)
-            if not len(dataStored) and 'received' in datafile:
-                datafile = Upload().finalizeUpload(
-                    datafile, Assetstore().load(datafile['assetstoreId']))
-            datafile.update({
-                'isLargeImageThumbnail' if not pickleCache else 'isLargeImageData': True,
-                'thumbnailKey': key,
-            })
-            # Ideally, we would check that the file is still wanted before we
-            # save it.  This is probably impossible without true transactions in
-            # Mongo.
-            File().save(datafile)
+            try:
+                datafile = Upload().uploadFromFile(
+                    io.BytesIO(dataStored), size=len(dataStored),
+                    name='_largeImageThumbnail', parentType='item', parent=item,
+                    user=None, mimeType=imageMime, attachParent=True)
+                if not len(dataStored) and 'received' in datafile:
+                    datafile = Upload().finalizeUpload(
+                        datafile, Assetstore().load(datafile['assetstoreId']))
+                datafile.update({
+                    'isLargeImageThumbnail' if not pickleCache else 'isLargeImageData': True,
+                    'thumbnailKey': key,
+                })
+                # Ideally, we would check that the file is still wanted before
+                # we save it.  This is probably impossible without true
+                # transactions in Mongo.
+                File().save(datafile)
+            except (GirderException, PermissionError):
+                logger.warning('Could not cache data for large image')
         return imageData, imageMime
 
     def removeThumbnailFiles(self, item, keep=0, sort=None, imageKey=None, **kwargs):
