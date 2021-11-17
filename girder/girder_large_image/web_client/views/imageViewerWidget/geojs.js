@@ -84,7 +84,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     // performance and appearance
                     // maxTextures: 16,
                     // maxTotalTexturePixels: 256 * 1024 * 1024,
-                    baseUrl: this._getTileUrl('{z}', '{x}', '{y}').split('/tiles/')[0] + '/tiles'
+                    baseUrl: this._getTileUrl('{z}', '{x}', '{y}').split('/tiles/')[0] + '/tiles',
+                    query: 'cache=true'
                 });
                 this._layer.setFrameQuad(0);
             }

@@ -279,6 +279,7 @@ class LargeImageResource(Resource):
                     'large_image items.')
         .param('imageKey', 'If specific, only include images with the '
                'specified key', required=False)
+        .notes('The imageKey can also be "tileFrames".')
     )
     @access.admin
     def countAssociatedImages(self, params):
@@ -312,7 +313,10 @@ class LargeImageResource(Resource):
 
     @describeRoute(
         Description('Create cached thumbnail files from large_image items.')
-        .notes('This creates a local job that processes all large_image items.')
+        .notes('This creates a local job that processes all large_image '
+               'items.  A common spec for the Girder API is: [{"width": 160, '
+               '"height": 100}, {"width": 160, "height": 100, "imageKey": '
+               '"macro"}, {"width": 160, "height": 100, "imageKey": "label"}]')
         .param('spec', 'A JSON list of thumbnail specifications to create.  '
                'The specifications typically include width, height, encoding, '
                'and encoding options.')
