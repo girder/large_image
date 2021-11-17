@@ -5,6 +5,7 @@
 ### Improvements
 - Add the image converter to the extra requires ([#677](../../pull/677))
 - All file tile sources can take either strings or pathlib.Path values ([#683](../../pull/683))
+- On Girder with read-only assetstores, return results even if caching fails ([#684](../../pull/684))
 
 ## Version 1.8.6
 
