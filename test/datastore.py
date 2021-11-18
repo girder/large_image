@@ -69,6 +69,9 @@ registry = {
     # One layer tiff with missing tiles
     # Source: one_layer_missing_tiles.tiff
     'one_layer_missing_tiles.tiff': 'sha512:53d52abbb82d312b114407d2974fa0a4116c3b50875c5b360798b5d529cbb67596b1dff7d8feceb319d0b4377d12d023b64e374ea3df37f795c5a940afaa4cd5',  # noqa
+    # Geospatial file without a projection
+    # Source: generated from geojs oahu sample and a script
+    'oahu-dense.tiff': 'sha512:414b7807f14991d6f8229134ad6ccbc2cc2d4b05423ccebfd3ede7d7323dfcf04ef1a7b2c2b4c45c31f8a36bccd390782af3e7d3e99f01f1b95650c5da1f122b',  # noqa
 }
 
 

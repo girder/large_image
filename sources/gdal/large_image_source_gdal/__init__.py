@@ -372,7 +372,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 wkt = self.dataset.GetProjection()
         if not wkt:
-            if hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}:
+            if (self.dataset.GetGeoTransform(can_return_null=True) or
+                    hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}):
                 return NeededInitPrefix + 'epsg:4326'
             return
         proj = osr.SpatialReference()
@@ -569,6 +570,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'geospatial': bool(
                     self.dataset.GetProjection() or
                     (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
+                    self.dataset.GetGeoTransform(can_return_null=True) or
                     hasattr(self, '_netcdf')),
                 'levels': self.levels,
                 'sizeX': self.sizeX,

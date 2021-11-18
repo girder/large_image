@@ -496,3 +496,14 @@ def testGetTiledRegion16BitWithStyle():
     assert tileMetadata['bounds']['ymin'] == pytest.approx(3899358, 1)
     assert '+proj=merc' in tileMetadata['bounds']['srs']
     region.unlink()
+
+
+def testFileWithoutProjection():
+    imagePath = datastore.fetch('oahu-dense.tiff')
+    ts = large_image_source_gdal.open(imagePath, projection='EPSG:3857')
+    tileMetadata = ts.getMetadata()
+    assert tileMetadata['bounds']['xmax'] == pytest.approx(-17548722, 1)
+    assert tileMetadata['bounds']['xmin'] == pytest.approx(-17620245, 1)
+    assert tileMetadata['bounds']['ymax'] == pytest.approx(2477890, 1)
+    assert tileMetadata['bounds']['ymin'] == pytest.approx(2420966, 1)
+    assert 'epsg:3857' in tileMetadata['bounds']['srs']
