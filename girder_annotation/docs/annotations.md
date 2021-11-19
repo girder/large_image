@@ -46,6 +46,8 @@ All shapes have the following properties.  If a property is not listed, it is no
 
 ### Arrow
 
+Not currently rendered.
+
 ```
 {
     "type": "arrow",                   # Exact string.  Required
@@ -59,6 +61,8 @@ All shapes have the following properties.  If a property is not listed, it is no
 
 ### Circle
 
+Not currently rendered.
+
 ```
 {
     "type": "circle",                  # Exact string.  Required
@@ -70,6 +74,8 @@ All shapes have the following properties.  If a property is not listed, it is no
 ```
 
 ### Ellipse
+
+Not currently rendered.
 
 The width and height of an ellipse are the major and minor axes.
 
@@ -128,6 +134,8 @@ The width and height of an ellipse are the major and minor axes.
 ```
 
 ### Rectangle Grid
+
+Not currently rendered.
 
 A Rectangle Grid is a rectangle which contains regular subdivisions, such as that used to show a regular scale grid overlay on an image.
 
