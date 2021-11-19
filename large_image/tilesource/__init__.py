@@ -35,6 +35,8 @@ def isGeospatial(path):
         return True
     if ds.GetProjection():
         return True
+    if ds.GetGeoTransform(can_return_null=True):
+        return True
     if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
         return True
     return False

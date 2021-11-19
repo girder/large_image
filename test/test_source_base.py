@@ -35,7 +35,7 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|tif.*)$',
-        'noread': r'(DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop)',
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop)',
         'skipTiles': r'one_layer_missing'},
     'pil': {
         'read': r'\.(jpeg|png|tif.*)$',
@@ -43,7 +43,8 @@ SourceAndFiles = {
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'\.(ptif|scn|svs|tif.*)$',
-        'noread': r'(DDX58_AXL|G10-3_pelvis_crop|d042-353\.crop\.small\.float|landcover_sample)',
+        'noread': r'(oahu|DDX58_AXL|G10-3_pelvis_crop|'
+                  r'd042-353\.crop\.small\.float|landcover_sample)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
 }
 
