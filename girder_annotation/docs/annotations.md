@@ -104,6 +104,8 @@ The width and height of an ellipse are the major and minor axes.
 
 ### Polyline
 
+When closed, this is a polygon.  When open, this is a continuous line.
+
 ```
 {
     "type": "polyline",                # Exact string.  Required
