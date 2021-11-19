@@ -919,7 +919,7 @@ class Annotation(AccessControlledModel):
                         return False
         elif isinstance(a, list):
             if len(a) != len(b):
-                if parentKey not in {'points', 'values'} or len(a) < 3 or len(b) < 3:
+                if parentKey not in {'points', 'values'} or len(a) < 2 or len(b) < 2:
                     return False
                 # If this is an array of points, let it pass
                 for idx in range(len(b)):

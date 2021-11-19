@@ -8,6 +8,9 @@
 - On Girder with read-only assetstores, return results even if caching fails ([#684](../../pull/684))
 - Handle geospatial files with no explicit projection ([#686](../../pull/686))
 
+### Bug Fixes
+- Fix default properties on annotations when emitted as centroids ([#687](../../pull/687))
+
 ## Version 1.8.6
 
 ### Bug Fixes

@@ -221,6 +221,12 @@ class Annotationelement(Model):
                 'bbox': True}
             proplist = []
             propskeys = ['type', 'fillColor', 'lineColor', 'lineWidth', 'closed']
+            # This should match the javascript
+            defaultProps = {
+                'fillColor': 'rgba(0,0,0,0)',
+                'lineColor': 'rgb(0,0,0)',
+                'lineWidth': 2,
+            }
             for key in propskeys:
                 fields['element.%s' % key] = True
             props = {}
@@ -249,7 +255,9 @@ class Annotationelement(Model):
                 bbox = entry.get('bbox')
                 if not bbox or 'lowx' not in bbox or 'size' not in bbox:
                     continue
-                prop = tuple(element.get(key) for key in propskeys)
+                prop = tuple(
+                    element.get(key, defaultProps.get(key)) for key in propskeys
+                    if element.get(key, defaultProps.get(key)) is not None)
                 if prop not in props:
                     props[prop] = len(props)
                     proplist.append(list(prop))
