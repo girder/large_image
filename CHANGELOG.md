@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.8.7
 
 ### Improvements
 - Add the image converter to the extra requires ([#677](../../pull/677))
