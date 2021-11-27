@@ -144,7 +144,7 @@ class LruCacheMetaclass(type):
         if LruCacheMetaclass.namedCaches.get(cacheName) is None:
             cache, cacheLock = CacheFactory().getCache(maxSize, cacheName=cacheName)
             LruCacheMetaclass.namedCaches[cacheName] = (cache, cacheLock)
-            config.getConfig('logger').info(
+            config.getConfig('logger').debug(
                 'Created LRU Cache for %r with %d maximum size' % (cacheName, cache.maxsize))
         else:
             (cache, cacheLock) = LruCacheMetaclass.namedCaches[cacheName]
