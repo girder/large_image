@@ -16,6 +16,7 @@
 
 import json
 import struct
+import time
 
 import cherrypy
 import ujson
@@ -346,6 +347,7 @@ class AnnotationResource(Resource):
         if item is not None:
             Item().requireAccess(
                 item, user=self.getCurrentUser(), level=AccessType.WRITE)
+        setResponseTimeLimit(86400)
         Annotation().remove(annotation)
 
     @describeRoute(
@@ -451,6 +453,7 @@ class AnnotationResource(Resource):
     )
     @access.public
     def revertAnnotationHistory(self, id, version):
+        setResponseTimeLimit(86400)
         annotation = Annotation().revertVersion(id, version, self.getCurrentUser())
         if not annotation:
             raise RestException('Annotation history version not found.')
@@ -506,8 +509,11 @@ class AnnotationResource(Resource):
     def createItemAnnotations(self, item, annotations):
         user = self.getCurrentUser()
         if hasattr(annotations, 'read'):
+            startTime = time.time()
             annotations = annotations.read().decode('utf8')
             annotations = ujson.loads(annotations)
+            if time.time() - startTime > 10:
+                logger.info('Decoded json in %5.3fs', time.time() - startTime)
         if not isinstance(annotations, list):
             annotations = [annotations]
         for entry in annotations:
@@ -532,6 +538,7 @@ class AnnotationResource(Resource):
     )
     @access.user
     def deleteItemAnnotations(self, item):
+        setResponseTimeLimit(86400)
         user = self.getCurrentUser()
         query = {'_active': {'$ne': False}, 'itemId': item['_id']}
 
