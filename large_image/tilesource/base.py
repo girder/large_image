@@ -26,22 +26,22 @@ from .utilities import (_encodeImage, _gdalParameters,  # noqa: F401
 
 
 class TileSource:
+    #: Name of the tile source
     name = None
-    """Name of the tile source"""
 
+    #: A dictionary of known file extensions and the ``SourcePriority`` given
+    #: to each.  It must contain a None key with a priority for the tile source
+    #: when the extension does not match.
     extensions = {
         None: SourcePriority.FALLBACK
     }
-    """A dictionary of known file extensions and the ``SourcePriority`` given
-    to each.  It must contain a None key with a priority for the tile source
-    when the extension does not match."""
 
+    #: A dictionary of common mime-types handled by the source and the
+    #: ``SourcePriority`` given to each.  This are used in place of or in
+    #: additional to extensions.
     mimeTypes = {
         None: SourcePriority.FALLBACK
     }
-    """A dictionary of common mime-types handled by the source and the
-    ``SourcePriority`` given to each.  This are used in place of or in
-    additional to extensions."""
 
     def __init__(self, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
                  tiffCompression='raw', edge=False, style=None, *args,
