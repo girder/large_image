@@ -938,7 +938,7 @@ class Annotation(AccessControlledModel):
         return True
 
     def validate(self, doc):
-        starttime = time.time()
+        startTime = lastTime = time.time()
         try:
             # This block could just use the json validator:
             #   jsonschema.validate(doc.get('annotation'),
@@ -951,7 +951,7 @@ class Annotation(AccessControlledModel):
             annot['elements'] = []
             self.validatorAnnotation.validate(annot)
             lastValidatedElement = None
-            for element in elements:
+            for idx, element in enumerate(elements):
                 if isinstance(element.get('id'), ObjectId):
                     element['id'] = str(element['id'])
                 # Handle elements with large arrays by checking that a
@@ -972,10 +972,15 @@ class Annotation(AccessControlledModel):
                     lastValidatedElement = element
                 if key:
                     element[key] = keydata
+                if time.time() - lastTime > 10:
+                    logger.info('Validated %s of %d elements in %5.3fs',
+                                idx + 1, len(elements), time.time() - startTime)
+                    lastTime = time.time()
             annot['elements'] = elements
         except jsonschema.ValidationError as exp:
             raise ValidationException(exp)
-        logger.debug('Validated in %5.3fs' % (time.time() - starttime))
+        if time.time() - startTime > 10:
+            logger.info('Validated in %5.3fs' % (time.time() - startTime))
         elementIds = [entry['id'] for entry in
                       doc['annotation'].get('elements', []) if 'id' in entry]
         if len(set(elementIds)) != len(elementIds):

@@ -1,0 +1,10 @@
+.indextable.genindextable td {
+  padding-right: 10px
+}
+.indextable.genindextable li {
+  word-break: break-word;
+}
+.indextable.genindextable a:before {
+  content: "\2022\00A0";
+}
+    

@@ -120,7 +120,7 @@ class TiledTiffDirectory:
         :param validate: if False, don't validate that images can be read.
         :type mustBeTiled: bool
         :raises: InvalidOperationTiffException or IOTiffException or
-        ValidationTiffException
+            ValidationTiffException
         """
         self.logger = config.getConfig('logger')
         # create local cache to store Jpeg tables and getTileByteCountsType

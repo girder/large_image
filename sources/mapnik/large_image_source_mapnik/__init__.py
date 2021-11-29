@@ -84,6 +84,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             this is a string with a json-encoded dictionary.  The style is
             ignored if it does not contain 'band' or 'bands'.  The style can
             contain the following keys:
+
                 band: either -1 for the default band(s), a 1-based value for
                     the band to use for styling, or a string that matches the
                     interpretation of the band ('red', 'green', 'blue', gray',
@@ -116,6 +117,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                     nodata value.
                 composite: this is a string containing one of the mapnik
                     CompositeOp properties.  It defaults to 'lighten'.
+
             Alternately, the style object can contain a single key of 'bands',
             which has a value which is a list of style dictionaries as above,
             excepting that each must have a band that is not -1.  Bands are
