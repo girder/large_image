@@ -34,6 +34,8 @@ large_image also works as a Girder plugin with optional annotation support.
    large_image_tasks/modules
    girder_large_image/modules
    girder_large_image_annotation/modules
+   annotations
+
 
 
 Indices and tables
