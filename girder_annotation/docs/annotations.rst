@@ -101,7 +101,8 @@ The width and height of an ellipse are the major and minor axes.
        "width": 5.3,                      # Number >= 0.  Required
        "height": 17.3,                    # Number >= 0.  Required
        "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
-       "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.  Optional
+       "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
+                                          # Optional
        "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
    }
 
@@ -147,7 +148,8 @@ Rectangle
        "width": 5.3,                      # Number >= 0.  Required
        "height": 17.3,                    # Number >= 0.  Required
        "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
-       "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.  Optional
+       "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
+                                          # Optional
        "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
    }
 
@@ -168,7 +170,8 @@ such as that used to show a regular scale grid overlay on an image.
        "width": 5.3,                      # Number >= 0.  Required
        "height": 17.3,                    # Number >= 0.  Required
        "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
-       "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.  Optional
+       "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
+                                          # Optional
        "widthSubdivisions": 3,            # Integer > 0.  Required
        "heightSubdivisions": 4,           # Integer > 0.  Required
        "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
@@ -193,13 +196,15 @@ near by values aggregate together when viewed.
            [10976, 93376, 0, 0.2],
            [42368, 65248, 0, 0.054]
        ],
-       "radius": 25,                      # Positive number.  Optional.  The size of the gaussian plot spread,
-       "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"],  # A list of colors corresponding to the
-                                          # rangeValues.  Optional
+       "radius": 25,                      # Positive number.  Optional.  The size of the gaussian plot
+                                          # spread
+       "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"],  # A list of colors corresponding to
+                                          # the rangeValues.  Optional
        "rangeValues: [0, 1],              # A list of range values corresponding to the colorRange list
                                           # and possibly normalized to a scale of [0, 1].  Optional
-       "normalizeRange": true             # If true, the rangeValues are normalized to [0, 1].  If false, the
-                                          # rangeValues are in the value domain.  Defaults to true.  Optional
+       "normalizeRange": true             # If true, the rangeValues are normalized to [0, 1].  If
+                                          # false, the rangeValues are in the
+                                          # value domain.  Defaults to true.  Optional
    }
 
 Grid Data
@@ -218,17 +223,19 @@ choropleth, a grid with a list of values can be specified.
        "origin": [0, 0, 0],               # Origin including fized x value.  Optional
        "dx": 32,                          # Grid spacing in x.  Optional
        "dy": 32,                          # Grid spacing in y.  Optional
-       "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"], # A list of colors corresponding to the
-                                          # rangeValues.  Optional
-       "rangeValues: [0, 1],              # A list of range values corresponding to the colorRange list.  This
-                                          # should have the same number of entries as colorRange unless a contour
-                                          # where stepped is true.  Possibly normalized to a scale of [0, 1].
-                                          # Optional
-       "normalizeRange": false,           # If true, the rangeValues are normalized to [0, 1].  If false, the
-                                          # rangeValues are in the value domain.  Defaults to true.  Optional
+       "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"], # A list of colors corresponding to
+                                          # the rangeValues.  Optional
+       "rangeValues: [0, 1],              # A list of range values corresponding to the colorRange list.
+                                          # This should have the same number of entries as colorRange
+                                          # unless a contour where stepped is true.  Possibly normalized
+                                          # to a scale of [0, 1].  Optional
+       "normalizeRange": false,           # If true, the rangeValues are normalized to [0, 1].  If
+                                          # false, the rangeValues are in the value domain.  Defaults to
+                                          # true.  Optional
        "minColor": "rgba(0, 0, 255, 1)",  # The color of data below the minimum range.  Optional
        "maxColor": "rgba(255, 255, 0, 1)", # The color of data above the maximum range.  Optional
-       "stepped": true,                   # For contours, whether discrete colors or continuous colors should be used.  Default false.  Optional
+       "stepped": true,                   # For contours, whether discrete colors or continuous colors
+                                          # should be used.  Default false.  Optional
        "values": [
            0.508,
            0.806,
