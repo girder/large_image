@@ -301,7 +301,8 @@ class Annotationelement(Model):
             see general MongoDB docs for "find()"
         :type query: dict
         """
-        assert query
+        if not query:
+            raise Exception('query must be specified')
 
         attachedQuery = query.copy()
         attachedQuery['datafile'] = {'$exists': True}
