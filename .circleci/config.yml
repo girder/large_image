@@ -157,10 +157,23 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.9.7
+          version: 3.9.9
           node: v12
       - tox:
           env: py39
+      - coverage
+      - store_artifacts:
+          path: build/test/artifacts
+  py310:
+    machine:
+      image: ubuntu-2004:202010-01
+    steps:
+      - checkout
+      - allservices:
+          version: 3.10.0
+          node: v12
+      - tox:
+          env: py310
       - coverage
       - store_artifacts:
           path: build/test/artifacts
@@ -268,6 +281,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      # - py310:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      #       branches:
+      #         ignore:
+      #           - gh-pages
       - lint_and_docs:
           filters:
             tags:
@@ -281,6 +301,7 @@ workflows:
             - py37
             - py38
             - py39
+            # - py310
             - lint_and_docs
           filters:
             tags:
@@ -294,6 +315,7 @@ workflows:
             - py37
             - py38
             - py39
+            # - py310
             - lint_and_docs
           filters:
             tags:
@@ -306,6 +328,7 @@ workflows:
             - py37
             - py38
             - py39
+            # - py310
             - lint_and_docs
           filters:
             tags:
@@ -328,5 +351,6 @@ workflows:
       - py37
       - py38
       - py39
+      # - py310
       - lint_and_docs
       - wheels
