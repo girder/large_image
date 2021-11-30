@@ -1,5 +1,7 @@
-Large Image |build-status| |codecov-io| |license-badge| |doi-badge|
-===================================================================
+Large Image
+===========
+
+|build-status| |codecov-io| |license-badge| |doi-badge| |pypi-badge|
 
 .. |build-status| image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
     :target: https://circleci.com/gh/girder/large_image
@@ -16,7 +18,21 @@ Large Image |build-status| |codecov-io| |license-badge| |doi-badge|
 .. |doi-badge| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4723355-blue
    :target: https://zenodo.org/badge/latestdoi/45569214
 
-Python modules to work with large multiresolution images.
+.. |pypi-badge| image:: https://img.shields.io/pypi/v/large-image.svg?logo=python&logoColor=white
+   :target: https://pypi.org/project/large-image/
+
+*Python modules to work with large, multiresolution images.*
+
+Large Image is developed and maintained by the Data & Analytics group at Kitware, Inc. for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_ and TODO add some others.
+
+
+Highlights
+----------
+
+- Tile serving made easy
+- Supports a wide variety of geospatial and medical image formats
+- Convert to tiled Cloud Optimized (Geo)Tiffs
+
 
 Quick Installation via pip
 --------------------------
@@ -73,22 +89,17 @@ Large Image consists of several Python modules designed to work together.  These
   Most tile sources can be used with girder-large-image.
 
 
-Installation
-------------
+Developer Installation
+----------------------
 
-To install all packages from source:
+To install all packages from source, clone the repository::
 
-1.  Clone the repository:
+    git clone https://github.com/girder/large_image.git
+    cd large_image
 
-    ``git clone https://github.com/girder/large_image.git``
+Install all packages and dependencies::
 
-    Change to the source directory:
-
-    ``cd large_image``
-
-2.  Install all packages and dependencies:
-
-    ``pip install -e . -r requirements-dev.txt``
+    pip install -e . -r requirements-dev.txt
 
 
 Tile source prerequisites
