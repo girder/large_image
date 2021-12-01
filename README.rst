@@ -104,6 +104,10 @@ Install all packages and dependencies::
 
     pip install -e . -r requirements-dev.txt
 
+If you aren't developing with Girder 3, you can skip installing those components.  Use ``requirements-dev-core.txt`` instead of ``requirements-dev.txt``::
+
+    pip install -e . -r requirements-dev-core.txt
+
 
 Tile source prerequisites
 =========================

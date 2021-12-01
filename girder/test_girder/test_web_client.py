@@ -1,7 +1,14 @@
 import os
 
 import pytest
-from pytest_girder.web_client import runWebClientTest
+
+pytestmark = [pytest.mark.girder, pytest.mark.girder_client]
+
+try:
+    from pytest_girder.web_client import runWebClientTest
+except ImportError:
+    # Make it easier to test without girder
+    pass
 
 
 @pytest.mark.singular

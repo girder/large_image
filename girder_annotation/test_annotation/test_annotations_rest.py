@@ -3,15 +3,22 @@ import json
 import struct
 
 import pytest
-from girder_large_image import constants
-from girder_large_image_annotation.models.annotation import Annotation
-
-from girder.constants import AccessType
-from girder.models.item import Item
-from girder.models.setting import Setting
 
 from . import girder_utilities as utilities
 from .test_annotations import makeLargeSampleAnnotation, sampleAnnotation, sampleAnnotationEmpty
+
+pytestmark = pytest.mark.girder
+
+try:
+    from girder_large_image import constants
+    from girder_large_image_annotation.models.annotation import Annotation
+
+    from girder.constants import AccessType
+    from girder.models.item import Item
+    from girder.models.setting import Setting
+except ImportError:
+    # Make it easier to test without girder
+    pass
 
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')

@@ -32,7 +32,7 @@
    girder_large_image/modules
    girder_large_image_annotation/modules
    annotations
-
+   development
 
 
 Indices and tables

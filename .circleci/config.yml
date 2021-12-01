@@ -121,7 +121,7 @@ jobs:
           version: 3.6.14
           node: v12
       - tox:
-          env: py36
+          env: test-py36
       - coverage
       - store_artifacts:
           path: build/test/artifacts
@@ -134,7 +134,7 @@ jobs:
           version: 3.7.11
           node: v12
       - tox:
-          env: py37
+          env: test-py37
       - coverage
       - store_artifacts:
           path: build/test/artifacts
@@ -147,7 +147,7 @@ jobs:
           version: 3.8.12
           node: v12
       - tox:
-          env: py38
+          env: test-py38
       - coverage
       - store_artifacts:
           path: build/test/artifacts
@@ -160,7 +160,7 @@ jobs:
           version: 3.9.9
           node: v12
       - tox:
-          env: py39
+          env: test-py39
       - coverage
       - store_artifacts:
           path: build/test/artifacts
@@ -173,7 +173,7 @@ jobs:
           version: 3.10.0
           node: v12
       - tox:
-          env: py310
+          env: test-py310
       - coverage
       - store_artifacts:
           path: build/test/artifacts
