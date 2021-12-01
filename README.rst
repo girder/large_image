@@ -23,7 +23,7 @@ Large Image
 
 *Python modules to work with large, multiresolution images.*
 
-Large Image is developed and maintained by the Data & Analytics group at Kitware, Inc. for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_ and TODO add some others.
+Large Image is developed and maintained by the Data & Analytics group at Kitware, Inc. for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_, `HistomicsUI <https://github.com/DigitalSlideArchive/HistomicsUI>`_, and `the Digital Slide Archive <https://digitalslidearchive.github.io/digital_slide_archive/>`_.
 
 
 Highlights
@@ -31,7 +31,8 @@ Highlights
 
 - Tile serving made easy
 - Supports a wide variety of geospatial and medical image formats
-- Convert to tiled Cloud Optimized (Geo)Tiffs
+- Convert to tiled Cloud Optimized (Geo)Tiffs (also known as pyramidal tiffs)
+- Python methods for retiling or accessing regions of images efficiently
 
 
 Quick Installation via pip
