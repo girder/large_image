@@ -1,5 +1,7 @@
-Large Image |build-status| |codecov-io| |license-badge| |doi-badge|
-===================================================================
+Large Image
+===========
+
+|build-status| |codecov-io| |license-badge| |doi-badge| |pypi-badge|
 
 .. |build-status| image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
     :target: https://circleci.com/gh/girder/large_image
@@ -16,7 +18,22 @@ Large Image |build-status| |codecov-io| |license-badge| |doi-badge|
 .. |doi-badge| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4723355-blue
    :target: https://zenodo.org/badge/latestdoi/45569214
 
-Python modules to work with large multiresolution images.
+.. |pypi-badge| image:: https://img.shields.io/pypi/v/large-image.svg?logo=python&logoColor=white
+   :target: https://pypi.org/project/large-image/
+
+*Python modules to work with large, multiresolution images.*
+
+Large Image is developed and maintained by the Data & Analytics group at Kitware, Inc. for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_, `HistomicsUI <https://github.com/DigitalSlideArchive/HistomicsUI>`_, and `the Digital Slide Archive <https://digitalslidearchive.github.io/digital_slide_archive/>`_.
+
+
+Highlights
+----------
+
+- Tile serving made easy
+- Supports a wide variety of geospatial and medical image formats
+- Convert to tiled Cloud Optimized (Geo)Tiffs (also known as pyramidal tiffs)
+- Python methods for retiling or accessing regions of images efficiently
+
 
 Quick Installation via pip
 --------------------------
@@ -36,13 +53,6 @@ Large Image consists of several Python modules designed to work together.  These
   You can specify extras_require of the name of any tile source included with this repository, ``sources`` for all of the tile sources in the repository, ``memcached`` for using memcached for tile caching, or ``all`` for all of the tile sources and memcached.
 
 - ``large-image-converter``: A utility for using pyvips and other libraries to convert images into pyramidal tiff files that can be read efficiently by large_image.
-
-- ``girder-large-image``: Large Image as a Girder_ 3.x plugin.
-  You can specify extras_require of ``tasks`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
-
-- ``girder-large-image-annotation``: Annotations for large images as a Girder_ 3.x plugin.
-
-- ``large-image-tasks``: A utility for running the converter via Girder Worker.
 
 - Tile sources:
 
@@ -72,23 +82,27 @@ Large Image consists of several Python modules designed to work together.  These
 
   Most tile sources can be used with girder-large-image.
 
+- As a Girder plugin:
 
-Installation
-------------
+  - ``girder-large-image``: Large Image as a Girder_ 3.x plugin.
+    You can specify extras_require of ``tasks`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
 
-To install all packages from source:
+  - ``girder-large-image-annotation``: Annotations for large images as a Girder_ 3.x plugin.
 
-1.  Clone the repository:
+  - ``large-image-tasks``: A utility for running the converter via Girder Worker.
 
-    ``git clone https://github.com/girder/large_image.git``
 
-    Change to the source directory:
+Developer Installation
+----------------------
 
-    ``cd large_image``
+To install all packages from source, clone the repository::
 
-2.  Install all packages and dependencies:
+    git clone https://github.com/girder/large_image.git
+    cd large_image
 
-    ``pip install -e . -r requirements-dev.txt``
+Install all packages and dependencies::
+
+    pip install -e . -r requirements-dev.txt
 
 
 Tile source prerequisites
