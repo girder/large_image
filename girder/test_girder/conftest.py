@@ -2,10 +2,8 @@ import os
 import subprocess
 
 import pytest
-from girder_worker.girder_plugin.constants import PluginSettings as WorkerSettings
 
-from girder import events
-from girder.models.setting import Setting
+pytestmark = pytest.mark.girder
 
 
 @pytest.fixture
@@ -13,6 +11,10 @@ def unavailableWorker(db):
     """
     Make sure that Girder Worker can't be reached and times out quickly.
     """
+    from girder_worker.girder_plugin.constants import PluginSettings as WorkerSettings
+
+    from girder.models.setting import Setting
+
     # Use an invalid broker to make sure we don't connect to girder_worker so
     # this will be incomplete.  We don't want to use amqp as it will retry a
     # very long time.  The mongodb backend is deprecated and throws many
@@ -45,6 +47,10 @@ def girderWorker(db, girderWorkerProcess):
     Run an instance of Girder worker, connected to rabbitmq.  The rabbitmq
     service must be running.
     """
+    from girder_worker.girder_plugin.constants import PluginSettings as WorkerSettings
+
+    from girder.models.setting import Setting
+
     broker = 'amqp://guest@127.0.0.1'
     backend = 'rpc://guest@127.0.0.1'
     Setting().set(WorkerSettings.BROKER, broker)
@@ -55,6 +61,8 @@ def girderWorker(db, girderWorkerProcess):
 
 
 def unbindGirderEventsByHandlerName(handlerName):
+    from girder import events
+
     for eventName in events._mapping:
         events.unbind(eventName, handlerName)
 

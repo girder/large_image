@@ -1,0 +1,26 @@
+# Top level dependencies
+-e sources/bioformats
+-e sources/deepzoom
+-e sources/dummy
+-e sources/gdal
+-e sources/nd2
+-e sources/openjpeg
+-e sources/openslide
+-e sources/pil
+-e sources/test
+-e sources/tiff
+# must be after sources/tiff
+-e sources/ometiff
+# must be after source/gdal
+-e sources/mapnik
+# Don't specify other extras for the converter; they are already present above
+-e utilities/converter[stats]
+
+# Extras from main setup.py
+pylibmc>=1.5.1
+
+# External dependencies
+pip>=9
+tox
+twine
+virtualenv

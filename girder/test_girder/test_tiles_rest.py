@@ -7,20 +7,28 @@ from unittest import mock
 
 import pytest
 import requests
-from girder_jobs.constants import JobStatus
-from girder_jobs.models.job import Job
-from girder_large_image import constants, getGirderTileSource, loadmodelcache
-from girder_large_image.models.image_item import ImageItem
 
-from girder.constants import SortDir
-from girder.models.file import File
-from girder.models.item import Item
-from girder.models.setting import Setting
-from girder.models.token import Token
-from girder.models.user import User
 from large_image import getTileSource
 
 from . import girder_utilities as utilities
+
+pytestmark = pytest.mark.girder
+
+try:
+    from girder_jobs.constants import JobStatus
+    from girder_jobs.models.job import Job
+    from girder_large_image import constants, getGirderTileSource, loadmodelcache
+    from girder_large_image.models.image_item import ImageItem
+
+    from girder.constants import SortDir
+    from girder.models.file import File
+    from girder.models.item import Item
+    from girder.models.setting import Setting
+    from girder.models.token import Token
+    from girder.models.user import User
+except ImportError:
+    # Make it easier to test without girder
+    pass
 
 
 def _testTilesZXY(server, admin, itemId, metadata, tileParams=None,

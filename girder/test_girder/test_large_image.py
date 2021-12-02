@@ -4,19 +4,26 @@ import time
 from unittest import mock
 
 import pytest
-from girder_jobs.constants import JobStatus
-from girder_jobs.models.job import Job
-from girder_large_image import constants
-from girder_large_image.models.image_item import ImageItem
-from girder_worker.girder_plugin.status import CustomJobStatus
-
-from girder import events
-from girder.exceptions import ValidationException
-from girder.models.file import File
-from girder.models.item import Item
-from girder.models.setting import Setting
 
 from . import girder_utilities as utilities
+
+pytestmark = pytest.mark.girder
+
+try:
+    from girder_jobs.constants import JobStatus
+    from girder_jobs.models.job import Job
+    from girder_large_image import constants
+    from girder_large_image.models.image_item import ImageItem
+    from girder_worker.girder_plugin.status import CustomJobStatus
+
+    from girder import events
+    from girder.exceptions import ValidationException
+    from girder.models.file import File
+    from girder.models.item import Item
+    from girder.models.setting import Setting
+except ImportError:
+    # Make it easier to test without girder
+    pass
 
 
 def _waitForJobToBeRunning(job):

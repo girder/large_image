@@ -3,7 +3,14 @@ import shutil
 import tempfile
 
 import pytest
-from large_image_tasks import tasks
+
+pytestmark = pytest.mark.girder
+
+try:
+    from large_image_tasks import tasks
+except ImportError:
+    # Make it easier to test without girder
+    pass
 
 
 def test_conversion():

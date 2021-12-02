@@ -1,6 +1,12 @@
 import pytest
 
-from girder import events
+pytestmark = pytest.mark.girder
+
+try:
+    from girder import events
+except ImportError:
+    # This makes it easier to test without girder
+    pass
 
 
 def unbindGirderEventsByHandlerName(handlerName):

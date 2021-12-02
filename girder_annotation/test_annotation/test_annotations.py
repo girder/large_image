@@ -4,19 +4,26 @@ import random
 from unittest import mock
 
 import pytest
-from bson import ObjectId
-from girder_large_image import constants
-from girder_large_image_annotation.models import annotation
-from girder_large_image_annotation.models.annotation import Annotation
-from girder_large_image_annotation.models.annotationelement import Annotationelement
-
-from girder.constants import AccessType
-from girder.exceptions import AccessException, ValidationException
-from girder.models.group import Group
-from girder.models.item import Item
-from girder.models.setting import Setting
 
 from . import girder_utilities as utilities
+
+pytestmark = pytest.mark.girder
+
+try:
+    from bson import ObjectId
+    from girder_large_image import constants
+    from girder_large_image_annotation.models import annotation
+    from girder_large_image_annotation.models.annotation import Annotation
+    from girder_large_image_annotation.models.annotationelement import Annotationelement
+
+    from girder.constants import AccessType
+    from girder.exceptions import AccessException, ValidationException
+    from girder.models.group import Group
+    from girder.models.item import Item
+    from girder.models.setting import Setting
+except ImportError:
+    # Make it easier to test without girder
+    pass
 
 sampleAnnotationEmpty = {
     'name': 'sample0',

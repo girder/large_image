@@ -2,8 +2,12 @@ import os
 from test.datastore import datastore
 from test.utilities import BigTIFFHeader, JFIFHeader, JPEGHeader, PNGHeader, TIFFHeader  # noqa
 
-from girder.models.folder import Folder
-from girder.models.upload import Upload
+try:
+    from girder.models.folder import Folder
+    from girder.models.upload import Upload
+except ImportError:
+    # Make it easier to test without girder
+    pass
 
 
 def namedFolder(user, folderName='Public'):
