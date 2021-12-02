@@ -13,6 +13,7 @@
    tilesource_options
    config_options
    image_conversion
+   upgrade
    large_image/modules
    large_image_source_bioformats/modules
    large_image_source_deepzoom/modules
