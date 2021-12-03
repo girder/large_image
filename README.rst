@@ -23,7 +23,7 @@ Large Image
 
 *Python modules to work with large, multiresolution images.*
 
-Large Image is developed and maintained by the Data & Analytics group at Kitware, Inc. for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_, `HistomicsUI <https://github.com/DigitalSlideArchive/HistomicsUI>`_, and `the Digital Slide Archive <https://digitalslidearchive.github.io/digital_slide_archive/>`_.
+Large Image is developed and maintained by the Data & Analytics group at `Kitware, Inc <https://kitware.com>`_. for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_, `HistomicsUI <https://github.com/DigitalSlideArchive/HistomicsUI>`_, and `the Digital Slide Archive <https://digitalslidearchive.github.io/digital_slide_archive/>`_.
 
 
 Highlights
