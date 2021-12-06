@@ -59,7 +59,7 @@ Conda makes dependency management a bit easier if not on Linux. Some of the sour
 
     conda install -c conda-forge large-image-source-gdal
     conda install -c conda-forge large-image-source-tiff
-    conda install -c conda-forge large-converter
+    conda install -c conda-forge large-image-converter
 
 
 Modules
