@@ -10,6 +10,9 @@ stat make_docs.sh
 mkdir -p ../build/docs-work
 mkdir -p ../build/docs
 
+rm _build 2>/dev/null || true
+ln -s ../build/docs-work _build
+
 large_image_converter --help > _build/large_image_converter.txt
 
 sphinx-apidoc -f -o _build/large_image ../large_image
@@ -31,5 +34,7 @@ sphinx-apidoc -f -o _build/girder_large_image ../girder/girder_large_image
 sphinx-apidoc -f -o _build/girder_large_image_annotation ../girder_annotation/girder_large_image_annotation
 
 sphinx-build -b html . ../build/docs
+
+rm _build || true
 
 cp -r ../.circleci ../build/docs/.
