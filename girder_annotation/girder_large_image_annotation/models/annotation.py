@@ -450,6 +450,46 @@ class AnnotationSchema:
         ]
     }
 
+    overlaySchema = {
+        '$schema': 'http://json-schema.org/schema#',
+        'type': 'object',
+        'properties': {
+            'girderId': {
+                'type': 'string',
+                'description': 'Girder item ID containing the image to '
+                               'overlay.'
+            },
+            'opacity': {
+                'type': 'number',
+                'minimum': 0,
+                'maximum': 1,
+                'description': 'Default opacity for this image overlay. Must '
+                               'be between 0 and 1. Defaults to 1.'
+            },
+            'location': {
+                'type': 'object',
+                'description': 'Position (upper-left coordinate, width, and '
+                               'height) of the overlay.',
+                'properties': {
+                    'upperLeftCorner': coordSchema,
+                    'width': {
+                        'type': 'number',
+                        'minimum': 0
+                    },
+                    'height': {
+                        'type': 'number',
+                        'minimum': 0
+                    }
+                },
+                'required': ['upperLeftCorner', 'width', 'height']
+            }
+        },
+        'required': ['girderId'],
+        'additionalProperties': False,
+        'description': 'An image to overlay onto another like an '
+                       'annotation.'
+    }
+
     annotationElementSchema = {
         '$schema': 'http://json-schema.org/schema#',
         # Shape subtypes are mutually exclusive, so for efficiency, don't use
@@ -496,7 +536,8 @@ class AnnotationSchema:
                 'title': 'Image Markup',
                 'description': 'Subjective things that apply to a '
                                'spatial region.'
-            }
+            },
+            'overlay': overlaySchema
         },
         'additionalProperties': False
     }
