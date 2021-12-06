@@ -63,3 +63,4 @@ test/externaldata
 docs/source/*
 !docs/source/*.py
 !docs/source/*.rst
+.pre-commit-config.yaml

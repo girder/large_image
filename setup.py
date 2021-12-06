@@ -6,6 +6,8 @@ from setuptools import find_packages, setup
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
+description = 'Python modules to work with large, multiresolution images.'
+long_description = readme
 
 extraReqs = {
     'memcached': ['pylibmc>=1.5.1'] if platform.system() != 'Windows' else [],
@@ -51,7 +53,9 @@ setup(
     name='large-image',
     use_scm_version={'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
-    description='Create, serve, and display large multiresolution images.',
+    description=description,
+    long_description=long_description,
+    license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
     classifiers=[
@@ -76,8 +80,6 @@ setup(
     extras_require=extraReqs,
     include_package_data=True,
     keywords='large_image',
-    license='Apache Software License 2.0',
-    long_description=readme,
     packages=find_packages(exclude=['test', 'test.*', 'girder']),
     url='https://github.com/girder/large_image',
     python_requires='>=3.6',

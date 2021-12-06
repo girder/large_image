@@ -2,6 +2,9 @@ import os
 
 from setuptools import find_packages, setup
 
+description = 'A Girder plugin to store and display annotations on large, multiresolution images.'
+long_description = description + '\n\nSee the large-image package for more details.'
+
 
 def prerelease_local_scheme(version):
     """
@@ -24,7 +27,9 @@ setup(
     name='girder-large-image-annotation',
     use_scm_version={'root': '..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm', 'setuptools-git'],
-    description='A Girder plugin to create, serve, and display large multiresolution images.',
+    description=description,
+    long_description=long_description,
+    license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
     classifiers=[
@@ -49,8 +54,6 @@ setup(
     },
     include_package_data=True,
     keywords='girder-plugin, large_image',
-    license='Apache Software License 2.0',
-    long_description='See the large-image package for more details.',
     packages=find_packages(exclude=['test', 'test.*', 'test_annotation', 'test_annotation.*']),
     python_requires='>=3.6',
     url='https://github.com/girder/large_image',

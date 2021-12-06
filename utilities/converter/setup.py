@@ -3,7 +3,10 @@ import os
 from setuptools import find_packages, setup
 
 with open('README.rst') as fh:
-    long_desc = fh.read()
+    readme = fh.read()
+
+description = 'Converter for Large Image.'
+long_description = readme
 
 
 def prerelease_local_scheme(version):
@@ -27,11 +30,11 @@ setup(
     name='large-image-converter',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
-    description='Converter for Large Image.',
-    long_description=long_desc,
+    description=description,
+    long_description=long_description,
+    license='Apache Software License 2.0',
     author='Kitware Inc',
     author_email='kitware@kitware.com',
-    license='Apache Software License 2.0',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',

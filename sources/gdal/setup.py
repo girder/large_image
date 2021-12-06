@@ -2,6 +2,9 @@ import os
 
 from setuptools import find_packages, setup
 
+description = 'A GDAL tilesource for large_image.'
+long_description = description + '\n\nSee the large-image package for more details.'
+
 
 def prerelease_local_scheme(version):
     """
@@ -24,8 +27,9 @@ setup(
     name='large-image-source-gdal',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
     setup_requires=['setuptools-scm'],
-    description='A GDAL tilesource for large_image',
-    long_description='See the large-image package for more details.',
+    description=description,
+    long_description=long_description,
+    license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
     classifiers=[
@@ -47,7 +51,6 @@ setup(
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
     },
-    license='Apache Software License 2.0',
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
