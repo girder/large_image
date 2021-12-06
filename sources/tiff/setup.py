@@ -45,6 +45,7 @@ setup(
     install_requires=[
         'large-image>=1.0.0',
         'libtiff>=0.4.1',
+        'tifftools>=1.2.0',
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
