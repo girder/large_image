@@ -24,13 +24,13 @@ pip wheel . --no-deps -w dist
 twine upload --verbose dist/*
 cd "$ROOTPATH/utilities/converter"
 python setup.py sdist
-cp "$ROOTPATH/README.rst" .
+# cp "$ROOTPATH/README.rst" .
 cp "$ROOTPATH/LICENSE" .
 pip wheel . --no-deps -w dist
 twine upload --verbose dist/*
 cd "$ROOTPATH/utilities/tasks"
 python setup.py sdist
-cp "$ROOTPATH/README.rst" .
+# cp "$ROOTPATH/README.rst" .
 cp "$ROOTPATH/LICENSE" .
 pip wheel . --no-deps -w dist
 twine upload --verbose dist/*

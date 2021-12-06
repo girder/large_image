@@ -9,3 +9,5 @@ icon on the items detail page in Girder, or by accessing the ``POST``
 ``item/{itemId}/tiles`` endpoint.  Using the endpoint allows specifying more
 options and converting an inefficient file into a preferred format.  See the
 ``large_image_converter`` for more details on the various options.
+
+See the large-image package for more details.
