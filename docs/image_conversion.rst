@@ -5,5 +5,5 @@ The large_image library can read a variety of images with the various tile sourc
 
 Installing the ``large-image-converter`` module adds a ``large_image_converter`` command to the local environment.  Running ``large_image_converter --help`` displays the various options.
 
-.. include:: large_image_converter.txt
+.. include:: ../build/docs-work/large_image_converter.txt
    :literal:
