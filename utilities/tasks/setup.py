@@ -55,6 +55,7 @@ setup(
     extras_require={
         'girder': [
             # Dependencies required on the producer (Girder) side.
+            'large-image-converter',
         ],
         'worker': [
             # Dependencies required on the consumer (Girder Worker) side.

@@ -1,5 +1,10 @@
 # Change Log
 
+## Version 1.8.9
+
+### Changes
+- Include the converter in the girder tasks dependency ([#707](../../pull/707))
+
 ## Version 1.8.8
 
 ### Changes
