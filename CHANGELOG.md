@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.8.8
 
 ### Changes
 - Some log levels have been adjusted ([#689](../../pull/689), [#695](../../pull/695))
