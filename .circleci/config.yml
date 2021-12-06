@@ -63,7 +63,7 @@ commands:
       - run:
           name: start mongo
           command: |
-            docker run --rm -d -p 27017:27017 circleci/mongo:4.0-ram
+            docker run --rm -d -p 27017:27017 circleci/mongo:5.0-ram
       - run:
           name: start rabbitmq
           command: |
@@ -223,7 +223,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: docs
+          at: build
       - run:
           name: Disable jekyll builds
           command: touch build/docs/.nojekyll
