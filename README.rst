@@ -45,7 +45,7 @@ Pip
 
 Install all tile sources on linux::
 
-    pip install large-image[all] --find-links https://girder.github.io/large_image_wheels``
+    pip install large-image[all] --find-links https://girder.github.io/large_image_wheels
 
 Install all tile sources and all Girder plugins on linux::
 
