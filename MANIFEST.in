@@ -1,8 +1,10 @@
+exclude *
+prune *
 include LICENSE
 include README.rst
 include setup.py
 
-graft large_image
 graft docs
-prune test
-global-exclude *.py[co] *.cmake __pycache__ node_modules
+graft large_image
+graft large_image.egg-info
+global-exclude *.py[co] __pycache__ node_modules

@@ -2,7 +2,7 @@ import itertools
 import os
 import platform
 
-from setuptools import find_packages, setup
+from setuptools import setup
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -80,7 +80,7 @@ setup(
     extras_require=extraReqs,
     include_package_data=True,
     keywords='large_image',
-    packages=find_packages(exclude=['test', 'test.*', 'girder']),
+    packages=['large_image'],
     url='https://github.com/girder/large_image',
     python_requires='>=3.6',
     zip_safe=False,
