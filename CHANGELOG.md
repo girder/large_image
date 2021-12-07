@@ -1,5 +1,10 @@
 # Change Log
 
+## Version 1.8.10
+
+### Changes
+- Improve library dependencies in setup.py  ([#710](../../pull/710), [#715](../../pull/715))
+
 ## Version 1.8.9
 
 ### Changes
