@@ -19,7 +19,7 @@ girder-jobs>=3.0.3
 # Don't specify other extras for the converter; they are already present above
 -e utilities/converter[stats]
 # Girder and worker dependencies are already installed above
--e utilities/tasks
+-e utilities/tasks[girder]
 -e girder/.
 -e girder_annotation/.
 
