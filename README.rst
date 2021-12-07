@@ -33,6 +33,7 @@ Highlights
 - Supports a wide variety of geospatial and medical image formats
 - Convert to tiled Cloud Optimized (Geo)Tiffs (also known as pyramidal tiffs)
 - Python methods for retiling or accessing regions of images efficiently
+- Options for restyling tiles, such as dynamically applying color and band transform
 
 
 Quick Installation via pip
