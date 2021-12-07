@@ -108,7 +108,7 @@ def testTileStyleMatplotlibColormap():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
-                        'palette': 'jet',  # use a named MPL colormap
+                        'palette': 'viridis',  # use a named MPL colormap
                         'scheme': 'linear'})
     source = large_image_source_gdal.open(
         imagePath, projection='EPSG:3857', style=style, encoding='PNG')
