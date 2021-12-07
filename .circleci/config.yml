@@ -281,13 +281,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
-      # - py310:
-      #     filters:
-      #       tags:
-      #         only: /^v.*/
-      #       branches:
-      #         ignore:
-      #           - gh-pages
+      - py310:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - lint_and_docs:
           filters:
             tags:
@@ -315,7 +315,7 @@ workflows:
             - py37
             - py38
             - py39
-            # - py310
+            - py310
             - lint_and_docs
           filters:
             tags:
@@ -328,7 +328,7 @@ workflows:
             - py37
             - py38
             - py39
-            # - py310
+            - py310
             - lint_and_docs
           filters:
             tags:
@@ -351,6 +351,6 @@ workflows:
       - py37
       - py38
       - py39
-      # - py310
+      - py310
       - lint_and_docs
       - wheels
