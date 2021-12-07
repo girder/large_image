@@ -23,7 +23,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 import girder
 import large_image
-from girder import events
+from girder import events, logger
 from girder.constants import AccessType
 from girder.exceptions import ValidationException
 from girder.models.file import File
@@ -297,7 +297,10 @@ class LargeImagePlugin(GirderPlugin):
     CLIENT_SOURCE_PATH = 'web_client'
 
     def load(self, info):
-        getPlugin('worker').load(info)
+        try:
+            getPlugin('worker').load(info)
+        except Exception:
+            logger.debug('worker plugin is unavailable')
 
         unbindGirderEventsByHandlerName('large_image')
 
