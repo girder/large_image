@@ -1,9 +1,14 @@
 # Change Log
 
+## Version 1.8.11
+
+### Changes
+- Reduce cruft in large_image distribution file ([#718](../../pull/718))
+
 ## Version 1.8.10
 
 ### Changes
-- Improve library dependencies in setup.py  ([#710](../../pull/710), [#715](../../pull/715))
+- Improve library dependencies in setup.py ([#710](../../pull/710), [#715](../../pull/715))
 
 ## Version 1.8.9
 
