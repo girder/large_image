@@ -358,6 +358,15 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             return attrgetter(palette)(palettable).hex_colors
         except AttributeError:
+            pass
+        try:
+            # Attempt getting palette by MPL cmap name, e.g. 'viridis' or 'jet'
+            import matplotlib
+            import matplotlib.colors as mcolors
+
+            cmap = matplotlib.cm.get_cmap(palette, 255)  # 255 might be overkill
+            return [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+        except (ImportError, ValueError):
             raise TileSourceError('Palette is not a valid palettable path.')
 
     def getProj4String(self):

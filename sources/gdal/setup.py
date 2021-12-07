@@ -50,6 +50,7 @@ setup(
     ],
     extras_require={
         'girder': 'girder-large-image>=1.0.0',
+        'colormaps': 'matplotlib',
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
