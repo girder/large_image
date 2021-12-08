@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- The openjpeg girder source handles uploaded files better ([#721](../../pull/721))
+
 ## Version 1.8.11
 
 ### Changes

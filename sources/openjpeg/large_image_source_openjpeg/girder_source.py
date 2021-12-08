@@ -27,3 +27,7 @@ class OpenjpegGirderTileSource(OpenjpegFileTileSource, GirderTileSource):
 
     cacheName = 'tilesource'
     name = 'openjpeg'
+
+    def mayHaveAdjacentFiles(self, largeImageFile):
+        # Glymur now uses extensions to determine if it can read a file.
+        return True
