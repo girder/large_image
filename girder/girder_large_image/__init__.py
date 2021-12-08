@@ -16,6 +16,7 @@
 
 import datetime
 import json
+import warnings
 
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
@@ -47,6 +48,11 @@ try:
 except DistributionNotFound:
     # package is not installed
     pass
+
+
+# Girder 3 is pinned to use pymongo < 4; its warnings aren't relevant until
+# that changes.
+warnings.filterwarnings('ignore', category=UserWarning, module='pymongo')
 
 
 def _postUpload(event):
