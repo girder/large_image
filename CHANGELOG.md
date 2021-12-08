@@ -3,7 +3,7 @@
 ## Version 1.8.11
 
 ### Changes
-- Reduce cruft in large_image distribution file ([#718](../../pull/718))
+- Reduce extraneous files in large_image distribution ([#718](../../pull/718))
 
 ## Version 1.8.10
 
