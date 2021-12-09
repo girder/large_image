@@ -49,7 +49,7 @@ setup(
     ],
     extras_require={
         'tasks': [
-            'large-image-tasks',
+            'girder-large-image[tasks]>=1.0.0',
         ],
     },
     include_package_data=True,
