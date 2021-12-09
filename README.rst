@@ -69,9 +69,10 @@ Modules
 Large Image consists of several Python modules designed to work together.  These include:
 
 - ``large-image``: The core module.
-  You can specify extras_require of the name of any tile source included with this repository, ``sources`` for all of the tile sources in the repository, ``memcached`` for using memcached for tile caching, or ``all`` for all of the tile sources and memcached.
+  You can specify extras_require of the name of any tile source included with this repository, ``sources`` for all of the tile sources in the repository, a specific source name (e.g., ``tiff``), ``memcached`` for using memcached for tile caching, ``converter`` to include the converter module, or ``all`` for all of the tile sources, memcached, and the converter module.
 
 - ``large-image-converter``: A utility for using pyvips and other libraries to convert images into pyramidal tiff files that can be read efficiently by large_image.
+  You can specify extras_require of ``jp2k`` to include modules to allow output to JPEG2000 compression, ``sources`` to include all sources, and ``stats`` to include modules to allow computing compression noise statistics.
 
 - Tile sources:
 
@@ -99,7 +100,7 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-dummy``: A tile source that does nothing.
 
-  Most tile sources can be used with girder-large-image.
+  Most tile sources can be used with girder-large-image.  You can specific an extras_require of ``girder`` to include ``girder-large-image`` with the source.
 
 - As a Girder plugin:
 
@@ -109,6 +110,7 @@ Large Image consists of several Python modules designed to work together.  These
   - ``girder-large-image-annotation``: Annotations for large images as a Girder_ 3.x plugin.
 
   - ``large-image-tasks``: A utility for running the converter via Girder Worker.
+    You can specify an extras_require of ``girder`` to include modules needed to work with the Girder remote worker or ``worker`` to include modules needed on the remote side of the Girder remote worker.  If neither is specified, some conversion tasks can be run using Girder local jobs.
 
 
 Developer Installation
