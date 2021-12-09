@@ -36,14 +36,32 @@ Highlights
 - Options for restyling tiles, such as dynamically applying color and band transform
 
 
-Quick Installation via pip
---------------------------
+Installation
+------------
 
 In addition to installing the ``large-image`` package, you'll need at least one tile source (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
 
-- Install all tile sources and all Girder plugins on linux: ``pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://girder.github.io/large_image_wheels``
+Pip
+~~~
 
-- Install all tile sources on linux: ``pip install large-image[all] --find-links https://girder.github.io/large_image_wheels``
+Install all tile sources on linux::
+
+    pip install large-image[all] --find-links https://girder.github.io/large_image_wheels
+
+Install all tile sources and all Girder plugins on linux::
+
+    pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://girder.github.io/large_image_wheels
+
+
+Conda
+~~~~~
+
+Conda makes dependency management a bit easier if not on Linux. Some of the source modules are available on conda-forge. You can install the following::
+
+    conda install -c conda-forge large-image-source-gdal
+    conda install -c conda-forge large-image-source-tiff
+    conda install -c conda-forge large-image-converter
+
 
 Modules
 -------
