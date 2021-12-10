@@ -2,8 +2,10 @@ import io
 import math
 import xml.etree.ElementTree
 from collections import defaultdict
+from operator import attrgetter
 
 import numpy
+import palettable
 import PIL
 import PIL.Image
 import PIL.ImageColor
@@ -11,6 +13,7 @@ import PIL.ImageDraw
 
 from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          TileOutputMimeTypes, TileOutputPILFormat)
+from ..exceptions import TileSourceError
 
 # Turn off decompression warning check
 PIL.Image.MAX_IMAGE_PIXELS = None
@@ -398,3 +401,71 @@ def nearPowerOfTwo(val1, val2, tolerance=0.02):
     log2ratio = math.log(float(val1) / float(val2)) / math.log(2)
     # Compare the mantissa of the ratio's log2 value.
     return abs(log2ratio - round(log2ratio)) < tolerance
+
+
+def _arrayToPalette(palette):
+    """
+    Given an array of color strings, tuples, or lists, return a numpy array.
+
+    :param palette: an array of color strings, tuples, or lists.
+    :returns: a numpy array of RGBA value on the scale of [0-255].
+    """
+    arr = []
+    for clr in palette:
+        if isinstance(clr, (tuple, list)):
+            arr.append(numpy.array((list(clr) + [1, 1, 1])[:4]) * 255)
+        else:
+            try:
+                arr.append(PIL.ImageColor.getcolor(str(clr), 'RGBA'))
+            except ValueError:
+                try:
+                    import matplotlib
+
+                    arr.append(PIL.ImageColor.getcolor(matplotlib.colors.to_hex(clr), 'RGBA'))
+                except (ImportError, ValueError):
+                    raise TileSourceError('Value cannot be used as a color palette.')
+    return numpy.array(arr)
+
+
+def getPaletteColors(value):
+    """
+    Given a list or a name, return a list of colors in the form of a numpy
+    array of RGBA.  If a list, each entry is a color name resolvable by either
+    PIL.ImageColor.getcolor, by matplotlib.colors, or a 3 or 4 element list or
+    tuple of RGB(A) values on a scale of 0-1.  If this is NOT a list, then, if
+    it can be parsed as a color, it is treated as ['#000', <value>].  If that
+    cannot be parsed, then it is assumed to be a named palette in palettable
+    (such as viridis.Viridis_12) or a named palette in matplotlib (including
+    plugins).
+
+    :param value: Either a list, a single color name, or a palette name.  See
+        above.
+    :returns: a numpy array of RGBA value on the scale of [0-255].
+    """
+    palette = None
+    if isinstance(value, (tuple, list)):
+        palette = value
+    if palette is None:
+        try:
+            color = PIL.ImageColor.getcolor(str(value), 'RGBA')
+            palette = ['#000', color]
+        except ValueError:
+            pass
+    if palette is None:
+        try:
+            palette = attrgetter(str(value))(palettable).hex_colors
+        except AttributeError:
+            pass
+    if palette is None:
+        try:
+            import matplotlib
+
+            palette = (
+                ['#0000', matplotlib.colors.to_hex(value)]
+                if value in matplotlib.colors.get_named_colors_mapping()
+                else matplotlib.cm.get_cmap(value).colors)
+        except (ImportError, ValueError):
+            pass
+    if palette is None:
+        raise TileSourceError('Value cannot be used as a color palette.')
+    return _arrayToPalette(palette)

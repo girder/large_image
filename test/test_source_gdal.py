@@ -125,7 +125,7 @@ def testTileStyleBadInput():
     _assertStyleResponse(imagePath, {
         'band': 1,
         'palette': 'nonexistent.palette'
-    }, 'Palette is not a valid palettable path.')
+    }, 'Value cannot be used as a color palette.')
 
     _assertStyleResponse(imagePath, ['style'],
                          'Style is not a valid json object.')

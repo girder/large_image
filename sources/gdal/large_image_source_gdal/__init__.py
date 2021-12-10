@@ -20,10 +20,8 @@ import pathlib
 import struct
 import tempfile
 import threading
-from operator import attrgetter
 
 import numpy
-import palettable
 import PIL.Image
 from osgeo import gdal, gdal_array, gdalconst, osr  # noqa I001
 # pyproj stopped supporting older pythons, so its database is aging; as such,
@@ -39,6 +37,7 @@ from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TileInputUnits, TileOutputMimeTypes)
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
+from large_image.tilesource.utilities import getPaletteColors
 
 try:
     __version__ = get_distribution(__name__).version
@@ -224,7 +223,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         bstyle['palette'] = [(
                             '#%02X%02X%02X' if len(entry) == 3 else
                             '#%02X%02X%02X%02X') % entry for entry in bandInfo['colortable']]
-                    if not isinstance(bstyle['palette'], list):
+                    else:
                         bstyle['palette'] = self.getHexColors(bstyle['palette'])
                 if bstyle.get('nodata') == 'auto':
                     bandInfo = self.getOneBandInformation(bstyle.get('band', 0))
@@ -355,10 +354,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: List of colors
         """
-        try:
-            return attrgetter(palette)(palettable).hex_colors
-        except AttributeError:
-            raise TileSourceError('Palette is not a valid palettable path.')
+        palette = getPaletteColors(palette)
+        return ['#%02X%02X%02X%02X' % tuple(clr) for clr in palette]
 
     def getProj4String(self):
         """

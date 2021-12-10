@@ -148,12 +148,12 @@ def testTileStyleBadInput():
     _assertStyleResponse(imagePath, {
         'band': 1,
         'palette': 'nonexistent.palette'
-    }, 'Palette is not a valid palettable path.')
+    }, 'Value cannot be used as a color palette.')
 
     _assertStyleResponse(imagePath, {
         'band': 1,
         'palette': ['notacolor', '#00ffff']
-    }, 'Mapnik failed to parse color')
+    }, 'Value cannot be used as a color palette.')
 
     _assertStyleResponse(imagePath, {
         'band': 1,

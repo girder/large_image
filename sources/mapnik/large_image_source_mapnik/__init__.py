@@ -82,46 +82,16 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             and 'EPSG:3857' are all equivalent.
         :param style: if None, use the default style for the file.  Otherwise,
             this is a string with a json-encoded dictionary.  The style is
-            ignored if it does not contain 'band' or 'bands'.  The style can
-            contain the following keys:
+            ignored if it does not contain 'band' or 'bands'.  In addition to
+            the base class parameters, the style can also contain the following
+            keys:
 
-                band: either -1 for the default band(s), a 1-based value for
-                    the band to use for styling, or a string that matches the
-                    interpretation of the band ('red', 'green', 'blue', gray',
-                    etc.).
-                min: the value of the band to map to the first palette value.
-                    Defaults to 0.  'auto' to use 0 if the reported minimum and
-                    maximum of the band are between [0, 255] or use the
-                    reported minimum otherwise.  'min' or 'max' to always uses
-                    the reported minimum or maximum.
-                max: the value of the band to map to the last palette value.
-                    Defaults to 255.  'auto' to use 0 if the reported minimum
-                    and maximum of the band are between [0, 255] or use the
-                    reported maximum otherwise.  'min' or 'max' to always uses
-                    the reported minimum or maximum.
                 scheme: one of the mapnik.COLORIZER_xxx values.  Case
                     insensitive.  Possible values are at least 'discrete',
                     'linear', and 'exact'.  This defaults to 'linear'.
-                palette: either a list of two or more color strings, a string
-                    with a dotted class name from the python palettable
-                    package, or 'colortable' to use the band's color table
-                    (palette).  Color strings must be parsable by mapnik's
-                    Color class.  Many css strings work.  If scheme is
-                    unspecified and the band is one of 'red', 'green', 'blue',
-                    gray', or 'alpha', this defaults to an appropriate band
-                    pair.  Otherwise, this defaults to the band's color table
-                    (palette) if it has one and a black-to-white palette if it
-                    does not.
-                nodata: the value to use for missing data.  'auto' to use the
-                    band reported value, if any.  null or unset to not use a
-                    nodata value.
                 composite: this is a string containing one of the mapnik
                     CompositeOp properties.  It defaults to 'lighten'.
 
-            Alternately, the style object can contain a single key of 'bands',
-            which has a value which is a list of style dictionaries as above,
-            excepting that each must have a band that is not -1.  Bands are
-            composited in the order listed.
         :param unitsPerPixel: The size of a pixel at the 0 tile size.  Ignored
             if the projection is None.  For projections, None uses the default,
             which is the distance between (-180,0) and (180,0) in EPSG:4326
@@ -265,20 +235,12 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             for value, color in enumerate(bandInfo['colortable']):
                 colorizer.add_stop(value, mapnik.Color(*color))
         else:
-            colors = style.get('palette', ['#000000', '#ffffff'])
-            if not isinstance(colors, list):
-                colors = self.getHexColors(colors)
-            else:
-                colors = [color if isinstance(color, bytes) else
-                          color.encode('utf8') for color in colors]
+            colors = self.getHexColors(style.get('palette', ['#000000', '#ffffff']))
             if len(colors) < 2:
                 raise TileSourceError('A palette must have at least 2 colors.')
             values = self.interpolateMinMax(minimum, maximum, len(colors))
             for value, color in sorted(zip(values, colors)):
-                try:
-                    colorizer.add_stop(value, mapnik.Color(color))
-                except RuntimeError:
-                    raise TileSourceError('Mapnik failed to parse color %r.' % color)
+                colorizer.add_stop(value, mapnik.Color(color))
 
         return colorizer
 

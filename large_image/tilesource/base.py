@@ -22,7 +22,7 @@ from .tiledict import LazyTileDict
 from .utilities import (_encodeImage, _gdalParameters,  # noqa: F401
                         _imageToNumpy, _imageToPIL, _letterboxImage, _vipsCast,
                         _vipsParameters, dictToEtree, etreeToDict,
-                        nearPowerOfTwo)
+                        getPaletteColors, nearPowerOfTwo)
 
 
 class TileSource:
@@ -87,7 +87,12 @@ class TileSource:
                     maximum otherwise.  'min' or 'max' to always uses the
                     reported minimum or maximum.
                 :palette: a list of two or more color strings, where color
-                    strings are of the form #RRGGBB, #RRGGBBAA, #RGB, #RGBA.
+                    strings are of the form #RRGGBB, #RRGGBBAA, #RGB, #RGBA, or
+                    any string parseable by the PIL modules, or, if it is
+                    installed, byt matplotlib.  Alternately, this can be a
+                    single color, which implies ['#000', <color>], or the name
+                    of a palettable paletter or, if available, a matplotlib
+                    palette.
                 :nodata: the value to use for missing data.  null or unset to
                     not use a nodata value.
                 :composite: either 'lighten' or 'multiply'.  Defaults to
@@ -1063,10 +1068,9 @@ class TileSource:
                 composite = entry.get('composite', 'multiply')
             if band is None:
                 band = image[:, :, bandidx]
-            palette = numpy.array([
-                PIL.ImageColor.getcolor(clr, 'RGBA') for clr in entry.get(
-                    'palette', ['#000', '#FFF']
-                    if entry.get('band') != 'alpha' else ['#FFF0', '#FFFF'])])
+            palette = getPaletteColors(entry.get(
+                'palette', ['#000', '#FFF']
+                if entry.get('band') != 'alpha' else ['#FFF0', '#FFFF']))
             palettebase = numpy.linspace(0, 1, len(palette), endpoint=True)
             nodata = entry.get('nodata')
             min = self._getMinMax('min', entry.get('min', 'auto'), image.dtype, bandidx, frame)

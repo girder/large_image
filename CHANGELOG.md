@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Better palette support in styles ([#724](../../pull/724))
+
 ### Improvements
 - The openjpeg girder source handles uploaded files better ([#721](../../pull/721))
 - Suppress some warnings on Girder and on bioformats ([#727](../../pull/727))
