@@ -77,6 +77,13 @@ def testSourcesFileNotFound(source):
         large_image.tilesource.AvailableTileSources[source]('nosuchfile.ext')
 
 
+def testBaseFileNotFound():
+    with pytest.raises(large_image.exceptions.TileSourceFileNotFoundError):
+        large_image.open('nosuchfile')
+    with pytest.raises(large_image.exceptions.TileSourceFileNotFoundError):
+        large_image.open('nosuchfile.ext')
+
+
 @pytest.mark.parametrize('filename', registry)
 @pytest.mark.parametrize('source', SourceAndFiles)
 def testSourcesCanRead(source, filename):

@@ -31,14 +31,15 @@ def isGeospatial(path):
         ds = gdal.Open(path, gdalconst.GA_ReadOnly)
     except Exception:
         return False
-    if ds.GetGCPs() and ds.GetGCPProjection():
-        return True
-    if ds.GetProjection():
-        return True
-    if ds.GetGeoTransform(can_return_null=True):
-        return True
-    if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
-        return True
+    if ds:
+        if ds.GetGCPs() and ds.GetGCPProjection():
+            return True
+        if ds.GetProjection():
+            return True
+        if ds.GetGeoTransform(can_return_null=True):
+            return True
+        if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
+            return True
     return False
 
 
@@ -113,6 +114,8 @@ def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
     sourceName = getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs)
     if sourceName:
         return availableSources[sourceName](pathOrUri, *args, **kwargs)
+    if not os.path.exists(pathOrUri) and '://' not in pathOrUri:
+        raise TileSourceFileNotFoundError(pathOrUri)
     raise TileSourceError('No available tilesource for %s' % pathOrUri)
 
 
