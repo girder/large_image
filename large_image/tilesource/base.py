@@ -1080,6 +1080,16 @@ class TileSource:
             band = (band - min) / delta
             if not clamp:
                 keep = keep & (band >= 0) & (band <= 1)
+            # To implement anything other multiply or lighten, we should mimic
+            # mapnik (and probably delegate to a family of functions).
+            # mapnik's options are: clear src dst src_over dst_over src_in
+            # dst_in src_out dst_out src_atop dst_atop xor plus minus multiply
+            # screen overlay darken lighten color_dodge color_burn hard_light
+            # soft_light difference exclusion contrast invert grain_merge
+            # grain_extract hue saturation color value linear_dodge linear_burn
+            # divide.
+            # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html for
+            # some details.                
             for channel in range(4):
                 if numpy.all(palette[:, channel] == palette[0, channel]):
                     if ((palette[0, channel] == 0 and composite != 'multiply') or
