@@ -139,3 +139,15 @@ def testSourcesTilesAndMethods(source, filename):
         tsf = sourceClass(imagePath, frame=len(tileMetadata['frames']) - 1)
         tileMetadata = tsf.getMetadata()
         utilities.checkTilesZXY(tsf, tileMetadata)
+
+
+@pytest.mark.parametrize('filename,isgeo', [
+    ('04091217_ruc.nc', True),
+    ('HENormalN801.czi', False),
+    ('landcover_sample_1000.tif', True),
+    ('oahu-dense.tiff', True),
+    ('region_gcp.tiff', True),
+])
+def testIsGeospatial(filename, isgeo):
+    imagePath = datastore.fetch(filename)
+    assert large_image.tilesource.isGeospatial(imagePath) == isgeo
