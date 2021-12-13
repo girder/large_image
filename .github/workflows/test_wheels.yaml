@@ -17,7 +17,6 @@ jobs:
           python-version: "3.8"
       - name: Install Python Dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install --find-links https://girder.github.io/large_image_wheels -r requirements-dev.txt
       - name: Build Wheels
         run: ./.circleci/make_wheels.sh
