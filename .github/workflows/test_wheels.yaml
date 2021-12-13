@@ -8,7 +8,6 @@ on:
 jobs:
   build-wheel-linux:
     runs-on: ubuntu-latest
-    container: kitware/cmb:ci-cmb-fedora31-latest
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
