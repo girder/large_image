@@ -1,6 +1,5 @@
 import itertools
 import os
-import platform
 
 from setuptools import setup
 
@@ -10,7 +9,7 @@ description = 'Python modules to work with large, multiresolution images.'
 long_description = readme
 
 extraReqs = {
-    'memcached': ['pylibmc>=1.5.1'] if platform.system() != 'Windows' else [],
+    'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
     'converter': ['large-image-converter'],
 }
 sources = {
