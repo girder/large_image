@@ -1,0 +1,55 @@
+name: Test Wheel Installation
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+  build-wheel-linux:
+    runs-on: ubuntu-latest
+    container: kitware/cmb:ci-cmb-fedora31-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --find-links https://girder.github.io/large_image_wheels -r requirements-dev.txt
+      - name: Build Wheels
+        run: ./.circleci/make_wheels.sh
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ~/wheels
+
+
+  test-wheel-all:
+    needs: build-wheel-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          path: ~/wheels
+      - name: Install miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-activate-base: true
+          python-version: ${{ matrix.python-version }}
+      # Handle tough dependencies with conda
+      - name: Install Dependencies
+        run: |
+          conda install -c conda-forge --yes 'gdal >=3' cachetools numpy 'psutil >=4.2.0' 'Pillow!=8.3.0,!=8.3.1'
+      - name: Install Weels
+        # ``*`` probably won't work on Windows
+        run: pip install '~/wheels/large-image-source-gdal*.whl[memcached]'
