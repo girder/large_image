@@ -4,6 +4,11 @@
 
 ### Improvements
 - The openjpeg girder source handles uploaded files better ([#721](../../pull/721))
+- Suppress some warnings on Girder and on bioformats ([#727](../../pull/727))
+
+### Bug Fixes
+- Harden detecting file-not-found ([#726](../../pull/726))
+- Fix the pylibmc dependency for windows ([#725](../../pull/725))
 
 ## Version 1.8.11
 
