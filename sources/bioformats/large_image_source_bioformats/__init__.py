@@ -29,7 +29,6 @@ import threading
 import types
 
 import bioformats
-import bioformats.log4j
 import javabridge
 import numpy
 from pkg_resources import DistributionNotFound, get_distribution
@@ -75,6 +74,28 @@ def _monitor_thread():
     _stopJavabridge()
 
 
+def _reduceLogging():
+    # As of bioformat 4.0.0, org.apache.log4j isn't in the bundled
+    # jar file, so setting log levels just produces needless warnings.
+    # bioformats.log4j.basic_config()
+    # javabridge.JClassWrapper('loci.common.Log4jTools').setRootLevel(
+    #     logging.getLevelName(logger.level))
+    #
+    # This is taken from
+    # https://github.com/pskeshu/microscoper/blob/master/microscoper/io.py
+    try:
+        rootLoggerName = javabridge.get_static_field(
+            'org/slf4j/Logger', 'ROOT_LOGGER_NAME', 'Ljava/lang/String;')
+        rootLogger = javabridge.static_call(
+            'org/slf4j/LoggerFactory', 'getLogger',
+            '(Ljava/lang/String;)Lorg/slf4j/Logger;', rootLoggerName)
+        logLevel = javabridge.get_static_field(
+            'ch/qos/logback/classic/Level', 'WARN', 'Lch/qos/logback/classic/Level;')
+        javabridge.call(rootLogger, 'setLevel', '(Lch/qos/logback/classic/Level;)V', logLevel)
+    except Exception:
+        pass
+
+
 def _startJavabridge(logger):
     global _javabridgeStarted
 
@@ -85,11 +106,7 @@ def _startJavabridge(logger):
         monitor.start()
         try:
             javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
-            # As of bioformat 4.0.0, org.apache.log4j isn't in the bundled
-            # jar file, so setting log levels just produces needless warnings.
-            # bioformats.log4j.basic_config()
-            # javabridge.JClassWrapper('loci.common.Log4jTools').setRootLevel(
-            #     logging.getLevelName(logger.level))
+            _reduceLogging()
             atexit.register(_stopJavabridge)
             logger.info('Started JVM for Bioformats tile source.')
             _javabridgeStarted = True
