@@ -23,11 +23,12 @@ import threading
 from functools import partial
 from xml.etree import ElementTree
 
+import cachetools
 import numpy
 import PIL.Image
 
 from large_image import config
-from large_image.cache_util import LRUCache, methodcache, strhash
+from large_image.cache_util import methodcache, strhash
 from large_image.tilesource import etreeToDict
 
 try:
@@ -124,7 +125,7 @@ class TiledTiffDirectory:
         """
         self.logger = config.getConfig('logger')
         # create local cache to store Jpeg tables and getTileByteCountsType
-        self.cache = LRUCache(10)
+        self.cache = cachetools.LRUCache(10)
         self._mustBeTiled = mustBeTiled
 
         self._tiffFile = None

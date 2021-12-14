@@ -23,7 +23,6 @@ try:
     from .memcache import MemCache
 except ImportError:
     MemCache = None
-from cachetools import Cache, LRUCache, cached
 
 from .cachefactory import CacheFactory, pickAvailableCache
 
@@ -78,5 +77,5 @@ def cachesInfo(*args, **kwargs):
 
 
 __all__ = ('CacheFactory', 'getTileCache', 'isTileCacheSetup', 'MemCache',
-           'strhash', 'LruCacheMetaclass', 'pickAvailableCache', 'cached',
-           'Cache', 'LRUCache', 'methodcache', 'CacheProperties')
+           'strhash', 'LruCacheMetaclass', 'pickAvailableCache', 'methodcache',
+           'CacheProperties')
