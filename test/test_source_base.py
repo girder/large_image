@@ -167,6 +167,7 @@ def testIsGeospatial(filename, isgeo):
 ])
 def testGoodGetPaletteColors(palette):
     large_image.tilesource.utilities.getPaletteColors(palette)
+    assert large_image.tilesource.utilities.isValidPalette(palette) is True
 
 
 @pytest.mark.parametrize('palette', [
@@ -177,5 +178,6 @@ def testGoodGetPaletteColors(palette):
     'matplotlib.Plasma_128',
 ])
 def testBadGetPaletteColors(palette):
-    with pytest.raises(large_image.exceptions.TileSourceError):
+    with pytest.raises(ValueError):
         large_image.tilesource.utilities.getPaletteColors(palette)
+    assert large_image.tilesource.utilities.isValidPalette(palette) is False

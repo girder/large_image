@@ -106,7 +106,7 @@ def testTileLinearStyleFromGeotiffs():
 
 def testTileStyleBadInput():
     def _assertStyleResponse(imagePath, style, message):
-        with pytest.raises(TileSourceError, match=message):
+        with pytest.raises((TileSourceError, ValueError), match=message):
             source = large_image_source_gdal.open(
                 imagePath, projection='EPSG:3857', style=json.dumps(style), encoding='PNG')
             source.getTile(22, 51, 7)
@@ -125,7 +125,7 @@ def testTileStyleBadInput():
     _assertStyleResponse(imagePath, {
         'band': 1,
         'palette': 'nonexistent.palette'
-    }, 'Value cannot be used as a color palette.')
+    }, 'cannot be used as a color palette')
 
     _assertStyleResponse(imagePath, ['style'],
                          'Style is not a valid json object.')

@@ -13,7 +13,6 @@ import PIL.ImageDraw
 
 from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          TileOutputMimeTypes, TileOutputPILFormat)
-from ..exceptions import TileSourceError
 
 # Turn off decompression warning check
 PIL.Image.MAX_IMAGE_PIXELS = None
@@ -423,7 +422,7 @@ def _arrayToPalette(palette):
 
                     arr.append(PIL.ImageColor.getcolor(matplotlib.colors.to_hex(clr), 'RGBA'))
                 except (ImportError, ValueError):
-                    raise TileSourceError('Value cannot be used as a color palette.')
+                    raise ValueError('cannot be used as a color palette: %r.' % palette)
     return numpy.array(arr)
 
 
@@ -467,5 +466,20 @@ def getPaletteColors(value):
         except (ImportError, ValueError):
             pass
     if palette is None:
-        raise TileSourceError('Value cannot be used as a color palette.')
+        raise ValueError('cannot be used as a color palette.: %r.' % value)
     return _arrayToPalette(palette)
+
+
+def isValidPalette(value):
+    """
+    Check if a value can be used as a palette.
+
+    :param value: Either a list, a single color name, or a palette name.  See
+        getPaletteColors.
+    :returns: a boolean; true if the value can be used as a palette.
+    """
+    try:
+        getPaletteColors(value)
+        return True
+    except ValueError:
+        return False
