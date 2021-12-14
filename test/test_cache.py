@@ -7,9 +7,9 @@ import pytest
 
 import large_image.cache_util.cache
 from large_image import config
-from large_image.cache_util import (Cache, LruCacheMetaclass, MemCache, cached,
-                                    cachesClear, cachesInfo, getTileCache,
-                                    methodcache, strhash)
+from large_image.cache_util import (LruCacheMetaclass, MemCache, cachesClear,
+                                    cachesInfo, getTileCache, methodcache,
+                                    strhash)
 
 
 class Fib:
@@ -22,7 +22,7 @@ class Fib:
 
 def cache_test(specific_cache, maxNum=100):
     temp = Fib()
-    temp.num = cached(cache=specific_cache, key=strhash)(temp.num)
+    temp.num = cachetools.cached(cache=specific_cache, key=strhash)(temp.num)
     temp.num(maxNum)
     if maxNum >= 3:
         assert temp.num(3) == 2
@@ -31,7 +31,7 @@ def cache_test(specific_cache, maxNum=100):
 
 
 def testLRUCacheTools():
-    cache_test(Cache(1000))
+    cache_test(cachetools.Cache(1000))
 
 
 def testCacheMemcached():

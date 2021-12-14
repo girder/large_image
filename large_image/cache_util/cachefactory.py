@@ -18,11 +18,12 @@
 import math
 import threading
 
+import cachetools
+
 try:
     import psutil
 except ImportError:
     psutil = None
-from cachetools import LRUCache
 
 from .. import config
 
@@ -116,7 +117,7 @@ class CacheFactory:
                 cache = None
         if cache is None:  # fallback backend
             cacheBackend = 'python'
-            cache = LRUCache(self.getCacheSize(numItems, cacheName=cacheName))
+            cache = cachetools.LRUCache(self.getCacheSize(numItems, cacheName=cacheName))
             cacheLock = threading.Lock()
         if numItems is None and not CacheFactory.logged:
             config.getConfig('logprint').info('Using %s for large_image caching' % cacheBackend)
