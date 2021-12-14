@@ -11,6 +11,7 @@ long_description = readme
 extraReqs = {
     'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
     'converter': ['large-image-converter'],
+    'colormaps': ['matplotlib'],
 }
 sources = {
     'bioformats': ['large-image-source-bioformats'],
@@ -69,6 +70,7 @@ setup(
     ],
     install_requires=[
         'cachetools>=3.0.0',
+        'palettable',
         # We don't pin the version of Pillow, as anything newer than 3.0
         # probably works, though we'd rather have the latest.  8.3.0 won't
         # save jpeg compressed tiffs properly.

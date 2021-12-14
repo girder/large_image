@@ -106,7 +106,7 @@ def testTileLinearStyleFromGeotiffs():
 
 def testTileStyleBadInput():
     def _assertStyleResponse(imagePath, style, message):
-        with pytest.raises(TileSourceError, match=message):
+        with pytest.raises((TileSourceError, ValueError), match=message):
             source = large_image_source_gdal.open(
                 imagePath, projection='EPSG:3857', style=json.dumps(style), encoding='PNG')
             source.getTile(22, 51, 7)
@@ -125,7 +125,7 @@ def testTileStyleBadInput():
     _assertStyleResponse(imagePath, {
         'band': 1,
         'palette': 'nonexistent.palette'
-    }, 'Palette is not a valid palettable path.')
+    }, 'cannot be used as a color palette')
 
     _assertStyleResponse(imagePath, ['style'],
                          'Style is not a valid json object.')
@@ -507,3 +507,16 @@ def testFileWithoutProjection():
     assert tileMetadata['bounds']['ymax'] == pytest.approx(2477890, 1)
     assert tileMetadata['bounds']['ymin'] == pytest.approx(2420966, 1)
     assert 'epsg:3857' in tileMetadata['bounds']['srs']
+
+
+def testMatplotlibPalette():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
+    style = json.dumps({'band': 1, 'min': 0, 'max': 100,
+                        'palette': 'viridis'})
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857', style=style, encoding='PNG')
+    image = source.getTile(22, 51, 7)
+    image = PIL.Image.open(io.BytesIO(image))
+    image = numpy.asarray(image)
+    assert list(image[0, 0, :]) == [68, 1, 84, 0]

@@ -45,7 +45,6 @@ setup(
     install_requires=[
         'large-image>=1.0.0',
         'gdal',
-        'palettable',
         'pyproj>=2.2.0',
     ],
     extras_require={

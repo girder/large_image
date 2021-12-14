@@ -151,3 +151,33 @@ def testSourcesTilesAndMethods(source, filename):
 def testIsGeospatial(filename, isgeo):
     imagePath = datastore.fetch(filename)
     assert large_image.tilesource.isGeospatial(imagePath) == isgeo
+
+
+@pytest.mark.parametrize('palette', [
+    ['#000', '#FFF'],
+    ['#000', '#888', '#FFF'],
+    '#fff',
+    'black',
+    'rgba(128, 128, 128, 128)',
+    'rgb(128, 128, 128)',
+    'xkcd:blue',
+    'viridis',
+    'matplotlib.Plasma_6',
+    [(0.5, 0.5, 0.5), (0.1, 0.1, 0.1, 0.1), 'xkcd:blue'],
+])
+def testGoodGetPaletteColors(palette):
+    large_image.tilesource.utilities.getPaletteColors(palette)
+    assert large_image.tilesource.utilities.isValidPalette(palette) is True
+
+
+@pytest.mark.parametrize('palette', [
+    'notacolor',
+    [0.5, 0.5, 0.5],
+    ['notacolor', '#fff'],
+    'notapalette',
+    'matplotlib.Plasma_128',
+])
+def testBadGetPaletteColors(palette):
+    with pytest.raises(ValueError):
+        large_image.tilesource.utilities.getPaletteColors(palette)
+    assert large_image.tilesource.utilities.isValidPalette(palette) is False

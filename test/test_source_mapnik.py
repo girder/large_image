@@ -117,7 +117,7 @@ def testTileLinearStyleFromGeotiffs():
 
 def testTileStyleBadInput():
     def _assertStyleResponse(imagePath, style, message):
-        with pytest.raises(TileSourceError, match=message):
+        with pytest.raises((TileSourceError, ValueError), match=message):
             source = large_image_source_mapnik.open(
                 imagePath, projection='EPSG:3857', style=json.dumps(style))
             source.getTile(22, 51, 7, encoding='PNG')
@@ -148,12 +148,12 @@ def testTileStyleBadInput():
     _assertStyleResponse(imagePath, {
         'band': 1,
         'palette': 'nonexistent.palette'
-    }, 'Palette is not a valid palettable path.')
+    }, 'cannot be used as a color palette')
 
     _assertStyleResponse(imagePath, {
         'band': 1,
         'palette': ['notacolor', '#00ffff']
-    }, 'Mapnik failed to parse color')
+    }, 'cannot be used as a color palette')
 
     _assertStyleResponse(imagePath, {
         'band': 1,
