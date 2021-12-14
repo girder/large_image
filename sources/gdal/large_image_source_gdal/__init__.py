@@ -355,7 +355,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: List of colors
         """
         palette = getPaletteColors(palette)
-        return ['#%02X%02X%02X%02X' % tuple(clr) for clr in palette]
+        return ['#%02X%02X%02X%02X' % tuple(int(val) for val in clr) for clr in palette]
 
     def getProj4String(self):
         """

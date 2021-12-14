@@ -18,6 +18,7 @@
 
 # Extras from main setup.py
 pylibmc>=1.5.1
+matplotlib
 
 # External dependencies
 pip>=9
