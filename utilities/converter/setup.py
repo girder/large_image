@@ -63,6 +63,7 @@ setup(
             'large_image[sources]',
         ],
         'stats': [
+            'packaging',
             'scikit-image',
         ],
     },
