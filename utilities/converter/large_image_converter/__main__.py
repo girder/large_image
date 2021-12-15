@@ -135,6 +135,7 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
 
     import large_image_source_tiff
     import numpy
+    import packaging
     import skimage.metrics
 
     lastlog = 0
@@ -176,11 +177,17 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
                 mse += last_mse * diff.size
                 last_ssim = 0
                 try:
+                    kwargs = {}
+                    if (packaging.version.parse(skimage.__version__) >=
+                            packaging.version.parse('0.19')):
+                        kwargs['channel_axis'] = 2 if len(do.shape) > 2 else None
+                    else:
+                        kwargs['multichannel'] = len(do.shape) > 2
                     last_ssim = skimage.metrics.structural_similarity(
                         do.astype(float), da.astype(float),
                         data_range=255 if tileOrig['tile'].dtype == numpy.uint8 else 65535,
                         gaussian_weights=True, sigma=1.5, use_sample_covariance=False,
-                        multichannel=len(do.shape) > 2)
+                        **kwargs)
                     ssim += last_ssim * diff.size
                     ssim_count += diff.size
                 except ValueError:
