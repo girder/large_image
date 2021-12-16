@@ -1,9 +1,10 @@
 # Change Log
 
-## Unreleased
+## Version 1.9.0
 
 ### Features
 - Better palette support in styles ([#724](../../pull/724))
+- Enumerate available palettes ([#741](../../pull/741))
 
 ### Improvements
 - The openjpeg girder source handles uploaded files better ([#721](../../pull/721))

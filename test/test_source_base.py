@@ -181,3 +181,9 @@ def testBadGetPaletteColors(palette):
     with pytest.raises(ValueError):
         large_image.tilesource.utilities.getPaletteColors(palette)
     assert large_image.tilesource.utilities.isValidPalette(palette) is False
+
+
+def testGetAvailableNamedPalettes():
+    assert len(large_image.tilesource.utilities.getAvailableNamedPalettes()) > 100
+    assert len(large_image.tilesource.utilities.getAvailableNamedPalettes()) > \
+        len(large_image.tilesource.utilities.getAvailableNamedPalettes(False))
