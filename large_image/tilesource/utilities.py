@@ -1,5 +1,6 @@
 import io
 import math
+import types
 import xml.etree.ElementTree
 from collections import defaultdict
 from operator import attrgetter
@@ -463,7 +464,7 @@ def getPaletteColors(value):
                 ['#0000', matplotlib.colors.to_hex(value)]
                 if value in matplotlib.colors.get_named_colors_mapping()
                 else matplotlib.cm.get_cmap(value).colors)
-        except (ImportError, ValueError):
+        except (ImportError, ValueError, AttributeError):
             pass
     if palette is None:
         raise ValueError('cannot be used as a color palette.: %r.' % value)
@@ -483,3 +484,61 @@ def isValidPalette(value):
         return True
     except ValueError:
         return False
+
+
+def _recursePalettablePalettes(module, palettes, root=None, depth=0):
+    """
+    Walk the modules in palettable to find all of the available palettes.
+
+    :param module: the current module.
+    :param palettes: a set to add palette names to.
+    :param root: a string of the parent modules.  None for palettable itself.
+    :param depth: the depth of the walk.  Used to avoid needless recursion.
+    """
+    for key in dir(module):
+        if not key.startswith('_'):
+            attr = getattr(module, key)
+            if isinstance(attr, types.ModuleType) and depth < 3:
+                _recursePalettablePalettes(
+                    attr, palettes, root + '.' + key if root else key, depth + 1)
+            elif root and isinstance(getattr(attr, 'hex_colors', None), list):
+                palettes.add(root + '.' + key)
+
+
+def getAvailableNamedPalettes(includeColors=True, reduced=False):
+    """
+    Get a list of all named palettes that can be used with getPaletteColors.
+
+    :param includeColors: if True, include named colors.  If False, only
+        include actual palettes.
+    :param reduced: if True, exclude reversed palettes and palettes with
+        fewer colors where a palette with the same basic name exists with more
+        colors.
+    :returns: a list of names.
+    """
+    palettes = set()
+    if includeColors:
+        palettes |= set(PIL.ImageColor.colormap.keys())
+    _recursePalettablePalettes(palettable, palettes)
+    try:
+        import matplotlib
+
+        if includeColors:
+            palettes |= set(matplotlib.colors.get_named_colors_mapping())
+        # matplotlib has made the colormap list more public in recent versions
+        mplcm = (matplotlib.colormaps if hasattr(matplotlib, 'colormaps')
+                 else matplotlib.cm._cmap_registry)
+        for key in mplcm:
+            if isValidPalette(key):
+                palettes.add(key)
+    except ImportError:
+        pass
+    if reduced:
+        palettes = {
+            key for key in palettes
+            if not key.endswith('_r') and (
+                '_' not in key or
+                not key.rsplit('_', 1)[-1].isdigit() or
+                (key.rsplit('_', 1)[0] + '_' + str(int(
+                    key.rsplit('_', 1)[-1]) + 1)) not in palettes)}
+    return sorted(palettes)
