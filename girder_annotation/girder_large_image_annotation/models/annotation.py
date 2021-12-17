@@ -450,12 +450,26 @@ class AnnotationSchema:
         ]
     }
 
+    transformArray = {
+        'type': 'array',
+        'items': {
+            'type': 'array',
+            'minItems': 2,
+            'maxItems': 2
+        },
+        'minItems': 2,
+        'maxItems': 2,
+        'description': 'A 2D matrix representing the transform of an '
+                       'image overlay.'
+    }
+
     overlaySchema = {
         '$schema': 'http://json-schema.org/schema#',
         'type': 'object',
         'properties': {
             'girderId': {
                 'type': 'string',
+                'pattern': '^[0-9a-f]{24}$',
                 'description': 'Girder item ID containing the image to '
                                'overlay.'
             },
@@ -466,22 +480,22 @@ class AnnotationSchema:
                 'description': 'Default opacity for this image overlay. Must '
                                'be between 0 and 1. Defaults to 1.'
             },
-            'location': {
+            'transform': {
                 'type': 'object',
-                'description': 'Position (upper-left coordinate, width, and '
-                               'height) of the overlay.',
+                'description': 'Specification for an affine transform of the '
+                               'image overlay. Includes a 2D transform matrix, '
+                               'an X offset and a Y offset.',
                 'properties': {
-                    'upperLeftCorner': coordSchema,
-                    'width': {
+                    'xoffset': {
                         'type': 'number',
                         'minimum': 0
                     },
-                    'height': {
+                    'yoffset': {
                         'type': 'number',
                         'minimum': 0
-                    }
+                    },
+                    'transform': transformArray
                 },
-                'required': ['upperLeftCorner', 'width', 'height']
             }
         },
         'required': ['girderId'],
