@@ -464,7 +464,7 @@ def getPaletteColors(value):
                 ['#0000', matplotlib.colors.to_hex(value)]
                 if value in matplotlib.colors.get_named_colors_mapping()
                 else matplotlib.cm.get_cmap(value).colors)
-        except (ImportError, ValueError):
+        except (ImportError, ValueError, AttributeError):
             pass
     if palette is None:
         raise ValueError('cannot be used as a color palette.: %r.' % value)
@@ -505,12 +505,15 @@ def _recursePalettablePalettes(module, palettes, root=None, depth=0):
                 palettes.add(root + '.' + key)
 
 
-def getAvailableNamedPalettes(includeColors=True):
+def getAvailableNamedPalettes(includeColors=True, reduced=False):
     """
     Get a list of all named palettes that can be used with getPaletteColors.
 
     :param includeColors: if True, include named colors.  If False, only
         include actual palettes.
+    :param reduced: if True, exclude reversed palettes and palettes with
+        fewer colors where a palette with the same basic name exists with more
+        colors.
     :returns: a list of names.
     """
     palettes = set()
@@ -523,10 +526,19 @@ def getAvailableNamedPalettes(includeColors=True):
         if includeColors:
             palettes |= set(matplotlib.colors.get_named_colors_mapping())
         # matplotlib has made the colormap list more public in recent versions
-        if hasattr(matplotlib, 'colormaps'):
-            palettes |= set(matplotlib.colormaps.keys())
-        else:
-            palettes |= set(matplotlib.cm._cmap_registry.keys())
+        mplcm = (matplotlib.colormaps if hasattr(matplotlib, 'colormaps')
+                 else matplotlib.cm._cmap_registry)
+        for key in mplcm:
+            if isValidPalette(key):
+                palettes.add(key)
     except ImportError:
         pass
+    if reduced:
+        palettes = {
+            key for key in palettes
+            if not key.endswith('_r') and (
+                '_' not in key or
+                not key.rsplit('_', 1)[-1].isdigit() or
+                (key.rsplit('_', 1)[0] + '_' + str(int(
+                    key.rsplit('_', 1)[-1]) + 1)) not in palettes)}
     return sorted(palettes)

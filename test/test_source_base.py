@@ -187,3 +187,6 @@ def testGetAvailableNamedPalettes():
     assert len(large_image.tilesource.utilities.getAvailableNamedPalettes()) > 100
     assert len(large_image.tilesource.utilities.getAvailableNamedPalettes()) > \
         len(large_image.tilesource.utilities.getAvailableNamedPalettes(False))
+
+    assert len(large_image.tilesource.utilities.getAvailableNamedPalettes(False)) > \
+        len(large_image.tilesource.utilities.getAvailableNamedPalettes(False, True))
