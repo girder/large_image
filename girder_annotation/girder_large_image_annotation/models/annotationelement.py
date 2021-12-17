@@ -21,6 +21,7 @@ import pickle
 import time
 
 import pymongo
+from girder_large_image.models.image_item import ImageItem
 
 from girder import logger
 from girder.constants import AccessType, SortDir
@@ -336,7 +337,7 @@ class Annotationelement(Model):
             query['_version'] = {'$lte': oldversion}
         self.removeWithQuery(query)
 
-    def _boundingBox(self, element):
+    def _boundingBox(self, element, annotation=None):
         """
         Compute bounding box information for an annotation element.
 
@@ -346,6 +347,7 @@ class Annotationelement(Model):
         The size of the bounding box's x-y diagonal is also stored.
 
         :param element: the element to compute the bounding box for.
+        :param annotation: the annotation containing the given element.
         :returns: the bounding box dictionary.  This contains 'lowx', 'lowy',
             'lowz', 'highx', 'highy', and 'highz, which are the minimum and
             maximum values in each dimension, 'details' with the complexity of
@@ -374,6 +376,20 @@ class Annotationelement(Model):
             bbox['highx'] = max(x0, x1)
             bbox['highy'] = max(y0, y1)
             bbox['details'] = len(element['values'])
+        elif element.get('type') == 'imageoverlay':
+            width = height = 0
+            try:
+                imageItem = ImageItem().load(annotation['itemId'], force=True)
+                metadata = ImageItem().getMetadata(imageItem)
+                height = metadata['sizeY']
+                width = metadata['sizeX']
+            except Exception as e:
+                logger.error('Error generating bounding box for image overlay annotation: %s' % e)
+            finally:
+                bbox['lowx'] = bbox['lowy'] = bbox['lowz'] = bbox['highz'] = 0
+                bbox['highx'] = width
+                bbox['highy'] = height
+                bbox['details'] = 1
         else:
             center = element['center']
             bbox['lowz'] = bbox['highz'] = center[2]
@@ -453,7 +469,7 @@ class Annotationelement(Model):
                 'annotationId': annotation['_id'],
                 '_version': annotation['_version'],
                 'created': now,
-                'bbox': self._boundingBox(element),
+                'bbox': self._boundingBox(element, annotation),
                 'element': element
             } for element in elements[chunk:chunk + chunkSize]]
             prepTime = time.time() - chunkStartTime

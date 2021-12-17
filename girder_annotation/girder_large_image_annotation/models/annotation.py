@@ -467,6 +467,10 @@ class AnnotationSchema:
         '$schema': 'http://json-schema.org/schema#',
         'type': 'object',
         'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['imageoverlay']
+            },
             'girderId': {
                 'type': 'string',
                 'pattern': '^[0-9a-f]{24}$',
@@ -494,11 +498,11 @@ class AnnotationSchema:
                         'type': 'number',
                         'minimum': 0
                     },
-                    'transform': transformArray
+                    'matrix': transformArray
                 },
             }
         },
-        'required': ['girderId'],
+        'required': ['girderId', 'type'],
         'additionalProperties': False,
         'description': 'An image to overlay onto another like an '
                        'annotation.'
@@ -521,6 +525,7 @@ class AnnotationSchema:
             polylineShapeSchema,
             rectangleShapeSchema,
             rectangleGridShapeSchema,
+            overlaySchema,
         ]
     }
 
@@ -550,8 +555,7 @@ class AnnotationSchema:
                 'title': 'Image Markup',
                 'description': 'Subjective things that apply to a '
                                'spatial region.'
-            },
-            'overlay': overlaySchema
+            }
         },
         'additionalProperties': False
     }
