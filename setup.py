@@ -77,6 +77,7 @@ setup(
         'Pillow!=8.3.0,!=8.3.1',
         'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
+        'scooby',
     ],
     extras_require=extraReqs,
     include_package_data=True,
