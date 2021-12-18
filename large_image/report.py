@@ -16,13 +16,13 @@ class Report(scooby.Report):
             'scooby',
         ]
 
+        # Optional packages.
         girder = [
             'girder_large_image',
             'girder_worker_utils'
             'girder_worker'
         ]
 
-        # Optional packages.
         sources = [
             'large_image_source_bioformats',
             'bioformats',
