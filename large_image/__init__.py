@@ -17,8 +17,8 @@
 from pkg_resources import DistributionNotFound, get_distribution
 
 from . import tilesource  # noqa
+from .report import Report  # noqa
 from .tilesource import canRead, getTileSource, open  # noqa
-from .report import Report
 
 try:
     __version__ = get_distribution(__name__).version
