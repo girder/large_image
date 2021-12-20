@@ -4,7 +4,6 @@ import scooby
 class Report(scooby.Report):
     def __init__(self, additional=None, ncol=3, text_width=80, sort=False):
         """Initiate a scooby.Report instance."""
-
         # Mandatory packages.
         core = [
             'large_image',
@@ -15,14 +14,12 @@ class Report(scooby.Report):
             'palettable',
             'scooby',
         ]
-
         # Optional packages.
         girder = [
             'girder_large_image',
             'girder_worker_utils'
             'girder_worker'
         ]
-
         sources = [
             'large_image_source_bioformats',
             'bioformats',
@@ -47,7 +44,6 @@ class Report(scooby.Report):
             'libtiff',
             'large_image_converter',
         ]
-
         optional = [
             'pylibmc',
             'matplotlib',
@@ -58,7 +54,6 @@ class Report(scooby.Report):
             'packaging',
             'skimage',
         ] + sources + girder
-
         scooby.Report.__init__(
             self,
             additional=additional,
