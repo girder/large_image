@@ -1,6 +1,11 @@
 # Change Log
 
+## Unreleased
+
 ## Version 1.9.0
+
+### Improvements
+- Expand user paths ([#746](../../pull/746))
 
 ### Features
 - Better palette support in styles ([#724](../../pull/724))

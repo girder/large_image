@@ -43,10 +43,10 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     install_requires=[
-        'large-image>=1.0.0',
+        'large-image',
     ],
     extras_require={
-        'girder': 'girder-large-image>=1.0.0',
+        'girder': 'girder-large-image',
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),

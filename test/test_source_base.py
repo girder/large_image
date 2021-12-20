@@ -190,3 +190,14 @@ def testGetAvailableNamedPalettes():
 
     assert len(large_image.tilesource.utilities.getAvailableNamedPalettes(False)) > \
         len(large_image.tilesource.utilities.getAvailableNamedPalettes(False, True))
+
+
+def testExpanduserPath():
+    imagePath = datastore.fetch('sample_image.ptif')
+    assert large_image.canRead(imagePath)
+    absPath = os.path.abspath(imagePath)
+    userDir = os.path.expanduser('~') + os.sep
+    if absPath.startswith(userDir):
+        userPath = '~' + os.sep + absPath[len(userDir):]
+        assert large_image.canRead(userPath)
+        assert large_image.canRead(Path(userPath))
