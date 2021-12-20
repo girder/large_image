@@ -28,7 +28,7 @@ def isGeospatial(path):
         # TODO: log a warning
         return False
     try:
-        ds = gdal.Open(path, gdalconst.GA_ReadOnly)
+        ds = gdal.Open(str(path), gdalconst.GA_ReadOnly)
     except Exception:
         return False
     if ds:
@@ -74,8 +74,8 @@ def getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs):
     :returns: the name of a tile source that can read the input, or None if
         there is no such source.
     """
-    uriWithoutProtocol = pathOrUri.split('://', 1)[-1]
-    isLargeImageUri = pathOrUri.startswith('large_image://')
+    uriWithoutProtocol = str(pathOrUri).split('://', 1)[-1]
+    isLargeImageUri = str(pathOrUri).startswith('large_image://')
     extensions = [ext.lower() for ext in os.path.basename(uriWithoutProtocol).split('.')[1:]]
     properties = {
         'geospatial': isGeospatial(pathOrUri),

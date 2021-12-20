@@ -2332,6 +2332,13 @@ class FileTileSource(TileSource):
         :param path: a filesystem path for the tile source.
         """
         super().__init__(*args, **kwargs)
+        # Expand the user without converting datatype of path.
+        try:
+            path = (path.expanduser() if callable(getattr(path, 'expanduser', None)) else
+                    os.path.expanduser(path))
+        except TypeError:
+            # Don't fail if the path is unusual -- maybe a source can handle it
+            pass
         self.largeImagePath = path
 
     @staticmethod
