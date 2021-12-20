@@ -53,9 +53,9 @@ def getBody(response, text=True):
 
     for chunk in response.body:
         if text and isinstance(chunk, bytes):
-            chunk = chunk.decode('utf8')
+            chunk = chunk.decode()
         elif not text and not isinstance(chunk, bytes):
-            chunk = chunk.encode('utf8')
+            chunk = chunk.encode()
         data += chunk
 
     return data

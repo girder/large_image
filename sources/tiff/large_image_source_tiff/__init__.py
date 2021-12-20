@@ -389,7 +389,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if not len(self._associatedImages):
                     id = 'macro'
             if not isinstance(id, str):
-                id = id.decode('utf8')
+                id = id.decode()
             # Only use this as an associated image if the parsed id is
             # a reasonable length, alphanumeric characters, and the
             # image isn't too large.
@@ -520,7 +520,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     if isinstance(v, (str, bytes)) and k:
                         if isinstance(v, bytes):
                             try:
-                                v = v.decode('utf8')
+                                v = v.decode()
                             except UnicodeDecodeError:
                                 continue
                         results.setdefault('tiff', {})

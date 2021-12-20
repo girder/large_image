@@ -110,7 +110,7 @@ class TestLargeImageAnnotationRest:
         assert b'\x00' in result
         elements = result.split(b'\x00', 1)[1].rsplit(b'\x00', 1)[0]
         data = result.split(b'\x00', 1)[0] + result.rsplit(b'\x00', 1)[1]
-        data = json.loads(data.decode('utf8'))
+        data = json.loads(data.decode())
         assert len(data['_elementQuery']['props']) == 1
         assert len(elements) == 28 * 1
         x, y, r, s = struct.unpack('<fffl', elements[12:28])

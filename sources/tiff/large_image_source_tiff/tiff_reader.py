@@ -165,7 +165,7 @@ class TiledTiffDirectory:
         try:
             bytePath = filePath
             if not isinstance(bytePath, bytes):
-                bytePath = filePath.encode('utf8')
+                bytePath = filePath.encode()
             self._tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         except TypeError:
             raise IOTiffException(
@@ -824,7 +824,7 @@ class TiledTiffDirectory:
         if not meta:
             return
         if not isinstance(meta, str):
-            meta = meta.decode('utf8', 'ignore')
+            meta = meta.decode(errors='ignore')
         try:
             parsed = json.loads(meta)
             if isinstance(parsed, dict):
