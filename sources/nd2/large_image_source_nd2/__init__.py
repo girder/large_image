@@ -22,7 +22,7 @@ import types
 import warnings
 
 # Work around an issue in the PIMS package (can be removed once pims is
-# released for Python 3.10)
+# released for Python 3.10).  This must be before improt nd2reader.
 if True:
     import collections.abc
     collections.Iterable = collections.abc.Iterable
@@ -161,12 +161,12 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for key, value in olddict.items():
             if value not in (None, b'', ''):
                 if isinstance(key, bytes):
-                    key = key.decode('utf8')
+                    key = key.decode()
                 if (isinstance(value, dict) and len(value) == 1 and
                         list(value.keys())[0] in (b'', '')):
                     value = list(value.values())[0]
                 if isinstance(value, bytes):
-                    value = value.decode('utf8')
+                    value = value.decode()
                 if isinstance(value, dict):
                     value = self._getND2MetadataCleanDict(value)
                     if not len(value):
@@ -178,7 +178,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         continue
                     for idx, entry in enumerate(value):
                         if isinstance(entry, bytes):
-                            entry = entry.decode('utf8')
+                            entry = entry.decode()
                         if isinstance(entry, dict):
                             entry = self._getND2MetadataCleanDict(entry)
                         value[idx] = entry

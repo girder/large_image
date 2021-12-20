@@ -125,7 +125,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if projection and projection.lower().startswith('epsg:'):
             projection = NeededInitPrefix + projection.lower()
         if projection and not isinstance(projection, bytes):
-            projection = projection.encode('utf8')
+            projection = projection.encode()
         self.projection = projection
         try:
             with self._getDatasetLock:
@@ -486,7 +486,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     key = keys[idx]
                     bounds[key]['x'] = pt[0]
                     bounds[key]['y'] = pt[1]
-                bounds['srs'] = srs.decode('utf8') if isinstance(srs, bytes) else srs
+                bounds['srs'] = srs.decode() if isinstance(srs, bytes) else srs
             bounds['xmin'] = min(bounds['ll']['x'], bounds['ul']['x'],
                                  bounds['lr']['x'], bounds['ur']['x'])
             bounds['xmax'] = max(bounds['ll']['x'], bounds['ul']['x'],
@@ -723,7 +723,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             res = (self.unitsAcrossLevel0 / self.tileSize) * (2 ** -z)
             if not hasattr(self, '_warpSRS'):
                 self._warpSRS = (self.getProj4String(),
-                                 self.projection.decode('utf8'))
+                                 self.projection.decode())
                 if self._warpSRS[1].startswith(InitPrefix) and tuple(
                         int(p) for p in gdal.__version__.split('.')[:2]) >= (3, 1):
                     self._warpSRS = (self._warpSRS[0], self._warpSRS[1][len(InitPrefix):])
@@ -760,7 +760,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             cannot be created.
         """
         if isinstance(proj, bytes):
-            proj = proj.decode('utf8')
+            proj = proj.decode()
         if not isinstance(proj, str):
             return
         if proj.lower().startswith('proj4:'):

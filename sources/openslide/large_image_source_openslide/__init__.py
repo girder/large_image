@@ -367,7 +367,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 return None
         bytePath = self._largeImagePath
         if not isinstance(bytePath, bytes):
-            bytePath = bytePath.encode('utf8')
+            bytePath = bytePath.encode()
         _tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         _tiffFile.SetDirectory(images[imageKey])
         img = _tiffFile.read_image()
