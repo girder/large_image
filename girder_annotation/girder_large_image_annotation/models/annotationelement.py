@@ -346,7 +346,8 @@ class Annotationelement(Model):
         image item in order to obtain bounding box coordinates.
 
         :param overlayElement: An annotation element of type 'imageoverlay'.
-        :returns: a tuple with 4 values: lowx, highx, lowy, highy
+        :returns: a tuple with 4 values: lowx, highx, lowy, highy. Runtime exceptions
+         during loading the image metadata will result in the tuple (0, 0, 0, 0).
         """
         if overlayElement.get('type') != 'imageoverlay':
             raise ValueError(
@@ -354,29 +355,34 @@ class Annotationelement(Model):
             )
 
         import numpy as np
+        lowx = highx = lowy = highy = 0
 
-        overlayItemId = overlayElement.get('girderId')
-        imageItem = ImageItem().load(overlayItemId, force=True)
-        overlayImageMetadata = ImageItem().getMetadata(imageItem)
-        corners = [
-            [0, 0],
-            [0, overlayImageMetadata['sizeY']],
-            [overlayImageMetadata['sizeX'], overlayImageMetadata['sizeY']],
-            [overlayImageMetadata['sizeX'], 0],
-        ]
-        transform = overlayElement.get('transform', {})
-        transformMatrix = np.array(transform.get('matrix', [[1, 0], [0, 1]]))
-        corners = [np.matmul(np.array(corner), transformMatrix) for corner in corners]
-        offsetArray = np.array([transform.get('xoffset', 0), transform.get('yoffset', 0)])
-        corners = [np.add(corner, offsetArray) for corner in corners]
-        # use .item() to convert back to native python types
-        lowx = min([corner[0] for corner in corners]).item()
-        highx = max([corner[0] for corner in corners]).item()
-        lowy = min([corner[1] for corner in corners]).item()
-        highy = max([corner[1] for corner in corners]).item()
-        return lowx, highx, lowy, highy
+        try:
+            overlayItemId = overlayElement.get('girderId')
+            imageItem = ImageItem().load(overlayItemId, force=True)
+            overlayImageMetadata = ImageItem().getMetadata(imageItem)
+            corners = [
+                [0, 0],
+                [0, overlayImageMetadata['sizeY']],
+                [overlayImageMetadata['sizeX'], overlayImageMetadata['sizeY']],
+                [overlayImageMetadata['sizeX'], 0],
+            ]
+            transform = overlayElement.get('transform', {})
+            transformMatrix = np.array(transform.get('matrix', [[1, 0], [0, 1]]))
+            corners = [np.matmul(np.array(corner), transformMatrix) for corner in corners]
+            offsetArray = np.array([transform.get('xoffset', 0), transform.get('yoffset', 0)])
+            corners = [np.add(corner, offsetArray) for corner in corners]
+            # use .item() to convert back to native python types
+            lowx = min([corner[0] for corner in corners]).item()
+            highx = max([corner[0] for corner in corners]).item()
+            lowy = min([corner[1] for corner in corners]).item()
+            highy = max([corner[1] for corner in corners]).item()
+        except Exception as e:
+            logger.error('Error generating bounding box for image overlay annotation: %s' % e)
+        finally:
+            return lowx, highx, lowy, highy
 
-    def _boundingBox(self, element, annotation=None):
+    def _boundingBox(self, element):
         """
         Compute bounding box information for an annotation element.
 
@@ -386,7 +392,6 @@ class Annotationelement(Model):
         The size of the bounding box's x-y diagonal is also stored.
 
         :param element: the element to compute the bounding box for.
-        :param annotation: the annotation containing the given element.
         :returns: the bounding box dictionary.  This contains 'lowx', 'lowy',
             'lowz', 'highx', 'highy', and 'highz, which are the minimum and
             maximum values in each dimension, 'details' with the complexity of
@@ -416,22 +421,13 @@ class Annotationelement(Model):
             bbox['highy'] = max(y0, y1)
             bbox['details'] = len(element['values'])
         elif element.get('type') == 'imageoverlay':
-            lowx = highx = lowy = highy = highz = 0
-            try:
-                lowx, highx, lowy, highy = Annotationelement()._overlayBounds(element)
-                baseImageItem = ImageItem().load(annotation['itemId'], force=True)
-                baseImageMetadata = ImageItem().getMetadata(baseImageItem)
-                highz = baseImageMetadata.get('levels', 0)
-            except Exception as e:
-                logger.error('Error generating bounding box for image overlay annotation: %s' % e)
-            finally:
-                bbox['lowz'] = 0
-                bbox['highz'] = highz
-                bbox['lowx'] = lowx
-                bbox['highx'] = highx
-                bbox['lowy'] = lowy
-                bbox['highy'] = highy
-                bbox['details'] = 1
+            lowx, highx, lowy, highy = Annotationelement()._overlayBounds(element)
+            bbox['lowz'] = bbox['highz'] = 0
+            bbox['lowx'] = lowx
+            bbox['highx'] = highx
+            bbox['lowy'] = lowy
+            bbox['highy'] = highy
+            bbox['details'] = 1
         else:
             center = element['center']
             bbox['lowz'] = bbox['highz'] = center[2]
@@ -511,7 +507,7 @@ class Annotationelement(Model):
                 'annotationId': annotation['_id'],
                 '_version': annotation['_version'],
                 'created': now,
-                'bbox': self._boundingBox(element, annotation),
+                'bbox': self._boundingBox(element),
                 'element': element
             } for element in elements[chunk:chunk + chunkSize]]
             prepTime = time.time() - chunkStartTime
