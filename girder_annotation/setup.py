@@ -44,7 +44,7 @@ setup(
     ],
     install_requires=[
         'jsonschema>=2.5.1',
-        'girder-large-image>=1.0.0',
+        'girder-large-image',
         'ujson>=1.35',
     ],
     extras_require={
