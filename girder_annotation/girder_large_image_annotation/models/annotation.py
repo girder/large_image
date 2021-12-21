@@ -450,6 +450,64 @@ class AnnotationSchema:
         ]
     }
 
+    transformArray = {
+        'type': 'array',
+        'items': {
+            'type': 'array',
+            'minItems': 2,
+            'maxItems': 2
+        },
+        'minItems': 2,
+        'maxItems': 2,
+        'description': 'A 2D matrix representing the transform of an '
+                       'image overlay.'
+    }
+
+    overlaySchema = {
+        '$schema': 'http://json-schema.org/schema#',
+        'type': 'object',
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['imageoverlay']
+            },
+            'girderId': {
+                'type': 'string',
+                'pattern': '^[0-9a-f]{24}$',
+                'description': 'Girder item ID containing the image to '
+                               'overlay.'
+            },
+            'opacity': {
+                'type': 'number',
+                'minimum': 0,
+                'maximum': 1,
+                'description': 'Default opacity for this image overlay. Must '
+                               'be between 0 and 1. Defaults to 1.'
+            },
+            'transform': {
+                'type': 'object',
+                'description': 'Specification for an affine transform of the '
+                               'image overlay. Includes a 2D transform matrix, '
+                               'an X offset and a Y offset.',
+                'properties': {
+                    'xoffset': {
+                        'type': 'number',
+                        'minimum': 0
+                    },
+                    'yoffset': {
+                        'type': 'number',
+                        'minimum': 0
+                    },
+                    'matrix': transformArray
+                },
+            }
+        },
+        'required': ['girderId', 'type'],
+        'additionalProperties': False,
+        'description': 'An image to overlay onto another like an '
+                       'annotation.'
+    }
+
     annotationElementSchema = {
         '$schema': 'http://json-schema.org/schema#',
         # Shape subtypes are mutually exclusive, so for efficiency, don't use
@@ -467,6 +525,7 @@ class AnnotationSchema:
             polylineShapeSchema,
             rectangleShapeSchema,
             rectangleGridShapeSchema,
+            overlaySchema,
         ]
     }
 

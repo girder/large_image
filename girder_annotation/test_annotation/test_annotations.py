@@ -416,6 +416,66 @@ class TestLargeImageAnnotationElement:
         val3 = Annotationelement().getNextVersionValue()
         assert val3 > val2
 
+    def testOverlayBounds(self, server, admin, fsAssetstore):
+        file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
+        itemId = str(file['itemId'])
+
+        # test no transform
+        lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
+            'type': 'imageoverlay', 'girderId': itemId
+        })
+        assert lowx == 0
+        assert lowy == 0
+        assert highx == 58368
+        assert highy == 12288
+
+        # test offset
+        lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
+            'type': 'imageoverlay', 'girderId': itemId,
+            'transform': {'xoffset': 500, 'yoffset': 1000}
+        })
+        assert lowx == 500
+        assert lowy == 1000
+        assert highx == 58868
+        assert highy == 13288
+
+        # test affine matrix, scale to 50%
+        lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
+            'type': 'imageoverlay', 'girderId': itemId,
+            'transform': {
+                'matrix': [[0.5, 0], [0, 0.5]]
+            }
+        })
+        assert lowx == 0
+        assert lowy == 0
+        assert highx == 58368 / 2
+        assert highy == 12288 / 2
+
+        # test transform and scaling
+        lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
+            'type': 'imageoverlay', 'girderId': itemId,
+            'transform': {
+                'xoffset': 500,
+                'yoffset': 1000,
+                'matrix': [[0.5, 0], [0, 0.5]]
+            }
+        })
+        assert lowx == 500
+        assert lowy == 1000
+        assert highx == (58368 / 2) + 500
+        assert highy == (12288 / 2) + 1000
+
+    def testOverlayBoundingBox(self, server, admin, fsAssetstore):
+        file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
+        itemId = str(file['itemId'])
+        bbox = Annotationelement()._boundingBox(
+            {'type': 'imageoverlay', 'girderId': itemId})
+        assert bbox == {
+            'lowx': 0, 'lowy': 0, 'lowz': 0,
+            'highx': 58368, 'highy': 12288, 'highz': 0,
+            'details': 1,
+            'size': (58368**2 + 12288**2)**0.5}
+
     def testBoundingBox(self):
         bbox = Annotationelement()._boundingBox({'points': [[1, -2, 3], [-4, 5, -6], [7, -8, 9]]})
         assert bbox == {

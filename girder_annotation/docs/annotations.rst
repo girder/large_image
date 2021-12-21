@@ -6,8 +6,10 @@ The full schema can be obtained by calling the Girder endpoint of
 
 An annotation consists of a basic structure which includes a free-form
 ``attributes`` object and a list of ``elements``. The elements are
-strictly specified by the schema and are limited to a set of defined
+strictly specified by the schema and are mostly limited to a set of defined
 shapes.
+
+In addition to elements defined as shapes, image overlays are supported.
 
 Partial annotations are shown below with some example values. Note that
 the comments are not part of a valid annotation:
@@ -28,8 +30,9 @@ the comments are not part of a valid annotation:
 Elements
 --------
 
-Currently, all defined elements are shapes. All of these have some
-properties that they are allowed. Each shape is listed below:
+Currently, most defined elements are shapes. Image overlays are not defined as
+shapes. All of the shape elements have some properties that they are allowed.
+Each element type is listed below:
 
 All shapes
 ~~~~~~~~~~
@@ -263,6 +266,33 @@ choropleth, a grid with a list of values can be specified.
            0.531
        ]
    }
+
+Image overlays
+~~~~~~~~~~~~~~
+
+Image overlay annotations allow specifying a girder large image item
+to display on top of the base image as an annotation. It supports
+translation via the ``xoffset`` and ``yoffset`` properties, as well as other
+types of transformations via its 'matrix' property which should be specified as
+a ``2x2`` affine matrix.
+
+::
+
+    {
+        "type": "imageoverlay"            # Exact string. Required
+        "girderId": <girder image id>     # 24-character girder id pointing
+                                          # to a large image object. Required
+        "opacity": 1                      # Default opacity for the overlay. Defaults to 1. Optional
+        "transform": {                    # Object specifying additional overlay information. Optional
+            "xoffset": 0,                 # How much to shift the overlaid image right.
+            "yoffset": 0,                 # How much to shift the overlaid image down.
+            "matrix": [                   # Affine matrix to specify tranformations like scaling,
+                                          # rotation, or shearing.
+                [1, 0],
+                [0, 1]
+            ]
+        }
+    }
 
 Component Values
 ----------------

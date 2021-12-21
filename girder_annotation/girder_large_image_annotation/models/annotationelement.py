@@ -21,6 +21,7 @@ import pickle
 import time
 
 import pymongo
+from girder_large_image.models.image_item import ImageItem
 
 from girder import logger
 from girder.constants import AccessType, SortDir
@@ -336,6 +337,50 @@ class Annotationelement(Model):
             query['_version'] = {'$lte': oldversion}
         self.removeWithQuery(query)
 
+    def _overlayBounds(self, overlayElement):
+        """
+        Compute bounding box information in the X-Y plane for an
+        image overlay element.
+
+        This uses numpy to perform the specified transform on the given girder
+        image item in order to obtain bounding box coordinates.
+
+        :param overlayElement: An annotation element of type 'imageoverlay'.
+        :returns: a tuple with 4 values: lowx, highx, lowy, highy. Runtime exceptions
+         during loading the image metadata will result in the tuple (0, 0, 0, 0).
+        """
+        if overlayElement.get('type') != 'imageoverlay':
+            raise ValueError(
+                'Function _overlayBounds only accepts annotation elements of type "imageoverlay"'
+            )
+
+        import numpy as np
+        lowx = highx = lowy = highy = 0
+
+        try:
+            overlayItemId = overlayElement.get('girderId')
+            imageItem = ImageItem().load(overlayItemId, force=True)
+            overlayImageMetadata = ImageItem().getMetadata(imageItem)
+            corners = [
+                [0, 0],
+                [0, overlayImageMetadata['sizeY']],
+                [overlayImageMetadata['sizeX'], overlayImageMetadata['sizeY']],
+                [overlayImageMetadata['sizeX'], 0],
+            ]
+            transform = overlayElement.get('transform', {})
+            transformMatrix = np.array(transform.get('matrix', [[1, 0], [0, 1]]))
+            corners = [np.matmul(np.array(corner), transformMatrix) for corner in corners]
+            offsetArray = np.array([transform.get('xoffset', 0), transform.get('yoffset', 0)])
+            corners = [np.add(corner, offsetArray) for corner in corners]
+            # use .item() to convert back to native python types
+            lowx = min([corner[0] for corner in corners]).item()
+            highx = max([corner[0] for corner in corners]).item()
+            lowy = min([corner[1] for corner in corners]).item()
+            highy = max([corner[1] for corner in corners]).item()
+        except Exception:
+            logger.exception('Error generating bounding box for image overlay annotation')
+        return lowx, highx, lowy, highy
+
     def _boundingBox(self, element):
         """
         Compute bounding box information for an annotation element.
@@ -374,6 +419,14 @@ class Annotationelement(Model):
             bbox['highx'] = max(x0, x1)
             bbox['highy'] = max(y0, y1)
             bbox['details'] = len(element['values'])
+        elif element.get('type') == 'imageoverlay':
+            lowx, highx, lowy, highy = Annotationelement()._overlayBounds(element)
+            bbox['lowz'] = bbox['highz'] = 0
+            bbox['lowx'] = lowx
+            bbox['highx'] = highx
+            bbox['lowy'] = lowy
+            bbox['highy'] = highy
+            bbox['details'] = 1
         else:
             center = element['center']
             bbox['lowz'] = bbox['highz'] = center[2]
