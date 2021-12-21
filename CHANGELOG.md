@@ -2,10 +2,13 @@
 
 ## Unreleased
 
-## Version 1.9.0
-
 ### Improvements
 - Expand user paths ([#746](../../pull/746))
+
+### Changes
+- Use importlib rather than pkg_resources internally ([#747](../../pull/747))
+
+## Version 1.9.0
 
 ### Features
 - Better palette support in styles ([#724](../../pull/724))
