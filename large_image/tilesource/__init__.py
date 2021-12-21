@@ -1,7 +1,5 @@
 import os
 
-from pkg_resources import iter_entry_points
-
 from .. import config
 from ..constants import SourcePriority
 from ..exceptions import (TileGeneralError, TileGeneralException,
@@ -51,7 +49,12 @@ def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTil
     :param entryPointName: the name of the entry points to load.
     :param sourceDict: a dictionary to populate with the loaded sources.
     """
-    for entryPoint in iter_entry_points(entryPointName):
+    try:
+        from importlib.metadata import entry_points
+    except ImportError:
+        from importlib_metadata import entry_points
+
+    for entryPoint in entry_points()[entryPointName]:
         try:
             sourceClass = entryPoint.load()
             if sourceClass.name and None in sourceClass.extensions:
