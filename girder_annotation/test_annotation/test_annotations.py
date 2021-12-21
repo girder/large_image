@@ -465,6 +465,17 @@ class TestLargeImageAnnotationElement:
         assert highx == (58368 / 2) + 500
         assert highy == (12288 / 2) + 1000
 
+    def testOverlayBoundingBox(self, server, admin, fsAssetstore):
+        file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
+        itemId = str(file['itemId'])
+        bbox = Annotationelement()._boundingBox(
+            {'type': 'imageoverlay', 'girderId': itemId})
+        assert bbox == {
+            'lowx': 0, 'lowy': 0, 'lowz': 0,
+            'highx': 58368, 'highy': 12288, 'highz': 0,
+            'details': 1,
+            'size': (58368**2 + 12288**2)**0.5}
+
     def testBoundingBox(self):
         bbox = Annotationelement()._boundingBox({'points': [[1, -2, 3], [-4, 5, -6], [7, -8, 9]]})
         assert bbox == {

@@ -378,7 +378,7 @@ class Annotationelement(Model):
             lowy = min([corner[1] for corner in corners]).item()
             highy = max([corner[1] for corner in corners]).item()
         except Exception as e:
-            logger.error('Error generating bounding box for image overlay annotation: %s' % e)
+            logger.exception('Error generating bounding box for image overlay annotation')
         return lowx, highx, lowy, highy
 
     def _boundingBox(self, element):
