@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Added image overlay annotation element ([#742](../../pull/742))
+
 ### Improvements
 - Expand user paths ([#746](../../pull/746))
 
