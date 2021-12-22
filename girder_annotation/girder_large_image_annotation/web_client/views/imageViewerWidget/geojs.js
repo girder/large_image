@@ -4,6 +4,7 @@ import Backbone from 'backbone';
 
 import events from '@girder/core/events';
 import { wrap } from '@girder/core/utilities/PluginUtils';
+import { restRequest } from '@girder/core/rest';
 
 import convertAnnotation from '../../annotations/geojs/convert';
 
@@ -93,11 +94,18 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         centroidFeature = feature;
                     }
                 });
+                let overlayLayerIds = this._annotations[annotation.id].overlays.map((overlay) => overlay.id);
+                let overlayLayers = this.viewer.layers().filter((layer) => overlayLayerIds.contains(layer.id()));
+                for (const layer of overlayLayers) {
+                    this.viewer.deleteLayer(layer);
+                }
             }
+            let overlays = annotation.overlays();
             this._annotations[annotation.id] = {
                 features: centroidFeature ? [centroidFeature] : [],
                 options: options,
-                annotation: annotation
+                annotation: annotation,
+                overlays: overlays
             };
             if (options.fetch && (!present || annotation.refresh() || annotation._inFetch === 'centroids')) {
                 annotation.off('g:fetched', null, this).on('g:fetched', () => {
@@ -190,6 +198,25 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     }
                 });
             }
+            // draw overlays
+            _.each(this._annotations[annotation.id].overlays, (overlay) => {
+                const overlayItemId = overlay.girderId;
+                restRequest({
+                    url: `item/${overlayItemId}/tiles`
+                }).done((response) => {
+                    let params = geo.util.pixelCoordinateParams(
+                        this.viewer.node(), response.sizeX, response.sizeY, response.tileHeight, response.tileWidth
+                    );
+                    params.layer.useCredentials = true;
+                    params.layer.url = `api/v1/item/${overlayItemId}/tiles/zxy/{z}/{x}/{y}`;
+                    params.layer.autoshareRenderer = false;
+                    params.layer.opacity = overlay.opacity || 1;
+                    let overlayLayer = this.viewer.createLayer('osm', params.layer);
+                    console.log({ overlayLayer });
+                }).fail((response) => {
+                    console.log({ response });
+                });
+            });
             this._featureOpacity[annotation.id] = {};
             geo.createFileReader('jsonReader', {layer: this.featureLayer})
                 .read(geojson, (features) => {

@@ -1,3 +1,5 @@
+// import { restRequest } from '@girder/core/rest';
+
 /**
  * Create a color table that can be used for a heatmap.
  *
@@ -91,6 +93,32 @@ function convertHeatmap(record, properties, layer) {
     heatmap._ownLayer = true;
     return [heatmap];
 }
+
+/**
+ * Convert an image overlay annotation to a geojs feature.
+ *
+ * @param record: the image overlay annotation element.
+ * @param properties: a property map of additional data, such as the original
+ *      annotation id.
+ * @param layer: the layer where this may be added.
+ */
+// function convertImageOverlay(record, properties, layer) {
+    // /* Image overlays need to be in their own layer */
+    // const overlayItemId = record.girderId;
+
+    // // Get overlay overlay metadata to inform layer params
+    // restRequest({
+        // url: `item/${overlayItemId}/tiles`
+    // }).done((response) => {
+        // const map = layer.map();
+        // const geo = window.geo;
+        // let params = geo.util.pixelCoordinateParams(
+           // map.node(), response.sizeX, response.sizeY, response.tileHeight, response.tileWidth
+        // );
+        // return params;
+    // }).fail((response) => {
+    // });
+// }
 
 /**
  * Convert a griddata heatmap annotation to a geojs feature.
