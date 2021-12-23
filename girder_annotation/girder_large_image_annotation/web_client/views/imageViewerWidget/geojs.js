@@ -212,9 +212,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     params.layer.autoshareRenderer = false;
                     params.layer.opacity = overlay.opacity || 1;
                     let overlayLayer = this.viewer.createLayer('osm', params.layer);
-                    console.log({ overlayLayer });
+                    overlayLayer.id(overlay.id);
+                    this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
                 }).fail((response) => {
-                    console.log({ response });
+                    console.error(`There was an error overlaying image with ID ${overlayItemId}`);
                 });
             });
             this._featureOpacity[annotation.id] = {};
@@ -428,6 +429,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     } else {
                         this.featureLayer.deleteFeature(feature);
                     }
+                });
+                _.each(this._annotations[annotation.id].overlays, (overlay) => {
+                    const overlayLayer = this.viewer.layers().find(
+                        (layer) => layer.id() === overlay.id);
+                    this.viewer.deleteLayer(overlayLayer);
                 });
                 delete this._annotations[annotation.id];
                 delete this._featureOpacity[annotation.id];
