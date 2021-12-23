@@ -57,6 +57,21 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         annotationAPI: _.constant(true),
 
         /**
+         * Given an image overlay annotation element, compute and return
+         * a proj-string representation of its transform specification.
+         * @param {object} overlay An imageoverlay annotation element.
+         * @returns a proj-string representing how to overlay should be tranformed.
+         */
+        _getOverlayTransformProjString: function (overlay) {
+            const transformInfo = overlay.transform || {};
+            const xOffset = transformInfo.xoffset || 0;
+            const yOffset = transformInfo.yoffset || 0;
+            const matrix = transformInfo.matrix || [[1, 0], [0, 1]];
+            return `+proj=longlat +axis=enu +s11=${1 / matrix[0][0]} +s12=${matrix[0][1]}` +
+                   ` +s21=${matrix[1][0]} +s22=${ 1 / matrix[1][1]} +xoff=-${xOffset} +yoff=${yOffset}`;
+        },
+
+        /**
          * Render an annotation model on the image.  Currently, this is limited
          * to annotation types that can be (1) directly converted into geojson
          * primitives, OR (2) be represented as heatmaps.
@@ -211,8 +226,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     params.layer.url = `api/v1/item/${overlayItemId}/tiles/zxy/{z}/{x}/{y}`;
                     params.layer.autoshareRenderer = false;
                     params.layer.opacity = overlay.opacity || 1;
-                    let overlayLayer = this.viewer.createLayer('osm', params.layer);
+                    const overlayLayer = this.viewer.createLayer('osm', params.layer);
                     overlayLayer.id(overlay.id);
+                    const proj = this._getOverlayTransformProjString(overlay);
+                    overlayLayer.gcs(proj);
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
                 }).fail((response) => {
                     console.error(`There was an error overlaying image with ID ${overlayItemId}`);
