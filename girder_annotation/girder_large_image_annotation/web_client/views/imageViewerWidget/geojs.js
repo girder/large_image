@@ -68,7 +68,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             const yOffset = transformInfo.yoffset || 0;
             const matrix = transformInfo.matrix || [[1, 0], [0, 1]];
             return `+proj=longlat +axis=enu +s11=${1 / matrix[0][0]} +s12=${matrix[0][1]}` +
-                   ` +s21=${matrix[1][0]} +s22=${ 1 / matrix[1][1]} +xoff=-${xOffset} +yoff=${yOffset}`;
+                   ` +s21=${matrix[1][0]} +s22=${1 / matrix[1][1]} +xoff=-${xOffset} +yoff=${yOffset}`;
         },
 
         /**
@@ -109,11 +109,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         centroidFeature = feature;
                     }
                 });
-                let overlayLayerIds = this._annotations[annotation.id].overlays.map((overlay) => overlay.id);
-                let overlayLayers = this.viewer.layers().filter((layer) => overlayLayerIds.contains(layer.id()));
-                for (const layer of overlayLayers) {
-                    this.viewer.deleteLayer(layer);
-                }
+                _.each(this._annotations[annotation.id].overlays, (overlay) => {
+                    const overlayLayer = this.viewer.layers().find(
+                        (layer) => layer.id() === overlay.id);
+                    this.viewer.deleteLayer(overlayLayer);
+                });
             }
             let overlays = annotation.overlays();
             this._annotations[annotation.id] = {
