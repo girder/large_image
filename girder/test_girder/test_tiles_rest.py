@@ -846,7 +846,9 @@ def testPixel(server, admin, fsAssetstore):
         path='/item/%s/tiles/pixel' % itemId, user=admin,
         params={'left': 48000, 'top': 3000})
     assert utilities.respStatus(resp) == 200
-    assert resp.json == {'r': 237, 'g': 248, 'b': 242}
+    assert 235 < resp.json['r'] < 240
+    assert 246 < resp.json['g'] < 250
+    assert 241 < resp.json['b'] < 245
 
     # If it is outside of the image, we get an empty result
     resp = server.request(
@@ -1167,7 +1169,7 @@ def testTilesHistogram(server, admin, fsAssetstore):
     assert len(resp.json) == 3
     assert len(resp.json[0]['hist']) == 256
     assert resp.json[1]['samples'] == 2801664
-    assert resp.json[1]['hist'][128] == 176
+    assert 150 < resp.json[1]['hist'][128] < 200
     # A second query will fetch it from cache
     resp = server.request(
         path='/item/%s/tiles/histogram' % itemId,
@@ -1187,8 +1189,7 @@ def testTilesHistogramWithRange(server, admin, fsAssetstore):
         params={'width': 2048, 'height': 2048, 'resample': False, 'rangeMin': 10, 'rangeMax': 240})
     assert len(resp.json) == 3
     assert len(resp.json[0]['hist']) == 256
-    assert resp.json[1]['samples'] == 685979
-    assert resp.json[1]['hist'][128] == 186
+    assert resp.json[1]['samples'] < 1000000
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
