@@ -61,7 +61,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * @returns whether to clamp viewer bounds when image overlays are
          * rendered
          */
-        getUnclampBoundsForOverlay() {
+        getUnclampBoundsForOverlay: function () {
             return this._unclampBoundsForOverlay;
         },
 
@@ -70,7 +70,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * @param {bool} newValue Set whether to clamp viewer bounds when image
          * overlays are rendered.
          */
-        setUnclampBoundsForOverlay(newValue) {
+        setUnclampBoundsForOverlay: function (newValue) {
             this._unclampBoundsForOverlay = newValue;
         },
 
@@ -90,6 +90,19 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             }
             return `+proj=longlat +axis=enu +s11=${1 / matrix[0][0]} +s12=${matrix[0][1]}` +
                    ` +s21=${matrix[1][0]} +s22=${1 / matrix[1][1]} +xoff=-${xOffset} +yoff=${yOffset}`;
+        },
+
+        /**
+         * @returns The number of currently drawn overlay elements across
+         * all annotations.
+         */
+        _countDrawnImageOverlays: function () {
+            let numOverlays = 0;
+            _.each(this._annotations, (value, key, obj) => {
+                let annotationOverlays = value.overlays || [];
+                numOverlays += annotationOverlays.length;
+            });
+            return numOverlays;
         },
 
         /**
@@ -249,7 +262,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     );
                     params.layer.useCredentials = true;
                     params.layer.url = `api/v1/item/${overlayItemId}/tiles/zxy/{z}/{x}/{y}`;
-                    params.layer.autoshareRenderer = false;
+                    if (this._countDrawnImageOverlays() <= 6) {
+                        params.layer.autoshareRenderer = false;
+                    } else {
+                        params.layer.renderer = 'canvas';
+                    }
                     params.layer.opacity = overlay.opacity || 1;
                     const overlayLayer = this.viewer.createLayer('osm', params.layer);
                     overlayLayer.id(overlay.id);
