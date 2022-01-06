@@ -26,6 +26,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
         this._annotations = {};
         this._featureOpacity = {};
+        this._unclampBoundsForOverlay = true;
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
         this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
@@ -55,6 +56,23 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         annotationAPI: _.constant(true),
+
+        /**
+         * @returns whether to clamp viewer bounds when image overlays are
+         * rendered
+         */
+        getUnclampBoundsForOverlay() {
+            return this._unclampBoundsForOverlay;
+        },
+
+        /**
+         *
+         * @param {bool} newValue Set whether to clamp viewer bounds when image
+         * overlays are rendered.
+         */
+        setUnclampBoundsForOverlay(newValue) {
+            this._unclampBoundsForOverlay = newValue;
+        },
 
         /**
          * Given an image overlay annotation element, compute and return
@@ -217,7 +235,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 });
             }
             // draw overlays
-            if (this._annotations[annotation.id].overlays.length > 0) {
+            if (this.getUnclampBoundsForOverlay() && this._annotations[annotation.id].overlays.length > 0) {
                 this.viewer.clampBoundsY(false);
                 this.viewer.clampBoundsX(false);
             }
