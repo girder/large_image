@@ -67,6 +67,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             const xOffset = transformInfo.xoffset || 0;
             const yOffset = transformInfo.yoffset || 0;
             const matrix = transformInfo.matrix || [[1, 0], [0, 1]];
+            if (xOffset === 0 && yOffset === 0 && matrix === [[1, 0], [0, 1]]) {
+                return '+proj=longlat +axis=enu';
+            }
             return `+proj=longlat +axis=enu +s11=${1 / matrix[0][0]} +s12=${matrix[0][1]}` +
                    ` +s21=${matrix[1][0]} +s22=${1 / matrix[1][1]} +xoff=-${xOffset} +yoff=${yOffset}`;
         },

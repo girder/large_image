@@ -1,5 +1,3 @@
-// import { restRequest } from '@girder/core/rest';
-
 /**
  * Create a color table that can be used for a heatmap.
  *
