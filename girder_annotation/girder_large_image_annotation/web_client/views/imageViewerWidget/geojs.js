@@ -496,8 +496,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 });
                 delete this._annotations[annotation.id];
                 delete this._featureOpacity[annotation.id];
-                this.viewer.clampBoundsY(true);
-                this.viewer.clampBoundsX(true);
+
+                // If removing an overlay annotation results in no more overlays drawn, and we've
+                // previously un-clamped bounds for overlays, re-clamp bounds
+                if (this._countDrawnImageOverlays() === 0 && this.getUnclampBoundsForOverlay()) {
+                    this.viewer.clampBoundsY(true);
+                    this.viewer.clampBoundsX(true);
+                }
                 this.viewer.scheduleAnimationFrame(this.viewer.draw);
             }
         },
