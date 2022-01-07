@@ -99,6 +99,28 @@ class AnnotationSchema:
         'additionalProperties': True
     }
 
+    labelSchema = {
+        'type': 'object',
+        'properties': {
+            'value': {'type': 'string'},
+            'visibility': {
+                'type': 'string',
+                # TODO: change to True, False, None?
+                'enum': ['hidden', 'always', 'onhover']
+            },
+            'fontSize': {
+                'type': 'number',
+                'minimum': 0,
+                'exclusiveMinimum': True,
+            },
+            'color': colorSchema,
+        },
+        'required': ['value'],
+        'additionalProperties': False
+    }
+
+    groupSchema = {'type': 'string'}
+
     baseShapeSchema = {
         '$schema': 'http://json-schema.org/schema#',
         'id': '/girder/plugins/large_image/models/base_shape',
@@ -111,31 +133,13 @@ class AnnotationSchema:
             'type': {'type': 'string'},
             # schema free field for users to extend annotations
             'user': userSchema,
-            'label': {
-                'type': 'object',
-                'properties': {
-                    'value': {'type': 'string'},
-                    'visibility': {
-                        'type': 'string',
-                        # TODO: change to True, False, None?
-                        'enum': ['hidden', 'always', 'onhover']
-                    },
-                    'fontSize': {
-                        'type': 'number',
-                        'minimum': 0,
-                        'exclusiveMinimum': True,
-                    },
-                    'color': colorSchema,
-                },
-                'required': ['value'],
-                'additionalProperties': False
-            },
+            'label': labelSchema,
             'lineColor': colorSchema,
             'lineWidth': {
                 'type': 'number',
                 'minimum': 0
             },
-            'group': {'type': 'string'}
+            'group': groupSchema
         },
         'required': ['type'],
         'additionalProperties': True
@@ -500,7 +504,10 @@ class AnnotationSchema:
                     },
                     'matrix': transformArray
                 },
-            }
+            },
+            'user': userSchema,
+            'label': labelSchema,
+            'group': groupSchema,
         },
         'required': ['girderId', 'type'],
         'additionalProperties': False,
