@@ -279,10 +279,10 @@ a ``2x2`` affine matrix.
 ::
 
     {
-        "type": "imageoverlay"            # Exact string. Required
-        "girderId": <girder image id>     # 24-character girder id pointing
+        "type": "imageoverlay",           # Exact string. Required
+        "girderId": <girder image id>,    # 24-character girder id pointing
                                           # to a large image object. Required
-        "opacity": 1                      # Default opacity for the overlay. Defaults to 1. Optional
+        "opacity": 1,                     # Default opacity for the overlay. Defaults to 1. Optional
         "transform": {                    # Object specifying additional overlay information. Optional
             "xoffset": 0,                 # How much to shift the overlaid image right.
             "yoffset": 0,                 # How much to shift the overlaid image down.
