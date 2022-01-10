@@ -4,12 +4,16 @@
 
 ### Features
 - Added image overlay annotation element ([#742](../../pull/742))
+- Allow the discrete scheme to be used on all tile sources  ([#755](../../pull/755))
 
 ### Improvements
 - Expand user paths ([#746](../../pull/746))
 
 ### Changes
 - Use importlib rather than pkg_resources internally ([#747](../../pull/747))
+
+### Bug Fixes
+- Fix expanding a style palette with a single named color ([#754](../../pull/754))
 
 ## Version 1.9.0
 

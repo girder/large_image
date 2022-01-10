@@ -1071,6 +1071,7 @@ class TileSource:
             palette = getPaletteColors(entry.get(
                 'palette', ['#000', '#FFF']
                 if entry.get('band') != 'alpha' else ['#FFF0', '#FFFF']))
+            discrete = entry.get('scheme') == 'discrete'
             palettebase = numpy.linspace(0, 1, len(palette), endpoint=True)
             nodata = entry.get('nodata')
             min = self._getMinMax('min', entry.get('min', 'auto'), image.dtype, bandidx, frame)
@@ -1104,7 +1105,11 @@ class TileSource:
                     # Don't recompute if the palette is repeated two channels
                     # in a row.
                     if not channel or numpy.any(palette[:, channel] != palette[:, channel - 1]):
-                        clrs = numpy.interp(band, palettebase, palette[:, channel])
+                        if not discrete:
+                            clrs = numpy.interp(band, palettebase, palette[:, channel])
+                        else:
+                            clrs = palette[numpy.floor(band * len(palette)).astype(int).clip(
+                                0, len(palette) - 1), channel]
                 if composite == 'multiply':
                     output[:, :, channel] = numpy.multiply(
                         output[:, :, channel], numpy.where(keep, clrs / 255, 1))
