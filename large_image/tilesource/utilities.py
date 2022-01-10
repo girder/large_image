@@ -447,8 +447,8 @@ def getPaletteColors(value):
         palette = value
     if palette is None:
         try:
-            color = PIL.ImageColor.getcolor(str(value), 'RGBA')
-            palette = ['#000', color]
+            PIL.ImageColor.getcolor(str(value), 'RGBA')
+            palette = ['#000', str(value)]
         except ValueError:
             pass
     if palette is None:
