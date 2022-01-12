@@ -89,6 +89,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             const s12 = matrix[0][1];
             const s21 = matrix[1][0];
             const s22 = matrix[1][1];
+
             let projString = '+proj=longlat +axis=enu';
             if (xOffset > 0) {
                 projString = projString + ` +xoff=-${xOffset}`;
@@ -114,6 +115,51 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 numOverlays += annotationOverlays.length;
             });
             return numOverlays;
+        },
+
+        /**
+         * Generate layer parameters for an image overlay layer
+         * @param {object} overlayImageMetadata metadata such as size, tile size, and levels for the overlay image
+         * @param {string} overlayImageId ID of a girder image item
+         * @param {object} overlay information about the overlay such as opacity
+         * @returns layer params for the image overlay layer
+         */
+        _generateOverlayLayerParams(overlayImageMetadata, overlayImageId, overlay) {
+            const geo = window.geo;
+            let params = geo.util.pixelCoordinateParams(
+                this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileHeight, overlayImageMetadata.tileWidth
+            );
+            params.layer.useCredentials = true;
+            params.layer.url = `api/v1/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
+            if (this._countDrawnImageOverlays() <= 6) {
+                params.layer.autoshareRenderer = false;
+            } else {
+                params.layer.renderer = 'canvas';
+            }
+            params.layer.opacity = overlay.opacity || 1;
+
+            if (this.levels !== overlayImageMetadata.levels) {
+                const levelDifference = Math.abs(this.levels - overlayImageMetadata.levels);
+                params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
+                params.layer.minLevel = levelDifference;
+                params.layer.maxLevel += levelDifference;
+
+                params.layer.tilesMaxBounds = (level) => {
+                    var scale = Math.pow(2, params.layer.maxLevel - level);
+                    return {
+                        x: Math.floor(overlayImageMetadata.sizeX / scale),
+                        y: Math.floor(overlayImageMetadata.sizeY / scale)
+                    };
+                };
+                params.layer.tilesAtZoom = (level) => {
+                    var scale = Math.pow(2, params.layer.maxLevel - level);
+                    return {
+                        x: Math.ceil(overlayImageMetadata.sizeX / overlayImageMetadata.tileWidth / scale),
+                        y: Math.ceil(overlayImageMetadata.sizeY / overlayImageMetadata.tileHeight / scale)
+                    };
+                };
+            }
+            return params.layer;
         },
 
         /**
@@ -268,18 +314,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 restRequest({
                     url: `item/${overlayItemId}/tiles`
                 }).done((response) => {
-                    let params = geo.util.pixelCoordinateParams(
-                        this.viewer.node(), response.sizeX, response.sizeY, response.tileHeight, response.tileWidth
-                    );
-                    params.layer.useCredentials = true;
-                    params.layer.url = `api/v1/item/${overlayItemId}/tiles/zxy/{z}/{x}/{y}`;
-                    if (this._countDrawnImageOverlays() <= 6) {
-                        params.layer.autoshareRenderer = false;
-                    } else {
-                        params.layer.renderer = 'canvas';
-                    }
-                    params.layer.opacity = overlay.opacity || 1;
-                    const overlayLayer = this.viewer.createLayer('osm', params.layer);
+                    let params = this._generateOverlayLayerParams(response, overlayItemId, overlay);
+                    const overlayLayer = this.viewer.createLayer('osm', params);
                     overlayLayer.id(overlay.id);
                     const proj = this._getOverlayTransformProjString(overlay);
                     overlayLayer.gcs(proj);
