@@ -82,7 +82,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          */
         _getOverlayTransformProjString: function (overlay) {
             const transformInfo = overlay.transform || {};
-            const xOffset = transformInfo.xoffset || 0;
+            let xOffset = transformInfo.xoffset || 0;
             const yOffset = transformInfo.yoffset || 0;
             const matrix = transformInfo.matrix || [[1, 0], [0, 1]];
             const s11 = matrix[0][0];
@@ -91,10 +91,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             const s22 = matrix[1][1];
 
             let projString = '+proj=longlat +axis=enu';
-            if (xOffset > 0) {
-                projString = projString + ` +xoff=-${xOffset}`;
+            if (xOffset !== 0) {
+                // negate x offset so positive values specified in the annotation
+                // move overlays to the right
+                xOffset = -1 * xOffset;
+                projString = projString + ` +xoff=${xOffset}`;
             }
-            if (yOffset > 0) {
+            if (yOffset !== 0) {
                 projString = projString + ` +yoff=${yOffset}`;
             }
             if (s11 !== 1 || s12 !== 0 || s21 !== 0 || s22 !== 1) {
