@@ -4,6 +4,7 @@ import Backbone from 'backbone';
 
 import events from '@girder/core/events';
 import { wrap } from '@girder/core/utilities/PluginUtils';
+import { restRequest } from '@girder/core/rest';
 
 import convertAnnotation from '../../annotations/geojs/convert';
 
@@ -25,6 +26,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
         this._annotations = {};
         this._featureOpacity = {};
+        this._unclampBoundsForOverlay = true;
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
         this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
@@ -54,6 +56,114 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         annotationAPI: _.constant(true),
+
+        /**
+         * @returns whether to clamp viewer bounds when image overlays are
+         * rendered
+         */
+        getUnclampBoundsForOverlay: function () {
+            return this._unclampBoundsForOverlay;
+        },
+
+        /**
+         *
+         * @param {bool} newValue Set whether to clamp viewer bounds when image
+         * overlays are rendered.
+         */
+        setUnclampBoundsForOverlay: function (newValue) {
+            this._unclampBoundsForOverlay = newValue;
+        },
+
+        /**
+         * Given an image overlay annotation element, compute and return
+         * a proj-string representation of its transform specification.
+         * @param {object} overlay An imageoverlay annotation element.
+         * @returns a proj-string representing how to overlay should be tranformed.
+         */
+        _getOverlayTransformProjString: function (overlay) {
+            const transformInfo = overlay.transform || {};
+            let xOffset = transformInfo.xoffset || 0;
+            const yOffset = transformInfo.yoffset || 0;
+            const matrix = transformInfo.matrix || [[1, 0], [0, 1]];
+            const s11 = matrix[0][0];
+            const s12 = matrix[0][1];
+            const s21 = matrix[1][0];
+            const s22 = matrix[1][1];
+
+            let projString = '+proj=longlat +axis=enu';
+            if (xOffset !== 0) {
+                // negate x offset so positive values specified in the annotation
+                // move overlays to the right
+                xOffset = -1 * xOffset;
+                projString = projString + ` +xoff=${xOffset}`;
+            }
+            if (yOffset !== 0) {
+                projString = projString + ` +yoff=${yOffset}`;
+            }
+            if (s11 !== 1 || s12 !== 0 || s21 !== 0 || s22 !== 1) {
+                // add affine matrix vals to projection string if not identity matrix
+                projString = projString + ` +s11=${1 / s11} +s12=${s12} +s21=${s21} +s22=${1 / s22}`;
+            }
+            return projString;
+        },
+
+        /**
+         * @returns The number of currently drawn overlay elements across
+         * all annotations.
+         */
+        _countDrawnImageOverlays: function () {
+            let numOverlays = 0;
+            _.each(this._annotations, (value, key, obj) => {
+                let annotationOverlays = value.overlays || [];
+                numOverlays += annotationOverlays.length;
+            });
+            return numOverlays;
+        },
+
+        /**
+         * Generate layer parameters for an image overlay layer
+         * @param {object} overlayImageMetadata metadata such as size, tile size, and levels for the overlay image
+         * @param {string} overlayImageId ID of a girder image item
+         * @param {object} overlay information about the overlay such as opacity
+         * @returns layer params for the image overlay layer
+         */
+        _generateOverlayLayerParams(overlayImageMetadata, overlayImageId, overlay) {
+            const geo = window.geo;
+            let params = geo.util.pixelCoordinateParams(
+                this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileWidth, overlayImageMetadata.tileHeight
+            );
+            params.layer.useCredentials = true;
+            params.layer.url = `api/v1/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
+            if (this._countDrawnImageOverlays() <= 6) {
+                params.layer.autoshareRenderer = false;
+            } else {
+                params.layer.renderer = 'canvas';
+            }
+            params.layer.opacity = overlay.opacity || 1;
+
+            if (this.levels !== overlayImageMetadata.levels) {
+                const levelDifference = this.levels - overlayImageMetadata.levels;
+                params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
+                params.layer.minLevel = levelDifference;
+                params.layer.maxLevel += levelDifference;
+
+                params.layer.tilesMaxBounds = (level) => {
+                    var scale = Math.pow(2, params.layer.maxLevel - level);
+                    return {
+                        x: Math.floor(overlayImageMetadata.sizeX / scale),
+                        y: Math.floor(overlayImageMetadata.sizeY / scale)
+                    };
+                };
+                params.layer.tilesAtZoom = (level) => {
+                    var scale = Math.pow(2, params.layer.maxLevel - level);
+                    return {
+                        x: Math.ceil(overlayImageMetadata.sizeX / overlayImageMetadata.tileWidth / scale),
+                        y: Math.ceil(overlayImageMetadata.sizeY / overlayImageMetadata.tileHeight / scale)
+                    };
+                };
+            }
+            return params.layer;
+        },
 
         /**
          * Render an annotation model on the image.  Currently, this is limited
@@ -93,11 +203,18 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         centroidFeature = feature;
                     }
                 });
+                _.each(this._annotations[annotation.id].overlays, (overlay) => {
+                    const overlayLayer = this.viewer.layers().find(
+                        (layer) => layer.id() === overlay.id);
+                    this.viewer.deleteLayer(overlayLayer);
+                });
             }
+            const overlays = annotation.overlays() || [];
             this._annotations[annotation.id] = {
                 features: centroidFeature ? [centroidFeature] : [],
                 options: options,
-                annotation: annotation
+                annotation: annotation,
+                overlays: overlays
             };
             if (options.fetch && (!present || annotation.refresh() || annotation._inFetch === 'centroids')) {
                 annotation.off('g:fetched', null, this).on('g:fetched', () => {
@@ -190,6 +307,26 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     }
                 });
             }
+            // draw overlays
+            if (this.getUnclampBoundsForOverlay() && this._annotations[annotation.id].overlays.length > 0) {
+                this.viewer.clampBoundsY(false);
+                this.viewer.clampBoundsX(false);
+            }
+            _.each(this._annotations[annotation.id].overlays, (overlay) => {
+                const overlayItemId = overlay.girderId;
+                restRequest({
+                    url: `item/${overlayItemId}/tiles`
+                }).done((response) => {
+                    let params = this._generateOverlayLayerParams(response, overlayItemId, overlay);
+                    const overlayLayer = this.viewer.createLayer('osm', params);
+                    overlayLayer.id(overlay.id);
+                    const proj = this._getOverlayTransformProjString(overlay);
+                    overlayLayer.gcs(proj);
+                    this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
+                }).fail((response) => {
+                    console.error(`There was an error overlaying image with ID ${overlayItemId}`);
+                });
+            });
             this._featureOpacity[annotation.id] = {};
             geo.createFileReader('jsonReader', {layer: this.featureLayer})
                 .read(geojson, (features) => {
@@ -402,8 +539,20 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         this.featureLayer.deleteFeature(feature);
                     }
                 });
+                _.each(this._annotations[annotation.id].overlays, (overlay) => {
+                    const overlayLayer = this.viewer.layers().find(
+                        (layer) => layer.id() === overlay.id);
+                    this.viewer.deleteLayer(overlayLayer);
+                });
                 delete this._annotations[annotation.id];
                 delete this._featureOpacity[annotation.id];
+
+                // If removing an overlay annotation results in no more overlays drawn, and we've
+                // previously un-clamped bounds for overlays, re-clamp bounds
+                if (this._countDrawnImageOverlays() === 0 && this.getUnclampBoundsForOverlay()) {
+                    this.viewer.clampBoundsY(true);
+                    this.viewer.clampBoundsX(true);
+                }
                 this.viewer.scheduleAnimationFrame(this.viewer.draw);
             }
         },

@@ -495,12 +495,10 @@ class AnnotationSchema:
                                'an X offset and a Y offset.',
                 'properties': {
                     'xoffset': {
-                        'type': 'number',
-                        'minimum': 0
+                        'type': 'number'
                     },
                     'yoffset': {
-                        'type': 'number',
-                        'minimum': 0
+                        'type': 'number'
                     },
                     'matrix': transformArray
                 },

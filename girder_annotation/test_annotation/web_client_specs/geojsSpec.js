@@ -9,7 +9,7 @@ girderTest.addScripts([
 girderTest.startApp();
 
 $(function () {
-    var itemId, annotationId, interactor;
+    var itemId, annotationId, overlayAnnotationId, interactor;
 
     function closeTo(a, b, tol) {
         var i;
@@ -83,10 +83,42 @@ $(function () {
                 expect(annotationId).toBeDefined();
             });
         });
+        it('upload test overlay annotation', function () {
+            runs(function () {
+                girder.rest.restRequest({
+                    url: 'annotation?itemId=' + itemId,
+                    contentType: 'application/json',
+                    processData: false,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        name: 'test overlay annotation',
+                        elements: [{
+                            type: 'imageoverlay',
+                            girderId: itemId,
+                            opacity: 0.5,
+                            transform: {
+                                'xoffset': 10,
+                                'yoffset': 15
+                            }
+                        }]
+                    })
+                }).then(function (resp) {
+                    overlayAnnotationId = resp._id;
+                    return null;
+                });
+            });
+            waitsFor(function () {
+                return overlayAnnotationId !== undefined;
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                expect(overlayAnnotationId).toBeDefined();
+            });
+        });
     });
 
     describe('Geojs viewer', function () {
-        var girder, large_image, $el, GeojsViewer, viewer, annotation, featureSpy, largeImageAnnotation;
+        var girder, large_image, $el, GeojsViewer, viewer, annotation, overlayAnnotation, featureSpy, largeImageAnnotation;
 
         beforeEach(function () {
             girder = window.girder;
@@ -152,6 +184,26 @@ $(function () {
                 viewer.viewer.zoom(12);
                 viewer.viewer.zoom(1);
                 expect(setViewSpy.callCount).toBe(firstCount + 2);
+            });
+        });
+
+        it('draw overlay', function() {
+            runs(function() {
+                overlayAnnotation = new largeImageAnnotation.models.AnnotationModel({
+                    _id: overlayAnnotationId
+                });
+                overlayAnnotation.fetch();
+            })
+            girderTest.waitForLoad();
+            runs(function () {
+                projStringSpy = sinon.spy(viewer, '_getOverlayTransformProjString');
+                viewer.drawAnnotation(overlayAnnotation);
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                const annotationRecord = viewer._annotations[overlayAnnotationId] || undefined;
+                expect(annotationRecord).toBeDefined();
+                expect(projStringSpy.callCount).toBe(1);
             });
         });
 
@@ -262,6 +314,7 @@ $(function () {
 
         it('removeAnnotation', function () {
             viewer.removeAnnotation(annotation);
+            viewer.removeAnnotation(overlayAnnotation);
             expect(viewer._annotations).toEqual({});
             sinon.assert.calledOnce(featureSpy);
         });

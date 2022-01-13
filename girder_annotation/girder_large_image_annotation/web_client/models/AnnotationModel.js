@@ -362,6 +362,16 @@ export default AccessControlledModel.extend({
     },
 
     /**
+     * Return annotation elements that cannot be represented as geojs
+     * features, such as image overlays.
+     */
+    overlays() {
+        const json = this.get('annotation') || {};
+        const elements = json.elements || [];
+        return elements.filter((element) => element.type === 'imageoverlay');
+    },
+
+    /**
      * Set the view.  If we are paging elements, possibly refetch the elements.
      * Callers should listen for the g:fetched event to know when new elements
      * have been fetched.
