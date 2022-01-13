@@ -130,7 +130,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _generateOverlayLayerParams(overlayImageMetadata, overlayImageId, overlay) {
             const geo = window.geo;
             let params = geo.util.pixelCoordinateParams(
-                this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileHeight, overlayImageMetadata.tileWidth
+                this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileWidth, overlayImageMetadata.tileHeight
             );
             params.layer.useCredentials = true;
             params.layer.url = `api/v1/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
@@ -142,7 +142,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             params.layer.opacity = overlay.opacity || 1;
 
             if (this.levels !== overlayImageMetadata.levels) {
-                const levelDifference = Math.abs(this.levels - overlayImageMetadata.levels);
+                const levelDifference = this.levels - overlayImageMetadata.levels;
                 params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
                 params.layer.minLevel = levelDifference;
                 params.layer.maxLevel += levelDifference;
