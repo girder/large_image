@@ -45,10 +45,12 @@ A band definition is an object which can contain the following keys:
 
 - ``max``: the value to map to the last palette value.  Defaults to 255.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported maximum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.
 
-- ``palette``: This is a list or two or more colors. The values between min and max are interpolated using a piecewise linear algorithm to map to the specified palette values.  It can be specified in a variety of ways:
+- ``palette``: This is a list or two or more colors. The values between min and max are interpolated using a piecewise linear algorithm or a nearest value algorithm (depending on the ``scheme``) to map to the specified palette values.  It can be specified in a variety of ways:
   - a list of two or more color values, where the color values are css-style strings (e.g., of the form #RRGGBB, #RRGGBBAA, #RGB, #RGBA, or a css ``rgb``, ``rgba``, ``hsl``, or ``hsv`` string, or a css color name), or, if matplotlib is available, a matplotlib color name, or a list or tuple of RGB(A) values on a scale of [0-1].
   - a single string that is a color string as above.  This is functionally a two-color palette with the first color as solid black (``#000``), and the second color the specified value
   - a named color palette from the palettable library (e.g., ``matplotlib.Plasma_6``) or, if available, from the matplotlib library or one of its plugins (e.g., ``viridis``).
+
+- ``scheme``: This is either ``linear`` (the default) or ``discrete``.  If a palette is specified, ``linear`` uses a piecewise linear interpolation, and ``discrete`` uses exact colors from the palette with the range of the data mapped into the specified number of colors (e.g., a palette with two colors will split exactly halfway between the min and max values).
 
 - ``nodata``: the value to use for missing data.  null or unset to not use a nodata value.
 

@@ -92,6 +92,18 @@ def testTileFromGeotiffs():
     _assertImageMatches(image, 'geotiff_9_89_207')
 
 
+def testTileStyleFromGeotiffs():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
+    style = json.dumps({'band': 1, 'min': 0, 'max': 100,
+                        'scheme': 'discrete',
+                        'palette': 'matplotlib.Plasma_6'})
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857', style=style)
+    image = source.getTile(22, 51, 7, encoding='PNG')
+    _assertImageMatches(image, 'geotiff_style_7_22_51')
+
+
 def testTileLinearStyleFromGeotiffs():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
