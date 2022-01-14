@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Features
-- Added image overlay annotation element ([#742](../../pull/742))
+- Added image overlay annotation element ([#742](../../pull/742), [#750](../../pull/750))
 - Allow the discrete scheme to be used on all tile sources  ([#755](../../pull/755))
 
 ### Improvements
