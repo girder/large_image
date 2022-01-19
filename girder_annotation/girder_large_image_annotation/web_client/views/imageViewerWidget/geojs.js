@@ -203,11 +203,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         centroidFeature = feature;
                     }
                 });
-                _.each(this._annotations[annotation.id].overlays, (overlay) => {
-                    const overlayLayer = this.viewer.layers().find(
-                        (layer) => layer.id() === overlay.id);
-                    this.viewer.deleteLayer(overlayLayer);
-                });
             }
             const overlays = annotation.overlays() || [];
             this._annotations[annotation.id] = {
@@ -317,6 +312,17 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 restRequest({
                     url: `item/${overlayItemId}/tiles`
                 }).done((response) => {
+                    // Since overlay layers are created asynchronously, we need to ensure that an attempt
+                    // to draw the same overlays happening at roughly the same time does not create
+                    // extra layers
+                    const conflictingLayers = this.viewer.layers().filter(
+                        (layer) => layer.id() === overlay.id);
+                    if (conflictingLayers.length > 0) {
+                        _.each(conflictingLayers, (layer) => {
+                            this.viewer.deleteLayer(layer);
+                        });
+                    }
+
                     let params = this._generateOverlayLayerParams(response, overlayItemId, overlay);
                     const overlayLayer = this.viewer.createLayer('osm', params);
                     overlayLayer.id(overlay.id);
@@ -540,9 +546,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     }
                 });
                 _.each(this._annotations[annotation.id].overlays, (overlay) => {
-                    const overlayLayer = this.viewer.layers().find(
+                    // Use filter instead of find to protect against multiple layers
+                    // for the same overlay element.
+                    const overlayLayers = this.viewer.layers().filter(
                         (layer) => layer.id() === overlay.id);
-                    this.viewer.deleteLayer(overlayLayer);
+                    _.each(overlayLayers, (layer) => {
+                        this.viewer.deleteLayer(layer);
+                    });
                 });
                 delete this._annotations[annotation.id];
                 delete this._featureOpacity[annotation.id];
