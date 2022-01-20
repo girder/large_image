@@ -164,6 +164,7 @@ def testIsGeospatial(filename, isgeo):
     'viridis',
     'matplotlib.Plasma_6',
     [(0.5, 0.5, 0.5), (0.1, 0.1, 0.1, 0.1), 'xkcd:blue'],
+    'coolwarm',
 ])
 def testGoodGetPaletteColors(palette):
     large_image.tilesource.utilities.getPaletteColors(palette)

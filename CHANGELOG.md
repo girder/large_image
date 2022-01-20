@@ -8,6 +8,7 @@
 
 ### Improvements
 - Expand user paths ([#746](../../pull/746))
+- Work with more matplotlib palettes ([#760](../../pull/760))
 
 ### Changes
 - Use importlib rather than pkg_resources internally ([#747](../../pull/747))

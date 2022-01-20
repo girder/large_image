@@ -460,10 +460,11 @@ def getPaletteColors(value):
         try:
             import matplotlib
 
-            palette = (
-                ['#0000', matplotlib.colors.to_hex(value)]
-                if value in matplotlib.colors.get_named_colors_mapping()
-                else matplotlib.cm.get_cmap(value).colors)
+            if value in matplotlib.colors.get_named_colors_mapping():
+                palette = ['#0000', matplotlib.colors.to_hex(value)]
+            else:
+                cmap = matplotlib.cm.get_cmap(value)
+                palette = [matplotlib.colors.to_hex(cmap(i)) for i in range(cmap.N)]
         except (ImportError, ValueError, AttributeError):
             pass
     if palette is None:
