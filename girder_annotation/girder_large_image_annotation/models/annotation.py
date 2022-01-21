@@ -508,7 +508,7 @@ class AnnotationSchema:
             'group': groupSchema,
         },
         'required': ['girderId', 'type'],
-        'additionalProperties': False,
+        'additionalProperties': True,
         'description': 'An image to overlay onto another like an '
                        'annotation.'
     }
