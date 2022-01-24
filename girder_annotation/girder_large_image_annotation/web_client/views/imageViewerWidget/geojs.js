@@ -140,6 +140,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 params.layer.renderer = 'canvas';
             }
             params.layer.opacity = overlay.opacity || 1;
+            params.layer.opacity *= this._globalAnnotationOpacity;
 
             if (this.levels !== overlayImageMetadata.levels) {
                 const levelDifference = this.levels - overlayImageMetadata.levels;
@@ -189,6 +190,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             var geo = window.geo;
             options = _.defaults(options || {}, {fetch: true});
             var geojson = annotation.geojson();
+            const overlays = annotation.overlays() || [];
             var present = _.has(this._annotations, annotation.id);
             var centroidFeature;
             if (present) {
@@ -203,8 +205,20 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         centroidFeature = feature;
                     }
                 });
+                if (this._annotations[annotation.id].overlays) {
+                    // Ensure that overlay elements that have been deleted are not rendered on a re-draw
+                    _.each(this._annotations[annotation.id].overlays, (overlay) => {
+                        const oldOverlayIds = this._annotations[annotation.id].overlays.map((overlay) => overlay.id);
+                        const updatedOverlayIds = overlays.map((overlay) => overlay.id);
+                        _.each(oldOverlayIds, (id) => {
+                            if (!updatedOverlayIds.includes(id)) {
+                                const overlayLayer = this.viewer.layers().find((layer) => layer.id() === id);
+                                this.viewer.deleteLayer(overlayLayer);
+                            }
+                        });
+                    });
+                }
             }
-            const overlays = annotation.overlays() || [];
             this._annotations[annotation.id] = {
                 features: centroidFeature ? [centroidFeature] : [],
                 options: options,
@@ -500,6 +514,20 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 feature.updateStyleFromArray('strokeOpacity', strokeOpacityArray);
                 feature._lastFeatureProp = prop;
             });
+            // Also modify opacity of image overlay layers
+            const overlays = this._annotations[annotationId].overlays || null;
+            if (overlays) {
+                _.each(overlays, (overlay) => {
+                    const overlayLayer = this.viewer.layers().find((layer) => layer.id() === overlay.id);
+                    if (overlayLayer) {
+                        let newOpacity = (overlay.opacity || 1) * this._globalAnnotationOpacity;
+                        if (this._highlightAnnotation && annotationId !== this._highlightAnnotation) {
+                            newOpacity = newOpacity * 0.25;
+                        }
+                        overlayLayer.opacity(newOpacity);
+                    }
+                });
+            }
         },
 
         /**
@@ -660,6 +688,15 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     feature.layer().opacity(opacity);
                 }
             }));
+            _.each(this._annotations, (annotation) => {
+                _.each(annotation.overlays, (overlay) => {
+                    const overlayLayer = this.viewer.layers().find((layer) => layer.id() === overlay.id);
+                    if (overlayLayer) {
+                        const overlayOpacity = overlay.opacity || 1;
+                        overlayLayer.opacity(opacity * overlayOpacity);
+                    }
+                });
+            });
             return this;
         },
 
