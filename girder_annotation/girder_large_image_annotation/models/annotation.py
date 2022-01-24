@@ -110,8 +110,7 @@ class AnnotationSchema:
             },
             'fontSize': {
                 'type': 'number',
-                'minimum': 0,
-                'exclusiveMinimum': True,
+                'exclusiveMinimum': 0,
             },
             'color': colorSchema,
         },
@@ -121,9 +120,7 @@ class AnnotationSchema:
 
     groupSchema = {'type': 'string'}
 
-    baseShapeSchema = {
-        '$schema': 'http://json-schema.org/schema#',
-        'id': '/girder/plugins/large_image/models/base_shape',
+    baseElementSchema = {
         'type': 'object',
         'properties': {
             'id': {
@@ -134,19 +131,38 @@ class AnnotationSchema:
             # schema free field for users to extend annotations
             'user': userSchema,
             'label': labelSchema,
-            'lineColor': colorSchema,
-            'lineWidth': {
-                'type': 'number',
-                'minimum': 0
-            },
             'group': groupSchema
         },
         'required': ['type'],
         'additionalProperties': True
     }
+    baseElementPatternProperties = {
+        '^%s$' % propertyName: {}
+        for propertyName in baseElementSchema['properties']
+        if propertyName != 'type'
+    }
+    baseShapeSchema = {
+        'type': 'object',
+        'allOf': [
+            baseElementSchema,
+            {
+                'properties': {
+                    'lineColor': colorSchema,
+                    'lineWidth': {
+                        'type': 'number',
+                        'minimum': 0
+                    },
+                },
+            },
+        ],
+        'required': ['type'],
+        'additionalProperties': True
+    }
     baseShapePatternProperties = {
         '^%s$' % propertyName: {}
-        for propertyName in baseShapeSchema['properties']
+        for part in [
+            part['properties'] for part in baseShapeSchema['allOf']
+        ] for propertyName in part
         if propertyName != 'type'
     }
 
@@ -348,7 +364,7 @@ class AnnotationSchema:
 
     heatmapSchema = {
         'allOf': [
-            baseShapeSchema,
+            baseElementSchema,
             {
                 'type': 'object',
                 'properties': {
@@ -362,8 +378,7 @@ class AnnotationSchema:
                     },
                     'radius': {
                         'type': 'number',
-                        'minimum': 0,
-                        'exclusiveMinimum': True,
+                        'exclusiveMinimum': 0,
                     },
                     'colorRange': colorRangeSchema,
                     'rangeValues': rangeValueSchema,
@@ -388,7 +403,7 @@ class AnnotationSchema:
 
     griddataSchema = {
         'allOf': [
-            baseShapeSchema,
+            baseElementSchema,
             {
                 'type': 'object',
                 'properties': {
@@ -423,8 +438,7 @@ class AnnotationSchema:
                     },
                     'radius': {
                         'type': 'number',
-                        'minimum': 0,
-                        'exclusiveMinimum': True,
+                        'exclusiveMinimum': 0,
                         'description': 'radius used for heatmap interpretation',
                     },
                     'colorRange': colorRangeSchema,
@@ -468,53 +482,52 @@ class AnnotationSchema:
     }
 
     overlaySchema = {
-        '$schema': 'http://json-schema.org/schema#',
-        'type': 'object',
-        'properties': {
-            'type': {
-                'type': 'string',
-                'enum': ['imageoverlay']
-            },
-            'girderId': {
-                'type': 'string',
-                'pattern': '^[0-9a-f]{24}$',
-                'description': 'Girder item ID containing the image to '
-                               'overlay.'
-            },
-            'opacity': {
-                'type': 'number',
-                'minimum': 0,
-                'maximum': 1,
-                'description': 'Default opacity for this image overlay. Must '
-                               'be between 0 and 1. Defaults to 1.'
-            },
-            'transform': {
+        'allOf': [
+            baseElementSchema,
+            {
                 'type': 'object',
-                'description': 'Specification for an affine transform of the '
-                               'image overlay. Includes a 2D transform matrix, '
-                               'an X offset and a Y offset.',
                 'properties': {
-                    'xoffset': {
-                        'type': 'number'
+                    'type': {
+                        'type': 'string',
+                        'enum': ['imageoverlay']
                     },
-                    'yoffset': {
-                        'type': 'number'
+                    'girderId': {
+                        'type': 'string',
+                        'pattern': '^[0-9a-f]{24}$',
+                        'description': 'Girder item ID containing the image to '
+                                       'overlay.'
                     },
-                    'matrix': transformArray
+                    'opacity': {
+                        'type': 'number',
+                        'minimum': 0,
+                        'maximum': 1,
+                        'description': 'Default opacity for this image overlay. Must '
+                                       'be between 0 and 1. Defaults to 1.'
+                    },
+                    'transform': {
+                        'type': 'object',
+                        'description': 'Specification for an affine transform of the '
+                                       'image overlay. Includes a 2D transform matrix, '
+                                       'an X offset and a Y offset.',
+                        'properties': {
+                            'xoffset': {
+                                'type': 'number'
+                            },
+                            'yoffset': {
+                                'type': 'number'
+                            },
+                            'matrix': transformArray
+                        },
+                    }
                 },
+                'required': ['girderId', 'type'],
+                'additionalProperties': False,
+                'description': 'An image overlay on top of the base resource.',
             },
-            'user': userSchema,
-            'label': labelSchema,
-            'group': groupSchema,
-        },
-        'required': ['girderId', 'type'],
-        'additionalProperties': True,
-        'description': 'An image to overlay onto another like an '
-                       'annotation.'
+        ],
     }
 
     annotationElementSchema = {
-        '$schema': 'http://json-schema.org/schema#',
         # Shape subtypes are mutually exclusive, so for efficiency, don't use
         # 'oneOf'
         'anyOf': [
@@ -536,7 +549,6 @@ class AnnotationSchema:
 
     annotationSchema = {
         '$schema': 'http://json-schema.org/schema#',
-        'id': '/girder/plugins/large_image/models/annotation',
         'type': 'object',
         'properties': {
             'name': {
@@ -576,9 +588,9 @@ class Annotation(AccessControlledModel):
     searching.
     """
 
-    validatorAnnotation = jsonschema.Draft4Validator(
+    validatorAnnotation = jsonschema.Draft6Validator(
         AnnotationSchema.annotationSchema)
-    validatorAnnotationElement = jsonschema.Draft4Validator(
+    validatorAnnotationElement = jsonschema.Draft6Validator(
         AnnotationSchema.annotationElementSchema)
     idRegex = re.compile('^[0-9a-f]{24}$')
     numberInstance = (int, float)
