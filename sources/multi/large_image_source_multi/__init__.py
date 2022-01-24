@@ -203,6 +203,34 @@ MultiSourceSchema = {
                         'items': {'type': 'string'},
                         'minItems': 1,
                     },
+                    'zStep': {
+                        'description':
+                            'Step value for multiple files included via '
+                            'pathPattern.  Applies to z or zValues',
+                        'type': 'integer',
+                        'exclusiveMinimum': 0,
+                    },
+                    'tStep': {
+                        'description':
+                            'Step value for multiple files included via '
+                            'pathPattern.  Applies to t or tValues',
+                        'type': 'integer',
+                        'exclusiveMinimum': 0,
+                    },
+                    'xyStep': {
+                        'description':
+                            'Step value for multiple files included via '
+                            'pathPattern.  Applies to x or xyValues',
+                        'type': 'integer',
+                        'exclusiveMinimum': 0,
+                    },
+                    'xStep': {
+                        'description':
+                            'Step value for multiple files included via '
+                            'pathPattern.  Applies to c or cValues',
+                        'type': 'integer',
+                        'exclusiveMinimum': 0,
+                    },
                     'position': {
                         'type': 'object',
                         'additionalProperties': False,
@@ -294,7 +322,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _defaultTileSize = 256
     _maxOpenHandles = 6
 
-    _validator = jsonschema.Draft4Validator(MultiSourceSchema)
+    _validator = jsonschema.Draft6Validator(MultiSourceSchema)
 
     def __init__(self, path, **kwargs):
         """
@@ -327,66 +355,67 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._basePath = Path(self._largeImagePath).parent
         self._collectFrames()
 
+    def _resolvePathPatterns(self, sources, source):
         """
-        self._pixelInfo = {}
-        try:
-            self._multi = glymur.Jp2k(largeImagePath)
-        except (glymur.jp2box.InvalidJp2kError, struct.error):
-            raise TileSourceError('File cannot be opened via Glymur and OpenJPEG.')
-        except FileNotFoundError:
-            if not os.path.isfile(self._largeImagePath):
-                raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise
-        glymur.set_option('lib.num_threads', multiprocessing.cpu_count())
-        self._multiHandles = queue.LifoQueue()
-        for _ in range(self._maxOpenHandles - 1):
-            self._multiHandles.put(None)
-        self._multiHandles.put(self._multi)
-        try:
-            self.sizeY, self.sizeX = self._multi.shape[:2]
-        except IndexError:
-            raise TileSourceError('File cannot be opened via Glymur and OpenJPEG.')
-        self.levels = int(self._multi.codestream.segment[2].num_res) + 1
-        self._minlevel = 0
-        self.tileWidth = self.tileHeight = 2 ** int(math.ceil(max(
-            math.log(float(self.sizeX)) / math.log(2) - self.levels + 1,
-            math.log(float(self.sizeY)) / math.log(2) - self.levels + 1)))
-        # Small and large tiles are both inefficient.  Large tiles don't work
-        # with some viewers (leaflet and Slide Atlas, for instance)
-        if self.tileWidth < self._minTileSize or self.tileWidth > self._maxTileSize:
-            self.tileWidth = self.tileHeight = min(
-                self._maxTileSize, max(self._minTileSize, self.tileWidth))
-            self.levels = int(math.ceil(math.log(float(max(
-                self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2))) + 1
-            self._minlevel = self.levels - self._multi.codestream.segment[2].num_res - 1
-        self._getAssociatedImages()
-        """
+        Given a source resolve pathPattern entries to specific paths.
+        Ensure that all paths exist.
 
-    def _resolvePathPatterns(self, sourceList):
+        :param sources: a list to append found sources to.
+        :param source: the specific source record with a pathPattern to
+            resolve.
         """
-        Given a list of sources, resolve pathPattern entries to specific paths.
+        kept = []
+        pattern = re.compile(source['pathPattern'])
+        basedir = self._basePath / source['path']
+        if (self._basePath.name == Path(self._largeImagePath).name and
+                (self._basePath.parent / source['path']).is_dir()):
+            basedir = self._basePath.parent / source['path']
+        basedir = basedir.resolve()
+        for entry in basedir.iterdir():
+            if pattern.search(entry.name):
+                if entry.is_file():
+                    kept.append((entry.name, entry))
+                elif entry.is_dir() and (entry / entry.name).is_file():
+                    kept.append((entry.name, entry / entry.name))
+        kept = [entry[-1] for entry in sorted(kept)]
+        for idx, entry in enumerate(kept):
+            subsource = copy.deepcopy(source)
+            subsource['path'] = entry
+            for axis in ['z', 't', 'xy', 'c']:
+                stepKey = '%sStep' % axis
+                valuesKey = '%sValues' % axis
+                if stepKey in source:
+                    if axis in source or valuesKey not in source:
+                        subsource[axis] = subsource.get(axis, 0) + idx * source[stepKey]
+                    else:
+                        subsource[valuesKey] = [
+                            val + idx * source[stepKey] for val in subsource[valuesKey]]
+            del subsource['pathPattern']
+            sources.append(subsource)
+
+    def _resolveFramePaths(self, sourceList):
+        """
+        Given a list of sources, resolve path and pathPattern entries to
+        specific paths.
         Ensure that all paths exist.
 
         :param sourceList: a list of source entries to resolve and check.
         :returns: sourceList: a expanded and checked list of sources.
         """
+        # we want to work with both _basePath / <path> and
+        # _basePath / .. / <path> / <name> to be compatible with Girder
+        # resource layouts.
         sources = []
         for source in sourceList:
             if source.get('pathPattern'):
-                kept = []
-                pattern = re.compile(source['pathPattern'])
-                for entry in (self._basePath / source['path']).resolve():
-                    if entry.is_file() and pattern.search(entry.name):
-                        kept.append((entry.name, entry))
-                kept.sort()
-                for _, entry in kept:
-                    subsource = copy.deepcopy(source)
-                    subsource['path'] = entry
-                    del subsource['pathPattern']
-                    sources.append(subsource)
+                self._resolvePathPatterns(sources, source)
             else:
                 source = copy.deepcopy(source)
                 source['path'] = self._basePath / source['path']
+                if not source['path'].is_file():
+                    altpath = self._basePath.parent / source['path'] / Path(source['path']).name
+                    if altpath.is_file():
+                        source['path'] = altpath
                 if not source['path'].is_file():
                     raise TileSourceFileNotFoundError(str(source['path']))
                 sources.append(source)
@@ -560,7 +589,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :param checkAll: if True, open all source files.
         """
-        self._sources = sources = self._resolvePathPatterns(self._info['sources'])
+        self._sources = sources = self._resolveFramePaths(self._info['sources'])
         self.logger.info('Sources: %r', sources)
 
         frameDict = {'byFrame': {}, 'byAxes': {}, 'axesAllowed': True}
