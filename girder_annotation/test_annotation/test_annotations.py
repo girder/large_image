@@ -3,6 +3,7 @@ import math
 import random
 from unittest import mock
 
+import jsonschema
 import pytest
 
 from . import girder_utilities as utilities
@@ -70,6 +71,10 @@ class TestLargeImageAnnotation:
         schema = annotation.AnnotationSchema
         assert schema.annotationSchema is not None
         assert schema.annotationElementSchema is not None
+
+    def testAnnotationSchemaIsValid(self):
+        schema = annotation.AnnotationSchema.annotationSchema
+        assert jsonschema.Draft6Validator.check_schema(schema) is None
 
     def testAnnotationCreate(self, admin):
         item = Item().createItem('sample', admin, utilities.namedFolder(admin, 'Public'))

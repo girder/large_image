@@ -522,6 +522,7 @@ class AnnotationSchema:
                 },
                 'required': ['girderId', 'type'],
                 'additionalProperties': False,
+                'patternProperties': baseShapePatternProperties,
                 'description': 'An image overlay on top of the base resource.',
             },
         ],
