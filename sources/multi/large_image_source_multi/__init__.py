@@ -18,6 +18,7 @@ from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
+from large_image.tilesource.utilities import _makeSameChannelDepth
 
 try:
     __version__ = get_distribution(__name__).version
@@ -372,14 +373,24 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             basedir = self._basePath.parent / source['path']
         basedir = basedir.resolve()
         for entry in basedir.iterdir():
-            if pattern.search(entry.name):
+            match = pattern.search(entry.name)
+            if match:
                 if entry.is_file():
-                    kept.append((entry.name, entry))
+                    kept.append((entry.name, entry, match))
                 elif entry.is_dir() and (entry / entry.name).is_file():
-                    kept.append((entry.name, entry / entry.name))
-        kept = [entry[-1] for entry in sorted(kept)]
-        for idx, entry in enumerate(kept):
+                    kept.append((entry.name, entry / entry.name, match))
+        for idx, (_, entry, match) in enumerate(sorted(kept)):
             subsource = copy.deepcopy(source)
+            # Use named match groups to augment source values.
+            for k, v in match.groupdict().items():
+                if v.isdigit():
+                    v = int(v)
+                    if k.endswith('1'):
+                        v -= 1
+                if '.' in k:
+                    subsource.setdefault(k.split('.', 1)[0], {})[k.split('.', 1)[1]] = v
+                else:
+                    subsource[k] = v
             subsource['path'] = entry
             for axis in ['z', 't', 'xy', 'c']:
                 stepKey = '%sStep' % axis
@@ -411,9 +422,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._resolvePathPatterns(sources, source)
             else:
                 source = copy.deepcopy(source)
-                source['path'] = self._basePath / source['path']
+                sourcePath = Path(source['path'])
+                source['path'] = self._basePath / sourcePath
                 if not source['path'].is_file():
-                    altpath = self._basePath.parent / source['path'] / Path(source['path']).name
+                    altpath = self._basePath.parent / sourcePath / sourcePath.name
                     if altpath.is_file():
                         source['path'] = altpath
                 if not source['path'].is_file():
@@ -448,9 +460,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         corners = numpy.array([[x0, y0, 1], [x1, y0, 1], [x0, y1, 1], [x1, y1, 1]])
         m = numpy.identity(3)
         m[0][0] = pos.get('s11', 1) * pos.get('scale', 1)
-        m[0][1] = pos.get('s12', 1) * pos.get('scale', 1)
+        m[0][1] = pos.get('s12', 0) * pos.get('scale', 1)
         m[0][2] = pos.get('x', 0)
-        m[1][0] = pos.get('s21', 1) * pos.get('scale', 1)
+        m[1][0] = pos.get('s21', 0) * pos.get('scale', 1)
         m[1][1] = pos.get('s22', 1) * pos.get('scale', 1)
         m[1][2] = pos.get('y', 0)
         if not numpy.array_equal(m, numpy.identity(3)):
@@ -462,8 +474,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         transcorners = numpy.dot(m, corners.T)
         bbox['left'] = min(transcorners[0])
         bbox['top'] = min(transcorners[1])
-        bbox['right'] = min(transcorners[0])
-        bbox['bottom'] = min(transcorners[1])
+        bbox['right'] = max(transcorners[0])
+        bbox['bottom'] = max(transcorners[1])
         return bbox
 
     def _axisKey(self, source, value, key):
@@ -590,7 +602,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param checkAll: if True, open all source files.
         """
         self._sources = sources = self._resolveFramePaths(self._info['sources'])
-        self.logger.info('Sources: %r', sources)
+        self.logger.debug('Sources: %r', sources)
 
         frameDict = {'byFrame': {}, 'byAxes': {}, 'axesAllowed': True}
         numChecked = 0
@@ -722,6 +734,39 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             })
         return result
 
+    def _mergeTiles(self, base, tile, x, y):
+        """
+        Add a tile to an existing tile.  The existing tile is expanded as
+        needed, and the number of channels will always be the greater of the
+        two.
+
+        :param base: numpy array base tile.  May be None.  May be modified.
+        :param tile: numpy tile to add.
+        :param x: location to add the tile.
+        :param y: location to add the tile.
+        :returns: a numpy tile.
+        """
+        # Replace non blank pixels, aggregating opacity appropriately
+        x = int(round(x))
+        y = int(round(y))
+        if base is None and not x and not y:
+            return tile
+        if base is None:
+            base = numpy.zeros((0, 0, tile.shape[2]), dtype=tile.dtype)
+        base, tile = _makeSameChannelDepth(base, tile)
+        if base.shape[0] < tile.shape[0] + y:
+            vfill = numpy.zeros((tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]))
+            if base.shape[2] == 2 or base.shape[2] == 4:
+                vfill[:, :, -1] = 1
+            base = numpy.vstack((base, vfill))
+        if base.shape[1] < tile.shape[1] + x:
+            hfill = numpy.zeros((base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]))
+            if base.shape[2] == 2 or base.shape[2] == 4:
+                hfill[:, :, -1] = 1
+            base = numpy.hstack((base, hfill))
+        base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
+        return base
+
     def _addSourceToTile(self, tile, sourceEntry, corners, scale):
         """
         Add a source to the current tile.
@@ -741,20 +786,22 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         source = self._sources[sourceEntry['sourcenum']]
         ts = large_image.open(source['path'], **sourceEntry['kwargs'], format=TILE_FORMAT_NUMPY)
         # If tile is outside of bounding box, skip it
-        if 'bbox' in source:
-            bbox = source['bbox']
-            if (corners[2][0] <= bbox['left'] or corners[0][0] >= bbox['right'] or
-                    corners[2][1] <= bbox['top'] or corners[0][1] >= bbox['bottom']):
-                return tile
-        transform = source.get('bbox', {}).get('transform')
+        bbox = source['bbox']
+        if (corners[2][0] <= bbox['left'] or corners[0][0] >= bbox['right'] or
+                corners[2][1] <= bbox['top'] or corners[0][1] >= bbox['bottom']):
+            return tile
+        transform = bbox.get('transform')
         srccorners = (
             list(numpy.dot(bbox['inverse'], numpy.array(corners).T).T)
-            if transform else corners)
+            if transform is not None else corners)
+        x = y = 0
         # If there is no transform or the diagonals are positive and there is
         #   no sheer, use getRegion with an appropriate size (be wary of edges)
         if (transform is None or
                 transform[0][0] > 0 and transform[0][1] == 0 and
                 transform[1][0] == 0 and transform[1][1] > 0):
+            scaleX = transform[0][0] if transform is not None else 1
+            scaleY = transform[1][1] if transform is not None else 1
             region = {
                 'left': srccorners[0][0], 'top': srccorners[0][1],
                 'right': srccorners[2][0], 'bottom': srccorners[2][1]
@@ -763,7 +810,28 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'maxWidth': (corners[2][0] - corners[0][0]) // scale,
                 'maxHeight': (corners[2][1] - corners[0][1]) // scale,
             }
-            sourceTile, _ = ts.getRegion(region=region, output=output)
+            if region['left'] < 0:
+                x -= region['left'] * scaleX // scale
+                output['maxWidth'] += int(region['left'] * scaleX // scale)
+                region['left'] = 0
+            if region['top'] < 0:
+                y -= region['top'] * scaleY // scale
+                output['maxHeight'] += int(region['top'] * scaleY // scale)
+                region['top'] = 0
+            if region['right'] > source['metadata']['sizeX']:
+                output['maxWidth'] -= int(
+                    (region['right'] - source['metadata']['sizeX']) * scaleX // scale)
+                region['right'] = source['metadata']['sizeX']
+            if region['bottom'] > source['metadata']['sizeY']:
+                output['maxHeight'] -= int(
+                    (region['bottom'] - source['metadata']['sizeY']) * scaleY // scale)
+                region['bottom'] = source['metadata']['sizeY']
+            for key in region:
+                region[key] = int(round(region[key]))
+            self.logger.debug('getRegion: ts: %r, region: %r, output: %r', ts, region, output)
+            sourceTile, _ = ts.getRegion(
+                region=region, output=output, frame=source.get('frame', 0),
+                format=TILE_FORMAT_NUMPY)
         # Otherwise, get an area twice as big as needed and use
         #  scipy.ndimage.affine_transform to transform it
         else:
@@ -771,10 +839,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError('Not implemented')
         # Crop
         # ##DWM::
-        # Replace non blank pixels, aggregating opacity appropriately
-        if tile is None:
-            tile = sourceTile
-        # ##DWM::
+        tile = self._mergeTiles(tile, sourceTile, x, y)
         return tile
 
     @methodcache()
@@ -784,17 +849,21 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         scale = 2 ** (self.levels - 1 - z)
         corners = [[
             x * self.tileWidth * scale,
-            y * self.tileHeight * scale
+            y * self.tileHeight * scale,
+            1,
         ], [
             min((x + 1) * self.tileWidth * scale, self.sizeX),
-            y * self.tileHeight * scale
+            y * self.tileHeight * scale,
+            1,
         ], [
             min((x + 1) * self.tileWidth * scale, self.sizeX),
-            min((y + 1) * self.tileHeight * scale, self.sizeY)
+            min((y + 1) * self.tileHeight * scale, self.sizeY),
+            1,
         ], [
             x * self.tileWidth * scale,
-            min((y + 1) * self.tileHeight * scale, self.sizeY)],
-        ]
+            min((y + 1) * self.tileHeight * scale, self.sizeY),
+            1,
+        ]]
         sourceList = self._frames[frame]['sources']
         tile = None
         # If the first source does not completely cover the output tile or uses
@@ -807,7 +876,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 cx < firstsource['bbox']['left'] or
                 cx > firstsource['bbox']['right'] or
                 cy < firstsource['bbox']['top'] or
-                cy > firstsource['bbox']['bottom'] for cx, cy in corners)
+                cy > firstsource['bbox']['bottom'] for cx, cy, _ in corners)
         if fill:
             colors = self._info.get('backgroundColor')
             if colors:
@@ -815,6 +884,11 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Add each source to the tile
         for sourceEntry in sourceList:
             tile = self._addSourceToTile(tile, sourceEntry, corners, scale)
+        if tile is None:
+            # ##DWM:: number of channels?
+            colors = self._info.get('backgroundColor', [0])
+            if colors:
+                tile = numpy.full((self.tileWidth, self.tileHeight, len(colors)), colors)
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
