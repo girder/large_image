@@ -14,6 +14,7 @@
 #  limitations under the License.
 ##############################################################################
 
+import copy
 import datetime
 import enum
 import re
@@ -40,6 +41,18 @@ from .annotationelement import Annotationelement
 
 # Some arrays longer than this are validated using numpy rather than jsonschema
 VALIDATE_ARRAY_LENGTH = 1000
+
+
+def extendSchema(base, add):
+    extend = copy.deepcopy(base)
+    for key in add:
+        if key == 'required' and 'required' in base:
+            extend[key] = sorted(set(extend[key]) | set(add[key]))
+        elif key != 'properties' and 'properties' in base:
+            extend[key] = add[key]
+    if 'properties' in add:
+        extend['properties'].update(add['properties'])
+    return extend
 
 
 class AnnotationSchema:
@@ -110,8 +123,7 @@ class AnnotationSchema:
             },
             'fontSize': {
                 'type': 'number',
-                'minimum': 0,
-                'exclusiveMinimum': True,
+                'exclusiveMinimum': 0,
             },
             'color': colorSchema,
         },
@@ -121,9 +133,7 @@ class AnnotationSchema:
 
     groupSchema = {'type': 'string'}
 
-    baseShapeSchema = {
-        '$schema': 'http://json-schema.org/schema#',
-        'id': '/girder/plugins/large_image/models/base_shape',
+    baseElementSchema = {
         'type': 'object',
         'properties': {
             'id': {
@@ -134,325 +144,245 @@ class AnnotationSchema:
             # schema free field for users to extend annotations
             'user': userSchema,
             'label': labelSchema,
-            'lineColor': colorSchema,
-            'lineWidth': {
-                'type': 'number',
-                'minimum': 0
-            },
             'group': groupSchema
         },
         'required': ['type'],
         'additionalProperties': True
     }
-    baseShapePatternProperties = {
-        '^%s$' % propertyName: {}
-        for propertyName in baseShapeSchema['properties']
-        if propertyName != 'type'
-    }
+    baseShapeSchema = extendSchema(baseElementSchema, {
+        'properties': {
+            'lineColor': colorSchema,
+            'lineWidth': {
+                'type': 'number',
+                'minimum': 0
+            },
+        },
+    })
 
-    pointShapeSchema = {
-        'allOf': [
-            baseShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['point']
-                    },
-                    'center': coordSchema,
-                    'fillColor': colorSchema
-                },
-                'required': ['type', 'center'],
-                'patternProperties': baseShapePatternProperties,
-                'additionalProperties': False
-            }
-        ]
-    }
+    pointShapeSchema = extendSchema(baseShapeSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['point']
+            },
+            'center': coordSchema,
+            'fillColor': colorSchema
+        },
+        'required': ['type', 'center'],
+        'additionalProperties': False
+    })
 
-    arrowShapeSchema = {
-        'allOf': [
-            baseShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['arrow']
-                    },
-                    'points': {
-                        'type': 'array',
-                        'items': coordSchema,
-                        'minItems': 2,
-                        'maxItems': 2,
-                    },
-                    'fillColor': colorSchema
-                },
-                'description': 'The first point is the head of the arrow',
-                'required': ['type', 'points'],
-                'patternProperties': baseShapePatternProperties,
-                'additionalProperties': False
-            }
-        ]
-    }
+    arrowShapeSchema = extendSchema(baseShapeSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['arrow']
+            },
+            'points': {
+                'type': 'array',
+                'items': coordSchema,
+                'minItems': 2,
+                'maxItems': 2,
+            },
+            'fillColor': colorSchema
+        },
+        'description': 'The first point is the head of the arrow',
+        'required': ['type', 'points'],
+        'additionalProperties': False
+    })
 
-    circleShapeSchema = {
-        'allOf': [
-            baseShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['circle']
-                    },
-                    'center': coordSchema,
-                    'radius': {
-                        'type': 'number',
-                        'minimum': 0
-                    },
-                    'fillColor': colorSchema
-                },
-                'required': ['type', 'center', 'radius'],
-                'patternProperties': baseShapePatternProperties,
-                'additionalProperties': False
-            }
-        ]
-    }
+    circleShapeSchema = extendSchema(baseShapeSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['circle']
+            },
+            'center': coordSchema,
+            'radius': {
+                'type': 'number',
+                'minimum': 0
+            },
+            'fillColor': colorSchema
+        },
+        'required': ['type', 'center', 'radius'],
+        'additionalProperties': False
+    })
 
-    polylineShapeSchema = {
-        'allOf': [
-            baseShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['polyline']
-                    },
-                    'points': {
-                        'type': 'array',
-                        'items': coordSchema,
-                        'minItems': 2,
-                    },
-                    'fillColor': colorSchema,
-                    'closed': {
-                        'type': 'boolean',
-                        'description': 'polyline is open if closed flag is '
-                                       'not specified'
-                    },
-                },
-                'required': ['type', 'points'],
-                'patternProperties': baseShapePatternProperties,
-                'additionalProperties': False
-            }
-        ]
-    }
+    polylineShapeSchema = extendSchema(baseShapeSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['polyline']
+            },
+            'points': {
+                'type': 'array',
+                'items': coordSchema,
+                'minItems': 2,
+            },
+            'fillColor': colorSchema,
+            'closed': {
+                'type': 'boolean',
+                'description': 'polyline is open if closed flag is '
+                               'not specified'
+            },
+        },
+        'required': ['type', 'points'],
+        'additionalProperties': False
+    })
 
-    baseRectangleShapeSchema = {
-        'allOf': [
-            baseShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {'type': 'string'},
-                    'center': coordSchema,
-                    'width': {
-                        'type': 'number',
-                        'minimum': 0
-                    },
-                    'height': {
-                        'type': 'number',
-                        'minimum': 0
-                    },
-                    'rotation': {
-                        'type': 'number',
-                        'description': 'radians counterclockwise around normal',
-                    },
-                    'normal': coordSchema,
-                    'fillColor': colorSchema
-                },
-                'decription': 'normal is the positive z-axis unless otherwise '
-                              'specified',
-                'required': ['type', 'center', 'width', 'height'],
-                # 'patternProperties': baseShapePatternProperties,
-                'additionalProperties': True,
-            }
-        ]
-    }
-    baseRectangleShapePatternProperties = {
-        '^%s$' % propertyName: {}
-        for propertyName in baseRectangleShapeSchema['allOf'][1]['properties']
-        if propertyName != 'type'
-    }
-    baseRectangleShapePatternProperties.update(baseShapePatternProperties)
-    rectangleShapeSchema = {
-        'allOf': [
-            baseRectangleShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['rectangle']
-                    },
-                },
-                'required': ['type'],
-                'patternProperties': baseRectangleShapePatternProperties,
-                'additionalProperties': False
-            }
-        ]
-    }
-    rectangleGridShapeSchema = {
-        'allOf': [
-            baseRectangleShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['rectanglegrid']
-                    },
-                    'widthSubdivisions': {
-                        'type': 'integer',
-                        'minimum': 1
-                    },
-                    'heightSubdivisions': {
-                        'type': 'integer',
-                        'minimum': 1
-                    },
-                },
-                'required': ['type', 'widthSubdivisions', 'heightSubdivisions'],
-                'patternProperties': baseRectangleShapePatternProperties,
-                'additionalProperties': False,
-            }
-        ]
-    }
-    ellipseShapeSchema = {
-        'allOf': [
-            baseRectangleShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['ellipse']
-                    },
-                },
-                'required': ['type'],
-                'patternProperties': baseRectangleShapePatternProperties,
-                'additionalProperties': False
-            }
-        ]
-    }
+    baseRectangleShapeSchema = extendSchema(baseShapeSchema, {
+        'properties': {
+            'type': {'type': 'string'},
+            'center': coordSchema,
+            'width': {
+                'type': 'number',
+                'minimum': 0
+            },
+            'height': {
+                'type': 'number',
+                'minimum': 0
+            },
+            'rotation': {
+                'type': 'number',
+                'description': 'radians counterclockwise around normal',
+            },
+            'normal': coordSchema,
+            'fillColor': colorSchema
+        },
+        'decription': 'normal is the positive z-axis unless otherwise '
+                      'specified',
+        'required': ['type', 'center', 'width', 'height'],
+    })
 
-    heatmapSchema = {
-        'allOf': [
-            baseShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['heatmap']
-                    },
-                    'points': {
-                        'type': 'array',
-                        'items': coordValueSchema,
-                    },
-                    'radius': {
-                        'type': 'number',
-                        'minimum': 0,
-                        'exclusiveMinimum': True,
-                    },
-                    'colorRange': colorRangeSchema,
-                    'rangeValues': rangeValueSchema,
-                    'normalizeRange': {
-                        'type': 'boolean',
-                        'description':
-                            'If true, rangeValues are on a scale of 0 to 1 '
-                            'and map to the minimum and maximum values on the '
-                            'data.  If false (the default), the rangeValues '
-                            'are the actual data values.',
-                    },
-                },
-                'required': ['type', 'points'],
-                'patternProperties': baseShapePatternProperties,
-                'additionalProperties': False,
+    rectangleShapeSchema = extendSchema(baseRectangleShapeSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['rectangle']
+            },
+        },
+        'additionalProperties': False
+    })
+    rectangleGridShapeSchema = extendSchema(baseRectangleShapeSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['rectanglegrid']
+            },
+            'widthSubdivisions': {
+                'type': 'integer',
+                'minimum': 1
+            },
+            'heightSubdivisions': {
+                'type': 'integer',
+                'minimum': 1
+            },
+        },
+        'required': ['type', 'widthSubdivisions', 'heightSubdivisions'],
+        'additionalProperties': False,
+    })
+    ellipseShapeSchema = extendSchema(baseRectangleShapeSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['ellipse']
+            },
+        },
+        'required': ['type'],
+        'additionalProperties': False
+    })
+
+    heatmapSchema = extendSchema(baseElementSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['heatmap']
+            },
+            'points': {
+                'type': 'array',
+                'items': coordValueSchema,
+            },
+            'radius': {
+                'type': 'number',
+                'exclusiveMinimum': 0,
+            },
+            'colorRange': colorRangeSchema,
+            'rangeValues': rangeValueSchema,
+            'normalizeRange': {
+                'type': 'boolean',
                 'description':
-                    'ColorRange and rangeValues should have a one-to-one '
-                    'correspondence.',
-            }
-        ]
-    }
+                    'If true, rangeValues are on a scale of 0 to 1 '
+                    'and map to the minimum and maximum values on the '
+                    'data.  If false (the default), the rangeValues '
+                    'are the actual data values.',
+            },
+        },
+        'required': ['type', 'points'],
+        'additionalProperties': False,
+        'description':
+            'ColorRange and rangeValues should have a one-to-one '
+            'correspondence.',
+    })
 
-    griddataSchema = {
-        'allOf': [
-            baseShapeSchema,
-            {
-                'type': 'object',
-                'properties': {
-                    'type': {
-                        'type': 'string',
-                        'enum': ['griddata']
-                    },
-                    'origin': coordSchema,
-                    'dx': {
-                        'type': 'number',
-                        'description': 'grid spacing in the x direction',
-                    },
-                    'dy': {
-                        'type': 'number',
-                        'description': 'grid spacing in the y direction',
-                    },
-                    'gridWidth': {
-                        'type': 'integer',
-                        'minimum': 1,
-                        'description': 'The number of values across the width of the grid',
-                    },
-                    'values': {
-                        'type': 'array',
-                        'items': {'type': 'number'},
-                        'description':
-                            'The values of the grid.  This must have a '
-                            'multiple of gridWidth entries',
-                    },
-                    'interpretation': {
-                        'type': 'string',
-                        'enum': ['heatmap', 'contour', 'choropleth']
-                    },
-                    'radius': {
-                        'type': 'number',
-                        'minimum': 0,
-                        'exclusiveMinimum': True,
-                        'description': 'radius used for heatmap interpretation',
-                    },
-                    'colorRange': colorRangeSchema,
-                    'rangeValues': rangeValueSchema,
-                    'normalizeRange': {
-                        'type': 'boolean',
-                        'description':
-                            'If true, rangeValues are on a scale of 0 to 1 '
-                            'and map to the minimum and maximum values on the '
-                            'data.  If false (the default), the rangeValues '
-                            'are the actual data values.',
-                    },
-                    'stepped': {'type': 'boolean'},
-                    'minColor': colorSchema,
-                    'maxColor': colorSchema,
-                },
-                'required': ['type', 'values', 'gridWidth'],
-                'patternProperties': baseShapePatternProperties,
-                'additionalProperties': False,
+    griddataSchema = extendSchema(baseElementSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['griddata']
+            },
+            'origin': coordSchema,
+            'dx': {
+                'type': 'number',
+                'description': 'grid spacing in the x direction',
+            },
+            'dy': {
+                'type': 'number',
+                'description': 'grid spacing in the y direction',
+            },
+            'gridWidth': {
+                'type': 'integer',
+                'minimum': 1,
+                'description': 'The number of values across the width of the grid',
+            },
+            'values': {
+                'type': 'array',
+                'items': {'type': 'number'},
                 'description':
-                    'ColorRange and rangeValues should have a one-to-one '
-                    'correspondence except for stepped contours where '
-                    'rangeValues needs one more entry than colorRange.  '
-                    'minColor and maxColor are the colors applies to values '
-                    'beyond the ranges in rangeValues.',
-            }
-        ]
-    }
+                    'The values of the grid.  This must have a '
+                    'multiple of gridWidth entries',
+            },
+            'interpretation': {
+                'type': 'string',
+                'enum': ['heatmap', 'contour', 'choropleth']
+            },
+            'radius': {
+                'type': 'number',
+                'exclusiveMinimum': 0,
+                'description': 'radius used for heatmap interpretation',
+            },
+            'colorRange': colorRangeSchema,
+            'rangeValues': rangeValueSchema,
+            'normalizeRange': {
+                'type': 'boolean',
+                'description':
+                    'If true, rangeValues are on a scale of 0 to 1 '
+                    'and map to the minimum and maximum values on the '
+                    'data.  If false (the default), the rangeValues '
+                    'are the actual data values.',
+            },
+            'stepped': {'type': 'boolean'},
+            'minColor': colorSchema,
+            'maxColor': colorSchema,
+        },
+        'required': ['type', 'values', 'gridWidth'],
+        'additionalProperties': False,
+        'description':
+            'ColorRange and rangeValues should have a one-to-one '
+            'correspondence except for stepped contours where '
+            'rangeValues needs one more entry than colorRange.  '
+            'minColor and maxColor are the colors applies to values '
+            'beyond the ranges in rangeValues.',
+    })
 
     transformArray = {
         'type': 'array',
@@ -467,9 +397,7 @@ class AnnotationSchema:
                        'image overlay.'
     }
 
-    overlaySchema = {
-        '$schema': 'http://json-schema.org/schema#',
-        'type': 'object',
+    overlaySchema = extendSchema(baseElementSchema, {
         'properties': {
             'type': {
                 'type': 'string',
@@ -502,19 +430,14 @@ class AnnotationSchema:
                     },
                     'matrix': transformArray
                 },
-            },
-            'user': userSchema,
-            'label': labelSchema,
-            'group': groupSchema,
+            }
         },
         'required': ['girderId', 'type'],
-        'additionalProperties': True,
-        'description': 'An image to overlay onto another like an '
-                       'annotation.'
-    }
+        'additionalProperties': False,
+        'description': 'An image overlay on top of the base resource.',
+    })
 
     annotationElementSchema = {
-        '$schema': 'http://json-schema.org/schema#',
         # Shape subtypes are mutually exclusive, so for efficiency, don't use
         # 'oneOf'
         'anyOf': [
@@ -536,7 +459,6 @@ class AnnotationSchema:
 
     annotationSchema = {
         '$schema': 'http://json-schema.org/schema#',
-        'id': '/girder/plugins/large_image/models/annotation',
         'type': 'object',
         'properties': {
             'name': {
@@ -576,9 +498,9 @@ class Annotation(AccessControlledModel):
     searching.
     """
 
-    validatorAnnotation = jsonschema.Draft4Validator(
+    validatorAnnotation = jsonschema.Draft6Validator(
         AnnotationSchema.annotationSchema)
-    validatorAnnotationElement = jsonschema.Draft4Validator(
+    validatorAnnotationElement = jsonschema.Draft6Validator(
         AnnotationSchema.annotationElementSchema)
     idRegex = re.compile('^[0-9a-f]{24}$')
     numberInstance = (int, float)
