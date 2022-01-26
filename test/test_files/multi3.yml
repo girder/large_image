@@ -1,0 +1,9 @@
+---
+name: Multi orientation
+description: A test multi file
+scale:
+  mm_x: 0.0005
+  mm_y: 0.0005
+sources:
+  - path: .
+    pathPattern: 'test_orient(?P<z1>[1-8])\.tif'

@@ -45,6 +45,7 @@ setup(
     install_requires=[
         'jsonschema',
         'large-image>=1.0.0',
+        'pyyaml',
         'scipy',
     ],
     extras_require={

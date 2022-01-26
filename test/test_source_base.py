@@ -30,6 +30,9 @@ SourceAndFiles = {
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         # we should only test this with a projection
         'skipTiles': r''},
+    'multi': {
+        'read': r'\.(yml|yaml)$',
+    },
     'nd2': {'read': r'\.(nd2)$'},
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
