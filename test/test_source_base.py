@@ -202,3 +202,9 @@ def testExpanduserPath():
         userPath = '~' + os.sep + absPath[len(userDir):]
         assert large_image.canRead(userPath)
         assert large_image.canRead(Path(userPath))
+
+
+def testClassRepr():
+    imagePath = datastore.fetch('sample_image.ptif')
+    ts = large_image.open(imagePath)
+    assert 'sample_image.ptif' in repr(ts)

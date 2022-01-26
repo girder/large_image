@@ -134,6 +134,9 @@ class TileSource:
             except TypeError:
                 raise exceptions.TileSourceError('Style is not a valid json object.')
 
+    def __repr__(self):
+        return self.getState()
+
     @staticmethod
     def getLRUHash(*args, **kwargs):
         """
