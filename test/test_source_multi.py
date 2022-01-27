@@ -7,6 +7,18 @@ from . import utilities
 from .datastore import datastore
 
 
+@pytest.fixture
+def multiSourceImagePath():
+    """
+    Make sure we have the components for the multi_source.yml test.
+    """
+    datastore.fetch('TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs')
+    datastore.fetch('DDX58_AXL_EGFR_well2_XY01.ome.tif')
+    datastore.fetch('ITGA3Hi_export_crop2.nd2')
+    datastore.fetch('sample_Easy1.png')
+    yield datastore.fetch('multi_source.yml')
+
+
 @pytest.mark.parametrize('filename', [
     'multi1.yml',
     'multi2.yml',
@@ -58,8 +70,8 @@ def testTilesFromMultiSimpleScaling():
         utilities.checkTilesZXY(source, tileMetadata, tileParams={'frame': frame})
 
 
-def testTilesFromMultiMultiSource():
-    imagePath = datastore.fetch('multi_source.yml')
+def testTilesFromMultiMultiSource(multiSourceImagePath):
+    imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)
     tileMetadata = source.getMetadata()
     assert tileMetadata['tileWidth'] == 256
@@ -73,15 +85,15 @@ def testTilesFromMultiMultiSource():
     utilities.checkTilesZXY(source, tileMetadata, tileParams={'frame': 50})
 
 
-def testInternalMetadata():
-    imagePath = datastore.fetch('multi_source.yml')
+def testInternalMetadata(multiSourceImagePath):
+    imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'frames' in metadata
 
 
-def testAssociatedImages():
-    imagePath = datastore.fetch('multi_source.yml')
+def testAssociatedImages(multiSourceImagePath):
+    imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)
     assert 'label' in source.getAssociatedImagesList()
     image, mimeType = source.getAssociatedImage('label')
