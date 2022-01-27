@@ -14,6 +14,7 @@ rm _build 2>/dev/null || true
 ln -s ../build/docs-work _build
 
 large_image_converter --help > _build/large_image_converter.txt
+python -c 'from girder_large_image_annotation.models import annotation;import json;print(json.dumps(annotation.AnnotationSchema.annotationSchema, indent=2))' > _build/annotation_schema.json
 
 sphinx-apidoc -f -o _build/large_image ../large_image
 sphinx-apidoc -f -o _build/large_image_source_bioformats ../sources/bioformats/large_image_source_bioformats

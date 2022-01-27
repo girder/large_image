@@ -1,9 +1,6 @@
 Annotation Schema
 =================
 
-The full schema can be obtained by calling the Girder endpoint of
-``GET`` ``/annotation/schema``.
-
 An annotation consists of a basic structure which includes a free-form
 ``attributes`` object and a list of ``elements``. The elements are
 strictly specified by the schema and are mostly limited to a set of defined
@@ -388,3 +385,9 @@ A sample that shows off a valid annotation:
       "heightSubdivisions": 4
     }]
   }
+
+Full Schema
+-----------
+
+The full schema can be obtained by calling the Girder endpoint of
+``GET`` ``/annotation/schema``.
