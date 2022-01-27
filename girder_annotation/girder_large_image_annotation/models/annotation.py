@@ -437,6 +437,63 @@ class AnnotationSchema:
         'description': 'An image overlay on top of the base resource.',
     })
 
+    segmentsToColorSchema = {
+        'type': 'array',
+        'items': colorSchema,
+        'description': 'An array where the indices correspond to pixel '
+                       'values in the pixel map image, and the values '
+                       'correspond to colors.'
+    }
+
+    categoryColorMap = {
+        'type': 'object',
+        'properties': {
+            'segments': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description': 'An array where the indices correspond to '
+                               'pixel values in the pixel map image, and the '
+                               'values correspond to key values in the '
+                               'colormap object.'
+            },
+            'colormap': {
+                'type': 'object',
+                'additionalProperties': colorSchema,
+                'description': 'An object whose keys represent category '
+                               'names, and whose values are color strings. '
+                               'This map is used together with the segments '
+                               'array to correctly color regions of the '
+                               'pixelmap.'
+            }
+        },
+        'additionalProperties': False,
+        'required': ['segments', 'colormap'],
+    }
+
+    pixelMapDataSchema = {
+        'oneOf': [
+            segmentsToColorSchema,
+            categoryColorMap,
+        ],
+    }
+
+    tiledPixelMapSchema = extendSchema(overlaySchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['tiledpixelmap'],
+            },
+            'data': pixelMapDataSchema,
+            'boundaries': {
+                'type': 'boolean',
+                'description': 'True if the boundaries of the pixelmap regions have '
+                               'their own value in the data or segments array.'
+            },
+        },
+        'required': ['data', 'boundaries'],
+        'description': 'A tiled pixelmap to overlay onto a base resource.'
+    })
+
     annotationElementSchema = {
         # Shape subtypes are mutually exclusive, so for efficiency, don't use
         # 'oneOf'
@@ -454,6 +511,7 @@ class AnnotationSchema:
             rectangleShapeSchema,
             rectangleGridShapeSchema,
             overlaySchema,
+            tiledPixelMapSchema,
         ]
     }
 
