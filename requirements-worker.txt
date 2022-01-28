@@ -2,6 +2,7 @@
 -e sources/deepzoom
 -e sources/dummy
 -e sources/gdal
+-e sources/multi
 -e sources/nd2
 -e sources/openjpeg
 -e sources/openslide

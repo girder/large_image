@@ -72,6 +72,9 @@ registry = {
     # Geospatial file without a projection
     # Source: generated from geojs oahu sample and a script
     'oahu-dense.tiff': 'sha512:414b7807f14991d6f8229134ad6ccbc2cc2d4b05423ccebfd3ede7d7323dfcf04ef1a7b2c2b4c45c31f8a36bccd390782af3e7d3e99f01f1b95650c5da1f122b',  # noqa
+    # Multi source file using different sources
+    # Source: manually generated.
+    'multi_source.yml': 'sha512:81d7768b06eca6903082daa5b91706beaac8557ba4cede7f826524303df69a33478d6bb205c56af7ee2b45cd7d75897cc4b5704f743ddbf71bb3537ed3b9e8a8',  # noqa
 }
 
 

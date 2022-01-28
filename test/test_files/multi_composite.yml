@@ -1,0 +1,50 @@
+---
+name: Multi orientation
+description: A test multi file
+scale:
+  mm_x: 0.0005
+  mm_y: 0.0005
+width: 360
+height: 360
+sources:
+  - name: First image
+    path: ./test_orient1.tif
+    z: 0
+    position:
+      x: 0
+      y: 0
+  - path: ./test_orient2.tif
+    z: 0
+    position:
+      x: 180
+      y: 0
+  - path: ./test_orient3.tif
+    z: 0
+    position:
+      x: 0
+      y: 180
+  - path: ./test_orient4.tif
+    z: 0
+    position:
+      x: 180
+      y: 180
+  - path: ./test_orient5.tif
+    z: 1
+    position:
+      x: 0
+      y: 0
+  - path: ./test_orient6.tif
+    z: 1
+    position:
+      x: 180
+      y: 0
+  - path: ./test_orient7.tif
+    z: 1
+    position:
+      x: 0
+      y: 180
+  - path: ./test_orient8.tif
+    z: 1
+    position:
+      x: 180
+      y: 180

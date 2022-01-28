@@ -13,6 +13,9 @@ from .datastore import datastore, registry
 # In general, if there is something in skipTiles, the reader should be improved
 # to either indicate that the file can't be read or changed to handle reading
 # with correct exceptions.
+# 'skip' is used to exclude testing specific paths.  This might be necessary
+# if a file is dependent on other files as these generalized tests don't ensure
+# a download order.
 SourceAndFiles = {
     'bioformats': {
         'read': r'\.(czi|jp2|svs|scn)$',
@@ -30,6 +33,10 @@ SourceAndFiles = {
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         # we should only test this with a projection
         'skipTiles': r''},
+    'multi': {
+        'read': r'\.(yml|yaml)$',
+        'skip': r'(multi_source\.yml)$',
+    },
     'nd2': {'read': r'\.(nd2)$'},
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
@@ -88,6 +95,8 @@ def testBaseFileNotFound():
 @pytest.mark.parametrize('source', SourceAndFiles)
 def testSourcesCanRead(source, filename):
     sourceInfo = SourceAndFiles[source]
+    if re.search(sourceInfo.get('skip', r'^$'), filename):
+        pytest.skip('this file needs more complex tests')
     canRead = sourceInfo.get('any') or (
         re.search(sourceInfo.get('read', r'^$'), filename) and
         not re.search(sourceInfo.get('noread', r'^$'), filename))
@@ -101,6 +110,8 @@ def testSourcesCanRead(source, filename):
 @pytest.mark.parametrize('source', SourceAndFiles)
 def testSourcesCanReadPath(source, filename):
     sourceInfo = SourceAndFiles[source]
+    if re.search(sourceInfo.get('skip', r'^$'), filename):
+        pytest.skip('this file needs more complex tests')
     canRead = sourceInfo.get('any') or (
         re.search(sourceInfo.get('read', r'^$'), filename) and
         not re.search(sourceInfo.get('noread', r'^$'), filename))
@@ -114,6 +125,8 @@ def testSourcesCanReadPath(source, filename):
 @pytest.mark.parametrize('source', SourceAndFiles)
 def testSourcesTilesAndMethods(source, filename):
     sourceInfo = SourceAndFiles[source]
+    if re.search(sourceInfo.get('skip', r'^$'), filename):
+        pytest.skip('this file needs more complex tests')
     canRead = sourceInfo.get('any') or (
         re.search(sourceInfo.get('read', r'^$'), filename) and
         not re.search(sourceInfo.get('noread', r'^$'), filename))

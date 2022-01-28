@@ -31,6 +31,8 @@ cd "$ROOTPATH/sources/gdal"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/mapnik"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
+cd "$ROOTPATH/sources/multi"
+pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/nd2"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/ometiff"

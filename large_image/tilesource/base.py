@@ -20,9 +20,10 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          TileOutputPILFormat, dtypeToGValue)
 from .tiledict import LazyTileDict
 from .utilities import (_encodeImage, _gdalParameters,  # noqa: F401
-                        _imageToNumpy, _imageToPIL, _letterboxImage, _vipsCast,
-                        _vipsParameters, dictToEtree, etreeToDict,
-                        getPaletteColors, nearPowerOfTwo)
+                        _imageToNumpy, _imageToPIL, _letterboxImage,
+                        _makeSameChannelDepth, _vipsCast, _vipsParameters,
+                        dictToEtree, etreeToDict, getPaletteColors,
+                        nearPowerOfTwo)
 
 
 class TileSource:
@@ -1668,12 +1669,8 @@ class TileSource:
                 raise exceptions.TileSourceError(
                     'Insufficient memory to get region of %d x %d pixels.' % (
                         width, height))
-        if subimage.shape[2] > image.shape[2]:
-            newimage = numpy.ones((image.shape[0], image.shape[1], subimage.shape[2]))
-            newimage[:, :, :image.shape[2]] = image
-            image = newimage
-        image[y:y + subimage.shape[0], x:x + subimage.shape[1],
-              :subimage.shape[2]] = subimage
+        image, subimage = _makeSameChannelDepth(image, subimage)
+        image[y:y + subimage.shape[0], x:x + subimage.shape[1], :] = subimage
         return image
 
     def _vipsAddAlphaBand(self, vimg, *otherImages):

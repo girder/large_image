@@ -19,6 +19,7 @@ sources = {
     'dummy': ['large-image-source-dummy'],
     'gdal': ['large-image-source-gdal'],
     'mapnik': ['large-image-source-mapnik'],
+    'multi': ['large-image-source-multi'],
     'nd2': ['large-image-source-nd2'],
     'ometiff': ['large-image-source-ometiff'],
     'openjpeg': ['large-image-source-openjpeg'],

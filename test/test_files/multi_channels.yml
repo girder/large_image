@@ -1,0 +1,27 @@
+---
+name: Multi orientationa
+sources:
+  - path: ./test_orient1.tif
+    channel: CY3
+    z: 0
+  - path: ./test_orient2.tif
+    channel: A594
+    z: 0
+  - path: ./test_orient3.tif
+    channel: CY5
+    z: 0
+  - path: ./test_orient4.tif
+    channel: DAPI
+    z: 0
+  - path: ./test_orient5.tif
+    channel: CY3
+    z: 1
+  - path: ./test_orient6.tif
+    channel: A594
+    z: 1
+  - path: ./test_orient7.tif
+    channel: CY5
+    z: 1
+  - path: ./test_orient8.tif
+    channel: DAPI
+    z: 1

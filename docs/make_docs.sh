@@ -15,6 +15,7 @@ ln -s ../build/docs-work _build
 
 large_image_converter --help > _build/large_image_converter.txt
 python -c 'from girder_large_image_annotation.models import annotation;import json;print(json.dumps(annotation.AnnotationSchema.annotationSchema, indent=2))' > _build/annotation_schema.json
+python -c 'import large_image_source_multi, json;print(json.dumps(large_image_source_multi.MultiSourceSchema, indent=2))' > _build/multi_source_schema.json
 
 sphinx-apidoc -f -o _build/large_image ../large_image
 sphinx-apidoc -f -o _build/large_image_source_bioformats ../sources/bioformats/large_image_source_bioformats
@@ -22,6 +23,7 @@ sphinx-apidoc -f -o _build/large_image_source_deepzoom ../sources/deepzoom/large
 sphinx-apidoc -f -o _build/large_image_source_dummy ../sources/dummy/large_image_source_dummy
 sphinx-apidoc -f -o _build/large_image_source_gdal ../sources/gdal/large_image_source_gdal
 sphinx-apidoc -f -o _build/large_image_source_mapnik ../sources/mapnik/large_image_source_mapnik
+sphinx-apidoc -f -o _build/large_image_source_multi ../sources/multi/large_image_source_multi
 sphinx-apidoc -f -o _build/large_image_source_nd2 ../sources/nd2/large_image_source_nd2
 sphinx-apidoc -f -o _build/large_image_source_ometiff ../sources/ometiff/large_image_source_ometiff
 sphinx-apidoc -f -o _build/large_image_source_openjpeg ../sources/openjpeg/large_image_source_openjpeg

@@ -543,3 +543,46 @@ def getAvailableNamedPalettes(includeColors=True, reduced=False):
                 (key.rsplit('_', 1)[0] + '_' + str(int(
                     key.rsplit('_', 1)[-1]) + 1)) not in palettes)}
     return sorted(palettes)
+
+
+def _makeSameChannelDepth(arr1, arr2):
+    """
+    Given two numpy arrays that are either two or three dimensions, make the
+    third dimension the same for both of them.  Specifically, if they are two
+    dimensions, first convert to trhee dimensions with a single final value.
+    Otherwise, the dimensions are assumed to be channels of L, LA, RGB, RGBA,
+    or <all colors>.  If L is needed to change to RGB, it is repeated (LLL).
+    Missing A channels are filled with 1.
+
+    :param arr1: one array to compare.
+    :param arr2: a second array to compare.
+    :returns: the two arrays, possibly modified.
+    """
+    arrays = {
+        'arr1': arr1,
+        'arr2': arr2,
+    }
+    # Make sure we have 3 dimensional arrays
+    for key, arr in arrays.items():
+        if len(arr.shape) == 2:
+            arrays[key] = numpy.resize(arr, (arr.shape[0], arr.shape[1], 1))
+    # If any array is RGB, make sure all arrays are RGB.
+    for key, arr in arrays.items():
+        other = arrays['arr1' if key == 'arr2' else 'arr2']
+        if arr.shape[2] < 3 and other.shape[2] >= 3:
+            newarr = numpy.ones((arr.shape[0], arr.shape[1], arr.shape[2] + 2))
+            newarr[:, :, 0:1] = arr[:, :, 0:1]
+            newarr[:, :, 1:2] = arr[:, :, 0:1]
+            newarr[:, :, 2:3] = arr[:, :, 0:1]
+            if arr.shape[2] == 2:
+                newarr[:, :, 3:4] = arr[:, :, 1:2]
+            arrays[key] = newarr
+    # If only one array has an A channel, make sure all arrays have an A
+    # channel
+    for key, arr in arrays.items():
+        other = arrays['arr1' if key == 'arr2' else 'arr2']
+        if arr.shape[2] < other.shape[2]:
+            newarr = numpy.ones((arr.shape[0], arr.shape[1], other.shape[2]))
+            newarr[:, :, :arr.shape[2]] = arr
+            arrays[key] = newarr
+    return arrays['arr1'], arrays['arr2']
