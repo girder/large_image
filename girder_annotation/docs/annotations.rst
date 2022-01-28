@@ -294,6 +294,74 @@ a ``2x2`` affine matrix.
     }
   }
 
+Tiled pixelmap overlays
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Tiled pixelmap overlay annotations allow specifying a girder large
+image item to display on top of the base image to help represent
+categorical data. The specified large image overlay should be a
+lossless tiled image where pixel values represent category indices
+instead of colors. Data provided along with the ID of the image item
+is used to color the pixelmap based on the categorical data. Data can
+be represented in two ways.
+
+The first is as an array, where the index in the array corresponds to
+a category value found in the pixelmap overlay. The value of the array
+at that index is the color that the corresponding pixels should be
+colored on the pixelmap.
+
+The second is as an object. The object should contain a ``segments``
+array. The indices of this array correspond to pixel values on the
+pixelmap, and the values are arbitrary strings. The object must also
+contain a ``colormap`` object, which maps those arbitrary strings to
+color strings. This option is demonstrated in the example below.
+
+::
+
+  {
+    "type": "tiledpixelmap",           # Exact string. Required
+    <id, label, group, user>           # Optional general shape properties
+    "girderId": <girder image id>,     # 24-character girder id pointing
+                                       # to a large image object. Required
+    "opacity": 1,                      # Default opacity for the overlay. Defaults to 1. Optional
+    "transform": {                     # Object specifying additional overlay information. Optional
+      "xoffset": 0,                    # How much to shift the overlaid image right.
+      "yoffset": 0,                    # How much to shift the overlaid image down.
+      "matrix": [                      # Affine matrix to specify transformations like scaling,
+                                       # rotation, or shearing.
+        [1, 0],
+        [0, 1]
+      ]
+    },
+    "boundaries": true,                # Whether boundaries within the pixelmap have unique values.
+                                       # If so, the data array should be constructed such that
+                                       # even-numbered indices represent regions of the pixelmap,
+                                       # and odd-numbered indices represent the borders of those
+                                       # regions. E.g., if index 0 is the region of all pixels
+                                       # with value 0, then index 1 is the border
+                                       # of that region. Required
+    "data": {                          # An object or array detailing how to color the pixelmap.
+                                       # Required
+      "segments": [                    # An array where the value at index 'i' is a string
+                                       # representing the category of pixels on the pixelmap
+                                       # with value 'i'. Required
+        "class_a",
+        "class_b",
+        "class_c",
+        "class_b",
+        "",
+        "class_c"
+      ],
+      "colormap": {                    # An object whose properties correspond to the classes
+                                       # specified in the segments array. The values of
+                                       # each property are the colors that those categories
+                                       # represent. Required
+        "class_a": "#000055",
+        "class_b": "#005500",
+        "class_c": "#550000"
+    }
+  }
+
 Component Values
 ----------------
 
