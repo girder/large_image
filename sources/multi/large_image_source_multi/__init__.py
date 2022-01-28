@@ -195,6 +195,13 @@ MultiSourceSchema = {
                         'items': {'type': 'number'},
                         'minItems': 1,
                     },
+                    'channel': {
+                        'description':
+                            'A channel name to correspond with the main '
+                            'image.  Ignored if c, cValues, or channels is '
+                            'specified.',
+                        'type': 'string',
+                    },
                     'channels': {
                         'description':
                             'A list of channel names used to correspond '
@@ -514,6 +521,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         channels = tsMeta.get('channels', [])
         if source.get('channels'):
             channels[:len(source['channels'])] = source['channels']
+        elif source.get('channel'):
+            channels[:1] = [source['channel']]
         if len(channels) > len(self._channels):
             self._channels += channels[len(self._channels):]
         if not any(key in source for key in {
@@ -537,6 +546,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     self._axisKey(source, tIdx, 't'),
                     self._axisKey(source, xyIdx, 'xy'))
             channel = channels[cIdx] if cIdx < len(channels) else None
+            if channel and channel not in self._channels and (
+                    'channel' in source or 'channels' in source):
+                self._channels.append(channel)
             if (channel and channel in self._channels and
                     'c' not in source and 'cValues' not in source):
                 aKey = (self._channels.index(channel), aKey[1], aKey[2], aKey[3])
@@ -672,6 +684,14 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.sizeY = self._info.get('height') or computedHeight
         self.levels = int(max(1, math.ceil(math.log(
             max(self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+
+    def getNativeMagnification(self):
+        """
+        Get the magnification at a particular level.
+
+        :return: magnification, width of a pixel in mm, height of a pixel in mm.
+        """
+        return self._nativeMagnification.copy()
 
     def getAssociatedImage(self, imageKey, *args, **kwargs):
         """
@@ -835,10 +855,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Otherwise, get an area twice as big as needed and use
         #  scipy.ndimage.affine_transform to transform it
         else:
-            # ##DWM::
+            # TODO
             raise TileSourceError('Not implemented')
         # Crop
-        # ##DWM::
+        # TODO
         tile = self._mergeTiles(tile, sourceTile, x, y)
         return tile
 
@@ -885,7 +905,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for sourceEntry in sourceList:
             tile = self._addSourceToTile(tile, sourceEntry, corners, scale)
         if tile is None:
-            # ##DWM:: number of channels?
+            # TODO number of channels?
             colors = self._info.get('backgroundColor', [0])
             if colors:
                 tile = numpy.full((self.tileWidth, self.tileHeight, len(colors)), colors)

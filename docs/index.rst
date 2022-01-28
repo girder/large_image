@@ -21,6 +21,7 @@
    _build/large_image_source_gdal/modules
    _build/large_image_source_mapnik/modules
    _build/large_image_source_multi/modules
+   multi_source_specification
    _build/large_image_source_nd2/modules
    _build/large_image_source_ometiff/modules
    _build/large_image_source_openjpeg/modules

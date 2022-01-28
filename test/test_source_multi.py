@@ -23,6 +23,7 @@ def multiSourceImagePath():
     'multi1.yml',
     'multi2.yml',
     'multi3.yml',
+    'multi_channels.yml',
 ])
 def testTilesFromMulti(filename):
     testDir = os.path.dirname(os.path.realpath(__file__))

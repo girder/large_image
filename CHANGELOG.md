@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Initial implementation of multi-source tile source ([#764](../../pull/764))
+
 ### Improvements
 - Add more opacity support for image overlays ([#761](../../pull/761))
 - Make annotation schema more uniform ([#763](../../pull/763))
