@@ -202,12 +202,15 @@ class TileSource:
             width = height * 16
         if width and not height:
             height = width * 16
-        if width * regionHeight > height * regionWidth:
+        scaledWidth = max(1, int(regionWidth * height / regionHeight))
+        scaledHeight = max(1, int(regionHeight * width / regionWidth))
+        if scaledWidth == width or (
+                width * regionHeight > height * regionWidth and not scaledHeight == height):
             scale = float(regionHeight) / height
-            width = max(1, int(regionWidth * height / regionHeight))
+            width = scaledWidth
         else:
             scale = float(regionWidth) / width
-            height = max(1, int(regionHeight * width / regionWidth))
+            height = scaledHeight
         return width, height, scale
 
     def _scaleFromUnits(self, metadata, units, desiredMagnification, **kwargs):

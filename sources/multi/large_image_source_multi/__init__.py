@@ -29,6 +29,222 @@ except DistributionNotFound:
 
 warnings.filterwarnings('ignore', category=UserWarning, module='glymur')
 
+SourceEntrySchema = {
+    'type': 'object',
+    'additionalProperties': False,
+    'properties': {
+        'name': {'type': 'string'},
+        'description': {'type': 'string'},
+        'path': {
+            'decription':
+                'The relative path, including file name if pathPattern is not '
+                'specified.  The relative path excluding file name if '
+                'pathPattern is specified.  Or, girder://id for Girder '
+                'sources.',
+            'type': 'string',
+        },
+        'pathPattern': {
+            'description':
+                'If specified, file names in the path are matched to this '
+                'regular expression, sorted in C-sort order.  This can '
+                'populate other properties via named expressions, e.g., '
+                'base_(?<xy>\\d+).png.  Add 1 to the name for 1-based '
+                'numerical values.',
+            'type': 'string',
+        },
+        'sourceName': {
+            'description':
+                'Require a specific source by name.  This is one of the '
+                'large_image source names (e.g., this one is "multi".',
+            'type': 'string',
+        },
+        # 'projection': {
+        #     'description':
+        #         'If specified, the source is treated as non-geospatial and '
+        #         'then a projection is added.  Set to None/null to use its '
+        #         'own projection if a overall projection was specified.',
+        #     'type': 'string',
+        # },
+        # corner points in the projection?
+        'frame': {
+            'description':
+                'Base value for all frames; only use this if the data does '
+                'not conceptually have z, t, xy, or c arrangement.',
+            'type': 'integer',
+            'minimum': 0,
+        },
+        'z': {
+            'description': 'Base value for all frames',
+            'type': 'integer',
+            'minimum': 0,
+        },
+        't': {
+            'description': 'Base value for all frames',
+            'type': 'integer',
+            'minimum': 0,
+        },
+        'xy': {
+            'description': 'Base value for all frames',
+            'type': 'integer',
+            'minimum': 0,
+        },
+        'c': {
+            'description': 'Base value for all frames',
+            'type': 'integer',
+            'minimum': 0,
+        },
+        'zValues': {
+            'description':
+                'The numerical z position of the different z indices of the '
+                'source.  If only one value is specified, other indices are '
+                'shifted based on the source.  If fewer values are given than '
+                'z indices, the last two value given imply a stride for the '
+                'remainder.',
+            'type': 'array',
+            'items': {'type': 'number'},
+            'minItems': 1,
+        },
+        'tValues': {
+            'description':
+                'The numerical t position of the different t indices of the '
+                'source.  If only one value is specified, other indices are '
+                'shifted based on the source.  If fewer values are given than '
+                't indices, the last two value given imply a stride for the '
+                'remainder.',
+            'type': 'array',
+            'items': {'type': 'number'},
+            'minItems': 1,
+        },
+        'xyValues': {
+            'description':
+                'The numerical zy position of the different zy indices of the '
+                'source.  If only one value is specified, other indices are '
+                'shifted based on the source.  If fewer values are given than '
+                'zy indices, the last two value given imply a stride for the '
+                'remainder.',
+            'type': 'array',
+            'items': {'type': 'number'},
+            'minItems': 1,
+        },
+        'cValues': {
+            'description':
+                'The numerical c position of the different c indices of the '
+                'source.  If only one value is specified, other indices are '
+                'shifted based on the source.  If fewer values are given than '
+                'c indices, the last two value given imply a stride for the '
+                'remainder.',
+            'type': 'array',
+            'items': {'type': 'number'},
+            'minItems': 1,
+        },
+        'frameValues': {
+            'description':
+                'The numerical frame position of the different frame indices '
+                'of the source.  If only one value is specified, other '
+                'indices are shifted based on the source.  If fewer values '
+                'are given than frame indices, the last two value given imply '
+                'a stride for the remainder.',
+            'type': 'array',
+            'items': {'type': 'number'},
+            'minItems': 1,
+        },
+        'channel': {
+            'description':
+                'A channel name to correspond with the main image.  Ignored '
+                'if c, cValues, or channels is specified.',
+            'type': 'string',
+        },
+        'channels': {
+            'description':
+                'A list of channel names used to correspond channels in this '
+                'source with the main image.  Ignored if c or cValues is '
+                'specified.',
+            'type': 'array',
+            'items': {'type': 'string'},
+            'minItems': 1,
+        },
+        'zStep': {
+            'description':
+                'Step value for multiple files included via pathPattern.  '
+                'Applies to z or zValues',
+            'type': 'integer',
+            'exclusiveMinimum': 0,
+        },
+        'tStep': {
+            'description':
+                'Step value for multiple files included via pathPattern.  '
+                'Applies to t or tValues',
+            'type': 'integer',
+            'exclusiveMinimum': 0,
+        },
+        'xyStep': {
+            'description':
+                'Step value for multiple files included via pathPattern.  '
+                'Applies to x or xyValues',
+            'type': 'integer',
+            'exclusiveMinimum': 0,
+        },
+        'xStep': {
+            'description':
+                'Step value for multiple files included via pathPattern.  '
+                'Applies to c or cValues',
+            'type': 'integer',
+            'exclusiveMinimum': 0,
+        },
+        'position': {
+            'type': 'object',
+            'additionalProperties': False,
+            'description':
+                'The image can be translated with x, y offset, apply an '
+                'affine transform, and scaled.  If only part of the source is '
+                'desired, a crop can be applied before the transformation.',
+            'properties': {
+                'x': {'type': 'number'},
+                'y': {'type': 'number'},
+                'crop': {
+                    'description':
+                        'Crop the source before applying a '
+                        'position transform',
+                    'type': 'object',
+                    'additionalProperties': False,
+                    'properties': {
+                        'left': {'type': 'integer'},
+                        'top': {'type': 'integer'},
+                        'right': {'type': 'integer'},
+                        'bottom': {'type': 'integer'},
+                    },
+                    # TODO: Add polygon option
+                    # TODO: Add postTransform option
+                },
+                'scale': {
+                    'description':
+                        'Values less than 1 will downsample the source.  '
+                        'Values greater than 1 will upsample it.',
+                    'type': 'number',
+                    'exclusiveMinimum': 0,
+                },
+                's11': {'type': 'number'},
+                's12': {'type': 'number'},
+                's21': {'type': 'number'},
+                's22': {'type': 'number'},
+            },
+        },
+        'frames': {
+            'description': 'List of frames to use from source',
+            'type': 'array',
+            'items': {'type': 'integer'},
+        },
+        'style': {'type': 'object'},
+        'params': {
+            'description':
+                'Additional parameters to pass to the base tile source',
+            'type': 'object',
+        },
+    },
+    'required': [
+        'path',
+    ],
+}
 
 MultiSourceSchema = {
     '$schema': 'http://json-schema.org/schema#',
@@ -76,226 +292,7 @@ MultiSourceSchema = {
         },
         'sources': {
             'type': 'array',
-            'items': {
-                'type': 'object',
-                'additionalProperties': False,
-                'properties': {
-                    'name': {'type': 'string'},
-                    'description': {'type': 'string'},
-                    'path': {
-                        'decription':
-                            'The relative path, including file name if '
-                            'pathPattern is not specified.  The relative path '
-                            'excluding file name if pathPttern is specified.  '
-                            'Or, girder://id for Girder sources.',
-                        'type': 'string',
-                    },
-                    'pathPattern': {
-                        'description':
-                            'If specified, file names in the path are matched '
-                            'to this regular expression, sorted in C-sort '
-                            'order.  This can populate other properties via '
-                            'named expressions, e.g., base_(?<xy>\\d+).png.',
-                        'type': 'string',
-                    },
-                    # 'projection': {
-                    #     'description':
-                    #         'If specified, the source is treated as '
-                    #         'non-geospatial and then a projection is added.  '
-                    #         'Set to None/null to use its own projection if a '
-                    #         'overall projection was specified.',
-                    #     'type': 'string',
-                    # },
-                    # corner points in the projection?
-                    'frame': {
-                        'description':
-                            'Base value for all frames; only use this if the '
-                            'data does not conceptually have z, t, xy, or c '
-                            'arrangement.',
-                        'type': 'integer',
-                        'minimum': 0,
-                    },
-                    'z': {
-                        'description': 'Base value for all frames',
-                        'type': 'integer',
-                        'minimum': 0,
-                    },
-                    't': {
-                        'description': 'Base value for all frames',
-                        'type': 'integer',
-                        'minimum': 0,
-                    },
-                    'xy': {
-                        'description': 'Base value for all frames',
-                        'type': 'integer',
-                        'minimum': 0,
-                    },
-                    'c': {
-                        'description': 'Base value for all frames',
-                        'type': 'integer',
-                        'minimum': 0,
-                    },
-                    'zValues': {
-                        'description':
-                            'The numerical z position of the different z '
-                            'indices of the source.  If only one value is '
-                            'specified, other indices are shifted based on the '
-                            'source.  If fewer values are given than z '
-                            'indices, the last two value given imply a stride '
-                            'for the remainder.',
-                        'type': 'array',
-                        'items': {'type': 'number'},
-                        'minItems': 1,
-                    },
-                    'tValues': {
-                        'description':
-                            'The numerical t position of the different t '
-                            'indices of the source.  If only one value is '
-                            'specified, other indices are shifted based on the '
-                            'source.  If fewer values are given than t '
-                            'indices, the last two value given imply a stride '
-                            'for the remainder.',
-                        'type': 'array',
-                        'items': {'type': 'number'},
-                        'minItems': 1,
-                    },
-                    'xyValues': {
-                        'description':
-                            'The numerical xy position of the different xy '
-                            'indices of the source.  If only one value is '
-                            'specified, other indices are shifted based on the '
-                            'source.  If fewer values are given than xy '
-                            'indices, the last two value given imply a stride '
-                            'for the remainder.',
-                        'type': 'array',
-                        'items': {'type': 'number'},
-                        'minItems': 1,
-                    },
-                    'cValues': {
-                        'description':
-                            'The numerical c position of the different c '
-                            'indices of the source.  If only one value is '
-                            'specified, other indices are shifted based on the '
-                            'source.  If fewer values are given than c '
-                            'indices, the last two value given imply a stride '
-                            'for the remainder.',
-                        'type': 'array',
-                        'items': {'type': 'number'},
-                        'minItems': 1,
-                    },
-                    'frameValues': {
-                        'description':
-                            'The numerical frame position of the different '
-                            'frame indices of the source.  If only one value '
-                            'is specified, other indices are shifted based '
-                            'on the source.  If fewer values are given than '
-                            'frame indices, the last two value given imply a '
-                            'stride for the remainder.',
-                        'type': 'array',
-                        'items': {'type': 'number'},
-                        'minItems': 1,
-                    },
-                    'channel': {
-                        'description':
-                            'A channel name to correspond with the main '
-                            'image.  Ignored if c, cValues, or channels is '
-                            'specified.',
-                        'type': 'string',
-                    },
-                    'channels': {
-                        'description':
-                            'A list of channel names used to correspond '
-                            'channels in this source with the main image.  '
-                            'Ignored if c or cValues is specified.',
-                        'type': 'array',
-                        'items': {'type': 'string'},
-                        'minItems': 1,
-                    },
-                    'zStep': {
-                        'description':
-                            'Step value for multiple files included via '
-                            'pathPattern.  Applies to z or zValues',
-                        'type': 'integer',
-                        'exclusiveMinimum': 0,
-                    },
-                    'tStep': {
-                        'description':
-                            'Step value for multiple files included via '
-                            'pathPattern.  Applies to t or tValues',
-                        'type': 'integer',
-                        'exclusiveMinimum': 0,
-                    },
-                    'xyStep': {
-                        'description':
-                            'Step value for multiple files included via '
-                            'pathPattern.  Applies to x or xyValues',
-                        'type': 'integer',
-                        'exclusiveMinimum': 0,
-                    },
-                    'xStep': {
-                        'description':
-                            'Step value for multiple files included via '
-                            'pathPattern.  Applies to c or cValues',
-                        'type': 'integer',
-                        'exclusiveMinimum': 0,
-                    },
-                    'position': {
-                        'type': 'object',
-                        'additionalProperties': False,
-                        'description':
-                            'The image can be translated with x, y offset, '
-                            'apply an affine transform, and scaled.  If only '
-                            'part of the source is desired, a crop can be '
-                            'applied before the transformation.',
-                        'properties': {
-                            'x': {'type': 'number'},
-                            'y': {'type': 'number'},
-                            'crop': {
-                                'description':
-                                    'Crop the source before applying a '
-                                    'position transform',
-                                'type': 'object',
-                                'additionalProperties': False,
-                                'properties': {
-                                    'left': {'type': 'integer'},
-                                    'top': {'type': 'integer'},
-                                    'right': {'type': 'integer'},
-                                    'bottom': {'type': 'integer'},
-                                },
-                                # TODO: Add polygon option
-                                # TODO: Add postTransform option
-                            },
-                            'scale': {
-                                'description':
-                                    'Values less than 1 will downsample the '
-                                    'source.  Values greater than 1 will '
-                                    'upsampled it.',
-                                'type': 'number',
-                                'exclusiveMinimum': 0,
-                            },
-                            's11': {'type': 'number'},
-                            's12': {'type': 'number'},
-                            's21': {'type': 'number'},
-                            's22': {'type': 'number'},
-                        },
-                    },
-                    'frames': {
-                        'description': 'List of frames to use from source',
-                        'type': 'array',
-                        'items': {'type': 'integer'},
-                    },
-                    'style': {'type': 'object'},
-                    'params': {
-                        'description':
-                            'Additional parameters to pass to the base tile '
-                            'source',
-                        'type': 'object',
-                    },
-                },
-                'required': [
-                    'path',
-                ],
-            },
+            'items': SourceEntrySchema
         },
         # TODO: add merge method for cases where the are pixels from multiple
         # sources in the same output location.
@@ -411,6 +408,25 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             del subsource['pathPattern']
             sources.append(subsource)
 
+    def _resolveSourcePath(self, sources, source):
+        """
+        Given a single source without a pathPattern, resolve to a specific
+        path, ensuring that it exists.
+
+        :param sources: a list to append found sources to.
+        :param source: the specific source record to resolve.
+        """
+        source = copy.deepcopy(source)
+        sourcePath = Path(source['path'])
+        source['path'] = self._basePath / sourcePath
+        if not source['path'].is_file():
+            altpath = self._basePath.parent / sourcePath / sourcePath.name
+            if altpath.is_file():
+                source['path'] = altpath
+        if not source['path'].is_file():
+            raise TileSourceFileNotFoundError(str(source['path']))
+        sources.append(source)
+
     def _resolveFramePaths(self, sourceList):
         """
         Given a list of sources, resolve path and pathPattern entries to
@@ -428,16 +444,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if source.get('pathPattern'):
                 self._resolvePathPatterns(sources, source)
             else:
-                source = copy.deepcopy(source)
-                sourcePath = Path(source['path'])
-                source['path'] = self._basePath / sourcePath
-                if not source['path'].is_file():
-                    altpath = self._basePath.parent / sourcePath / sourcePath.name
-                    if altpath.is_file():
-                        source['path'] = altpath
-                if not source['path'].is_file():
-                    raise TileSourceFileNotFoundError(str(source['path']))
-                sources.append(source)
+                self._resolveSourcePath(sources, source)
         return sources
 
     def _sourceBoundingBox(self, source, width, height):
@@ -641,7 +648,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceError('Multi source specification is self-referential')
             if numChecked < 2 or checkAll or not self._info.get('uniformSources'):
                 # need kwargs of frame, style?
-                ts = large_image.open(path, **source.get('params', {}))
+                ts = self._openSource(source)
                 self.tileWidth = self.tileWidth or ts.tileWidth
                 self.tileHeight = self.tileHeight or ts.tileHeight
                 if not numChecked:
@@ -693,6 +700,23 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         return self._nativeMagnification.copy()
 
+    def _openSource(self, source, params=None):
+        """
+        Open a tile source, possibly using a specific source.
+
+        :param source: a dictionary with path, params, and possibly sourceName.
+        :param params: a dictionary of parameters to pass to the open call.
+        :returns: a tile source.
+        """
+        if ('sourceName' not in source or
+                source['sourceName'] not in large_image.tilesource.AvailableTileSources):
+            openFunc = large_image.open
+        else:
+            openFunc = large_image.tilesource.AvailableTileSources[source['sourceName']]
+        if params is None:
+            params = source.get('params', {})
+        return openFunc(source['path'], **params, format=format)
+
     def getAssociatedImage(self, imageKey, *args, **kwargs):
         """
         Return an associated image.
@@ -706,7 +730,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if imageKey not in self._associatedImages:
             return
         source = self._sources[self._associatedImages[imageKey]['sourcenum']]
-        ts = large_image.open(source['path'], **source.get('params', {}))
+        ts = self._openSource(source)
         return ts.getAssociatedImage(self._associatedImages[imageKey]['key'], *args, **kwargs)
 
     def getAssociatedImagesList(self):
@@ -747,7 +771,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         }
         for path in self._sourcePaths.values():
             source = self._sources[min(path['sourcenum'])]
-            ts = large_image.open(source['path'], **source.get('params', {}))
+            ts = self._openSource(source)
             result['sourceFiles'].append({
                 'path': source['path'],
                 'internal': ts.getInternalMetadata(),
@@ -804,7 +828,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a numpy array of the tile.
         """
         source = self._sources[sourceEntry['sourcenum']]
-        ts = large_image.open(source['path'], **sourceEntry['kwargs'], format=TILE_FORMAT_NUMPY)
+        ts = self._openSource(source, sourceEntry['kwargs'])
         # If tile is outside of bounding box, skip it
         bbox = source['bbox']
         if (corners[2][0] <= bbox['left'] or corners[0][0] >= bbox['right'] or
