@@ -45,6 +45,7 @@ setup(
     install_requires=[
         'large-image',
         'python-bioformats>=1.5.2',
+        'scikit-image',
     ],
     extras_require={
         'girder': 'girder-large-image',
