@@ -1,3 +1,4 @@
+import json
 import os
 
 import large_image_source_multi
@@ -84,6 +85,40 @@ def testTilesFromMultiMultiSource(multiSourceImagePath):
 
     utilities.checkTilesZXY(source, tileMetadata)
     utilities.checkTilesZXY(source, tileMetadata, tileParams={'frame': 50})
+
+
+def testTilesFromSpecificSource():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_test_source.yml')
+    source = large_image_source_multi.open(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 100000
+    assert tileMetadata['sizeY'] == 75000
+    assert tileMetadata['levels'] == 10
+    assert len(tileMetadata['frames']) == 600
+    utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testTilesFromMultiString():
+    sourceString = json.dumps({'sources': [{
+        'sourceName': 'test', 'path': '__none__', 'params': {'sizeX': 10000, 'sizeY': 10000}}]})
+    source = large_image_source_multi.open(sourceString)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 10000
+    assert tileMetadata['sizeY'] == 10000
+    assert tileMetadata['levels'] == 7
+    utilities.checkTilesZXY(source, tileMetadata)
+
+    source = large_image_source_multi.open('multi://' + sourceString)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['sizeX'] == 10000
+
+    with pytest.raises(Exception):
+        large_image_source_multi.open('invalid' + sourceString)
 
 
 def testInternalMetadata(multiSourceImagePath):
