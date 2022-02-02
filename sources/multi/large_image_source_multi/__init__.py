@@ -40,7 +40,9 @@ SourceEntrySchema = {
                 'The relative path, including file name if pathPattern is not '
                 'specified.  The relative path excluding file name if '
                 'pathPattern is specified.  Or, girder://id for Girder '
-                'sources.',
+                'sources.  If a specific tile source is specified that does '
+                'not need an actual path, the special value of `__none__` can '
+                'be used to bypass checking for an actual file.',
             'type': 'string',
         },
         'pathPattern': {
@@ -284,6 +286,12 @@ MultiSourceSchema = {
             'type': 'array',
             'items': {'type': 'number'},
         },
+        'basePath': {
+            'decription':
+                'A relative path that is used as a base for all paths in '
+                'sources.  Defaults to the directory of the main file.',
+            'type': 'string',
+        },
         'uniformSources': {
             'description':
                 'If true and the first two sources are similar in frame '
@@ -339,25 +347,27 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super().__init__(path, **kwargs)
 
         self._largeImagePath = self._getLargeImagePath()
-        try:
-            with builtins.open(self._largeImagePath) as fptr:
-                start = fptr.read(1024).strip()
-                if start[:1] not in ('{', '#', '-') and (start[:1] < 'a' or start[:1] > 'z'):
-                    raise TileSourceError('File cannot be opened via multi-source reader.')
-                fptr.seek(0)
-                try:
-                    self._info = json.load(fptr)
-                except (json.JSONDecodeError, UnicodeDecodeError):
+        if not os.path.isfile(self._largeImagePath):
+            try:
+                possibleYaml = self._largeImagePath.split('multi://', 1)[-1]
+                self._info = yaml.safe_load(possibleYaml)
+                self._validator.validate(self._info)
+                self._basePath = Path('.')
+            except Exception:
+                raise TileSourceFileNotFoundError(self._largeImagePath) from None
+        else:
+            try:
+                with builtins.open(self._largeImagePath) as fptr:
+                    start = fptr.read(1024).strip()
+                    if start[:1] not in ('{', '#', '-') and (start[:1] < 'a' or start[:1] > 'z'):
+                        raise TileSourceError('File cannot be opened via multi-source reader.')
                     fptr.seek(0)
                     self._info = yaml.safe_load(fptr)
-        except (json.JSONDecodeError, yaml.YAMLError, UnicodeDecodeError):
-            raise TileSourceError('File cannot be opened via multi-source reader.')
-        except FileNotFoundError:
-            if not os.path.isfile(self._largeImagePath):
-                raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise
-        self._validator.validate(self._info)
-        self._basePath = Path(self._largeImagePath).parent
+            except (json.JSONDecodeError, yaml.YAMLError, UnicodeDecodeError):
+                raise TileSourceError('File cannot be opened via multi-source reader.')
+            self._validator.validate(self._info)
+            self._basePath = Path(self._largeImagePath).parent
+        self._basePath /= Path(self._info.get('basePath', '.'))
         self._collectFrames()
 
     def _resolvePathPatterns(self, sources, source):
@@ -417,14 +427,15 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param source: the specific source record to resolve.
         """
         source = copy.deepcopy(source)
-        sourcePath = Path(source['path'])
-        source['path'] = self._basePath / sourcePath
-        if not source['path'].is_file():
-            altpath = self._basePath.parent / sourcePath / sourcePath.name
-            if altpath.is_file():
-                source['path'] = altpath
-        if not source['path'].is_file():
-            raise TileSourceFileNotFoundError(str(source['path']))
+        if source['path'] != '__none__':
+            sourcePath = Path(source['path'])
+            source['path'] = self._basePath / sourcePath
+            if not source['path'].is_file():
+                altpath = self._basePath.parent / sourcePath / sourcePath.name
+                if altpath.is_file():
+                    source['path'] = altpath
+            if not source['path'].is_file():
+                raise TileSourceFileNotFoundError(str(source['path']))
         sources.append(source)
 
     def _resolveFramePaths(self, sourceList):
@@ -708,6 +719,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param params: a dictionary of parameters to pass to the open call.
         :returns: a tile source.
         """
+        if not len(large_image.tilesource.AvailableTileSources):
+            large_image.tilesource.loadTileSources()
         if ('sourceName' not in source or
                 source['sourceName'] not in large_image.tilesource.AvailableTileSources):
             openFunc = large_image.open
@@ -872,9 +885,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 region['bottom'] = source['metadata']['sizeY']
             for key in region:
                 region[key] = int(round(region[key]))
-            self.logger.debug('getRegion: ts: %r, region: %r, output: %r', ts, region, output)
+            self.logger.info('getRegion: ts: %r, region: %r, output: %r', ts, region, output)
             sourceTile, _ = ts.getRegion(
-                region=region, output=output, frame=source.get('frame', 0),
+                region=region, output=output, frame=sourceEntry.get('frame', 0),
                 format=TILE_FORMAT_NUMPY)
         # Otherwise, get an area twice as big as needed and use
         #  scipy.ndimage.affine_transform to transform it
