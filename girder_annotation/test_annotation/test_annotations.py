@@ -427,7 +427,7 @@ class TestLargeImageAnnotationElement:
 
         # test no transform
         lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
-            'type': 'tiledimage', 'girderId': itemId
+            'type': 'image', 'girderId': itemId
         })
         assert lowx == 0
         assert lowy == 0
@@ -436,7 +436,7 @@ class TestLargeImageAnnotationElement:
 
         # test offset
         lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
-            'type': 'tiledimage', 'girderId': itemId,
+            'type': 'image', 'girderId': itemId,
             'transform': {'xoffset': 500, 'yoffset': 1000}
         })
         assert lowx == 500
@@ -446,7 +446,7 @@ class TestLargeImageAnnotationElement:
 
         # test affine matrix, scale to 50%
         lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
-            'type': 'tiledimage', 'girderId': itemId,
+            'type': 'image', 'girderId': itemId,
             'transform': {
                 'matrix': [[0.5, 0], [0, 0.5]]
             }
@@ -458,7 +458,7 @@ class TestLargeImageAnnotationElement:
 
         # test transform and scaling
         lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
-            'type': 'tiledimage', 'girderId': itemId,
+            'type': 'image', 'girderId': itemId,
             'transform': {
                 'xoffset': 500,
                 'yoffset': 1000,
@@ -474,7 +474,7 @@ class TestLargeImageAnnotationElement:
         file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
         itemId = str(file['itemId'])
         bbox = Annotationelement()._boundingBox(
-            {'type': 'tiledimage', 'girderId': itemId})
+            {'type': 'image', 'girderId': itemId})
         assert bbox == {
             'lowx': 0, 'lowy': 0, 'lowz': 0,
             'highx': 58368, 'highy': 12288, 'highz': 0,

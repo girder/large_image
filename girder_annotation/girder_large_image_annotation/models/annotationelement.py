@@ -345,14 +345,14 @@ class Annotationelement(Model):
         This uses numpy to perform the specified transform on the given girder
         image item in order to obtain bounding box coordinates.
 
-        :param overlayElement: An annotation element of type 'tiledimage'.
+        :param overlayElement: An annotation element of type 'image'.
         :returns: a tuple with 4 values: lowx, highx, lowy, highy. Runtime exceptions
          during loading the image metadata will result in the tuple (0, 0, 0, 0).
         """
-        if overlayElement.get('type') not in ['tiledimage', 'tiledpixelmap']:
+        if overlayElement.get('type') not in ['image', 'pixelmap']:
             raise ValueError(
-                'Function _overlayBounds only accepts annotation elements of type "tiledimage", '
-                '"tiledpixelmap."'
+                'Function _overlayBounds only accepts annotation elements of type "image", '
+                '"pixelmap."'
             )
 
         import numpy as np
@@ -420,7 +420,7 @@ class Annotationelement(Model):
             bbox['highx'] = max(x0, x1)
             bbox['highy'] = max(y0, y1)
             bbox['details'] = len(element['values'])
-        elif element.get('type') in ['tiledimage', 'tiledpixelmap']:
+        elif element.get('type') in ['image', 'pixelmap']:
             lowx, highx, lowy, highy = Annotationelement()._overlayBounds(element)
             bbox['lowz'] = bbox['highz'] = 0
             bbox['lowx'] = lowx

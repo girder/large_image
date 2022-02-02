@@ -368,7 +368,7 @@ export default AccessControlledModel.extend({
     overlays() {
         const json = this.get('annotation') || {};
         const elements = json.elements || [];
-        return elements.filter((element) => element.type === 'tiledimage');
+        return elements.filter((element) => element.type === 'image');
     },
 
     /**

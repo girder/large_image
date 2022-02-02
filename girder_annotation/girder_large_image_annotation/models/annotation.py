@@ -401,7 +401,7 @@ class AnnotationSchema:
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['tiledimage']
+                'enum': ['image']
             },
             'girderId': {
                 'type': 'string',
@@ -457,11 +457,11 @@ class AnnotationSchema:
         'required': ['fillColor']
     }
 
-    tiledPixelMapSchema = extendSchema(overlaySchema, {
+    pixelmapSchema = extendSchema(overlaySchema, {
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['tiledpixelmap'],
+                'enum': ['pixelmap'],
             },
             'values': {
                 'type': 'array',
@@ -507,7 +507,7 @@ class AnnotationSchema:
             rectangleShapeSchema,
             rectangleGridShapeSchema,
             overlaySchema,
-            tiledPixelMapSchema,
+            pixelmapSchema,
         ]
     }
 
@@ -733,7 +733,6 @@ class Annotation(AccessControlledModel):
         return annotation
 
     def createAnnotation(self, item, creator, annotation, public=None):
-        print('\nCREATING ANNOTATION\n')
         now = datetime.datetime.utcnow()
         doc = {
             'itemId': item['_id'],
@@ -754,7 +753,6 @@ class Annotation(AccessControlledModel):
 
         # give the current user admin access
         self.setUserAccess(doc, user=creator, level=AccessType.ADMIN, save=False)
-        print('\nCREATED ANNOTATION\n')
 
         return self.save(doc)
 

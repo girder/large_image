@@ -278,7 +278,7 @@ a ``2x2`` affine matrix.
 ::
 
   {
-    "type": "tiledimage",              # Exact string. Required
+    "type": "image",                   # Exact string. Required
     <id, label, group, user>           # Optional general shape properties
     "girderId": <girder image id>,     # 24-character girder id pointing
                                        # to a large image object. Required
@@ -310,7 +310,7 @@ integers which correspond to indices in a ``categories`` array.
 ::
 
   {
-    "type": "tiledpixelmap",           # Exact string. Required
+    "type": "pixelmap",                # Exact string. Required
     <id, label, group, user>           # Optional general shape properties
     "girderId": <girder image id>,     # 24-character girder id pointing
                                        # to a large image object. Required
