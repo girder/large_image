@@ -302,20 +302,11 @@ image item to display on top of the base image to help represent
 categorical data. The specified large image overlay should be a
 lossless tiled image where pixel values represent category indices
 instead of colors. Data provided along with the ID of the image item
-is used to color the pixelmap based on the categorical data. Data can
-be represented in two ways.
+is used to color the pixelmap based on the categorical data.
 
-The first is as an array, where the index in the array corresponds to
-a category value found in the pixelmap overlay. The value of the array
-at that index is the color that the corresponding pixels should be
-colored on the pixelmap.
-
-The second is as an object. The object should contain a ``segments``
-array. The indices of this array correspond to pixel values on the
-pixelmap, and the values are arbitrary strings. The object must also
-contain a ``colormap`` object, which maps those arbitrary strings to
-color strings. This option is demonstrated in the example below.
-
+The element must contain a ``values`` array. The indices of this
+array correspond to pixel values on the pixelmap, and the values are
+integers which correspond to indices in a ``categories`` array.
 ::
 
   {
@@ -333,33 +324,37 @@ color strings. This option is demonstrated in the example below.
         [0, 1]
       ]
     },
-    "boundaries": true,                # Whether boundaries within the pixelmap have unique values.
-                                       # If so, the data array should be constructed such that
-                                       # even-numbered indices represent regions of the pixelmap,
-                                       # and odd-numbered indices represent the borders of those
-                                       # regions. E.g., if index 0 is the region of all pixels
-                                       # with value 0, then index 1 is the border
-                                       # of that region. Required
-    "data": {                          # An object or array detailing how to color the pixelmap.
-                                       # Required
-      "segments": [                    # An array where the value at index 'i' is a string
-                                       # representing the category of pixels on the pixelmap
-                                       # with value 'i'. Required
-        "class_a",
-        "class_b",
-        "class_c",
-        "class_b",
-        "",
-        "class_c"
+    "boundaries": false,               # Whether boundaries within the pixelmap have unique values.
+                                       # If so, the values array should only be half as long as the
+                                       # actual number of distinct pixel values in the pixelmap. In
+                                       # this case, for a given index i in the values array, the
+                                       # pixels with value 2i will be given the corresponding
+                                       # fillColor from the category information, and the pixels
+                                       # with value 2i + 1 will be given the corresponding
+                                       # strokeColor from the category information. Required
+    "values": [                        # An array where the value at index 'i' is an integer
+                                       # pointing to an index in the categories array. Required
+        1,
+        2,
+        1,
+        1,
+        2,
       ],
-      "colormap": {                    # An object whose properties correspond to the classes
-                                       # specified in the segments array. The values of
-                                       # each property are the colors that those categories
-                                       # represent. Required
-        "class_a": "#000055",
-        "class_b": "#005500",
-        "class_c": "#550000"
-    }
+      "categories": [                  # An array whose values contain category information.
+        {
+          "fillColor": "#0000FF",      # The color pixels with this category should be. Required
+          "label": "class_a",          # A human-readable label for this category. Optional
+        },
+        {
+          "fillColor": "#00FF00",
+          "label": "class_b",
+
+        },
+        {
+          "fillColor": "#FF0000",
+          "label": "class_c",
+        },
+    ]
   }
 
 Component Values

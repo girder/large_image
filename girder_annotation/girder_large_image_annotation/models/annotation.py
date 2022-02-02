@@ -437,44 +437,24 @@ class AnnotationSchema:
         'description': 'An image overlay on top of the base resource.',
     })
 
-    segmentsToColorSchema = {
-        'type': 'array',
-        'items': colorSchema,
-        'description': 'An array where the indices correspond to pixel '
-                       'values in the pixel map image, and the values '
-                       'correspond to colors.'
-    }
-
-    categoryColorMap = {
+    pixelMapCategorySchema = {
         'type': 'object',
         'properties': {
-            'segments': {
-                'type': 'array',
-                'items': {'type': 'string'},
-                'description': 'An array where the indices correspond to '
-                               'pixel values in the pixel map image, and the '
-                               'values correspond to key values in the '
-                               'colormap object.'
+            'fillColor': colorSchema,
+            'strokeColor': colorSchema,
+            'label': {
+                'type': 'string',
+                'description': 'A string representing the semantic '
+                               'meaning of regions of the map with '
+                               'the corresponding color.'
             },
-            'colormap': {
-                'type': 'object',
-                'additionalProperties': colorSchema,
-                'description': 'An object whose keys represent category '
-                               'names, and whose values are color strings. '
-                               'This map is used together with the segments '
-                               'array to correctly color regions of the '
-                               'pixelmap.'
+            'description': {
+                'type': 'string',
+                'description': 'A more detailed explanation of the '
+                               'meaining of this category.'
             }
         },
-        'additionalProperties': False,
-        'required': ['segments', 'colormap'],
-    }
-
-    pixelMapDataSchema = {
-        'oneOf': [
-            segmentsToColorSchema,
-            categoryColorMap,
-        ],
+        'required': ['fillColor']
     }
 
     tiledPixelMapSchema = extendSchema(overlaySchema, {
@@ -483,14 +463,30 @@ class AnnotationSchema:
                 'type': 'string',
                 'enum': ['tiledpixelmap'],
             },
-            'data': pixelMapDataSchema,
+            'values': {
+                'type': 'array',
+                'items': {'type': 'integer'},
+                'description': 'An array where the indices '
+                               'correspond to pixel values in the '
+                               'pixel map image and the values are '
+                               'used to look up the appropriate '
+                               'color in the categories property.'
+            },
+            'categories': {
+                'type': 'array',
+                'items': pixelMapCategorySchema,
+                'description': 'An array used to map between the '
+                               'values array and color values. '
+                               'Can also contain semantic '
+                               'information for color values.'
+            },
             'boundaries': {
                 'type': 'boolean',
                 'description': 'True if the boundaries of the pixelmap regions have '
                                'their own value in the data or segments array.'
             },
         },
-        'required': ['data', 'boundaries'],
+        'required': ['values', 'categories', 'boundaries'],
         'description': 'A tiled pixelmap to overlay onto a base resource.'
     })
 
@@ -737,6 +733,7 @@ class Annotation(AccessControlledModel):
         return annotation
 
     def createAnnotation(self, item, creator, annotation, public=None):
+        print('\nCREATING ANNOTATION\n')
         now = datetime.datetime.utcnow()
         doc = {
             'itemId': item['_id'],
@@ -757,6 +754,7 @@ class Annotation(AccessControlledModel):
 
         # give the current user admin access
         self.setUserAccess(doc, user=creator, level=AccessType.ADMIN, save=False)
+        print('\nCREATED ANNOTATION\n')
 
         return self.save(doc)
 
