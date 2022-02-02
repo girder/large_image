@@ -366,9 +366,10 @@ export default AccessControlledModel.extend({
      * features, such as image overlays.
      */
     overlays() {
+        const overlayElementTypes = ['image', 'pixelmap'];
         const json = this.get('annotation') || {};
         const elements = json.elements || [];
-        return elements.filter((element) => element.type === 'image');
+        return elements.filter((element) => overlayElementTypes.includes(element.type));
     },
 
     /**
