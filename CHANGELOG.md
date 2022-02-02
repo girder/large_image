@@ -9,6 +9,7 @@
 - Add more opacity support for image overlays ([#761](../../pull/761))
 - Make annotation schema more uniform ([#763](../../pull/763))
 - Improve TileSource class repr ([#765](../../pull/765))
+- Improve frame slider response with base quads ([#771](../../pull/771))
 
 ## Version 1.10.0
 
