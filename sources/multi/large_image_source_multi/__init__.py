@@ -885,7 +885,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 region['bottom'] = source['metadata']['sizeY']
             for key in region:
                 region[key] = int(round(region[key]))
-            self.logger.info('getRegion: ts: %r, region: %r, output: %r', ts, region, output)
+            self.logger.debug('getRegion: ts: %r, region: %r, output: %r', ts, region, output)
             sourceTile, _ = ts.getRegion(
                 region=region, output=output, frame=sourceEntry.get('frame', 0),
                 format=TILE_FORMAT_NUMPY)
