@@ -77,7 +77,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         /**
          * Given an image overlay annotation element, compute and return
          * a proj-string representation of its transform specification.
-         * @param {object} overlay An imageoverlay annotation element.
+         * @param {object} overlay A tiledimage annotation element.
          * @returns a proj-string representing how to overlay should be tranformed.
          */
         _getOverlayTransformProjString: function (overlay) {

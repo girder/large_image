@@ -401,7 +401,7 @@ class AnnotationSchema:
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['imageoverlay']
+                'enum': ['tiledimage']
             },
             'girderId': {
                 'type': 'string',

@@ -278,7 +278,7 @@ a ``2x2`` affine matrix.
 ::
 
   {
-    "type": "imageoverlay",            # Exact string. Required
+    "type": "tiledimage",              # Exact string. Required
     <id, label, group, user>           # Optional general shape properties
     "girderId": <girder image id>,     # 24-character girder id pointing
                                        # to a large image object. Required
