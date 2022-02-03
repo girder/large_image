@@ -11,6 +11,7 @@
 - Make annotation schema more uniform ([#763](../../pull/763))
 - Improve TileSource class repr ([#765](../../pull/765))
 - Improve frame slider response with base quads ([#771](../../pull/771))
+- Default to nearest-neighbor scaling in lossless image conversion ([#772](../../pull/772))
 
 ## Version 1.10.0
 

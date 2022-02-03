@@ -85,6 +85,13 @@ depth.
     parser.add_argument(
         '--cr', type=int, help='JP2K compression ratio.  1 for lossless.')
     parser.add_argument(
+        '--shrink-mode', '--shrink', '--reduce', dest='shrinkMode',
+        default=None,
+        choices=['mean', 'median', 'mode', 'max', 'min', 'nearest', 'default'],
+        help='When producing lower resolution images, use this method for '
+        'computing pixels.  This defaults to median for lossy images and '
+        'nearest for lossless images.')
+    parser.add_argument(
         '--only-associated', dest='_keep_associated', action='append',
         help='Only keep associated images with the specified keys.  The value '
         'is used as a matching regex.')
