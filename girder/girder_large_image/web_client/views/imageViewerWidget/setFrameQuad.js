@@ -192,6 +192,9 @@ function setFrameQuad(tileinfo, layer, options) {
                         options.progress(status);
                     } catch (err) {}
                 }
+                if (status.frame !== undefined) {
+                    layer.baseQuad = Object.assign({}, status.quads[status.framesToIdx[status.frame]]);
+                }
             };
         } else {
             ((idx) => {
@@ -233,10 +236,10 @@ function setFrameQuad(tileinfo, layer, options) {
     status.images[0].src = status.src[0];
 
     layer.setFrameQuad = function (frame) {
-        if (status.framesToIdx[frame] !== undefined) {
+        if (status.framesToIdx[frame] !== undefined && status.loaded) {
             layer.baseQuad = Object.assign({}, status.quads[status.framesToIdx[frame]]);
-            status.frame = frame;
         }
+        status.frame = frame;
     };
     layer.setFrameQuad.status = status;
 }

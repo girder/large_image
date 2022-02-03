@@ -1,0 +1,10 @@
+---
+sources:
+  - sourceName: test
+    path: __none__
+    params:
+      sizeX: 2000
+      sizeY: 1250
+      fractal: True
+      # c,z,t,xy OR frames
+      frames: "1,3,1,1"

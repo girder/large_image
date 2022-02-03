@@ -20,6 +20,59 @@ $(function () {
             girderTest.createUser(
                 'admin', 'admin@email.com', 'Admin', 'Admin', 'testpassword')();
         });
+    });
+    describe('test accessing a multi-frame image', function () {
+        it('go to users page', girderTest.goToUsersPage());
+
+        it('Got to a user page and then the Public folder', function () {
+            runs(function () {
+                $('a.g-user-link').trigger('click');
+            });
+            waitsFor(function () {
+                return $('button:contains("Actions")').length === 1;
+            }, 'user page to appear');
+            waitsFor(function () {
+                return $('a.g-folder-list-link:contains(Public):visible').length === 1;
+            }, 'the Public folder to be clickable');
+            runs(function () {
+                $('a.g-folder-list-link:contains(Public)').trigger('click');
+            });
+            waitsFor(function () {
+                return $('.g-folder-actions-button:visible').length === 1;
+            }, 'the folder to appear');
+        });
+        it('upload test file', function () {
+            girderTest.waitForLoad();
+            runs(function () {
+                $('.g-folder-list-link:first').click();
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                girderTest.binaryUpload('${large_image}/../../test/test_files/multi_test_source3.yml');
+            });
+            girderTest.waitForLoad();
+        });
+        it('navigate to item and wait for an image', function () {
+            runs(function () {
+                $('a.g-item-list-link').click();
+            });
+            girderTest.waitForLoad();
+            waitsFor(function () {
+                return $('.g-item-image-viewer-select').length !== 0;
+            }, 'image to load', 15000);
+        });
+        it('adjust frame slider', function () {
+            runs(function () {
+                expect($('.image-controls-frame').length).toBe(1);
+                $('.image-controls-number').val(1).trigger('input');
+            });
+            girderTest.waitForLoad();
+            waitsFor(function () {
+                return $('.image-controls-slider').val() === '1';
+            }, 'control slider to update');
+        });
+    });
+    describe('upload test file', function () {
         it('go to collections page', function () {
             runs(function () {
                 $("a.g-nav-link[g-target='collections']").click();
