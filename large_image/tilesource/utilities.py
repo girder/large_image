@@ -271,6 +271,7 @@ def _vipsParameters(forTiled=True, defaultCompression=None, **kwargs):
     :param level: compression level for zstd, 1-22 (default is 10).
     :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
         deflate.
+    :param shrinkMode: one of vips's VipsRegionShrink strings.
     :returns: a dictionary of parameters.
     """
     if not forTiled:
@@ -293,6 +294,12 @@ def _vipsParameters(forTiled=True, defaultCompression=None, **kwargs):
         'Q': 90,
         'predictor': 'horizontal',
     }
+    # For lossless modes, make sure pixel values in lower resolutions are
+    # values that exist in the upper resolutions.
+    if convertParams['compression'] in {'none', 'lzw'}:
+        convertParams['region_shrink'] = 'nearest'
+    if kwargs.get('shrinkMode') and kwargs['shrinkMode'] != 'default':
+        convertParams['region_shrink'] = kwargs['shrinkMode']
     for vkey, kwkeys in {
         'tile_width': {'tileSize'},
         'tile_height': {'tileSize'},
