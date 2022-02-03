@@ -437,7 +437,7 @@ class AnnotationSchema:
         'description': 'An image overlay on top of the base resource.',
     })
 
-    pixelMapCategorySchema = {
+    pixelmapCategorySchema = {
         'type': 'object',
         'properties': {
             'fillColor': colorSchema,
@@ -454,7 +454,8 @@ class AnnotationSchema:
                                'meaining of this category.'
             }
         },
-        'required': ['fillColor']
+        'required': ['fillColor'],
+        'additionalProperties': False,
     }
 
     pixelmapSchema = extendSchema(overlaySchema, {
@@ -474,7 +475,7 @@ class AnnotationSchema:
             },
             'categories': {
                 'type': 'array',
-                'items': pixelMapCategorySchema,
+                'items': pixelmapCategorySchema,
                 'description': 'An array used to map between the '
                                'values array and color values. '
                                'Can also contain semantic '
@@ -482,12 +483,19 @@ class AnnotationSchema:
             },
             'boundaries': {
                 'type': 'boolean',
-                'description': 'True if the boundaries of the pixelmap regions have '
-                               'their own value in the data or segments array.'
+                'description': 'True if the pixelmap doubles pixel '
+                               'values such that even values are the '
+                               'fill and odd values the are stroke '
+                               'of each superpixel. If true, the '
+                               'length of the values array should be '
+                               'half of the maximum value in the '
+                               'pixelmap.'
+
             },
         },
         'required': ['values', 'categories', 'boundaries'],
-        'description': 'A tiled pixelmap to overlay onto a base resource.'
+        'additionalProperties': False,
+        'description': 'A tiled pixelmap to overlay onto a base resource.',
     })
 
     annotationElementSchema = {
