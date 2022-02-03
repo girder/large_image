@@ -4,6 +4,7 @@
 
 ### Features
 - Initial implementation of multi-source tile source ([#764](../../pull/764))
+- Added pixelmaps to the annotation schema ([#767](../../pull/767))
 
 ### Improvements
 - Add more opacity support for image overlays ([#761](../../pull/761))
