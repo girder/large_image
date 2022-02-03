@@ -401,7 +401,7 @@ class AnnotationSchema:
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['imageoverlay']
+                'enum': ['image']
             },
             'girderId': {
                 'type': 'string',
@@ -437,6 +437,67 @@ class AnnotationSchema:
         'description': 'An image overlay on top of the base resource.',
     })
 
+    pixelmapCategorySchema = {
+        'type': 'object',
+        'properties': {
+            'fillColor': colorSchema,
+            'strokeColor': colorSchema,
+            'label': {
+                'type': 'string',
+                'description': 'A string representing the semantic '
+                               'meaning of regions of the map with '
+                               'the corresponding color.'
+            },
+            'description': {
+                'type': 'string',
+                'description': 'A more detailed explanation of the '
+                               'meaining of this category.'
+            }
+        },
+        'required': ['fillColor'],
+        'additionalProperties': False,
+    }
+
+    pixelmapSchema = extendSchema(overlaySchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['pixelmap'],
+            },
+            'values': {
+                'type': 'array',
+                'items': {'type': 'integer'},
+                'description': 'An array where the indices '
+                               'correspond to pixel values in the '
+                               'pixel map image and the values are '
+                               'used to look up the appropriate '
+                               'color in the categories property.'
+            },
+            'categories': {
+                'type': 'array',
+                'items': pixelmapCategorySchema,
+                'description': 'An array used to map between the '
+                               'values array and color values. '
+                               'Can also contain semantic '
+                               'information for color values.'
+            },
+            'boundaries': {
+                'type': 'boolean',
+                'description': 'True if the pixelmap doubles pixel '
+                               'values such that even values are the '
+                               'fill and odd values the are stroke '
+                               'of each superpixel. If true, the '
+                               'length of the values array should be '
+                               'half of the maximum value in the '
+                               'pixelmap.'
+
+            },
+        },
+        'required': ['values', 'categories', 'boundaries'],
+        'additionalProperties': False,
+        'description': 'A tiled pixelmap to overlay onto a base resource.',
+    })
+
     annotationElementSchema = {
         # Shape subtypes are mutually exclusive, so for efficiency, don't use
         # 'oneOf'
@@ -454,6 +515,7 @@ class AnnotationSchema:
             rectangleShapeSchema,
             rectangleGridShapeSchema,
             overlaySchema,
+            pixelmapSchema,
         ]
     }
 

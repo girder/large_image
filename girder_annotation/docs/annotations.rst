@@ -278,7 +278,7 @@ a ``2x2`` affine matrix.
 ::
 
   {
-    "type": "imageoverlay",            # Exact string. Required
+    "type": "image",                   # Exact string. Required
     <id, label, group, user>           # Optional general shape properties
     "girderId": <girder image id>,     # 24-character girder id pointing
                                        # to a large image object. Required
@@ -292,6 +292,69 @@ a ``2x2`` affine matrix.
         [0, 1]
       ]
     }
+  }
+
+Tiled pixelmap overlays
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Tiled pixelmap overlay annotations allow specifying a girder large
+image item to display on top of the base image to help represent
+categorical data. The specified large image overlay should be a
+lossless tiled image where pixel values represent category indices
+instead of colors. Data provided along with the ID of the image item
+is used to color the pixelmap based on the categorical data.
+
+The element must contain a ``values`` array. The indices of this
+array correspond to pixel values on the pixelmap, and the values are
+integers which correspond to indices in a ``categories`` array.
+::
+
+  {
+    "type": "pixelmap",                # Exact string. Required
+    <id, label, group, user>           # Optional general shape properties
+    "girderId": <girder image id>,     # 24-character girder id pointing
+                                       # to a large image object. Required
+    "opacity": 1,                      # Default opacity for the overlay. Defaults to 1. Optional
+    "transform": {                     # Object specifying additional overlay information. Optional
+      "xoffset": 0,                    # How much to shift the overlaid image right.
+      "yoffset": 0,                    # How much to shift the overlaid image down.
+      "matrix": [                      # Affine matrix to specify transformations like scaling,
+                                       # rotation, or shearing.
+        [1, 0],
+        [0, 1]
+      ]
+    },
+    "boundaries": false,               # Whether boundaries within the pixelmap have unique values.
+                                       # If so, the values array should only be half as long as the
+                                       # actual number of distinct pixel values in the pixelmap. In
+                                       # this case, for a given index i in the values array, the
+                                       # pixels with value 2i will be given the corresponding
+                                       # fillColor from the category information, and the pixels
+                                       # with value 2i + 1 will be given the corresponding
+                                       # strokeColor from the category information. Required
+    "values": [                        # An array where the value at index 'i' is an integer
+                                       # pointing to an index in the categories array. Required
+        1,
+        2,
+        1,
+        1,
+        2,
+      ],
+      "categories": [                  # An array whose values contain category information.
+        {
+          "fillColor": "#0000FF",      # The color pixels with this category should be. Required
+          "label": "class_a",          # A human-readable label for this category. Optional
+        },
+        {
+          "fillColor": "#00FF00",
+          "label": "class_b",
+
+        },
+        {
+          "fillColor": "#FF0000",
+          "label": "class_c",
+        },
+    ]
   }
 
 Component Values

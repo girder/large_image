@@ -93,7 +93,7 @@ $(function () {
                     data: JSON.stringify({
                         name: 'test overlay annotation',
                         elements: [{
-                            type: 'imageoverlay',
+                            type: 'image',
                             girderId: itemId,
                             opacity: 0.5,
                             transform: {
