@@ -532,11 +532,15 @@ class TileSource:
             'edges': kwargs.get('tile_overlap', {}).get('edges', False),
             'offset_x': 0,
             'offset_y': 0,
+            'range_x': 0,
+            'range_y': 0
         }
         if not tile_overlap['edges']:
             # offset by half the overlap
             tile_overlap['offset_x'] = tile_overlap['x'] // 2
             tile_overlap['offset_y'] = tile_overlap['y'] // 2
+            tile_overlap['range_x'] = tile_overlap['x']
+            tile_overlap['range_y'] = tile_overlap['y']
         if 'tile_size' in kwargs:
             tile_size['width'] = int(kwargs['tile_size'].get(
                 'width', kwargs['tile_size'].get('height', tile_size['width'])))
@@ -563,10 +567,10 @@ class TileSource:
         # size of the region is reduced by the overlap.  This factor is stored
         # in the overlap offset_*.
         xmin = int(left / tile_size['width'])
-        xmax = int(math.ceil((float(right) - tile_overlap['offset_x']) /
+        xmax = int(math.ceil((float(right) - tile_overlap['range_x']) /
                              tile_size['width']))
         ymin = int(top / tile_size['height'])
-        ymax = int(math.ceil((float(bottom) - tile_overlap['offset_y']) /
+        ymax = int(math.ceil((float(bottom) - tile_overlap['range_y']) /
                              tile_size['height']))
         tile_overlap.update({'xmin': xmin, 'xmax': xmax,
                              'ymin': ymin, 'ymax': ymax})
