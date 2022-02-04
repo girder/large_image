@@ -13,6 +13,9 @@
 - Improve frame slider response with base quads ([#771](../../pull/771))
 - Default to nearest-neighbor scaling in lossless image conversion ([#772](../../pull/772))
 
+### Bug Fixes
+- The tile iterator could return excess tiles with overlap ([#773](../../pull/773))
+
 ## Version 1.10.0
 
 ### Features

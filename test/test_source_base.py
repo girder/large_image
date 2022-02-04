@@ -221,3 +221,35 @@ def testClassRepr():
     imagePath = datastore.fetch('sample_image.ptif')
     ts = large_image.open(imagePath)
     assert 'sample_image.ptif' in repr(ts)
+
+
+def testTileOverlap():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'test_orient1.tif')
+    ts = large_image.open(imagePath)
+    assert [(
+        tiles['x'], tiles['x'] + tiles['width'], tiles['width'],
+        tiles['tile_overlap']['left'], tiles['tile_overlap']['right']
+    ) for tiles in ts.tileIterator(
+        tile_size=dict(width=75, height=180), tile_overlap=dict(x=60))
+    ] == [
+        (0, 75, 75, 0, 30),
+        (15, 90, 75, 30, 30),
+        (30, 105, 75, 30, 30),
+        (45, 120, 75, 30, 0),
+    ]
+    assert [(
+        tiles['x'], tiles['x'] + tiles['width'], tiles['width'],
+        tiles['tile_overlap']['left'], tiles['tile_overlap']['right']
+    ) for tiles in ts.tileIterator(
+        tile_size=dict(width=75, height=180), tile_overlap=dict(x=60, edges=True))
+    ] == [
+        (0, 45, 45, 0, 30),
+        (0, 60, 60, 15, 30),
+        (0, 75, 75, 30, 30),
+        (15, 90, 75, 30, 30),
+        (30, 105, 75, 30, 30),
+        (45, 120, 75, 30, 30),
+        (60, 120, 60, 30, 15),
+        (75, 120, 45, 30, 0),
+    ]
