@@ -6,7 +6,6 @@ from collections import defaultdict
 from operator import attrgetter
 
 import numpy
-import palettable
 import PIL
 import PIL.Image
 import PIL.ImageColor
@@ -449,6 +448,8 @@ def getPaletteColors(value):
         above.
     :returns: a numpy array of RGBA value on the scale of [0-255].
     """
+    import palettable
+
     palette = None
     if isinstance(value, (tuple, list)):
         palette = value
@@ -524,6 +525,8 @@ def getAvailableNamedPalettes(includeColors=True, reduced=False):
         colors.
     :returns: a list of names.
     """
+    import palettable
+
     palettes = set()
     if includeColors:
         palettes |= set(PIL.ImageColor.colormap.keys())

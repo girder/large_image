@@ -12,6 +12,7 @@
 - Improve TileSource class repr ([#765](../../pull/765))
 - Improve frame slider response with base quads ([#771](../../pull/771))
 - Default to nearest-neighbor scaling in lossless image conversion ([#772](../../pull/772))
+- Improve the import time ([#775](../../pull/775))
 
 ### Bug Fixes
 - The tile iterator could return excess tiles with overlap ([#773](../../pull/773))
