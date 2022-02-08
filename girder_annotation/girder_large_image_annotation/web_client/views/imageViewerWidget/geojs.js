@@ -129,7 +129,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          */
         _addPixelmapLayerParams(layerParams, pixelmapElement) {
             // For pixelmap overlays, there are additional parameters to set
-            layerParams.keepLower = false;
             layerParams.url = layerParams.url + `?encoding=PNG`;
             let pixelmapData = pixelmapElement.values;
             if (pixelmapElement.boundaries) {
