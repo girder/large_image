@@ -12,6 +12,7 @@ extraReqs = {
     'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
     'converter': ['large-image-converter'],
     'colormaps': ['matplotlib'],
+    'tiledoutput': ['pyvips'],
 }
 sources = {
     'bioformats': ['large-image-source-bioformats'],
