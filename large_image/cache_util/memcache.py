@@ -18,7 +18,6 @@ import hashlib
 import time
 
 import cachetools
-import pylibmc
 
 from .. import config
 
@@ -28,6 +27,9 @@ class MemCache(cachetools.Cache):
 
     def __init__(self, url='127.0.0.1', username=None, password=None,
                  getsizeof=None, mustBeAvailable=False):
+        global pylibmc
+        import pylibmc
+
         super().__init__(0, getsizeof=getsizeof)
         if isinstance(url, str):
             url = [url]
