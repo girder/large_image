@@ -121,6 +121,47 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         /**
+         * Set additional parameters for pixelmap overlays.
+         * @param {object} layerParams An object containing layer parameters. This should already have
+         * generic properties for overlay annotations set, such as the URL, opacity, etc.
+         * @param {object} pixelmapElement A pixelmap annotation element
+         * @returns An object containing parameters needed to create a pixelmap layer.
+         */
+        _addPixelmapLayerParams(layerParams, pixelmapElement) {
+            // For pixelmap overlays, there are additional parameters to set
+            layerParams.keepLower = false;
+            layerParams.url = layerParams.url + `?encoding=PNG`;
+            let pixelmapData = pixelmapElement.values;
+            if (pixelmapElement.boundaries) {
+                let valuesWithBoundaries = new Array(pixelmapData.length * 2);
+                for (let i = 0; i < pixelmapData.length; i++) {
+                    valuesWithBoundaries[i * 2] = valuesWithBoundaries[i * 2 + 1] = pixelmapData[i];
+                }
+                pixelmapData = valuesWithBoundaries;
+            }
+            layerParams.data = pixelmapData;
+            layerParams.style = {
+                color: (d, i) => {
+                    const categoryMap = pixelmapElement.categories;
+                    const boundaries = pixelmapElement.boundaries;
+                    if (d < 0 || d > categoryMap.length) {
+                        console.warn(`No category found at index ${d} in the category map.`);
+                        return 'rgba(0, 0, 0, 0)';
+                    }
+                    let color;
+                    let category = categoryMap[d];
+                    if (boundaries) {
+                        color = (i % 2 === 0) ? category.fillColor : category.strokeColor;
+                    } else {
+                        color = category.fillColor;
+                    }
+                    return color;
+                }
+            };
+            return layerParams;
+        },
+
+        /**
          * Generate layer parameters for an image overlay layer
          * @param {object} overlayImageMetadata metadata such as size, tile size, and levels for the overlay image
          * @param {string} overlayImageId ID of a girder image item
@@ -162,6 +203,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         y: Math.ceil(overlayImageMetadata.sizeY / overlayImageMetadata.tileHeight / scale)
                     };
                 };
+            }
+            if (overlay.type === 'pixelmap') {
+                params.layer = this._addPixelmapLayerParams(params.layer, overlay);
             }
             return params.layer;
         },
@@ -336,11 +380,12 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                             this.viewer.deleteLayer(layer);
                         });
                     }
-
-                    let params = this._generateOverlayLayerParams(response, overlayItemId, overlay);
-                    const overlayLayer = this.viewer.createLayer('osm', params);
-                    overlayLayer.id(overlay.id);
+                    const params = this._generateOverlayLayerParams(response, overlayItemId, overlay);
+                    const layerType = (overlay.type === 'pixelmap') ? 'pixelmap' : 'osm';
+                    const overlayLayer = this.viewer.createLayer(layerType, params);
                     const proj = this._getOverlayTransformProjString(overlay);
+
+                    overlayLayer.id(overlay.id);
                     overlayLayer.gcs(proj);
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
                 }).fail((response) => {

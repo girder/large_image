@@ -207,6 +207,38 @@ $(function () {
             });
         });
 
+        it('generates pixelmap layer parameters', function() {
+            const overlayMetadata = {
+                sizeX: 500,
+                sizeY: 500,
+                tileWidth: 256,
+                tileHeight: 256,
+                levels: viewer.levels,
+            };
+            const overlayId = '012345678901234567890123';
+            const pixelMapElement = {
+                type: 'pixelmap',
+                id: '00001111222233334444',
+                opacity: 0.5,
+                girderId: overlayId,
+                boundaries: false,
+                values: [0, 1, 0, 1, 0, 1],
+                categories: [
+                    {fillColor: '#000000'},
+                    {fillColor: '#ffffff'}
+                ]
+            }
+            const pixelmapLayerParams = viewer._generateOverlayLayerParams(overlayMetadata, overlayId, pixelMapElement);
+            const expectedUrl = 'api/v1/item/' + overlayId + '/tiles/zxy/{z}/{x}/{y}?encoding=PNG';
+            expect(pixelmapLayerParams.url).toBe(expectedUrl);
+            expect(pixelmapLayerParams.data).toEqual(pixelMapElement.values);
+
+            pixelMapElement.boundaries = true;
+            const pixelmapLayerParamsWithBoundaries = viewer._generateOverlayLayerParams(overlayMetadata, overlayId, pixelMapElement);
+            const expectedDataArray = [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1];
+            expect(pixelmapLayerParamsWithBoundaries.data).toEqual(expectedDataArray);
+        });
+
         it('mouse over events', function () {
             var mouseon, mouseover, context = {};
             runs(function () {
