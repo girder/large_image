@@ -14,14 +14,18 @@
 #  limitations under the License.
 ##############################################################################
 
-from pkg_resources import DistributionNotFound, get_distribution
-
 from large_image.constants import SourcePriority
 from large_image.tilesource import TileSource
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _importlib_version
+except ImportError:
+    from importlib_metadata import PackageNotFoundError
+    from importlib_metadata import version as _importlib_version
+try:
+    __version__ = _importlib_version(__name__)
+except PackageNotFoundError:
     # package is not installed
     pass
 

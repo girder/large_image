@@ -20,7 +20,6 @@ import warnings
 
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
-from pkg_resources import DistributionNotFound, get_distribution
 
 import girder
 import large_image
@@ -44,8 +43,14 @@ from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _importlib_version
+except ImportError:
+    from importlib_metadata import PackageNotFoundError
+    from importlib_metadata import version as _importlib_version
+try:
+    __version__ = _importlib_version(__name__)
+except PackageNotFoundError:
     # package is not installed
     pass
 

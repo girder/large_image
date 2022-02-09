@@ -28,7 +28,7 @@
 - Work with more matplotlib palettes ([#760](../../pull/760))
 
 ### Changes
-- Use importlib rather than pkg_resources internally ([#747](../../pull/747))
+- Use importlib rather than pkg_resources internally ([#747](../../pull/747), [#778](../../pull/778))
 
 ### Bug Fixes
 - Fix expanding a style palette with a single named color ([#754](../../pull/754))

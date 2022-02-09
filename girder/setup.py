@@ -46,6 +46,7 @@ setup(
         'girder>=3.0.4',
         'girder-jobs>=3.0.3',
         'large_image>=1.0.0',
+        'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
         'tasks': [
