@@ -4,7 +4,7 @@
 
 ### Features
 - Initial implementation of multi-source tile source ([#764](../../pull/764))
-- Added pixelmaps to the annotation schema ([#767](../../pull/767))
+- Added pixelmap annotation element ([#767](../../pull/767), [#776](../../pull/776))
 
 ### Improvements
 - Add more opacity support for image overlays ([#761](../../pull/761))
@@ -20,7 +20,7 @@
 ## Version 1.10.0
 
 ### Features
-- Added image overlay annotation element ([#742](../../pull/742), [#750](../../pull/750))
+- Added image annotation element ([#742](../../pull/742), [#750](../../pull/750))
 - Allow the discrete scheme to be used on all tile sources  ([#755](../../pull/755))
 
 ### Improvements
