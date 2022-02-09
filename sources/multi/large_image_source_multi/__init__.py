@@ -11,7 +11,6 @@ from pathlib import Path
 import jsonschema
 import numpy
 import yaml
-from pkg_resources import DistributionNotFound, get_distribution
 
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -21,8 +20,14 @@ from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import _makeSameChannelDepth
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _importlib_version
+except ImportError:
+    from importlib_metadata import PackageNotFoundError
+    from importlib_metadata import version as _importlib_version
+try:
+    __version__ = _importlib_version(__name__)
+except PackageNotFoundError:
     # package is not installed
     pass
 

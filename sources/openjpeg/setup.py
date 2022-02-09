@@ -46,6 +46,7 @@ setup(
         'large-image',
         'glymur>=0.8.18 ; python_version >= "3.7"',
         'glymur>=0.8.18,<0.9.4 ; python_version < "3.7"',
+        'importlib-metadata ; python_version < "3.8"'
     ],
     extras_require={
         'girder': 'girder-large-image',

@@ -44,6 +44,7 @@ setup(
     ],
     install_requires=[
         'large-image',
+        'importlib-metadata ; python_version < "3.8"',
     ],
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),

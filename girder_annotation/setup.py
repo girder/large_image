@@ -46,6 +46,7 @@ setup(
         'jsonschema>=2.5.1',
         'girder-large-image',
         'ujson>=1.35',
+        'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
         'tasks': [

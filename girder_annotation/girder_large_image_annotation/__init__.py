@@ -24,8 +24,20 @@ from . import constants
 from .models.annotation import Annotation
 from .rest.annotation import AnnotationResource
 
-# Validators
+try:
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _importlib_version
+except ImportError:
+    from importlib_metadata import PackageNotFoundError
+    from importlib_metadata import version as _importlib_version
+try:
+    __version__ = _importlib_version(__name__)
+except PackageNotFoundError:
+    # package is not installed
+    pass
 
+
+# Validators
 
 @setting_utilities.validator({
     constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY,

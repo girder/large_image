@@ -28,7 +28,6 @@ from osgeo import gdal, gdal_array, gdalconst, osr  # noqa I001
 # if on those older versions of python if it is imported before gdal, there can
 # be a database version conflect; importing after gdal avoids this.
 import pyproj  # noqa I001
-from pkg_resources import DistributionNotFound, get_distribution
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
@@ -40,11 +39,16 @@ from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _importlib_version
+except ImportError:
+    from importlib_metadata import PackageNotFoundError
+    from importlib_metadata import version as _importlib_version
+try:
+    __version__ = _importlib_version(__name__)
+except PackageNotFoundError:
     # package is not installed
     pass
-
 
 TileInputUnits['projection'] = 'projection'
 TileInputUnits['proj'] = 'projection'

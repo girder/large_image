@@ -46,6 +46,7 @@ setup(
         'large-image',
         'gdal',
         'pyproj>=2.2.0',
+        'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
         'girder': 'girder-large-image',
