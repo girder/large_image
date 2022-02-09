@@ -132,8 +132,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             layerParams.url = layerParams.url + `?encoding=PNG`;
             let pixelmapData = pixelmapElement.values;
             if (pixelmapElement.boundaries) {
-                let valuesWithBoundaries = new Array(pixelmapData.length * 2).fill(0);
-                pixelmapData = valuesWithBoundaries.map((d, i) => pixelmapData[Math.floor(i / 2)]);
+                let valuesWithBoundaries = new Array(pixelmapData.length * 2);
+                for (let i = 0; i < pixelmapData.length; i++) {
+                    valuesWithBoundaries[i * 2] = valuesWithBoundaries[i * 2 + 1] = pixelmapData[i];
+                }
+                pixelmapData = valuesWithBoundaries;
             }
             layerParams.data = pixelmapData;
             layerParams.style = {
