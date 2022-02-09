@@ -28,8 +28,6 @@ import os
 import threading
 import types
 
-import bioformats
-import javabridge
 import numpy
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -46,6 +44,9 @@ except DistributionNotFound:
     # package is not installed
     pass
 
+bioformats = None
+# import javabridge
+javabridge = None
 
 _javabridgeStarted = None
 _openImages = []
@@ -100,6 +101,14 @@ def _startJavabridge(logger):
     global _javabridgeStarted
 
     if _javabridgeStarted is None:
+        # Only import these when first asked.  They are slow to import.
+        global bioformats
+        global javabridge
+        if bioformats is None:
+            import bioformats
+        if javabridge is None:
+            import javabridge
+
         # We need something to wake up at exit and shut things down
         monitor = threading.Thread(target=_monitor_thread)
         monitor.daemon = True
@@ -119,7 +128,8 @@ def _startJavabridge(logger):
 def _stopJavabridge(*args, **kwargs):
     global _javabridgeStarted
 
-    javabridge.kill_vm()
+    if javabridge is not None:
+        javabridge.kill_vm()
     _javabridgeStarted = None
 
 

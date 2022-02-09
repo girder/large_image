@@ -21,14 +21,7 @@ import threading
 import types
 import warnings
 
-# Work around an issue in the PIMS package (can be removed once pims is
-# released for Python 3.10).  This must be before improt nd2reader.
-if True:
-    import collections.abc
-    collections.Iterable = collections.abc.Iterable
-
 import cachetools
-import nd2reader
 import numpy
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -37,6 +30,8 @@ from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 
+nd2reader = None
+
 try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:
@@ -44,7 +39,21 @@ except DistributionNotFound:
     pass
 
 
-warnings.filterwarnings('ignore', category=UserWarning, module='nd2reader')
+def _lazyImport():
+    """
+    Import the nd2reader module.  This is done when needed rather than in the
+    module initialization because it is slow.
+    """
+    global nd2reader
+
+    if nd2reader is None:
+        # Work around an issue in the PIMS package (can be removed once pims is
+        # released for Python 3.10).  This must be before import nd2reader.
+        if True:
+            import collections.abc
+            collections.Iterable = collections.abc.Iterable
+        import nd2reader
+        warnings.filterwarnings('ignore', category=UserWarning, module='nd2reader')
 
 
 class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -82,6 +91,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         self._pixelInfo = {}
 
+        _lazyImport()
         try:
             self._nd2 = nd2reader.ND2Reader(self._largeImagePath)
         except (UnicodeDecodeError,
