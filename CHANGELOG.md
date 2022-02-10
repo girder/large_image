@@ -2,6 +2,11 @@
 
 ## Version 1.11.0
 
+### Improvements
+- Release memory associated with a lazy tile if it has been loaded
+
+## Version 1.11.0
+
 ### Features
 - Initial implementation of multi-source tile source ([#764](../../pull/764))
 - Added pixelmap annotation element ([#767](../../pull/767), [#776](../../pull/776))

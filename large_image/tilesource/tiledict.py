@@ -220,3 +220,14 @@ class LazyTileDict(dict):
             self['tile'] = tileData
             self['format'] = tileFormat
         return super().__getitem__(key, *args, **kwargs)
+
+    def release(self):
+        """
+        If the tile has been loaded, unload it.  It can be loaded again.  This
+        is useful if you want to keep tiles available in memory but not their
+        actual tile data.
+        """
+        if self.loaded:
+            self.loaded = False
+            for key in self.deferredKeys:
+                self[key] = None
