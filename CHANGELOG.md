@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.11.0
 
 ### Features
 - Initial implementation of multi-source tile source ([#764](../../pull/764))
