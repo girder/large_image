@@ -732,12 +732,18 @@ class TileSource:
                     'left': max(0, x * tileSize['width'] + tileOverlap['offset_x'] - left - posX),
                     'top': max(0, y * tileSize['height'] + tileOverlap['offset_y'] - top - posY),
                 }
-                overlap['right'] = max(0, tileWidth - tileSize['width'] - overlap['left'])
-                overlap['bottom'] = max(0, tileHeight - tileSize['height'] - overlap['top'])
-                if tileOverlap['offset_x']:
+                overlap['right'] = (
+                    max(0, tileWidth - tileSize['width'] - overlap['left'])
+                    if x != xmin or not tileOverlap['range_x'] else
+                    min(tileWidth, tileOverlap['range_x'] - tileOverlap['offset_x']))
+                overlap['bottom'] = (
+                    max(0, tileHeight - tileSize['height'] - overlap['top'])
+                    if y != ymin or not tileOverlap['range_y'] else
+                    min(tileHeight, tileOverlap['range_y'] - tileOverlap['offset_y']))
+                if tileOverlap['range_x']:
                     overlap['left'] = 0 if x == tileOverlap['xmin'] else overlap['left']
                     overlap['right'] = 0 if x + 1 == tileOverlap['xmax'] else overlap['right']
-                if tileOverlap['offset_y']:
+                if tileOverlap['range_y']:
                     overlap['top'] = 0 if y == tileOverlap['ymin'] else overlap['top']
                     overlap['bottom'] = 0 if y + 1 == tileOverlap['ymax'] else overlap['bottom']
                 tile = LazyTileDict({

@@ -3,7 +3,10 @@
 ## Version 1.11.0
 
 ### Improvements
-- Release memory associated with a lazy tile if it has been loaded
+- Release memory associated with a lazy tile if it has been loaded ([#780](../../pull/780))
+
+### Bug Fixes
+- Tile overlaps on subset regions could be wrong ([#781](../../pull/781))
 
 ## Version 1.11.0
 
