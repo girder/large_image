@@ -253,3 +253,24 @@ def testTileOverlap():
         (60, 120, 60, 30, 15),
         (75, 120, 45, 30, 0),
     ]
+
+
+def testLazyTileRelease():
+    imagePath = datastore.fetch('sample_image.ptif')
+    ts = large_image.open(imagePath)
+
+    tiles = list(ts.tileIterator(
+        scale={'magnification': 2.5},
+        format=large_image.constants.TILE_FORMAT_IMAGE,
+        encoding='PNG'))
+    assert isinstance(tiles[5], large_image.tilesource.tiledict.LazyTileDict)
+    assert super(large_image.tilesource.tiledict.LazyTileDict, tiles[5]).__getitem__(
+        'tile') is None
+    data = tiles[5]['tile']
+    assert len(tiles[5]['tile']) > 0
+    assert super(large_image.tilesource.tiledict.LazyTileDict, tiles[5]).__getitem__(
+        'tile') is not None
+    tiles[5].release()
+    assert super(large_image.tilesource.tiledict.LazyTileDict, tiles[5]).__getitem__(
+        'tile') is None
+    assert tiles[5]['tile'] == data
