@@ -1374,3 +1374,41 @@ def testTileFrames(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
     assert image[:len(utilities.BigTIFFHeader)] == utilities.BigTIFFHeader
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testTileFramesQuadInfo(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample.ome.tif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    params = {'maxTextureSize': 2048}
+    resp = server.request(path='/item/%s/tiles/tile_frames/quad_info' % itemId,
+                          user=admin, params=params)
+    assert utilities.respStatus(resp) == 200
+    assert 'frames' in resp.json
+
+    params = {'cache': 'report', 'maxTextureSize': 2048}
+    resp = server.request(path='/item/%s/tiles/tile_frames/quad_info' % itemId,
+                          user=admin, params=params)
+    assert utilities.respStatus(resp) == 200
+    assert 'cached' in resp.json
+    assert resp.json['cached'][0] is False
+
+    params = {'cache': 'schedule', 'maxTextureSize': 2048}
+    resp = server.request(path='/item/%s/tiles/tile_frames/quad_info' % itemId,
+                          user=admin, params=params)
+    assert utilities.respStatus(resp) == 200
+    assert 'scheduledJob' in resp.json
+
+    job = Job().load(resp.json['scheduledJob'], force=True)
+    while job['status'] not in (JobStatus.SUCCESS, JobStatus.ERROR, JobStatus.CANCELED):
+        time.sleep(0.1)
+        job = Job().load(job['_id'], force=True)
+
+    params = {'cache': 'report', 'maxTextureSize': 2048}
+    resp = server.request(path='/item/%s/tiles/tile_frames/quad_info' % itemId,
+                          user=admin, params=params)
+    assert utilities.respStatus(resp) == 200
+    assert 'cached' in resp.json
+    assert resp.json['cached'][0] is True

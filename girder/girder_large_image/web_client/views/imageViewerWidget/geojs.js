@@ -85,6 +85,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     // maxTextures: 16,
                     // maxTotalTexturePixels: 256 * 1024 * 1024,
                     baseUrl: this._getTileUrl('{z}', '{x}', '{y}').split('/tiles/')[0] + '/tiles',
+                    restRequest: restRequest,
+                    restUrl: 'item/' + this.itemId + '/tiles',
                     query: 'cache=true'
                 });
                 this._layer.setFrameQuad(0);

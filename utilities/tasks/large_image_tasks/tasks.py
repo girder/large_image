@@ -146,3 +146,29 @@ def convert_image_job(job):
             job, log='Finished large image conversion\n', status=status)
     finally:
         logger.removeHandler(handler)
+
+
+def cache_tile_frames_job(job):
+    from girder_jobs.constants import JobStatus
+    from girder_jobs.models.job import Job
+    from girder_large_image.models.image_item import ImageItem
+
+    from girder import logger
+
+    kwargs = job['kwargs']
+    item = ImageItem().load(kwargs.pop('itemId'), force=True)
+    job = Job().updateJob(
+        job, log='Started caching tile frames\n',
+        status=JobStatus.RUNNING)
+    try:
+        for entry in kwargs.get('tileFramesList'):
+            job = Job().load(job['_id'], force=True)
+            if job['status'] == JobStatus.CANCELED:
+                return
+            job = Job().updateJob(job, log='Caching %r\n' % entry)
+            ImageItem().tileFrames(item, checkAndCreate=True, **entry)
+        job = Job().updateJob(job, log='Finished caching tile frames\n', status=JobStatus.SUCCESS)
+    except Exception as exc:
+        logger.exception('Failed caching tile frames')
+        job = Job().updateJob(
+            job, log='Failed caching tile frames (%s)\n' % exc, status=JobStatus.ERROR)
