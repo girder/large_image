@@ -274,3 +274,14 @@ def testLazyTileRelease():
     assert super(large_image.tilesource.tiledict.LazyTileDict, tiles[5]).__getitem__(
         'tile') is None
     assert tiles[5]['tile'] == data
+
+
+def testTileOverlapWithRegionOffset():
+    imagePath = datastore.fetch('sample_image.ptif')
+    ts = large_image.open(imagePath)
+    tileIter = ts.tileIterator(
+        region=dict(left=10000, top=10000, width=6000, height=6000),
+        tile_size=dict(width=1936, height=1936),
+        tile_overlap=dict(x=400, y=400))
+    firstTile = next(tileIter)
+    assert firstTile['tile_overlap']['right'] == 200
