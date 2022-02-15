@@ -82,7 +82,9 @@ commands:
           name: Switch node versions
           command: |
             nvm install << parameters.node >>
-            nvm alias default  << parameters.node >>
+            nvm alias default << parameters.node >>
+            NODE_DIR=$(dirname $(which node))
+            echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
       - run:
           name: Check node versions
           command: |
@@ -101,7 +103,8 @@ commands:
 
 jobs:
   testdocker:
-    machine: true
+    machine:
+      image: ubuntu-2004:202111-02
     steps:
       - checkout
       - run:
@@ -114,7 +117,7 @@ jobs:
               docker push girder/tox-and-node:latest
   py36:
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2004:202111-02
     steps:
       - checkout
       - allservices:
@@ -127,7 +130,7 @@ jobs:
           path: build/test/artifacts
   py37:
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2004:202111-02
     steps:
       - checkout
       - allservices:
@@ -140,7 +143,7 @@ jobs:
           path: build/test/artifacts
   py38:
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2004:202111-02
     steps:
       - checkout
       - allservices:
@@ -153,7 +156,7 @@ jobs:
           path: build/test/artifacts
   py39:
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2004:202111-02
     steps:
       - checkout
       - allservices:
@@ -166,7 +169,7 @@ jobs:
           path: build/test/artifacts
   py310:
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2004:202111-02
     steps:
       - checkout
       - allservices:
