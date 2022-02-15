@@ -31,6 +31,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
         this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
+        this.listenTo(events, 's:widgetDrawPolygonRegion', (model) => this.drawRegion(model, 'polygon'));
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
         return initialize.apply(this, _.rest(arguments));
@@ -78,7 +79,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * Given an image overlay annotation element, compute and return
          * a proj-string representation of its transform specification.
          * @param {object} overlay A image annotation element.
-         * @returns a proj-string representing how to overlay should be tranformed.
+         * @returns a proj-string representing how to overlay should be
+         *   transformed.
          */
         _getOverlayTransformProjString: function (overlay) {
             const transformInfo = overlay.transform || {};
@@ -654,29 +656,38 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          *   [ left, top, width, height ]
          *
          * @param {Backbone.Model} [model] A model to set the region to
+         * @param {string} [drawMode='rectangle'] An annotation drawing mode.
          * @returns {$.Promise}
          */
-        drawRegion: function (model) {
+        drawRegion: function (model, drawMode) {
             model = model || new Backbone.Model();
-            return this.startDrawMode('rectangle', {trigger: false}).then((elements) => {
+            return this.startDrawMode(drawMode === 'polygon' ? drawMode : 'rectangle', {trigger: false}).then((elements) => {
                 /*
-                 * Strictly speaking, the rectangle drawn here could be rotated, but
-                 * for simplicity we will set the region model assuming it is not.
-                 * To be more precise, we could expand the region to contain the
-                 * whole rotated rectangle.  A better solution would be to add
-                 * a draw parameter to geojs that draws a rectangle aligned with
-                 * the image coordinates.
+                 * Strictly speaking, the rectangle drawn here could be
+                 * rotated, but for simplicity we will set the region model
+                 * assuming it is not.  To be more precise, we could expand the
+                 * region to contain the whole rotated rectangle.  A better
+                 * solution would be to add a draw parameter to geojs that
+                 * draws a rectangle aligned with the image coordinates.
                  */
                 var element = elements[0];
-                var width = Math.round(element.width);
-                var height = Math.round(element.height);
-                var left = Math.round(element.center[0] - element.width / 2);
-                var top = Math.round(element.center[1] - element.height / 2);
+                if (drawMode === 'polygon') {
+                    let values = element.points.map(([x, y, z]) => [Math.round(x), Math.round(y)]).flat();
+                    while (values.length > 0 && values.length <= 6) {
+                        values.push(values[0]);
+                        values.push(values[1]);
+                    }
+                    model.set('value', values, {trigger: true});
+                } else {
+                    var width = Math.round(element.width);
+                    var height = Math.round(element.height);
+                    var left = Math.round(element.center[0] - element.width / 2);
+                    var top = Math.round(element.center[1] - element.height / 2);
 
-                model.set('value', [
-                    left, top, width, height
-                ], {trigger: true});
-
+                    model.set('value', [
+                        left, top, width, height
+                    ], {trigger: true});
+                }
                 return model.get('value');
             });
         },
