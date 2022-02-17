@@ -23,6 +23,7 @@ import urllib
 
 import cherrypy
 
+import large_image
 from girder.api import access, filter_logging
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import filtermodel, loadmodel, setRawResponse, setResponseHeader
@@ -106,6 +107,8 @@ class TilesItemResource(ItemResource):
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'), self.getTilesThumbnail)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'region'), self.getTilesRegion)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames'), self.tileFrames)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames', 'quad_info'),
+                           self.tileFramesQuadInfo)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'pixel'), self.getTilesPixel)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'histogram'), self.getHistogram)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'bands'), self.getBandInformation)
@@ -1086,9 +1089,37 @@ class TilesItemResource(ItemResource):
             result['info'] = pilImage.info
         return result
 
+    _tileFramesParams = [
+        ('framesAcross', int),
+        ('frameList', str),
+        ('left', float, 'region', 'left'),
+        ('top', float, 'region', 'top'),
+        ('right', float, 'region', 'right'),
+        ('bottom', float, 'region', 'bottom'),
+        ('regionWidth', float, 'region', 'width'),
+        ('regionHeight', float, 'region', 'height'),
+        ('units', str, 'region', 'units'),
+        ('unitsWH', str, 'region', 'unitsWH'),
+        ('width', int, 'output', 'maxWidth'),
+        ('height', int, 'output', 'maxHeight'),
+        ('fill', str),
+        ('magnification', float, 'scale', 'magnification'),
+        ('mm_x', float, 'scale', 'mm_x'),
+        ('mm_y', float, 'scale', 'mm_y'),
+        ('exact', bool, 'scale', 'exact'),
+        ('frame', int),
+        ('encoding', str),
+        ('jpegQuality', int),
+        ('jpegSubsampling', int),
+        ('tiffCompression', str),
+        ('style', str),
+        ('resample', 'boolOrInt'),
+        ('contentDisposition', str),
+        ('contentDispositionFileName', str)
+    ]
+
     @describeRoute(
-        Description('Get any region of a large image item, optionally scaling '
-                    'it.')
+        Description('Composite thumbnails of multiple frames into a single image.')
         .param('itemId', 'The ID of the item.', paramType='path')
         .param('framesAcross', 'How many frames across', required=False, dataType='int')
         .param('frameList', 'Comma-separated list of frames', required=False)
@@ -1180,34 +1211,7 @@ class TilesItemResource(ItemResource):
         checkAndCreate = False if cache else 'nosave'
         _adjustParams(params)
 
-        params = self._parseParams(params, True, [
-            ('framesAcross', int),
-            ('frameList', str),
-            ('left', float, 'region', 'left'),
-            ('top', float, 'region', 'top'),
-            ('right', float, 'region', 'right'),
-            ('bottom', float, 'region', 'bottom'),
-            ('regionWidth', float, 'region', 'width'),
-            ('regionHeight', float, 'region', 'height'),
-            ('units', str, 'region', 'units'),
-            ('unitsWH', str, 'region', 'unitsWH'),
-            ('width', int, 'output', 'maxWidth'),
-            ('height', int, 'output', 'maxHeight'),
-            ('fill', str),
-            ('magnification', float, 'scale', 'magnification'),
-            ('mm_x', float, 'scale', 'mm_x'),
-            ('mm_y', float, 'scale', 'mm_y'),
-            ('exact', bool, 'scale', 'exact'),
-            ('frame', int),
-            ('encoding', str),
-            ('jpegQuality', int),
-            ('jpegSubsampling', int),
-            ('tiffCompression', str),
-            ('style', str),
-            ('resample', 'boolOrInt'),
-            ('contentDisposition', str),
-            ('contentDispositionFileName', str)
-        ])
+        params = self._parseParams(params, True, self._tileFramesParams)
         _handleETag('tileFrames', item, params)
         if 'frameList' in params:
             params['frameList'] = [
@@ -1244,3 +1248,86 @@ class TilesItemResource(ItemResource):
             return stream
         setRawResponse()
         return regionData
+
+    @describeRoute(
+        Description('Get parameters for using tile_frames as background sprite images.')
+        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('format', 'Optional format parameters, such as "encoding=JPEG&'
+               'jpegQuality=85&jpegSubsampling=1".  If specified, these '
+               'replace the defaults.', required=False)
+        .param('query', 'Addition query parameters that would be passed to '
+               'tile endpoints, such as style.', required=False)
+        .param('frameBase', 'Starting frame number (default 0)',
+               required=False, dataType='int')
+        .param('frameStride', 'Only use every frameStride frame of the image '
+               '(default 1)', required=False, dataType='int')
+        .param('frameGroup', 'Group frames when using multiple textures to '
+               'keep boundaries at a multiple of the group size number.',
+               required=False, dataType='int')
+        .param('frameGroupFactor', 'Ignore grouping if the resultant images '
+               'would be more than this factor smaller than without grouping '
+               '(default 4)', required=False, dataType='int')
+        .param('frameGroupStride', 'Reorder frames based on the to stride.',
+               required=False, dataType='int')
+        .param('maxTextureSize', 'Maximum texture size in either dimension.  '
+               'This should be the smaller of a desired value and of the '
+               'intended graphics environment texture buffer (default 16384).',
+               required=False, dataType='int')
+        .param('maxTextures', 'Maximum number of textures to use (default 1).',
+               required=False, dataType='int')
+        .param('maxTotalTexturePixels', 'Limit the total area of all combined '
+               'textures (default 2**30).',
+               required=False, dataType='int')
+        .param('alignment', 'Individual frame alignment within a texture.  '
+               'Used to avoid jpeg artifacts from crossing frames (default '
+               '16).',
+               required=False, dataType='int')
+        .param('maxFrameSize', 'If specified, frames will never be larger '
+               'than this, even if the texture size allows it (default None).',
+               required=False, dataType='int')
+        .param('cache', 'Report on or request caching the resultant frames.  '
+               'Scheduling creates a local job.',
+               required=False,
+               enum=['none', 'report', 'schedule'])
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.public(cookie=True)
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
+    def tileFramesQuadInfo(self, item, params):
+        metadata = self.imageItemModel.getMetadata(item)
+        options = self._parseParams(params, False, [
+            ('format', str),
+            ('query', str),
+            ('frameBase', int),
+            ('frameStride', int),
+            ('frameGroup', int),
+            ('frameGroupFactor', int),
+            ('frameGroupStride', int),
+            ('maxTextureSize', int),
+            ('maxTextures', int),
+            ('maxTotalTexturePixels', int),
+            ('alignment', int),
+            ('maxFrameSize', int),
+        ])
+        for key in {'format', 'query'}:
+            if key in options:
+                options[key] = dict(urllib.parse.parse_qsl(options[key]))
+        result = large_image.tilesource.utilities.getTileFramesQuadInfo(metadata, options)
+        if params.get('cache') in {'report', 'schedule'}:
+            needed = []
+            result['cached'] = []
+            for src in result['src']:
+                tfParams = self._parseParams(src, False, self._tileFramesParams)
+                if 'frameList' in tfParams:
+                    tfParams['frameList'] = [
+                        int(f.strip()) for f in str(tfParams['frameList']).lstrip(
+                            '[').rstrip(']').split(',')]
+                result['cached'].append(self.imageItemModel.tileFrames(
+                    item, checkAndCreate='check', **tfParams))
+                if not result['cached'][-1]:
+                    needed.append(tfParams)
+            if params.get('cache') == 'schedule' and not all(result['cached']):
+                result['scheduledJob'] = str(self.imageItemModel._scheduleTileFrames(
+                    item, needed, self.getCurrentUser())['_id'])
+        return result

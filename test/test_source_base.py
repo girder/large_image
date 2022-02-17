@@ -285,3 +285,174 @@ def testTileOverlapWithRegionOffset():
         tile_overlap=dict(x=400, y=400))
     firstTile = next(tileIter)
     assert firstTile['tile_overlap']['right'] == 200
+
+
+@pytest.mark.parametrize('options,lensrc,lenquads,frame10,src0,srclast,quads10', [
+    ({}, 1, 250, 10, {
+        'encoding': 'JPEG',
+        'exact': False,
+        'fill': 'corner:black',
+        'framesAcross': 14,
+        'height': 880,
+        'jpegQuality': 85,
+        'jpegSubsampling': 1,
+        'width': 1168,
+    }, None, {
+        'bottom': 15840,
+        'left': 11680,
+        'right': 12848,
+        'top': 14964,
+    }),
+
+    ({'format': {'encoding': 'PNG'}}, 1, 250, 10, {
+        'encoding': 'PNG',
+        'jpeqQuality': None,
+    }, None, None),
+
+    ({'query': {'style': 'abc=def'}}, 1, 250, 10, {
+        'style': 'abc=def',
+    }, None, None),
+
+    ({'maxTextureSize': 4096}, 1, 250, 10, {
+        'framesAcross': 14,
+        'height': 224,
+        'width': 288,
+    }, None, {
+        'left': 2880,
+        'top': 3816,
+    }),
+
+    ({'maxTextures': 8}, 4, 250, 10, {
+        'framesAcross': 7,
+        'height': 1632,
+        'width': 2176,
+    }, None, {
+        'left': 6528,
+        'top': 13056,
+    }),
+
+    ({'maxTextures': 8, 'maxTextureSize': 4096}, 8, 250, 10, {
+        'framesAcross': 5,
+        'height': 576,
+        'width': 768,
+    }, None, {
+        'left': 0,
+        'top': 2304,
+    }),
+
+    ({'maxTextures': 8, 'maxTotalTexturePixels': 8 * 1024 ** 3}, 8, 250, 10, {
+        'framesAcross': 5,
+        'height': 2336,
+        'width': 3120,
+    }, None, {
+        'left': 0,
+        'top': 9344,
+    }),
+
+    ({'alignment': 32}, 1, 250, 10, {
+        'framesAcross': 14,
+        'height': 864,
+        'width': 1152,
+    }, None, {
+        'left': 11520,
+        'top': 14688,
+    }),
+
+    ({'frameBase': 100}, 1, 150, 110, {
+        'framesAcross': 11,
+        'height': 1088,
+        'width': 1456,
+    }, None, {
+        'left': 14560,
+        'top': 14144,
+    }),
+
+    ({'frameStride': 10}, 1, 25, 100, {
+        'framesAcross': 5,
+        'height': 2448,
+        'width': 3264,
+    }, None, {
+        'left': 0,
+        'top': 4896,
+    }),
+
+    ({'maxTextures': 8, 'maxTextureSize': 4096, 'frameGroup': 50}, 5, 250, 10, {
+        'framesAcross': 7,
+        'height': 432,
+        'width': 576,
+    }, None, {
+        'left': 1728,
+        'top': 2592,
+    }),
+
+    ({
+        'maxTextures': 8,
+        'maxTextureSize': 4096,
+        'frameGroup': 250,
+        'frameGroupFactor': 4
+    }, 8, 250, 10, {
+        'framesAcross': 5,
+        'height': 576,
+        'width': 768,
+    }, None, {
+        'left': 0,
+        'top': 2304,
+    }),
+
+    ({
+        'maxTextures': 8,
+        'maxTextureSize': 4096,
+        'frameGroup': 50,
+        'frameGroupStride': 5
+    }, 5, 250, 50, {
+        'framesAcross': 7,
+        'height': 432,
+        'width': 576,
+    }, None, None),
+
+    ({'maxFrameSize': 250}, 1, 250, 10, {
+        'framesAcross': 17,
+        'height': 192,
+        'width': 240,
+    }, None, {
+        'left': 2400,
+        'top': 2700,
+    }),
+
+    ({'maxTotalTexturePixels': 16 * 1024 ** 2}, 1, 250, 10, {
+        'framesAcross': 14,
+        'height': 224,
+        'width': 288,
+    }, None, {
+        'left': 2880,
+        'top': 3816,
+    }),
+])
+def testGetTileFramesQuadInfo(options, lensrc, lenquads, frame10, src0, srclast, quads10):
+    metadata = {
+        'frames': [0] * 250,
+        'levels': 10,
+        'sizeX': 100000,
+        'sizeY': 75000,
+        'tileHeight': 256,
+        'tileWidth': 256
+    }
+    results = large_image.tilesource.utilities.getTileFramesQuadInfo(metadata, options)
+    import pprint
+    open('/tmp/junk.txt', 'a').write(pprint.pformat(results) + '\n\n')
+    assert len(results['src']) == lensrc
+    assert len(results['quads']) == lenquads
+    if len(results['frames']) > 10:
+        assert results['frames'][10] == frame10
+    for key, value in src0.items():
+        if value is not None:
+            assert results['src'][0][key] == value
+        else:
+            assert key not in results['src'][0]
+    if srclast is not None:
+        for key, value in srclast.items():
+            assert results['src'][-1][key] == value
+    if len(results['quads']) > 10 and quads10 is not None:
+        crop10 = results['quads'][10]['crop']
+        for key, value in quads10.items():
+            assert crop10[key] == value

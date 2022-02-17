@@ -596,3 +596,201 @@ def _makeSameChannelDepth(arr1, arr2):
             newarr[:, :, :arr.shape[2]] = arr
             arrays[key] = newarr
     return arrays['arr1'], arrays['arr2']
+
+
+def _computeFramesPerTexture(opts, numFrames, sizeX, sizeY):
+    """
+    Compute the number of frames for each tile_frames texture.
+
+    :param opts: the options dictionary from getTileFramesQuadInfo.
+    :param numFrames: the number of frames that need to be included.
+    :param sizeX: the size of one frame of the image.
+    :param sizeY: the size of one frame of the image.
+    :returns: a tuple consisting of:
+        fw: the width of an individual frame in the texture.
+        fh: the height of an individual frame in the texture.
+        fhorz:  the number of frames across the texture/
+        fperframe: the number of frames per texture.  The last texture may have
+            fewer frames.
+        textures: the number of textures to be used.  This many calls will need
+            to be made to tileFrames.
+    """
+    # defining fw, fh, fhorz, fvert, fperframe
+    alignment = opts['alignment'] or 16
+    texSize = opts['maxTextureSize']
+    textures = opts['maxTextures'] or 1
+    while texSize ** 2 > opts['maxTotalTexturePixels']:
+        texSize //= 2
+    while textures > 1 and texSize ** 2 * textures > opts['maxTotalTexturePixels']:
+        textures -= 1
+    # Iterate in case we can reduce the number of textures or the texture size
+    while True:
+        f = int(math.ceil(numFrames / textures))  # frames per texture
+        if opts['frameGroup'] > 1:
+            fg = int(math.ceil(f / opts['frameGroup'])) * opts['frameGroup']
+            if fg / f <= opts['frameGroupFactor']:
+                f = fg
+        texScale2 = texSize ** 2 / f / sizeX / sizeY
+        # frames across the texture
+        fhorz = int(math.ceil(texSize / (math.ceil(
+            sizeX * texScale2 ** 0.5 / alignment) * alignment)))
+        fvert = int(math.ceil(texSize / (math.ceil(
+            sizeY * texScale2 ** 0.5 / alignment) * alignment)))
+        # tile sizes
+        fw = int(math.floor(texSize / fhorz / alignment)) * alignment
+        fvert = int(max(math.ceil(f / (texSize // fw)), fvert))
+        fh = int(math.floor(texSize / fvert / alignment) * alignment)
+        if opts['maxFrameSize']:
+            maxFrameSize = opts['maxFrameSize'] // alignment * alignment
+            fw = min(fw, maxFrameSize)
+            fh = min(fh, maxFrameSize)
+        if fw > sizeX:
+            fw = int(math.ceil(sizeX / alignment) * alignment)
+        if fh > sizeY:
+            fh = int(math.ceil(sizeY / alignment) * alignment)
+        # shrink one dimension to account for aspect ratio
+        fw = int(min(math.ceil(fh * sizeX / sizeY / alignment) * alignment, fw))
+        fh = int(min(math.ceil(fw * sizeY / sizeX / alignment) * alignment, fh))
+        # recompute frames across the texture
+        fhorz = texSize // fw
+        fvert = int(min(texSize // fh, math.ceil(numFrames / fhorz)))
+        fperframe = fhorz * fvert
+        if textures > 1 and opts['frameGroup'] > 1:
+            fperframe = int(fperframe // opts['frameGroup'] * opts['frameGroup'])
+            if textures * fperframe < numFrames and fhorz * fvert * textures >= numFrames:
+                fperframe = fhorz * fvert
+        # check if we are not using all textures or are using less than a
+        # quarter of one texture.  If not, stop, if so, reduce and recalculate
+        if textures > 1 and numFrames <= fperframe * (textures - 1):
+            textures -= 1
+            continue
+        if fhorz >= 2 and math.ceil(f / (fhorz // 2)) * fh <= texSize / 2:
+            texSize //= 2
+            continue
+        return fw, fh, fhorz, fperframe, textures
+
+
+def getTileFramesQuadInfo(metadata, options=None):
+    """
+    Compute what tile_frames need to be requested for a particular condition.
+
+    :param metadata: the tile source metadata.  Needs to contain sizeX, sizeY,
+        tileWidth, tileHeight, and a list of frames.
+    :param options: dictionary of
+        format: The compression and format for the texture.  Defaults to
+            {'encoding': 'JPEG', 'jpegQuality': 85, 'jpegSubsampling': 1}.
+        query: Additional query options to add to the tile source, such as
+            style.
+        frameBase: (default 0) Starting frame number used.
+        frameStride: (default 1) Only use every ``frameStride`` frame of the
+            image.
+        frameGroup: (default 1) If above 1 and multiple textures are used, each
+            texture will have an even multiple of the group size number of
+            frames.  This helps control where texture loading transitions
+            occur.
+        frameGroupFactor: (default 4) If ``frameGroup`` would reduce the size
+            of the tile images beyond this factor, don't use it.
+        frameGroupStride: (default 1) If ``frameGroup`` is above 1 and multiple
+            textures are used, then the frames are reordered based on this
+            stride value.
+        maxTextureSize: Limit the maximum texture size to a square of this
+            size.
+        maxTextures: (default 1) If more than one, allow multiple textures to
+            increase the size of the individual frames.  The number of textures
+            will be capped by ``maxTotalTexturePixels`` as well as this number.
+        maxTotalTexturePixels: (default 1073741824) Limit the maximum texture
+            size and maximum number of textures so that the combined set does
+            not exceed this number of pixels.
+        alignment: (default 16) Individual frames are buffered to an alignment
+            of this maxy pixels.  If JPEG compression is used, this should
+            be 8 for monochrome images or jpegs without subsampling, or 16 for
+            jpegs with moderate subsampling to avoid compression artifacts from
+            leaking between frames.
+        maxFrameSize: If set, limit the maximum width and height of an
+            individual frame to this value.
+    :returns: a dictionary of values to use for making calls to tile_frames.
+    """
+    defaultOptions = {
+        'format': {
+            'encoding': 'JPEG',
+            'jpegQuality': 85,
+            'jpegSubsampling': 1,
+        },
+        'query': {},
+        'frameBase': 0,
+        'frameStride': 1,
+        'frameGroup': 1,
+        'frameGroupFactor': 4,
+        'frameGroupStride': 1,
+        'maxTextureSize': 16384,
+        'maxTextures': 1,
+        'maxTotalTexturePixels': 1024 * 1024 * 1024,
+        'alignment': 16,
+        'maxFrameSize': None,
+    }
+    opts = defaultOptions.copy()
+    opts.update(options or {})
+    sizeX, sizeY = metadata['sizeX'], metadata['sizeY']
+    numFrames = len(metadata.get('frames', [])) or 1
+    frames = []
+    for fds in range(opts['frameGroupStride']):
+        frames.extend(list(range(
+            opts['frameBase'] + fds * opts['frameStride'], numFrames,
+            opts['frameStride'] * opts['frameGroupStride'])))
+    numFrames = len(frames)
+    # check if numFrames zero and return early?
+    fw, fh, fhorz, fperframe, textures = _computeFramesPerTexture(
+        opts, numFrames, sizeX, sizeY)
+    # used area of each tile
+    usedw = int(math.floor(sizeX / max(sizeX / fw, sizeY / fh)))
+    usedh = int(math.floor(sizeY / max(sizeX / fw, sizeY / fh)))
+    # get the set of texture images
+    status = {
+        'metadata': metadata,
+        'options': opts,
+        'src': [],
+        'quads': [],
+        'quadsToIdx': [],
+        'frames': frames,
+        'framesToIdx': {}
+    }
+    if metadata.get('tileWidth') and metadata.get('tileHeight'):
+        # report that tiles below this level are not needed
+        status['minLevel'] = int(math.ceil(math.log(min(
+            usedw / metadata['tileWidth'], usedh / metadata['tileHeight'])) / math.log(2)))
+    status['framesToIdx'] = {frame: idx for idx, frame in enumerate(frames)}
+    for idx in range(textures):
+        frameList = frames[idx * fperframe: (idx + 1) * fperframe]
+        tfparams = {
+            'framesAcross': fhorz,
+            'width': fw,
+            'height': fh,
+            'fill': 'corner:black',
+            'exact': False,
+        }
+        if len(frameList) != len(metadata.get('frames', [])):
+            tfparams['frameList'] = frameList
+        tfparams.update(opts['format'])
+        tfparams.update(opts['query'])
+        status['src'].append(tfparams)
+        f = len(frameList)
+        ivert = int(math.ceil(f / fhorz))
+        ihorz = int(min(f, fhorz))
+        for fidx in range(f):
+            quad = {
+                # z = -1 to place under other tile layers
+                'ul': {'x': 0, 'y': 0, 'z': -1},
+                # y coordinate is inverted
+                'lr': {'x': sizeX, 'y': -sizeY, 'z': -1},
+                'crop': {
+                    'x': sizeX,
+                    'y': sizeY,
+                    'left': (fidx % ihorz) * fw,
+                    'top': (ivert - (fidx // ihorz)) * fh - usedh,
+                    'right': (fidx % ihorz) * fw + usedw,
+                    'bottom': (ivert - (fidx // ihorz)) * fh,
+                },
+            }
+            status['quads'].append(quad)
+            status['quadsToIdx'].append(idx)
+    return status

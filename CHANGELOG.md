@@ -1,5 +1,10 @@
 # Change Log
 
+## Version 1.11.1
+
+### Improvements
+- Add options to get frame quad info from python ([#783](../../pull/783))
+
 ## Version 1.11.0
 
 ### Improvements
