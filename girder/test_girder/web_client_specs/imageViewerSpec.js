@@ -12,6 +12,7 @@ $(function () {
             girder.utilities.PluginUtils.wrap(GeojsViewer, 'initialize', function (initialize) {
                 this.once('g:beforeFirstRender', function () {
                     window.geo.util.mockWebglRenderer();
+                    window.geo.webgl.webglRenderer._maxTextureSize = 256;
                 });
                 initialize.apply(this, _.rest(arguments));
             });
