@@ -15,8 +15,8 @@
 #############################################################################
 
 import re
-from distutils.version import StrictVersion
 
+import packaging.version
 from girder_large_image.girder_tilesource import GirderTileSource
 from osgeo import gdal
 
@@ -48,7 +48,7 @@ class GDALGirderTileSource(GDALFileTileSource, GirderTileSource):
         try:
             largeImageFileId = self.item['largeImage']['fileId']
             largeImageFile = File().load(largeImageFileId, force=True)
-            if (StrictVersion(gdal.__version__) >= StrictVersion('2.1.3') and
+            if (packaging.version.parse(gdal.__version__) >= packaging.version.parse('2.1.3') and
                     largeImageFile.get('linkUrl') and
                     not largeImageFile.get('assetstoreId') and
                     re.match(r'(http(|s)|ftp)://', largeImageFile['linkUrl'])):
