@@ -74,6 +74,8 @@ def _monitor_thread():
                 except Exception:
                     pass
                 source._bioimage = None
+        except AssertionError:
+            pass
         finally:
             if javabridge.get_env():
                 javabridge.detach()
