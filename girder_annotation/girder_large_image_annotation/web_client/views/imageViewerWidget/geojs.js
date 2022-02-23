@@ -125,12 +125,17 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * @param {object} layerParams An object containing layer parameters. This should already have
          * generic properties for overlay annotations set, such as the URL, opacity, etc.
          * @param {object} pixelmapElement A pixelmap annotation element
+         * @param {number} levelDifference The difference in zoom level between the base image and the overlay
          * @returns An object containing parameters needed to create a pixelmap layer.
          */
-        _addPixelmapLayerParams(layerParams, pixelmapElement) {
+        _addPixelmapLayerParams(layerParams, pixelmapElement, levelDifference) {
             // For pixelmap overlays, there are additional parameters to set
             layerParams.keepLower = false;
-            layerParams.url = layerParams.url + `?encoding=PNG`;
+            if (levelDifference !== 0) {
+                layerParams.url = (x, y, z) => 'api/v1/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+            } else {
+                layerParams.url = layerParams.url + `?encoding=PNG`;
+            }
             let pixelmapData = pixelmapElement.values;
             if (pixelmapElement.boundaries) {
                 let valuesWithBoundaries = new Array(pixelmapData.length * 2);
@@ -183,8 +188,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             params.layer.opacity = overlay.opacity || 1;
             params.layer.opacity *= this._globalAnnotationOpacity;
 
+            const levelDifference = this.levels - overlayImageMetadata.levels;
             if (this.levels !== overlayImageMetadata.levels) {
-                const levelDifference = this.levels - overlayImageMetadata.levels;
                 params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
                 params.layer.minLevel = levelDifference;
                 params.layer.maxLevel += levelDifference;
@@ -205,7 +210,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 };
             }
             if (overlay.type === 'pixelmap') {
-                params.layer = this._addPixelmapLayerParams(params.layer, overlay);
+                params.layer = this._addPixelmapLayerParams(params.layer, overlay, levelDifference);
             }
             return params.layer;
         },
@@ -387,6 +392,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
                     overlayLayer.id(overlay.id);
                     overlayLayer.gcs(proj);
+                    this.trigger('g:drawOverlayAnnotation', overlay, overlayLayer);
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
                 }).fail((response) => {
                     console.error(`There was an error overlaying image with ID ${overlayItemId}`);
