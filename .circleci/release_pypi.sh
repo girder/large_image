@@ -112,3 +112,9 @@ cp "$ROOTPATH/LICENSE" .
 python setup.py sdist
 pip wheel . --no-deps -w dist
 twine upload --verbose dist/*
+cd "$ROOTPATH/sources/vips"
+cp "$ROOTPATH/README.rst" .
+cp "$ROOTPATH/LICENSE" .
+python setup.py sdist
+pip wheel . --no-deps -w dist
+twine upload --verbose dist/*

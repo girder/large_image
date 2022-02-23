@@ -29,6 +29,7 @@
    _build/large_image_source_pil/modules
    _build/large_image_source_test/modules
    _build/large_image_source_tiff/modules
+   _build/large_image_source_vips/modules
    _build/large_image_converter/modules
    _build/large_image_tasks/modules
    _build/girder_large_image/modules

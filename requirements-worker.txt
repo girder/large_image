@@ -9,6 +9,7 @@
 -e sources/pil
 -e sources/test
 -e sources/tiff
+-e sources/vips
 # must be after sources/tiff
 -e sources/ometiff
 # must be after source/gdal
