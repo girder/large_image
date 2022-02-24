@@ -438,8 +438,6 @@ def testGetTileFramesQuadInfo(options, lensrc, lenquads, frame10, src0, srclast,
         'tileWidth': 256
     }
     results = large_image.tilesource.utilities.getTileFramesQuadInfo(metadata, options)
-    import pprint
-    open('/tmp/junk.txt', 'a').write(pprint.pformat(results) + '\n\n')
     assert len(results['src']) == lensrc
     assert len(results['quads']) == lenquads
     if len(results['frames']) > 10:
