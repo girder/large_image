@@ -57,7 +57,7 @@
  * @param {string} [options.crossOrigin] If specified, use this as the
  *   crossOrigin policy for images.
  * @param {string} [options.progress] If specified, a function to call whenever
- *   a texture image is loaded.
+ *   a texture image is loaded.  This is also called before the first load.
  * @param {boolean} [options.redrawOnFirstLoad=true] If truthy, redraw the
  *   layer after the base quad is first loaded if a frame value has been set.
  */
@@ -87,7 +87,7 @@ function setFrameQuad(tileinfo, layer, options) {
         type: 'GET',
         url: `${options.restUrl}/tile_frames/quad_info`,
         data: qiOptions
-    }).done((data) => {
+    }).then((data) => {
         status.quads = data.quads;
         status.frames = data.frames;
         status.framesToIdx = data.framesToIdx;
@@ -139,6 +139,12 @@ function setFrameQuad(tileinfo, layer, options) {
             status.images.push(img);
         }
         status.images[0].src = status.src[0];
+        if (options.progress) {
+            try {
+                options.progress(status);
+            } catch (err) {}
+        }
+        return status;
     });
     layer.setFrameQuad = function (frame) {
         if (status.framesToIdx[frame] !== undefined && status.loaded) {
