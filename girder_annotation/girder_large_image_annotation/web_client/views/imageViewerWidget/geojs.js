@@ -395,6 +395,17 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     overlayLayer.id(overlay.id);
                     overlayLayer.gcs(proj);
                     this.trigger('g:drawOverlayAnnotation', overlay, overlayLayer);
+                    const featureEvents = geo.event.feature;
+                    overlayLayer.geoOn(
+                        [
+                            featureEvents.mouseclick,
+                            featureEvents.mouseoff,
+                            featureEvents.mouseon,
+                            featureEvents.mouseover,
+                            featureEvents.mouseout
+                        ],
+                        (evt) => this._onMouseFeature(evt, annotation.elements().get(overlay.id), overlayLayer)
+                    );
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
                 }).fail((response) => {
                     console.error(`There was an error overlaying image with ID ${overlayItemId}`);
@@ -632,6 +643,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     const overlayLayers = this.viewer.layers().filter(
                         (layer) => layer.id() === overlay.id);
                     _.each(overlayLayers, (layer) => {
+                        this.trigger('g:removeOverlayAnnotation', overlay, layer);
                         this.viewer.deleteLayer(layer);
                     });
                 });
@@ -785,14 +797,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             };
         },
 
-        _onMouseFeature: function (evt) {
+        _onMouseFeature: function (evt, overlay, overlayLayer) {
             var properties = evt.data.properties || {};
             var eventType;
 
             if (!this._eventTypes) {
                 this._setEventTypes();
             }
-
             if (properties.element && properties.annotation) {
                 eventType = this._eventTypes[evt.event];
 
@@ -803,6 +814,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         properties.annotation,
                         evt
                     );
+                }
+            } else if (overlay && overlayLayer) {
+                // handle events for overlay layers like pixelmaps
+                eventType = this._eventTypes[evt.event];
+                if (eventType) {
+                    const overlayEventType = eventType + 'Overlay';
+                    this.trigger(overlayEventType, overlay, overlayLayer, evt);
                 }
             }
         }
