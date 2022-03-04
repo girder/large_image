@@ -1257,17 +1257,24 @@ class TilesItemResource(ItemResource):
                'replace the defaults.', required=False)
         .param('query', 'Addition query parameters that would be passed to '
                'tile endpoints, such as style.', required=False)
-        .param('frameBase', 'Starting frame number (default 0)',
+        .param('frameBase', 'Starting frame number (default 0).  If c/z/t/xy '
+               'then step through values from 0 to number of that axis - 1.  '
+               'The axis specification in only useful for cache reporting or '
+               'scheduling',
                required=False, dataType='int')
         .param('frameStride', 'Only use every frameStride frame of the image '
-               '(default 1)', required=False, dataType='int')
+               '(default 1).  c/z/t/xy to use the length of that axis',
+               required=False, dataType='int')
         .param('frameGroup', 'Group frames when using multiple textures to '
-               'keep boundaries at a multiple of the group size number.',
+               'keep boundaries at a multiple of the group size number.  '
+               'c/z/t/xy to use the length of that axis.',
                required=False, dataType='int')
         .param('frameGroupFactor', 'Ignore grouping if the resultant images '
                'would be more than this factor smaller than without grouping '
                '(default 4)', required=False, dataType='int')
-        .param('frameGroupStride', 'Reorder frames based on the to stride.',
+        .param('frameGroupStride', 'Reorder frames based on the to stride '
+               '(default 1).  "auto" to use frameGroup / frameStride if that '
+               'value is an integer.',
                required=False, dataType='int')
         .param('maxTextureSize', 'Maximum texture size in either dimension.  '
                'This should be the smaller of a desired value and of the '
@@ -1299,11 +1306,11 @@ class TilesItemResource(ItemResource):
         options = self._parseParams(params, False, [
             ('format', str),
             ('query', str),
-            ('frameBase', int),
-            ('frameStride', int),
-            ('frameGroup', int),
+            ('frameBase', str),
+            ('frameStride', str),
+            ('frameGroup', str),
             ('frameGroupFactor', int),
-            ('frameGroupStride', int),
+            ('frameGroupStride', str),
             ('maxTextureSize', int),
             ('maxTextures', int),
             ('maxTotalTexturePixels', int),

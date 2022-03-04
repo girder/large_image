@@ -1,5 +1,16 @@
 # Change Log
 
+## Version 1.11.2
+
+### Improvements
+- Emit events when an overlay annotation layer is created ([#787](../../pull/787))
+- Minor improvements to setFrameQuad to make it more flexible ([#790](../../pull/790))
+- Support drawing polygon selection regions ([#791](../../pull/791))
+- Add some automating options to getTileFramesQuadInfo  ([#792](../../pull/792))
+
+### Changes
+- Change how we do a version check ([#785](../../pull/785))
+
 ## Version 1.11.1
 
 ### Improvements

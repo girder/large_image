@@ -681,18 +681,21 @@ def getTileFramesQuadInfo(metadata, options=None):
             {'encoding': 'JPEG', 'jpegQuality': 85, 'jpegSubsampling': 1}.
         query: Additional query options to add to the tile source, such as
             style.
-        frameBase: (default 0) Starting frame number used.
+        frameBase: (default 0) Starting frame number used.  c/z/xy/z to step
+            through that index length (0 to 1 less than the value), which is
+            probably only useful for cache reporting or scheduling.
         frameStride: (default 1) Only use every ``frameStride`` frame of the
-            image.
+            image.  c/z/xy/z to use that axis length.
         frameGroup: (default 1) If above 1 and multiple textures are used, each
             texture will have an even multiple of the group size number of
             frames.  This helps control where texture loading transitions
-            occur.
+            occur.  c/z/xy/z to use that axis length.
         frameGroupFactor: (default 4) If ``frameGroup`` would reduce the size
             of the tile images beyond this factor, don't use it.
         frameGroupStride: (default 1) If ``frameGroup`` is above 1 and multiple
             textures are used, then the frames are reordered based on this
-            stride value.
+            stride value.  "auto" to use frameGroup / frameStride if that
+            value is an integer.
         maxTextureSize: Limit the maximum texture size to a square of this
             size.
         maxTextures: (default 1) If more than one, allow multiple textures to
@@ -730,6 +733,30 @@ def getTileFramesQuadInfo(metadata, options=None):
     }
     opts = defaultOptions.copy()
     opts.update(options or {})
+
+    opts['frameStride'] = (
+        int(opts['frameStride']) if str(opts['frameStride']).isdigit() else
+        metadata.get('IndexRange', {}).get('Index' + opts['frameStride'].upper(), 1))
+    opts['frameGroup'] = (
+        int(opts['frameGroup']) if str(opts['frameGroup']).isdigit() else
+        metadata.get('IndexRange', {}).get('Index' + opts['frameGroup'].upper(), 1))
+    opts['frameGroupStride'] = (
+        int(opts['frameGroupStride']) if opts['frameGroupStride'] != 'auto' else
+        max(1, opts['frameGroup'] // opts['frameStride']))
+    if str(opts['frameBase']).isdigit():
+        opts['frameBase'] = int(opts['frameBase'])
+    else:
+        status = {
+            'metadata': metadata,
+            'options': opts,
+            'src': [],
+        }
+        for val in range(metadata.get(
+                'IndexRange', {}).get('Index' + opts['frameBase'].upper(), 1)):
+            opts['frameBase'] = val
+            result = getTileFramesQuadInfo(metadata, opts)
+            status['src'].extend(result['src'])
+        return status
     sizeX, sizeY = metadata['sizeX'], metadata['sizeY']
     numFrames = len(metadata.get('frames', [])) or 1
     frames = []
