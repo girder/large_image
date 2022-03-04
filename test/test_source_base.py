@@ -427,10 +427,24 @@ def testTileOverlapWithRegionOffset():
         'left': 2880,
         'top': 3816,
     }),
+
+    ({
+        'maxTextures': 8,
+        'maxTextureSize': 4096,
+        'frameBase': 'c',
+        'frameStride': 'c',
+        'frameGroup': 'z',
+        'frameGroupStride': 'auto',
+    }, 10, None, None, {
+        'framesAcross': 5,
+        'height': 624,
+        'width': 816,
+    }, None, None),
 ])
 def testGetTileFramesQuadInfo(options, lensrc, lenquads, frame10, src0, srclast, quads10):
     metadata = {
         'frames': [0] * 250,
+        'IndexRange': {'IndexC': 5, 'IndexZ': 25, 'IndexT': 2},
         'levels': 10,
         'sizeX': 100000,
         'sizeY': 75000,
@@ -439,8 +453,9 @@ def testGetTileFramesQuadInfo(options, lensrc, lenquads, frame10, src0, srclast,
     }
     results = large_image.tilesource.utilities.getTileFramesQuadInfo(metadata, options)
     assert len(results['src']) == lensrc
-    assert len(results['quads']) == lenquads
-    if len(results['frames']) > 10:
+    if lenquads:
+        assert len(results['quads']) == lenquads
+    if frame10 is not None and len(results['frames']) > 10:
         assert results['frames'][10] == frame10
     for key, value in src0.items():
         if value is not None:
@@ -450,7 +465,7 @@ def testGetTileFramesQuadInfo(options, lensrc, lenquads, frame10, src0, srclast,
     if srclast is not None:
         for key, value in srclast.items():
             assert results['src'][-1][key] == value
-    if len(results['quads']) > 10 and quads10 is not None:
+    if quads10 is not None and len(results['quads']) > 10:
         crop10 = results['quads'][10]['crop']
         for key, value in quads10.items():
             assert crop10[key] == value
