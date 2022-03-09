@@ -150,10 +150,12 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     extensions = {
         None: SourcePriority.FALLBACK,
         'czi': SourcePriority.PREFERRED,
+        'vsi': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
         'image/czi': SourcePriority.PREFERRED,
+        'image/vsi': SourcePriority.PREFERRED,
     }
 
     # If frames are smaller than this they are served as single tiles, which
