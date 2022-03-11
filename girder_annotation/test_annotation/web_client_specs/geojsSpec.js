@@ -323,6 +323,33 @@ $(function () {
             });
         });
 
+        it('fires overlay event', function() {
+            const eventType = window.geo.event.feature.mouseclick;
+            const mockEvent = {
+                event: eventType,
+                data: {}
+            };
+            const mockOverlay = overlayAnnotation.elements().models[0] || {};
+            const mockLayer = viewer.viewer.createLayer('osm');
+            var mouseclick = false;
+            runs(function () {
+                function handleOverlayEvent() {
+                    mouseclick = true;
+                }
+
+                viewer.on('g:mouseClickAnnotationOverlay', handleOverlayEvent);
+                viewer._onMouseFeature(mockEvent, mockOverlay, mockLayer);
+            });
+
+            waitsFor(function () {
+                return mouseclick;
+            }, 'event to be fired');
+
+            runs(function () {
+                viewer.viewer.deleteLayer(mockLayer);
+            });
+        });
+
         it('mouse reset events', function () {
             var mousereset, context = {};
             runs(function () {
