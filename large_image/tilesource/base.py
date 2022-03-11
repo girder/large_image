@@ -2201,6 +2201,8 @@ class TileSource:
         :param tiffCompression: the compression format when encoding a TIFF.
             This is usually 'raw', 'tiff_lzw', 'jpeg', or 'tiff_adobe_deflate'.
             Some of these are aliased: 'none', 'lzw', 'deflate'.
+        :param frame: the frame number within the tile source.  None is the
+            same as 0 for multi-frame sources.
         :param kwargs: optional arguments.
         :yields: an iterator that returns a dictionary as listed above.
         """
