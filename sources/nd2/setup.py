@@ -36,7 +36,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
@@ -44,7 +43,8 @@ setup(
     ],
     install_requires=[
         'large-image',
-        'nd2reader>=3.3',
+        'dask[array]',
+        'nd2[legacy] ; python_version >= "3.7"',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={

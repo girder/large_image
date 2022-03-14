@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 
 import large_image_source_multi
 import pytest
@@ -72,6 +73,7 @@ def testTilesFromMultiSimpleScaling():
         utilities.checkTilesZXY(source, tileMetadata, tileParams={'frame': frame})
 
 
+@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for a sub-source')
 def testTilesFromMultiMultiSource(multiSourceImagePath):
     imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)
@@ -121,6 +123,7 @@ def testTilesFromMultiString():
         large_image_source_multi.open('invalid' + sourceString)
 
 
+@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for a sub-source')
 def testInternalMetadata(multiSourceImagePath):
     imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)
@@ -128,6 +131,7 @@ def testInternalMetadata(multiSourceImagePath):
     assert 'frames' in metadata
 
 
+@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for a sub-source')
 def testAssociatedImages(multiSourceImagePath):
     imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)

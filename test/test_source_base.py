@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -37,7 +38,6 @@ SourceAndFiles = {
         'read': r'\.(yml|yaml)$',
         'skip': r'(multi_source\.yml)$',
     },
-    'nd2': {'read': r'\.(nd2)$'},
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
@@ -54,6 +54,10 @@ SourceAndFiles = {
                   r'd042-353\.crop\.small\.float|landcover_sample)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
 }
+if sys.version_info >= (3, 7):
+    SourceAndFiles.update({
+        'nd2': {'read': r'\.(nd2)$'},
+    })
 
 
 def testNearPowerOfTwo():

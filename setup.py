@@ -1,5 +1,6 @@
 import itertools
 import os
+import sys
 
 from setuptools import setup
 
@@ -21,7 +22,6 @@ sources = {
     'gdal': ['large-image-source-gdal'],
     'mapnik': ['large-image-source-mapnik'],
     'multi': ['large-image-source-multi'],
-    'nd2': ['large-image-source-nd2'],
     'ometiff': ['large-image-source-ometiff'],
     'openjpeg': ['large-image-source-openjpeg'],
     'openslide': ['large-image-source-openslide'],
@@ -29,6 +29,10 @@ sources = {
     'test': ['large-image-source-test'],
     'tiff': ['large-image-source-tiff'],
 }
+if sys.version_info >= (3, 7):
+    sources.update({
+        'nd2': ['large-image-source-nd2'],
+    })
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
 extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))

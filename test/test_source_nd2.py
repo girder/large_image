@@ -1,3 +1,5 @@
+import sys
+
 import large_image_source_nd2
 import pytest
 
@@ -5,6 +7,7 @@ from . import utilities
 from .datastore import datastore
 
 
+@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python3.7 or higher')
 def testTilesFromND2():
     imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
     source = large_image_source_nd2.open(imagePath)
@@ -27,6 +30,7 @@ def testTilesFromND2():
     utilities.checkTilesZXY(source, tileMetadata)
 
 
+@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python3.7 or higher')
 def testInternalMetadata():
     imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
     source = large_image_source_nd2.open(imagePath)
