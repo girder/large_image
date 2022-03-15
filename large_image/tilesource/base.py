@@ -23,7 +23,7 @@ from .utilities import (_encodeImage, _gdalParameters,  # noqa: F401
                         _imageToNumpy, _imageToPIL, _letterboxImage,
                         _makeSameChannelDepth, _vipsCast, _vipsParameters,
                         dictToEtree, etreeToDict, getPaletteColors,
-                        nearPowerOfTwo)
+                        histogramThreshold, nearPowerOfTwo)
 
 
 class TileSource:
@@ -914,7 +914,8 @@ class TileSource:
             'range': ((results['min'][idx], results['max'][idx] + 1)
                       if histRange is None else histRange),
             'hist': None,
-            'bin_edges': None
+            'bin_edges': None,
+            'density': bool(density),
         } for idx in range(len(results['min']))]
         for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
             tile = tile['tile']
@@ -954,7 +955,7 @@ class TileSource:
             self._classkey_unstyled = key
         return self._classkey_unstyled
 
-    def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, **kwargs):
+    def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, onlyMinMax=True, **kwargs):
         """
         Scan the image at a lower resolution to find the minimum and maximum
         values.
@@ -962,6 +963,8 @@ class TileSource:
         :param dtype: the numpy dtype.  Used for guessing the range.
         :param frame: the frame to use for auto-ranging.
         :param analysisSize: the size of the image to use for analysis.
+        :param onlyMinMax: if True, only find the min and max.  If False, get
+            the entire histogram.
         """
         self._skipStyle = True
         # Divert the tile cache while querying unstyled tiles
@@ -970,16 +973,49 @@ class TileSource:
         try:
             self._bandRanges[frame] = self.histogram(
                 dtype=dtype,
-                onlyMinMax=True,
+                onlyMinMax=onlyMinMax,
                 output={'maxWidth': min(self.sizeX, analysisSize),
                         'maxHeight': min(self.sizeY, analysisSize)},
                 resample=False,
                 frame=frame, **kwargs)
             if self._bandRanges[frame]:
-                self.logger.info('Style range is %r' % self._bandRanges[frame])
+                self.logger.info('Style range is %r' % {
+                    k: v for k, v in self._bandRanges[frame].items() if k in {
+                        'min', 'max', 'mean', 'stdev'}})
         finally:
             del self._skipStyle
             self._classkey = classkey
+
+    def _validateMinMaxValue(self, value, frame, dtype):
+        """
+        Validate the min/max setting and return a specific string or float
+        value and with any threshold.
+
+        :param value: the specified value, 'auto', 'min', or 'max'.  'auto'
+            uses the parameter specified in 'minmax' or 0 or 255 if the
+            band's minimum is in the range [0, 254] and maximum is in the range
+            [2, 255].  'min:<value>' and 'max:<value>' use the histogram to
+            threshold the image based on the value.
+        :param dtype: the numpy dtype.  Used for guessing the range.
+        :param frame: the frame to use for auto-ranging.
+        :returns: the validated value and a threshold from [0-1].
+        """
+        threshold = 0
+        if value not in {'min', 'max', 'auto'}:
+            try:
+                if str(value)[:4] in {'min:', 'max:'}:
+                    threshold = float(value[4:])
+                    value = value[:3]
+                else:
+                    value = float(value)
+            except ValueError:
+                self.logger.warning('Style min/max value of %r is not valid; using "auto"', value)
+                value = 'auto'
+        if value in {'min', 'max', 'auto'} and (
+                frame not in self._bandRanges or (
+                    threshold and 'histogram' not in self._bandRanges[frame])):
+            self._scanForMinMax(dtype, frame, onlyMinMax=not threshold)
+        return value, threshold
 
     def _getMinMax(self, minmax, value, dtype, bandidx=None, frame=None):
         """
@@ -989,21 +1025,15 @@ class TileSource:
         :param value: the specified value, 'auto', 'min', or 'max'.  'auto'
             uses the parameter specified in 'minmax' or 0 or 255 if the
             band's minimum is in the range [0, 254] and maximum is in the range
-            [2, 255].
+            [2, 255].  'min:<value>' and 'max:<value>' use the histogram to
+            threshold the image based on the value.
         :param dtype: the numpy dtype.  Used for guessing the range.
         :param bandidx: the index of the channel that could be used for
             determining the min or max.
         :param frame: the frame to use for auto-ranging.
         """
         frame = frame or 0
-        if value not in {'min', 'max', 'auto'}:
-            try:
-                value = float(value)
-            except ValueError:
-                self.logger.warning('Style min/max value of %r is not valid; using "auto"', value)
-                value = 'auto'
-        if value in {'min', 'max', 'auto'} and frame not in self._bandRanges:
-            self._scanForMinMax(dtype, frame)
+        value, threshold = self._validateMinMaxValue(value, frame, dtype)
         if value == 'auto':
             if (self._bandRanges.get(frame) and
                     numpy.all(self._bandRanges[frame]['min'] >= 0) and
@@ -1015,12 +1045,20 @@ class TileSource:
                 value = minmax
         if value == 'min':
             if bandidx is not None and self._bandRanges.get(frame):
-                value = self._bandRanges[frame]['min'][bandidx]
+                if threshold:
+                    value = histogramThreshold(
+                        self._bandRanges[frame]['histogram'][bandidx], threshold)
+                else:
+                    value = self._bandRanges[frame]['min'][bandidx]
             else:
                 value = 0
         elif value == 'max':
             if bandidx is not None and self._bandRanges.get(frame):
-                value = self._bandRanges[frame]['max'][bandidx]
+                if threshold:
+                    value = histogramThreshold(
+                        self._bandRanges[frame]['histogram'][bandidx], threshold, True)
+                else:
+                    value = self._bandRanges[frame]['max'][bandidx]
             elif dtype == numpy.uint16:
                 value = 65535
             elif dtype.kind == 'f':
