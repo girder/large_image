@@ -995,7 +995,8 @@ class TileSource:
             uses the parameter specified in 'minmax' or 0 or 255 if the
             band's minimum is in the range [0, 254] and maximum is in the range
             [2, 255].  'min:<value>' and 'max:<value>' use the histogram to
-            threshold the image based on the value.
+            threshold the image based on the value.  'auto:<value>' applies a
+            histogram threshold if the parameter specified in minmax is used.
         :param dtype: the numpy dtype.  Used for guessing the range.
         :param frame: the frame to use for auto-ranging.
         :returns: the validated value and a threshold from [0-1].
@@ -1003,9 +1004,9 @@ class TileSource:
         threshold = 0
         if value not in {'min', 'max', 'auto'}:
             try:
-                if str(value)[:4] in {'min:', 'max:'}:
-                    threshold = float(value[4:])
-                    value = value[:3]
+                if ':' in str(value) and value.split(':', 1)[0] in {'min', 'max', 'auto'}:
+                    threshold = float(value.split(':', 1)[1])
+                    value = value.split(':', 1)[0]
                 else:
                     value = float(value)
             except ValueError:
@@ -1026,7 +1027,8 @@ class TileSource:
             uses the parameter specified in 'minmax' or 0 or 255 if the
             band's minimum is in the range [0, 254] and maximum is in the range
             [2, 255].  'min:<value>' and 'max:<value>' use the histogram to
-            threshold the image based on the value.
+            threshold the image based on the value.  'auto:<value>' applies a
+            histogram threshold if the parameter specified in minmax is used.
         :param dtype: the numpy dtype.  Used for guessing the range.
         :param bandidx: the index of the channel that could be used for
             determining the min or max.
