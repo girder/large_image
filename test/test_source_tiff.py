@@ -641,6 +641,21 @@ def testStyleClamp():
     assert imageB[0][0][3] == 0
 
 
+def testStyleMinMaxThreshold():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image_source_tiff.open(
+        imagePath, style=json.dumps({'min': 'min', 'max': 'max'}))
+    image, _ = source.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    sourceB = large_image_source_tiff.open(
+        imagePath, style=json.dumps({'min': 'min:0.02', 'max': 'max:0.02'}))
+    imageB, _ = sourceB.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    assert numpy.any(image != imageB)
+    assert image[0][0][0] == 252
+    assert imageB[0][0][0] == 254
+
+
 def testStyleNoData():
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image_source_tiff.open(

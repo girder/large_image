@@ -247,10 +247,10 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if band.get('interpretation'):
                 self._bandNames[band['interpretation'].lower()] = idx
 
-    def _scanForMinMax(self, dtype, frame=None, analysisSize=1024):
+    def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, onlyMinMax=True):
         frame = frame or 0
         bandInfo = self.getBandInformation()
-        if (not frame and all(
+        if (not frame and onlyMinMax and all(
                 band.get('min') is not None and band.get('max') is not None
                 for band in bandInfo.values())):
             with self._getDatasetLock:
@@ -272,7 +272,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     'units': 'projection'
                 }}
             super(GDALFileTileSource, GDALFileTileSource)._scanForMinMax(
-                self, dtype=dtype, frame=frame, analysisSize=analysisSize, **kwargs)
+                self, dtype=dtype, frame=frame, analysisSize=analysisSize,
+                onlyMinMax=onlyMinMax, **kwargs)
         # Add the maximum range of the data type to the end of the band
         # range list.  This changes autoscaling behavior.  For non-integer
         # data types, this adds the range [0, 1].

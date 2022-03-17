@@ -821,3 +821,33 @@ def getTileFramesQuadInfo(metadata, options=None):
             status['quads'].append(quad)
             status['quadsToIdx'].append(idx)
     return status
+
+
+def histogramThreshold(histogram, threshold, fromMax=False):
+    """
+    Given a histogram and a threshold on a scale of [0, 1], return the bin
+    edge that excludes no more than the specified threshold amount of values.
+    For instance, a threshold of 0.02 would exclude at most 2% of the values.
+
+    :param histogram: a histogram record for a specific channel.
+    :param threshold: a value from 0 to 1.
+    :param fromMax: if False, return values excluding the low end of the
+        histogram; if True, return values from excluding the high end of the
+        histogram.
+    :returns: the value the excludes no more than the threshold from the
+        specified end.
+    """
+    hist = histogram['hist']
+    edges = histogram['bin_edges']
+    samples = histogram['samples'] if not histogram.get('density') else 1
+    if fromMax:
+        hist = hist[::-1]
+        edges = edges[::-1]
+    tally = 0
+    for idx in range(len(hist)):
+        if tally >= threshold * samples:
+            if not idx:
+                return histogram['min' if not fromMax else 'max']
+            return edges[idx]
+        tally += hist[idx]
+    return edges[-1]

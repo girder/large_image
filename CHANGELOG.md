@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- Add options to threshold near min/max based on the histogram ([#798](../../pull/798))
+- Mark vsi extensions as being preferred by the bioformats source ([#793](../../pull/793))
+
 ## Version 1.11.2
 
 ### Improvements
