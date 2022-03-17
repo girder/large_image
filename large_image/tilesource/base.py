@@ -1,4 +1,3 @@
-import io
 import json
 import math
 import os
@@ -19,11 +18,11 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          SourcePriority, TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat, dtypeToGValue)
 from .tiledict import LazyTileDict
-from .utilities import (_encodeImage, _gdalParameters,  # noqa: F401
-                        _imageToNumpy, _imageToPIL, _letterboxImage,
-                        _makeSameChannelDepth, _vipsCast, _vipsParameters,
-                        dictToEtree, etreeToDict, getPaletteColors,
-                        histogramThreshold, nearPowerOfTwo)
+from .utilities import (_encodeImage, _encodeImageBinary,  # noqa: F401
+                        _gdalParameters, _imageToNumpy, _imageToPIL,
+                        _letterboxImage, _makeSameChannelDepth, _vipsCast,
+                        _vipsParameters, dictToEtree, etreeToDict,
+                        getPaletteColors, histogramThreshold, nearPowerOfTwo)
 
 
 class TileSource:
@@ -1253,23 +1252,13 @@ class TileSource:
         tile = _imageToPIL(tile)
         if pilImageAllowed:
             return tile
-        encoding = TileOutputPILFormat.get(self.encoding, self.encoding)
-        if encoding == 'JPEG' and tile.mode not in ('L', 'RGB'):
-            tile = tile.convert('RGB')
         # If we can't redirect, but the tile is read from a file in the desired
         # output format, just read the file
         if hasattr(tile, 'fp') and self._pilFormatMatches(tile):
             tile.fp.seek(0)
             return tile.fp.read()
-        output = io.BytesIO()
-        params = {}
-        if encoding == 'JPEG':
-            params['quality'] = self.jpegQuality
-            params['subsampling'] = self.jpegSubsampling
-        elif encoding in {'TIFF', 'TILED'}:
-            params['compression'] = self.tiffCompression
-        tile.save(output, encoding, **params)
-        return output.getvalue()
+        return _encodeImageBinary(
+            tile, self.encoding, self.jpegQuality, self.jpegSubsampling, self.tiffCompression)
 
     def _getAssociatedImage(self, imageKey):
         """

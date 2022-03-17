@@ -11,11 +11,59 @@ import PIL.Image
 import PIL.ImageColor
 import PIL.ImageDraw
 
+try:
+    import simplejpeg
+except ImportError:
+    simplejpeg = None
+
 from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          TileOutputMimeTypes, TileOutputPILFormat)
 
 # Turn off decompression warning check
 PIL.Image.MAX_IMAGE_PIXELS = None
+
+
+def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompression):
+    """
+    Encode a PIL Image to a binary representation of the image (a jpeg, png, or
+    tif).
+
+    :param image: a PIL image.
+    :param encoding: a valid PIL encoding (typically 'PNG' or 'JPEG').  Must
+        also be in the TileOutputMimeTypes map.
+    :param jpegQuality: the quality to use when encoding a JPEG.
+    :param jpegSubsampling: the subsampling level to use when encoding a JPEG.
+    :param tiffCompression: the compression format to use when encoding a TIFF.
+    :returns: a binary image or b'' if the image is of zero size.
+    """
+    encoding = TileOutputPILFormat.get(encoding, encoding)
+    if image.width == 0 or image.height == 0:
+        return b''
+    params = {}
+    if encoding == 'JPEG':
+        if image.mode not in ({'L', 'RGB', 'RGBA'} if simplejpeg else {'L', 'RGB'}):
+            image = image.convert('RGB' if image.mode != 'LA' else 'L')
+        if simplejpeg:
+            return simplejpeg.encode_jpeg(
+                _imageToNumpy(image)[0],
+                quality=jpegQuality,
+                colorspace=image.mode if image.mode in {'RGB', 'RGBA'} else 'GRAY',
+                colorsubsampling={-1: '444', 0: '444', 1: '422', 2: '420'}.get(
+                    jpegSubsampling, str(jpegSubsampling).strip(':')),
+            )
+        params['quality'] = jpegQuality
+        params['subsampling'] = jpegSubsampling
+    elif encoding in {'TIFF', 'TILED'}:
+        params['compression'] = {
+            'none': 'raw',
+            'lzw': 'tiff_lzw',
+            'deflate': 'tiff_adobe_deflate',
+        }.get(tiffCompression, tiffCompression)
+    elif encoding == 'PNG':
+        params['compress_level'] = 2
+    output = io.BytesIO()
+    image.save(output, encoding, **params)
+    return output.getvalue()
 
 
 def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
@@ -53,27 +101,8 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
             raise ValueError('Invalid encoding "%s"' % encoding)
         imageFormatOrMimeType = TileOutputMimeTypes[encoding]
         image = _imageToPIL(image)
-        if image.width == 0 or image.height == 0:
-            imageData = b''
-        else:
-            encoding = TileOutputPILFormat.get(encoding, encoding)
-            output = io.BytesIO()
-            params = {}
-            if encoding == 'JPEG' and image.mode not in ('L', 'RGB'):
-                image = image.convert('RGB' if image.mode != 'LA' else 'L')
-            if encoding == 'JPEG':
-                params['quality'] = jpegQuality
-                params['subsampling'] = jpegSubsampling
-            elif encoding in {'TIFF', 'TILED'}:
-                params['compression'] = {
-                    'none': 'raw',
-                    'lzw': 'tiff_lzw',
-                    'deflate': 'tiff_adobe_deflate',
-                }.get(tiffCompression, tiffCompression)
-            elif encoding == 'PNG':
-                params['compress_level'] = 2
-            image.save(output, encoding, **params)
-            imageData = output.getvalue()
+        imageData = _encodeImageBinary(
+            image, encoding, jpegQuality, jpegSubsampling, tiffCompression)
     return imageData, imageFormatOrMimeType
 
 

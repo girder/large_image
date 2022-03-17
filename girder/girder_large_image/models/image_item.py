@@ -196,6 +196,10 @@ class ImageItem(Item):
             if tileCacheLock is None:
                 tileData = tileCache[tileHash]
             else:
+                # Checking this outside the lock is sufficient for the cache
+                # miss condition and faster
+                if tileHash not in tileCache:
+                    return None
                 with tileCacheLock:
                     tileData = tileCache[tileHash]
             tileMime = TileOutputMimeTypes.get(kwargs.get('encoding'), 'image/jpeg')
