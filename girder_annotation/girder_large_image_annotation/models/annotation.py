@@ -725,10 +725,12 @@ class Annotation(AccessControlledModel):
                 'Could not generate annotation ACL due to missing folder %s', annotation['_id'])
             return annotation
 
-        user = User().load(annotation['creatorId'], force=True)
+        user = None
+        if annotation.get('creatorId'):
+            user = User().load(annotation['creatorId'], force=True)
         if user is None:
             logger.warning(
-                'Could not generate annotation ACL %s due to missing user %s', annotation['_id'])
+                'Could not generate annotation ACL due to missing user %s', annotation['_id'])
             return annotation
 
         self.copyAccessPolicies(item, annotation, save=False)
