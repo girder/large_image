@@ -69,7 +69,22 @@ Modules
 Large Image consists of several Python modules designed to work together.  These include:
 
 - ``large-image``: The core module.
-  You can specify extras_require of the name of any tile source included with this repository, ``sources`` for all of the tile sources in the repository, a specific source name (e.g., ``tiff``), ``memcached`` for using memcached for tile caching, ``converter`` to include the converter module, ``colormap`` for using matplotlib for named color palettes used in styles, or ``all`` for all of the tile sources, memcached, the converter module, and better color map support.
+
+  You can specify extras_require of the name of any tile source included with this repository.  For instance, you can do ``pip install large-image[tiff]``.  THere are additional extras_require options:
+
+  - ``sources``: all of the tile sources in the repository, a specific source name (e.g., ``tiff``)
+
+  - ``memcached``: use memcached for tile caching
+
+  - ``converter``: include the converter module
+
+  - ``colormaps``: use matplotlib for named color palettes used in styles
+
+  - ``tiledoutput``: support for emitting large regions as tiled tiffs
+
+  - ``performance``: include optional modules that can improve performance
+
+  - ``all``: for all of the above
 
 - ``large-image-converter``: A utility for using pyvips and other libraries to convert images into pyramidal tiff files that can be read efficiently by large_image.
   You can specify extras_require of ``jp2k`` to include modules to allow output to JPEG2000 compression, ``sources`` to include all sources, and ``stats`` to include modules to allow computing compression noise statistics.

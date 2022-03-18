@@ -14,6 +14,7 @@ extraReqs = {
     'converter': ['large-image-converter'],
     'colormaps': ['matplotlib'],
     'tiledoutput': ['pyvips'],
+    'performance': ['simplejpeg'],
 }
 sources = {
     'bioformats': ['large-image-source-bioformats'],
