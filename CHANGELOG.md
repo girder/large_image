@@ -9,6 +9,7 @@
 - Add options to threshold near min/max based on the histogram ([#798](../../pull/798))
 - Mark vsi extensions as being preferred by the bioformats source ([#793](../../pull/793))
 - Add mouse events to overlay annotations ([#794](../../pull/794))
+- Use orjson instead of ujson for annotationss ([#802](../../pull/802))
 
 ## Version 1.11.2
 

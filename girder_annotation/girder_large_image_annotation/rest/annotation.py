@@ -19,7 +19,7 @@ import struct
 import time
 
 import cherrypy
-import ujson
+import orjson
 
 from girder import logger
 from girder.api import access
@@ -202,7 +202,7 @@ class AnnotationResource(Resource):
                     element = struct.pack(
                         '>QL', int(element[0][:16], 16), int(element[0][16:24], 16)
                     ) + struct.pack('<fffl', *element[1:])
-                # Use ujson; it is much faster.  The standard json library
+                # Use orjson; it is much faster.  The standard json library
                 # could be used in its most default mode instead like so:
                 #   result = json.dumps(element, separators=(',', ':'))
                 # Collect multiple elements before emitting them.  This
@@ -212,14 +212,18 @@ class AnnotationResource(Resource):
                 collect.append(element)
                 if len(collect) >= 100:
                     if isinstance(collect[0], dict):
-                        yield (b',' if idx else b'') + ujson.dumps(collect).encode('utf8')[1:-1]
+                        # if switching json libraries, this may need
+                        #  json.dumps(collect).encode()
+                        yield (b',' if idx else b'') + orjson.dumps(collect)[1:-1]
                     else:
                         yield b''.join(collect)
                     idx += 1
                     collect = []
             if len(collect):
                 if isinstance(collect[0], dict):
-                    yield (b',' if idx else b'') + ujson.dumps(collect).encode('utf8')[1:-1]
+                    # if switching json libraries, this may need
+                    #  json.dumps(collect).encode()
+                    yield (b',' if idx else b'') + orjson.dumps(collect)[1:-1]
                 else:
                     yield b''.join(collect)
             if centroids:
@@ -494,8 +498,8 @@ class AnnotationResource(Resource):
     @autoDescribeRoute(
         Description('Create multiple annotations on an item.')
         .modelParam('id', model=Item, level=AccessType.WRITE)
-        # Use param instead of jsonParam; it lets us use ujson which is much
-        # faster
+        # Use param instead of jsonParam; it lets us use a faster non-core json
+        # library
         .param('annotations', 'A JSON list of annotation model records or '
                'annotations.  If these are complete models, the value of '
                'the "annotation" key is used and the other information is '
@@ -511,7 +515,7 @@ class AnnotationResource(Resource):
         if hasattr(annotations, 'read'):
             startTime = time.time()
             annotations = annotations.read().decode('utf8')
-            annotations = ujson.loads(annotations)
+            annotations = orjson.loads(annotations)
             if time.time() - startTime > 10:
                 logger.info('Decoded json in %5.3fs', time.time() - startTime)
         if not isinstance(annotations, list):
