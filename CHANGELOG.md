@@ -12,6 +12,9 @@
 - Use orjson instead of ujson for annotations ([#802](../../pull/802))
 - Use simplejpeg for jpeg encoding rather than PIL ([#800](../../pull/800))
 
+### Bug Fixes
+- Harden annotation ACL migration code ([#804](../../pull/804))
+
 ## Version 1.11.2
 
 ### Improvements

@@ -637,7 +637,7 @@ class TestLargeImageAnnotationAccessMigration:
         item = Item().createItem('userItem', user, publicFolder)
         annot = Annotation().createAnnotation(item, admin, sampleAnnotation)
 
-        # assert ACL's work
+        # assert ACLs work
         with pytest.raises(AccessException):
             Annotation().load(annot['_id'], user=user, level=AccessType.WRITE)
 
@@ -707,6 +707,23 @@ class TestLargeImageAnnotationAccessMigration:
         del annot['access']
         del annot['public']
         annot['creatorId'] = ObjectId()
+        Annotation().save(annot)
+        with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
+            Annotation()._migrateDatabase()
+            logger.warning.assert_called_once()
+        annot = Annotation().load(annot['_id'], force=True)
+        assert 'access' not in annot
+
+    def testMigrateAnnotationAccessControlNullUserError(self, user, admin):
+        publicFolder = utilities.namedFolder(admin, 'Public')
+        # create an annotation
+        item = Item().createItem('userItem', user, publicFolder)
+        annot = Annotation().createAnnotation(item, admin, sampleAnnotation)
+
+        # remove the access control properties and save back to the database
+        del annot['access']
+        del annot['public']
+        annot['creatorId'] = None
         Annotation().save(annot)
         with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
             Annotation()._migrateDatabase()
