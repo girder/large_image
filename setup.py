@@ -77,10 +77,8 @@ setup(
     install_requires=[
         'cachetools>=3.0.0',
         'palettable',
-        # We don't pin the version of Pillow, as anything newer than 3.0
-        # probably works, though we'd rather have the latest.  8.3.0 won't
-        # save jpeg compressed tiffs properly.
-        'Pillow!=8.3.0,!=8.3.1',
+        # Pillow 8.3.0 and 8.3.1 won't save jpeg compressed tiffs properly.
+        'Pillow',
         'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
         'importlib-metadata ; python_version < "3.8"',
