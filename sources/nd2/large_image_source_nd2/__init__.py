@@ -14,14 +14,9 @@
 #  limitations under the License.
 ##############################################################################
 
-import array
 import math
 import os
-import threading
-import types
-import warnings
 
-import cachetools
 import numpy
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -29,7 +24,7 @@ from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 
-nd2reader = None
+nd2 = None
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -46,25 +41,65 @@ except PackageNotFoundError:
 
 def _lazyImport():
     """
-    Import the nd2reader module.  This is done when needed rather than in the
-    module initialization because it is slow.
+    Import the nd2 module.  This is done when needed rather than in the module
+    initialization because it is slow.
     """
-    global nd2reader
+    global nd2
 
-    if nd2reader is None:
-        # Work around an issue in the PIMS package (can be removed once pims is
-        # released for Python 3.10).  This must be before import nd2reader.
-        if True:
-            import collections.abc
-            collections.Iterable = collections.abc.Iterable
-        import nd2reader
-        warnings.filterwarnings('ignore', category=UserWarning, module='nd2reader')
+    if nd2 is None:
+        try:
+            import nd2
+        except ImportError:
+            raise TileSourceError('nd2 module not found.')
+
+
+def namedtupleToDict(obj):
+    """
+    Convert a namedtuple to a plain dictionary.
+
+    :param obj: the object to convert
+    :returns: a dictionary or the original object.
+    """
+    if hasattr(obj, '__dict__') and not isinstance(obj, dict):
+        obj = obj.__dict__
+    if isinstance(obj, dict):
+        obj = {
+            k: namedtupleToDict(v) for k, v in obj.items()
+            if not k.startswith('_')}
+        return {k: v for k, v in obj.items() if v is not None and v != {} and v != ''}
+    if isinstance(obj, (tuple, list)):
+        obj = [namedtupleToDict(v) for v in obj]
+        if not any(v is not None and v != {} and v != '' for v in obj):
+            return None
+    return obj
+
+
+def diffObj(obj1, obj2):
+    """
+    Given two objects, report the differences that exist in the first object
+    that are not in the second object.
+
+    :param obj1: the first object to compare.  Only values present in this
+        object are returned.
+    :param obj2: the second object to compare.
+    :returns: a subset of obj1.
+    """
+    if obj1 == obj2:
+        return None
+    if type(obj1) != type(obj2):
+        return obj1
+    if isinstance(obj1, (list, tuple)):
+        return [diffObj(obj1[idx], obj2[idx]) for idx in range(len(obj1))]
+    if isinstance(obj1, dict):
+        diff = {k: diffObj(v, obj2.get(k)) for k, v in obj1.items()}
+        diff = {k: v for k, v in diff.items() if v is not None}
+        return diff
+    return obj1
 
 
 class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
-    Provides tile access to nd2 files and other files the nd2reader library can
-    read.
+    Provides tile access to nd2 files the nd2 or nd2reader library can read.
     """
 
     cacheName = 'tilesource'
@@ -98,135 +133,44 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         _lazyImport()
         try:
-            self._nd2 = nd2reader.ND2Reader(self._largeImagePath)
-        except (UnicodeDecodeError,
-                nd2reader.exceptions.InvalidVersionError,
-                nd2reader.exceptions.EmptyFileError,
-                nd2reader.exceptions.InvalidFileType):
+            # We use dask to allow lazy reading of large images
+            self._nd2 = nd2.ND2File(self._largeImagePath)
+        except Exception:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via nd2reader.')
-        self._tileLock = threading.RLock()
-        self._recentFrames = cachetools.LRUCache(maxsize=6)
-        self.sizeX = self._nd2.metadata['width']
-        self.sizeY = self._nd2.metadata['height']
+        self._nd2array = self._nd2.to_dask()
+        arrayOrder = list(self._nd2.sizes)
+        # Reorder this so that it is XY (P), T, Z, C, Y, X, S (or at least end
+        # in Y, X[, S]).
+        newOrder = [k for k in arrayOrder if k not in {'C', 'X', 'Y', 'S'}] + (
+            ['C'] if 'C' in arrayOrder else []) + ['Y', 'X'] + (
+            ['S'] if 'S' in arrayOrder else [])
+        if newOrder != arrayOrder:
+            self._nd2array = numpy.moveaxis(
+                self._nd2array,
+                list(range(len(arrayOrder))),
+                [newOrder.index(k) for k in arrayOrder])
+        self._nd2order = newOrder
+        self._nd2origindex = {}
+        basis = 1
+        for k in arrayOrder:
+            if k not in {'C', 'X', 'Y', 'S'}:
+                self._nd2origindex[k] = basis
+                basis *= self._nd2.sizes[k]
+        self.sizeX = self._nd2.sizes['X']
+        self.sizeY = self._nd2.sizes['Y']
         self.tileWidth = self.tileHeight = self._tileSize
         if self.sizeX <= self._singleTileThreshold and self.sizeY <= self._singleTileThreshold:
             self.tileWidth = self.sizeX
             self.tileHeight = self.sizeY
         self.levels = int(max(1, math.ceil(math.log(
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
-        # There is one file that throws a warning 'Z-levels details missing in
-        # metadata'.  In this instance, there should be no z-levels.
-        try:
-            if (self._nd2.sizes.get('z') and
-                    self._nd2.sizes.get('z') == self._nd2.sizes.get('v') and
-                    not len(self._nd2._parser._raw_metadata._parse_dimension(
-                        r""".*?Z\((\d+)\).*?""")) and
-                    self._nd2.sizes['v'] * self._nd2.sizes.get('t', 1) ==
-                    self._nd2.metadata.get('total_images_per_channel')):
-                self._nd2._parser._raw_metadata._metadata_parsed['z_levels'] = []
-                self._nd2.sizes['z'] = 1
-        except Exception:
-            pass
-        frames = self._nd2.sizes.get('c', 1) * self._nd2.metadata.get(
-            'total_images_per_channel', 0)
-        self._framecount = frames or None
-        self._nd2.iter_axes = sorted(
-            [a for a in self._nd2.axes if a not in {'x', 'y', 'v'}], reverse=True)
-        if frames and len(self._nd2) != frames and 'v' in self._nd2.axes:
-            self._nd2.iter_axes = ['v'] + self._nd2.iter_axes
-        if 'c' in self._nd2.iter_axes and len(self._nd2.metadata.get('channels', [])):
-            self._bandnames = {
-                name.lower(): idx for idx, name in enumerate(self._nd2.metadata['channels'])}
-
-        # self._nd2.metadata
-        # {'channels': ['CY3', 'A594', 'CY5', 'DAPI'],
-        #  'date': datetime.datetime(2019, 7, 21, 15, 13, 45),
-        #  'events': [],
-        #  'experiment': {'description': '',
-        #                 'loops': [{'duration': 0,
-        #                            'sampling_interval': 0.0,
-        #                            'start': 0,
-        #                            'stimulation': False}]},
-        #  'fields_of_view': range(0, 2500),         # v
-        #  'frames': [0],
-        #  'height': 1022,
-        #  'num_frames': 1,
-        #  'pixel_microns': 0.219080212825376,
-        #  'total_images_per_channel': 2500,
-        #  'width': 1024,
-        #  'z_coordinates': [1890.8000000000002,
-        #                    1891.025,
-        #                    1891.1750000000002,
-        # ...
-        #                    1905.2250000000001,
-        #                    1905.125,
-        #                    1905.1000000000001],
-        #  'z_levels': range(0, 2500)}
-
-        # self._nd2.axes   ['x', 'y', 'c', 't', 'z', 'v']
-        # self._nd2.ndim   6
-        # self._nd2.pixel_type   numpy.float64
-        # self._nd2.sizes  {'x': 1024, 'y': 1022, 'c': 4, 't': 1, 'z': 2500, 'v': 2500}
-        self._getND2Metadata()
-
-    def _getND2MetadataCleanDict(self, olddict):
-        newdict = {}
-        for key, value in olddict.items():
-            if value not in (None, b'', ''):
-                if isinstance(key, bytes):
-                    key = key.decode()
-                if (isinstance(value, dict) and len(value) == 1 and
-                        list(value.keys())[0] in (b'', '')):
-                    value = list(value.values())[0]
-                if isinstance(value, bytes):
-                    value = value.decode()
-                if isinstance(value, dict):
-                    value = self._getND2MetadataCleanDict(value)
-                    if not len(value):
-                        continue
-                if isinstance(value, (types.GeneratorType, numpy.ndarray, array.array, range)):
-                    value = list(value)
-                if isinstance(value, list):
-                    if not len(value):
-                        continue
-                    for idx, entry in enumerate(value):
-                        if isinstance(entry, bytes):
-                            entry = entry.decode()
-                        if isinstance(entry, dict):
-                            entry = self._getND2MetadataCleanDict(entry)
-                        value[idx] = entry
-                newdict[key] = value
-        return newdict
-
-    def _getND2Metadata(self):
-        self._metadata = self._nd2.metadata.copy()
-        for key, value in self._metadata.items():
-            if isinstance(value, (types.GeneratorType, numpy.ndarray, array.array, range)):
-                value = list(value)
-            self._metadata[key] = value
-        for key in {
-                'acquisition_times', 'app_info', 'camera_exposure_time',
-                'camera_temp', 'channels', 'custom_data', 'date', 'events',
-                'experiment', 'fields_of_view', 'frames', 'height',
-                'image_attributes', 'image_calibration', 'image_events',
-                'image_metadata', 'image_metadata_sequence', 'image_text_info',
-                'num_frames', 'pfs_offset', 'pfs_status', 'pixel_microns',
-                'roi_metadata', 'total_images_per_channel', 'width', 'x_data',
-                'y_data', 'z_coordinates', 'z_data', 'z_levels'}:
-            if key in self._metadata:
-                continue
-            try:
-                value = getattr(self._nd2.parser._raw_metadata, key, None)
-            except (AttributeError, TypeError):
-                continue
-            if isinstance(value, (types.GeneratorType, numpy.ndarray, array.array, range)):
-                value = list(value)
-            if isinstance(value, dict):
-                value = self._getND2MetadataCleanDict(value)
-            if value is not None and value != [] and value != {}:
-                self._metadata[key] = value
+        self._framecount = (
+            self._nd2.metadata.contents.channelCount * self._nd2.metadata.contents.frameCount)
+        self._bandnames = {
+            chan.channel.name.lower(): idx for idx, chan in enumerate(self._nd2.metadata.channels)}
+        self._channels = [chan.channel.name for chan in self._nd2.metadata.channels]
 
     def getNativeMagnification(self):
         """
@@ -237,9 +181,9 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         mm_x = mm_y = None
         microns = None
         try:
-            microns = float(self._nd2.metadata.get('pixel_microns', 0))
-            if microns and microns > 0:
-                mm_x = mm_y = microns * 0.001
+            microns = self._nd2.voxel_size()
+            mm_x = microns.x * 1000
+            mm_y = microns.y * 1000
         except Exception:
             pass
         # Estimate the magnification; we don't have a direct value
@@ -260,45 +204,25 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         result = super().getMetadata()
 
         sizes = self._nd2.sizes
-        # We may want to reformat the frames to standardize this across sources
-        # An example of frames from OMETiff: {
-        #   "DeltaT": "3532.529541",
-        #   "ExposureTime": "3100.000000",
-        #   "PositionX": "27808.039063",
-        #   "PositionY": "38605.839844",
-        #   "PositionZ": "1905.524976",
-        #   "TheC": "0",
-        #   "TheT": "0",
-        #   "TheZ": "1",
-        # }
-        axes = self._nd2.iter_axes[::-1]
+        axes = self._nd2order[:self._nd2order.index('Y')][::-1]
+        sizes = self._nd2.sizes
         result['frames'] = frames = []
-        for idx in range(len(self._nd2)):
-            frame = {'Frame': idx, 'IndexZ': 0, 'IndexXY': 0}
+        for idx in range(self._framecount):
+            frame = {'Frame': idx}
             basis = 1
             ref = {}
             for axis in axes:
                 ref[axis] = (idx // basis) % sizes[axis]
-                frame['Index' + (axis.upper() if axis != 'v' else 'XY')] = (
+                frame['Index' + (axis.upper() if axis.upper() != 'P' else 'XY')] = (
                     idx // basis) % sizes[axis]
                 basis *= sizes.get(axis, 1)
-            if self._metadata.get('z_coordinates'):
-                frame['PositionZ'] = self._metadata['z_coordinates'][ref.get('z', 0)]
             frames.append(frame)
-            if self._framecount and len(frames) == self._framecount:
-                break
-        self._addMetadataFrameInformation(result, self._metadata.get('channels'))
+        self._addMetadataFrameInformation(result, self._channels)
         for frame in result['frames']:
-            index = frame['Index']
-            for mkey, fkey in [
-                ('x_data', 'PositionX'),
-                ('y_data', 'PositionY'),
-                ('z_data', 'PositionZ'),
-                ('acquisition_times', 'DeltaT'),
-                ('camera_exposure_time', 'ExposureTime'),
-            ]:
-                if mkey in self._metadata:
-                    frame[fkey] = self._metadata[mkey][index % len(self._metadata[mkey])]
+            frame['OriginalIndex'] = sum(
+                frame[k] * self._nd2origindex.get(
+                    k.split('Index')[1] if k != 'IndexXY' else 'P', 1)
+                for k in frame if k.startswith('Index') and k != 'Index')
         return result
 
     def getInternalMetadata(self, **kwargs):
@@ -310,29 +234,42 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a dictionary of data or None.
         """
         result = {}
-        result['nd2'] = self._metadata
-        # result['nd2'].pop('custom_data', None)
-        # result['nd2'].pop('image_metadata', None)
-        # result['nd2'].pop('image_metadata_sequence', None)
+        result['nd2'] = namedtupleToDict(self._nd2.metadata)
         result['nd2_sizes'] = self._nd2.sizes
-        result['nd2_axes'] = self._nd2.axes
-        result['nd2_iter_axes'] = self._nd2.iter_axes
+        result['nd2_text'] = self._nd2.text_info
+        result['nd2_custom'] = self._nd2.custom_data
+        result['nd2_experiment'] = namedtupleToDict(self._nd2.experiment)
+        result['nd2_legacy'] = self._nd2.is_legacy
+        result['nd2_rgb'] = self._nd2.is_rgb
+        result['nd2_frame_metadata'] = [
+            diffObj(namedtupleToDict(self._nd2.frame_metadata(idx)), result['nd2'])
+            for idx in range(self._nd2.metadata.contents.frameCount)]
+        if (len(result['nd2_frame_metadata']) and
+                list(result['nd2_frame_metadata'][0].keys()) == ['channels']):
+            result['nd2_frame_metadata'] = [
+                fm['channels'][0] for fm in result['nd2_frame_metadata']]
         return result
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         frame = int(kwargs.get('frame') or 0)
-        self._xyzInRange(x, y, z, frame, len(self._nd2))
+        self._xyzInRange(x, y, z, frame, self._framecount)
+
         step = int(2 ** (self.levels - 1 - z))
         x0 = x * step * self.tileWidth
         x1 = min((x + 1) * step * self.tileWidth, self.sizeX)
         y0 = y * step * self.tileHeight
         y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
-        with self._tileLock:
-            if frame not in self._recentFrames:
-                self._recentFrames[frame] = self._nd2[frame]
-            tileframe = self._recentFrames[frame]
-            tile = tileframe[y0:y1:step, x0:x1:step].copy()
+
+        tileframe = self._nd2array
+        fc = self._framecount
+        fp = frame
+        for axis in self._nd2order[:self._nd2order.index('Y')]:
+            fc //= self._nd2.sizes[axis]
+            tileframe = tileframe[fp // fc]
+            fp = fp % fc
+
+        tile = numpy.array(tileframe[y0:y1:step, x0:x1:step])
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
