@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.12.0
 
 ### Features
 - Refactor the nd2 source to use the nd2 library ([#797](../../pull/797))
@@ -11,6 +11,7 @@
 - Add mouse events to overlay annotations ([#794](../../pull/794))
 - Use orjson instead of ujson for annotations ([#802](../../pull/802))
 - Use simplejpeg for jpeg encoding rather than PIL ([#800](../../pull/800))
+- Use pylibtiff instead of libtiff ([#799](../../pull/799))
 
 ### Bug Fixes
 - Harden annotation ACL migration code ([#804](../../pull/804))
