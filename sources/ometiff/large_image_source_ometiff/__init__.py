@@ -268,6 +268,12 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         if len(set(channels)) != len(channels) and (
                 len(channels) <= 1 or len(channels) > len(result['frames'])):
             channels = []
+        for k in {'C', 'Z', 'T'}:
+            if (str(len(result['frames'])) == str(self._omebase.get('Size%s' % k)) and
+                    len(result['frames']) > 1 and
+                    result['frames'][0].get('Index%s' % k) is None):
+                for idx in range(len(result['frames'])):
+                    result['frames'][idx]['Index%s' % k] = idx
         # Standardize "TheX" to "IndexX" values
         reftbl = OrderedDict([
             ('TheC', 'IndexC'), ('TheZ', 'IndexZ'), ('TheT', 'IndexT'),
