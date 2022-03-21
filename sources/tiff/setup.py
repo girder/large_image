@@ -44,7 +44,7 @@ setup(
     ],
     install_requires=[
         'large-image',
-        'libtiff>=0.4.1',
+        'pylibtiff',
         'tifftools>=1.2.0',
         'importlib-metadata ; python_version < "3.8"',
     ],
