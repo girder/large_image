@@ -220,13 +220,23 @@ class ImageItem(Item):
             # First try to use the tilesource we recorded as the preferred one.
             # This is faster than trying to find the best source each time.
             tileSource = girder_tilesource.AvailableGirderTileSources[sourceName](item, **kwargs)
-        except TileSourceError:
+        except TileSourceError as exc:
             # We could try any source
             # tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
             # but, instead, log that the original source no longer works are
             # reraise the exception
             logger.warning('The original tile source for item %s is not working' % item['_id'])
-            raise
+            try:
+                file = File().load(item['largeImage']['fileId'], force=True)
+                localPath = File().getLocalFilePath(file)
+                open(localPath, 'rb').read(1)
+            except IOError:
+                logger.warning(
+                    'Is the original data reachable and readable (it fails via %r)?', localPath)
+                raise IOError(localPath) from None
+            except Exception:
+                pass
+            raise exc
         return tileSource
 
     def getMetadata(self, item, **kwargs):

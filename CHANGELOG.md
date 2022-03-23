@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- Improve parsing OME TIFF channel names ([806](../../pull/806))
+- Improve handling when a file vanishes ([807](../../pull/807))
+
 ## Version 1.12.0
 
 ### Features

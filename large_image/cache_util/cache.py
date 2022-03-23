@@ -191,10 +191,13 @@ class LruCacheMetaclass(type):
                     pass
             try:
                 instance = super().__call__(*args, **kwargs)
-            except Exception:
+            except Exception as exc:
                 with cacheLock:
-                    del cache[key]
-                raise
+                    try:
+                        del cache[key]
+                    except Exception:
+                        pass
+                raise exc
             instance._classkey = key
             with cacheLock:
                 cache[key] = instance
