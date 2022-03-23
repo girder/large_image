@@ -177,7 +177,6 @@
         "eslint-plugin-node": "^9.1.0",
         "eslint-plugin-promise": "^4.1.1",
         "eslint-plugin-standard": "^4.0.0",
-        "eslint-plugin-underscore": "0.0.10",
         "@girder/pug-lint-config": "^3.0.0-rc1",
         "pug-lint": "^2.6.0",
         "stylint": "^1.5.9"

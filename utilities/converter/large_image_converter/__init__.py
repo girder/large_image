@@ -738,7 +738,15 @@ def _is_multiframe(path):
     :returns: True if multiframe.
     """
     _import_pyvips()
-    image = pyvips.Image.new_from_file(path)
+    try:
+        image = pyvips.Image.new_from_file(path)
+    except Exception:
+        try:
+            open(path, 'rb').read(1)
+            raise
+        except Exception:
+            logger.warning('Is the file reachable and readable? (%r)', path)
+            raise IOError(path) from None
     pages = 1
     if 'n-pages' in image.get_fields():
         pages = image.get_value('n-pages')
