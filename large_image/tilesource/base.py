@@ -1440,20 +1440,20 @@ class TileSource:
         """
         Check if a tile at x, y, z is in range based on self.levels,
         self.tileWidth, self.tileHeight, self.sizeX, and self.sizeY,  Raise an
-        exception if not.
+        ``TileSourceXYZRangeError`` exception if not.
         """
         if z < 0 or z >= self.levels:
-            raise exceptions.TileSourceError('z layer does not exist')
+            raise exceptions.TileSourceXYZRangeError('z layer does not exist')
         scale = 2 ** (self.levels - 1 - z)
         offsetx = x * self.tileWidth * scale
         if not (0 <= offsetx < self.sizeX):
-            raise exceptions.TileSourceError('x is outside layer')
+            raise exceptions.TileSourceXYZRangeError('x is outside layer')
         offsety = y * self.tileHeight * scale
         if not (0 <= offsety < self.sizeY):
-            raise exceptions.TileSourceError('y is outside layer')
+            raise exceptions.TileSourceXYZRangeError('y is outside layer')
         if frame is not None and numFrames is not None:
             if frame < 0 or frame >= numFrames:
-                raise exceptions.TileSourceError('Frame does not exist')
+                raise exceptions.TileSourceXYZRangeError('Frame does not exist')
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,

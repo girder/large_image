@@ -24,7 +24,7 @@ import PIL.Image
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
-from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
+from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError, TileSourceXYZRangeError
 from large_image.tilesource import FileTileSource
 
 try:
@@ -176,11 +176,11 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 mayRedirect=False, **kwargs):
         if z != 0:
-            raise TileSourceError('z layer does not exist')
+            raise TileSourceXYZRangeError('z layer does not exist')
         if x != 0:
-            raise TileSourceError('x is outside layer')
+            raise TileSourceXYZRangeError('x is outside layer')
         if y != 0:
-            raise TileSourceError('y is outside layer')
+            raise TileSourceXYZRangeError('y is outside layer')
         return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
