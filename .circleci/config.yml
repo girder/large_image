@@ -62,8 +62,13 @@ commands:
           version: << parameters.version >>
       - run:
           name: start mongo
+          # This had been
+          # docker run --rm -d -p 27017:27017 circleci/mongo:5.0-ram
+          # but circleci has deprecated their mongo images.  Running as ram
+          # just turned off journalling and run with the db on a memory mapped
+          # location.  --bind_ip_all is required.
           command: |
-            docker run --rm -d -p 27017:27017 circleci/mongo:5.0-ram
+            docker run --rm -d -p 127.0.0.1:27017:27017 mongo:5.0 bash -c "mkdir /dev/shm/mongo && mongod --nojournal --dbpath=/dev/shm/mongo --noauth --bind_ip_all"
       - run:
           name: start rabbitmq
           command: |
