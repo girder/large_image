@@ -48,34 +48,27 @@ it is not allowed. If element IDs are specified, they must be unique.
       "fontSize": 3.4,                # Number.  Optional
       "color": "#0000FF"              # String.  See note about colors.  Optional
     },
-    "lineColor": "#000000",           # String.  See note about colors.  Optional
-    "lineWidth": 1,                   # Number >= 0.  Optional
     "group": "group name",            # String. Optional
     "user": {},                       # User properties -- this can contain anything,
                                       # but should be kept small.  Optional.
     <shape specific properties>
   }
 
-Arrow
-~~~~~
 
-Not currently rendered.
+All Vector Shapes
+~~~~~~~~~~~~~~~~~
+
+These properties exist for all vector shapes (all but heatmaps, grid data, and image and pixelmap overlays).
 
 ::
 
   {
-    "type": "arrow",                   # Exact string.  Required
-    <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
-    "points": [                        # Arrows ALWAYS have two points
-      [5,6,0],                         # Coordinate.  Arrow head.  Required
-      [-17,6,0]                        # Coordinate.  Aroow tail.  Required
-    ]
+    "lineColor": "#000000",           # String.  See note about colors.  Optional
+    "lineWidth": 1,                   # Number >= 0.  Optional
   }
 
 Circle
 ~~~~~~
-
-Not currently rendered.
 
 ::
 
@@ -89,8 +82,6 @@ Not currently rendered.
 
 Ellipse
 ~~~~~~~
-
-Not currently rendered.
 
 The width and height of an ellipse are the major and minor axes.
 
@@ -152,30 +143,6 @@ Rectangle
     "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
     "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
                                        # Optional
-    "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
-  }
-
-Rectangle Grid
-~~~~~~~~~~~~~~
-
-Not currently rendered.
-
-A Rectangle Grid is a rectangle which contains regular subdivisions,
-such as that used to show a regular scale grid overlay on an image.
-
-::
-
-  {
-    "type": "rectanglegrid",           # Exact string.  Required
-    <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
-    "center": [10.3, -40.0, 0],        # Coordinate.  Required
-    "width": 5.3,                      # Number >= 0.  Required
-    "height": 17.3,                    # Number >= 0.  Required
-    "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
-    "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
-                                       # Optional
-    "widthSubdivisions": 3,            # Integer > 0.  Required
-    "heightSubdivisions": 4,           # Integer > 0.  Required
     "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
   }
 
@@ -355,6 +322,46 @@ integers which correspond to indices in a ``categories`` array.
           "label": "class_c",
         },
     ]
+  }
+
+Arrow
+~~~~~
+
+Not currently rendered.
+
+::
+
+  {
+    "type": "arrow",                   # Exact string.  Required
+    <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+    "points": [                        # Arrows ALWAYS have two points
+      [5,6,0],                         # Coordinate.  Arrow head.  Required
+      [-17,6,0]                        # Coordinate.  Aroow tail.  Required
+    ]
+  }
+
+Rectangle Grid
+~~~~~~~~~~~~~~
+
+Not currently rendered.
+
+A Rectangle Grid is a rectangle which contains regular subdivisions,
+such as that used to show a regular scale grid overlay on an image.
+
+::
+
+  {
+    "type": "rectanglegrid",           # Exact string.  Required
+    <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+    "center": [10.3, -40.0, 0],        # Coordinate.  Required
+    "width": 5.3,                      # Number >= 0.  Required
+    "height": 17.3,                    # Number >= 0.  Required
+    "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
+    "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
+                                       # Optional
+    "widthSubdivisions": 3,            # Integer > 0.  Required
+    "heightSubdivisions": 4,           # Integer > 0.  Required
+    "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
   }
 
 Component Values

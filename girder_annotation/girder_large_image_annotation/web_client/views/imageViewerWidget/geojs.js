@@ -41,13 +41,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _postRender: function () {
             // the feature layer is for annotations that are loaded
             this.featureLayer = this.viewer.createLayer('feature', {
-                features: ['point', 'line', 'polygon']
+                features: ['point', 'line', 'polygon', 'marker']
             });
             this.setGlobalAnnotationOpacity(this._globalAnnotationOpacity);
             this.setGlobalAnnotationFillOpacity(this._globalAnnotationFillOpacity);
             // the annotation layer is for annotations that are actively drawn
             this.annotationLayer = this.viewer.createLayer('annotation', {
-                annotations: ['point', 'line', 'rectangle', 'polygon'],
+                annotations: ['point', 'line', 'rectangle', 'ellipse', 'circle', 'polygon'],
                 showLabels: false
             });
             var geo = window.geo; // this makes the style checker happy
@@ -220,7 +220,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         /**
          * Render an annotation model on the image.  Currently, this is limited
          * to annotation types that can be (1) directly converted into geojson
-         * primitives, OR (2) be represented as heatmaps.
+         * primitives, (2) be represented as heatmaps, or (3) shown as image
+         * overlays.
          *
          * Internally, this generates a new feature layer for the annotation
          * that is referenced by the annotation id.  All "elements" contained

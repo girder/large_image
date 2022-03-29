@@ -92,6 +92,16 @@ export default AccessControlledModel.extend({
                     strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
                     strokeWidth: 2
                 },
+                ellipse: {
+                    fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
+                    strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
+                    strokeWidth: 2
+                },
+                circle: {
+                    fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
+                    strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
+                    strokeWidth: 2
+                },
                 polyline: {
                     strokeColor: {r: 1, g: 120 / 255, b: 0},
                     strokeOpacity: 0.5,
