@@ -175,12 +175,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 mayRedirect=False, **kwargs):
-        if z != 0:
-            raise TileSourceError('z layer does not exist')
-        if x != 0:
-            raise TileSourceError('x is outside layer')
-        if y != 0:
-            raise TileSourceError('y is outside layer')
+        self._xyzInRange(x, y, z)
         return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
