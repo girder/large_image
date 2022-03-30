@@ -132,6 +132,44 @@ describe('Annotations', function () {
             expect(obj.coordinates).toEqual([1, 2]);
         });
 
+        it('ellipse', function () {
+            var obj = largeImageAnnotation.annotations.geometry.ellipse({
+                type: 'ellipse',
+                id: 'a',
+                center: [10, 20, 0],
+                width: 5,
+                height: 10,
+                rotation: 0
+            });
+
+            expect(obj.type).toBe('Polygon');
+            expect(obj.coordinates.length).toBe(1);
+            expect(obj.annotationType).toBe('ellipse');
+            expectClose(
+                obj.coordinates[0], [
+                    [7.5, 15], [12.5, 15], [12.5, 25], [7.5, 25], [7.5, 15]
+                ]
+            );
+        });
+
+        it('circle', function () {
+            var obj = largeImageAnnotation.annotations.geometry.circle({
+                type: 'circle',
+                id: 'a',
+                center: [10, 20, 0],
+                radius: 5
+            });
+
+            expect(obj.type).toBe('Polygon');
+            expect(obj.coordinates.length).toBe(1);
+            expect(obj.annotationType).toBe('circle');
+            expectClose(
+                obj.coordinates[0], [
+                    [5, 15], [15, 15], [15, 25], [5, 25], [5, 15]
+                ]
+            );
+        });
+
         describe('heatmapColorTable', function () {
             var values = [0.508, 0.806, 0.311, 0.402, 0.535, 0.661, 0.866, 0.31, 0.241, 0.63, 0.555, 0.067, 0.668, 0.164, 0.512, 0.647, 0.501, 0.637, 0.498, 0.658, 0.332, 0.431, 0.053, 0.531];
             var tests = [{

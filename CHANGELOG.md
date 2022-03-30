@@ -3,11 +3,12 @@
 ## Unreleased
 
 ### Features
-- Add support for ellipse and circle annotations
+- Add support for ellipse and circle annotations ([811](../../pull/811))
 
 ### Improvements
 - Improve parsing OME TIFF channel names ([806](../../pull/806))
 - Improve handling when a file vanishes ([807](../../pull/807))
+- Add TileSourceXYZRangeError ([809](../../pull/809))
 
 ## Version 1.12.0
 

@@ -219,5 +219,44 @@ describe('geojs-annotations', function () {
                 lineWidth: lineWidth
             });
         });
+
+        it('ellipse', function () {
+            type = 'ellipse';
+            coordinates = [
+                {x: 1, y: 2},
+                {x: 1, y: 4},
+                {x: 3, y: 4},
+                {x: 3, y: 2}
+            ];
+            expect(geojs.types.ellipse(annotation)).toEqual({
+                type: 'ellipse',
+                center: [2, 3, 0],
+                width: 2,
+                height: 2,
+                rotation: 0,
+                fillColor: fillColor,
+                lineColor: lineColor,
+                lineWidth: lineWidth,
+                normal: [0, 0, 1]
+            });
+        });
+
+        it('circle', function () {
+            type = 'circle';
+            coordinates = [
+                {x: 1, y: 2},
+                {x: 1, y: 4},
+                {x: 3, y: 4},
+                {x: 3, y: 2}
+            ];
+            expect(geojs.types.circle(annotation)).toEqual({
+                type: 'circle',
+                center: [2, 3, 0],
+                radius: 1,
+                fillColor: fillColor,
+                lineColor: lineColor,
+                lineWidth: lineWidth
+            });
+        });
     });
 });

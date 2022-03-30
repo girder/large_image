@@ -452,7 +452,7 @@ $(function () {
                     expect(elements.length).toBe(1);
                     expect(elements[0].type).toBe('point');
                     closeTo(elements[0].center, [100, 200, 0]);
-                    created = true;
+                    created = true;;
                     return null;
                 });
                 var pt = viewer.viewer.gcsToDisplay({x: 100, y: 200});
@@ -483,7 +483,7 @@ $(function () {
                     closeTo(elements[0].points[0], [100, 200, 0]);
                     closeTo(elements[0].points[1], [200, 200, 0]);
                     closeTo(elements[0].points[2], [200, 300, 0]);
-                    created = true;
+                    created = true;;
                     return null;
                 });
 
@@ -550,6 +550,140 @@ $(function () {
             });
         });
 
+        it('draw rectangle', function () {
+            var created;
+
+            runs(function () {
+                viewer.startDrawMode('rectangle').then(function (elements) {
+                    expect(elements.length).toBe(1);
+                    closeTo(elements[0].center, [150, 300, 0]);
+                    expect(elements[0].width).toBe(100);
+                    expect(elements[0].height).toBe(200);
+                    created = true;;
+                    return null;
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 400})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 400})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 400})
+                });
+            });
+
+            waitsFor(function () {
+                return created;
+            });
+        });
+
+        it('draw ellipse', function () {
+            var created;
+
+            runs(function () {
+                viewer.startDrawMode('ellipse').then(function (elements) {
+                    expect(elements.length).toBe(1);
+                    closeTo(elements[0].center, [150, 300, 0]);
+                    expect(elements[0].width).toBe(100);
+                    expect(elements[0].height).toBe(200);
+                    created = true;;
+                    return null;
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 200})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 400})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 400})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 400})
+                });
+            });
+
+            waitsFor(function () {
+                return created;
+            });
+        });
+
+        it('draw circle', function () {
+            var created;
+
+            runs(function () {
+                viewer.startDrawMode('circle').then(function (elements) {
+                    expect(elements.length).toBe(1);
+                    closeTo(elements[0].center, [200, 200, 0]);
+                    expect(elements[0].radius).toBe(100);
+                    created = true;;
+                    return null;
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 100})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 100})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 100, y: 100})
+                });
+
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 500})
+                });
+                interactor.simulateEvent('mousedown', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 500})
+                });
+                interactor.simulateEvent('mouseup', {
+                    button: 'left',
+                    map: viewer.viewer.gcsToDisplay({x: 200, y: 500})
+                });
+            });
+
+            waitsFor(function () {
+                return created;
+            });
+        });
+
         it('draw line', function () {
             var created;
 
@@ -562,7 +696,7 @@ $(function () {
                     closeTo(elements[0].points[0], [100, 200, 0]);
                     closeTo(elements[0].points[1], [200, 200, 0]);
                     closeTo(elements[0].points[2], [200, 300, 0]);
-                    created = true;
+                    created = true;;
                     return null;
                 });
 
