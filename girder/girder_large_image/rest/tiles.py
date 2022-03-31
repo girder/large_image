@@ -18,6 +18,7 @@ import hashlib
 import math
 import os
 import pathlib
+import pickle
 import re
 import urllib
 
@@ -90,6 +91,38 @@ def _handleETag(key, item, *args, **kwargs):
         raise cherrypy.HTTPRedirect([], 304)
     # Explicitly set a max-age to recheck the cache after a while
     setResponseHeader('Cache-control', 'max-age=3600')
+
+
+def _pickleParams(params):
+    """
+    Check if the output should be returned as pickled data and adjust the
+    parameters accordingly.
+
+    :param params: a dictionary of parameters.  If encoding starts with
+        'pickle', numpy format will be requested.
+    :return: None if the output should not be pickled.  Otherwise, the pickle
+        protocol that should be used.
+    """
+    if not str(params.get('encoding')).startswith('pickle'):
+        return None
+    params['format'] = large_image.constants.TILE_FORMAT_NUMPY
+    pickle = params['encoding'].split(':')[-1]
+    del params['encoding']
+    return int(pickle) or 4 if pickle.isdigit() else 4
+
+
+def _pickleOutput(data, protocol):
+    """
+    Pickle some data using a specific protocol and return the pickled data
+    and the recommended mime type.
+
+    :param data: the data to pickle.
+    :param protocol: the pickle protocol level.
+    :returns: the pickled data and the mime type.
+    """
+    return (
+        pickle.dumps(data, protocol=min(protocol, pickle.HIGHEST_PROTOCOL)),
+        'application/octet-stream')
 
 
 class TilesItemResource(ItemResource):
@@ -662,8 +695,10 @@ class TilesItemResource(ItemResource):
         .param('encoding', 'Output image encoding.  TILED generates a tiled '
                'tiff without the upper limit on image size the other options '
                'have.  For geospatial sources, TILED will also have '
-               'appropriate tagging.', required=False,
-               enum=['JPEG', 'PNG', 'TIFF', 'TILED'], default='JPEG')
+               'appropriate tagging.  Pickle emits python pickle data with an '
+               'optional specific protocol', required=False,
+               enum=['JPEG', 'PNG', 'TIFF', 'TILED', 'pickle', 'pickle:3',
+                     'pickle:4', 'pickle:5'], default='JPEG')
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
@@ -691,6 +726,7 @@ class TilesItemResource(ItemResource):
             ('contentDispositionFileName', str)
         ])
         _handleETag('getTilesThumbnail', item, params)
+        pickle = _pickleParams(params)
         try:
             result = self.imageItemModel.getThumbnail(item, **params)
         except TileGeneralError as e:
@@ -700,6 +736,8 @@ class TilesItemResource(ItemResource):
         if not isinstance(result, tuple):
             return result
         thumbData, thumbMime = result
+        if pickle:
+            thumbData, thumbMime = _pickleOutput(thumbData, pickle)
         self._setContentDisposition(
             item, params.get('contentDisposition'), thumbMime, 'thumbnail',
             params.get('contentDispositionFilename'))
@@ -767,8 +805,10 @@ class TilesItemResource(ItemResource):
         .param('encoding', 'Output image encoding.  TILED generates a tiled '
                'tiff without the upper limit on image size the other options '
                'have.  For geospatial sources, TILED will also have '
-               'appropriate tagging.', required=False,
-               enum=['JPEG', 'PNG', 'TIFF', 'TILED'], default='JPEG')
+               'appropriate tagging.  Pickle emits python pickle data with an '
+               'optional specific protocol', required=False,
+               enum=['JPEG', 'PNG', 'TIFF', 'TILED', 'pickle', 'pickle:3',
+                     'pickle:4', 'pickle:5'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
                required=False, dataType='int', default=95)
         .param('jpegSubsampling', 'Chroma subsampling used for generating '
@@ -827,10 +867,13 @@ class TilesItemResource(ItemResource):
             ('contentDispositionFileName', str)
         ])
         _handleETag('getTilesRegion', item, params)
+        pickle = _pickleParams(params)
         setResponseTimeLimit(86400)
         try:
             regionData, regionMime = self.imageItemModel.getRegion(
                 item, **params)
+            if pickle:
+                regionData, regionMime = _pickleOutput(regionData, pickle)
         except TileGeneralError as e:
             raise RestException(e.args[0])
         except ValueError as e:
@@ -1175,8 +1218,10 @@ class TilesItemResource(ItemResource):
         .param('encoding', 'Output image encoding.  TILED generates a tiled '
                'tiff without the upper limit on image size the other options '
                'have.  For geospatial sources, TILED will also have '
-               'appropriate tagging.', required=False,
-               enum=['JPEG', 'PNG', 'TIFF', 'TILED'], default='JPEG')
+               'appropriate tagging.  Pickle emits python pickle data with an '
+               'optional specific protocol', required=False,
+               enum=['JPEG', 'PNG', 'TIFF', 'TILED', 'pickle', 'pickle:3',
+                     'pickle:4', 'pickle:5'], default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
                required=False, dataType='int', default=95)
         .param('jpegSubsampling', 'Chroma subsampling used for generating '
@@ -1213,6 +1258,7 @@ class TilesItemResource(ItemResource):
 
         params = self._parseParams(params, True, self._tileFramesParams)
         _handleETag('tileFrames', item, params)
+        pickle = _pickleParams(params)
         if 'frameList' in params:
             params['frameList'] = [
                 int(f.strip()) for f in str(params['frameList']).lstrip(
@@ -1228,6 +1274,8 @@ class TilesItemResource(ItemResource):
         if not isinstance(result, tuple):
             return result
         regionData, regionMime = result
+        if pickle:
+            regionData, regionMime = _pickleOutput(regionData, pickle)
         self._setContentDisposition(
             item, params.get('contentDisposition'), regionMime, 'tileframes',
             params.get('contentDispositionFilename'))
