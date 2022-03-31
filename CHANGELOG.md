@@ -4,6 +4,7 @@
 
 ### Features
 - Add support for ellipse and circle annotations ([811](../../pull/811))
+- Support pickle output of numpy arrays for region, thumbnail, and tile_frames endpoints ([812](../../pull/812))
 
 ### Improvements
 - Improve parsing OME TIFF channel names ([806](../../pull/806))

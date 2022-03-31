@@ -1,5 +1,6 @@
 import math
 import os
+import pickle
 import shutil
 import struct
 import time
@@ -819,6 +820,41 @@ def testRegions(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
     assert image[:len(utilities.BigTIFFHeader)] == utilities.BigTIFFHeader
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testRegionPickle(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample_image.ptif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+
+    params = {'regionWidth': 2000, 'regionHeight': 1500,
+              'width': 500, 'height': 500,
+              'encoding': 'pickle'}
+    resp = server.request(path='/item/%s/tiles/region' % itemId,
+                          user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+    narray = pickle.loads(utilities.getBody(resp, text=False))
+    assert narray.shape == (375, 500, 3)
+
+    params = {'regionWidth': 2000, 'regionHeight': 1500,
+              'width': 500, 'height': 500,
+              'encoding': 'pickle:1'}
+    resp = server.request(path='/item/%s/tiles/region' % itemId,
+                          user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+    narray = pickle.loads(utilities.getBody(resp, text=False))
+    assert narray.shape == (375, 500, 3)
+
+    params = {'regionWidth': 2000, 'regionHeight': 1500,
+              'width': 500, 'height': 500,
+              'encoding': 'pickle:' + str(pickle.HIGHEST_PROTOCOL)}
+    resp = server.request(path='/item/%s/tiles/region' % itemId,
+                          user=admin, isJson=False, params=params)
+    assert utilities.respStatus(resp) == 200
+    narray = pickle.loads(utilities.getBody(resp, text=False))
+    assert narray.shape == (375, 500, 3)
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
