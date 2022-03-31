@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## Version 1.13.0
 
 ### Features
 - Add support for ellipse and circle annotations ([811](../../pull/811))
