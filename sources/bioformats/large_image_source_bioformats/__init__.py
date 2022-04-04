@@ -57,8 +57,9 @@ _javabridgeStarted = None
 _openImages = []
 
 
-config.ConfigValues['source_bioformats_ignored_extensions'] = \
-    '.jpg,.jpeg,.jpe,.png,.tif,.tiff,.ndpi'
+# Default to ignoring files with no extension and some specific extensions.
+config.ConfigValues['source_bioformats_ignored_names'] = \
+    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'
 
 
 def _monitor_thread():
@@ -174,17 +175,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super().__init__(path, **kwargs)
 
         largeImagePath = str(self._getLargeImagePath())
-
-        ext = os.path.splitext(largeImagePath)[1]
-        if not ext:
-            if not os.path.isfile(largeImagePath):
-                raise TileSourceFileNotFoundError(largeImagePath) from None
-            raise TileSourceError(
-                'File cannot be opened via bioformats because it has no '
-                'extension to specify the file type (%s).' % largeImagePath)
-        if ext.lower() in (config.getConfig(
-                'source_bioformats_ignored_extensions') or '.png').split(','):
-            raise TileSourceError('File will not be opened by bioformats reader')
+        self._ignoreSourceNames('bioformats', largeImagePath, r'\.png$')
 
         if not _startJavabridge(self.logger):
             raise TileSourceError(

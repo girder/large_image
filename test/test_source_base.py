@@ -46,7 +46,7 @@ SourceAndFiles = {
         'skipTiles': r'one_layer_missing'},
     'pil': {
         'read': r'\.(jpeg|png|tif.*)$',
-        'noread': r'(G10-3|JK-kidney|d042-353|huron|sample.*ome|one_layer_missing)'},
+        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing)'},
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'\.(ptif|scn|svs|tif.*)$',
@@ -58,6 +58,11 @@ if sys.version_info >= (3, 7):
     SourceAndFiles.update({
         'nd2': {'read': r'\.(nd2)$'},
     })
+else:
+    # Python 3.6 has an older version of PIL that won't read some of the
+    # ome.tif files.
+    SourceAndFiles['pil']['noread'] = \
+        r'(G10-3|JK-kidney|d042-353|huron|sample.*ome|one_layer_missing)'
 
 
 def testNearPowerOfTwo():

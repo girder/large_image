@@ -238,11 +238,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         self._xyzInRange(x, y, z)
-        step = int(2 ** (self.levels - 1 - z))
-        x0 = x * step * self.tileWidth
-        x1 = min((x + 1) * step * self.tileWidth, self.sizeX)
-        y0 = y * step * self.tileHeight
-        y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
+        x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         scale = None
         if z < self._minlevel:
             scale = int(2 ** (self._minlevel - z))

@@ -2,6 +2,7 @@ import json
 import math
 import os
 import pathlib
+import re
 import tempfile
 import threading
 import time
@@ -178,6 +179,23 @@ class TileSource:
         :returns: a cache key.
         """
         return strhash(self.getState()) + strhash(*args, **kwargs)
+
+    def _ignoreSourceNames(self, configKey, path, default=None):
+        """
+        Given a path, if it is an actual file and there is a setting
+        "source_<configKey>_ignored_names", raise a TileSoruceError if the
+        path matches the ignore names setting regex in a case-insensitve
+        search.
+
+        :param configKey: key to use to fetch value from settings.
+        :param path: the file path to check.
+        :param default: a default ignore regex, or None for no default.
+        """
+        ignored_names = config.getConfig('source_%s_ignored_names' % configKey) or default
+        if not ignored_names or not os.path.isfile(path):
+            return
+        if re.search(ignored_names, os.path.basename(path), flags=re.IGNORECASE):
+            raise exceptions.TileSourceError('File will not be opened by %s reader' % configKey)
 
     def _calculateWidthHeight(self, width, height, regionWidth, regionHeight):
         """
@@ -1454,6 +1472,25 @@ class TileSource:
         if frame is not None and numFrames is not None:
             if frame < 0 or frame >= numFrames:
                 raise exceptions.TileSourceXYZRangeError('Frame does not exist')
+
+    def _xyzToCorners(self, x, y, z):
+        """
+        Convert a tile in x, y, z to corners and scale factor.   The corners
+        are in full resolution image coordinates.  The scale is always a power
+        of two >= 1.
+
+        To convert the output to the resolution at the specified z level,
+        integer divide the corners by the scale (e.g., x0z = x0 // scale).
+
+        :param x, y, z: the tile position.
+        :returns: x0, y0, x1, y1, scale.
+        """
+        step = int(2 ** (self.levels - 1 - z))
+        x0 = x * step * self.tileWidth
+        x1 = min((x + 1) * step * self.tileWidth, self.sizeX)
+        y0 = y * step * self.tileHeight
+        y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
+        return x0, y0, x1, y1, step
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,

@@ -39,6 +39,10 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
+# Default to ignoring files with some specific extensions.
+config.ConfigValues['source_pil_ignored_names'] = \
+    r'(\.mrxs|\.vsi)$'
+
 
 def getMaxSize(size=None, maxDefault=4096):
     """
@@ -102,12 +106,11 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.maxSize = maxSize
 
         largeImagePath = self._getLargeImagePath()
-
         # Some formats shouldn't be read this way, even if they could.  For
         # instances, mirax (mrxs) files look like JPEGs, but opening them as
         # such misses most of the data.
-        if os.path.splitext(largeImagePath)[1] in {'.mrxs', '.vsi'}:
-            raise TileSourceError('File cannot be opened via PIL.')
+        self._ignoreSourceNames('pil', largeImagePath)
+
         try:
             self._pilImage = PIL.Image.open(largeImagePath)
         except OSError:

@@ -25,7 +25,7 @@ Configuration parameters:
 
 - ``max_small_image_size``: The PIL tilesource is used for small images if they are no more than this many pixels along their maximum dimension.
 
-- ``source_bioformats_ignored_extensions``: The bioformats tilesource can read some files that are better read by other tilesources or ignored.  Since reading these files is suboptimal, by default files with particular extensions are ignored by the bioformats tilesource.  This defaults to ``.jpg,.jpeg,.jpe,.png,.tif,.tiff,.ndpi``.
+- ``source_bioformats_ignored_names``, ``source_pil_ignored_names``: Some tile sources can read some files that are better read by other tilesources.  Since reading these files is suboptimal, these tile sources have a setting that, by default, ignores files without extensions or with particular extensions.  This setting is a Python regular expressions.  For bioformats this defaults to ``r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'``.
 
 
 Configuration from Python
