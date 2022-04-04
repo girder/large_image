@@ -147,11 +147,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 pixelmapData = valuesWithBoundaries;
             }
             layerParams.data = pixelmapData;
+            const categoryMap = pixelmapElement.categories;
+            const boundaries = pixelmapElement.boundaries;
             layerParams.style = {
                 color: (d, i) => {
-                    const categoryMap = pixelmapElement.categories;
-                    const boundaries = pixelmapElement.boundaries;
-                    if (d < 0 || d > categoryMap.length) {
+                    if (d < 0 || d >= categoryMap.length) {
                         console.warn(`No category found at index ${d} in the category map.`);
                         return 'rgba(0, 0, 0, 0)';
                     }
@@ -390,11 +390,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     }
                     const params = this._generateOverlayLayerParams(response, overlayItemId, overlay);
                     const layerType = (overlay.type === 'pixelmap') ? 'pixelmap' : 'osm';
-                    const overlayLayer = this.viewer.createLayer(layerType, params);
                     const proj = this._getOverlayTransformProjString(overlay);
-
-                    overlayLayer.id(overlay.id);
-                    overlayLayer.gcs(proj);
+                    const overlayLayer = this.viewer.createLayer(layerType, Object.assign({}, params, {id: overlay.id, gcs: proj}));
+                    this.annotationLayer.moveToTop();
                     this.trigger('g:drawOverlayAnnotation', overlay, overlayLayer);
                     const featureEvents = geo.event.feature;
                     overlayLayer.geoOn(
