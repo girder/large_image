@@ -254,13 +254,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         frame = int(kwargs.get('frame') or 0)
         self._xyzInRange(x, y, z, frame, self._framecount)
-
-        step = int(2 ** (self.levels - 1 - z))
-        x0 = x * step * self.tileWidth
-        x1 = min((x + 1) * step * self.tileWidth, self.sizeX)
-        y0 = y * step * self.tileHeight
-        y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
-
+        x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         tileframe = self._nd2array
         fc = self._framecount
         fp = frame
