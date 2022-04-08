@@ -20,6 +20,7 @@ import pathlib
 import struct
 import tempfile
 import threading
+from urllib.parse import urlencode, urlparse
 
 import numpy
 import PIL.Image
@@ -68,6 +69,21 @@ InitPrefix = '+init='
 NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else InitPrefix
 
 
+def make_vsi(url: str, **options):
+    if str(url).startswith("s3://"):
+        s3_path = url.replace("s3://", "")
+        vsi = f"/vsis3/{s3_path}"
+    else:
+        gdal_options = {
+            "url": str(url),
+            "use_head": "no",
+            "list_dir": "no",
+        }
+        gdal_options.update(options)
+        vsi = f"/vsicurl?{urlencode(gdal_options)}"
+    return vsi
+
+
 class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
@@ -114,7 +130,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
         self._bounds = {}
-        self._largeImagePath = str(self._getLargeImagePath())
+        self._largeImagePath = self._getLargeImagePath()
         try:
             self.dataset = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
         except RuntimeError:
@@ -158,6 +174,16 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._initWithProjection(unitsPerPixel)
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
+
+    def _getLargeImagePath(self):
+        """Get GDAL-compatible image path.
+
+        This will cast the outout to a string and can also handle URLs for use
+        with GDAL VFS interface.
+        """
+        if urlparse(str(self.largeImagePath)).scheme in {'http', 'https', 'ftp', 's3'}:
+            return make_vsi(self.largeImagePath)
+        return str(self.largeImagePath)
 
     def _checkNetCDF(self):
         return False

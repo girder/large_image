@@ -532,3 +532,21 @@ def testMatplotlibPalette():
     image = PIL.Image.open(io.BytesIO(image))
     image = numpy.asarray(image)
     assert list(image[0, 0, :]) == [68, 1, 84, 0]
+
+
+def testHttpVfsPath():
+    imagePath = datastore.get_url('landcover_sample_1000.tif')
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857', encoding='PNG')
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 65536
+    assert tileMetadata['sizeY'] == 65536
+    assert tileMetadata['levels'] == 9
+    assert tileMetadata['bounds']['xmax'] == pytest.approx(-7837888, 1)
+    assert tileMetadata['bounds']['xmin'] == pytest.approx(-8909162, 1)
+    assert tileMetadata['bounds']['ymax'] == pytest.approx(5755717, 1)
+    assert tileMetadata['bounds']['ymin'] == pytest.approx(4876273, 1)
+    assert tileMetadata['bounds']['srs'] == 'epsg:3857'
+    assert tileMetadata['geospatial']
