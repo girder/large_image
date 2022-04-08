@@ -87,7 +87,7 @@ def testTileFromGeotiffs():
     assert tileMetadata['geospatial']
 
     source = large_image_source_gdal.open(
-        imagePath, projection='EPSG:3857', style=json.dumps({'band': -1}), encoding='PNG')
+        imagePath, projection='EPSG:3857', style={'band': -1}, encoding='PNG')
     image = source.getTile(89, 207, 9)
     _assertImageMatches(image, 'geotiff_9_89_207')
 
@@ -95,9 +95,9 @@ def testTileFromGeotiffs():
 def testTileStyleFromGeotiffs():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    style = json.dumps({'band': 1, 'min': 0, 'max': 100,
-                        'scheme': 'discrete',
-                        'palette': 'matplotlib.Plasma_6'})
+    style = {'band': 1, 'min': 0, 'max': 100,
+             'scheme': 'discrete',
+             'palette': 'matplotlib.Plasma_6'}
     source = large_image_source_gdal.open(
         imagePath, projection='EPSG:3857', style=style)
     image = source.getTile(22, 51, 7, encoding='PNG')
@@ -107,9 +107,9 @@ def testTileStyleFromGeotiffs():
 def testTileLinearStyleFromGeotiffs():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    style = json.dumps({'band': 1, 'min': 0, 'max': 100,
-                        'palette': 'matplotlib.Plasma_6',
-                        'scheme': 'linear'})
+    style = {'band': 1, 'min': 0, 'max': 100,
+             'palette': 'matplotlib.Plasma_6',
+             'scheme': 'linear'}
     source = large_image_source_gdal.open(
         imagePath, projection='EPSG:3857', style=style, encoding='PNG')
     image = source.getTile(22, 51, 7)
@@ -120,7 +120,7 @@ def testTileStyleBadInput():
     def _assertStyleResponse(imagePath, style, message):
         with pytest.raises((TileSourceError, ValueError), match=message):
             source = large_image_source_gdal.open(
-                imagePath, projection='EPSG:3857', style=json.dumps(style), encoding='PNG')
+                imagePath, projection='EPSG:3857', style=style, encoding='PNG')
             source.getTile(22, 51, 7)
 
     testDir = os.path.dirname(os.path.realpath(__file__))
@@ -176,8 +176,8 @@ def testPixel():
         'r': 94, 'g': 98, 'b': 99, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
     # Test with styles
-    style = json.dumps({'band': 1, 'min': 0, 'max': 100,
-                        'palette': 'matplotlib.Plasma_6'})
+    style = {'band': 1, 'min': 0, 'max': 100,
+             'palette': 'matplotlib.Plasma_6'}
     source = large_image_source_gdal.open(
         imagePath, projection='EPSG:3857', style=style)
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
@@ -185,8 +185,8 @@ def testPixel():
         'r': 247, 'g': 156, 'b': 60, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
     # Test with palette as an array of colors
-    style = json.dumps({'band': 1, 'min': 0, 'max': 100,
-                        'palette': ['#0000ff', '#00ff00', '#ff0000']})
+    style = {'band': 1, 'min': 0, 'max': 100,
+             'palette': ['#0000ff', '#00ff00', '#ff0000']}
     source = large_image_source_gdal.open(
         imagePath, projection='EPSG:3857', style=style)
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})

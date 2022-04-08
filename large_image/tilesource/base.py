@@ -128,12 +128,15 @@ class TileSource:
         self.edge = edge
         self._jsonstyle = style
         if style:
-            try:
-                self.style = json.loads(style)
-                if not isinstance(self.style, dict):
-                    raise TypeError
-            except TypeError:
-                raise exceptions.TileSourceError('Style is not a valid json object.')
+            if isinstance(style, dict):
+                self.style = style
+            else:
+                try:
+                    self.style = json.loads(style)
+                    if not isinstance(self.style, dict):
+                        raise TypeError
+                except TypeError:
+                    raise exceptions.TileSourceError('Style is not a valid json object.')
 
     def __repr__(self):
         return self.getState()
