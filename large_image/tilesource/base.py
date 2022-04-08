@@ -126,12 +126,12 @@ class TileSource:
         self.jpegSubsampling = int(jpegSubsampling)
         self.tiffCompression = tiffCompression
         self.edge = edge
+        self._jsonstyle = style
         if style:
             if isinstance(style, dict):
                 self.style = style
                 self._jsonstyle = json.dumps(style, sort_keys=True, separators=(',', ':'))
             else:
-                self._jsonstyle = style
                 try:
                     self.style = json.loads(style)
                     if not isinstance(self.style, dict):
