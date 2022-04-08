@@ -70,17 +70,17 @@ NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else In
 
 
 def make_vsi(url: str, **options):
-    if str(url).startswith("s3://"):
-        s3_path = url.replace("s3://", "")
-        vsi = f"/vsis3/{s3_path}"
+    if str(url).startswith('s3://'):
+        s3_path = url.replace('s3://', '')
+        vsi = f'/vsis3/{s3_path}'
     else:
         gdal_options = {
-            "url": str(url),
-            "use_head": "no",
-            "list_dir": "no",
+            'url': str(url),
+            'use_head': 'no',
+            'list_dir': 'no',
         }
         gdal_options.update(options)
-        vsi = f"/vsicurl?{urlencode(gdal_options)}"
+        vsi = f'/vsicurl?{urlencode(gdal_options)}'
     return vsi
 
 
