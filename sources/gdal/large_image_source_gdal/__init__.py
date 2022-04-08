@@ -178,8 +178,9 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def _getLargeImagePath(self):
         """Get GDAL-compatible image path.
 
-        This will cast the outout to a string and can also handle URLs for use
-        with GDAL VFS interface.
+        This will cast the output to a string and can also handle URLs
+        ('http', 'https', 'ftp', 's3') for use with GDAL
+        `Virtual Filesystems Interface <https://gdal.org/user/virtual_file_systems.html>`_.
         """
         if urlparse(str(self.largeImagePath)).scheme in {'http', 'https', 'ftp', 's3'}:
             return make_vsi(self.largeImagePath)
