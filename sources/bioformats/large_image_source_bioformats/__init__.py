@@ -125,7 +125,7 @@ def _startJavabridge(logger):
             javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
             _reduceLogging()
             atexit.register(_stopJavabridge)
-            logger.info('Started JVM for Bioformats tile source.')
+            logger.debug('Started JVM for Bioformats tile source.')
             _javabridgeStarted = True
         except RuntimeError as exc:
             logger.exception('Cannot start JVM for Bioformats tile source.', exc)

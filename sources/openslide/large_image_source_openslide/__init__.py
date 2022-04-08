@@ -110,7 +110,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                    'dimensions.' % (
                        self._openslide.dimensions[0],
                        self._openslide.dimensions[1], self.sizeX, self.sizeY))
-            self.logger.info(msg)
+            self.logger.debug(msg)
 
         self._getTileSize()
 
@@ -151,7 +151,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     self.tileHeight * scale > maxSize):
                 msg = ('OpenSlide has no small-scale tiles (level %d is at %d '
                        'scale)' % (level, scale))
-                self.logger.info(msg)
+                self.logger.debug(msg)
                 raise TileSourceError(msg)
             self._svslevels.append({
                 'svslevel': bestlevel,

@@ -249,7 +249,7 @@ def main(args=sys.argv[1:]):
     if not os.path.isfile(dest):
         logger.error('Failed to generate file')
         return 1
-    logger.info('Created %s, %d bytes, %3.1f s', dest, os.path.getsize(dest), end_time - start_time)
+    logger.debug('Created %s, %d bytes, %3.1f s', dest, os.path.getsize(dest), end_time - start_time)
     if opts._stats:
         import json
 

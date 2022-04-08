@@ -135,7 +135,7 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
 
     cmdopt = large_image.tilesource.base._gdalParameters(**kwargs)
     cmd = ['gdal_translate', inputPath, outputPath] + cmdopt
-    logger.info('Convert to geotiff: %r', cmd)
+    logger.debug('Convert to geotiff: %r', cmd)
     try:
         # subprocess.check_call(cmd)
         ds = gdal.Open(inputPath, gdalconst.GA_ReadOnly)
@@ -188,7 +188,7 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
         if subImage.width != width or subImage.height != height:
             if subImage.width * subImage.height <= width * height:
                 continue
-            logger.info('Bigger image found (was %dx%d, now %dx%d)',
+            logger.debug('Bigger image found (was %dx%d, now %dx%d)',
                         width, height, subImage.width, subImage.height)
             for path in outputList:
                 os.unlink(path)
@@ -278,7 +278,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     else:
         source = inputPathOrBuffer
         image = pyvips.Image.new_from_file(inputPathOrBuffer)
-    logger.info('Input: %s, Output: %s, Options: %r%s',
+    logger.debug('Input: %s, Output: %s, Options: %r%s',
                 source, outputPath, convertParams, status)
     image = image.autorot()
     adjusted = format_hook('modify_vips_image_before_output', image, convertParams, **kwargs)
@@ -521,7 +521,7 @@ def _convert_large_image_frame(frame, numFrames, ts, frameOutputPath, tempPath, 
     # The iterator tile size is a balance between memory use and fewer calls
     # and file handles.
     _iterTileSize = 4096
-    logger.info('Processing frame %d/%d', frame + 1, numFrames)
+    logger.debug('Processing frame %d/%d', frame + 1, numFrames)
     strips = []
     pool = _get_thread_pool(**kwargs)
     tasks = []

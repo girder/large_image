@@ -59,7 +59,7 @@ def createThumbnailsJobTask(item, spec):
         except TileGeneralError as exc:
             status['failed'] += 1
             status['lastFailed'] = str(item['_id'])
-            logger.info('Failed to get thumbnail for item %s: %r' % (item['_id'], exc))
+            logger.error('Failed to get thumbnail for item %s: %r' % (item['_id'], exc))
         except AttributeError:
             raise
         except Exception:
@@ -190,7 +190,7 @@ def createThumbnailsJob(job):
                         JobStatus.ERROR: 'stopped due to error',
                     }[None if not job else job.get('status')]
                     msg = 'Large image thumbnails job %s' % cause
-                    logger.info(msg)
+                    logger.debug(msg)
                     # Cancel any outstanding tasks.  If they haven't started,
                     # they are discarded.  Those that have started will still
                     # run, though.
@@ -208,7 +208,7 @@ def createThumbnailsJob(job):
         # Clean up the task pool asynchronously
         pool.shutdown(False)
     job, msg = createThumbnailsJobLog(job, status, 'Finished: ', JobStatus.SUCCESS)
-    logger.info(msg)
+    logger.debug(msg)
 
 
 class LargeImageResource(Resource):

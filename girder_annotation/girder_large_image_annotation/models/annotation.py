@@ -667,7 +667,7 @@ class Annotation(AccessControlledModel):
         folder = Folder().load(destItem['folderId'], force=True)
         count = 0
         for annotation in annotations:
-            logger.info('Copying annotation %d of %d from %s to %s',
+            logger.debug('Copying annotation %d of %d from %s to %s',
                         count + 1, total, srcItemId, destItemId)
             # Make sure we have the elements
             annotation = Annotation().load(annotation['_id'], force=True)
@@ -684,7 +684,7 @@ class Annotation(AccessControlledModel):
             self.setPublic(annotation, folder.get('public'), save=False)
             self.save(annotation)
             count += 1
-        logger.info('Copied %d annotations from %s to %s ',
+        logger.debug('Copied %d annotations from %s to %s ',
                     count, srcItemId, destItemId)
 
     def _onSettingChange(self, event):
@@ -739,7 +739,7 @@ class Annotation(AccessControlledModel):
 
         # call the super class save method to avoid messing with elements
         super().save(annotation)
-        logger.info('Generated annotation ACL for %s', annotation['_id'])
+        logger.debug('Generated annotation ACL for %s', annotation['_id'])
         return annotation
 
     def createAnnotation(self, item, creator, annotation, public=None):
@@ -1023,14 +1023,14 @@ class Annotation(AccessControlledModel):
                 if key:
                     element[key] = keydata
                 if time.time() - lastTime > 10:
-                    logger.info('Validated %s of %d elements in %5.3fs',
+                    logger.debug('Validated %s of %d elements in %5.3fs',
                                 idx + 1, len(elements), time.time() - startTime)
                     lastTime = time.time()
             annot['elements'] = elements
         except jsonschema.ValidationError as exp:
             raise ValidationException(exp)
         if time.time() - startTime > 10:
-            logger.info('Validated in %5.3fs' % (time.time() - startTime))
+            logger.debug('Validated in %5.3fs' % (time.time() - startTime))
         elementIds = [entry['id'] for entry in
                       doc['annotation'].get('elements', []) if 'id' in entry]
         if len(set(elementIds)) != len(elementIds):
@@ -1232,11 +1232,11 @@ class Annotation(AccessControlledModel):
         itemIds = {}
         processedIds = set()
         annotVersions = set()
-        logger.info('Checking old annotations')
+        logger.debug('Checking old annotations')
         logtime = time.time()
         for annot in self.collection.find().sort([('_id', SortDir.ASCENDING)]):
             if time.time() - logtime > 10:
-                logger.info('Still checking old annotations, checked %d with %d versions, %r' % (
+                logger.debug('Still checking old annotations, checked %d with %d versions, %r' % (
                     len(processedIds), len(annotVersions), report))
                 logtime = time.time()
             id = annot.get('_annotationId', annot['_id'])
@@ -1271,24 +1271,24 @@ class Annotation(AccessControlledModel):
                 else:
                     report['recentVersions'] += 1
             processedIds.add(id)
-        logger.info('Getting distinct element versions')
+        logger.debug('Getting distinct element versions')
         elemVersions = Annotationelement().collection.distinct(
             '_version', filter={'created': {'$lt': age}})
-        logger.info('Got %d distinct element versions' % len(elemVersions))
+        logger.debug('Got %d distinct element versions' % len(elemVersions))
         logtime = time.time()
         abandonedVersions = set(elemVersions) - set(annotVersions)
         report['abandonedVersions'] = len(abandonedVersions)
         if remove:
             for version in abandonedVersions:
                 if time.time() - logtime > 10:
-                    logger.info('Removing abandoned versions, %r' % report)
+                    logger.debug('Removing abandoned versions, %r' % report)
                     logtime = time.time()
                 Annotationelement().removeWithQuery({'_version': version})
                 report['removedVersions'] += 1
-            logger.info('Compacting annotation collection')
+            logger.debug('Compacting annotation collection')
             self.collection.database.command('compact', self.name)
-            logger.info('Compacting annotationelement collection')
+            logger.debug('Compacting annotationelement collection')
             self.collection.database.command('compact', Annotationelement().name)
-            logger.info('Done compacting collections')
-        logger.info('Finished checking old annotations, %r' % report)
+            logger.debug('Done compacting collections')
+        logger.debug('Finished checking old annotations, %r' % report)
         return report

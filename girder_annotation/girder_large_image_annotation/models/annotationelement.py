@@ -520,12 +520,12 @@ class Annotationelement(Model):
                     entry['element']['id'] = str(res.inserted_ids[pos])
             # If the whole insert is slow, log information about it.
             if time.time() - lastTime > 10:
-                logger.info('insert %d elements in %4.2fs (prep time %4.2fs), done %d/%d' % (
+                logger.debug('insert %d elements in %4.2fs (prep time %4.2fs), done %d/%d' % (
                     len(entries), time.time() - chunkStartTime, prepTime,
                     chunk + len(entries), len(elements)))
                 lastTime = time.time()
         if time.time() - startTime > 10:
-            logger.info('inserted %d elements in %4.2fs' % (
+            logger.debug('inserted %d elements in %4.2fs' % (
                 len(elements), time.time() - startTime))
 
     def getElementGroupSet(self, annotation):

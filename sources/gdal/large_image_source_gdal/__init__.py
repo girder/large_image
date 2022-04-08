@@ -23,11 +23,11 @@ import threading
 
 import numpy
 import PIL.Image
-from osgeo import gdal, gdal_array, gdalconst, osr  # noqa I001
 # pyproj stopped supporting older pythons, so its database is aging; as such,
 # if on those older versions of python if it is imported before gdal, there can
 # be a database version conflect; importing after gdal avoids this.
 import pyproj  # noqa I001
+from osgeo import gdal, gdal_array, gdalconst, osr  # noqa I001
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
@@ -529,7 +529,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         # fetch those separately
                         info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
                     except RuntimeError:
-                        self.logger.info('Failed to get statistics for band %d', i + 1)
+                        self.logger.error('Failed to get statistics for band %d', i + 1)
                     info['nodata'] = band.GetNoDataValue()
                     info['scale'] = band.GetScale()
                     info['offset'] = band.GetOffset()
@@ -1141,7 +1141,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         fd, outputPath = tempfile.mkstemp('.tiff', 'tiledGeoRegion_')
         os.close(fd)
         try:
-            self.logger.info('Using gdal warp %r' % gdalParams)
+            self.logger.debug('Using gdal warp %r' % gdalParams)
             ds = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
             gdal.Warp(outputPath, ds, options=gdalParams)
         except Exception as exc:

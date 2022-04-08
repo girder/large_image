@@ -996,7 +996,7 @@ class TileSource:
                 resample=False,
                 frame=frame, **kwargs)
             if self._bandRanges[frame]:
-                self.logger.info('Style range is %r' % {
+                self.logger.debug('Style range is %r' % {
                     k: v for k, v in self._bandRanges[frame].items() if k in {
                         'min', 'max', 'mean', 'stdev'}})
         finally:
@@ -1975,7 +1975,7 @@ class TileSource:
             offsetX = (idx % framesAcross) * frameWidth
             offsetY = (idx // framesAcross) * frameHeight
             if time.time() - lastlog > 10:
-                self.logger.info(
+                self.logger.debug(
                     'Tiling frame %d (%d/%d), offset %dx%d',
                     frame, idx, len(frameList), offsetX, offsetY)
                 lastlog = time.time()

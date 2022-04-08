@@ -113,13 +113,13 @@ class CacheFactory:
                 cache = MemCache(url, memcachedUsername, memcachedPassword,
                                  mustBeAvailable=True)
             except Exception:
-                config.getConfig('logger').info('Cannot use memcached for caching.')
+                config.getConfig('logger').error('Cannot use memcached for caching.')
                 cache = None
         if cache is None:  # fallback backend
             cacheBackend = 'python'
             cache = cachetools.LRUCache(self.getCacheSize(numItems, cacheName=cacheName))
             cacheLock = threading.Lock()
         if numItems is None and not CacheFactory.logged:
-            config.getConfig('logprint').info('Using %s for large_image caching' % cacheBackend)
+            config.getConfig('logprint').debug('Using %s for large_image caching' % cacheBackend)
             CacheFactory.logged = True
         return cache, cacheLock

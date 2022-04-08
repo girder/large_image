@@ -72,7 +72,7 @@ def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90,
         renamePath = os.path.join(outputDir, renameOutput)
         shutil.move(outputPath, renamePath)
         outputPath = renamePath
-    logger.info('Created a file of size %d' % os.path.getsize(outputPath))
+    logger.debug('Created a file of size %d' % os.path.getsize(outputPath))
     return outputPath
 
 

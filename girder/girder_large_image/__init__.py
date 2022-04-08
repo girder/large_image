@@ -164,7 +164,7 @@ def checkForLargeImageFiles(event):
         ImageItem().createImageItem(item, file, createJob=False)
     except Exception:
         # We couldn't automatically set this as a large image
-        girder.logger.info(
+        girder.logger.error(
             'Saved file %s cannot be automatically used as a largeImage' % str(file['_id']))
 
 

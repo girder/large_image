@@ -517,7 +517,7 @@ class AnnotationResource(Resource):
             annotations = annotations.read().decode('utf8')
             annotations = orjson.loads(annotations)
             if time.time() - startTime > 10:
-                logger.info('Decoded json in %5.3fs', time.time() - startTime)
+                logger.debug('Decoded json in %5.3fs', time.time() - startTime)
         if not isinstance(annotations, list):
             annotations = [annotations]
         for entry in annotations:
