@@ -98,7 +98,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._output = None
         self._editable = True
         self._bandRanges = None
-        self._addLock = threading.Lock()
+        self._addLock = threading.RLock()
 
     def getState(self):
         # Use the _cacheValue to avoid caching the source and tiles if we are
@@ -247,7 +247,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         vimgTemp = pyvips.Image.new_temp_file('%s.v')
         vimg.write(vimgTemp)
         vimg = vimgTemp
-        with self._addLock():
+        with self._addLock:
             if self._output is None:
                 self._output = {
                     'images': [],
@@ -297,10 +297,10 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if type(tile) != pyvips.vimage.Image:
             tile, mode = _imageToNumpy(tile)
             interpretation = interpretation or mode
-        with self._addLock():
+        with self._addLock:
             self._updateBandRanges(tile)
         if interpretation == 'pixelmap':
-            with self._addLock():
+            with self._addLock:
                 self._interpretation = 'pixelmap'
             tile = numpy.dstack((
                 (tile % 256).astype(int),
@@ -343,7 +343,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         alpha channel is always included unless the intrepretation is
         multichannel.
         """
-        with self._addLock():
+        with self._addLock:
             bands = self._output['bands']
             if bands in {1, 3}:
                 bands += 1
@@ -396,7 +396,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         if not overwriteAllowed and os.path.exists(path):
             raise TileSourceError('Output path exists (%s)' % str(path))
-        with self._addLock():
+        with self._addLock:
             img = self._getFrameImage(0)
             # TODO: set image description: e.g.,
             # img.set_type(
@@ -408,7 +408,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 img = img[:-1]
         if not lossy:
             img.write_to_file(
-                path, tile_width=self.tileWidth, tile_height=self.tileHieght,
+                path, tile_width=self.tileWidth, tile_height=self.tileHeight,
                 pyramid=True, bigtiff=True,
                 region_shrink='nearest', compression='lzw', predictor='horizontal')
         else:
