@@ -175,15 +175,10 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :return: magnification, width of a pixel in mm, height of a pixel in mm.
         """
-        if self._image:
-            xres = self._image.get('xres') or 0
-            yres = self._image.get('yres') or 0
-        else:
-            xres = yres = 0
         return {
-            'mm_x': 1.0 / xres if xres else None,
-            'mm_y': 1.0 / yres if yres else None,
-            'magnification': 0.01 * xres if xres else None,
+            'mm_x': self.mm_x,
+            'mm_y': self.mm_y,
+            'magnification': 0.01 / self.mm_x if self.mm_x else None,
         }
 
     @methodcache()
@@ -253,6 +248,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     'images': [],
                     'interp': vimg.interpretation,
                     'bands': vimg.bands,
+                    'minx': None,
+                    'miny': None,
                     'width': 0,
                     'height': 0,
                 }
@@ -265,12 +262,25 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if vimg.interpretation == pyvips.Interpretation.RGB and self._output['bands'] == 2:
                     self._output['bands'] = 4
             self._output['bands'] = max(self._output['bands'], vimg.bands)
+            self._output['minx'] = min(
+                self._output['minx'] if self._output['minx'] is not None else x, x)
+            self._output['miny'] = min(
+                self._output['miny'] if self._output['miny'] is not None else y, y)
             self._output['width'] = max(self._output['width'], x + vimg.width)
             self._output['height'] = max(self._output['height'], y + vimg.height)
-            # Invalidate the tile and class cache
+            self._invalidateImage()
+
+    def _invalidateImage(self):
+        """
+        Invalidate the tile and class cache
+        """
+        if self._output is not None:
             self._image = None
-            self.sizeX = self._output['width']
-            self.sizeY = self._output['height']
+            w, h = self._output['width'], self._output['height']
+            w = max(self.minWidth or w, w)
+            h = max(self.minHeight or h, h)
+            self.sizeX = w
+            self.sizeY = h
             self.levels = int(max(1, math.ceil(math.log(
                 float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
             self._cacheValue = str(uuid.uuid4())
@@ -334,6 +344,34 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # band range doesn't include it)
         self._addVipsImage(vimg, x, y)
 
+    def _getVipsFormat(self):
+        """
+        Get the recommended vips format for the output image based on the
+        band range and the interpretation.
+
+        :returns: a vips BandFormat.
+        """
+        bmin, bmax = min(self._bandRanges['min']), max(self._bandRanges['max'])
+        if getattr(self, '_interpretation', None) == 'pixelmap':
+            format = pyvips.enums.BandFormat.UCHAR
+        elif bmin >= -1 and bmax <= 1:
+            format = pyvips.enums.BandFormat.FLOAT
+        elif bmin >= 0 and bmax < 2 ** 8:
+            format = pyvips.enums.BandFormat.UCHAR
+        elif bmin >= 0 and bmax < 2 ** 16:
+            format = pyvips.enums.BandFormat.USHORT
+        elif bmin >= 0 and bmax < 2 ** 32:
+            format = pyvips.enums.BandFormat.UINT
+        elif bmin < 0 and bmin >= -(2 ** 7) and bmax < 2 ** 7:
+            format = pyvips.enums.BandFormat.CHAR
+        elif bmin < 0 and bmin >= -(2 ** 15) and bmax < 2 ** 15:
+            format = pyvips.enums.BandFormat.SHORT
+        elif bmin < 0 and bmin >= -(2 ** 31) and bmax < 2 ** 31:
+            format = pyvips.enums.BandFormat.INT
+        else:
+            format = pyvips.enums.BandFormat.FLOAT
+        return format
+
     def _outputToImage(self):
         """
         Create a vips image that pipelines all of the pieces we have into a
@@ -347,26 +385,12 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             bands = self._output['bands']
             if bands in {1, 3}:
                 bands += 1
-            img = pyvips.Image.black(self._output['width'], self._output['height'], bands=bands)
-            bmin, bmax = min(self._bandRanges['min']), max(self._bandRanges['max'])
-            if getattr(self, '_interpretation', None) == 'pixelmap':
-                format = pyvips.enums.BandFormat.UCHAR
-            elif bmin >= -1 and bmax <= 1:
-                format = pyvips.enums.BandFormat.FLOAT
-            elif bmin >= 0 and bmax < 2 ** 8:
-                format = pyvips.enums.BandFormat.UCHAR
-            elif bmin >= 0 and bmax < 2 ** 16:
-                format = pyvips.enums.BandFormat.USHORT
-            elif bmin >= 0 and bmax < 2 ** 32:
-                format = pyvips.enums.BandFormat.UINT
-            elif bmin < 0 and bmin >= -(2 ** 7) and bmax < 2 ** 7:
-                format = pyvips.enums.BandFormat.CHAR
-            elif bmin < 0 and bmin >= -(2 ** 15) and bmax < 2 ** 15:
-                format = pyvips.enums.BandFormat.SHORT
-            elif bmin < 0 and bmin >= -(2 ** 31) and bmax < 2 ** 31:
-                format = pyvips.enums.BandFormat.INT
-            else:
-                format = pyvips.enums.BandFormat.FLOAT
+            img = pyvips.Image.black(self.sizeX, self.sizeY, bands=bands)
+            if self.mm_x or self.mm_y:
+                img = img.copy(
+                    xres=1.0 / (self.mm_x if self.mm_x else self._mm_y),
+                    yres=1.0 / (self.mm_y if self.mm_y else self._mm_x))
+            format = self._getVipsFormat()
             baseimg = img.copy(interpretation=self._output['interp'], format=format)
 
             leaves = math.ceil(len(self._output['images']) ** (1. / 3))
@@ -404,8 +428,16 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             #   json.dumps(dict(vars(opts), indexCount=found)))
             if getattr(self, '_interpretation', None) == 'pixelmap':
                 img = img[:3]
-            elif not alpha and self._output['interp'] != pyvips.Interpretation.MULTIBAND:
+            elif (not alpha and getattr(self, '_output', {}).get(
+                    'interp') != pyvips.Interpretation.MULTIBAND):
                 img = img[:-1]
+        if self.crop:
+            x, y, w, h = self._crop
+            w = max(0, min(img.width - x, w))
+            h = max(0, min(img.height - y, h))
+            x = min(x, img.width)
+            y = min(y, img.height)
+            img = img.crop(x, y, w, h)
         if not lossy:
             img.write_to_file(
                 path, tile_width=self.tileWidth, tile_height=self.tileHeight,
@@ -417,9 +449,107 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 pyramid=True, bigtiff=True,
                 compression='jpeg', Q=90)
 
-    # TODO: set scale (magnfication or mm_x/y), specify bit depth explicitly,
-    # report recommended bit depth, allow cropping or setting a minimum image
-    # size, get band ranges
+    @property
+    def crop(self):
+        """
+        Crop only applies to the output file, not the internal data access.
+
+        It consists of x, y, w, h in pixels.
+        """
+        return getattr(self, '_crop', None)
+
+    @crop.setter
+    def crop(self, value):
+        self._checkEditable()
+        if value is None:
+            self._crop = None
+            return
+        x, y, w, h = value
+        x = int(x)
+        y = int(y)
+        w = int(w)
+        h = int(h)
+        if x < 0 or y < 0 or w <= 0 or h <= 0:
+            raise TileSourceError('Crop must have non-negative x, y and positive w, h')
+        self._crop = (x, y, w, h)
+
+    @property
+    def minWidth(self):
+        return getattr(self, '_minWidth', None)
+
+    @minWidth.setter
+    def minWidth(self, value):
+        self._checkEditable()
+        value = int(value) if value is not None else None
+        if value is not None and value <= 0:
+            raise TileSourceError('minWidth must be positive or None')
+        if value != getattr(self, '_minWidth', None):
+            self._minWidth = value
+            self._invalidateImage()
+
+    @property
+    def minHeight(self):
+        return getattr(self, '_minHeight', None)
+
+    @minHeight.setter
+    def minHeight(self, value):
+        self._checkEditable()
+        value = int(value) if value is not None else None
+        if value is not None and value <= 0:
+            raise TileSourceError('minHeight must be positive or None')
+        if value != getattr(self, '_minHeight', None):
+            self._minHeight = value
+            self._invalidateImage()
+
+    @property
+    def mm_x(self):
+        if getattr(self, '_mm_x', None):
+            return self._mm_x
+        xres = 0
+        if self._image:
+            xres = self._image.get('xres') or 0
+        return 1.0 / xres if xres else None
+
+    @mm_x.setter
+    def mm_x(self, value):
+        self._checkEditable()
+        value = float(value) if value is not None else None
+        if value is not None and value <= 0:
+            raise TileSourceError('mm_x must be positive or None')
+        if value != getattr(self, '_minHeight', None):
+            self._mm_x = value
+            self._invalidateImage()
+
+    @property
+    def mm_y(self):
+        if getattr(self, '_mm_y', None):
+            return self._mm_y
+        yres = 0
+        if self._image:
+            yres = self._image.get('yres') or 0
+        return 1.0 / yres if yres else None
+
+    @mm_y.setter
+    def mm_y(self, value):
+        self._checkEditable()
+        value = float(value) if value is not None else None
+        if value is not None and value <= 0:
+            raise TileSourceError('mm_y must be positive or None')
+        if value != getattr(self, '_minHeight', None):
+            self._mm_y = value
+            self._invalidateImage()
+
+    @property
+    def bandRanges(self):
+        return getattr(self, '_bandRanges', None)
+
+    @property
+    def bandFormat(self):
+        if not self._editable:
+            return self._image.format
+        return self._getVipsFormat()
+
+    # TODO: specify bit depth / bandFormat explicitly
 
 
 def open(*args, **kwargs):
