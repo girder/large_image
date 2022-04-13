@@ -136,7 +136,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             if (levelDifference !== 0) {
                 layerParams.url = (x, y, z) => 'api/v1/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
             } else {
-                layerParams.url = layerParams.url + `?encoding=PNG`;
+                layerParams.url = layerParams.url + '?encoding=PNG';
             }
             let pixelmapData = pixelmapElement.values;
             if (pixelmapElement.boundaries) {
@@ -213,6 +213,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             }
             if (overlay.type === 'pixelmap') {
                 params.layer = this._addPixelmapLayerParams(params.layer, overlay, levelDifference);
+            } else if (overlay.hasAlpha) {
+                params.layer.keepLower = false;
+                params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
             }
             return params.layer;
         },
