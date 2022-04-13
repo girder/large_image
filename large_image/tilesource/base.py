@@ -1272,7 +1272,7 @@ class TileSource:
             return tile
         # If we can't redirect, but the tile is read from a file in the desired
         # output format, just read the file
-        if hasattr(tile, 'fp') and self._pilFormatMatches(tile):
+        if getattr(tile, 'fp', None) and self._pilFormatMatches(tile):
             tile.fp.seek(0)
             return tile.fp.read()
         return _encodeImageBinary(
