@@ -181,7 +181,8 @@ class LazyTileDict(dict):
                     pilData.size[1] / self.requestedScale))
                 pilData = tileData = pilData.resize(
                     (self['width'], self['height']),
-                    resample=PIL.Image.LANCZOS if self.resample is True else self.resample)
+                    resample=getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS
+                    if self.resample is True else self.resample)
 
             tileFormat = (TILE_FORMAT_PIL if isinstance(tileData, PIL.Image.Image)
                           else (TILE_FORMAT_NUMPY if isinstance(tileData, numpy.ndarray)

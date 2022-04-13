@@ -662,7 +662,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
         return tile.resize((self.tileWidth, self.tileHeight),
-                           PIL.Image.LANCZOS)
+                           getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
 
     def getPreferredLevel(self, level):
         """

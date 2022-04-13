@@ -13,6 +13,9 @@
 - Fix a range check for pixelmap annotations ([815](../../pull/815))
 - Harden checking if a PIL Image can be read directly from a file pointer ([822](../../pull/822))
 
+### Changes
+- Handle PIL deprecations ([824](../../pull/824))
+
 ## Version 1.13.0
 
 ### Features

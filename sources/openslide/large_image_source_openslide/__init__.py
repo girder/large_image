@@ -298,7 +298,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Always scale to the svs level 0 tile size.
         if svslevel['scale'] != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight),
-                               PIL.Image.LANCZOS)
+                               getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
         return self._outputTile(tile, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
                                 numpyAllowed, **kwargs)
 
