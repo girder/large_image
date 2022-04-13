@@ -416,6 +416,12 @@ class AnnotationSchema:
                 'description': 'Default opacity for this image overlay. Must '
                                'be between 0 and 1. Defaults to 1.'
             },
+            'hasAlpha': {
+                'type': 'boolean',
+                'description':
+                    'If true, the image is treated assuming it has an alpha '
+                    'channel.',
+            },
             'transform': {
                 'type': 'object',
                 'description': 'Specification for an affine transform of the '

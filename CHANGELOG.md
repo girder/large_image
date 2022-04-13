@@ -6,10 +6,12 @@
 - Vips tile source and tiled file writer ([816](../../pull/816))
 
 ### Improvements
-- Handle file URLs with GDAL  ([820](../../pull/820))
+- Handle file URLs with GDAL ([820](../../pull/820))
+- Add a hasAlpha flag to image annotations ([823](../../pull/823))
 
 ### Bug Fixes
 - Fix a range check for pixelmap annotations ([815](../../pull/815))
+- Harden checking if a PIL Image can be read directly from a file pointer ([822](../../pull/822))
 
 ## Version 1.13.0
 

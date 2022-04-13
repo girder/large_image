@@ -250,6 +250,8 @@ a ``2x2`` affine matrix.
     "girderId": <girder image id>,     # 24-character girder id pointing
                                        # to a large image object. Required
     "opacity": 1,                      # Default opacity for the overlay. Defaults to 1. Optional
+    "hasAlpha": false,                 # Boolean specifying if the image has an alpha channel
+                                       # that should be used in rendering.
     "transform": {                     # Object specifying additional overlay information. Optional
       "xoffset": 0,                    # How much to shift the overlaid image right.
       "yoffset": 0,                    # How much to shift the overlaid image down.
