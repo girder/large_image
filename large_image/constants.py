@@ -33,6 +33,9 @@ TILE_FORMAT_PIL = 'PIL'
 TILE_FORMAT_NUMPY = 'numpy'
 
 
+NEW_IMAGE_PATH_FLAG = '__new_image__'
+
+
 TileOutputMimeTypes = {
     # JFIF forces conversion to JPEG through PIL to ensure the image is in a
     # common colorspace.  JPEG colorspace is complex: see
@@ -79,3 +82,4 @@ dtypeToGValue = {
     'i': 'int',
     'I': 'uint',
 }
+GValueToDtype = {v: k for k, v in dtypeToGValue.items()}

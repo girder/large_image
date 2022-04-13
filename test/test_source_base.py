@@ -53,6 +53,10 @@ SourceAndFiles = {
         'noread': r'(oahu|DDX58_AXL|G10-3_pelvis_crop|'
                   r'd042-353\.crop\.small\.float|landcover_sample)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
+    'vips': {
+        'read': r'',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
+        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2)'},  # noqa
 }
 if sys.version_info >= (3, 7):
     SourceAndFiles.update({

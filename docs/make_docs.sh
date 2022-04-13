@@ -31,6 +31,7 @@ sphinx-apidoc -f -o _build/large_image_source_openslide ../sources/openslide/lar
 sphinx-apidoc -f -o _build/large_image_source_pil ../sources/pil/large_image_source_pil
 sphinx-apidoc -f -o _build/large_image_source_test ../sources/test/large_image_source_test
 sphinx-apidoc -f -o _build/large_image_source_tiff ../sources/tiff/large_image_source_tiff
+sphinx-apidoc -f -o _build/large_image_source_vips ../sources/vips/large_image_source_vips
 sphinx-apidoc -f -o _build/large_image_converter ../utilities/converter/large_image_converter
 sphinx-apidoc -f -o _build/large_image_tasks ../utilities/tasks/large_image_tasks
 sphinx-apidoc -f -o _build/girder_large_image ../girder/girder_large_image
