@@ -1,5 +1,16 @@
 # Change Log
 
+## Unreleased
+
+### Features
+- Vips tile source and tiled file writer ([816](../../pull/816))
+
+### Improvements
+- Handle file URLs with GDAL  ([820](../../pull/820))
+
+### Bug Fixes
+- Fix a range check for pixelmap annotations ([815](../../pull/815))
+
 ## Version 1.13.0
 
 ### Features
