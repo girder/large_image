@@ -23,7 +23,7 @@ Large Image
 
 *Python modules to work with large, multiresolution images.*
 
-Large Image is developed and maintained by the Data & Analytics group at `Kitware, Inc <https://kitware.com>`_. for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_, `HistomicsUI <https://github.com/DigitalSlideArchive/HistomicsUI>`_, and `the Digital Slide Archive <https://digitalslidearchive.github.io/digital_slide_archive/>`_.
+Large Image is developed and maintained by the Data & Analytics group at `Kitware, Inc. <https://kitware.com>`_ for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_, `HistomicsUI <https://github.com/DigitalSlideArchive/HistomicsUI>`_, and `the Digital Slide Archive <https://digitalslidearchive.github.io/digital_slide_archive/>`_.
 
 
 Highlights
@@ -70,7 +70,7 @@ Large Image consists of several Python modules designed to work together.  These
 
 - ``large-image``: The core module.
 
-  You can specify extras_require of the name of any tile source included with this repository.  For instance, you can do ``pip install large-image[tiff]``.  THere are additional extras_require options:
+  You can specify extras_require of the name of any tile source included with this repository.  For instance, you can do ``pip install large-image[tiff]``.  There are additional extras_require options:
 
   - ``sources``: all of the tile sources in the repository, a specific source name (e.g., ``tiff``)
 
@@ -111,7 +111,7 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-deepzoom``: A tile source for reading Deepzoom tiles.
 
-  - ``large-image-source-multi``: A tile source for compisiting other tile sources into a single multi-frame source.
+  - ``large-image-source-multi``: A tile source for compositing other tile sources into a single multi-frame source.
 
   - ``large-image-source-vips``: A tile source for reading any files handled by libvips.  This also can be used for writing tiled images from numpy arrays.
 
