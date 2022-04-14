@@ -1716,8 +1716,9 @@ class TileSource:
         if outWidth != regionWidth or outHeight != regionHeight:
             image = _imageToPIL(image, mode).resize(
                 (outWidth, outHeight),
-                PIL.Image.BICUBIC if outWidth > regionWidth else
-                PIL.Image.LANCZOS)
+                getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
+                if outWidth > regionWidth else
+                getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:
@@ -2173,9 +2174,9 @@ class TileSource:
             Formats are members of (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY,
             TILE_FORMAT_IMAGE).  If TILE_FORMAT_IMAGE, encoding must be
             specified.
-        :param resample: If True or one of PIL.Image.NEAREST, LANCZOS,
-            BILINEAR, or BICUBIC to resample tiles that are not the target
-            output size.  Tiles that are resampled will have additional
+        :param resample: If True or one of PIL.Image.Resampling.NEAREST,
+            LANCZOS, BILINEAR, or BICUBIC to resample tiles that are not the
+            target output size.  Tiles that are resampled will have additional
             dictionary entries of:
 
             :scaled: the scaling factor that was applied (less than 1 is
@@ -2376,7 +2377,9 @@ class TileSource:
                 width, height, imageWidth, imageHeight)
             image = image.resize(
                 (width, height),
-                PIL.Image.BICUBIC if width > imageWidth else PIL.Image.LANCZOS)
+                getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
+                if width > imageWidth else
+                getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
         return _encodeImage(image, **kwargs)
 
     def getPixel(self, includeTileRecord=False, **kwargs):
