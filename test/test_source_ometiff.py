@@ -85,7 +85,7 @@ def testStyleAutoMinMax():
     image, _ = source.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
     sourceB = large_image_source_ometiff.open(
-        imagePath, style=json.dumps({'min': 'auto', 'max': 'auto'}))
+        imagePath, style={'min': 'auto', 'max': 'auto'})
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
     imageB = imageB[:, :, :1]

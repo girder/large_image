@@ -610,11 +610,11 @@ def testStyleSwapChannels():
     image, _ = source.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
     # swap the green and blue channels
-    sourceB = large_image_source_tiff.open(imagePath, style=json.dumps({'bands': [
+    sourceB = large_image_source_tiff.open(imagePath, style={'bands': [
         {'band': 'red', 'palette': ['#000', '#f00']},
         {'band': 'green', 'palette': ['#000', '#00f']},
         {'band': 'blue', 'palette': ['#000', '#0f0']},
-    ]}))
+    ]})
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
     imageB = imageB[:, :, :3]
