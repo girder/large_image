@@ -1,6 +1,7 @@
 import os
 
 from setuptools import find_packages, setup
+from setuptools_scm import get_version
 
 description = 'A Girder plugin to work with large, multiresolution images.'
 long_description = description + '\n\nSee the large-image package for more details.'
@@ -22,6 +23,8 @@ def prerelease_local_scheme(version):
     else:
         return get_local_node_and_date(version)
 
+
+version = get_version(root='..', local_scheme=prerelease_local_scheme)
 
 setup(
     name='girder-large-image',
@@ -46,12 +49,12 @@ setup(
     install_requires=[
         'girder>=3.0.4',
         'girder-jobs>=3.0.3',
-        'large_image>=1.0.0',
+        f'large_image>={version}',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
         'tasks': [
-            'large-image-tasks[girder]',
+            f'large-image-tasks[girder]>={version}',
             'girder-worker[girder]>=0.6.0',
         ],
     },
