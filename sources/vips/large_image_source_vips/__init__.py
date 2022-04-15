@@ -323,9 +323,11 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             newarr[:, :, :tile.shape[2]] = tile
             newarr[:, :, -1] = 255
             tile = newarr
-        if mask:
+        if mask is not None:
+            if len(mask.shape) == 3:
+                mask = numpy.logical_or.reduce(mask, axis=2)
             if tile.shape[2] in {2, 4}:
-                tile[:, :, -1] *= mask.astype(numpy.dtype.bool)
+                tile[:, :, -1] *= mask.astype(bool)
             else:
                 raise TileSourceError('Cannot apply a mask if the source is not 1 or 3 channels.')
         if tile.dtype.char not in dtypeToGValue:

@@ -184,3 +184,29 @@ def testNewAndWriteJPEG():
         assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     finally:
         shutil.rmtree(tmpdir)
+
+
+def testNewAndWriteWithMask():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image.open(imagePath)
+    out = large_image_source_vips.new()
+    for tile in source.tileIterator(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        region=dict(right=4000, bottom=2000),
+    ):
+        if tile['tile_position']['position']:
+            mask = tile['tile'] > 128
+        else:
+            mask = None
+        out.addTile(tile['tile'], x=tile['x'], y=tile['y'], mask=mask)
+
+    tmpdir = tempfile.mkdtemp()
+    outputPath = os.path.join(tmpdir, 'temp.tiff')
+    try:
+        out.write(outputPath, lossy=False)
+        assert os.path.getsize(outputPath) > 50000
+        result = large_image.open(outputPath)
+        resultMetadata = result.getMetadata()
+        assert resultMetadata['sizeX'] == 4000
+    finally:
+        shutil.rmtree(tmpdir)
