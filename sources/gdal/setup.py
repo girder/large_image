@@ -1,6 +1,7 @@
 import os
 
 from setuptools import find_packages, setup
+from setuptools_scm import get_version
 
 description = 'A GDAL tilesource for large_image.'
 long_description = description + '\n\nSee the large-image package for more details.'
@@ -23,6 +24,8 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
+version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+
 setup(
     name='large-image-source-gdal',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
@@ -44,14 +47,14 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     install_requires=[
-        'large-image',
+        f'large-image>={version}',
         'gdal',
         'packaging',
         'pyproj>=2.2.0',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
-        'girder': 'girder-large-image',
+        'girder': f'girder-large-image>={version}',
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),

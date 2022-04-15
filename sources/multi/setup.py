@@ -1,6 +1,7 @@
 import os
 
 from setuptools import find_packages, setup
+from setuptools_scm import get_version
 
 description = 'A tilesource for large_image to composite other tile sources'
 long_description = description + '\n\nSee the large-image package for more details.'
@@ -22,6 +23,8 @@ def prerelease_local_scheme(version):
     else:
         return get_local_node_and_date(version)
 
+
+version = get_version(root='../..', local_scheme=prerelease_local_scheme)
 
 setup(
     name='large-image-source-multi',
@@ -45,13 +48,13 @@ setup(
     ],
     install_requires=[
         'jsonschema',
-        'large-image>=1.0.0',
+        f'large-image>={version}',
         'pyyaml',
         'scipy',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
-        'girder': 'girder-large-image>=1.0.0',
+        'girder': f'girder-large-image>={version}',
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),

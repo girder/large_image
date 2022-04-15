@@ -1,6 +1,7 @@
 import os
 
 from setuptools import find_packages, setup
+from setuptools_scm import get_version
 
 description = 'A fractal test tilesource for large_image.'
 long_description = description + '\n\nSee the large-image package for more details.'
@@ -23,6 +24,8 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
+version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+
 setup(
     name='large-image-source-test',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
@@ -44,7 +47,7 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     install_requires=[
-        'large-image',
+        f'large-image>={version}',
         'importlib-metadata ; python_version < "3.8"',
     ],
     keywords='large_image, tile source',

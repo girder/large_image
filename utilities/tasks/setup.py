@@ -1,6 +1,7 @@
 import os
 
 from setuptools import find_packages, setup
+from setuptools_scm import get_version
 
 with open('README.rst') as fh:
     readme = fh.read()
@@ -25,6 +26,8 @@ def prerelease_local_scheme(version):
     else:
         return get_local_node_and_date(version)
 
+
+version = get_version(root='../..', local_scheme=prerelease_local_scheme)
 
 setup(
     name='large-image-tasks',
@@ -56,12 +59,12 @@ setup(
     extras_require={
         'girder': [
             # Dependencies required on the producer (Girder) side.
-            'large-image-converter',
+            f'large-image-converter>={version}',
             'girder-worker[girder]>=0.6.0',
         ],
         'worker': [
             # Dependencies required on the consumer (Girder Worker) side.
-            'large-image-converter[sources]',
+            f'large-image-converter[sources]>={version}',
             'girder-worker[worker]>=0.6.0',
         ],
     },
