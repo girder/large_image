@@ -24,11 +24,17 @@ from urllib.parse import urlencode, urlparse
 
 import numpy
 import PIL.Image
-from osgeo import gdal, gdal_array, gdalconst, osr  # noqa I001
-# pyproj stopped supporting older pythons, so its database is aging; as such,
-# if on those older versions of python if it is imported before gdal, there can
-# be a database version conflect; importing after gdal avoids this.
-import pyproj  # noqa I001
+from osgeo import gdal, gdal_array, gdalconst, osr
+
+# isort: off
+
+# pyproj stopped supporting older pythons, so on those versions its database is
+# aging; as such, if on those older versions of python if it is imported before
+# gdal, there can be a database version conflict; importing after gdal avoids
+# this.
+import pyproj
+
+# isort: on
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
