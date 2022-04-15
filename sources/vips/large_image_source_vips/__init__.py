@@ -328,7 +328,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 tile[:, :, -1] *= mask.astype(numpy.dtype.bool)
             else:
                 raise TileSourceError('Cannot apply a mask if the source is not 1 or 3 channels.')
-
+        if tile.dtype.char not in dtypeToGValue:
+            tile = tile.astype(float)
         vimg = pyvips.Image.new_from_memory(
             numpy.ascontiguousarray(tile).data,
             tile.shape[1], tile.shape[0], tile.shape[2],
@@ -408,7 +409,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     trunk = baseimg.copy()
             self._image = img
 
-    def write(self, path, lossy=True, alpha=True, overwriteAllowed=True):
+    def write(self, path, lossy=True, alpha=True, overwriteAllowed=True, vips_kwargs=None):
         """
         Output the current image to a file.
 
@@ -417,6 +418,10 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param alpha: True if an alpha channel is allowed.
         :param overwriteAllowed: if False, raise an exception if the output
             path exists.
+        :param vips_kwargs: if not None, save the image using these kwargs to
+            the write_to_file function instead of the automatically chosen
+            ones.  In this case, lossy is ignored and all vips options must be
+            manually specified.
         """
         if not overwriteAllowed and os.path.exists(path):
             raise TileSourceError('Output path exists (%s)' % str(path))
@@ -438,7 +443,9 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             x = min(x, img.width)
             y = min(y, img.height)
             img = img.crop(x, y, w, h)
-        if not lossy:
+        if vips_kwargs is not None:
+            img.write_to_file(path, **vips_kwargs)
+        elif not lossy:
             img.write_to_file(
                 path, tile_width=self.tileWidth, tile_height=self.tileHeight,
                 pyramid=True, bigtiff=True,

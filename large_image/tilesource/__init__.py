@@ -1,4 +1,5 @@
 import os
+import uuid
 
 try:
     from importlib.metadata import entry_points
@@ -6,7 +7,7 @@ except ImportError:
     from importlib_metadata import entry_points
 
 from .. import config
-from ..constants import SourcePriority
+from ..constants import NEW_IMAGE_PATH_FLAG, SourcePriority
 from ..exceptions import (TileGeneralError, TileGeneralException,
                           TileSourceAssetstoreError,
                           TileSourceAssetstoreException, TileSourceError,
@@ -160,12 +161,22 @@ def canRead(*args, **kwargs):
     return False
 
 
+def new(*args, **kwargs):
+    """
+    Create a new image.
+
+    TODO: add specific arguments to choose a source based on criteria.
+    """
+    return getTileSource(NEW_IMAGE_PATH_FLAG + str(uuid.uuid4()), *args, **kwargs)
+
+
 __all__ = [
     'TileSource', 'FileTileSource',
     'exceptions', 'TileGeneralError', 'TileSourceError',
     'TileSourceAssetstoreError', 'TileSourceFileNotFoundError',
     'TileGeneralException', 'TileSourceException', 'TileSourceAssetstoreException',
     'TileOutputMimeTypes', 'TILE_FORMAT_IMAGE', 'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY',
-    'AvailableTileSources', 'getTileSource', 'canRead', 'getSourceNameFromDict', 'nearPowerOfTwo',
+    'AvailableTileSources', 'getTileSource', 'getSourceNameFromDict', 'nearPowerOfTwo',
+    'canRead', 'open', 'new',
     'etreeToDict', 'dictToEtree',
 ]

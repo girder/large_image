@@ -163,3 +163,24 @@ def testNewAndWriteMinSize():
         assert resultMetadata['sizeY'] == 2000
     finally:
         shutil.rmtree(tmpdir)
+
+
+def testNewAndWriteJPEG():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image.open(imagePath)
+    # Update this if it doesn't direct to vips source
+    out = large_image.new()
+    for tile in source.tileIterator(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        region=dict(right=4000, bottom=2000),
+    ):
+        out.addTile(tile['tile'], x=tile['x'], y=tile['y'])
+    tmpdir = tempfile.mkdtemp()
+    outputPath = os.path.join(tmpdir, 'temp.jpeg')
+    try:
+        out.write(outputPath, vips_kwargs=dict(Q=80))
+        assert os.path.getsize(outputPath) > 50000
+        image = open(outputPath, 'rb').read()
+        assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
+    finally:
+        shutil.rmtree(tmpdir)
