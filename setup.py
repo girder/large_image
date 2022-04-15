@@ -3,40 +3,7 @@ import os
 import sys
 
 from setuptools import setup
-
-with open('README.rst') as readme_file:
-    readme = readme_file.read()
-description = 'Python modules to work with large, multiresolution images.'
-long_description = readme
-
-extraReqs = {
-    'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
-    'converter': ['large-image-converter'],
-    'colormaps': ['matplotlib'],
-    'tiledoutput': ['pyvips'],
-    'performance': ['simplejpeg'],
-}
-sources = {
-    'bioformats': ['large-image-source-bioformats'],
-    'deepzoom': ['large-image-source-deepzoom'],
-    'dummy': ['large-image-source-dummy'],
-    'gdal': ['large-image-source-gdal'],
-    'mapnik': ['large-image-source-mapnik'],
-    'multi': ['large-image-source-multi'],
-    'ometiff': ['large-image-source-ometiff'],
-    'openjpeg': ['large-image-source-openjpeg'],
-    'openslide': ['large-image-source-openslide'],
-    'pil': ['large-image-source-pil'],
-    'test': ['large-image-source-test'],
-    'tiff': ['large-image-source-tiff'],
-}
-if sys.version_info >= (3, 7):
-    sources.update({
-        'nd2': ['large-image-source-nd2'],
-    })
-extraReqs.update(sources)
-extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
-extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
+from setuptools_scm import get_version
 
 
 def prerelease_local_scheme(version):
@@ -55,6 +22,42 @@ def prerelease_local_scheme(version):
     else:
         return get_local_node_and_date(version)
 
+
+version = get_version(local_scheme=prerelease_local_scheme)
+
+with open('README.rst') as readme_file:
+    readme = readme_file.read()
+description = 'Python modules to work with large, multiresolution images.'
+long_description = readme
+
+extraReqs = {
+    'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
+    'converter': [f'large-image-converter>={version}'],
+    'colormaps': ['matplotlib'],
+    'tiledoutput': ['pyvips'],
+    'performance': ['simplejpeg'],
+}
+sources = {
+    'bioformats': [f'large-image-source-bioformats>={version}'],
+    'deepzoom': [f'large-image-source-deepzoom>={version}'],
+    'dummy': [f'large-image-source-dummy>={version}'],
+    'gdal': [f'large-image-source-gdal>={version}'],
+    'mapnik': [f'large-image-source-mapnik>={version}'],
+    'multi': [f'large-image-source-multi>={version}'],
+    'ometiff': [f'large-image-source-ometiff>={version}'],
+    'openjpeg': [f'large-image-source-openjpeg>={version}'],
+    'openslide': [f'large-image-source-openslide>={version}'],
+    'pil': [f'large-image-source-pil>={version}'],
+    'test': [f'large-image-source-test>={version}'],
+    'tiff': [f'large-image-source-tiff>={version}'],
+}
+if sys.version_info >= (3, 7):
+    sources.update({
+        'nd2': [f'large-image-source-nd2>={version}'],
+    })
+extraReqs.update(sources)
+extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
+extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
 
 setup(
     name='large-image',
