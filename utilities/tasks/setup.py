@@ -28,7 +28,8 @@ def prerelease_local_scheme(version):
 
 setup(
     name='large-image-tasks',
-    use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme},
+    use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
+                     'fallback_version': 'development'},
     setup_requires=['setuptools-scm'],
     description=description,
     long_description=long_description,
