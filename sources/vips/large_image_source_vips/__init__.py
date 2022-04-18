@@ -4,6 +4,7 @@ import math
 import os
 import threading
 import uuid
+from pathlib import Path
 
 import cachetools
 import numpy
@@ -445,8 +446,9 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             x = min(x, img.width)
             y = min(y, img.height)
             img = img.crop(x, y, w, h)
-        if vips_kwargs is not None:
-            img.write_to_file(path, **vips_kwargs)
+        pathIsTiff = Path(path).suffix.lower() in {'tif', 'tiff'}
+        if vips_kwargs is not None or not pathIsTiff:
+            img.write_to_file(path, **(vips_kwargs or {}))
         elif not lossy:
             img.write_to_file(
                 path, tile_width=self.tileWidth, tile_height=self.tileHeight,
