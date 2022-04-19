@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Features
-- Vips tile source and tiled file writer ([816](../../pull/816))
+- Vips tile source and tiled file writer ([816](../../pull/816), [827](../../pull/827), [830](../../pull/830))
 
 ### Improvements
 - Handle file URLs with GDAL ([820](../../pull/820))
