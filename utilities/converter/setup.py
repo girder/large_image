@@ -26,6 +26,14 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
+
 setup(
     name='large-image-converter',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
@@ -50,7 +58,7 @@ setup(
     ],
     install_requires=[
         'gdal',
-        'large_image_source_tiff',
+        f'large-image-source-tiff{limit_version}',
         'numpy',
         'psutil',
         'pyvips',
@@ -62,7 +70,7 @@ setup(
             'glymur',
         ],
         'sources': [
-            'large_image[sources]',
+            f'large-image[sources]{limit_version}',
         ],
         'stats': [
             'packaging',

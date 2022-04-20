@@ -26,6 +26,14 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
+
 setup(
     name='large-image-tasks',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
@@ -56,12 +64,12 @@ setup(
     extras_require={
         'girder': [
             # Dependencies required on the producer (Girder) side.
-            'large-image-converter',
+            f'large-image-converter{limit_version}',
             'girder-worker[girder]>=0.6.0',
         ],
         'worker': [
             # Dependencies required on the consumer (Girder Worker) side.
-            'large-image-converter[sources]',
+            f'large-image-converter[sources]{limit_version}',
             'girder-worker[worker]>=0.6.0',
         ],
     },

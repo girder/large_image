@@ -23,6 +23,14 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(root='..', local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
+
 setup(
     name='girder-large-image-annotation',
     use_scm_version={'root': '..', 'local_scheme': prerelease_local_scheme,
@@ -45,13 +53,13 @@ setup(
     ],
     install_requires=[
         'jsonschema>=2.5.1',
-        'girder-large-image',
+        f'girder-large-image{limit_version}',
         'orjson',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
         'tasks': [
-            'girder-large-image[tasks]>=1.0.0',
+            f'girder-large-image[tasks]{limit_version}',
         ],
     },
     include_package_data=True,

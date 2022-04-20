@@ -4,40 +4,6 @@ import sys
 
 from setuptools import setup
 
-with open('README.rst') as readme_file:
-    readme = readme_file.read()
-description = 'Python modules to work with large, multiresolution images.'
-long_description = readme
-
-extraReqs = {
-    'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
-    'converter': ['large-image-converter'],
-    'colormaps': ['matplotlib'],
-    'tiledoutput': ['pyvips'],
-    'performance': ['simplejpeg'],
-}
-sources = {
-    'bioformats': ['large-image-source-bioformats'],
-    'deepzoom': ['large-image-source-deepzoom'],
-    'dummy': ['large-image-source-dummy'],
-    'gdal': ['large-image-source-gdal'],
-    'mapnik': ['large-image-source-mapnik'],
-    'multi': ['large-image-source-multi'],
-    'ometiff': ['large-image-source-ometiff'],
-    'openjpeg': ['large-image-source-openjpeg'],
-    'openslide': ['large-image-source-openslide'],
-    'pil': ['large-image-source-pil'],
-    'test': ['large-image-source-test'],
-    'tiff': ['large-image-source-tiff'],
-}
-if sys.version_info >= (3, 7):
-    sources.update({
-        'nd2': ['large-image-source-nd2'],
-    })
-extraReqs.update(sources)
-extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
-extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
-
 
 def prerelease_local_scheme(version):
     """
@@ -55,6 +21,48 @@ def prerelease_local_scheme(version):
     else:
         return get_local_node_and_date(version)
 
+
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
+
+with open('README.rst') as readme_file:
+    readme = readme_file.read()
+description = 'Python modules to work with large, multiresolution images.'
+long_description = readme
+
+extraReqs = {
+    'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
+    'converter': [f'large-image-converter{limit_version}'],
+    'colormaps': ['matplotlib'],
+    'tiledoutput': ['pyvips'],
+    'performance': ['simplejpeg'],
+}
+sources = {
+    'bioformats': [f'large-image-source-bioformats{limit_version}'],
+    'deepzoom': [f'large-image-source-deepzoom{limit_version}'],
+    'dummy': [f'large-image-source-dummy{limit_version}'],
+    'gdal': [f'large-image-source-gdal{limit_version}'],
+    'mapnik': [f'large-image-source-mapnik{limit_version}'],
+    'multi': [f'large-image-source-multi{limit_version}'],
+    'ometiff': [f'large-image-source-ometiff{limit_version}'],
+    'openjpeg': [f'large-image-source-openjpeg{limit_version}'],
+    'openslide': [f'large-image-source-openslide{limit_version}'],
+    'pil': [f'large-image-source-pil{limit_version}'],
+    'test': [f'large-image-source-test{limit_version}'],
+    'tiff': [f'large-image-source-tiff{limit_version}'],
+}
+if sys.version_info >= (3, 7):
+    sources.update({
+        'nd2': [f'large-image-source-nd2{limit_version}'],
+    })
+extraReqs.update(sources)
+extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
+extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
 
 setup(
     name='large-image',

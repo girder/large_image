@@ -23,6 +23,14 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
+
 setup(
     name='large-image-source-multi',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
@@ -45,13 +53,13 @@ setup(
     ],
     install_requires=[
         'jsonschema',
-        'large-image>=1.0.0',
+        f'large-image{limit_version}',
         'pyyaml',
         'scipy',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
-        'girder': 'girder-large-image>=1.0.0',
+        'girder': f'girder-large-image{limit_version}',
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),

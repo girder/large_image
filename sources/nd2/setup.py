@@ -23,6 +23,14 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
+
 setup(
     name='large-image-source-nd2',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
@@ -43,13 +51,13 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     install_requires=[
-        'large-image',
+        f'large-image{limit_version}',
         'dask[array]',
         'nd2[legacy] ; python_version >= "3.7"',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
-        'girder': 'girder-large-image',
+        'girder': f'girder-large-image{limit_version}',
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
