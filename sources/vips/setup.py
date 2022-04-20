@@ -1,7 +1,6 @@
 import os
 
 from setuptools import find_packages, setup
-from setuptools_scm import get_version
 
 description = 'A libvips tilesource for large_image.'
 long_description = description + '\n\nSee the large-image package for more details.'
@@ -22,9 +21,6 @@ def prerelease_local_scheme(version):
         return ''
     else:
         return get_local_node_and_date(version)
-
-
-version = get_version(root='../..', local_scheme=prerelease_local_scheme)
 
 
 setup(
@@ -48,14 +44,14 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     install_requires=[
-        f'large-image>={version}',
+        'large-image',
         'numpy',
         'packaging',
         'pyvips',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
-        'girder': f'girder-large-image>={version}',
+        'girder': 'girder-large-image',
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
