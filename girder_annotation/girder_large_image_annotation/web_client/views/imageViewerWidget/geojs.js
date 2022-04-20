@@ -31,7 +31,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
         this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
         this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
+        this.listenTo(events, 's:widgetDrawAddRegion', (model) => this.drawRegion(model, 'rectangle', true));
         this.listenTo(events, 's:widgetDrawPolygonRegion', (model) => this.drawRegion(model, 'polygon'));
+        this.listenTo(events, 's:widgetDrawAddPolygonRegion', (model) => this.drawRegion(model, 'polygon', true));
+        this.listenTo(events, 's:widgetClearRegion', this.clearRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
         return initialize.apply(this, _.rest(arguments));
@@ -663,6 +666,46 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         /**
+         * Combine two regions into a multipolygon region.
+         */
+        _mergeRegions(origval, addval) {
+            if (!origval || !origval.length || origval.length < 4 || origval === [-1, -1, -1, -1]) {
+                return addval;
+            }
+            if (origval.length === 4) {
+                origval = [
+                    origval[0], origval[1],
+                    origval[0] + origval[2], origval[1],
+                    origval[0] + origval[2], origval[1] + origval[3],
+                    origval[0], origval[1] + origval[3]
+                ];
+            } else if (origval.length === 6) {
+                origval = [
+                    origval[0] - origval[3], origval[1] - origval[4],
+                    origval[0] + origval[3], origval[1] - origval[4],
+                    origval[0] + origval[3], origval[1] + origval[4],
+                    origval[0] - origval[3], origval[1] + origval[4]
+                ];
+            }
+            if (addval.length === 4) {
+                addval = [
+                    addval[0], addval[1],
+                    addval[0] + addval[2], addval[1],
+                    addval[0] + addval[2], addval[1] + addval[3],
+                    addval[0], addval[1] + addval[3]
+                ];
+            } else if (addval.length === 6) {
+                addval = [
+                    addval[0] - addval[3], addval[1] - addval[4],
+                    addval[0] + addval[3], addval[1] - addval[4],
+                    addval[0] + addval[3], addval[1] + addval[4],
+                    addval[0] - addval[3], addval[1] + addval[4]
+                ];
+            }
+            return origval.concat([-1, -1]).concat(addval);
+        },
+
+        /**
          * Set the image interaction mode to region drawing mode.  This
          * method takes an optional `model` argument where the region will
          * be stored when created by the user.  In any case, this method
@@ -671,9 +714,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          *
          * @param {Backbone.Model} [model] A model to set the region to
          * @param {string} [drawMode='rectangle'] An annotation drawing mode.
+         * @param {boolean} [addToExisting=false] If truthy, add the new
+         *   annotation to any existing annotation making a multipolygon.
          * @returns {$.Promise}
          */
-        drawRegion: function (model, drawMode) {
+        drawRegion: function (model, drawMode, addToExisting) {
             model = model || new Backbone.Model();
             return this.startDrawMode(drawMode === 'polygon' ? drawMode : 'rectangle', {trigger: false}).then((elements) => {
                 /*
@@ -691,30 +736,43 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         values.push(values[0]);
                         values.push(values[1]);
                     }
+                    if (addToExisting) {
+                        values = this._mergeRegions(model.get('value'), values);
+                    }
                     model.set('value', values, {trigger: true});
                 } else {
                     var width = Math.round(element.width);
                     var height = Math.round(element.height);
                     var left = Math.round(element.center[0] - element.width / 2);
                     var top = Math.round(element.center[1] - element.height / 2);
-
-                    model.set('value', [
-                        left, top, width, height
-                    ], {trigger: true});
+                    var values = [left, top, width, height];
+                    if (addToExisting) {
+                        values = this._mergeRegions(model.get('value'), values);
+                    }
+                    model.set('value', values, {trigger: true});
                 }
                 return model.get('value');
             });
         },
 
+        clearRegion: function (model) {
+            if (model) {
+                model.set('value', [-1, -1, -1, -1], {trigger: true});
+            }
+        },
+
         /**
          * Set the image interaction mode to draw the given type of annotation.
          *
-         * @param {string} type An annotation type, or null to turn off drawing.
+         * @param {string} type An annotation type, or null to turn off
+         *    drawing.
          * @param {object} [options]
-         * @param {boolean} [options.trigger=true]
-         *      Trigger a global event after creating each annotation element.
+         * @param {boolean} [options.trigger=true] Trigger a global event after
+         *    creating each annotation element.
+         * @param {boolean} [options.keepExisting=false] If true, don't
+         *    remove extant annotations.
          * @returns {$.Promise}
-         *      Resolves to an array of generated annotation elements.
+         *    Resolves to an array of generated annotation elements.
          */
         startDrawMode: function (type, options) {
             var layer = this.annotationLayer;
@@ -725,9 +783,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
             layer.mode(null);
             layer.geoOff(window.geo.event.annotation.state);
-            layer.removeAllAnnotations();
-
             options = _.defaults(options || {}, {trigger: true});
+            if (!options.keepExisting) {
+                layer.removeAllAnnotations();
+            }
             layer.geoOn(
                 window.geo.event.annotation.state,
                 (evt) => {
