@@ -3,7 +3,6 @@ import os
 import sys
 
 from setuptools import setup
-from setuptools_scm import get_version
 
 
 def prerelease_local_scheme(version):
@@ -23,7 +22,13 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
-version = get_version(local_scheme=prerelease_local_scheme)
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -32,28 +37,28 @@ long_description = readme
 
 extraReqs = {
     'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
-    'converter': [f'large-image-converter>={version}'],
+    'converter': [f'large-image-converter{limit_version}'],
     'colormaps': ['matplotlib'],
     'tiledoutput': ['pyvips'],
     'performance': ['simplejpeg'],
 }
 sources = {
-    'bioformats': [f'large-image-source-bioformats>={version}'],
-    'deepzoom': [f'large-image-source-deepzoom>={version}'],
-    'dummy': [f'large-image-source-dummy>={version}'],
-    'gdal': [f'large-image-source-gdal>={version}'],
-    'mapnik': [f'large-image-source-mapnik>={version}'],
-    'multi': [f'large-image-source-multi>={version}'],
-    'ometiff': [f'large-image-source-ometiff>={version}'],
-    'openjpeg': [f'large-image-source-openjpeg>={version}'],
-    'openslide': [f'large-image-source-openslide>={version}'],
-    'pil': [f'large-image-source-pil>={version}'],
-    'test': [f'large-image-source-test>={version}'],
-    'tiff': [f'large-image-source-tiff>={version}'],
+    'bioformats': [f'large-image-source-bioformats{limit_version}'],
+    'deepzoom': [f'large-image-source-deepzoom{limit_version}'],
+    'dummy': [f'large-image-source-dummy{limit_version}'],
+    'gdal': [f'large-image-source-gdal{limit_version}'],
+    'mapnik': [f'large-image-source-mapnik{limit_version}'],
+    'multi': [f'large-image-source-multi{limit_version}'],
+    'ometiff': [f'large-image-source-ometiff{limit_version}'],
+    'openjpeg': [f'large-image-source-openjpeg{limit_version}'],
+    'openslide': [f'large-image-source-openslide{limit_version}'],
+    'pil': [f'large-image-source-pil{limit_version}'],
+    'test': [f'large-image-source-test{limit_version}'],
+    'tiff': [f'large-image-source-tiff{limit_version}'],
 }
 if sys.version_info >= (3, 7):
     sources.update({
-        'nd2': [f'large-image-source-nd2>={version}'],
+        'nd2': [f'large-image-source-nd2{limit_version}'],
     })
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))

@@ -1,7 +1,6 @@
 import os
 
 from setuptools import find_packages, setup
-from setuptools_scm import get_version
 
 description = 'A Girder plugin to store and display annotations on large, multiresolution images.'
 long_description = description + '\n\nSee the large-image package for more details.'
@@ -24,7 +23,13 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
-version = get_version(root='..', local_scheme=prerelease_local_scheme)
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(root='..', local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
 
 setup(
     name='girder-large-image-annotation',
@@ -48,13 +53,13 @@ setup(
     ],
     install_requires=[
         'jsonschema>=2.5.1',
-        f'girder-large-image>={version}',
+        f'girder-large-image{limit_version}',
         'orjson',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
         'tasks': [
-            f'girder-large-image[tasks]>={version}',
+            f'girder-large-image[tasks]{limit_version}',
         ],
     },
     include_package_data=True,

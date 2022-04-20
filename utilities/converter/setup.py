@@ -1,7 +1,6 @@
 import os
 
 from setuptools import find_packages, setup
-from setuptools_scm import get_version
 
 with open('README.rst') as fh:
     readme = fh.read()
@@ -27,7 +26,13 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
-version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}'
+except (ImportError, LookupError):
+    limit_version = ''
 
 setup(
     name='large-image-converter',
@@ -53,7 +58,7 @@ setup(
     ],
     install_requires=[
         'gdal',
-        f'large-image-source-tiff>={version}',
+        f'large-image-source-tiff{limit_version}',
         'numpy',
         'psutil',
         'pyvips',
@@ -65,7 +70,7 @@ setup(
             'glymur',
         ],
         'sources': [
-            f'large-image[sources]>={version}',
+            f'large-image[sources]{limit_version}',
         ],
         'stats': [
             'packaging',
