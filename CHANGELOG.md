@@ -9,6 +9,7 @@
 - Handle file URLs with GDAL ([820](../../pull/820))
 - Add a hasAlpha flag to image annotations ([823](../../pull/823))
 - Allow dict for style ([817](../../pull/817))
+- Support drawing multipolygon regions ([832](../../pull/832))
 
 ### Bug Fixes
 - Fix a range check for pixelmap annotations ([815](../../pull/815))
