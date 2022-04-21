@@ -1,6 +1,11 @@
 # Change Log
 
-## Unreleased
+## 1.14.1
+
+### Changes
+- The sources extra_installs didn't include all sources ([833](../../pull/833))
+
+## 1.14.0
 
 ### Features
 - Vips tile source and tiled file writer ([816](../../pull/816), [827](../../pull/827), [830](../../pull/830))
