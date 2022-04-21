@@ -49,12 +49,14 @@ sources = {
     'gdal': [f'large-image-source-gdal{limit_version}'],
     'mapnik': [f'large-image-source-mapnik{limit_version}'],
     'multi': [f'large-image-source-multi{limit_version}'],
+    'nd2': [f'large-image-source-nd2{limit_version}'],
     'ometiff': [f'large-image-source-ometiff{limit_version}'],
     'openjpeg': [f'large-image-source-openjpeg{limit_version}'],
     'openslide': [f'large-image-source-openslide{limit_version}'],
     'pil': [f'large-image-source-pil{limit_version}'],
     'test': [f'large-image-source-test{limit_version}'],
     'tiff': [f'large-image-source-tiff{limit_version}'],
+    'vips': [f'large-image-source-vips{limit_version}'],
 }
 if sys.version_info >= (3, 7):
     sources.update({
