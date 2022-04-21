@@ -126,7 +126,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.6.14
+          version: 3.6.15
           node: v12
       - tox:
           env: test-py36
