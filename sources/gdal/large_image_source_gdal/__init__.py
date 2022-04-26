@@ -1191,7 +1191,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise exc
         return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
 
-    def validate_cog(self, check_tiled: bool = True, full_check: bool = False, strict: bool = True):
+    def validate_cog(self, check_tiled=True, full_check=False, strict=True, warn=True):
         """Check if this image is a valid Cloud Optimized GeoTiff.
 
         This will raise a :class:`large_image.exceptions.TileSourcePyramidFormatError`
@@ -1209,6 +1209,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         strict : bool
             Enforce warnings as exceptions. Set to False to simple warn and not
             raise exceptions.
+        warn : bool
+            Log any warnings
 
         """
         if gdal_validate is None:
@@ -1222,8 +1224,9 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourcePyramidFormatError(errors)
         if strict and warnings:
             raise TileSourcePyramidFormatError(warnings)
-        for warn in warnings:
-            self.logger.warning(warn)
+        if warn:
+            for warning in warnings:
+                self.logger.warning(warning)
         return True
 
 
