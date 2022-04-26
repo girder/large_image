@@ -28,4 +28,6 @@ RUN pip install \
     matplotlib \
     pyvips \
     simplejpeg \
-    $(ls -1  /opt/wheels/large_image*.whl)
+    /opt/wheels/large_image-*.whl \
+    /opt/wheels/large_image_converter*.whl \
+    $(ls -1  /opt/wheels/large_image_source*.whl)
