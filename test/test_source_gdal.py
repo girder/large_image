@@ -10,7 +10,7 @@ import PIL.ImageChops
 import pytest
 
 from large_image import constants
-from large_image.exceptions import TileSourceError
+from large_image.exceptions import TileSourceError, TileSourcePyramidFormatError
 
 from . import utilities
 from .datastore import datastore
@@ -550,3 +550,15 @@ def testHttpVfsPath():
     assert tileMetadata['bounds']['ymin'] == pytest.approx(4876273, 1)
     assert tileMetadata['bounds']['srs'] == 'epsg:3857'
     assert tileMetadata['geospatial']
+
+
+def testVfsCogValidation():
+    imagePath = datastore.get_url('TC_NG_SFBay_US_Geo_COG.tif')
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857', encoding='PNG')
+    assert source.validateCOG()
+    imagePath = datastore.get_url('TC_NG_SFBay_US_Geo.tif')
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857', encoding='PNG')
+    with pytest.raises(TileSourcePyramidFormatError):
+        source.validateCOG()
