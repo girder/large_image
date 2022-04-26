@@ -17,6 +17,10 @@ class TileSourceXYZRangeError(TileSourceError):
     pass
 
 
+class TileSourcePyramidFormatError(TileSourceError):
+    pass
+
+
 class TileSourceFileNotFoundError(TileSourceError, FileNotFoundError):
     def __init__(self, *args, **kwargs):
         return super().__init__(errno.ENOENT, *args, **kwargs)

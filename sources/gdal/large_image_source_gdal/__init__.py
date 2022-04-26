@@ -41,7 +41,9 @@ from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcac
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, SourcePriority,
                                    TileInputUnits, TileOutputMimeTypes)
-from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
+from large_image.exceptions import (TileSourceError,
+                                    TileSourceFileNotFoundError,
+                                    TileSourcePyramidFormatError)
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
@@ -56,6 +58,10 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+try:
+    from osgeo_utils.samples.validate_cloud_optimized_geotiff import validate as gdal_validate
+except ImportError:
+    gdal_validate = None
 
 TileInputUnits['projection'] = 'projection'
 TileInputUnits['proj'] = 'projection'
@@ -1184,6 +1190,41 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 pass
             raise exc
         return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
+
+    def validate_cog(self, check_tiled: bool = True, full_check: bool = False, strict: bool = True):
+        """Check if this image is a valid Cloud Optimized GeoTiff.
+
+        This will raise a :class:`large_image.exceptions.TileSourcePyramidFormatError`
+        if not a valid Cloud Optimized GeoTiff. Otherwise, returns True.
+
+        Requires the ``osgeo_utils`` package.
+
+        Parameters
+        ----------
+        check_tiled : bool
+            Set to False to ignore missing tiling.
+        full_check : bool
+            Set to True to check tile/strip leader/trailer bytes.
+            Might be slow on remote files
+        strict : bool
+            Enforce warnings as exceptions. Set to False to simple warn and not
+            raise exceptions.
+
+        """
+        if gdal_validate is None:
+            raise ImportError('Please insall `osgeo_utils`')
+        warnings, errors, details = gdal_validate(
+            self._largeImagePath,
+            check_tiled=check_tiled,
+            full_check=full_check
+        )
+        if errors:
+            raise TileSourcePyramidFormatError(errors)
+        if strict and warnings:
+            raise TileSourcePyramidFormatError(warnings)
+        for warn in warnings:
+            self.logger.warning(warn)
+        return True
 
 
 def open(*args, **kwargs):
