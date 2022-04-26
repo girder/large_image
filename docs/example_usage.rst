@@ -240,7 +240,7 @@ Styles - Changing colors, scales, and other properties
 
 By default, reading from an image gets the values stored in the image file.  If you get a JPEG or PNG as the output, the values will be 8-bit per channel.  If you get values as a numpy array, they will have their original resolution.  Depending on the source image, this could be 16-bit per channel, floats, or other data types.
 
-Especially when working with high bit-depth images, it can be useful to modify the output.  For examples, you can adjust the color range:
+Especially when working with high bit-depth images, it can be useful to modify the output.  For example, you can adjust the color range:
 
 .. code-block:: python
 
