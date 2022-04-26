@@ -22,6 +22,8 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: token
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and publish image with all sources
       - name: Extract metadata for the Docker image
         id: meta
         uses: docker/metadata-action@v3
@@ -32,6 +34,26 @@ jobs:
         with:
           context: .
           file: slim.Dockerfile
+          target: all
           push: ${{ github.actor != 'dependabot[bot]' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # Build and publish image with only geospatial sources
+      - name: Extract metadata for the geospatial Docker image
+        id: meta_geo
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+            suffix=-geo,onlatest=true
+      - name: Build and push the geosptial Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: slim.Dockerfile
+          target: geo
+          push: ${{ github.actor != 'dependabot[bot]' }}
+          tags: ${{ steps.meta_geo.outputs.tags }}
+          labels: ${{ steps.meta_geo.outputs.labels }}

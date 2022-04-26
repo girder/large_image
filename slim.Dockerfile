@@ -14,9 +14,12 @@ RUN python -m pip install --upgrade pip wheel setuptools
 RUN sh .circleci/make_wheels.sh
 RUN mv ~/wheels /opt/build-context/
 
-# Production
-FROM python:3.9-slim
+RUN echo "pylibmc>=1.5.1\nmatplotlib\npyvips\nsimplejpeg\n" \
+    > /opt/build-context/wheels/requirements.txt
 
+
+# Geospatial Sources
+FROM python:3.9-slim as geo
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
@@ -24,10 +27,24 @@ LABEL repo="https://github.com/girder/large_image"
 RUN pip install \
     --find-links https://girder.github.io/large_image_wheels \
     --find-links=/opt/wheels \
-    'pylibmc>=1.5.1' \
-    matplotlib \
-    pyvips \
-    simplejpeg \
+    -r /opt/wheels/requirements.txt \
+    /opt/wheels/large_image-*.whl \
+    /opt/wheels/large_image_source_gdal*.whl \
+    /opt/wheels/large_image_source_mapnik*.whl \
+    /opt/wheels/large_image_source_tiff*.whl \
+    /opt/wheels/large_image_source_pil*.whl \
+    /opt/wheels/large_image_converter*.whl
+
+# All Sources
+FROM python:3.9-slim as all
+COPY --from=build /opt/build-context/wheels /opt/wheels
+LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
+LABEL repo="https://github.com/girder/large_image"
+# NOTE: this does not install any girder3 packages
+RUN pip install \
+    --find-links https://girder.github.io/large_image_wheels \
+    --find-links=/opt/wheels \
+    -r /opt/wheels/requirements.txt \
     /opt/wheels/large_image-*.whl \
     /opt/wheels/large_image_converter*.whl \
     $(ls -1  /opt/wheels/large_image_source*.whl)
