@@ -11,6 +11,7 @@
    :caption: Contents:
 
    tilesource_options
+   example_usage
    config_options
    image_conversion
    upgrade
