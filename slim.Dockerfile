@@ -35,6 +35,7 @@ RUN pip install \
     /opt/wheels/large_image_source_pil*.whl \
     /opt/wheels/large_image_converter*.whl
 
+
 # All Sources
 FROM python:3.9-slim as all
 COPY --from=build /opt/build-context/wheels /opt/wheels
@@ -48,3 +49,16 @@ RUN pip install \
     /opt/wheels/large_image-*.whl \
     /opt/wheels/large_image_converter*.whl \
     $(ls -1  /opt/wheels/large_image_source*.whl)
+
+
+# All Sources and Girder Packages
+FROM python:3.9-slim as girder
+COPY --from=build /opt/build-context/wheels /opt/wheels
+LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
+LABEL repo="https://github.com/girder/large_image"
+# NOTE: this does not install any girder3 packages
+RUN pip install \
+    --find-links https://girder.github.io/large_image_wheels \
+    --find-links=/opt/wheels \
+    -r /opt/wheels/requirements.txt \
+    $(ls -1  /opt/wheels/*.whl)

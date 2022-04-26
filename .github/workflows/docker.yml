@@ -57,3 +57,22 @@ jobs:
           push: ${{ github.actor != 'dependabot[bot]' }}
           tags: ${{ steps.meta_geo.outputs.tags }}
           labels: ${{ steps.meta_geo.outputs.labels }}
+
+      # Build and publish image with all sources and Girder packages
+      - name: Extract metadata for the Girder Docker image
+        id: meta_girder
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+            suffix=-girder,onlatest=true
+      - name: Build and push the Girder Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: slim.Dockerfile
+          target: geo
+          push: ${{ github.actor != 'dependabot[bot]' }}
+          tags: ${{ steps.meta_girder.outputs.tags }}
+          labels: ${{ steps.meta_girder.outputs.labels }}
