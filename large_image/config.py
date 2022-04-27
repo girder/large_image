@@ -3,7 +3,7 @@ import logging
 # Default logger
 fallbackLogger = logging.getLogger('large_image')
 fallbackLogger.setLevel(logging.INFO)
-fallbackLogHandler = logging.StreamHandler()
+fallbackLogHandler = logging.NullHandler()
 fallbackLogHandler.setLevel(logging.NOTSET)
 fallbackLogger.addHandler(fallbackLogHandler)
 
