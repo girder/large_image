@@ -66,7 +66,7 @@ else:
     # Python 3.6 has an older version of PIL that won't read some of the
     # ome.tif files.
     SourceAndFiles['pil']['noread'] = \
-        r'(G10-3|JK-kidney|d042-353|huron|sample.*ome|one_layer_missing)'
+        r'(G10-3|JK-kidney|d042-353|huron|sample.*ome|one_layer_missing|US_Geo)'
 
 
 def testNearPowerOfTwo():
