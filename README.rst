@@ -69,12 +69,12 @@ Docker Image
 Included in this repository’s packages is a pre-built Docker image that has all
 of the dependencies to read any supported image format.
 
-To use, pull the image and run it by mounting a local volume where the
-imagery is stored.
-
 This is particularly useful if you do not want to install some of the heavier
 dependencies like GDAL on your system or want a dedicated and isolated
 environment for working with large images.
+
+To use, pull the image and run it by mounting a local volume where the
+imagery is stored::
 
     docker pull ghcr.io/girder/large_image:latest
     docker run -v /path/to/images:/opt/images ghcr.io/girder/large_image:latest
