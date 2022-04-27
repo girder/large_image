@@ -395,6 +395,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     xres=1.0 / (self.mm_x if self.mm_x else self._mm_y),
                     yres=1.0 / (self.mm_y if self.mm_y else self._mm_x))
             format = self._getVipsFormat()
+            if img.format != format:
+                img = img.cast(format)
             baseimg = img.copy(interpretation=self._output['interp'], format=format)
 
             leaves = math.ceil(len(self._output['images']) ** (1. / 3))
