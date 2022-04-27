@@ -17,7 +17,7 @@ class TileSourceXYZRangeError(TileSourceError):
     pass
 
 
-class TileSourcePyramidFormatError(TileSourceError):
+class TileSourceInefficientError(TileSourceError):
     pass
 
 

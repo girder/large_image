@@ -43,7 +43,7 @@ from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TileInputUnits, TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
-                                    TileSourcePyramidFormatError)
+                                    TileSourceInefficientError)
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
@@ -1194,7 +1194,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def validateCOG(self, check_tiled=True, full_check=False, strict=True, warn=True):
         """Check if this image is a valid Cloud Optimized GeoTiff.
 
-        This will raise a :class:`large_image.exceptions.TileSourcePyramidFormatError`
+        This will raise a :class:`large_image.exceptions.TileSourceInefficientError`
         if not a valid Cloud Optimized GeoTiff. Otherwise, returns True.
 
         Requires the ``osgeo_utils`` package.
@@ -1221,9 +1221,9 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             full_check=full_check
         )
         if errors:
-            raise TileSourcePyramidFormatError(errors)
+            raise TileSourceInefficientError(errors)
         if strict and warnings:
-            raise TileSourcePyramidFormatError(warnings)
+            raise TileSourceInefficientError(warnings)
         if warn:
             for warning in warnings:
                 self.logger.warning(warning)

@@ -10,7 +10,7 @@ import PIL.ImageChops
 import pytest
 
 from large_image import constants
-from large_image.exceptions import TileSourceError, TileSourcePyramidFormatError
+from large_image.exceptions import TileSourceError, TileSourceInefficientError
 
 from . import utilities
 from .datastore import datastore
@@ -560,5 +560,5 @@ def testVfsCogValidation():
     imagePath = datastore.get_url('TC_NG_SFBay_US_Geo.tif')
     source = large_image_source_gdal.open(
         imagePath, projection='EPSG:3857', encoding='PNG')
-    with pytest.raises(TileSourcePyramidFormatError):
+    with pytest.raises(TileSourceInefficientError):
         source.validateCOG()
