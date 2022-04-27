@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.14.2
+
+### Improvements
+- Imporve handling for vips pixel formats in addTile ([838](../../pull/838))
+- Add validateCOG method to GDALFileTileSource ([835](../../pull/835))
+
+### Changes
+- The default logger now uses the null handler ([840](../../pull/840))
+
 ## 1.14.1
 
 ### Changes
