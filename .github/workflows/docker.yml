@@ -1,0 +1,61 @@
+name: Docker Package
+on:
+  push:
+    tags: "*"
+    branches:
+      - master
+  pull_request:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository )
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Log into the Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: token
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and publish image with all sources
+      - name: Extract metadata for the Docker image
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: slim.Dockerfile
+          target: all
+          push: ${{ github.actor != 'dependabot[bot]' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # Build and publish image with only geospatial sources
+      - name: Extract metadata for the geospatial Docker image
+        id: meta_geo
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+            suffix=-geo,onlatest=true
+      - name: Build and push the geosptial Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: slim.Dockerfile
+          target: geo
+          push: ${{ github.actor != 'dependabot[bot]' }}
+          tags: ${{ steps.meta_geo.outputs.tags }}
+          labels: ${{ steps.meta_geo.outputs.labels }}

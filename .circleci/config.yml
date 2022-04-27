@@ -114,7 +114,7 @@ jobs:
       - checkout
       - run:
           name: Build the test docker
-          command: docker build --force-rm -t girder/tox-and-node .
+          command: docker build --force-rm -t girder/tox-and-node -f test.Dockerfile .
       - run:
           name: Publish the images to Docker Hub
           command: |
