@@ -27,7 +27,7 @@ This might print a result like::
         'mm_y': 0.00025
     }
 
-``levels`` doesn't actually tell which resolutions are present in the file -- it is the number of levels that can be requested from the ``getTiles`` method.  The levels can also be computed via ``ceil(log(max(sizeX / tileWidth, sizeY / tileHeight)) / log(2)) + 1``.
+``levels`` doesn't actually tell which resolutions are present in the file.  It is the number of levels that can be requested from the ``getTiles`` method.  The levels can also be computed via ``ceil(log(max(sizeX / tileWidth, sizeY / tileHeight)) / log(2)) + 1``.
 
 The ``mm_x`` and ``mm_y`` values are the size of a pixel in millimeters.  These can be ``None`` if the value is unknown.  The ``magnification`` is that reported by the file itself, and may be ``None``.  The magnification can be approximated by ``0.01 / mm_x``.
 
@@ -75,7 +75,7 @@ You can specify the size in physical coordinates:
 Tile Serving
 ------------
 
-One of the uses of large_image is to get tiles that can be used in image or map viewers.  Most of these viewers expect tiles that are a fixed size and know resolution.  The ``getTile`` method returns only tiles as stored in the original image (though if there are missing levels, these are synthesized) and the original tile size.  For instance,
+One of the uses of large_image is to get tiles that can be used in image or map viewers.  Most of these viewers expect tiles that are a fixed size and known resolution.  The ``getTile`` method returns only tiles as stored in the original image and the original tile size.  If there are missing levels, these are synthesized. For instance,
 
 .. code-block:: python
 
@@ -88,7 +88,7 @@ One of the uses of large_image is to get tiles that can be used in image or map 
     # tile002 will be a tile a tile representing no more than 1/4 the width of
     # image in the upper-left corner.
 
-Because tiles are cached directly, unlike ``getRegion`` and ``getThumbnail``, if you want tiles in a different image format, you need to open the source specifying that.
+Some methods such as ``getRegion`` and ``getThumbnail`` allow you to specify format on the fly.  But note that since tiles need to be cached in a consistent format, ``getTile`` always returns the same format depending on what encoding was specified when it was opened:
 
 .. code-block:: python
 
@@ -240,7 +240,7 @@ Styles - Changing colors, scales, and other properties
 
 By default, reading from an image gets the values stored in the image file.  If you get a JPEG or PNG as the output, the values will be 8-bit per channel.  If you get values as a numpy array, they will have their original resolution.  Depending on the source image, this could be 16-bit per channel, floats, or other data types.
 
-Especially when working with high bit-depth images, it can be useful to modify the output.  This can be done just to adjust the color range:
+Especially when working with high bit-depth images, it can be useful to modify the output.  For example, you can adjust the color range:
 
 .. code-block:: python
 
@@ -254,7 +254,7 @@ Especially when working with high bit-depth images, it can be useful to modify t
         output=dict(maxWidth=1000))
     # image will use the full dynamic range
 
-It can also be used to composite a multi-frame image into a false-color output:
+You can also composite a multi-frame image into a false-color output:
 
 .. code-block:: python
 
