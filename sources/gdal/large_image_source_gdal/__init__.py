@@ -58,10 +58,6 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
-try:
-    from osgeo_utils.samples.validate_cloud_optimized_geotiff import validate as gdal_validate
-except ImportError:
-    gdal_validate = None
 
 TileInputUnits['projection'] = 'projection'
 TileInputUnits['proj'] = 'projection'
@@ -1213,9 +1209,9 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             Log any warnings
 
         """
-        if gdal_validate is None:
-            raise ImportError('Please insall `osgeo_utils`')
-        warnings, errors, details = gdal_validate(
+        from osgeo_utils.samples.validate_cloud_optimized_geotiff import validate
+
+        warnings, errors, details = validate(
             self._largeImagePath,
             check_tiled=check_tiled,
             full_check=full_check
