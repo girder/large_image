@@ -67,7 +67,7 @@ You can specify the size in physical coordinates:
     source = large_image.open('sample.tiff')
     nparray, mime_type = source.getRegion(
         region=dict(left=0.25, top=0.125, right=2.75, bottom=0.375, units='mm'),
-        scale=dict(mm_x=0.0025)
+        scale=dict(mm_x=0.0025),
         format=large_image.constants.TILE_FORMAT_NUMPY)
     # Since our source image had mm_x = 0.00025 for its scale, this has the
     # same result as the previous example.
