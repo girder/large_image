@@ -75,6 +75,11 @@ registry = {
     # Multi source file using different sources
     # Source: manually generated.
     'multi_source.yml': 'sha512:81d7768b06eca6903082daa5b91706beaac8557ba4cede7f826524303df69a33478d6bb205c56af7ee2b45cd7d75897cc4b5704f743ddbf71bb3537ed3b9e8a8',  # noqa
+    # Geospatial tiff - not cloud optimized
+    'TC_NG_SFBay_US_Geo.tif': 'sha512:da2e66528f77a5e10af5de9e496074b77277c3da81dafc69790189510e5a7e18dba9e966329d36c979f1b547f0d36a82fbc4cfccc65ae9ef9e2747b5a9ee77b0',  # noqa
+    # Geospatial tiff - cloud optimized
+    'TC_NG_SFBay_US_Geo_COG.tif': 'sha512:5e56cdb8fb1a02615698a153862c10d5292b1ad42836a6e8bce5627e93a387dc0d3c9b6cfbd539796500bc2d3e23eafd07550f8c214e9348880bbbc6b3b0ea0c',  # noqa
+
 }
 
 

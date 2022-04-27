@@ -41,7 +41,9 @@ from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcac
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, SourcePriority,
                                    TileInputUnits, TileOutputMimeTypes)
-from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
+from large_image.exceptions import (TileSourceError,
+                                    TileSourceFileNotFoundError,
+                                    TileSourceInefficientError)
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
@@ -1184,6 +1186,44 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 pass
             raise exc
         return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
+
+    def validateCOG(self, check_tiled=True, full_check=False, strict=True, warn=True):
+        """Check if this image is a valid Cloud Optimized GeoTiff.
+
+        This will raise a :class:`large_image.exceptions.TileSourceInefficientError`
+        if not a valid Cloud Optimized GeoTiff. Otherwise, returns True.
+
+        Requires the ``osgeo_utils`` package.
+
+        Parameters
+        ----------
+        check_tiled : bool
+            Set to False to ignore missing tiling.
+        full_check : bool
+            Set to True to check tile/strip leader/trailer bytes.
+            Might be slow on remote files
+        strict : bool
+            Enforce warnings as exceptions. Set to False to only warn and not
+            raise exceptions.
+        warn : bool
+            Log any warnings
+
+        """
+        from osgeo_utils.samples.validate_cloud_optimized_geotiff import validate
+
+        warnings, errors, details = validate(
+            self._largeImagePath,
+            check_tiled=check_tiled,
+            full_check=full_check
+        )
+        if errors:
+            raise TileSourceInefficientError(errors)
+        if strict and warnings:
+            raise TileSourceInefficientError(warnings)
+        if warn:
+            for warning in warnings:
+                self.logger.warning(warning)
+        return True
 
 
 def open(*args, **kwargs):
