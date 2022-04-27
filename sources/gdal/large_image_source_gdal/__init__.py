@@ -1207,7 +1207,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             Set to True to check tile/strip leader/trailer bytes.
             Might be slow on remote files
         strict : bool
-            Enforce warnings as exceptions. Set to False to simple warn and not
+            Enforce warnings as exceptions. Set to False to only warn and not
             raise exceptions.
         warn : bool
             Log any warnings
