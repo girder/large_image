@@ -90,8 +90,8 @@ One of the uses of large_image is to get tiles that can be used in image or map 
     tile002 = source.getTile(0, 0, 2)
     # tile002 will be a tile representing no more than 1/4 the width of the
     # image in the upper-left corner.  Since the z (third parameter) is 2, the
-    # level will have up to 2**2 x 2**2 (4 x 4) tiles.  Since the image may not
-    # be a power of two and square, there may be fewer tiles than this.
+    # level will have up to 2**2 x 2**2 (4 x 4) tiles.  An image doesn't
+    # necessarily have all tiles in that range, as the image may not be square.
 
 Some methods such as ``getRegion`` and ``getThumbnail`` allow you to specify format on the fly.  But note that since tiles need to be cached in a consistent format, ``getTile`` always returns the same format depending on what encoding was specified when it was opened:
 
