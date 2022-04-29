@@ -27,7 +27,7 @@ This might print a result like::
         'mm_y': 0.00025
     }
 
-``levels`` doesn't actually tell which resolutions are present in the file.  It is the number of levels that can be requested from the ``getTiles`` method.  The levels can also be computed via ``ceil(log(max(sizeX / tileWidth, sizeY / tileHeight)) / log(2)) + 1``.
+``levels`` doesn't actually tell which resolutions are present in the file.  It is the number of levels that can be requested from the ``getTile`` method.  The levels can also be computed via ``ceil(log(max(sizeX / tileWidth, sizeY / tileHeight)) / log(2)) + 1``.
 
 The ``mm_x`` and ``mm_y`` values are the size of a pixel in millimeters.  These can be ``None`` if the value is unknown.  The ``magnification`` is that reported by the file itself, and may be ``None``.  The magnification can be approximated by ``0.01 / mm_x``.
 
@@ -44,7 +44,8 @@ You can get a portion of an image at different resolutions and in different form
         region=dict(left=1000, top=500, right=11000, bottom=1500),
         output=dict(maxWidth=1000),
         encoding='PNG')
-    # image is a PNG that is 1000 x 100
+    # image is a PNG that is 1000 x 100.  Specifically, it will be a bytes
+    # object that represent a PNG encoded image.
 
 You could also get this as a ``numpy`` array:
 
@@ -75,18 +76,22 @@ You can specify the size in physical coordinates:
 Tile Serving
 ------------
 
-One of the uses of large_image is to get tiles that can be used in image or map viewers.  Most of these viewers expect tiles that are a fixed size and known resolution.  The ``getTile`` method returns only tiles as stored in the original image and the original tile size.  If there are missing levels, these are synthesized. For instance,
+One of the uses of large_image is to get tiles that can be used in image or map viewers.  Most of these viewers expect tiles that are a fixed size and known resolution.  The ``getTile`` method returns tiles as stored in the original image and the original tile size.  If there are missing levels, these are synthesized -- this is only done for missing powers-of-two levels or missing tiles. For instance,
 
 .. code-block:: python
 
     import large_image
     source = large_image.open('sample.tiff')
+    # getTile takes x, y, z, where x and y are the tile location within the
+    # level and z is level where 0 is the lowest resolution.
     tile0 = source.getTile(0, 0, 0)
     # tile0 is the lowest resolution tile that shows the whole image.  It will
     # be a JPEG or PNG or some other image format depending on the source
     tile002 = source.getTile(0, 0, 2)
-    # tile002 will be a tile a tile representing no more than 1/4 the width of
-    # image in the upper-left corner.
+    # tile002 will be a tile representing no more than 1/4 the width of the
+    # image in the upper-left corner.  Since the z (third parameter) is 2, the
+    # level will have up to 2**2 x 2**2 (4 x 4) tiles.  An image doesn't
+    # necessarily have all tiles in that range, as the image may not be square.
 
 Some methods such as ``getRegion`` and ``getThumbnail`` allow you to specify format on the fly.  But note that since tiles need to be cached in a consistent format, ``getTile`` always returns the same format depending on what encoding was specified when it was opened:
 
@@ -96,6 +101,8 @@ Some methods such as ``getRegion`` and ``getThumbnail`` allow you to specify for
     source = large_image.open('sample.tiff', encoding='PNG')
     tile0 = source.getTile(0, 0, 0)
     # tile is now guaranteed to be a PNG
+
+Tiles are always ``tileWidth`` by ``tileHeight`` in pixels.  At the maximum level (``z = levels - 1``), the number of tiles in that level will range in ``x`` from ``0`` to strictly less than ``sizeX / tileWidth``, and ``y`` from ``0`` to strictly less than ``sizeY / tileHeight``.  For each lower level, the is a power of two less tiles.  For instance, when ``z = levels - 2``, ``x`` ranges from ``0`` to less than ``sizeX / tileWidth / 2``; at ``z = levels - 3``, ``x`` is less than ``sizeX / tileWidth / 4``.
 
 Iterating Across an Image
 -------------------------
@@ -182,6 +189,8 @@ Many digital pathology images (also called whole slide images or WSI) contain se
     # image is now a PNG
     image, mime_type = source.getAssociatedImage('macro', format=large_image.constants.TILE_FORMAT_NUMPY)
     # image is now a numpy array
+
+You can get associated images in different encodings and formats.  The entire image is always returned.
 
 Projections
 -----------
