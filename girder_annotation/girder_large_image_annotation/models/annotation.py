@@ -758,6 +758,8 @@ class Annotation(AccessControlledModel):
             'updated': now,
             'annotation': annotation,
         }
+        if annotation and not annotation.get('name'):
+            annotation['name'] = now.strftime('Annotation %Y-%m-%d %H:%M')
 
         # copy access control from the folder containing the image
         folder = Folder().load(item['folderId'], force=True)
