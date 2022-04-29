@@ -225,6 +225,19 @@ class AnnotationSchema:
                 'description': 'polyline is open if closed flag is '
                                'not specified'
             },
+            'holes': {
+                'type': 'array',
+                'description':
+                    'If closed is true, this is a list of polylines that are '
+                    'treated as holes in the base polygon. These should not '
+                    'cross each other and should be contained within the base '
+                    'polygon.',
+                'items': {
+                    'type': 'array',
+                    'items': coordSchema,
+                    'minItems': 3,
+                },
+            },
         },
         'required': ['type', 'points'],
         'additionalProperties': False
@@ -976,6 +989,15 @@ class Annotation(AccessControlledModel):
                     if not self._similarElementStructure(a[k], b[k], k):
                         return False
         elif isinstance(a, list):
+            if parentKey == 'holes':
+                for hidx in range(len(b)):
+                    for idx in range(len(b[hidx])):
+                        if (len(b[hidx][idx]) != 3 or
+                                not isinstance(b[hidx][idx][0], self.numberInstance) or
+                                not isinstance(b[hidx][idx][1], self.numberInstance) or
+                                not isinstance(b[hidx][idx][2], self.numberInstance)):
+                            return False
+                return True
             if len(a) != len(b):
                 if parentKey not in {'points', 'values'} or len(a) < 2 or len(b) < 2:
                     return False

@@ -7,9 +7,17 @@ export default function polyline(json) {
     var annotationType;
 
     if (json.closed) {
-        type = 'Polygon';
         points.push(points[0]);
         coordinates = [points];
+        if (json.holes) {
+            const holes = (json.holes || []).map((hole) => {
+                let result = hole.map((p) => _.first(p, 2));
+                result.push(result[0]);
+                return result;
+            });
+            coordinates = coordinates.concat(holes);
+        }
+        type = 'Polygon';
         annotationType = 'polygon';
     } else {
         type = 'LineString';

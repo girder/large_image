@@ -126,6 +126,17 @@ When closed, this is a polygon. When open, this is a continuous line.
       [56,-45,6]
     ],
     "closed": true,                    # Boolean.  Default is false.  Optional
+    "holes": [                         # Only used if closed is true.  A list of a list of
+                                       # coordinates.  Each list of coordinates is a
+                                       # separate hole within the main polygon, and is expected
+                                       # to be contained within it and not cross the main
+                                       # polygon or other holes.
+      [
+        [10,10,0],
+        [20,30,0],
+        [10,30,0]
+      ]
+    ],
     "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
   }
 
