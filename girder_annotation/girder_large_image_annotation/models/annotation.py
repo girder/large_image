@@ -225,6 +225,19 @@ class AnnotationSchema:
                 'description': 'polyline is open if closed flag is '
                                'not specified'
             },
+            'holes': {
+                'type': 'array',
+                'description':
+                    'If closed is true, this is a list of polylines that are '
+                    'treated as holes in the base polygon. These should not '
+                    'cross each other and should be contained within the base '
+                    'polygon.',
+                'items': {
+                    'type': 'array',
+                    'items': coordSchema,
+                    'minItems': 3,
+                },
+            },
         },
         'required': ['type', 'points'],
         'additionalProperties': False
