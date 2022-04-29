@@ -102,6 +102,8 @@ Some methods such as ``getRegion`` and ``getThumbnail`` allow you to specify for
     tile0 = source.getTile(0, 0, 0)
     # tile is now guaranteed to be a PNG
 
+Tiles are always ``tileWidth`` by ``tileHeight`` in pixels.  At the maximum level (``z = levels - 1``), the number of tiles in that level will range in ``x`` from ``0`` to strictly less than ``sizeX / tileWidth``, and ``y`` from ``0`` to strictly less than ``sizeY / tileHeight``.  For each lower level, the is a power of two less tiles.  For instance, when ``z = levels - 2``, ``x`` ranges from ``0`` to less than ``sizeX / tileWidth / 2``; at ``z = levels - 3``, ``x`` is less than ``sizeX / tileWidth / 4``.
+
 Iterating Across an Image
 -------------------------
 
