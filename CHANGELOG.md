@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.14.3
+
+### Improvements
+- Support polygon annotations with holes ([844](../../pull/844))
+- New annotations get a default name if they do not have one ([843](../../pull/843))
+
 ## 1.14.2
 
 ### Improvements
