@@ -990,25 +990,23 @@ class Annotation(AccessControlledModel):
                         return False
         elif isinstance(a, list):
             if parentKey == 'holes':
-                for hidx in range(len(b)):
-                    for idx in range(len(b[hidx])):
-                        if (len(b[hidx][idx]) != 3 or
-                                not isinstance(b[hidx][idx][0], self.numberInstance) or
-                                not isinstance(b[hidx][idx][1], self.numberInstance) or
-                                not isinstance(b[hidx][idx][2], self.numberInstance)):
-                            return False
-                return True
+                return all(
+                    len(hole) == 3 and
+                    isinstance(hole[0], self.numberInstance) and
+                    isinstance(hole[1], self.numberInstance) and
+                    isinstance(hole[2], self.numberInstance)
+                    for hlist in b
+                    for hole in hlist)
             if len(a) != len(b):
                 if parentKey not in {'points', 'values'} or len(a) < 2 or len(b) < 2:
                     return False
                 # If this is an array of points, let it pass
-                for idx in range(len(b)):
-                    if (len(b[idx]) != 3 or
-                            not isinstance(b[idx][0], self.numberInstance) or
-                            not isinstance(b[idx][1], self.numberInstance) or
-                            not isinstance(b[idx][2], self.numberInstance)):
-                        return False
-                return True
+                return all(
+                    len(elem) == 3 and
+                    isinstance(elem[0], self.numberInstance) and
+                    isinstance(elem[1], self.numberInstance) and
+                    isinstance(elem[2], self.numberInstance)
+                    for elem in b)
             for idx in range(len(a)):
                 if not self._similarElementStructure(a[idx], b[idx], parentKey):
                     return False
@@ -1031,6 +1029,7 @@ class Annotation(AccessControlledModel):
             annot['elements'] = []
             self.validatorAnnotation.validate(annot)
             lastValidatedElement = None
+            lastValidatedElement2 = None
             for idx, element in enumerate(elements):
                 if isinstance(element.get('id'), ObjectId):
                     element['id'] = str(element['id'])
@@ -1047,8 +1046,10 @@ class Annotation(AccessControlledModel):
                         element[key] = element[key][:VALIDATE_ARRAY_LENGTH]
                     except Exception:
                         key = None
-                if not self._similarElementStructure(element, lastValidatedElement):
+                if (not self._similarElementStructure(element, lastValidatedElement) and
+                        not self._similarElementStructure(element, lastValidatedElement2)):
                     self.validatorAnnotationElement.validate(element)
+                    lastValidatedElement2 = lastValidatedElement
                     lastValidatedElement = element
                 if key:
                     element[key] = keydata
