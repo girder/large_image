@@ -34,6 +34,7 @@ from girder.exceptions import AccessException, ValidationException
 from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.model_base import AccessControlledModel
+from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.models.user import User
 
@@ -785,7 +786,13 @@ class Annotation(AccessControlledModel):
         # give the current user admin access
         self.setUserAccess(doc, user=creator, level=AccessType.ADMIN, save=False)
 
-        return self.save(doc)
+        doc = self.save(doc)
+        Notification().createNotification(
+            type='large_image_annotation.create',
+            data={'_id': doc['_id'], 'itemId': doc['itemId']},
+            user=creator,
+            expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=1))
+        return doc
 
     def load(self, id, region=None, getElements=True, *args, **kwargs):
         """
@@ -853,6 +860,11 @@ class Annotation(AccessControlledModel):
                     result = super().remove(annotation, *args, **kwargs)
                 finally:
                     self.collection.delete_one = delete_one
+        Notification().createNotification(
+            type='large_image_annotation.remove',
+            data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
+            user=User().load(annotation['creatorId'], force=True),
+            expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=1))
         return result
 
     def save(self, annotation, *args, **kwargs):
@@ -953,7 +965,13 @@ class Annotation(AccessControlledModel):
         """
         annotation['updated'] = datetime.datetime.utcnow()
         annotation['updatedId'] = updateUser['_id'] if updateUser else None
-        return self.save(annotation)
+        annotation = self.save(annotation)
+        Notification().createNotification(
+            type='large_image_annotation.update',
+            data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
+            user=User().load(annotation['creatorId'], force=True),
+            expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=1))
+        return annotation
 
     def _similarElementStructure(self, a, b, parentKey=None):  # noqa
         """
