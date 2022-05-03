@@ -5,11 +5,12 @@
 ### Improvements
 - Support polygon annotations with holes ([844](../../pull/844))
 - New annotations get a default name if they do not have one ([843](../../pull/843))
+- Explicitly mark vips output as tiled ([848](../../pull/848))
 
 ## 1.14.2
 
 ### Improvements
-- Imporve handling for vips pixel formats in addTile ([838](../../pull/838))
+- Improve handling for vips pixel formats in addTile ([838](../../pull/838))
 - Add validateCOG method to GDALFileTileSource ([835](../../pull/835))
 
 ### Changes

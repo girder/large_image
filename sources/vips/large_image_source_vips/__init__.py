@@ -449,17 +449,18 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             y = min(y, img.height)
             img = img.crop(x, y, w, h)
         pathIsTiff = Path(path).suffix.lower() in {'tif', 'tiff'}
+        pixels = img.width * img.height
         if vips_kwargs is not None or not pathIsTiff:
             img.write_to_file(path, **(vips_kwargs or {}))
         elif not lossy:
             img.write_to_file(
                 path, tile_width=self.tileWidth, tile_height=self.tileHeight,
-                pyramid=True, bigtiff=True,
+                tile=True, pyramid=True, bigtiff=pixels >= 2 * 1024 ** 3,
                 region_shrink='nearest', compression='lzw', predictor='horizontal')
         else:
             img.write_to_file(
                 path, tile_width=self.tileWidth, tile_height=self.tileHeight,
-                pyramid=True, bigtiff=True,
+                tile=True, pyramid=True, bigtiff=pixels >= 2 * 1024 ** 3,
                 compression='jpeg', Q=90)
 
     @property
