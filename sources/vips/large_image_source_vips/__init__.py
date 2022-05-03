@@ -448,7 +448,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             x = min(x, img.width)
             y = min(y, img.height)
             img = img.crop(x, y, w, h)
-        pathIsTiff = Path(path).suffix.lower() in {'tif', 'tiff'}
+        pathIsTiff = Path(path).suffix.lower() in {'.tif', '.tiff'}
         pixels = img.width * img.height
         if vips_kwargs is not None or not pathIsTiff:
             img.write_to_file(path, **(vips_kwargs or {}))
