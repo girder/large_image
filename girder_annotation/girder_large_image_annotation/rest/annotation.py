@@ -142,6 +142,10 @@ class AnnotationResource(Resource):
         .param('centroids', 'If true, only return the centroids of each '
                'element.  The results are returned as a packed binary array '
                'with a json wrapper.', dataType='boolean', required=False)
+        .param('bbox', 'If true, add _bbox records to each element.  These '
+               'are computed when the annotation is stored and cannot be '
+               'modified.  Cannot be used with the centroids option.',
+               dataType='boolean', required=False)
         .pagingParams(defaultSort='_id', defaultLimit=None,
                       defaultSortDir=SortDir.ASCENDING)
         .errorResponse('ID was invalid.')

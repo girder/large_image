@@ -128,6 +128,24 @@ class TestLargeImageAnnotationRest:
         elements = result.split(b'\x00', 1)[1].rsplit(b'\x00', 1)[0]
         assert len(elements) == 28 * len(largeSample['elements'])
 
+    def testGetAnnotationWithBoundingBox(self, server, admin):
+        publicFolder = utilities.namedFolder(admin, 'Public')
+        item = Item().createItem('sample', admin, publicFolder)
+        annot = Annotation().createAnnotation(item, admin, sampleAnnotation)
+        annotId = str(annot['_id'])
+        resp = server.request(
+            path='/annotation/%s' % annotId, user=admin)
+        assert utilities.respStatus(resp) == 200
+        assert 'bbox' not in resp.json['_elementQuery']
+        assert '_bbox' not in resp.json['annotation']['elements'][0]
+
+        resp = server.request(
+            path='/annotation/%s' % annotId, user=admin,
+            params={'bbox': 'true'})
+        assert utilities.respStatus(resp) == 200
+        assert 'bbox' in resp.json['_elementQuery']
+        assert '_bbox' in resp.json['annotation']['elements'][0]
+
     def testAnnotationCopy(self, server, admin):
         publicFolder = utilities.namedFolder(admin, 'Public')
         # create annotation on an item
