@@ -27,7 +27,7 @@ try:
     from setuptools_scm import get_version
 
     version = get_version(root='..', local_scheme=prerelease_local_scheme)
-    limit_version = f'>={version}'
+    limit_version = f'>={version}' if '+' not in version else ''
 except (ImportError, LookupError):
     limit_version = ''
 
