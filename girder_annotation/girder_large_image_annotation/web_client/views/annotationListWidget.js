@@ -2,11 +2,12 @@ import $ from 'jquery';
 import _ from 'underscore';
 
 import { AccessType } from '@girder/core/constants';
+import eventStream from '@girder/core/utilities/EventStream';
+import { getCurrentUser } from '@girder/core/auth';
 import { confirm } from '@girder/core/dialog';
 import { getApiRoot, restRequest } from '@girder/core/rest';
 import AccessWidget from '@girder/core/views/widgets/AccessWidget';
 import events from '@girder/core/events';
-import FileModel from '@girder/core/models/FileModel';
 import UserCollection from '@girder/core/collections/UserCollection';
 import UploadWidget from '@girder/core/views/widgets/UploadWidget';
 import View from '@girder/core/views/View';
@@ -45,6 +46,8 @@ const AnnotationListWidget = View.extend({
 
         this.listenTo(this.collection, 'all', this.render);
         this.listenTo(this.users, 'all', this.render);
+        this.listenTo(eventStream, 'g:event.large_image_annotation.create', () => this.collection.fetch(null, true));
+        this.listenTo(eventStream, 'g:event.large_image_annotation.remove', () => this.collection.fetch(null, true));
 
         this.collection.fetch({
             itemId: this.model.id,
@@ -129,68 +132,27 @@ const AnnotationListWidget = View.extend({
         var uploadWidget = new UploadWidget({
             el: $('#g-dialog-container'),
             title: 'Upload Annotation',
-            parent: this._makeUploadParent(),
-            parentType: 'file', // invokes special upload widget code
+            parent: this.model,
+            parentType: 'item',
             parentView: this,
-            multiFile: true
-        }).on('g:uploadFinished', function () {
+            multiFile: true,
+            otherParams: {reference: JSON.stringify({
+                identifier: 'LargeImageAnnotationUpload',
+                itemId: this.model.id,
+                fileId: this.model.get('largeImage') && this.model.get('largeImage').fileId,
+                userId: (getCurrentUser() || {}).id
+            })}
+        }).on('g:uploadFinished', () => {
             events.trigger('g:alert', {
                 icon: 'ok',
                 text: 'Uploaded annotations.',
                 type: 'success',
                 timeout: 4000
             });
+            this.collection.fetch(null, true);
         }, this);
         this._uploadWidget = uploadWidget;
         uploadWidget.render();
-        uploadWidget.on('g:uploadFinished', () => {
-            this.collection.fetch(null, true);
-        });
-    },
-
-    _makeUploadParent() {
-        var parent = new FileModel();
-        parent.updateContents = (data) => {
-            restRequest({
-                xhr: () => {
-                    var xhr = new window.XMLHttpRequest();
-                    xhr.upload.addEventListener('progress', (evt) => {
-                        if (evt.lengthComputable) {
-                            this._uploadWidget.currentFile.trigger('g:upload.progress', {
-                                startByte: 0,
-                                loaded: evt.loaded,
-                                total: evt.total,
-                                file: this._uploadWidget.files[this._uploadWidget.currentIndex]
-                            });
-                        }
-                    }, false);
-                    return xhr;
-                },
-                url: `annotation/item/${this.model.id}`,
-                method: 'POST',
-                data: data,
-                contentType: 'application/json',
-                processData: false
-            }).done((resp) => {
-                parent.name = this.model.name();
-                this._uploadWidget.overallProgress += data.size;
-                this._uploadWidget.parent = this._makeUploadParent();
-                parent.trigger('g:upload.complete');
-            }).fail((resp) => {
-                this._uploadWidget.parent = this._makeUploadParent();
-                parent.trigger('g:upload.error', {
-                    message: 'An error occurred while uploading, check console.',
-                    response: resp
-                });
-            });
-        };
-        parent.name = () => {
-            return this.model.name();
-        };
-        parent.get = () => {
-            return this.model.get.apply(this.model, arguments);
-        };
-        return parent;
     },
 
     _changePermissions(evt) {

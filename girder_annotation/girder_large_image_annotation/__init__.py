@@ -14,13 +14,14 @@
 #  limitations under the License.
 #############################################################################
 
+from girder import events
 from girder.exceptions import ValidationException
 from girder.plugin import GirderPlugin, getPlugin
 from girder.settings import SettingDefault
 from girder.utility import setting_utilities
 from girder.utility.model_importer import ModelImporter
 
-from . import constants
+from . import constants, handlers
 from .models.annotation import Annotation
 from .rest.annotation import AnnotationResource
 
@@ -82,3 +83,7 @@ class LargeImageAnnotationPlugin(GirderPlugin):
         info['apiRoot'].folder.copyFolder.description.param(
             'copyAnnotations', 'Copy annotations when copying folder (default true)',
             required=False, dataType='boolean')
+
+        events.bind(
+            'data.process', 'large_image_annotation.annotations',
+            handlers.process_annotations)
