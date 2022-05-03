@@ -176,6 +176,8 @@ class Annotationelement(Model):
                 the value).
             :centroids: if specified and true, only return the id, center of
                 the bounding box, and bounding box size for each element.
+            :bbox: if specified and true and centroids are not specified,
+                add _bbox to each element with the bounding box record.
 
         :param annotation: the annotation to get elements for.  Modified.
         :param region: if present, a dictionary restricting which annotations
@@ -234,6 +236,9 @@ class Annotationelement(Model):
             info['centroids'] = True
             info['props'] = proplist
             info['propskeys'] = propskeys
+        elif region.get('bbox'):
+            fields.pop('bbox.details')
+            fields['bbox'] = True
         elementCursor = self.find(
             query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
             offset=offset, fields=fields)
@@ -283,6 +288,17 @@ class Annotationelement(Model):
                             data.write(chunk)
                     data.seek(0)
                     element[datafile['key']] = pickle.load(data)
+                if region.get('bbox') and 'bbox' in entry:
+                    element['_bbox'] = entry['bbox']
+                    if 'bbox' not in info:
+                        info['bbox'] = {}
+                    for axis in {'x', 'y', 'z'}:
+                        lkey, hkey = 'low' + axis, 'high' + axis
+                        if lkey in entry['bbox'] and hkey in entry['bbox']:
+                            info['bbox'][lkey] = min(
+                                info['bbox'].get(lkey, entry['bbox'][lkey]), entry['bbox'][lkey])
+                            info['bbox'][hkey] = max(
+                                info['bbox'].get(hkey, entry['bbox'][hkey]), entry['bbox'][hkey])
                 yield element
                 details += entry.get('bbox', {}).get('details', 1)
             count += 1
@@ -400,14 +416,14 @@ class Annotationelement(Model):
         """
         bbox = {}
         if 'points' in element:
-            key = 'points'
-            bbox['lowx'] = min(p[0] for p in element[key])
-            bbox['lowy'] = min(p[1] for p in element[key])
-            bbox['lowz'] = min(p[2] for p in element[key])
-            bbox['highx'] = max(p[0] for p in element[key])
-            bbox['highy'] = max(p[1] for p in element[key])
-            bbox['highz'] = max(p[2] for p in element[key])
-            bbox['details'] = len(element[key])
+            pts = element['points']
+            bbox['lowx'] = min(p[0] for p in pts)
+            bbox['lowy'] = min(p[1] for p in pts)
+            bbox['lowz'] = min(p[2] for p in pts)
+            bbox['highx'] = max(p[0] for p in pts)
+            bbox['highy'] = max(p[1] for p in pts)
+            bbox['highz'] = max(p[2] for p in pts)
+            bbox['details'] = len(pts)
         elif element.get('type') == 'griddata':
             x0, y0, z = element['origin']
             isElements = element.get('interpretation') == 'choropleth'

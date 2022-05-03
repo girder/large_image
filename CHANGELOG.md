@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.14.4
+
+### Improvements
+- Optionally include bounding box information with annotation queries ([851](../../pull/851))
+
 ## 1.14.3
 
 ### Improvements

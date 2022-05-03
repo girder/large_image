@@ -1033,7 +1033,7 @@ class Annotation(AccessControlledModel):
         # Either a number or the dictionary or list comparisons passed
         return True
 
-    def validate(self, doc):
+    def validate(self, doc):  # noqa
         startTime = lastTime = time.time()
         try:
             # This block could just use the json validator:
@@ -1049,28 +1049,41 @@ class Annotation(AccessControlledModel):
             lastValidatedElement = None
             lastValidatedElement2 = None
             for idx, element in enumerate(elements):
+                # Discard element keys beginning with _
+                for key in list(element):
+                    if key.startswith('_'):
+                        del element[key]
                 if isinstance(element.get('id'), ObjectId):
                     element['id'] = str(element['id'])
                 # Handle elements with large arrays by checking that a
                 # conversion to a numpy array works
-                key = None
+                keys = None
                 if len(element.get('points', element.get('values', []))) > VALIDATE_ARRAY_LENGTH:
                     key = 'points' if 'points' in element else 'values'
                     try:
                         # Check if the entire array converts in an obvious
                         # manner
                         numpy.array(element[key], dtype=float)
-                        keydata = element[key]
+                        keys[key] = element[key]
                         element[key] = element[key][:VALIDATE_ARRAY_LENGTH]
                     except Exception:
-                        key = None
+                        pass
+                if any(len(h) > VALIDATE_ARRAY_LENGTH for h in element.get('holes', [])):
+                    key = 'holes'
+                    try:
+                        for h in element['holes']:
+                            numpy.array(h, dtype=float)
+                        keys[key] = element[key]
+                        element[key] = []
+                    except Exception:
+                        pass
                 if (not self._similarElementStructure(element, lastValidatedElement) and
                         not self._similarElementStructure(element, lastValidatedElement2)):
                     self.validatorAnnotationElement.validate(element)
                     lastValidatedElement2 = lastValidatedElement
                     lastValidatedElement = element
-                if key:
-                    element[key] = keydata
+                if keys:
+                    element.update(keys)
                 if time.time() - lastTime > 10:
                     logger.info('Validated %s of %d elements in %5.3fs',
                                 idx + 1, len(elements), time.time() - startTime)
