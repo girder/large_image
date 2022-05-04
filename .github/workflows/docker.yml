@@ -11,7 +11,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-publish:
+  build-and-publish-base:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository )
     steps:
@@ -41,21 +41,39 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  build-and-publish-targets:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository )
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["geo", "jupyter", "jupyter-geo"]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Log into the Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: token
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       # Build and publish image with only geospatial sources
       - name: Extract metadata for the geospatial Docker image
-        id: meta_geo
+        id: meta_target
         uses: docker/metadata-action@v3
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
             latest=auto
-            suffix=-geo,onlatest=true
+            suffix=-${{ matrix.target }},onlatest=true
       - name: Build and push the geosptial Docker image
         uses: docker/build-push-action@v2
         with:
           context: .
           file: slim.Dockerfile
-          target: geo
+          target: ${{ matrix.target }}
           push: ${{ github.actor != 'dependabot[bot]' }}
-          tags: ${{ steps.meta_geo.outputs.tags }}
-          labels: ${{ steps.meta_geo.outputs.labels }}
+          tags: ${{ steps.meta_target.outputs.tags }}
+          labels: ${{ steps.meta_target.outputs.labels }}
