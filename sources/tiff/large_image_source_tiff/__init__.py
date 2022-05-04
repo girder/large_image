@@ -72,14 +72,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'image/x-ptif': SourcePriority.PREFERRED,
     }
 
-    # When getting tiles for otherwise empty directories (missing powers of
-    # two), we composite the tile from higher resolution levels.  This can use
-    # excessive memory if there are too many missing levels.  For instance, if
-    # there are six missing levels and the tile size is 1024 square RGBA, then
-    # 16 Gb are needed for the composited tile at a minimum.  By setting
-    # _maxSkippedLevels, such large gaps are composited in stages.
-    _maxSkippedLevels = 3
-
     _maxAssociatedImageSize = 8192
 
     def __init__(self, path, **kwargs):  # noqa
@@ -643,7 +635,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if dir is None:
                 try:
                     if not kwargs.get('inSparseFallback'):
-                        tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
+                        tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
                     else:
                         raise IOTiffError('Missing z level %d' % z)
                 except Exception:
@@ -713,64 +705,19 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                     numpyAllowed, applyStyle=False, **kwargs)
         raise TileSourceError('Internal I/O failure: %s' % exception.args[0])
 
-    def getTileFromEmptyDirectory(self, x, y, z, **kwargs):
+    def _nonemptyLevelsList(self, frame=0):
         """
-        Given the x, y, z tile location in an unpopulated level, get tiles from
-        higher resolution levels to make the lower-res tile.
+        Return a list of one value per level where the value is None if the
+        level does not exist in the file and any other value if it does.
 
-        :param x: location of tile within original level.
-        :param y: location of tile within original level.
-        :param z: original level.
-        :returns: tile in PIL format.
+        :param frame: the frame number.
+        :returns: a list of levels length.
         """
-        basez = z
-        scale = 1
         dirlist = self._tiffDirectories
-        frame = self._getFrame(**kwargs)
+        frame = int(frame or 0)
         if frame > 0 and hasattr(self, '_frames'):
             dirlist = self._frames[frame]['dirs']
-        while dirlist[z] is None:
-            scale *= 2
-            z += 1
-        while z - basez > self._maxSkippedLevels:
-            z -= self._maxSkippedLevels
-            scale = int(scale / 2 ** self._maxSkippedLevels)
-        tile = PIL.Image.new('RGBA', (
-            min(self.sizeX, self.tileWidth * scale), min(self.sizeY, self.tileHeight * scale)))
-        maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
-        maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
-        for newX in range(scale):
-            for newY in range(scale):
-                if ((newX or newY) and ((x * scale + newX) >= maxX or
-                                        (y * scale + newY) >= maxY)):
-                    continue
-                subtile = self.getTile(
-                    x * scale + newX, y * scale + newY, z,
-                    pilImageAllowed=True, numpyAllowed=False,
-                    sparseFallback=True, edge=False, frame=frame)
-                if not isinstance(subtile, PIL.Image.Image):
-                    subtile = PIL.Image.open(io.BytesIO(subtile))
-                tile.paste(subtile, (newX * self.tileWidth,
-                                     newY * self.tileHeight))
-        return tile.resize((self.tileWidth, self.tileHeight),
-                           getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
-
-    def getPreferredLevel(self, level):
-        """
-        Given a desired level (0 is minimum resolution, self.levels - 1 is max
-        resolution), return the level that contains actual data that is no
-        lower resolution.
-
-        :param level: desired level
-        :returns level: a level with actual data that is no lower resolution.
-        """
-        level = max(0, min(level, self.levels - 1))
-        baselevel = level
-        while self._tiffDirectories[level] is None and level < self.levels - 1:
-            level += 1
-        while level - baselevel >= self._maxSkippedLevels:
-            level -= self._maxSkippedLevels
-        return level
+        return dirlist
 
     def getAssociatedImagesList(self):
         """

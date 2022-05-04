@@ -33,6 +33,7 @@ from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, etreeToDict
+from large_image.tilesource.utilities import _imageToNumpy
 
 try:
     __version__ = _importlib_version(__name__)
@@ -158,6 +159,17 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     if getattr(subbox, 'icc_profile', None):
                         self._iccprofiles = [subbox.icc_profile]
 
+    def _nonemptyLevelsList(self, frame=0):
+        """
+        Return a list of one value per level where the value is None if the
+        level does not exist in the file and any other value if it does.
+
+        :param frame: the frame number.
+        :returns: a list of levels length.
+        """
+        return [True if self.levels - 1 - idx < self._populatedLevels else None
+                for idx in range(self.levels)]
+
     def getNativeMagnification(self):
         """
         Get the magnification at a particular level.
@@ -243,26 +255,30 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._xyzInRange(x, y, z)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         scale = None
-        if z < self._minlevel:
-            scale = int(2 ** (self._minlevel - z))
-            step = int(2 ** (self.levels - 1 - self._minlevel))
-        # possibly open the file multiple times so multiple threads can access
-        # it concurrently.
-        while True:
+        if self._minlevel - z > self._maxSkippedLevels:
+            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile = _imageToNumpy(tile)[0]
+        else:
+            if z < self._minlevel:
+                scale = int(2 ** (self._minlevel - z))
+                step = int(2 ** (self.levels - 1 - self._minlevel))
+            # possibly open the file multiple times so multiple threads can access
+            # it concurrently.
+            while True:
+                try:
+                    # A timeout prevents uninterupptable waits on some platforms
+                    openjpegHandle = self._openjpegHandles.get(timeout=1.0)
+                    break
+                except queue.Empty:
+                    continue
+            if openjpegHandle is None:
+                openjpegHandle = glymur.Jp2k(self._largeImagePath)
             try:
-                # A timeout prevents uninterupptable waits on some platforms
-                openjpegHandle = self._openjpegHandles.get(timeout=1.0)
-                break
-            except queue.Empty:
-                continue
-        if openjpegHandle is None:
-            openjpegHandle = glymur.Jp2k(self._largeImagePath)
-        try:
-            tile = openjpegHandle[y0:y1:step, x0:x1:step]
-        finally:
-            self._openjpegHandles.put(openjpegHandle)
-        if scale:
-            tile = tile[::scale, ::scale]
+                tile = openjpegHandle[y0:y1:step, x0:x1:step]
+            finally:
+                self._openjpegHandles.put(openjpegHandle)
+            if scale:
+                tile = tile[::scale, ::scale]
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

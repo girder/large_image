@@ -104,6 +104,8 @@ registry = {
     'synthetic_multiaxis.zarr.db': 'sha512:2ca118b67ca73bbc6fe9542c5b71ee6cb5f45f5049575a4682290cec4cfb4deef29aee5e19fb5d4005167322668a94191a86f98f1125c94f5eef3e14c6ec6e26',  # noqa
     # The same as above, but as a multi directory zip
     'synthetic_multiaxis.zarr.zip': 'sha512:95da53061bd09deaf4357e745404780d78a0949935f82c10ee75237e775345caace18fad3f05c3452ba36efca6b3ed58d815d041f33197497ab53d2c80b9e2ac',  # noqa
+    # Single flat array zarr
+    'flat2.zarr.zip': 'sha512:c49ff5fbfa73615da4c2a7c8602723297d604892b848860a068ab200245eec6c4f638f35d0b40cde0233c55faa6dc4e46351a841b481211f36dc5fb43765d818',  # noqa
 }
 
 

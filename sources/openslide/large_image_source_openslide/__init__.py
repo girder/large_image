@@ -225,6 +225,16 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                   nearPowerOfTwo(levels[0]['height'], entry['height'])]
         return levels
 
+    def _nonemptyLevelsList(self, frame=0):
+        """
+        Return a list of one value per level where the value is None if the
+        level does not exist in the file and any other value if it does.
+
+        :param frame: the frame number.
+        :returns: a list of levels length.
+        """
+        return [True if l['scale'] == 1 else None for l in self._svslevels]
+
     def getNativeMagnification(self):
         """
         Get the magnification at a particular level.
@@ -284,18 +294,21 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # We ask to read an area that will cover the tile at the z level.  The
         # scale we computed in the __init__ process for this svs level tells
         # how much larger a region we need to read.
-        try:
-            tile = self._openslide.read_region(
-                (offsetx, offsety), svslevel['svslevel'],
-                (self.tileWidth * svslevel['scale'],
-                 self.tileHeight * svslevel['scale']))
-        except openslide.lowlevel.OpenSlideError as exc:
-            raise TileSourceError(
-                'Failed to get OpenSlide region (%r).' % exc)
-        # Always scale to the svs level 0 tile size.
-        if svslevel['scale'] != 1:
-            tile = tile.resize((self.tileWidth, self.tileHeight),
-                               getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        if svslevel['scale'] > 2 ** self._maxSkippedLevels:
+            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+        else:
+            try:
+                tile = self._openslide.read_region(
+                    (offsetx, offsety), svslevel['svslevel'],
+                    (self.tileWidth * svslevel['scale'],
+                     self.tileHeight * svslevel['scale']))
+            except openslide.lowlevel.OpenSlideError as exc:
+                raise TileSourceError(
+                    'Failed to get OpenSlide region (%r).' % exc)
+            # Always scale to the svs level 0 tile size.
+            if svslevel['scale'] != 1:
+                tile = tile.resize((self.tileWidth, self.tileHeight),
+                                   getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
         return self._outputTile(tile, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
                                 numpyAllowed, **kwargs)
 
