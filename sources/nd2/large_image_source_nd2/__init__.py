@@ -16,6 +16,7 @@
 
 import math
 import os
+import threading
 
 import numpy
 
@@ -139,7 +140,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via nd2reader.')
-        self._nd2array = self._nd2.to_dask()
+        self._nd2array = self._nd2.to_dask(copy=False)
         arrayOrder = list(self._nd2.sizes)
         # Reorder this so that it is XY (P), T, Z, C, Y, X, S (or at least end
         # in Y, X[, S]).
@@ -171,6 +172,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._bandnames = {
             chan.channel.name.lower(): idx for idx, chan in enumerate(self._nd2.metadata.channels)}
         self._channels = [chan.channel.name for chan in self._nd2.metadata.channels]
+        self._tileLock = threading.RLock()
 
     def getNativeMagnification(self):
         """
@@ -262,8 +264,8 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             fc //= self._nd2.sizes[axis]
             tileframe = tileframe[fp // fc]
             fp = fp % fc
-
-        tile = numpy.array(tileframe[y0:y1:step, x0:x1:step])
+        with self._tileLock:
+            tile = tileframe[y0:y1:step, x0:x1:step].compute().copy()
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

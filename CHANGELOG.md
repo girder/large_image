@@ -4,6 +4,7 @@
 
 ### Improvements
 - Optionally include bounding box information with annotation queries ([851](../../pull/851))
+- Reduce memory copying in the nd2 reader ([853](../../pull/853))
 
 ## 1.14.3
 
