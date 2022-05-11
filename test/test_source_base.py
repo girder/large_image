@@ -208,6 +208,7 @@ def testIsGeospatial(filename, isgeo):
     'matplotlib.Plasma_6',
     [(0.5, 0.5, 0.5), (0.1, 0.1, 0.1, 0.1), 'xkcd:blue'],
     'coolwarm',
+    'GREEN',
 ])
 def testGoodGetPaletteColors(palette):
     large_image.tilesource.utilities.getPaletteColors(palette)

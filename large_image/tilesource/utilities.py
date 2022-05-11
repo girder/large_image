@@ -22,6 +22,17 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
 # Turn off decompression warning check
 PIL.Image.MAX_IMAGE_PIXELS = None
 
+# Extend colors so G and GREEN map to expected values.  CSS green is #0080ff,
+# which is unfortunate.
+colormap = {
+    'R': '#ff0000',
+    'G': '#00ff00',
+    'B': '#0000ff',
+    'RED': '#ff0000',
+    'GREEN': '#00ff00',
+    'BLUE': '#0000ff',
+}
+
 
 def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompression):
     """
@@ -185,7 +196,7 @@ def _letterboxImage(image, width, height, fill):
     corner = False
     if fill.lower().startswith('corner:'):
         corner, fill = True, fill.split(':', 1)[1]
-    color = PIL.ImageColor.getcolor(fill, image.mode)
+    color = PIL.ImageColor.getcolor(colormap.get(fill, fill), image.mode)
     width = max(width, image.width)
     height = max(height, image.height)
     result = PIL.Image.new(image.mode, (width, height), color)
@@ -451,7 +462,7 @@ def _arrayToPalette(palette):
             arr.append(numpy.array((list(clr) + [1, 1, 1])[:4]) * 255)
         else:
             try:
-                arr.append(PIL.ImageColor.getcolor(str(clr), 'RGBA'))
+                arr.append(PIL.ImageColor.getcolor(str(colormap.get(clr, clr)), 'RGBA'))
             except ValueError:
                 try:
                     import matplotlib
@@ -482,7 +493,7 @@ def getPaletteColors(value):
         palette = value
     if palette is None:
         try:
-            PIL.ImageColor.getcolor(str(value), 'RGBA')
+            PIL.ImageColor.getcolor(str(colormap.get(value, value)), 'RGBA')
             palette = ['#000', str(value)]
         except ValueError:
             pass
@@ -559,6 +570,7 @@ def getAvailableNamedPalettes(includeColors=True, reduced=False):
     palettes = set()
     if includeColors:
         palettes |= set(PIL.ImageColor.colormap.keys())
+        palettes |= set(colormap.keys())
     _recursePalettablePalettes(palettable, palettes)
     try:
         import matplotlib
