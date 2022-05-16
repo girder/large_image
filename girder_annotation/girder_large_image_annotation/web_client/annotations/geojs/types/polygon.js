@@ -9,12 +9,15 @@ import array from '../coordinates/array';
  */
 function polygon(annotation) {
     const element = common(annotation, 'polyline');
-    const coordinates = array(annotation.coordinates());
+    let coordinates = annotation.coordinates();
+    const holes = coordinates.inner ? coordinates.inner.map((h) => array(h)) : undefined;
+    coordinates = array(coordinates.outer || coordinates);
 
     return _.extend(element, {
         type: 'polyline',
         closed: true,
-        points: coordinates
+        points: coordinates,
+        holes
     });
 }
 
