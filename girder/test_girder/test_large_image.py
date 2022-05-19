@@ -18,7 +18,10 @@ try:
 
     from girder import events
     from girder.exceptions import ValidationException
+    from girder.models.collection import Collection
     from girder.models.file import File
+    from girder.models.folder import Folder
+    from girder.models.group import Group
     from girder.models.item import Item
     from girder.models.setting import Setting
 except ImportError:
@@ -400,3 +403,75 @@ def testHistogramCaching(server, admin, user, fsAssetstore):
     resp = server.request(path='/large_image/histograms', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json == 0
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testYAMLConfigFile(server, admin, user, fsAssetstore):
+    # Create some resources to use in the tests
+    collection = Collection().createCollection(
+        'collection A', admin)
+    colFolderA = Folder().createFolder(
+        collection, 'folder A', parentType='collection',
+        creator=admin)
+    colFolderB = Folder().createFolder(
+        colFolderA, 'folder C', creator=admin)
+    groupA = Group().createGroup('Group A', admin)
+
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']),
+        method='GET')
+    assert utilities.respStatus(resp) == 200
+    assert resp.json is None
+
+    colFolderConfig = Folder().createFolder(
+        collection, '.config', parentType='collection',
+        creator=admin)
+    utilities.uploadText(
+        json.dumps({'keyA': 'value1'}),
+        admin, fsAssetstore, colFolderConfig, 'sample.json')
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']))
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value1'
+
+    utilities.uploadText(
+        json.dumps({'keyA': 'value2'}),
+        admin, fsAssetstore, colFolderA, 'sample.json')
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']))
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value2'
+
+    utilities.uploadText(
+        json.dumps({
+            'keyA': 'value3',
+            'groups': {
+                'Group A': {'access': {'user': {'keyA': 'value4'}}}},
+            'access': {'user': {'keyA': 'value5'}, 'admin': {'keyA': 'value6'}}}),
+        admin, fsAssetstore, colFolderB, 'sample.json')
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']))
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value3'
+
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']), user=user)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value5'
+
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']), user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value6'
+
+    Group().addUser(groupA, user)
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']), user=user)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value4'
+
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']), user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value6'

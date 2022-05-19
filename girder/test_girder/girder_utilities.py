@@ -1,3 +1,4 @@
+import io
 import os
 from test.datastore import datastore
 from test.utilities import BigTIFFHeader, JFIFHeader, JPEGHeader, PNGHeader, TIFFHeader  # noqa
@@ -36,6 +37,13 @@ def uploadTestFile(fileName, user, assetstore, folderName='Public', name=None):
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, '..', '..', 'test', 'test_files', fileName)
     return uploadFile(imagePath, user=user, assetstore=assetstore, folderName=folderName, name=None)
+
+
+def uploadText(text, user, assetstore, folder, name):
+    file = Upload().uploadFromFile(
+        io.BytesIO(text.encode()), len(text), name,
+        parentType='folder', parent=folder, user=user, assetstore=assetstore)
+    return file
 
 
 def respStatus(resp):

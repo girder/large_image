@@ -39,6 +39,7 @@ from . import constants, girder_tilesource
 from .girder_tilesource import getGirderTileSource  # noqa
 from .loadmodelcache import invalidateLoadModelCache
 from .models.image_item import ImageItem
+from .rest import addSystemEndpoints
 from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
 
@@ -322,6 +323,7 @@ class LargeImagePlugin(GirderPlugin):
         curConfig = config.getConfig().get('large_image')
         for key, value in (curConfig or {}).items():
             large_image.config.setConfig(key, value)
+        addSystemEndpoints(info['apiRoot'])
 
         girder_tilesource.loadGirderTileSources()
         TilesItemResource(info['apiRoot'])

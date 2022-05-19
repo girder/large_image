@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+
+### Improvements
+- Better handle editing polygons with holes ([857](../../pull/857))
+- Support fetching yaml config files ([860](../../pull/860))
+
 ## 1.14.4
 
 ### Improvements
