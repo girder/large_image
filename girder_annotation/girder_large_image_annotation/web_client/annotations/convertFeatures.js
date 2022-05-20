@@ -80,7 +80,8 @@ function convertHeatmap(record, properties, layer) {
             radius: record.radius || 25,
             blurRadius: 0,
             gaussian: true,
-            color: colorTable.color
+            color: colorTable.color,
+            scaleWithZoom: record.scaleWithZoom || false
         },
         position: (d) => ({x: d[0], y: d[1], z: d[2]}),
         intensity: (d) => d[3] || 0,
