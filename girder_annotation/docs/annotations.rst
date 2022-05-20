@@ -182,7 +182,7 @@ near by values aggregate together when viewed.
                                        # the rangeValues.  Optional
     "rangeValues: [0, 1],              # A list of range values corresponding to the colorRange list
                                        # and possibly normalized to a scale of [0, 1].  Optional
-    "normalizeRange": true             # If true, the rangeValues are normalized to [0, 1].  If
+    "normalizeRange": true,            # If true, the rangeValues are normalized to [0, 1].  If
                                        # false, the rangeValues are in the
                                        # value domain.  Defaults to true.  Optional
     "scaleWithZoom": true              # If true, scale the size of points with the zoom level of
