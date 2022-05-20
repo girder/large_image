@@ -447,7 +447,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         if (annotation._centroids) {
                             annotation._shownIds = new Set(feature.data().map((d) => d.id));
                         }
-                        if (data.length <= this._highlightFeatureSizeLimit) {
+                        if (data.length <= this._highlightFeatureSizeLimit && !annotation._centroids) {
                             this._featureOpacity[annotation.id][feature.featureType] = feature.data()
                                 .map(({id, properties}) => {
                                     return {
