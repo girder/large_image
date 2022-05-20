@@ -330,6 +330,14 @@ class AnnotationSchema:
                     'data.  If false (the default), the rangeValues '
                     'are the actual data values.',
             },
+            'scaleWithZoom': {
+                'type': 'boolean',
+                'description':
+                    'If true, scale the size of points with the '
+                    'zoom level of the map. In this case, the '
+                    'radius property refers to the size of points '
+                    'at zoom level 0.'
+            }
         },
         'required': ['type', 'points'],
         'additionalProperties': False,
