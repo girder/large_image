@@ -334,9 +334,7 @@ class AnnotationSchema:
                 'type': 'boolean',
                 'description':
                     'If true, scale the size of points with the '
-                    'zoom level of the map. In this case, the '
-                    'radius property refers to the size of points '
-                    'at zoom level 0.'
+                    'zoom level of the map.'
             }
         },
         'required': ['type', 'points'],
