@@ -185,6 +185,9 @@ near by values aggregate together when viewed.
     "normalizeRange": true             # If true, the rangeValues are normalized to [0, 1].  If
                                        # false, the rangeValues are in the
                                        # value domain.  Defaults to true.  Optional
+    "scaleWithZoom": true              # If true, scale the size of points with the zoom level of
+                                       # the map. In this case, the radius property refers to the
+                                       # size of points at zoom level 0. Defaults to false. Optional
   }
 
 Grid Data
