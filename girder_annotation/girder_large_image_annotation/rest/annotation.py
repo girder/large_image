@@ -552,7 +552,7 @@ class AnnotationResource(Resource):
 
         count = 0
         for annotation in Annotation().find(query, limit=0, sort=[('_id', 1)]):
-            annot = Annotation().load(annotation['_id'], user=user)
+            annot = Annotation().load(annotation['_id'], user=user, getElements=False)
             if annot:
                 Annotation().remove(annot)
                 count += 1
