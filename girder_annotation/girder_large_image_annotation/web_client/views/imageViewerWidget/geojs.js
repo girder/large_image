@@ -793,6 +793,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (evt.annotation.state() !== window.geo.annotation.state.done) {
                         return;
                     }
+                    const opts = {};
+                    if (layer.currentBooleanOperation) {
+                        opts.currentBooleanOperation = layer.currentBooleanOperation();
+                    }
                     element = convertAnnotation(evt.annotation);
                     if (!element.id) {
                         element.id = guid();
@@ -801,12 +805,12 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     annotations.push(evt.annotation);
 
                     if (options.trigger) {
-                        events.trigger('g:annotationCreated', element, evt.annotation);
+                        events.trigger('g:annotationCreated', element, evt.annotation, opts);
                     }
 
                     layer.removeAllAnnotations();
                     layer.geoOff(window.geo.event.annotation.state);
-                    defer.resolve(elements, annotations);
+                    defer.resolve(elements, annotations, opts);
                 }
             );
             layer.mode(type);
@@ -884,7 +888,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     this.trigger(overlayEventType, overlay, overlayLayer, evt);
                 }
             }
-        }
+        },
+
+        _guid: guid
     });
 };
 
