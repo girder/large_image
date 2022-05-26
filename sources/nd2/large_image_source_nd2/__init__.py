@@ -134,12 +134,12 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         _lazyImport()
         try:
-            # We use dask to allow lazy reading of large images
-            self._nd2 = nd2.ND2File(self._largeImagePath)
+            self._nd2 = nd2.ND2File(self._largeImagePath, validate_frames=True)
         except Exception:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via nd2reader.')
+        # We use dask to allow lazy reading of large images
         self._nd2array = self._nd2.to_dask(copy=False)
         arrayOrder = list(self._nd2.sizes)
         # Reorder this so that it is XY (P), T, Z, C, Y, X, S (or at least end
