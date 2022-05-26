@@ -53,7 +53,7 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'dask[array]',
-        'nd2[legacy]<0.2.3 ; python_version >= "3.7"',
+        'nd2[legacy]>=0.2.3 ; python_version >= "3.7"',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
