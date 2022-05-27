@@ -1,16 +1,18 @@
 # Change Log
 
-## Unreleased
+## 1.14.4
 
 ### Improvements
 - Better handle editing polygons with holes ([857](../../pull/857))
 - Support fetching yaml config files ([860](../../pull/860))
-
-## 1.14.4
-
-### Improvements
 - Optionally include bounding box information with annotation queries ([851](../../pull/851))
 - Reduce memory copying in the nd2 reader ([853](../../pull/853))
+- Add support for boolean annotation operations ([865](../../pull/865))
+- Speed up removing all annotations from an item ([863](../../pull/863))
+
+### Bug Fixes
+- Fix issues with the nd2 reader ([866](../../pull/866), [867](../../pull/867))
+- Honor the highlight size limit with centroid annotations ([861](../../pull/861))
 
 ## 1.14.3
 
