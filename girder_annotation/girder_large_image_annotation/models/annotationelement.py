@@ -14,9 +14,11 @@
 #  limitations under the License.
 ##############################################################################
 
+import concurrent.futures
 import datetime
 import io
 import math
+import multiprocessing
 import pickle
 import time
 
@@ -417,12 +419,15 @@ class Annotationelement(Model):
         bbox = {}
         if 'points' in element:
             pts = element['points']
-            bbox['lowx'] = min(p[0] for p in pts)
-            bbox['lowy'] = min(p[1] for p in pts)
-            bbox['lowz'] = min(p[2] for p in pts)
-            bbox['highx'] = max(p[0] for p in pts)
-            bbox['highy'] = max(p[1] for p in pts)
-            bbox['highz'] = max(p[2] for p in pts)
+            p0 = [p[0] for p in pts]
+            p1 = [p[1] for p in pts]
+            p2 = [p[2] for p in pts]
+            bbox['lowx'] = min(p0)
+            bbox['lowy'] = min(p1)
+            bbox['lowz'] = min(p2)
+            bbox['highx'] = max(p0)
+            bbox['highy'] = max(p1)
+            bbox['highz'] = max(p2)
             bbox['details'] = len(pts)
         elif element.get('type') == 'griddata':
             x0, y0, z = element['origin']
@@ -504,6 +509,35 @@ class Annotationelement(Model):
             'fileId': elementFile['_id'],
         }
 
+    def updateElementChunk(self, elements, chunk, chunkSize, annotation, now):
+        """
+        Update the database for a chunk of elements.  See the updateElements
+        method for details.
+        """
+        lastTime = time.time()
+        chunkStartTime = time.time()
+        entries = [{
+            'annotationId': annotation['_id'],
+            '_version': annotation['_version'],
+            'created': now,
+            'bbox': self._boundingBox(element),
+            'element': element
+        } for element in elements[chunk:chunk + chunkSize]]
+        prepTime = time.time() - chunkStartTime
+        if (len(entries) == 1 and len(entries[0]['element'].get(
+                'points', entries[0]['element'].get('values', []))) > MAX_ELEMENT_DOCUMENT):
+            self.saveElementAsFile(annotation, entries)
+        res = self.collection.insert_many(entries, ordered=False)
+        for pos, entry in enumerate(entries):
+            if 'id' not in entry['element']:
+                entry['element']['id'] = str(res.inserted_ids[pos])
+        # If the insert is slow, log information about it.
+        if time.time() - lastTime > 10:
+            logger.info('insert %d elements in %4.2fs (prep time %4.2fs), chunk %d/%d' % (
+                len(entries), time.time() - chunkStartTime, prepTime,
+                chunk + len(entries), len(elements)))
+            lastTime = time.time()
+
     def updateElements(self, annotation):
         """
         Given an annotation, extract the elements from it and update the
@@ -511,35 +545,16 @@ class Annotationelement(Model):
 
         :param annotation: the annotation to save elements for.  Modified.
         """
-        startTime = lastTime = time.time()
+        startTime = time.time()
         elements = annotation['annotation'].get('elements', [])
         if not len(elements):
             return
         now = datetime.datetime.utcnow()
-        chunkSize = 100000
-        for chunk in range(0, len(elements), chunkSize):
-            chunkStartTime = time.time()
-            entries = [{
-                'annotationId': annotation['_id'],
-                '_version': annotation['_version'],
-                'created': now,
-                'bbox': self._boundingBox(element),
-                'element': element
-            } for element in elements[chunk:chunk + chunkSize]]
-            prepTime = time.time() - chunkStartTime
-            if (len(entries) == 1 and len(entries[0]['element'].get(
-                    'points', entries[0]['element'].get('values', []))) > MAX_ELEMENT_DOCUMENT):
-                self.saveElementAsFile(annotation, entries)
-            res = self.collection.insert_many(entries)
-            for pos, entry in enumerate(entries):
-                if 'id' not in entry['element']:
-                    entry['element']['id'] = str(res.inserted_ids[pos])
-            # If the whole insert is slow, log information about it.
-            if time.time() - lastTime > 10:
-                logger.info('insert %d elements in %4.2fs (prep time %4.2fs), done %d/%d' % (
-                    len(entries), time.time() - chunkStartTime, prepTime,
-                    chunk + len(entries), len(elements)))
-                lastTime = time.time()
+        threads = multiprocessing.cpu_count()
+        chunkSize = int(max(100000 // threads, 10000))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
+            for chunk in range(0, len(elements), chunkSize):
+                pool.submit(self.updateElementChunk, elements, chunk, chunkSize, annotation, now)
         if time.time() - startTime > 10:
             logger.info('inserted %d elements in %4.2fs' % (
                 len(elements), time.time() - startTime))
