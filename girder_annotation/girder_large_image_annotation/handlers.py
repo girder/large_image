@@ -126,6 +126,7 @@ def process_annotations(event):
 
     if not isinstance(data, list):
         data = [data]
+    data = [entry['annotation'] if 'annotation' in entry else entry for entry in data]
     # Check some of the early elements to see if there are any girderIds
     # that need resolution.
     if 'uuid' in results:
