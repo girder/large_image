@@ -1016,9 +1016,13 @@ class Annotation(AccessControlledModel):
             if parentKey == 'holes':
                 return all(
                     len(hole) == 3 and
-                    isinstance(hole[0], self.numberInstance) and
-                    isinstance(hole[1], self.numberInstance) and
-                    isinstance(hole[2], self.numberInstance)
+                    # this is faster than checking the instance type, and, if
+                    # it raises an exception, it would have failed validation
+                    # any way.
+                    1 + hole[0] + hole[1] + hole[2] is not None
+                    # isinstance(hole[0], self.numberInstance) and
+                    # isinstance(hole[1], self.numberInstance) and
+                    # isinstance(hole[2], self.numberInstance)
                     for hlist in b
                     for hole in hlist)
             if len(a) != len(b):
@@ -1027,9 +1031,13 @@ class Annotation(AccessControlledModel):
                 # If this is an array of points, let it pass
                 return all(
                     len(elem) == 3 and
-                    isinstance(elem[0], self.numberInstance) and
-                    isinstance(elem[1], self.numberInstance) and
-                    isinstance(elem[2], self.numberInstance)
+                    # this is faster than checking the instance type, and, if
+                    # it raises an exception, it would have failed validation
+                    # any way.
+                    1 + elem[0] + elem[1] + elem[2] is not None
+                    # isinstance(elem[0], self.numberInstance) and
+                    # isinstance(elem[1], self.numberInstance) and
+                    # isinstance(elem[2], self.numberInstance)
                     for elem in b)
             for idx in range(len(a)):
                 if not self._similarElementStructure(a[idx], b[idx], parentKey):
@@ -1083,11 +1091,14 @@ class Annotation(AccessControlledModel):
                         element[key] = []
                     except Exception:
                         pass
-                if (not self._similarElementStructure(element, lastValidatedElement) and
-                        not self._similarElementStructure(element, lastValidatedElement2)):
+                try:
+                    if (not self._similarElementStructure(element, lastValidatedElement) and
+                            not self._similarElementStructure(element, lastValidatedElement2)):
+                        self.validatorAnnotationElement.validate(element)
+                        lastValidatedElement2 = lastValidatedElement
+                        lastValidatedElement = element
+                except TypeError:
                     self.validatorAnnotationElement.validate(element)
-                    lastValidatedElement2 = lastValidatedElement
-                    lastValidatedElement = element
                 if keys:
                     element.update(keys)
                 if time.time() - lastTime > 10:
