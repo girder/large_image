@@ -251,6 +251,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             const overlays = annotation.overlays() || [];
             var present = _.has(this._annotations, annotation.id);
             var centroidFeature;
+            let immediateUpdate = false;
             if (present) {
                 _.each(this._annotations[annotation.id].features, (feature, idx) => {
                     if (idx || !annotation._centroids || feature.data().length !== annotation._centroids.data.length) {
@@ -258,6 +259,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                             feature.layer().map().deleteLayer(feature.layer());
                         } else {
                             this.featureLayer.deleteFeature(feature);
+                            immediateUpdate = true;
                         }
                     } else {
                         centroidFeature = feature;
@@ -417,7 +419,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 });
             });
             this._featureOpacity[annotation.id] = {};
-            geo.createFileReader('jsonReader', {layer: this.featureLayer})
+            geo.createFileReader('geojsonReader', {layer: this.featureLayer})
                 .read(geojson, (features) => {
                     if (features.length === 0) {
                         features = annotation.non_geojson(this.featureLayer);
@@ -482,6 +484,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     }
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
                 });
+            if (immediateUpdate) {
+                this.featureLayer._update();
+            }
         },
 
         /**
