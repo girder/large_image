@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.14.5
+
+### Improvements
+- Speed up ingesting annotations ([870](../../pull/870))
+- Reduce the chance of blinking on annotation layers ([871](../../pull/871))
+- Reduce updates when modifying annotations ([872](../../pull/872))
+
+### Bug Fixes
+- Improve annotation upload; support full annotation documents ([869](../../pull/869))
+
 ## 1.14.4
 
 ### Improvements
