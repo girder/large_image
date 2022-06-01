@@ -1300,7 +1300,7 @@ class Annotation(AccessControlledModel):
         :param keepInactiveVersions: keep at least this many inactive versions
             of any annotation, regardless of age.
         """
-        if remove and minAgeInDays < 7 or minAgeInDays < 0:
+        if (remove and minAgeInDays < 7) or minAgeInDays < 0:
             raise ValidationException('minAgeInDays must be >= 7')
         age = datetime.datetime.utcnow() + datetime.timedelta(-minAgeInDays)
         if keepInactiveVersions < 0:
