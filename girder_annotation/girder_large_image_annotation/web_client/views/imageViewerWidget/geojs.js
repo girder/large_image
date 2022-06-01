@@ -504,13 +504,15 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * @param {string?} element The id of the element to highlight
          */
         highlightAnnotation: function (annotation, element) {
-            this._highlightAnnotation = annotation;
-            this._highlightElement = element;
-            _.each(this._annotations, (layer, annotationId) => {
-                const features = layer.features;
-                this._mutateFeaturePropertiesForHighlight(annotationId, features);
-            });
-            this.viewer.scheduleAnimationFrame(this.viewer.draw);
+            if (annotation !== this._highlightAnnotation || element !== this._highlightElement) {
+                this._highlightAnnotation = annotation;
+                this._highlightElement = element;
+                _.each(this._annotations, (layer, annotationId) => {
+                    const features = layer.features;
+                    this._mutateFeaturePropertiesForHighlight(annotationId, features);
+                });
+                this.viewer.scheduleAnimationFrame(this.viewer.draw);
+            }
             return this;
         },
 
