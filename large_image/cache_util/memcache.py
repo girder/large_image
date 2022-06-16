@@ -16,6 +16,7 @@
 
 import threading
 import time
+from typing import Tuple
 
 from .. import config
 from .base import BaseCache
@@ -145,7 +146,7 @@ class MemCache(BaseCache):
         self._client.flush_all()
 
     @staticmethod
-    def getCache() -> tuple['MemCache', threading.Lock]:
+    def getCache() -> Tuple['MemCache', threading.Lock]:
         # lock needed because pylibmc(memcached client) is not threadsafe
         cacheLock = threading.Lock()
 

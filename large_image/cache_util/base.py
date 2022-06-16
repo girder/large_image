@@ -1,6 +1,7 @@
 import hashlib
 import threading
 import time
+from typing import Tuple
 
 import cachetools
 
@@ -75,6 +76,6 @@ class BaseCache(cachetools.Cache):
         raise NotImplementedError
 
     @staticmethod
-    def getCache() -> tuple['BaseCache', threading.Lock]:
+    def getCache() -> Tuple['BaseCache', threading.Lock]:
         # return cache, cacheLock
         raise NotImplementedError
