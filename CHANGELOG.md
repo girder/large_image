@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Bug Fixes
+- Fix getPixel for single channel sources ([875](../../pull/875))
+
 ## 1.14.5
 
 ### Improvements
