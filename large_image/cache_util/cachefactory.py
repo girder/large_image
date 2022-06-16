@@ -16,7 +16,6 @@
 
 import math
 import threading
-from collections import OrderedDict
 
 import cachetools
 
@@ -37,10 +36,12 @@ try:
 except ImportError:
     MemCache = None
 
-availableCaches = OrderedDict()
+# DO NOT MANUALLY ADD ANYTHING TO `_availableCaches`
+#  use entrypoints and let loadCaches fill in `_availableCaches`
+_availableCaches = {}
 
 
-def loadCaches(entryPointName='large_image.cache', sourceDict=availableCaches):
+def loadCaches(entryPointName='large_image.cache', sourceDict=_availableCaches):
     """
     Load all caches from entrypoints and add them to the
     availableCaches dictionary.
@@ -48,20 +49,23 @@ def loadCaches(entryPointName='large_image.cache', sourceDict=availableCaches):
     :param entryPointName: the name of the entry points to load.
     :param sourceDict: a dictionary to populate with the loaded caches.
     """
+    if len(_availableCaches):
+        return
     epoints = entry_points()
     if entryPointName in epoints:
         for entryPoint in epoints[entryPointName]:
             try:
                 cacheClass = entryPoint.load()
                 sourceDict[entryPoint.name.lower()] = cacheClass
-                config.getConfig('logprint').debug('Loaded cache %s' % entryPoint.name)
+                config.getConfig('logprint').debug(f'Loaded cache {entryPoint.name}')
             except Exception:
                 config.getConfig('logprint').exception(
-                    'Failed to load cache %s' % entryPoint.name)
+                    f'Failed to load cache {entryPoint.name}'
+                )
     # Load memcached last for now
     if MemCache is not None:
         # TODO: put this in an entry point for a new package
-        availableCaches['memcached'] = MemCache
+        _availableCaches['memcached'] = MemCache
     # NOTE: `python` cache is viewed as a fallback and isn't listed in `availableCaches`
 
 
@@ -120,29 +124,32 @@ class CacheFactory:
                 pass
         return numItems
 
-    def getCache(self, numItems=None, cacheName=None):
+    def getCache(self, numItems=None, cacheName=None, inProcess=False):
         loadCaches()
-        # memcached is the fallback default, if available.
-        cacheBackend = config.getConfig('cache_backend', None)
 
-        if cacheBackend is None and len(availableCaches):
-            cacheBackend = next(iter(availableCaches))
-            config.getConfig('logprint').info('Automatically setting `%s` as cache_backend from availableCaches' % cacheBackend)
+        # Default to `python` cache for inProcess
+        cacheBackend = config.getConfig('cache_backend', 'python' if inProcess else None)
+
+        # set the config cache_backend if caches available and not set
+        if cacheBackend is None and len(_availableCaches):
+            cacheBackend = next(iter(_availableCaches))
+            config.getConfig('logprint').info(
+                f'Automatically setting `{cacheBackend}` as cache_backend from availableCaches'
+            )
             config.setConfig('cache_backend', cacheBackend)
 
-        if cacheBackend:
-            cacheBackend = str(cacheBackend).lower()
+        if isinstance(cacheBackend, str):
+            cacheBackend = cacheBackend.lower()
 
-        cache = None
-        # TODO: why have this numItems check?
-        if numItems is None and cacheBackend in availableCaches:
-            cache, cacheLock = availableCaches[cacheBackend].getCache()
-
-        if cache is None:  # fallback backend
+        if not inProcess and cacheBackend in _availableCaches:
+            cache, cacheLock = _availableCaches[cacheBackend].getCache()
+        else:  # fallback backend or inProcess
             cacheBackend = 'python'
             cache = cachetools.LRUCache(self.getCacheSize(numItems, cacheName=cacheName))
             cacheLock = threading.Lock()
-        if numItems is None and not CacheFactory.logged:
-            config.getConfig('logprint').info('Using %s for large_image caching' % cacheBackend)
+
+        if not inProcess and not CacheFactory.logged:
+            config.getConfig('logprint').info(f'Using {cacheBackend} for large_image caching')
             CacheFactory.logged = True
+
         return cache, cacheLock

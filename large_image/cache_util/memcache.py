@@ -145,7 +145,7 @@ class MemCache(BaseCache):
         self._client.flush_all()
 
     @staticmethod
-    def getCache():
+    def getCache() -> tuple['MemCache', threading.Lock]:
         # lock needed because pylibmc(memcached client) is not threadsafe
         cacheLock = threading.Lock()
 
@@ -162,7 +162,7 @@ class MemCache(BaseCache):
             memcachedPassword = None
         try:
             cache = MemCache(url, memcachedUsername, memcachedPassword,
-                                mustBeAvailable=True)
+                             mustBeAvailable=True)
         except Exception:
             config.getConfig('logger').info('Cannot use memcached for caching.')
             cache = None

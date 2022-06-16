@@ -1,4 +1,5 @@
 import hashlib
+import threading
 import time
 
 import cachetools
@@ -39,13 +40,13 @@ class BaseCache(cachetools.Cache):
         raise NotImplementedError
 
     def __len__(self):
-       raise NotImplementedError
+        raise NotImplementedError
 
     def __contains__(self, key):
         raise NotImplementedError
 
     def __delitem__(self, key):
-       raise NotImplementedError
+        raise NotImplementedError
 
     def _hashKey(self, key):
         return hashlib.sha256(key.encode()).hexdigest()
@@ -68,12 +69,12 @@ class BaseCache(cachetools.Cache):
 
     @property
     def maxsize(self):
-       raise NotImplementedError
+        raise NotImplementedError
 
     def clear(self):
-       raise NotImplementedError
+        raise NotImplementedError
 
     @staticmethod
-    def getCache():
+    def getCache() -> tuple['BaseCache', threading.Lock]:
         # return cache, cacheLock
         raise NotImplementedError
