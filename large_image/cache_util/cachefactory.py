@@ -30,6 +30,7 @@ except ImportError:
     from importlib_metadata import entry_points
 
 from .. import config
+from ..exceptions import TileCacheError
 
 try:
     from .memcache import MemCache
@@ -100,6 +101,26 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None, cacheName=None):
     return numItems
 
 
+def getFirstAvailableCache():
+    cacheBackend = config.getConfig('cache_backend', None)
+    if cacheBackend is not None:
+        raise ValueError('cache_backend already set')
+    loadCaches()
+    cache, cacheLock = None, None
+    for cacheBackend in _availableCaches:
+        try:
+            cache, cacheLock = _availableCaches[cacheBackend].getCache()
+            break
+        except TileCacheError:
+            continue
+    if cache is not None:
+        config.getConfig('logprint').info(
+            f'Automatically setting `{cacheBackend}` as cache_backend from availableCaches'
+        )
+        config.setConfig('cache_backend', cacheBackend)
+    return cache, cacheLock
+
+
 class CacheFactory:
     logged = False
 
@@ -130,20 +151,16 @@ class CacheFactory:
         # Default to `python` cache for inProcess
         cacheBackend = config.getConfig('cache_backend', 'python' if inProcess else None)
 
-        # set the config cache_backend if caches available and not set
-        if cacheBackend is None and len(_availableCaches):
-            cacheBackend = next(iter(_availableCaches))
-            config.getConfig('logprint').info(
-                f'Automatically setting `{cacheBackend}` as cache_backend from availableCaches'
-            )
-            config.setConfig('cache_backend', cacheBackend)
-
         if isinstance(cacheBackend, str):
             cacheBackend = cacheBackend.lower()
 
+        cache = None
         if not inProcess and cacheBackend in _availableCaches:
             cache, cacheLock = _availableCaches[cacheBackend].getCache()
-        else:  # fallback backend or inProcess
+        elif not inProcess and cacheBackend is None:
+            cache, cacheLock = getFirstAvailableCache()
+
+        if cache is None:  # fallback backend or inProcess
             cacheBackend = 'python'
             cache = cachetools.LRUCache(self.getCacheSize(numItems, cacheName=cacheName))
             cacheLock = threading.Lock()

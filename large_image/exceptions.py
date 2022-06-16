@@ -26,6 +26,14 @@ class TileSourceFileNotFoundError(TileSourceError, FileNotFoundError):
         return super().__init__(errno.ENOENT, *args, **kwargs)
 
 
+class TileCacheError(TileGeneralError):
+    pass
+
+
+class TileCacheConfigurationError(TileCacheError):
+    pass
+
+
 TileGeneralException = TileGeneralError
 TileSourceException = TileSourceError
 TileSourceAssetstoreException = TileSourceAssetstoreError
