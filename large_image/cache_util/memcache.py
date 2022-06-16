@@ -14,15 +14,14 @@
 #  limitations under the License.
 #############################################################################
 
-import hashlib
+import threading
 import time
 
-import cachetools
-
 from .. import config
+from .base import BaseCache
 
 
-class MemCache(cachetools.Cache):
+class MemCache(BaseCache):
     """Use memcached as the backing cache."""
 
     def __init__(self, url='127.0.0.1', username=None, password=None,
@@ -56,8 +55,6 @@ class MemCache(cachetools.Cache):
             self._client['large_image_cache_test'] = time.time()
         self._clientParams = (url, dict(
             binary=True, username=username, password=password, behaviors=behaviors))
-        self.lastError = {}
-        self.throttleErrors = 10  # seconds between logging errors
 
     def __repr__(self):
         return "Memcache doesn't list its keys"
@@ -75,31 +72,11 @@ class MemCache(cachetools.Cache):
         return None
 
     def __delitem__(self, key):
-        hashedKey = hashlib.sha256(key.encode()).hexdigest()
+        hashedKey = self._hashKey(key)
         del self._client[hashedKey]
 
-    def logError(self, err, func, msg):
-        """
-        Log errors, but throttle them so as not to spam the logs.
-
-        :param err: error to log.
-        :param func: function to use for logging.  This is something like
-            logprint.exception or logger.error.
-        :param msg: the message to log.
-        """
-        curtime = time.time()
-        key = (err, func)
-        if (curtime - self.lastError.get(key, {}).get('time', 0) > self.throttleErrors):
-            skipped = self.lastError.get(key, {}).get('skipped', 0)
-            if skipped:
-                msg += '  (%d similar messages)' % skipped
-            self.lastError[key] = {'time': curtime, 'skipped': 0}
-            func(msg)
-        else:
-            self.lastError[key]['skipped'] += 1
-
     def __getitem__(self, key):
-        hashedKey = hashlib.sha256(key.encode()).hexdigest()
+        hashedKey = self._hashKey(key)
         try:
             return self._client[hashedKey]
         except KeyError:
@@ -114,7 +91,7 @@ class MemCache(cachetools.Cache):
             return self.__missing__(key)
 
     def __setitem__(self, key, value):
-        hashedKey = hashlib.sha256(key.encode()).hexdigest()
+        hashedKey = self._hashKey(key)
         try:
             self._client[hashedKey] = value
         except (TypeError, KeyError) as exc:
@@ -166,3 +143,27 @@ class MemCache(cachetools.Cache):
 
     def clear(self):
         self._client.flush_all()
+
+    @staticmethod
+    def getCache():
+        # lock needed because pylibmc(memcached client) is not threadsafe
+        cacheLock = threading.Lock()
+
+        # check if credentials and location exist, otherwise assume
+        # location is 127.0.0.1 (localhost) with no password
+        url = config.getConfig('cache_memcached_url')
+        if not url:
+            url = '127.0.0.1'
+        memcachedUsername = config.getConfig('cache_memcached_username')
+        if not memcachedUsername:
+            memcachedUsername = None
+        memcachedPassword = config.getConfig('cache_memcached_password')
+        if not memcachedPassword:
+            memcachedPassword = None
+        try:
+            cache = MemCache(url, memcachedUsername, memcachedPassword,
+                                mustBeAvailable=True)
+        except Exception:
+            config.getConfig('logger').info('Cannot use memcached for caching.')
+            cache = None
+        return cache, cacheLock

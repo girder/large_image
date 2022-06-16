@@ -14,9 +14,9 @@
 #  limitations under the License.
 #############################################################################
 
-
 import math
 import threading
+from collections import OrderedDict
 
 import cachetools
 
@@ -25,12 +25,44 @@ try:
 except ImportError:
     psutil = None
 
+try:
+    from importlib.metadata import entry_points
+except ImportError:
+    from importlib_metadata import entry_points
+
 from .. import config
 
 try:
     from .memcache import MemCache
 except ImportError:
     MemCache = None
+
+availableCaches = OrderedDict()
+
+
+def loadCaches(entryPointName='large_image.cache', sourceDict=availableCaches):
+    """
+    Load all caches from entrypoints and add them to the
+    availableCaches dictionary.
+
+    :param entryPointName: the name of the entry points to load.
+    :param sourceDict: a dictionary to populate with the loaded caches.
+    """
+    epoints = entry_points()
+    if entryPointName in epoints:
+        for entryPoint in epoints[entryPointName]:
+            try:
+                cacheClass = entryPoint.load()
+                sourceDict[entryPoint.name.lower()] = cacheClass
+                config.getConfig('logprint').debug('Loaded cache %s' % entryPoint.name)
+            except Exception:
+                config.getConfig('logprint').exception(
+                    'Failed to load cache %s' % entryPoint.name)
+    # Load memcached last for now
+    if MemCache is not None:
+        # TODO: put this in an entry point for a new package
+        availableCaches['memcached'] = MemCache
+    # NOTE: `python` cache is viewed as a fallback and isn't listed in `availableCaches`
 
 
 def pickAvailableCache(sizeEach, portion=8, maxItems=None, cacheName=None):
@@ -89,32 +121,23 @@ class CacheFactory:
         return numItems
 
     def getCache(self, numItems=None, cacheName=None):
+        loadCaches()
         # memcached is the fallback default, if available.
-        cacheBackend = config.getConfig('cache_backend', 'python')
+        cacheBackend = config.getConfig('cache_backend', None)
+
+        if cacheBackend is None and len(availableCaches):
+            cacheBackend = next(iter(availableCaches))
+            config.getConfig('logprint').info('Automatically setting `%s` as cache_backend from availableCaches' % cacheBackend)
+            config.setConfig('cache_backend', cacheBackend)
+
         if cacheBackend:
             cacheBackend = str(cacheBackend).lower()
-        cache = None
-        if cacheBackend == 'memcached' and MemCache and numItems is None:
-            # lock needed because pylibmc(memcached client) is not threadsafe
-            cacheLock = threading.Lock()
 
-            # check if credentials and location exist, otherwise assume
-            # location is 127.0.0.1 (localhost) with no password
-            url = config.getConfig('cache_memcached_url')
-            if not url:
-                url = '127.0.0.1'
-            memcachedUsername = config.getConfig('cache_memcached_username')
-            if not memcachedUsername:
-                memcachedUsername = None
-            memcachedPassword = config.getConfig('cache_memcached_password')
-            if not memcachedPassword:
-                memcachedPassword = None
-            try:
-                cache = MemCache(url, memcachedUsername, memcachedPassword,
-                                 mustBeAvailable=True)
-            except Exception:
-                config.getConfig('logger').info('Cannot use memcached for caching.')
-                cache = None
+        cache = None
+        # TODO: why have this numItems check?
+        if numItems is None and cacheBackend in availableCaches:
+            cache, cacheLock = availableCaches[cacheBackend].getCache()
+
         if cache is None:  # fallback backend
             cacheBackend = 'python'
             cache = cachetools.LRUCache(self.getCacheSize(numItems, cacheName=cacheName))
