@@ -1,6 +1,9 @@
 # Change Log
 
-## Unreleased
+## 1.15.0
+
+### Features
+- Abstract caching and support entrypoints ([876](../../pull/876))
 
 ### Bug Fixes
 - Fix getPixel for single channel sources ([875](../../pull/875))
