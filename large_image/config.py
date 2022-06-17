@@ -12,7 +12,7 @@ ConfigValues = {
     'logprint': fallbackLogger,
 
     # For tiles
-    'cache_backend': 'python',  # 'python' or 'memcached'
+    'cache_backend': None,  # 'python' or 'memcached'
     # 'python' cache can use 1/(val) of the available memory
     'cache_python_memory_portion': 32,
     # cache_memcached_url may be a list
