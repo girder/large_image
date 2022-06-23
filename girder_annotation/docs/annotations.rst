@@ -176,7 +176,7 @@ near by values aggregate together when viewed.
       [10976, 93376, 0, 0.2],
       [42368, 65248, 0, 0.054]
     ],
-    "radius": 25,                      # Positive number.  Optional.  The size of the gaussian plot
+    "radius": 25,                      # Positive number.  Optional.  The size of the gaussian point
                                        # spread
     "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"],  # A list of colors corresponding to
                                        # the rangeValues.  Optional
@@ -186,7 +186,9 @@ near by values aggregate together when viewed.
                                        # false, the rangeValues are in the
                                        # value domain.  Defaults to true.  Optional
     "scaleWithZoom": true              # If true, scale the size of points with the zoom level of
-                                       # the map. Defaults to false. Optional
+                                       # the map. Defaults to false. In this case, radius is in
+                                       # pixels of the associated image.  If false or unspecified,
+                                       # radius is in screen pixels. Optional
   }
 
 Grid Data

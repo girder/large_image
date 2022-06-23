@@ -73,11 +73,15 @@ function heatmapColorTable(record, values) {
 function convertHeatmap(record, properties, layer) {
     /* Heatmaps need to be in their own layer */
     const map = layer.map();
+    /* when scaleWithZoom is set, use the base pixel level of the first tile
+     * layer for scaling rather than the 0-resolution level. */
+    const tileLayer = map.layers().find((l) => l instanceof window.geo.tileLayer && l.options && l.options.maxLevel !== undefined);
+    const scaleZoomFactor = tileLayer ? 2 ** -tileLayer.options.maxLevel : 1;
     const heatmapLayer = map.createLayer('feature', {features: ['heatmap']});
     const colorTable = heatmapColorTable(record, record.points.map((d) => d[3]));
     const heatmap = heatmapLayer.createFeature('heatmap', {
         style: {
-            radius: record.radius || 25,
+            radius: (record.radius || 25) * (record.scaleWithZoom ? scaleZoomFactor : 1),
             blurRadius: 0,
             gaussian: true,
             color: colorTable.color,
