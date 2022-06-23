@@ -70,7 +70,10 @@ setup(
     name='large-image',
     use_scm_version={'local_scheme': prerelease_local_scheme,
                      'fallback_version': 'development'},
-    setup_requires=['setuptools-scm'],
+    setup_requires=[
+        'setuptools-scm<7 ; python_version < "3.7"',
+        'setuptools-scm ; python_version >= "3.7"',
+    ],
     description=description,
     long_description=long_description,
     license='Apache Software License 2.0',
