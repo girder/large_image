@@ -1,5 +1,7 @@
 const path = require('path');
 
+const webpack = require('webpack');
+
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = function (config) {
@@ -15,6 +17,11 @@ module.exports = function (config) {
             from: path.join(path.resolve(__dirname), 'node_modules', 'sinon', 'pkg', 'sinon.js'),
             to: path.join(config.output.path, 'extra', 'sinon.js')
         }])
+    );
+    config.plugins.push(
+        new webpack.DefinePlugin({
+            BUILD_TIMESTAMP: Date.now()
+        })
     );
     return config;
 };

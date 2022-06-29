@@ -1,3 +1,5 @@
+/* global BUILD_TIMESTAMP */
+
 import $ from 'jquery';
 import _ from 'underscore';
 // Import hammerjs for geojs touch events
@@ -42,7 +44,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 return this;
             }),
             $.ajax({ // like $.getScript, but allow caching
-                url: root + '/plugins/large_image/extra/geojs.js',
+                url: root + '/plugins/large_image/extra/geojs.js' + (BUILD_TIMESTAMP ? '?_=' + BUILD_TIMESTAMP : ''),
                 dataType: 'script',
                 cache: true
             }))

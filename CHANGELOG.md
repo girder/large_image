@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.15.1
+
+### Improvements
+- When scaling heatmap annoations, use an appropriate value ([878](../../pull/878))
+- Use the girder client build time for cache control ([879](../../pull/879))
+
 ## 1.15.0
 
 ### Features
