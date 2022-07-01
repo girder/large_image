@@ -418,15 +418,10 @@ $(function () {
             });
             runs(function () {
                 var pt = viewer.viewer.gcsToDisplay({x: 115, y: 115});
-                // Due to a bug in geojs, this raises an error, but it is required to simulate
-                // a drag event on the map.
-                try {
-                    interactor.simulateEvent('mousemove', {
-                        button: 'left',
-                        map: pt
-                    });
-                } catch (e) {
-                }
+                interactor.simulateEvent('mousemove', {
+                    button: 'left',
+                    map: pt
+                });
             });
             runs(function () {
                 var pt = viewer.viewer.gcsToDisplay({x: 115, y: 115});
@@ -481,8 +476,14 @@ $(function () {
                     expect(elements[0].closed).toBe(true);
                     expect(elements[0].points.length).toBe(3);
                     closeTo(elements[0].points[0], [100, 200, 0]);
-                    closeTo(elements[0].points[1], [200, 200, 0]);
-                    closeTo(elements[0].points[2], [200, 300, 0]);
+                    // these could be in either order
+                    if (Math.abs(elements[0].points[1][1] - 300) < 50) {
+                      closeTo(elements[0].points[2], [200, 200, 0]);
+                      closeTo(elements[0].points[1], [200, 300, 0]);
+                    } else {
+                      closeTo(elements[0].points[1], [200, 200, 0]);
+                      closeTo(elements[0].points[2], [200, 300, 0]);
+                    }
                     created = true;;
                     return null;
                 });
