@@ -81,12 +81,13 @@ class TileSource:
                     0.  'auto' to use 0 if the reported minimum and maximum of
                     the band are between [0, 255] or use the reported minimum
                     otherwise.  'min' or 'max' to always uses the reported
-                    minimum or maximum.
+                    minimum or maximum.  'full' to always use 0.
                 :max: the value to map to the last palette value.  Defaults to
                     255.  'auto' to use 0 if the reported minimum and maximum
                     of the band are between [0, 255] or use the reported
                     maximum otherwise.  'min' or 'max' to always uses the
-                    reported minimum or maximum.
+                    reported minimum or maximum.  'full' to use the maximum
+                    value of the base data type (either 1, 255, or 65535).
                 :palette: a list of two or more color strings, where color
                     strings are of the form #RRGGBB, #RRGGBBAA, #RGB, #RGBA, or
                     any string parseable by the PIL modules, or, if it is
@@ -101,11 +102,21 @@ class TileSource:
                 :clamp: either True to clamp (also called clip or crop) values
                     outside of the [min, max] to the ends of the palette or
                     False to make outside values transparent.
+                :dtype: convert the results to the specified numpy dtype.
+                    Normally, if a style is applied, the results are
+                    intermediately a float numpy array with a value range of
+                    [0,255].  If this is 'uint16', it will be cast to that and
+                    multiplied by 65535/255.  If 'float', it will be divided by
+                    255.
+                :axis: keep only the specified axis from the numpy intermediate
+                    results.  This can be used to extract a single channel
+                    after compositing.
 
             Alternately, the style object can contain a single key of 'bands',
             which has a value which is a list of style dictionaries as above,
             excepting that each must have a band that is not -1.  Bands are
-            composited in the order listed.
+            composited in the order listed.  This base object may also contain
+            the 'dtype' and 'axis' values.
         """
         self.logger = config.getConfig('logger')
         self.cache, self.cache_lock = getTileCache()
@@ -1023,7 +1034,7 @@ class TileSource:
         :returns: the validated value and a threshold from [0-1].
         """
         threshold = 0
-        if value not in {'min', 'max', 'auto'}:
+        if value not in {'min', 'max', 'auto', 'full'}:
             try:
                 if ':' in str(value) and value.split(':', 1)[0] in {'min', 'max', 'auto'}:
                     threshold = float(value.split(':', 1)[1])
@@ -1039,7 +1050,7 @@ class TileSource:
             self._scanForMinMax(dtype, frame, onlyMinMax=not threshold)
         return value, threshold
 
-    def _getMinMax(self, minmax, value, dtype, bandidx=None, frame=None):
+    def _getMinMax(self, minmax, value, dtype, bandidx=None, frame=None):  # noqa
         """
         Get an appropriate minimum or maximum for a band.
 
@@ -1057,6 +1068,15 @@ class TileSource:
         """
         frame = frame or 0
         value, threshold = self._validateMinMaxValue(value, frame, dtype)
+        if value == 'full':
+            value = 0
+            if minmax != 'min':
+                if dtype == numpy.uint16:
+                    value = 65535
+                elif dtype.kind == 'f':
+                    value = 1
+                else:
+                    value = 255
         if value == 'auto':
             if (self._bandRanges.get(frame) and
                     numpy.all(self._bandRanges[frame]['min'] >= 0) and
@@ -1102,11 +1122,15 @@ class TileSource:
         :param frame: the frame to use for auto ranging.
         :returns: a styled image.
         """
+        dtype = style.get('dtype')
+        axis = style.get('axis')
         style = style['bands'] if 'bands' in style else [style]
         output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
         mainImage = image
         mainFrame = frame
         for entry in style:
+            dtype = dtype if dtype is not None else entry.get('dtype')
+            axis = axis if axis is not None else entry.get('axis')
             bandidx = 0 if image.shape[2] <= 2 else 1
             band = None
             if ((entry.get('frame') is None and not entry.get('framedelta')) or
@@ -1194,6 +1218,12 @@ class TileSource:
                 else:
                     output[:, :, channel] = numpy.maximum(
                         output[:, :, channel], numpy.where(keep, clrs, 0))
+        if dtype == 'uint16':
+            output = (output * 65535 / 255).astype(numpy.uint16)
+        elif dtype == 'float':
+            output /= 255
+        if axis is not None and 0 <= int(axis) < output.shape[2]:
+            output = output[:, :, axis:axis + 1]
         return output
 
     def _outputTileNumpyStyle(self, tile, applyStyle, x, y, z, frame=None):
