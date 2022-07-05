@@ -1222,7 +1222,6 @@ class TileSource:
             output = (output * 65535 / 255).astype(numpy.uint16)
         elif dtype == 'float':
             output /= 255
-        print(axis, output.shape)
         if axis is not None and 0 <= int(axis) < output.shape[2]:
             output = output[:, :, axis:axis + 1]
         return output
