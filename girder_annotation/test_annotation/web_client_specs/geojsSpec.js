@@ -475,15 +475,16 @@ $(function () {
                     expect(elements[0].type).toBe('polyline');
                     expect(elements[0].closed).toBe(true);
                     expect(elements[0].points.length).toBe(3);
-                    closeTo(elements[0].points[0], [100, 200, 0]);
-                    // these could be in either order
-                    if (Math.abs(elements[0].points[1][1] - 300) < 50) {
-                      closeTo(elements[0].points[2], [200, 200, 0]);
-                      closeTo(elements[0].points[1], [200, 300, 0]);
-                    } else {
-                      closeTo(elements[0].points[1], [200, 200, 0]);
-                      closeTo(elements[0].points[2], [200, 300, 0]);
-                    }
+                    // these could be in any order, so sort them
+                    var points = elements[0].points.sort(function (a, b) {
+                        if (a[0] !== b[0]) {
+                            return a[0] < b[0] ? -1 : 1;
+                        }
+                        return a[1] < b[1] ? -1 : 1;
+                    });
+                    closeTo(points[0], [100, 200, 0]);
+                    closeTo(points[1], [200, 200, 0]);
+                    closeTo(points[2], [200, 300, 0]);
                     created = true;;
                     return null;
                 });
