@@ -778,6 +778,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          *    creating each annotation element.
          * @param {boolean} [options.keepExisting=false] If true, don't
          *    remove extant annotations.
+         * @param {object} [options.modeOptions] Additional options to pass to
+         *    the annotationLayer mode.
          * @returns {$.Promise}
          *    Resolves to an array of generated annotation elements.
          */
@@ -820,7 +822,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     defer.resolve(elements, annotations, opts);
                 }
             );
-            layer.mode(type);
+            layer.mode(type, undefined, options.modeOptions);
             return defer.promise();
         },
 
