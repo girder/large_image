@@ -654,6 +654,22 @@ def testStyleMinMaxThreshold():
     assert numpy.any(image != imageB)
     assert image[0][0][0] == 252
     assert imageB[0][0][0] == 254
+    sourceC = large_image_source_tiff.open(
+        imagePath, style=json.dumps({'min': 'full', 'max': 'full'}))
+    imageC, _ = sourceC.getRegion(
+        output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
+    assert numpy.any(image != imageC)
+    assert imageC[0][0][0] == 253
+
+
+def testStyleDtypeAxis():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image_source_tiff.open(
+        imagePath, style=json.dumps({'dtype': 'uint16', 'axis': 1}))
+    image, _ = source.getRegion(
+        output={'maxWidth': 456, 'maxHeight': 96}, format=constants.TILE_FORMAT_NUMPY)
+    assert image.shape[2] == 1
+    assert image[0][0][0] == 65021
 
 
 def testStyleNoData():
