@@ -61,6 +61,10 @@ SourceAndFiles = {
 if sys.version_info >= (3, 7):
     SourceAndFiles.update({
         'nd2': {'read': r'\.(nd2)$'},
+        'tifffile': {
+            'read': r'',
+            'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2)$',
+        },
     })
 else:
     # Python 3.6 has an older version of PIL that won't read some of the
@@ -117,6 +121,9 @@ def testSourcesCanRead(source, filename):
     large_image.tilesource.loadTileSources()
     sourceClass = large_image.tilesource.AvailableTileSources[source]
     assert bool(sourceClass.canRead(imagePath)) is bool(canRead)
+    # Test module canRead method
+    mod = sys.modules[sourceClass.__module__]
+    assert bool(mod.canRead(imagePath)) is bool(canRead)
 
 
 @pytest.mark.parametrize('filename', registry)
@@ -166,6 +173,15 @@ def testSourcesTilesAndMethods(source, filename):
         tsf = sourceClass(imagePath, frame=len(tileMetadata['frames']) - 1)
         tileMetadata = tsf.getMetadata()
         utilities.checkTilesZXY(tsf, tileMetadata)
+    # Test if we can fetch an associated image if any exist
+    assert ts.getAssociatedImagesList() is not None
+    if len(ts.getAssociatedImagesList()):
+        # This should be an image and a mime type
+        assert len(ts.getAssociatedImage(ts.getAssociatedImagesList()[0])) == 2
+    assert ts.getAssociatedImage('nosuchimage') is None
+    # Test module open method
+    mod = sys.modules[sourceClass.__module__]
+    assert mod.open(imagePath) is not None
 
 
 @pytest.mark.parametrize('filename,isgeo', [

@@ -56,6 +56,7 @@ sources = {
     'pil': [f'large-image-source-pil{limit_version}'],
     'test': [f'large-image-source-test{limit_version}'],
     'tiff': [f'large-image-source-tiff{limit_version}'],
+    'tifffile': [f'large-image-source-tifffile{limit_version}'],
     'vips': [f'large-image-source-vips{limit_version}'],
 }
 if sys.version_info >= (3, 7):
