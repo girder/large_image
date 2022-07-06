@@ -30,7 +30,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'vipsfile'
+    name = 'vips'
     extensions = {
         None: SourcePriority.LOW,
     }

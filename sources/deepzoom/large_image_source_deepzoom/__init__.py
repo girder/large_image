@@ -20,7 +20,7 @@ class DeepzoomFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'deepzoomfile'
+    name = 'deepzoom'
     extensions = {
         None: SourcePriority.LOW,
         'dzi': SourcePriority.HIGH,

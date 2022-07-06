@@ -52,7 +52,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'openslidefile'
+    name = 'openslide'
     extensions = {
         None: SourcePriority.MEDIUM,
         'bif': SourcePriority.LOW,  # Ventana

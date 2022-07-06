@@ -72,7 +72,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'pilfile'
+    name = 'pil'
 
     # Although PIL is always a fallback source, prefer it to other fallback
     # sources

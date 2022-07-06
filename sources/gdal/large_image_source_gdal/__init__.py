@@ -98,7 +98,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'gdalfile'
+    name = 'gdal'
     extensions = {
         None: SourcePriority.MEDIUM,
         'geotiff': SourcePriority.PREFERRED,

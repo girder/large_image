@@ -104,7 +104,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'nd2file'
+    name = 'nd2'
     extensions = {
         None: SourcePriority.LOW,
         'nd2': SourcePriority.PREFERRED,

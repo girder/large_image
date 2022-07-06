@@ -55,7 +55,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'openjpegfile'
+    name = 'openjpeg'
     extensions = {
         None: SourcePriority.MEDIUM,
         'jp2': SourcePriority.PREFERRED,
