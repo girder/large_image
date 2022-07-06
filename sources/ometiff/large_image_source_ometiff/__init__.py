@@ -76,7 +76,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'ometifffile'
+    name = 'ometiff'
     extensions = {
         None: SourcePriority.LOW,
         'tif': SourcePriority.MEDIUM,

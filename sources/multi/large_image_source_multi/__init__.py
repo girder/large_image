@@ -322,7 +322,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
 
     cacheName = 'tilesource'
-    name = 'multifile'
+    name = 'multi'
     extensions = {
         None: SourcePriority.MEDIUM,
         'json': SourcePriority.PREFERRED,
