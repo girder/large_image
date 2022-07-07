@@ -712,7 +712,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 return PIL.Image.open(io.BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
         if imageKey in self._associatedImages:
             return PIL.Image.fromarray(self._associatedImages[imageKey])
-        return None
 
 
 def open(*args, **kwargs):
