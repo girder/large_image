@@ -134,7 +134,7 @@ def convert_image_job(job):
             )
             job = Job().updateJob(job, log='Storing result\n')
             with open(dest, 'rb') as fobj:
-                Upload().uploadFromFile(
+                fileObj = Upload().uploadFromFile(
                     fobj,
                     size=os.path.getsize(dest),
                     name=name or os.path.basename(dest),
@@ -142,6 +142,11 @@ def convert_image_job(job):
                     parent=folder,
                     user=user,
                 )
+                job = Job().load(job['_id'], force=True)
+                job.setdefault('results', {})
+                job['results'].setdefault('file', [])
+                job['results']['file'].append(fileObj['_id'])
+                job = Job().save(job)
     except Exception as exc:
         status = JobStatus.ERROR
         logger.exception('Failed in large image conversion')
