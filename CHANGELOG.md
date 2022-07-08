@@ -8,6 +8,7 @@
 ### Improvements
 - Pass options to the annotationLayer mode ([881](../../pull/881))
 - Support more style range options ([883](../../pull/883))
+- When converting girder images locally, prefer mount paths ([886](../../pull/886))
 
 ### Changes
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))

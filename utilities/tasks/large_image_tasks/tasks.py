@@ -118,9 +118,16 @@ def convert_image_job(job):
     # We could increase the default logging level here
     # logger.setLevel(logging.DEBUG)
     try:
+        inputPath = None
+        if not fileObj.get('imported'):
+            try:
+                inputPath = File().getGirderMountFilePath(fileObj)
+            except Exception:
+                pass
+        inputPath = inputPath or File().getLocalFilePath(fileObj)
         with tempfile.TemporaryDirectory() as tempdir:
             dest = create_tiff(
-                inputFile=File().getLocalFilePath(fileObj),
+                inputFile=inputPath,
                 inputName=fileObj['name'],
                 outputDir=tempdir,
                 **kwargs,
