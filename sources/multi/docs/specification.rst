@@ -79,18 +79,22 @@ Multiple sources can be made to appear as a single frame.  For instance:
     height: 360
     sources:
       - path: ./test_orient1.tif
+        z: 0
         position:
           x: 0
           y: 0
       - path: ./test_orient2.tif
+        z: 0
         position:
           x: 180
           y: 0
       - path: ./test_orient3.tif
+        z: 0
         position:
           x: 0
           y: 180
       - path: ./test_orient4.tif
+        z: 0
         position:
           x: 180
           y: 180
