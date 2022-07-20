@@ -1213,11 +1213,13 @@ class TileSource:
                             clrs = palette[numpy.floor(band * len(palette)).astype(int).clip(
                                 0, len(palette) - 1), channel]
                 if composite == 'multiply':
-                    output[:, :, channel] = numpy.multiply(
-                        output[:, :, channel], numpy.where(keep, clrs / 255, 1))
+                    output[:keep.shape[0], :keep.shape[1], channel] = numpy.multiply(
+                        output[:keep.shape[0], :keep.shape[1], channel],
+                        numpy.where(keep, clrs / 255, 1))
                 else:
-                    output[:, :, channel] = numpy.maximum(
-                        output[:, :, channel], numpy.where(keep, clrs, 0))
+                    output[:keep.shape[0], :keep.shape[1], channel] = numpy.maximum(
+                        output[:keep.shape[0], :keep.shape[1], channel],
+                        numpy.where(keep, clrs, 0))
         if dtype == 'uint16':
             output = (output * 65535 / 255).astype(numpy.uint16)
         elif dtype == 'float':
