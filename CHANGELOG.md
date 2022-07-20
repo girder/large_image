@@ -10,6 +10,7 @@
 - Support more style range options ([883](../../pull/883))
 - When converting girder images locally, prefer mount paths ([886](../../pull/886))
 - Store the id of job results for easier post-job work ([887](../../pull/887))
+- Harden style compositing of partial tiles ([889](../../pull/889))
 
 ### Changes
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))
