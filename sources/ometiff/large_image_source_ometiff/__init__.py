@@ -324,7 +324,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                 **kwargs)
-        frame = int(kwargs.get('frame') or 0)
+        frame = self._getFrame(**kwargs)
         if frame < 0 or frame >= len(self._omebase['TiffData']):
             raise TileSourceError('Frame does not exist')
         subdir = None

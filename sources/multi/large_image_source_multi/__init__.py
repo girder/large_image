@@ -906,7 +906,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        frame = int(kwargs.get('frame') or 0)
+        frame = self._getFrame(**kwargs)
         self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
         scale = 2 ** (self.levels - 1 - z)
         corners = [[

@@ -1128,7 +1128,7 @@ class TileSource:
         output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
         mainImage = image
         mainFrame = frame
-        for entry in style:
+        for eidx, entry in enumerate(style):
             dtype = dtype if dtype is not None else entry.get('dtype')
             axis = axis if axis is not None else entry.get('axis')
             bandidx = 0 if image.shape[2] <= 2 else 1
@@ -1213,13 +1213,17 @@ class TileSource:
                             clrs = palette[numpy.floor(band * len(palette)).astype(int).clip(
                                 0, len(palette) - 1), channel]
                 if composite == 'multiply':
-                    output[:keep.shape[0], :keep.shape[1], channel] = numpy.multiply(
-                        output[:keep.shape[0], :keep.shape[1], channel],
-                        numpy.where(keep, clrs / 255, 1))
+                    if eidx:
+                        output[:keep.shape[0], :keep.shape[1], channel] = numpy.multiply(
+                            output[:keep.shape[0], :keep.shape[1], channel],
+                            numpy.where(keep, clrs / 255, 1))
                 else:
-                    output[:keep.shape[0], :keep.shape[1], channel] = numpy.maximum(
-                        output[:keep.shape[0], :keep.shape[1], channel],
-                        numpy.where(keep, clrs, 0))
+                    if not eidx:
+                        output[:keep.shape[0], :keep.shape[1], channel] = numpy.where(keep, clrs, 0)
+                    else:
+                        output[:keep.shape[0], :keep.shape[1], channel] = numpy.maximum(
+                            output[:keep.shape[0], :keep.shape[1], channel],
+                            numpy.where(keep, clrs, 0))
         if dtype == 'uint16':
             output = (output * 65535 / 255).astype(numpy.uint16)
         elif dtype == 'float':
@@ -1287,7 +1291,8 @@ class TileSource:
         mode = None
         if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
                 (applyStyle and getattr(self, 'style', None)) or isEdge):
-            tile, mode = self._outputTileNumpyStyle(tile, applyStyle, x, y, z, kwargs.get('frame'))
+            tile, mode = self._outputTileNumpyStyle(
+                tile, applyStyle, x, y, z, self._getFrame(**kwargs))
         if isEdge:
             contentWidth = min(self.tileWidth,
                                sizeX - (maxX - self.tileWidth))
@@ -1490,6 +1495,21 @@ class TileSource:
                         bandInfo[idx + 1][key] = histogram[key][idx]
             self._bandInfo = bandInfo
         return self._bandInfo
+
+    def _getFrame(self, frame=None, **kwargs):
+        """
+        Get the current frame number.  If a style is used that completely
+        specified the frame, use that value instead.
+
+        :param frame: an integer or string with the frame number.
+        :returns: an integer frame number.
+        """
+        frame = int(frame or 0)
+        if (hasattr(self, 'style') and 'bands' in self.style and
+                len(self.style['bands']) and
+                all(entry.get('frame') is not None for entry in self.style['bands'])):
+            frame = int(self.style['bands'][0]['frame'])
+        return frame
 
     def _xyzInRange(self, x, y, z, frame=None, numFrames=None):
         """

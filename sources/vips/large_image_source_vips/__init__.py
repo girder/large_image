@@ -184,7 +184,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        frame = int(kwargs.get('frame') or 0)
+        frame = self._getFrame(**kwargs)
         self._xyzInRange(x, y, z, frame, len(self._frames))
         img = self._getFrameImage(frame)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
