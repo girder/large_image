@@ -1311,8 +1311,9 @@ class TileSource:
         if getattr(tile, 'fp', None) and self._pilFormatMatches(tile):
             tile.fp.seek(0)
             return tile.fp.read()
-        return _encodeImageBinary(
+        result = _encodeImageBinary(
             tile, self.encoding, self.jpegQuality, self.jpegSubsampling, self.tiffCompression)
+        return result
 
     def _getAssociatedImage(self, imageKey):
         """
