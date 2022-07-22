@@ -365,7 +365,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        frame = int(kwargs.get('frame') or 0)
+        frame = self._getFrame(**kwargs)
         self._xyzInRange(x, y, z, frame, self._framecount)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         if len(self._series) > 1:

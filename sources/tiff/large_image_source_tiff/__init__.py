@@ -544,7 +544,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 sparseFallback=False, **kwargs):
-        frame = int(kwargs.get('frame') or 0)
+        frame = self._getFrame(**kwargs)
         self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
         if frame > 0:
             if self._frames[frame]['dirs'][z] is not None:
@@ -641,7 +641,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         basez = z
         scale = 1
         dirlist = self._tiffDirectories
-        frame = int(kwargs.get('frame') or 0)
+        frame = self._getFrame(**kwargs)
         if frame > 0:
             dirlist = self._frames[frame]['dirs']
         while dirlist[z] is None:
@@ -662,7 +662,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 subtile = self.getTile(
                     x * scale + newX, y * scale + newY, z,
                     pilImageAllowed=True, numpyAllowed=False,
-                    sparseFallback=True, edge=False, frame=kwargs.get('frame'))
+                    sparseFallback=True, edge=False, frame=frame)
                 if not isinstance(subtile, PIL.Image.Image):
                     subtile = PIL.Image.open(io.BytesIO(subtile))
                 tile.paste(subtile, (newX * self.tileWidth,

@@ -478,7 +478,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         ft = fc = fz = 0
         fseries = self._metadata['frameSeries'][0]
         if kwargs.get('frame') is not None:
-            frame = int(kwargs.get('frame'))
+            frame = self._getFrame(**kwargs)
             fc = frame % self._metadata['sizeC']
             fz = (frame // self._metadata['sizeC']) % self._metadata['sizeZ']
             ft = (frame // self._metadata['sizeC'] //
