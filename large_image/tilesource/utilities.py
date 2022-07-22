@@ -477,8 +477,6 @@ def getPaletteColors(value):
         above.
     :returns: a numpy array of RGBA value on the scale of [0-255].
     """
-    import palettable
-
     palette = None
     if isinstance(value, (tuple, list)):
         palette = value
@@ -489,6 +487,8 @@ def getPaletteColors(value):
         except ValueError:
             pass
     if palette is None:
+        import palettable
+
         try:
             palette = attrgetter(str(value))(palettable).hex_colors
         except AttributeError:
