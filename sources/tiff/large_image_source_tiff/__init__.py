@@ -21,6 +21,7 @@ import json
 import math
 import os
 
+import cachetools
 import numpy
 import PIL.Image
 import tifftools
@@ -46,6 +47,11 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+
+@cachetools.cached(cache=cachetools.LRUCache(maxsize=10))
+def _cached_read_tiff(path):
+    return tifftools.read_tiff(path)
 
 
 class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -264,7 +270,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = max(1, int(math.ceil(math.log(max(
             dir0.imageWidth / dir0.tileWidth,
             dir0.imageHeight / dir0.tileHeight)) / math.log(2))) + 1)
-        info = tifftools.read_tiff(self._largeImagePath)
+        info = _cached_read_tiff(self._largeImagePath)
         frames = []
         associated = []  # for now, a list of directories
         curframe = -1
