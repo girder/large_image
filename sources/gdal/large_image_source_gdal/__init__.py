@@ -183,6 +183,16 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
 
+    def _setStyle(self, style):
+        """
+        Check and set the specified style from a json string or a dictionary.
+
+        :param style: The new style.
+        """
+        super()._setStyle(style)
+        if hasattr(self, '_getTileLock'):
+            self._setDefaultStyle()
+
     def _getLargeImagePath(self):
         """Get GDAL-compatible image path.
 
