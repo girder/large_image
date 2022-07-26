@@ -66,17 +66,16 @@ def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTil
                 'Failed to loaded tile source %s' % entryPoint.name)
 
 
-def getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs):
+def getSortedSourceList(availableSources, pathOrUri, *args, **kwargs):
     """
-    Get a tile source based on a ordered dictionary of known sources and a path
-    name or URI.  Additional parameters are passed to the tile source and can
-    be used for properties such as encoding.
+    Get an ordered list of sources where earlier sources are more likely to
+    work for a specified path or uri.
 
     :param availableSources: an ordered dictionary of sources to try.
     :param pathOrUri: either a file path or a fixed source via
         large_image://<source>.
-    :returns: the name of a tile source that can read the input, or None if
-        there is no such source.
+    :returns: a list of (clash, priority, sourcename) for sources where
+        sourcename is a key in availableSources.
     """
     uriWithoutProtocol = str(pathOrUri).split('://', 1)[-1]
     isLargeImageUri = str(pathOrUri).startswith('large_image://')
@@ -99,6 +98,22 @@ def getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs):
             getattr(availableSources[sourceName], k, False) != v
             for k, v in properties.items())
         sourceList.append((propertiesClash, priority, sourceName))
+    return sourceList
+
+
+def getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs):
+    """
+    Get a tile source based on a ordered dictionary of known sources and a path
+    name or URI.  Additional parameters are passed to the tile source and can
+    be used for properties such as encoding.
+
+    :param availableSources: an ordered dictionary of sources to try.
+    :param pathOrUri: either a file path or a fixed source via
+        large_image://<source>.
+    :returns: the name of a tile source that can read the input, or None if
+        there is no such source.
+    """
+    sourceList = getSortedSourceList(availableSources, pathOrUri, *args, **kwargs)
     for _clash, _priority, sourceName in sorted(sourceList):
         if availableSources[sourceName].canRead(pathOrUri, *args, **kwargs):
             return sourceName
@@ -159,6 +174,21 @@ def canRead(*args, **kwargs):
     if getSourceNameFromDict(AvailableTileSources, *args, **kwargs):
         return True
     return False
+
+
+def canReadList(*args, **kwargs):
+    """
+    Check if large_image can read a path or uri via each source.
+
+    :returns: A list of tuples of (source name, canRead).
+    """
+    if not len(AvailableTileSources):
+        loadTileSources()
+    sourceList = getSortedSourceList(AvailableTileSources, *args, **kwargs)
+    result = []
+    for _clash, _priority, sourceName in sorted(sourceList):
+        result.append((sourceName, AvailableTileSources[sourceName].canRead(*args, **kwargs)))
+    return result
 
 
 def new(*args, **kwargs):
