@@ -499,3 +499,9 @@ def testGetTileFramesQuadInfo(options, lensrc, lenquads, frame10, src0, srclast,
         crop10 = results['quads'][10]['crop']
         for key, value in quads10.items():
             assert crop10[key] == value
+
+
+def testCanReadList():
+    imagePath = datastore.fetch('sample_image.ptif')
+    assert len(large_image.canReadList(imagePath)) > 1
+    assert any(canRead for source, canRead in large_image.canReadList(imagePath))
