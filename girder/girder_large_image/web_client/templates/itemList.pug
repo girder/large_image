@@ -1,0 +1,64 @@
+ul.g-item-list.li-item-list
+  li.li-item-list-header
+    if checkboxes
+      span.li-item-list-header
+    for column in itemList.columns
+      span.li-item-list-header
+        if column.type === 'record'
+          if column.title !== undefined
+            = column.title
+          else if column.value === 'name'
+            | Name
+          else if column.value === 'controls'
+            | Controls
+          else if column.value === 'size'
+            | Size
+        else if column.type === 'image'
+          = column.title !== undefined ? column.title : column.value
+        else if column.type === 'metadata'
+          = column.title !== undefined ? column.title : column.value
+  each item in items
+    li.g-item-list-entry(class=(highlightItem && item.id === selectedItemId ? 'g-selected' : ''), public=(isParentPublic ? 'true' : 'false'))
+      if checkboxes
+        span.li-item-list-cell
+          input.g-list-checkbox(type="checkbox", g-item-cid=item.cid)
+      for column in itemList.columns
+        span.li-item-list-cell(class=(('' + column.type + column.value).match(/^[a-zA-Z][a-zA-Z0-9-_]*$/) ? `li-column-${column.type}-${column.value}` : '') + ' ' + (('' + column.type).match(/^[a-zA-Z][a-zA-Z0-9-_]*$/) ? `li-column-${column.type}` : ''))
+          if column.type === 'record'
+            if column.value === 'name'
+              if downloadLinks || viewLinks
+                a.g-item-list-link(g-item-cid=item.cid, href=`#item/${item.id}`)
+                  i.icon-doc-text-inv
+                  = item.name()
+              else
+                a.g-item-list-link(g-item-cid=item.cid, href='#item/' + item.id)
+                  i.icon-doc-text-inv
+                  = item.name()
+            else if column.value === 'controls'
+              if downloadLinks
+                a(title="Download item", href=item.downloadUrl())
+                  i.icon-download
+              if viewLinks
+                a.g-view-inline(title="View in browser", target="_blank", rel="noopener noreferrer",
+                    href=item.downloadUrl({contentDisposition: 'inline'}))
+                  i.icon-eye
+            else if column.value === 'size'
+              if showSizes
+                .g-item-size= formatSize(item.get('size'))
+          else if column.type === 'image' && item.get('largeImage')
+            .large_image_thumbnail(extra-image=column.value !== 'thumbnail' ? column.value : undefined, style=column.width ? `width: ${column.width}px` : undefined, g-item-cid=column.value === 'thumbnail' ? item.cid : undefined)
+              - var imageName = column.value === 'thumbnail' ? column.value : `images/${column.value}`;
+              img.waiting(deferred-src=`${apiRoot}/item/${item.id}/tiles/${imageName}?width=${column.width || 160}&height=${column.height || 100}`)
+          else if column.type === 'metadata'
+            span.large_image_metadata
+              -
+                let value = item.get('meta') || {}
+                column.value.split('.').forEach((part) => {
+                  value = (value || {})[part];
+                })
+              = value
+  if (hasMore && !paginated)
+    li.g-show-more
+      a.g-show-more-items
+        i.icon-level-down
+        | Show more items...

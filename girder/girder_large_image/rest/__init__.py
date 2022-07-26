@@ -1,3 +1,5 @@
+import json
+
 import yaml
 
 from girder import logger
@@ -21,6 +23,27 @@ def addSystemEndpoints(apiRoot):
     :param apiRoot: Girder api root class.
     """
     apiRoot.folder.route('GET', (':id', 'yaml_config', ':name'), getYAMLConfigFile)
+
+    origItemFind = apiRoot.item._find
+    origFolderFind = apiRoot.folder._find
+
+    @boundHandler(apiRoot.item)
+    def altItemFind(self, folderId, text, name, limit, offset, sort, filters=None):
+        if sort and sort[0][0][0] == '[':
+            sort = json.loads(sort[0][0])
+        return origItemFind(folderId, text, name, limit, offset, sort, filters)
+
+    @boundHandler(apiRoot.item)
+    def altFolderFind(self, parentType, parentId, text, name, limit, offset, sort, filters=None):
+        if sort and sort[0][0][0] == '[':
+            sort = json.loads(sort[0][0])
+        return origFolderFind(parentType, parentId, text, name, limit, offset, sort, filters)
+
+    if not hasattr(origItemFind, '_origFunc'):
+        apiRoot.item._find = altItemFind
+        altItemFind._origFunc = origItemFind
+        apiRoot.folder._find = altFolderFind
+        altFolderFind._origFunc = origFolderFind
 
 
 def _mergeDictionaries(a, b):

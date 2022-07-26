@@ -1,14 +1,6 @@
 .g-config-breadcrumb-container
 p.g-large-image-description
-  | Very large images can be served as tiles, allowing many different viewers
-  | to show them.
 form#g-large-image-form(role="form")
-  .form-group
-    label Default large image item viewer
-    .g-large-image-default-viewer-container
-      select.form-control.input-sm.g-large-image-default-viewer
-        each viewer in viewers
-          option(value=viewer.name, selected=(settings['large_image.default_viewer'] === viewer.name)) #{viewer.label}
   .form-group
     label Automatically use new items as large images
     p.g-large-image-description
@@ -31,7 +23,17 @@ form#g-large-image-form(role="form")
     input.input-sm.form-control.g-large-image-max-small-image-size(
       type="text", value=settings['large_image.max_small_image_size'], title="The maximum size in pixels.  0 to not use regular images.", placeholder="0 to not use regular images.")
   .form-group
+    label
+      | Maximum number of thumbnail files to save per item
+    p.g-large-image-description
+      | Caching files speeds up thumbnail retrieval but takes some storage space.  Use 0 to not cache thumbnails as files.
+    input.input-sm.form-control.g-large-image-max-thumbnail-files(
+      type="text", value=settings['large_image.max_thumbnail_files'], placeholder="Use 0 to not cache thumbnails as files.")
+  .form-group
     label Large images in items
+    p.g-large-image-description
+      | Very large images can be served as tiles, allowing many different
+      | viewers to show them.
     .g-large-image-viewer-container
       label.radio-inline
         input.g-large-image-viewer-show(type="radio", name="g-large-image-viewer", checked=settings['large_image.show_viewer'] !== false ? 'checked': undefined)
@@ -40,7 +42,36 @@ form#g-large-image-form(role="form")
         input.g-large-image-viewer-hide(type="radio", name="g-large-image-viewer", checked=settings['large_image.show_viewer'] !== false ? undefined : 'checked')
         | Don't show
   .form-group
+    label Default large image item viewer
+    p.g-large-image-description
+      | Only the GeoJS viewer supports all features.
+    .g-large-image-default-viewer-container
+      select.form-control.input-sm.g-large-image-default-viewer
+        each viewer in viewers
+          option(value=viewer.name, selected=(settings['large_image.default_viewer'] === viewer.name)) #{viewer.label}
+  .form-group
+    - var detailplaceholder = 'A JSON object listing extra details to show.  For example: {"metadata": ["tile", "internal"], "images": ["label", "macro", "*"]}'
+    - var detailtitle = 'This can be specified images and metadata as a JSON object such as {"metadata": ["tile", "internal"], "images": ["label", "macro", "*"]}'
+    label
+      | Additional details to show in item pages
+    p.g-large-image-description
+      | Details to show on item pages to anonymous users.
+    input.input-sm.form-control.g-large-image-show-item-extra-public(
+      type="text", value=settings['large_image.show_item_extra_public'], placeholder=detailplaceholder, title=detailtitle)
+    p.g-large-image-description
+      | Details to show on item pages for all logged-in users.
+    input.input-sm.form-control.g-large-image-show-item-extra(
+      type="text", value=settings['large_image.show_item_extra'], placeholder=detailplaceholder, title=detailtitle)
+    p.g-large-image-description
+      | Details to show on item pages for admins and owners of the images.
+    input.input-sm.form-control.g-large-image-show-item-extra-admin(
+      type="text", value=settings['large_image.show_item_extra_admin'], placeholder=detailplaceholder, title=detailtitle)
+  .form-group
     label Large image thumbnails in item lists
+    p.g-large-image-description
+      | This can be overridden using
+      i  .large_image_config.yaml
+      |  files.
     .g-large-image-thumbnails-container
       label.radio-inline
         input.g-large-image-thumbnails-show(type="radio", name="g-large-image-thumbnails", checked=settings['large_image.show_thumbnails'] !== false ? 'checked': undefined)
@@ -66,23 +97,6 @@ form#g-large-image-form(role="form")
     input.input-sm.form-control.g-large-image-show-extra-admin(
       type="text", value=settings['large_image.show_extra_admin'], placeholder=detailplaceholder, title=detailtitle)
   .form-group
-    - var detailplaceholder = 'A JSON object listing extra details to show.  For example: {"metadata": ["tile", "internal"], "images": ["label", "macro", "*"]}'
-    - var detailtitle = 'This can be specified images and metadata as a JSON object such as {"metadata": ["tile", "internal"], "images": ["label", "macro", "*"]}'
-    label
-      | Additional details to show in item pages
-    p.g-large-image-description
-      | Details to show on item pages to anonymous users.
-    input.input-sm.form-control.g-large-image-show-item-extra-public(
-      type="text", value=settings['large_image.show_item_extra_public'], placeholder=detailplaceholder, title=detailtitle)
-    p.g-large-image-description
-      | Details to show on item pages for all logged-in users.
-    input.input-sm.form-control.g-large-image-show-item-extra(
-      type="text", value=settings['large_image.show_item_extra'], placeholder=detailplaceholder, title=detailtitle)
-    p.g-large-image-description
-      | Details to show on item pages for admins and owners of the images.
-    input.input-sm.form-control.g-large-image-show-item-extra-admin(
-      type="text", value=settings['large_image.show_item_extra_admin'], placeholder=detailplaceholder, title=detailtitle)
-  .form-group
     label(for="g-large-image-config-folder") Configuration Folder
     p.g-large-image-description
       | If a configuration folder is specified, configuration files stored there are used for the entire system if they are not overridden by local configuration files.
@@ -93,12 +107,5 @@ form#g-large-image-form(role="form")
       .input-group-btn
         button.g-open-browser.btn.btn-default(type="button")
           i.icon-folder-open
-  .form-group
-    label
-      | Maximum number of thumbnail files to save per item
-    p.g-large-image-description
-      | Caching files speeds up thumbnail retrieval but takes some storage space.  Use 0 to not cache thumbnails as files.
-    input.input-sm.form-control.g-large-image-max-thumbnail-files(
-      type="text", value=settings['large_image.max_thumbnail_files'], placeholder="Use 0 to not cache thumbnails as files.")
   p#g-large-image-error-message.g-validation-failed-message
   input.btn.btn-sm.btn-primary(type="submit", value="Save")
