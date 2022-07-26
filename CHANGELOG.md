@@ -3,7 +3,7 @@
 ## 1.16.0
 
 ### Features
-- Add a tifffile tile source ([885](../../pull/885))
+- Add a tifffile tile source ([885](../../pull/885), [896](../../pull/896))
 
 ### Improvements
 - Pass options to the annotationLayer mode ([881](../../pull/881))

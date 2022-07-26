@@ -72,6 +72,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     # Fallback for non-tiled or oddly tiled sources
     _tileSize = 512
+    _minImageSize = 128
     _minTileSize = 128
     _maxTileSize = 2048
     _maxAssociatedImageSize = 8192
@@ -161,6 +162,9 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         skip = True
                 if skip:
                     continue
+            if (s.shape[s.axes.index('X')] < min(self.sizeX, self._minImageSize) and
+                    s.shape[s.axes.index('Y')] < min(self.sizeY, self._minImageSize)):
+                continue
             self._series.append(idx)
             self._seriesShape.append({
                 'sizeX': s.shape[s.axes.index('X')], 'sizeY': s.shape[s.axes.index('Y')]})
