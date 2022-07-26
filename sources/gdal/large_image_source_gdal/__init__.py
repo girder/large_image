@@ -601,22 +601,21 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._bandInfo = infoSet
         return self._bandInfo
 
-    # @property
-    # def geospatial(self):
-    #     return bool(
-    #         self.dataset.GetProjection() or
-    #         (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
-    #         self.dataset.GetGeoTransform(can_return_null=True) or
-    #         hasattr(self, '_netcdf'))
+    @property
+    def geospatial(self):
+        """
+        This is true if the source has geospatial information.
+        """
+        return bool(
+            self.dataset.GetProjection() or
+            (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
+            self.dataset.GetGeoTransform(can_return_null=True) or
+            hasattr(self, '_netcdf'))
 
     def getMetadata(self):
         with self._getDatasetLock:
             metadata = {
-                'geospatial': bool(
-                    self.dataset.GetProjection() or
-                    (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
-                    self.dataset.GetGeoTransform(can_return_null=True) or
-                    hasattr(self, '_netcdf')),
+                'geospatial': self.geospatial,
                 'levels': self.levels,
                 'sizeX': self.sizeX,
                 'sizeY': self.sizeY,

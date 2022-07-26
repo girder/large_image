@@ -44,6 +44,8 @@ class TileSource:
         None: SourcePriority.FALLBACK
     }
 
+    geospatial = False
+
     def __init__(self, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
                  tiffCompression='raw', edge=False, style=None, *args,
                  **kwargs):
