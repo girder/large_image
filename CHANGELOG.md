@@ -14,6 +14,7 @@
 - Harden style compositing of partial tiles ([889](../../pull/889))
 - Cache read_tiff calls to speed up restyling ([891](../../pull/891))
 - Speed up styling by doing less ([892](../../pull/892))
+- Add local color definitions ([858](../../pull/858))
 
 ### Changes
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))
