@@ -15,7 +15,7 @@
 #############################################################################
 
 from . import tilesource  # noqa
-from .tilesource import canRead, getTileSource, new, open  # noqa
+from .tilesource import canRead, canReadList, getTileSource, new, open  # noqa
 
 try:
     from importlib.metadata import PackageNotFoundError

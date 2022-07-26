@@ -4,6 +4,7 @@
 
 ### Features
 - Add a tifffile tile source ([885](../../pull/885), [896](../../pull/896))
+- Added a canReadList method to large_image to show which source can be used ([895](../../pull/895))
 
 ### Improvements
 - Pass options to the annotationLayer mode ([881](../../pull/881))
