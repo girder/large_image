@@ -15,6 +15,7 @@
 - Cache read_tiff calls to speed up restyling ([891](../../pull/891))
 - Speed up styling by doing less ([892](../../pull/892))
 - Add local color definitions ([858](../../pull/858))
+- Inheritable config files ([897](../../pull/897))
 
 ### Changes
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))
