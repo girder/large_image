@@ -83,6 +83,17 @@ form#g-large-image-form(role="form")
     input.input-sm.form-control.g-large-image-show-item-extra-admin(
       type="text", value=settings['large_image.show_item_extra_admin'], placeholder=detailplaceholder, title=detailtitle)
   .form-group
+    label(for="g-large-image-config-folder") Configuration Folder
+    p.g-large-image-description
+      | If a configuration folder is specified, configuration files stored there are used for the entire system if they are not overridden by local configuration files.
+    .input-group.input-group-sm
+      input#g-large-image-config-folder.form-control.input-sm(
+          type="text", value=settings['large_image.config_folder'] || '',
+          title="A folder to store configuration files.")
+      .input-group-btn
+        button.g-open-browser.btn.btn-default(type="button")
+          i.icon-folder-open
+  .form-group
     label
       | Maximum number of thumbnail files to save per item
     p.g-large-image-description

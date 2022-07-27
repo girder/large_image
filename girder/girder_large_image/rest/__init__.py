@@ -9,6 +9,9 @@ from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.group import Group
 from girder.models.item import Item
+from girder.models.setting import Setting
+
+from .. import constants
 
 
 def addSystemEndpoints(apiRoot):
@@ -96,10 +99,11 @@ def adjustConfigForUser(config, user):
 )
 @boundHandler()
 def getYAMLConfigFile(self, folder, name):
+    addConfig = None
     user = self.getCurrentUser()
+    last = False
     while folder:
-        item = Item().findOne({'folderId': folder['_id'], 'name': name},
-                              user=user, level=AccessType.READ)
+        item = Item().findOne({'folderId': folder['_id'], 'name': name})
         if item:
             for file in Item().childFiles(item):
                 if file['size'] > 10 * 1024 ** 2:
@@ -110,13 +114,28 @@ def getYAMLConfigFile(self, folder, name):
                     # combine and adjust config values based on current user
                     if isinstance(config, dict) and 'access' in config or 'group' in config:
                         config = adjustConfigForUser(config, user)
-                    return config
+                    if addConfig and isinstance(config, dict):
+                        config = _mergeDictionaries(config, addConfig)
+                    if not isinstance(config, dict) or config.get('__inherit__') is not True:
+                        return config
+                    config.pop('__inherit__')
+                    addConfig = config
+        if last:
+            break
         if folder['parentCollection'] != 'folder':
-            if folder['name'] == '.config':
-                break
-            folder = Folder().findOne({
-                'parentId': folder['parentId'],
-                'parentCollection': folder['parentCollection'],
-                'name': '.config'})
+            if folder['name'] != '.config':
+                folder = Folder().findOne({
+                    'parentId': folder['parentId'],
+                    'parentCollection': folder['parentCollection'],
+                    'name': '.config'})
+            else:
+                last = 'setting'
+            if not folder or last == 'setting':
+                folderId = Setting().get(constants.PluginSettings.LARGE_IMAGE_CONFIG_FOLDER)
+                if not folderId:
+                    break
+                folder = Folder().load(folderId, force=True)
+                last = True
         else:
             folder = Folder().load(folder['parentId'], user=user, level=AccessType.READ)
+    return addConfig

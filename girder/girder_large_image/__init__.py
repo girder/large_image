@@ -27,6 +27,7 @@ from girder import events, logger
 from girder.constants import AccessType
 from girder.exceptions import ValidationException
 from girder.models.file import File
+from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.notification import Notification
 from girder.models.setting import Setting
@@ -284,6 +285,14 @@ def validateNonnegativeInteger(doc):
 })
 def validateDefaultViewer(doc):
     doc['value'] = str(doc['value']).strip()
+
+
+@setting_utilities.validator(constants.PluginSettings.LARGE_IMAGE_CONFIG_FOLDER)
+def validateFolder(doc):
+    if not doc.get('value', None):
+        doc['value'] = None
+    else:
+        Folder().load(doc['value'], force=True, exc=True)
 
 
 # Defaults
