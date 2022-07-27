@@ -415,7 +415,7 @@ def testYAMLConfigFile(server, admin, user, fsAssetstore):
         collection, 'folder A', parentType='collection',
         creator=admin)
     colFolderB = Folder().createFolder(
-        colFolderA, 'folder C', creator=admin)
+        colFolderA, 'folder B', creator=admin)
     groupA = Group().createGroup('Group A', admin)
 
     resp = server.request(
@@ -475,3 +475,66 @@ def testYAMLConfigFile(server, admin, user, fsAssetstore):
         path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']), user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json['keyA'] == 'value6'
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
+    # Create some resources to use in the tests
+    collection = Collection().createCollection(
+        'collection A', admin)
+    colFolderA = Folder().createFolder(
+        collection, 'folder A', parentType='collection',
+        creator=admin)
+    colFolderB = Folder().createFolder(
+        colFolderA, 'folder B', creator=admin)
+    colFolderConfig = Folder().createFolder(
+        collection, '.config', parentType='collection',
+        creator=admin)
+    collectionB = Collection().createCollection(
+        'collection B', admin)
+    configFolder = Folder().createFolder(
+        collectionB, 'any', parentType='collection',
+        creator=admin)
+    Setting().set(constants.PluginSettings.LARGE_IMAGE_CONFIG_FOLDER, str(configFolder['_id']))
+    utilities.uploadText(
+        json.dumps({
+            'keyA': 'value1',
+            'keyB': 'value2',
+            'keyC': 'value3',
+            '__inherit__': True}),
+        admin, fsAssetstore, colFolderB, 'sample.json')
+    utilities.uploadText(
+        json.dumps({
+            'keyA': 'value4',
+            'keyD': 'value5',
+            '__inherit__': True}),
+        admin, fsAssetstore, colFolderConfig, 'sample.json')
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']), user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value1'
+    assert resp.json['keyB'] == 'value2'
+    assert resp.json['keyC'] == 'value3'
+    assert resp.json['keyD'] == 'value5'
+    utilities.uploadText(
+        json.dumps({
+            'keyB': 'value6',
+            'keyE': 'value7'}),
+        admin, fsAssetstore, configFolder, 'sample.json')
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']), user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value1'
+    assert resp.json['keyB'] == 'value2'
+    assert resp.json['keyC'] == 'value3'
+    assert resp.json['keyD'] == 'value5'
+    assert resp.json['keyE'] == 'value7'
+    Folder().remove(colFolderConfig, user=admin)
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']), user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value1'
+    assert resp.json['keyB'] == 'value2'
+    assert resp.json['keyC'] == 'value3'
+    assert resp.json['keyE'] == 'value7'

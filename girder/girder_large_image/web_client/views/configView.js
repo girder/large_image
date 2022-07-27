@@ -1,9 +1,11 @@
+import $ from 'jquery';
 import View from '@girder/core/views/View';
 
-import PluginConfigBreadcrumbWidget from '@girder/core/views/widgets/PluginConfigBreadcrumbWidget';
-import { restRequest } from '@girder/core/rest';
 import { AccessType } from '@girder/core/constants';
 import events from '@girder/core/events';
+import { restRequest } from '@girder/core/rest';
+import BrowserWidget from '@girder/core/views/widgets/BrowserWidget';
+import PluginConfigBreadcrumbWidget from '@girder/core/views/widgets/PluginConfigBreadcrumbWidget';
 
 import ConfigViewTemplate from '../templates/largeImageConfig.pug';
 import '../stylesheets/largeImageConfig.styl';
@@ -52,13 +54,46 @@ var ConfigView = View.extend({
             }, {
                 key: 'large_image.show_item_extra_admin',
                 value: this.$('.g-large-image-show-item-extra-admin').val()
+            }, {
+                key: 'large_image.config_folder',
+                value: (this.$('#g-large-image-config-folder').val() || '').split(' ')[0]
             }]);
-        }
+        },
+        'click .g-open-browser': '_openBrowser'
     },
     initialize: function () {
         ConfigView.getSettings((settings) => {
             this.settings = settings;
             this.render();
+        });
+
+        this._browserWidgetView = new BrowserWidget({
+            parentView: this,
+            titleText: 'Configuration File Location',
+            helpText: 'Browse to a location to select it.',
+            submitText: 'Select Location',
+            validate: function (model) {
+                let isValid = $.Deferred();
+                if (!model || model.get('_modelType') !== 'folder') {
+                    isValid.reject('Please select a folder.');
+                } else {
+                    isValid.resolve();
+                }
+                return isValid.promise();
+            }
+        });
+        this.listenTo(this._browserWidgetView, 'g:saved', function (val) {
+            this.$('#g-large-image-config-folder').val(val.id);
+            restRequest({
+                url: `resource/${val.id}/path`,
+                method: 'GET',
+                data: { type: val.get('_modelType') }
+            }).done((result) => {
+                // Only add the resource path if the value wasn't altered
+                if (this.$('#g-large-image-config-folder').val() === val.id) {
+                    this.$('#g-large-image-config-folder').val(`${val.id} (${result})`);
+                }
+            });
         });
     },
 
@@ -101,6 +136,11 @@ var ConfigView = View.extend({
                 resp.responseJSON.message
             );
         });
+    },
+
+    _openBrowser: function () {
+        console.log('A');
+        this._browserWidgetView.setElement($('#g-dialog-container')).render();
     }
 }, {
     /* Class methods and objects */
