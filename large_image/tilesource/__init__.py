@@ -81,7 +81,7 @@ def getSortedSourceList(availableSources, pathOrUri, *args, **kwargs):
     isLargeImageUri = str(pathOrUri).startswith('large_image://')
     extensions = [ext.lower() for ext in os.path.basename(uriWithoutProtocol).split('.')[1:]]
     properties = {
-        'geospatial': isGeospatial(pathOrUri),
+        '_geospatial_source': isGeospatial(pathOrUri),
     }
     sourceList = []
     for sourceName in availableSources:
