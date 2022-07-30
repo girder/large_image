@@ -47,10 +47,12 @@ class ImageBytes(bytes):
         return self._mime_type
 
     def _repr_png_(self):
-        return self
+        if self.mimetype == 'image/png':
+            return self
 
     def _repr_jpeg_(self):
-        return self
+        if self.mimetype == 'image/jpeg':
+            return self
 
     def __repr__(self):
         if self.mimetype:
@@ -98,10 +100,10 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
         params['compress_level'] = 2
     output = io.BytesIO()
     image.save(output, encoding, **params)
-    btes = output.getvalue()
-    if encoding in ['PNG', 'JPEG']:
-        return ImageBytes(btes, mimetype=f'image/{encoding.lower()}')
-    return btes
+    return ImageBytes(
+        output.getvalue(),
+        mimetype=f'image/{encoding.lower().replace("tiled", "tiff")}'
+    )
 
 
 def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,

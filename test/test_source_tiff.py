@@ -275,7 +275,7 @@ def testThumbnails():
     assert isinstance(image, ImageBytes)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     image, mimeType = source.getThumbnail(encoding='TIFF')
-    assert isinstance(image, bytes)
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.TIFFHeader)] == utilities.TIFFHeader
     image, mimeType = source.getThumbnail(jpegQuality=10)
     assert isinstance(image, ImageBytes)
