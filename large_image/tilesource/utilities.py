@@ -36,6 +36,7 @@ colormap = {
 
 class ImageBytes(bytes):
     """Wrapper class to make repr of image bytes better in ipython."""
+
     def __new__(cls, source: bytes, mimetype: str = None):
         self = super().__new__(cls, source)
         self._mime_type = mimetype
