@@ -81,13 +81,13 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
         if image.mode not in ({'L', 'RGB', 'RGBA'} if simplejpeg else {'L', 'RGB'}):
             image = image.convert('RGB' if image.mode != 'LA' else 'L')
         if simplejpeg:
-            return simplejpeg.encode_jpeg(
+            return ImageBytes(simplejpeg.encode_jpeg(
                 _imageToNumpy(image)[0],
                 quality=jpegQuality,
                 colorspace=image.mode if image.mode in {'RGB', 'RGBA'} else 'GRAY',
                 colorsubsampling={-1: '444', 0: '444', 1: '422', 2: '420'}.get(
                     jpegSubsampling, str(jpegSubsampling).strip(':')),
-            )
+            ), mimetype='image/jpeg')
         params['quality'] = jpegQuality
         params['subsampling'] = jpegSubsampling
     elif encoding in {'TIFF', 'TILED'}:
