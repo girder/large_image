@@ -11,6 +11,7 @@ import pytest
 
 from large_image import constants
 from large_image.exceptions import TileSourceError, TileSourceInefficientError
+from large_image.tilesource.utilities import ImageBytes
 
 from . import utilities
 from .datastore import datastore
@@ -149,10 +150,12 @@ def testThumbnailFromGeotiffs():
     source = large_image_source_gdal.open(imagePath)
     # We get a thumbnail without a projection
     image, mimeType = source.getThumbnail(encoding='PNG')
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     # We get a different thumbnail with a projection
     source = large_image_source_gdal.open(imagePath, projection='EPSG:3857')
     image2, mimeType = source.getThumbnail(encoding='PNG')
+    assert isinstance(image2, ImageBytes)
     assert image2[:len(utilities.PNGHeader)] == utilities.PNGHeader
     assert image != image2
 

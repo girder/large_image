@@ -9,6 +9,7 @@ import pytest
 import tifftools
 
 from large_image import constants
+from large_image.tilesource.utilities import ImageBytes
 
 from . import utilities
 from .datastore import datastore
@@ -271,19 +272,24 @@ def testThumbnails():
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     defaultLength = len(image)
     image, mimeType = source.getThumbnail(encoding='PNG')
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     image, mimeType = source.getThumbnail(encoding='TIFF')
+    assert isinstance(image, bytes)
     assert image[:len(utilities.TIFFHeader)] == utilities.TIFFHeader
     image, mimeType = source.getThumbnail(jpegQuality=10)
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     assert len(image) < defaultLength
     image, mimeType = source.getThumbnail(jpegSubsampling=2)
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     assert len(image) < defaultLength
     with pytest.raises(Exception):
         source.getThumbnail(encoding='unknown')
     # Test width and height using PNGs
     image, mimeType = source.getThumbnail(encoding='PNG')
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     (width, height) = struct.unpack('!LL', image[16:24])
     assert max(width, height) == 256

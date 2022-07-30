@@ -34,6 +34,15 @@ colormap = {
 }
 
 
+class ImageBytes(bytes):
+    """Wrapper class to make repr of image bytes better in ipython."""
+    def _repr_png_(self):
+        return self
+
+    def _repr_jpeg_(self):
+        return self
+
+
 def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompression):
     """
     Encode a PIL Image to a binary representation of the image (a jpeg, png, or
@@ -74,7 +83,10 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
         params['compress_level'] = 2
     output = io.BytesIO()
     image.save(output, encoding, **params)
-    return output.getvalue()
+    btes = output.getvalue()
+    if encoding in ['PNG', 'JPEG']:
+        return ImageBytes(btes)
+    return btes
 
 
 def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
