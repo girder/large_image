@@ -36,11 +36,25 @@ colormap = {
 
 class ImageBytes(bytes):
     """Wrapper class to make repr of image bytes better in ipython."""
+    def __new__(cls, source: bytes, mimetype: str = None):
+        self = super().__new__(cls, source)
+        self._mime_type = mimetype
+        return self
+
+    @property
+    def mimetype(self):
+        return self._mime_type
+
     def _repr_png_(self):
         return self
 
     def _repr_jpeg_(self):
         return self
+
+    def __repr__(self):
+        if self.mimetype:
+            return f'ImageBytes<{len(self)}> ({self.mimetype})'
+        return f'ImageBytes<{len(self)}> (wrapped image bytes)'
 
 
 def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompression):
@@ -85,7 +99,7 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
     image.save(output, encoding, **params)
     btes = output.getvalue()
     if encoding in ['PNG', 'JPEG']:
-        return ImageBytes(btes)
+        return ImageBytes(btes, mimetype=f'image/{encoding.lower()}')
     return btes
 
 
