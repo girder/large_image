@@ -154,7 +154,7 @@ def testThumbnailFromGeotiffs():
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     image, mimeType = source.getThumbnail(encoding='JPEG')
     assert isinstance(image, ImageBytes)
-    assert image[:len(utilities.PNGHeader)] == utilities.JPEGHeader
+    assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     # We get a different thumbnail with a projection
     source = large_image_source_gdal.open(imagePath, projection='EPSG:3857')
     image2, mimeType = source.getThumbnail(encoding='PNG')
