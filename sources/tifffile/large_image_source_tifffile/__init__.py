@@ -95,17 +95,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via tifffile.')
-        # Find the series with the most pixels.  Use all series that have the
-        # same dimensionality and resolution.  They can differ in X, Y size.
-        maxseries = None
-        maxsamples = 0
-        for idx, s in enumerate(self._tf.series):
-            samples = numpy.prod(s.shape)
-            if samples > maxsamples and 'X' in s.axes and 'Y' in s.axes:
-                maxseries = idx
-                maxsamples = samples
-        if maxseries is None:
-            raise TileSourceError('File cannot be opened via tifffile source.')
+        maxseries, maxsamples = self._biggestSeries()
         self.tileWidth = self.tileHeight = self._tileSize
         s = self._tf.series[maxseries]
         self._baseSeries = s
@@ -135,6 +125,29 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if (key.startswith('is_') and hasattr(self, '_handle_' + key[3:]) and
                     getattr(self._tf, key)):
                 getattr(self, '_handle_' + key[3:])()
+
+    def _biggestSeries(self):
+        """
+        Find the series with the most pixels.  Use all series that have the
+        same dimensionality and resolution.  They can differ in X, Y size.
+
+        :returns: index of the largest series, number of pixels in a frame in
+            that series.
+        """
+        maxseries = None
+        maxsamples = 0
+        try:
+            for idx, s in enumerate(self._tf.series):
+                samples = numpy.prod(s.shape)
+                if samples > maxsamples and 'X' in s.axes and 'Y' in s.axes:
+                    maxseries = idx
+                    maxsamples = samples
+        except Exception as exc:
+            self.logger.debug('Cannot use tifffile: %r', exc)
+            maxseries = None
+        if maxseries is None:
+            raise TileSourceError('File cannot be opened via tifffile source.')
+        return maxseries, maxsamples
 
     def _findMatchingSeries(self):
         """
