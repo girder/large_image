@@ -35,7 +35,7 @@ from girder.models.file import File
 from girder.models.item import Item
 from girder.utility.progress import setResponseTimeLimit
 from large_image.cache_util import strhash
-from large_image.constants import TileInputUnits
+from large_image.constants import TileInputUnits, TileOutputMimeTypes
 from large_image.exceptions import TileGeneralError
 
 from .. import loadmodelcache
@@ -46,7 +46,12 @@ MimeTypeExtensions = {
     'image/png': 'png',
     'image/tiff': 'tiff',
 }
+for key, value in TileOutputMimeTypes.items():
+    if value not in MimeTypeExtensions:
+        MimeTypeExtensions[value] = key.lower()
 ImageMimeTypes = list(MimeTypeExtensions)
+EncodingTypes = list(TileOutputMimeTypes.keys()) + [
+    'pickle', 'pickle:3', 'pickle:4', 'pickle:5']
 
 
 def _adjustParams(params):
@@ -697,8 +702,7 @@ class TilesItemResource(ItemResource):
                'have.  For geospatial sources, TILED will also have '
                'appropriate tagging.  Pickle emits python pickle data with an '
                'optional specific protocol', required=False,
-               enum=['JPEG', 'PNG', 'TIFF', 'TILED', 'pickle', 'pickle:3',
-                     'pickle:4', 'pickle:5'], default='JPEG')
+               enum=EncodingTypes, default='JPEG')
         .param('contentDisposition', 'Specify the Content-Disposition response '
                'header disposition-type value.', required=False,
                enum=['inline', 'attachment'])
@@ -807,8 +811,7 @@ class TilesItemResource(ItemResource):
                'have.  For geospatial sources, TILED will also have '
                'appropriate tagging.  Pickle emits python pickle data with an '
                'optional specific protocol', required=False,
-               enum=['JPEG', 'PNG', 'TIFF', 'TILED', 'pickle', 'pickle:3',
-                     'pickle:4', 'pickle:5'], default='JPEG')
+               enum=EncodingTypes, default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
                required=False, dataType='int', default=95)
         .param('jpegSubsampling', 'Chroma subsampling used for generating '
@@ -1220,8 +1223,7 @@ class TilesItemResource(ItemResource):
                'have.  For geospatial sources, TILED will also have '
                'appropriate tagging.  Pickle emits python pickle data with an '
                'optional specific protocol', required=False,
-               enum=['JPEG', 'PNG', 'TIFF', 'TILED', 'pickle', 'pickle:3',
-                     'pickle:4', 'pickle:5'], default='JPEG')
+               enum=EncodingTypes, default='JPEG')
         .param('jpegQuality', 'Quality used for generating JPEG images',
                required=False, dataType='int', default=95)
         .param('jpegSubsampling', 'Chroma subsampling used for generating '

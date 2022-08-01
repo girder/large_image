@@ -74,6 +74,15 @@ def testTileIterator():
         tileCount += 1
         assert tile['tile'][:len(utilities.TIFFHeader)] == utilities.TIFFHeader
     assert tileCount == 45
+    # Ask for WEBPs
+    tileCount = 0
+    for tile in source.tileIterator(
+            scale={'magnification': 2.5},
+            format=constants.TILE_FORMAT_IMAGE,
+            encoding='WEBP'):
+        tileCount += 1
+        assert tile['tile'][8:12] == b'WEBP'
+    assert tileCount == 45
 
 
 def testTileIteratorRetiling():
