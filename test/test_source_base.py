@@ -506,3 +506,28 @@ def testCanReadList():
     imagePath = datastore.fetch('sample_image.ptif')
     assert len(large_image.canReadList(imagePath)) > 1
     assert any(canRead for source, canRead in large_image.canReadList(imagePath))
+
+
+def testImageBytes():
+    ib = large_image.tilesource.utilities.ImageBytes(b'abc')
+    assert ib == b'abc'
+    assert isinstance(ib, bytes)
+    assert 'ImageBytes' in repr(ib)
+    assert ib.mimetype is None
+    assert ib._repr_jpeg_() is None
+    assert ib._repr_png_() is None
+    ib = large_image.tilesource.utilities.ImageBytes(b'abc', 'image/jpeg')
+    assert ib.mimetype == 'image/jpeg'
+    assert 'ImageBytes' in repr(ib)
+    assert ib._repr_jpeg_() == b'abc'
+    assert ib._repr_png_() is None
+    ib = large_image.tilesource.utilities.ImageBytes(b'abc', 'image/png')
+    assert ib.mimetype == 'image/png'
+    assert 'ImageBytes' in repr(ib)
+    assert ib._repr_jpeg_() is None
+    assert ib._repr_png_() == b'abc'
+    ib = large_image.tilesource.utilities.ImageBytes(b'abc', 'other')
+    assert ib.mimetype == 'other'
+    assert 'ImageBytes' in repr(ib)
+    assert ib._repr_jpeg_() is None
+    assert ib._repr_png_() is None
