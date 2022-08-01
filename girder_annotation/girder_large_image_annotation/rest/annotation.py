@@ -20,8 +20,8 @@ import time
 
 import cherrypy
 import orjson
-
 from bson.objectid import ObjectId
+
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
@@ -561,7 +561,8 @@ class AnnotationResource(Resource):
                 count += 1
         return count
 
-    def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False, sortDir=False):
+    def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
+                             sortDir=False):
         recursivePipeline = [
             {'$graphLookup': {
                 'from': 'folder',
@@ -619,12 +620,11 @@ class AnnotationResource(Resource):
 
         return Annotation().collection.aggregate(pipeline)
 
-
     @autoDescribeRoute(
         Description('Check if there are any annotations from the items in a folder')
         .param('id', 'The ID of the folder', required=True, paramType='path')
         .param('recurse', 'Whether or not to recursively check '
-            'subfolders for annotations', required=False, default=True, dataType='boolean')
+               'subfolders for annotations', required=False, default=True, dataType='boolean')
         .errorResponse()
     )
     @access.public
@@ -636,19 +636,18 @@ class AnnotationResource(Resource):
         except StopIteration:
             yield False
 
-
     @autoDescribeRoute(
         Description('Get the annotations from the items in a folder')
         .param('id', 'The ID of the folder', required=True, paramType='path')
         .param('recurse', 'Whether or not to retrieve all '
-            'annotations from subfolders', required=False, default=False, dataType='boolean')
+               'annotations from subfolders', required=False, default=False, dataType='boolean')
         .pagingParams(defaultSort='created', defaultSortDir=-1)
         .errorResponse()
     )
     @access.public
     def returnFolderAnnotations(self, id, recurse, limit, offset, sort):
         return self.getFolderAnnotations(id, recurse, self.getCurrentUser(), limit, offset,
-                                    sort[0][0], sort[0][1])
+                                         sort[0][0], sort[0][1])
 
     @autoDescribeRoute(
         Description('Report on old annotations.')
