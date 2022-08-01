@@ -13,7 +13,7 @@ wrap(ItemListWidget, 'render', function (render) {
     render.apply(this, _.rest(arguments));
 
     function addLargeImageAnnotationBadge(item, parent, numAnnotations) {
-        const thumbnail = $('a[g-item-cid="' + item.cid + '"] .large_image_thumbnail', parent).first();
+        const thumbnail = $('.large_image_thumbnail[g-item-cid="' + item.cid + '"]', parent).first();
 
         let badge = thumbnail.find('.large_image_annotation_badge');
         if (badge.length === 0) {

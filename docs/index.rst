@@ -35,7 +35,9 @@
    _build/large_image_converter/modules
    _build/large_image_tasks/modules
    _build/girder_large_image/modules
+   girder_config_options
    _build/girder_large_image_annotation/modules
+   girder_annotation_config_options
    annotations
    development
 
