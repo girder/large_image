@@ -2,13 +2,30 @@ import $ from 'jquery';
 import _ from 'underscore';
 
 import { wrap } from '@girder/core/utilities/PluginUtils';
-import { getApiRoot } from '@girder/core/rest';
+import { getApiRoot, restRequest } from '@girder/core/rest';
 import { getCurrentUser } from '@girder/core/auth';
 import { AccessType } from '@girder/core/constants';
+import { formatSize } from '@girder/core/misc';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
 import '../stylesheets/itemList.styl';
+import ItemListTemplate from '../templates/itemList.pug';
+
+wrap(ItemListWidget, 'initialize', function (initialize, settings) {
+    initialize.call(this, settings);
+    delete this._hasAnyLargeImage;
+
+    if (!settings.folderId) {
+        this._liconfig = {};
+    }
+    restRequest({
+        url: `folder/${settings.folderId}/yaml_config/.large_image_config.yaml`
+    }).done((val) => {
+        this._liconfig = val || {};
+        this.render();
+    });
+});
 
 wrap(ItemListWidget, 'render', function (render) {
     /* Chrome limits the number of connections to a single domain, which means
@@ -40,6 +57,7 @@ wrap(ItemListWidget, 'render', function (render) {
     function addLargeImageDetails(item, container, parent, extraInfo) {
         var elem;
         elem = $('<div class="large_image_thumbnail"/>');
+        elem.attr('g-item-cid', item.cid);
         container.append(elem);
         /* We store the desired src attribute in deferred-src until we actually
          * load the image. */
@@ -85,30 +103,79 @@ wrap(ItemListWidget, 'render', function (render) {
         _loadMoreImages(parent);
     }
 
+    this._confList = () => {
+        return this._liconfig ? (this.$el.closest('.modal-dialog').length ? this._liconfig.itemListDialog : this._liconfig.itemList) : undefined;
+    };
+
+    function itemListRender() {
+        this.$el.html(ItemListTemplate({
+            items: this.collection.toArray(),
+            isParentPublic: this.public,
+            hasMore: this.collection.hasNextPage(),
+            formatSize: formatSize,
+            checkboxes: this._checkboxes,
+            downloadLinks: this._downloadLinks,
+            viewLinks: this._viewLinks,
+            showSizes: this._showSizes,
+            highlightItem: this._highlightItem,
+            selectedItemId: (this._selectedItem || {}).id,
+            paginated: this._paginated,
+            apiRoot: getApiRoot(),
+            itemList: this._confList()
+        }));
+
+        const parent = this.$el;
+        this.$el.find('.large_image_thumbnail').each(function () {
+            var elem = $(this);
+            /* Handle images loading or failing. */
+            $('img', elem).one('error', function () {
+                $('img', elem).addClass('failed-to-load');
+                $('img', elem).removeClass('loading waiting');
+                elem.addClass('failed-to-load');
+                _loadMoreImages(parent);
+            });
+            $('img', elem).one('load', function () {
+                $('img', elem).addClass('loaded');
+                $('img', elem).removeClass('loading waiting');
+                _loadMoreImages(parent);
+            });
+        });
+        _loadMoreImages(parent);
+    }
+
+    if (this._confList() && this._hasAnyLargeImage) {
+        return itemListRender.apply(this, _.rest(arguments));
+    }
+
     render.call(this);
     largeImageConfig.getSettings((settings) => {
-        // we will want to also show metadata, so these entries might look like
-        // {images: ['label', 'macro'],  meta: [{key: 'abc', label: 'ABC'}]}
+        var items = this.collection.toArray();
+        var parent = this.$el;
+        this._hasAnyLargeImage = !!_.some(items, function (item) {
+            return item.has('largeImage');
+        });
+        if (this._confList() && this._hasAnyLargeImage) {
+            return itemListRender.apply(this, _.rest(arguments));
+        }
         if (settings['large_image.show_thumbnails'] === false ||
                 this.$('.large_image_container').length > 0) {
             return this;
         }
-        var items = this.collection.toArray();
-        var parent = this.$el;
-        var hasAnyLargeImage = _.some(items, function (item) {
-            return item.has('largeImage');
-        });
-        if (hasAnyLargeImage) {
-            _.each(items, function (item) {
-                var elem = $('<div class="large_image_container"/>');
-                if (item.get('largeImage')) {
-                    item.getAccessLevel(function () {
-                        addLargeImageDetails(item, elem, parent, settings.extraInfo);
-                    });
-                }
-                $('a[g-item-cid="' + item.cid + '"]>i', parent).before(elem);
-                _loadMoreImages(parent);
-            });
+        if (this._hasAnyLargeImage) {
+            if (!this._confList()) {
+                _.each(items, (item) => {
+                    var elem = $('<div class="large_image_container"/>');
+                    if (item.get('largeImage')) {
+                        item.getAccessLevel(() => {
+                            if (!this._confList()) {
+                                addLargeImageDetails(item, elem, parent, settings.extraInfo);
+                            }
+                        });
+                    }
+                    $('a[g-item-cid="' + item.cid + '"]>i', parent).before(elem);
+                    _loadMoreImages(parent);
+                });
+            }
         }
         return this;
     });

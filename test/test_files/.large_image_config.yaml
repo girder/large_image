@@ -1,0 +1,56 @@
+access:
+  # Show to user and higher
+  user:
+    # itemList adjustments
+    itemList:
+      # Show these columns
+      columns:
+        -
+          type: image
+          value: thumbnail
+          title: Thumbnail
+        -
+          type: image
+          value: label
+          title: Label
+        -
+          type: image
+          value: macro
+          title: Macro
+        -
+          type: record
+          value: name
+        -
+          type: metadata
+          value: Stain
+          format: text
+        -
+          type: metadata
+          value: Classification
+          format: number
+        -
+          type: metadata
+          value: gloms.length
+        -
+          type: record
+          value: size
+        -
+          type: record
+          value: controls
+    itemListDialog:
+      # Show these columns
+      columns:
+        -
+          type: image
+          value: thumbnail
+          title: Thumbnail
+        -
+          type: record
+          value: name
+        -
+          type: metadata
+          value: Stain
+          format: text
+        -
+          type: record
+          value: size

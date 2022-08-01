@@ -15,3 +15,34 @@ div.large_image_container
 [large_image_columns="3"]
   div.large_image_container
     min-width 480px
+ul.g-item-list
+  &.li-item-list
+    display table
+    >li
+      display table-row
+      &.li-item-list-header
+        padding-bottom 5px
+      >span.li-item-list-header
+        display table-cell
+        font-weight bold
+        text-align center
+        border-bottom 1px solid #888
+        padding 0 5px
+      >span.li-item-list-cell
+        display table-cell
+        padding-top 4px
+        padding-bottom 3px
+        &.li-column-record-size
+          div
+            float none
+            margin-left 0
+            padding 0 10px
+        &.li-column-record-controls
+          white-space nowrap
+      >span.li-item-list-cell:first-child
+        padding-left 5px
+      >span.li-item-list-cell:last-child
+        padding-right 5px
+      >span.li-column-metadata
+        padding-left 5px
+        padding-right 5px
