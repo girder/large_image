@@ -21,6 +21,7 @@ import time
 import cherrypy
 import orjson
 
+from bson.objectid import ObjectId
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
@@ -58,6 +59,8 @@ class AnnotationResource(Resource):
         self.route('GET', ('item', ':id'), self.getItemAnnotations)
         self.route('POST', ('item', ':id'), self.createItemAnnotations)
         self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
+        self.route('GET', ('folder', ':id'), self.returnFolderAnnotations)
+        self.route('GET', ('folder', ':id', 'present'), self.existFolderAnnotations)
         self.route('GET', ('old',), self.getOldAnnotations)
         self.route('DELETE', ('old',), self.deleteOldAnnotations)
         self.route('GET', ('counts',), self.getItemListAnnotationCounts)
@@ -557,6 +560,95 @@ class AnnotationResource(Resource):
                 Annotation().remove(annot)
                 count += 1
         return count
+
+    def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False, sortDir=False):
+        recursivePipeline = [
+            {'$graphLookup': {
+                'from': 'folder',
+                'startWith': '$_id',
+                'connectFromField': '_id',
+                'connectToField': 'parentId',
+                'as': '__children'
+            }},
+            {'$unwind': {'path': '$__children'}},
+            {'$replaceRoot': {'newRoot': '$__children'}}] if recurse else []
+        accessPipeline = [
+            {'$match': {
+                '$or': [
+                    {'access.users':
+                        {'$elemMatch': {
+                            'id': user['_id'],
+                            'level': {'$gte': 2}
+                        }}},
+                    {'access.groups':
+                        {'$elemMatch': {
+                            'id': {'$in': user['groups']},
+                            'level': {'$gte': 2}
+                        }}}
+                ]
+            }}
+        ] if not user['admin'] else []
+        pipeline = [
+            {'$match': {'_id': 'none'}},
+            {'$unionWith': {
+                'coll': 'folder',
+                'pipeline': [{'$match': {'_id': ObjectId(id)}}] +
+                recursivePipeline +
+                [{'$unionWith': {
+                    'coll': 'folder',
+                    'pipeline': [{'$match': {'_id': ObjectId(id)}}]
+                }}, {'$lookup': {
+                    'from': 'item',
+                    'localField': '_id',
+                    'foreignField': 'folderId',
+                    'as': '__items'
+                }}, {'$lookup': {
+                    'from': 'annotation',
+                    'localField': '__items._id',
+                    'foreignField': 'itemId',
+                    'as': '__annotations'
+                }}, {'$unwind': '$__annotations'},
+                    {'$replaceRoot': {'newRoot': '$__annotations'}},
+                    {'$match': {'_active': {'$ne': False}}}
+                ] + accessPipeline
+            }},
+        ]
+        pipeline = pipeline + [{'$sort': {sort: sortDir}}] if sort else pipeline
+        pipeline = pipeline + [{'$skip': offset}] if offset else pipeline
+        pipeline = pipeline + [{'$limit': limit}] if limit else pipeline
+
+        return Annotation().collection.aggregate(pipeline)
+
+
+    @autoDescribeRoute(
+        Description('Check if there are any annotations from the items in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .param('recurse', 'Whether or not to recursively check '
+            'subfolders for annotations', required=False, default=True, dataType='boolean')
+        .errorResponse()
+    )
+    @access.public
+    def existFolderAnnotations(self, id, recurse):
+        annotations = self.getFolderAnnotations(id, recurse, self.getCurrentUser(), 1)
+        try:
+            next(annotations)
+            yield True
+        except StopIteration:
+            yield False
+
+
+    @autoDescribeRoute(
+        Description('Get the annotations from the items in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .param('recurse', 'Whether or not to retrieve all '
+            'annotations from subfolders', required=False, default=False, dataType='boolean')
+        .pagingParams(defaultSort='created', defaultSortDir=-1)
+        .errorResponse()
+    )
+    @access.public
+    def returnFolderAnnotations(self, id, recurse, limit, offset, sort):
+        return self.getFolderAnnotations(id, recurse, self.getCurrentUser(), limit, offset,
+                                    sort[0][0], sort[0][1])
 
     @autoDescribeRoute(
         Description('Report on old annotations.')
