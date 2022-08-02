@@ -6,6 +6,7 @@
 - Add a tifffile tile source ([885](../../pull/885), [896](../../pull/896), [903](../../pull/903))
 - Added a canReadList method to large_image to show which source can be used ([895](../../pull/895))
 - Optionally show metadata in item lists ([901](../../pull/901))
+- Register the tile output formats from PIL ([904](../../pull/904))
 
 ### Improvements
 - Pass options to the annotationLayer mode ([881](../../pull/881))
@@ -18,6 +19,7 @@
 - Add local color definitions ([858](../../pull/858))
 - Inheritable config files ([897](../../pull/897))
 - Add geospatial property ([818](../../pull/818))
+- Improve repr of image bytes ([902](../../pull/902))
 
 ### Changes
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))
