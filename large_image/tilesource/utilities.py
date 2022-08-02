@@ -921,3 +921,23 @@ def histogramThreshold(histogram, threshold, fromMax=False):
             return edges[idx]
         tally += hist[idx]
     return edges[-1]
+
+
+def addPILFormatsToOutputOptions():
+    """
+    Check PIL for available formats that be saved and add them to the lists of
+    of available formats.
+    """
+    # Call this to actual register the extensions
+    PIL.Image.registered_extensions()
+    for key, value in PIL.Image.MIME.items():
+        if key not in TileOutputMimeTypes and key in PIL.Image.SAVE:
+            TileOutputMimeTypes[key] = value
+    for key, value in PIL.Image.registered_extensions().items():
+        key = key.lstrip('.')
+        if (key not in TileOutputMimeTypes and value in TileOutputMimeTypes and
+                key not in TileOutputPILFormat):
+            TileOutputPILFormat[key] = value
+
+
+addPILFormatsToOutputOptions()
