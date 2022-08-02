@@ -272,7 +272,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     if type(inputPathOrBuffer) == pyvips.vimage.Image:
         source = 'vips image'
         image = inputPathOrBuffer
-    elif type(inputPathOrBuffer) == bytes:
+    elif isinstance(inputPathOrBuffer, bytes):
         source = 'buffer'
         image = pyvips.Image.new_from_buffer(inputPathOrBuffer, '')
     else:
