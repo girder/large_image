@@ -18,11 +18,14 @@
 - Speed up styling by doing less ([892](../../pull/892))
 - Add local color definitions ([858](../../pull/858))
 - Inheritable config files ([897](../../pull/897))
-- Add geospatial property ([818](../../pull/818))
+- Add geospatial property ([818](../../pull/818), [908](../../pull/908))
 - Improve repr of image bytes ([902](../../pull/902))
 
 ### Changes
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))
+
+### Bug Fixes
+- Fix alpha on GDAL sources with a projection that have an explicit alpha channel ([909](../../pull/909))
 
 ## 1.15.1
 

@@ -255,7 +255,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             hasAlpha = False
             for bstyle in style:
                 hasAlpha = hasAlpha or self.getOneBandInformation(
-                    bstyle.get('band', 0)).get('iterpretation') == 'alpha'
+                    bstyle.get('band', 0)).get('interpretation') == 'alpha'
                 if 'palette' in bstyle:
                     if bstyle['palette'] == 'colortable':
                         bandInfo = self.getOneBandInformation(bstyle.get('band', 0))
