@@ -75,6 +75,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _minImageSize = 128
     _minTileSize = 128
     _maxTileSize = 2048
+    _minAssociatedImageSize = 64
     _maxAssociatedImageSize = 8192
 
     def __init__(self, path, **kwargs):
@@ -214,8 +215,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 entry['width'] = p.shape[p.axes.index('X')]
                 entry['height'] = p.shape[p.axes.index('Y')]
                 if (id not in self._associatedImages and
-                        entry['width'] <= self._maxAssociatedImageSize and
-                        entry['height'] <= self._maxAssociatedImageSize):
+                        max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
+                        max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
                     self._associatedImages[id] = entry
         for sidx, s in enumerate(self._tf.series):
             if sidx not in self._series and not len(set(s.axes) - set('YXS')):
@@ -226,8 +227,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 entry['width'] = s.shape[s.axes.index('X')]
                 entry['height'] = s.shape[s.axes.index('Y')]
                 if (id not in self._associatedImages and
-                        entry['width'] <= self._maxAssociatedImageSize and
-                        entry['height'] <= self._maxAssociatedImageSize):
+                        max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
+                        max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
                     self._associatedImages[id] = entry
 
     def _handle_scn(self):  # noqa
