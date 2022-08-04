@@ -155,7 +155,7 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):
     extensions = [entry.lower().split()[0] for entry in file['exts'] if entry]
     properties = {}
     if localPath:
-        properties['geospatial'] = tilesource.isGeospatial(localPath)
+        properties['_geospatial_source'] = tilesource.isGeospatial(localPath)
     sourceList = []
     for sourceName in AvailableGirderTileSources:
         if not getattr(AvailableGirderTileSources[sourceName], 'girderSource', False):
