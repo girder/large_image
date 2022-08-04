@@ -286,8 +286,10 @@ MultiSourceSchema = {
         # },
         # corner points in the projection?
         'backgroundColor': {
-            'description': 'A list of background color values in the same '
-                           'scale and band order as the first tile source',
+            'description': 'A list of background color values (fill color) in '
+                           'the same scale and band order as the first tile '
+                           'source (e.g., white might be [255, 255, 255] for '
+                           'a three channel image).',
             'type': 'array',
             'items': {'type': 'number'},
         },
