@@ -575,8 +575,8 @@ def testNoData():
     source = large_image_source_gdal.open(
         imagePath, projection='EPSG:3857',
         style={'bands': [{'band': 1, 'max': '100', 'min': '5', 'nodata': '0'}]})
-    assert source.getThumbnail()[0] is not None
+    assert source.getThumbnail()[0]
     source = large_image_source_gdal.open(
         imagePath, projection='EPSG:3857',
         style={'bands': [{'band': 1, 'max': 100, 'min': 5, 'nodata': 0}]})
-    assert source.getThumbnail()[0] is not None
+    assert source.getThumbnail()[0]
