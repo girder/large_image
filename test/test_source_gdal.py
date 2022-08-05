@@ -568,3 +568,15 @@ def testVfsCogValidation():
         imagePath, projection='EPSG:3857', encoding='PNG')
     with pytest.raises(TileSourceInefficientError):
         source.validateCOG()
+
+
+def testNoData():
+    imagePath = datastore.get_url('TC_NG_SFBay_US_Geo_COG.tif')
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857',
+        style={'bands': [{'band': 1, 'max': '100', 'min': '5', 'nodata': '0'}]})
+    assert source.getThumbnail()[0] is not None
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857',
+        style={'bands': [{'band': 1, 'max': 100, 'min': 5, 'nodata': 0}]})
+    assert source.getThumbnail()[0] is not None

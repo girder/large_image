@@ -20,6 +20,7 @@
 - Inheritable config files ([897](../../pull/897))
 - Add geospatial property ([818](../../pull/818), [908](../../pull/908))
 - Improve repr of image bytes ([902](../../pull/902))
+- Handle nodata style when specified as a string ([914](../../pull/914))
 
 ### Changes
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))

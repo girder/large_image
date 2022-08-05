@@ -1191,7 +1191,7 @@ class TileSource:
             clamp = entry.get('clamp', True)
             delta = max - min if max != min else 1
             if nodata is not None:
-                keep = band != nodata
+                keep = band != float(nodata)
             else:
                 keep = numpy.full(image.shape[:2], True)
             band = (band - min) / delta
