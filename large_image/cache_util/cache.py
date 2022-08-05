@@ -1,3 +1,4 @@
+import copy
 import functools
 import threading
 
@@ -193,6 +194,17 @@ class LruCacheMetaclass(type):
                         return result
                 except KeyError:
                     pass
+            # This conditionally copies a non-styled class and add a style.
+            if kwargs.get('style') and hasattr(cls, '_setStyle'):
+                subkwargs = kwargs.copy()
+                subkwargs.pop('style')
+                subresult = cls(*args, **subkwargs)
+                result = copy.copy(subresult)
+                result._setStyle(kwargs['style'])
+                result._classkey = key
+                with cacheLock:
+                    cache[key] = result
+                    return result
             try:
                 instance = super().__call__(*args, **kwargs)
             except Exception as exc:

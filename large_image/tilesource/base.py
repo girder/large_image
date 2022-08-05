@@ -129,7 +129,6 @@ class TileSource:
         self.sizeX = None
         self.sizeY = None
         self._styleLock = threading.RLock()
-        self._bandRanges = {}
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -139,6 +138,15 @@ class TileSource:
         self.jpegSubsampling = int(jpegSubsampling)
         self.tiffCompression = tiffCompression
         self.edge = edge
+        self._setStyle(style)
+
+    def _setStyle(self, style):
+        """
+        Check and set the specified style from a json string or a dictionary.
+
+        :param style: The new style.
+        """
+        self._bandRanges = {}
         self._jsonstyle = style
         if style:
             if isinstance(style, dict):

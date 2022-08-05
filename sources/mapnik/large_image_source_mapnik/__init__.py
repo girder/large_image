@@ -176,7 +176,9 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
 
     def _setDefaultStyle(self):
         """Don't inherit from GDAL tilesource."""
-        pass
+        with self._getTileLock:
+            if hasattr(self, '_mapnikMap'):
+                del self._mapnikMap
 
     @staticmethod
     def interpolateMinMax(start, stop, count):
