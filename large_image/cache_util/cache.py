@@ -96,7 +96,7 @@ def methodcache(key=None):
                     self.cache[k] = v
             except ValueError:
                 pass  # value too large
-            except KeyError:
+            except (KeyError, RuntimeError):
                 # the key was refused for some reason
                 config.getConfig('logger').debug(
                     'Had a cache KeyError while trying to store a value to key %r' % (k))

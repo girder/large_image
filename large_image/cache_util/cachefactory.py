@@ -53,16 +53,18 @@ def loadCaches(entryPointName='large_image.cache', sourceDict=_availableCaches):
     if len(_availableCaches):
         return
     epoints = entry_points()
-    if entryPointName in epoints:
-        for entryPoint in epoints[entryPointName]:
-            try:
-                cacheClass = entryPoint.load()
-                sourceDict[entryPoint.name.lower()] = cacheClass
-                config.getConfig('logprint').debug(f'Loaded cache {entryPoint.name}')
-            except Exception:
-                config.getConfig('logprint').exception(
-                    f'Failed to load cache {entryPoint.name}'
-                )
+    # Python 3.10 uses select and deprecates dictionary interface
+    epointList = epoints.select(group=entryPointName) if hasattr(
+        epoints, 'select') else epoints.get(entryPointName, [])
+    for entryPoint in epointList:
+        try:
+            cacheClass = entryPoint.load()
+            sourceDict[entryPoint.name.lower()] = cacheClass
+            config.getConfig('logprint').debug(f'Loaded cache {entryPoint.name}')
+        except Exception:
+            config.getConfig('logprint').exception(
+                f'Failed to load cache {entryPoint.name}'
+            )
     # Load memcached last for now
     if MemCache is not None:
         # TODO: put this in an entry point for a new package
