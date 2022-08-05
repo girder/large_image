@@ -279,7 +279,10 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     bstyle['nodata'] = bandInfo.get('nodata', None)
             if not hasAlpha and self.projection:
                 style.append({
-                    'band': len(self.getBandInformation()) + 1,
+                    'band': (
+                        self._bandNumber('alpha', False)
+                        if self._bandNumber('alpha', False) is not None else
+                        (len(self.getBandInformation()) + 1)),
                     'min': 0,
                     'max': 'auto',
                     'composite': 'multiply',

@@ -27,7 +27,7 @@
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))
 
 ### Bug Fixes
-- Fix alpha on GDAL sources with a projection that have an explicit alpha channel ([909](../../pull/909))
+- Fix alpha on GDAL sources with a projection that have an explicit alpha channel ([909](../../pull/909), [915](../../pull/915))
 
 ## 1.15.1
 
