@@ -7,6 +7,7 @@
 - Added a canReadList method to large_image to show which source can be used ([895](../../pull/895))
 - Optionally show metadata in item lists ([901](../../pull/901))
 - Register the tile output formats from PIL ([904](../../pull/904))
+- Copy tilesource instances to add styles ([894](../../pull/894))
 
 ### Improvements
 - Pass options to the annotationLayer mode ([881](../../pull/881))
