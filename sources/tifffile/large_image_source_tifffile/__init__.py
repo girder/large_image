@@ -137,6 +137,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         maxseries = None
         maxsamples = 0
+        ex = 'no maximum series'
         try:
             for idx, s in enumerate(self._tf.series):
                 samples = numpy.prod(s.shape)
@@ -145,9 +146,11 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     maxsamples = samples
         except Exception as exc:
             self.logger.debug('Cannot use tifffile: %r', exc)
+            ex = exc
             maxseries = None
         if maxseries is None:
-            raise TileSourceError('File cannot be opened via tifffile source.')
+            raise TileSourceError(
+                'File cannot be opened via tifffile source: %r' % ex)
         return maxseries, maxsamples
 
     def _findMatchingSeries(self):
@@ -205,7 +208,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Find associated images from unused pages and series.
         """
-        pagesInSeries = [p for s in self._tf.series for l in s.pages.levels for p in l.pages]
+        pagesInSeries = [p for s in self._tf.series for ll in s.pages.levels for p in ll.pages]
         self._associatedImages = {}
         for p in self._tf.pages:
             if (p not in pagesInSeries and p.keyframe is not None and
@@ -330,7 +333,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         result = {}
         pages = [s.pages[0] for s in self._tf.series]
-        pagesInSeries = [p for s in self._tf.series for l in s.pages.levels for p in l.pages]
+        pagesInSeries = [p for s in self._tf.series for ll in s.pages.levels for p in ll.pages]
         pages.extend([page for page in self._tf.pages if page not in pagesInSeries])
         for page in pages:
             for tag in getattr(page, 'tags', []):
@@ -402,11 +405,11 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if hasattr(za[0], 'get_basic_selection'):
             bza = za[0]
             # we could cache this
-            for l in range(len(series.levels) - 1, 0, -1):
-                scale = round(max(za[0].shape[xidx] / za[l].shape[xidx],
-                                  za[0].shape[yidx] / za[l].shape[yidx]))
+            for ll in range(len(series.levels) - 1, 0, -1):
+                scale = round(max(za[0].shape[xidx] / za[ll].shape[xidx],
+                                  za[0].shape[yidx] / za[ll].shape[yidx]))
                 if scale <= step and step // scale == step / scale:
-                    bza = za[l]
+                    bza = za[ll]
                     x0 //= scale
                     x1 //= scale
                     y0 //= scale

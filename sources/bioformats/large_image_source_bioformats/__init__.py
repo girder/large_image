@@ -278,10 +278,14 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         if self.levels < 1:
             raise TileSourceError(
-                'OpenSlide image must have at least one level.')
+                'Bioformats image must have at least one level.')
 
         if self.sizeX <= 0 or self.sizeY <= 0:
             raise TileSourceError('Bioformats tile size is invalid.')
+        try:
+            self.getTile(0, 0, self.levels - 1)
+        except Exception as exc:
+            raise TileSourceError('Bioformats cannot read a tile: %r' % exc)
 
     def __del__(self):
         if getattr(self, '_bioimage', None) is not None:

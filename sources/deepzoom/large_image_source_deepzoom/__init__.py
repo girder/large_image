@@ -48,7 +48,7 @@ class DeepzoomFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             xml = ElementTree.parse(self._largeImagePath).getroot()
             self._info = etreeToDict(xml)['Image']
         except (ElementTree.ParseError, KeyError, UnicodeDecodeError):
-            raise TileSourceError('File cannot be opened via Deepzoom reader.')
+            raise TileSourceError('File cannot be opened via deepzoom reader.')
         except FileNotFoundError:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None

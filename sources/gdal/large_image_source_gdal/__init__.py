@@ -159,15 +159,15 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             with self._getDatasetLock:
                 self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
                 self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
-        except AttributeError:
+        except AttributeError as exc:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via GDAL.')
+            raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
         is_netcdf = self._checkNetCDF()
         try:
             scale = self.getPixelSizeInMeters()
-        except RuntimeError:
-            raise TileSourceError('File cannot be opened via GDAL.')
+        except RuntimeError as exc:
+            raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
         if (self.projection or self._getDriver() in {
             'PNG',
         }) and not scale and not is_netcdf:
