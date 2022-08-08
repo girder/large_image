@@ -872,14 +872,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'left and right and at least one of top and bottom is '
                 'specified.')
         if not self.projection:
-            pleft, ptop = self.toNativePixelCoordinates(
-                right if left is None else left,
-                bottom if top is None else top,
-                units)
-            pright, pbottom = self.toNativePixelCoordinates(
-                left if right is None else right,
-                top if bottom is None else bottom,
-                units)
+            pleft, ptop = self.toNativePixelCoordinates(left or right, top or bottom, units)
+            pright, pbottom = self.toNativePixelCoordinates(right or left, bottom or top, units)
             units = 'base_pixels'
         else:
             inProj = self._proj4Proj(units)
