@@ -23,6 +23,7 @@
 #   IFormatReader.html for interface details.
 
 import atexit
+import logging
 import math
 import os
 import threading
@@ -103,6 +104,7 @@ def _reduceLogging():
         javabridge.call(rootLogger, 'setLevel', '(Lch/qos/logback/classic/Level;)V', logLevel)
     except Exception:
         pass
+    bioformats.formatreader.logger.setLevel(logging.ERROR)
 
 
 def _startJavabridge(logger):
@@ -191,7 +193,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
                 self.logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
-                raise TileSourceError('File cannot be opened via Bioformats. (%r)' % exc)
+                raise TileSourceError('File cannot be opened via BioformatsA (%r)' % exc)
             _openImages.append(self)
 
             rdr = self._bioimage.rdr

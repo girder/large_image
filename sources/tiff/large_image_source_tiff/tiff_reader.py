@@ -47,6 +47,8 @@ except ValueError as exc:
 
 # This suppress warnings about unknown tags
 libtiff_ctypes.suppress_warnings()
+# Suppress errors to stderr
+libtiff_ctypes.suppress_errors()
 
 
 def patchLibtiff():
