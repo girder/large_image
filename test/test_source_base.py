@@ -20,9 +20,10 @@ from .datastore import datastore, registry
 SourceAndFiles = {
     'bioformats': {
         'read': r'\.(czi|jp2|svs|scn)$',
+        'noread': r'(JK-kidney_B|TCGA-AA-A02O|\.scn$)',
         # We need to modify the bioformats reader similar to tiff's
         # getTileFromEmptyDirectory
-        'skipTiles': r'(JK-kidney_B|TCGA-AA-A02O|TCGA-DU-6399|sample_jp2k_33003|\.scn$)'},
+        'skipTiles': r'(TCGA-DU-6399|sample_jp2k_33003)'},
     'deepzoom': {},
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
