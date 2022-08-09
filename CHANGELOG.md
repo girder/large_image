@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.16.1
+
+### Improvements
+- Reduce error messages and make canRead results more accurate ([918](../../pull/918), [919](../../pull/919), [920](../../pull/920))
+
 ## 1.16.0
 
 ### Features

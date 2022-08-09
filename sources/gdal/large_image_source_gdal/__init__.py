@@ -205,6 +205,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return str(self.largeImagePath)
 
     def _checkNetCDF(self):
+        if self._getDriver() == 'netCDF':
+            raise TileSourceError('netCDF file will not be read via GDAL source')
         return False
 
     def _styleBands(self):

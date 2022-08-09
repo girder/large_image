@@ -27,8 +27,8 @@ SourceAndFiles = {
     'deepzoom': {},
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*)$',
-        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
+        'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'skipTiles': r'\.*nc$'},
     'mapnik': {
         'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*)$',
