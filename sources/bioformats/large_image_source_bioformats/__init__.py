@@ -193,7 +193,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
                 self.logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
-                raise TileSourceError('File cannot be opened via BioformatsA (%r)' % exc)
+                raise TileSourceError('File cannot be opened via Bioformats (%r)' % exc)
             _openImages.append(self)
 
             rdr = self._bioimage.rdr
