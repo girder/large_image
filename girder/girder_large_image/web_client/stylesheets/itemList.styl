@@ -28,6 +28,15 @@ ul.g-item-list
         text-align center
         border-bottom 1px solid #888
         padding 0 5px
+        &.sortable
+          &:after
+            color black
+            content "\002b65"
+            padding-left 5px
+          &.down:after
+            content "\002b63"
+          &.up:after
+            content "\002b61"
       >span.li-item-list-cell
         display table-cell
         padding-top 4px
