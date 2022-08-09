@@ -60,7 +60,7 @@ _openImages = []
 
 # Default to ignoring files with no extension and some specific extensions.
 config.ConfigValues['source_bioformats_ignored_names'] = \
-    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'
+    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2))$'
 
 
 def _monitor_thread():
