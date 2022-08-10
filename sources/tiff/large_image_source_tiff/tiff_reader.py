@@ -47,6 +47,8 @@ except ValueError as exc:
 
 # This suppress warnings about unknown tags
 libtiff_ctypes.suppress_warnings()
+# Suppress errors to stderr
+libtiff_ctypes.suppress_errors()
 
 
 def patchLibtiff():
@@ -82,6 +84,15 @@ class IOTiffException(TiffException):
     """
     An exception caused by an internal failure, due to an invalid file or other
     error.
+    """
+
+    pass
+
+
+class IOTiffOpenException(IOTiffException):
+    """
+    An exception caused by an internal failure where the file cannot be opened
+    by the main library.
     """
 
     pass
@@ -168,7 +179,7 @@ class TiledTiffDirectory:
                 bytePath = filePath.encode()
             self._tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         except TypeError:
-            raise IOTiffException(
+            raise IOTiffOpenException(
                 'Could not open TIFF file: %s' % filePath)
         # pylibtiff changed the case of some functions between version 0.4 and
         # the version that supports libtiff 4.0.6.  To support both, ensure

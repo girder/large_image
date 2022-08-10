@@ -11,7 +11,9 @@ Python tile functions can return tile data as images, numpy arrays, or PIL Image
 Encoding
 --------
 
-The ``encoding`` parameter can be one of ``JPEG``, ``PNG``, ``TIFF``, or ``JFIF``.  When the tile is output as an image, this is the preferred format.  Note that ``JFIF`` is a specific variant of ``JPEG`` that will always use either the Y or YCbCr color space as well as constraining other options.
+The ``encoding`` parameter can be one of ``JPEG``, ``PNG``, ``TIFF``, ``JFIF``, or ``TILED``.  When the tile is output as an image, this is the preferred format.  Note that ``JFIF`` is a specific variant of ``JPEG`` that will always use either the Y or YCbCr color space as well as constraining other options.  ``TILED`` will output a tiled tiff file; this is slower than ``TIFF`` but can support images of arbitrary size.
+
+Additional options are available based on the PIL.Image registered encoders.
 
 The ``encoding`` only affects output when ``format`` is ``TILE_FORMAT_IMAGE``.
 

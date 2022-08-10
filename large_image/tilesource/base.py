@@ -129,7 +129,6 @@ class TileSource:
         self.sizeX = None
         self.sizeY = None
         self._styleLock = threading.RLock()
-        self._bandRanges = {}
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -139,6 +138,15 @@ class TileSource:
         self.jpegSubsampling = int(jpegSubsampling)
         self.tiffCompression = tiffCompression
         self.edge = edge
+        self._setStyle(style)
+
+    def _setStyle(self, style):
+        """
+        Check and set the specified style from a json string or a dictionary.
+
+        :param style: The new style.
+        """
+        self._bandRanges = {}
         self._jsonstyle = style
         if style:
             if isinstance(style, dict):
@@ -926,10 +934,10 @@ class TileSource:
                     'count': tilecount
                 }
             else:
-                results['min'] = numpy.minimum(results['min'], tilemin)
-                results['max'] = numpy.maximum(results['max'], tilemax)
-                results['sum'] += tilesum
-                results['sum2'] += tilesum2
+                results['min'] = numpy.minimum(results['min'], tilemin[:len(results['min'])])
+                results['max'] = numpy.maximum(results['max'], tilemax[:len(results['min'])])
+                results['sum'] += tilesum[:len(results['min'])]
+                results['sum2'] += tilesum2[:len(results['min'])]
                 results['count'] += tilecount
         results['mean'] = results['sum'] / results['count']
         results['stdev'] = numpy.maximum(
@@ -1183,7 +1191,7 @@ class TileSource:
             clamp = entry.get('clamp', True)
             delta = max - min if max != min else 1
             if nodata is not None:
-                keep = band != nodata
+                keep = band != float(nodata)
             else:
                 keep = numpy.full(image.shape[:2], True)
             band = (band - min) / delta

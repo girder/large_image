@@ -1,11 +1,19 @@
 # Change Log
 
+## 1.16.1
+
+### Improvements
+- Reduce error messages and make canRead results more accurate ([918](../../pull/918), [919](../../pull/919), [920](../../pull/920))
+- Sort columns in item lists based ([925](../../pull/925))
+
 ## 1.16.0
 
 ### Features
 - Add a tifffile tile source ([885](../../pull/885), [896](../../pull/896), [903](../../pull/903))
 - Added a canReadList method to large_image to show which source can be used ([895](../../pull/895))
 - Optionally show metadata in item lists ([901](../../pull/901))
+- Register the tile output formats from PIL ([904](../../pull/904))
+- Copy tilesource instances to add styles ([894](../../pull/894))
 
 ### Improvements
 - Pass options to the annotationLayer mode ([881](../../pull/881))
@@ -17,10 +25,15 @@
 - Speed up styling by doing less ([892](../../pull/892))
 - Add local color definitions ([858](../../pull/858))
 - Inheritable config files ([897](../../pull/897))
-- Add geospatial property ([818](../../pull/818))
+- Add geospatial property ([818](../../pull/818), [908](../../pull/908))
+- Improve repr of image bytes ([902](../../pull/902))
+- Handle nodata style when specified as a string ([914](../../pull/914))
 
 ### Changes
 - Be more consistent in source class name attribute assignment ([884](../../pull/884))
+
+### Bug Fixes
+- Fix alpha on GDAL sources with a projection that have an explicit alpha channel ([909](../../pull/909), [915](../../pull/915))
 
 ## 1.15.1
 

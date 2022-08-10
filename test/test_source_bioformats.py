@@ -1,5 +1,3 @@
-import pytest
-
 from large_image.cache_util import cachesClear
 
 from . import utilities
@@ -18,7 +16,7 @@ def testTilesFromBioformats():
     assert tileMetadata['sizeX'] == 50577
     assert tileMetadata['sizeY'] == 17417
     assert tileMetadata['levels'] == 7
-    assert tileMetadata['magnification'] == pytest.approx(20, 1)
+    # assert tileMetadata['magnification'] == pytest.approx(20, 1)
     utilities.checkTilesZXY(source, tileMetadata)
 
     source = None

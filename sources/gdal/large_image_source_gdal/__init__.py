@@ -159,15 +159,15 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             with self._getDatasetLock:
                 self.sourceSizeX = self.sizeX = self.dataset.RasterXSize
                 self.sourceSizeY = self.sizeY = self.dataset.RasterYSize
-        except AttributeError:
+        except AttributeError as exc:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via GDAL.')
+            raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
         is_netcdf = self._checkNetCDF()
         try:
             scale = self.getPixelSizeInMeters()
-        except RuntimeError:
-            raise TileSourceError('File cannot be opened via GDAL.')
+        except RuntimeError as exc:
+            raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
         if (self.projection or self._getDriver() in {
             'PNG',
         }) and not scale and not is_netcdf:
@@ -183,6 +183,16 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
 
+    def _setStyle(self, style):
+        """
+        Check and set the specified style from a json string or a dictionary.
+
+        :param style: The new style.
+        """
+        super()._setStyle(style)
+        if hasattr(self, '_getTileLock'):
+            self._setDefaultStyle()
+
     def _getLargeImagePath(self):
         """Get GDAL-compatible image path.
 
@@ -195,6 +205,8 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return str(self.largeImagePath)
 
     def _checkNetCDF(self):
+        if self._getDriver() == 'netCDF':
+            raise TileSourceError('netCDF file will not be read via GDAL source')
         return False
 
     def _styleBands(self):
@@ -255,7 +267,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             hasAlpha = False
             for bstyle in style:
                 hasAlpha = hasAlpha or self.getOneBandInformation(
-                    bstyle.get('band', 0)).get('iterpretation') == 'alpha'
+                    bstyle.get('band', 0)).get('interpretation') == 'alpha'
                 if 'palette' in bstyle:
                     if bstyle['palette'] == 'colortable':
                         bandInfo = self.getOneBandInformation(bstyle.get('band', 0))
@@ -269,7 +281,10 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     bstyle['nodata'] = bandInfo.get('nodata', None)
             if not hasAlpha and self.projection:
                 style.append({
-                    'band': len(self.getBandInformation()) + 1,
+                    'band': (
+                        self._bandNumber('alpha', False)
+                        if self._bandNumber('alpha', False) is not None else
+                        (len(self.getBandInformation()) + 1)),
                     'min': 0,
                     'max': 'auto',
                     'composite': 'multiply',
