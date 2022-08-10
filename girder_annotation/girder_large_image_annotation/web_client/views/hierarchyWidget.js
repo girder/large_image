@@ -37,7 +37,7 @@ function fetchCollections(root, folderId) {
             recurse: true
         }
     }).done((resp) => {
-        if (resp[0]) {
+        if (resp) {
             root.users = new UserCollection();
 
             root.recurseCollection = new AnnotationCollection([], {comparator: null});

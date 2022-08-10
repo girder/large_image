@@ -632,9 +632,9 @@ class AnnotationResource(Resource):
         annotations = self.getFolderAnnotations(id, recurse, self.getCurrentUser(), 1)
         try:
             next(annotations)
-            yield True
+            return True
         except StopIteration:
-            yield False
+            return False
 
     @autoDescribeRoute(
         Description('Get the annotations from the items in a folder')
