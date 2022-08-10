@@ -117,6 +117,18 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(largeImagePath):
                 raise TileSourceFileNotFoundError(largeImagePath) from None
             raise TileSourceError('File cannot be opened via PIL.')
+        minwh = min(self._pilImage.width, self._pilImage.height)
+        maxwh = max(self._pilImage.width, self._pilImage.height)
+        # Throw an exception if too small or big before processing further
+        if minwh <= 0:
+            raise TileSourceError('PIL tile size is invalid.')
+        maxWidth, maxHeight = getMaxSize(maxSize, self.defaultMaxSize())
+        if maxwh > max(maxWidth, maxHeight):
+            raise TileSourceError('PIL tile size is too large.')
+        # If the rotation flag exists, loading the image may change the width
+        # and height
+        if getattr(self._pilImage, '_tile_orientation', None) not in {None, 1}:
+            self._pilImage.load()
         # If this is encoded as a 32-bit integer or a 32-bit float, convert it
         # to an 8-bit integer.  This expects the source value to either have a
         # maximum of 1, 2^8-1, 2^16-1, 2^24-1, or 2^32-1, and scales it to
@@ -133,10 +145,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.tileWidth = self.sizeX
         self.tileHeight = self.sizeY
         self.levels = 1
-        # Throw an exception if too big
-        if self.tileWidth <= 0 or self.tileHeight <= 0:
-            raise TileSourceError('PIL tile size is invalid.')
-        maxWidth, maxHeight = getMaxSize(maxSize, self.defaultMaxSize())
+        # Throw an exception if too big after processing
         if self.tileWidth > maxWidth or self.tileHeight > maxHeight:
             raise TileSourceError('PIL tile size is too large.')
 
