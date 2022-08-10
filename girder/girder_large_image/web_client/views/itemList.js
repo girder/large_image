@@ -25,6 +25,8 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         this._liconfig = val || {};
         this.render();
     });
+    this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
+    this.delegateEvents();
 });
 
 wrap(ItemListWidget, 'render', function (render) {
@@ -121,7 +123,8 @@ wrap(ItemListWidget, 'render', function (render) {
             selectedItemId: (this._selectedItem || {}).id,
             paginated: this._paginated,
             apiRoot: getApiRoot(),
-            itemList: this._confList()
+            itemList: this._confList(),
+            sort: this._lastSort
         }));
 
         const parent = this.$el;
@@ -180,5 +183,29 @@ wrap(ItemListWidget, 'render', function (render) {
         return this;
     });
 });
+
+function sortColumn(evt) {
+    const header = $(evt.target);
+    const entry = {
+        type: header.attr('column_type'),
+        value: header.attr('column_value')
+    };
+    const curDir = header.hasClass('down') ? 'down' : header.hasClass('up') ? 'up' : null;
+    const nextDir = curDir === 'down' ? 'up' : 'down';
+    header.toggleClass('down', nextDir === 'down').toggleClass('up', nextDir === 'up');
+    entry.dir = nextDir;
+    if (!this._lastSort) {
+        this._lastSort = [];
+    }
+    this._lastSort = this._lastSort.filter((e) => e.type !== entry.type || e.value !== entry.value);
+    this._lastSort.unshift(entry);
+    this.collection.offset = 0;
+    this.collection.comparator = _.constant(0);
+    this.collection.sortField = JSON.stringify(this._lastSort.map((e) => [
+        (e.type === 'metadata' ? 'meta.' : '') + e.value,
+        e.dir === 'down' ? 1 : -1
+    ]));
+    this.collection.fetch({folderId: this.parentView.parentModel.id});
+}
 
 export default ItemListWidget;

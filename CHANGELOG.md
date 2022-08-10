@@ -4,6 +4,7 @@
 
 ### Improvements
 - Reduce error messages and make canRead results more accurate ([918](../../pull/918), [919](../../pull/919), [920](../../pull/920))
+- Sort columns in item lists based ([925](../../pull/925))
 
 ## 1.16.0
 
