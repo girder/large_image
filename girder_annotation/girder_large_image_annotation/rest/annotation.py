@@ -562,7 +562,7 @@ class AnnotationResource(Resource):
         return count
 
     def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
-                             sortDir=False):
+                             sortDir=False, count=False):
         recursivePipeline = [
             {'$graphLookup': {
                 'from': 'folder',
@@ -614,9 +614,12 @@ class AnnotationResource(Resource):
                 ] + accessPipeline
             }},
         ]
-        pipeline = pipeline + [{'$sort': {sort: sortDir}}] if sort else pipeline
-        pipeline = pipeline + [{'$skip': offset}] if offset else pipeline
-        pipeline = pipeline + [{'$limit': limit}] if limit else pipeline
+        if count:
+            pipeline += [{'$count': 'count'}]
+        else:
+            pipeline = pipeline + [{'$sort': {sort: sortDir}}] if sort else pipeline
+            pipeline = pipeline + [{'$skip': offset}] if offset else pipeline
+            pipeline = pipeline + [{'$limit': limit}] if limit else pipeline
 
         return Annotation().collection.aggregate(pipeline)
 
@@ -646,8 +649,19 @@ class AnnotationResource(Resource):
     )
     @access.public
     def returnFolderAnnotations(self, id, recurse, limit, offset, sort):
-        return self.getFolderAnnotations(id, recurse, self.getCurrentUser(), limit, offset,
-                                         sort[0][0], sort[0][1])
+        annotations = self.getFolderAnnotations(id, recurse, self.getCurrentUser(), limit, offset,
+                                                sort[0][0], sort[0][1])
+
+        def count():
+            try:
+                return next(self.getFolderAnnotations(id, recurse, self.getCurrentUser(),
+                                                      count=True))['count']
+            except StopIteration:
+                # If there are no values to iterate over, the count is 0 and should be returned
+                return 0
+
+        annotations.count = count
+        return annotations
 
     @autoDescribeRoute(
         Description('Report on old annotations.')
