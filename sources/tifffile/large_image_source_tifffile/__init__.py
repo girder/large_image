@@ -1,3 +1,4 @@
+import logging
 import math
 import os
 import threading
@@ -41,6 +42,7 @@ def _lazyImport():
         if not hasattr(tifffile.TiffTag, 'dtype_name') or not hasattr(tifffile.TiffPage, 'aszarr'):
             tifffile = None
             raise TileSourceError('tifffile module is too old.')
+        logging.getLogger('tifffile.tifffile').setLevel(logging.ERROR)
 
 
 def et_findall(tag, text):

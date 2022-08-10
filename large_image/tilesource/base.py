@@ -934,10 +934,10 @@ class TileSource:
                     'count': tilecount
                 }
             else:
-                results['min'] = numpy.minimum(results['min'], tilemin)
-                results['max'] = numpy.maximum(results['max'], tilemax)
-                results['sum'] += tilesum
-                results['sum2'] += tilesum2
+                results['min'] = numpy.minimum(results['min'], tilemin[:len(results['min'])])
+                results['max'] = numpy.maximum(results['max'], tilemax[:len(results['min'])])
+                results['sum'] += tilesum[:len(results['min'])]
+                results['sum2'] += tilesum2[:len(results['min'])]
                 results['count'] += tilecount
         results['mean'] = results['sum'] / results['count']
         results['stdev'] = numpy.maximum(

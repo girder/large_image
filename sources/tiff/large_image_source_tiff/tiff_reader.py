@@ -89,6 +89,15 @@ class IOTiffException(TiffException):
     pass
 
 
+class IOTiffOpenException(IOTiffException):
+    """
+    An exception caused by an internal failure where the file cannot be opened
+    by the main library.
+    """
+
+    pass
+
+
 class ValidationTiffException(TiffException):
     """
     An exception caused by the TIFF reader not being able to support a given
@@ -170,7 +179,7 @@ class TiledTiffDirectory:
                 bytePath = filePath.encode()
             self._tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         except TypeError:
-            raise IOTiffException(
+            raise IOTiffOpenException(
                 'Could not open TIFF file: %s' % filePath)
         # pylibtiff changed the case of some functions between version 0.4 and
         # the version that supports libtiff 4.0.6.  To support both, ensure

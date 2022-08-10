@@ -33,8 +33,8 @@ from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
 from .tiff_reader import (InvalidOperationTiffException, IOTiffException,
-                          TiffException, TiledTiffDirectory,
-                          ValidationTiffException)
+                          IOTiffOpenException, TiffException,
+                          TiledTiffDirectory, ValidationTiffException)
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -104,6 +104,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         try:
             alldir = self._scanDirectories()
+        except IOTiffOpenException:
+            raise TileSourceError('File cannot be opened via tiff source.')
         except (ValidationTiffException, TiffException) as exc:
             alldir = []
             lastException = exc
@@ -547,7 +549,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         frame = self._getFrame(**kwargs)
         self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
         if frame > 0:
-            if self._frames[frame]['dirs'][z] is not None:
+            if hasattr(self, '_frames') and self._frames[frame]['dirs'][z] is not None:
                 dir = self._getDirFromCache(*self._frames[frame]['dirs'][z])
             else:
                 dir = None
