@@ -232,10 +232,10 @@ $(function () {
         });
         it('navigate back to image', function () {
             waitsFor(function () {
-                return $('a.g-item-list-link').filter(function () { return $(this).text() !== '.large_image_config.yaml'}).length > 0;
+                return $('span.g-item-list-link').filter(function () { return $(this).text() !== '.large_image_config.yaml'; }).length > 0;
             }, 'link to appear');
             runs(function () {
-                $('a.g-item-list-link').filter(function () { return $(this).text() !== '.large_image_config.yaml'}).click();
+                $('span.g-item-list-link').filter(function () { return $(this).text() !== '.large_image_config.yaml'; }).click();
             });
             girderTest.waitForLoad();
         });
