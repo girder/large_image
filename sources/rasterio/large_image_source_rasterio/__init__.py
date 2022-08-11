@@ -213,6 +213,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 # green instead.
                 styleBand["band"] = self._bandNumber(styleBand.get("band", 1))
                 style.append(styleBand)
+
         if not len(style):
             for interp in ("red", "green", "blue", "gray", "palette", "alpha"):
                 band = self._bandNumber(interp, False)
@@ -225,6 +226,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     or (interp in ("gray", "palette") and len(style))
                 ):
                     continue
+
                 if interp == "palette":
                     bandInfo = self.getOneBandInformation(band)
                     style.append(
@@ -266,23 +268,16 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if len(style):
             hasAlpha = False
             for bstyle in style:
-                hasAlpha = (
-                    hasAlpha
-                    or self.getOneBandInformation(bstyle.get("band", 0)).get(
-                        "interpretation"
-                    )
-                    == "alpha"
+                interp = self.getOneBandInformation(bstyle.get("band", 0)).get(
+                    "interpretation"
                 )
+                hasAlpha = hasAlpha or interp == "alpha"
                 if "palette" in bstyle:
                     if bstyle["palette"] == "colortable":
                         bandInfo = self.getOneBandInformation(bstyle.get("band", 0))
+                        color = lambda i: "#" + i * "{:x02}"  # noqa E731
                         bstyle["palette"] = [
-                            (
-                                "#%02X%02X%02X"
-                                if len(entry) == 3
-                                else "#%02X%02X%02X%02X"
-                            )
-                            % entry
+                            (color(len(entry)).format(entry))
                             for entry in bandInfo["colortable"]
                         ]
                     else:
@@ -387,7 +382,9 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 # If unitsPerPixel is not specified, the horizontal distance
                 # between -180,0 and +180,0 is used.  Some projections (such as
                 # stereographic) will fail in this case; they must have a unitsPerPixel specified.
-                equator = pyproj.transformer.Transformer.from_proj(inProj, outProj, always_xy=True)
+                equator = pyproj.transformer.Transformer.from_proj(
+                    inProj, outProj, always_xy=True
+                )
                 xx, yy = equator.transform([-180, 180], [0, 0])
                 self.unitsAcrossLevel0 = abs(xx[1] - xx[0])
                 if not self.unitsAcrossLevel0:
@@ -887,7 +884,9 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 srcCrs = self.dataset.crs
             dstCrs = self.projection
 
-            transformer = pyproj.transformer.Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
+            transformer = pyproj.transformer.Transformer.from_crs(
+                srcCrs, dstCrs, always_xy=True
+            )
             pleft, ptop = transformer.transform(left or right, top or bottom)
             pright, pbottom = transformer.transform(right or left, bottom or top)
             units = "projection"
@@ -1076,7 +1075,9 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         # convert to the native projection
         dstCrs = pyproj.crs.CRS(self.getCrs())
-        transformer = pyproj.transformer.Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
+        transformer = pyproj.transformer.Transformer.from_crs(
+            srcCrs, dstCrs, always_xy=True
+        )
         px, py = transformer.transform(x, y)
 
         # convert to native pixel coordinates

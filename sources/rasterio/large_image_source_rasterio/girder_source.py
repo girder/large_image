@@ -16,7 +16,7 @@
 
 import re
 
-import packaging.version # noqa F401
+import packaging.version  # noqa F401
 from girder_large_image.girder_tilesource import GirderTileSource
 
 from girder import logger
