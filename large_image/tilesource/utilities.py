@@ -246,6 +246,55 @@ def _vipsCast(image, mustBe8Bit=False, originalScale=None):
     image = ((image.cast(pyvips.BandFormat.DOUBLE) + offset) * multiplier).cast(target)
     return image
 
+def _rasterioParameters(defaultCompression=None, eightbit=None, **kwargs):
+    """
+    return a dictionnary of creation option for the rasterio driver
+    
+    :param defaultCompression: if not specified, use this value.
+    :param eightbit: True or False to indicate that the bit depth per sample is
+        known.  None for unknown.
+
+    Optional parameters that can be specified in kwargs:
+
+    :param tileSize: the horizontal and vertical tile size.
+    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
+        'zstd', or 'none'.
+    :param quality: a jpeg quality passed to gdal.  0 is small, 100 is high
+        quality.  90 or above is recommended.
+    :param level: compression level for zstd, 1-22 (default is 10).
+    :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
+        deflate.
+    :returns: a dictionary of parameters.
+    """
+    
+    # some default option and parameters
+    options = {
+        "blocksize":256,
+        "compress": "lzw",
+        "quality": 90,
+    }
+    
+    # the name of the predictor need to be strings so we convert here from set values to actual
+    # required values (https://rasterio.readthedocs.io/en/latest/topics/image_options.html)
+    predictor = {
+        'none': 'NO',
+        'horizontal': 'STANDARD',
+        'float': 'FLOATING_POINT',
+        'yes': 'YES',
+    }
+    
+    if eightbit is not None:
+        options['predictor'] = 'yes' if eightbit else 'none'
+      
+    # add the values from kwargs to the options. Remove anything that isnot set.
+    options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
+    
+    # add the remaining options
+    options.update(bigtiff="IF_SAFER")
+    "predictor" not in options or options.update(predictor=predictor[options["predictor"]])
+    
+    return options
+        
 
 def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
     """
@@ -290,6 +339,32 @@ def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
     if 'level' in options:
         cmdopt += ['-co', 'LEVEL=%s' % options['level']]
     return cmdopt
+
+def _rasterioWarpParameters(defaultCompression=None, eightbit=None, **kwargs):
+    """
+    Return a dict of rasterio warping parameters
+    
+    :param defaultCompression: if not specified, use this value.
+    :param eightbit: True or False to indicate that the bit depth per sample is
+        known.  None for unknown.
+        
+    Optional parameters that can be specified in kwargs:
+
+    :param tileSize: the horizontal and vertical tile size.
+    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
+        'zstd', or 'none'.
+    :param quality: a jpeg quality passed to gdal.  0 is small, 100 is high
+        quality.  90 or above is recommended.
+    :param level: compression level for zstd, 1-22 (default is 10).
+    :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and
+        deflate.
+    :returns: a dictionary of parameters.
+    """
+    
+    options = {
+        "
+        
+    
 
 
 def _vipsParameters(forTiled=True, defaultCompression=None, **kwargs):
