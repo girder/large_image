@@ -23,6 +23,7 @@
 #   IFormatReader.html for interface details.
 
 import atexit
+import logging
 import math
 import os
 import threading
@@ -59,7 +60,7 @@ _openImages = []
 
 # Default to ignoring files with no extension and some specific extensions.
 config.ConfigValues['source_bioformats_ignored_names'] = \
-    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'
+    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2))$'
 
 
 def _monitor_thread():
@@ -103,6 +104,7 @@ def _reduceLogging():
         javabridge.call(rootLogger, 'setLevel', '(Lch/qos/logback/classic/Level;)V', logLevel)
     except Exception:
         pass
+    bioformats.formatreader.logger.setLevel(logging.ERROR)
 
 
 def _startJavabridge(logger):
@@ -191,7 +193,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
                 self.logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
-                raise TileSourceError('File cannot be opened via Bioformats. (%r)' % exc)
+                raise TileSourceError('File cannot be opened via Bioformats (%r)' % exc)
             _openImages.append(self)
 
             rdr = self._bioimage.rdr
@@ -278,10 +280,14 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         if self.levels < 1:
             raise TileSourceError(
-                'OpenSlide image must have at least one level.')
+                'Bioformats image must have at least one level.')
 
         if self.sizeX <= 0 or self.sizeY <= 0:
             raise TileSourceError('Bioformats tile size is invalid.')
+        try:
+            self.getTile(0, 0, self.levels - 1)
+        except Exception as exc:
+            raise TileSourceError('Bioformats cannot read a tile: %r' % exc)
 
     def __del__(self):
         if getattr(self, '_bioimage', None) is not None:

@@ -11,6 +11,7 @@ import pytest
 
 from large_image import constants
 from large_image.exceptions import TileSourceError, TileSourceInefficientError
+from large_image.tilesource.utilities import ImageBytes
 
 from . import utilities
 from .datastore import datastore
@@ -149,10 +150,15 @@ def testThumbnailFromGeotiffs():
     source = large_image_source_gdal.open(imagePath)
     # We get a thumbnail without a projection
     image, mimeType = source.getThumbnail(encoding='PNG')
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+    image, mimeType = source.getThumbnail(encoding='JPEG')
+    assert isinstance(image, ImageBytes)
+    assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     # We get a different thumbnail with a projection
     source = large_image_source_gdal.open(imagePath, projection='EPSG:3857')
     image2, mimeType = source.getThumbnail(encoding='PNG')
+    assert isinstance(image2, ImageBytes)
     assert image2[:len(utilities.PNGHeader)] == utilities.PNGHeader
     assert image != image2
 
@@ -562,3 +568,36 @@ def testVfsCogValidation():
         imagePath, projection='EPSG:3857', encoding='PNG')
     with pytest.raises(TileSourceInefficientError):
         source.validateCOG()
+
+
+def testNoData():
+    imagePath = datastore.get_url('TC_NG_SFBay_US_Geo_COG.tif')
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857',
+        style={'bands': [{'band': 1, 'max': '100', 'min': '5', 'nodata': '0'}]})
+    assert source.getThumbnail()[0]
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857',
+        style={'bands': [{'band': 1, 'max': 100, 'min': 5, 'nodata': 0}]})
+    assert source.getThumbnail()[0]
+
+
+def testAlphaProjection():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857')
+    base = source.getThumbnail(encoding='PNG')[0]
+    basenp = source.getThumbnail(format='numpy')[0]
+    assert numpy.count_nonzero(basenp[:, :, 3] == 255) > 30000
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857',
+        style={'bands': [
+            {'band': 1, 'palette': 'R'},
+            {'band': 2, 'palette': 'G'},
+            {'band': 3, 'palette': 'B'}]})
+    assert source.getThumbnail(encoding='PNG')[0] == base
+    assert not (source.getThumbnail(format='numpy')[0] - basenp).any()
+    source = large_image_source_gdal.open(
+        imagePath)
+    assert numpy.count_nonzero(source.getThumbnail(format='numpy')[0][:, :, 3] == 255) > 30000

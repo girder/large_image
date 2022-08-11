@@ -9,6 +9,7 @@ import pytest
 import tifftools
 
 from large_image import constants
+from large_image.tilesource.utilities import ImageBytes
 
 from . import utilities
 from .datastore import datastore
@@ -73,6 +74,15 @@ def testTileIterator():
             encoding='TIFF'):
         tileCount += 1
         assert tile['tile'][:len(utilities.TIFFHeader)] == utilities.TIFFHeader
+    assert tileCount == 45
+    # Ask for WEBPs
+    tileCount = 0
+    for tile in source.tileIterator(
+            scale={'magnification': 2.5},
+            format=constants.TILE_FORMAT_IMAGE,
+            encoding='WEBP'):
+        tileCount += 1
+        assert tile['tile'][8:12] == b'WEBP'
     assert tileCount == 45
 
 
@@ -271,19 +281,24 @@ def testThumbnails():
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     defaultLength = len(image)
     image, mimeType = source.getThumbnail(encoding='PNG')
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     image, mimeType = source.getThumbnail(encoding='TIFF')
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.TIFFHeader)] == utilities.TIFFHeader
     image, mimeType = source.getThumbnail(jpegQuality=10)
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     assert len(image) < defaultLength
     image, mimeType = source.getThumbnail(jpegSubsampling=2)
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
     assert len(image) < defaultLength
     with pytest.raises(Exception):
         source.getThumbnail(encoding='unknown')
     # Test width and height using PNGs
     image, mimeType = source.getThumbnail(encoding='PNG')
+    assert isinstance(image, ImageBytes)
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
     (width, height) = struct.unpack('!LL', image[16:24])
     assert max(width, height) == 256

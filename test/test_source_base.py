@@ -20,14 +20,15 @@ from .datastore import datastore, registry
 SourceAndFiles = {
     'bioformats': {
         'read': r'\.(czi|jp2|svs|scn)$',
+        'noread': r'(JK-kidney_B|TCGA-AA-A02O|\.scn$)',
         # We need to modify the bioformats reader similar to tiff's
         # getTileFromEmptyDirectory
-        'skipTiles': r'(JK-kidney_B|TCGA-AA-A02O|TCGA-DU-6399|sample_jp2k_33003|\.scn$)'},
+        'skipTiles': r'(TCGA-DU-6399|sample_jp2k_33003)'},
     'deepzoom': {},
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*)$',
-        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
+        'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'skipTiles': r'\.*nc$'},
     'mapnik': {
         'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*)$',
@@ -506,3 +507,28 @@ def testCanReadList():
     imagePath = datastore.fetch('sample_image.ptif')
     assert len(large_image.canReadList(imagePath)) > 1
     assert any(canRead for source, canRead in large_image.canReadList(imagePath))
+
+
+def testImageBytes():
+    ib = large_image.tilesource.utilities.ImageBytes(b'abc')
+    assert ib == b'abc'
+    assert isinstance(ib, bytes)
+    assert 'ImageBytes' in repr(ib)
+    assert ib.mimetype is None
+    assert ib._repr_jpeg_() is None
+    assert ib._repr_png_() is None
+    ib = large_image.tilesource.utilities.ImageBytes(b'abc', 'image/jpeg')
+    assert ib.mimetype == 'image/jpeg'
+    assert 'ImageBytes' in repr(ib)
+    assert ib._repr_jpeg_() == b'abc'
+    assert ib._repr_png_() is None
+    ib = large_image.tilesource.utilities.ImageBytes(b'abc', 'image/png')
+    assert ib.mimetype == 'image/png'
+    assert 'ImageBytes' in repr(ib)
+    assert ib._repr_jpeg_() is None
+    assert ib._repr_png_() == b'abc'
+    ib = large_image.tilesource.utilities.ImageBytes(b'abc', 'other')
+    assert ib.mimetype == 'other'
+    assert 'ImageBytes' in repr(ib)
+    assert ib._repr_jpeg_() is None
+    assert ib._repr_png_() is None

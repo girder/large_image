@@ -98,7 +98,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not self._openjpeg.shape:
                 if not os.path.isfile(self._largeImagePath):
                     raise FileNotFoundError()
-                raise TileSourceError('File cannot be opened via Glymur and OpenJPEG.')
+                raise TileSourceError('File cannot be opened via Glymur and OpenJPEG (no shape).')
         except (glymur.jp2box.InvalidJp2kError, struct.error):
             raise TileSourceError('File cannot be opened via Glymur and OpenJPEG.')
         except FileNotFoundError:
@@ -112,8 +112,8 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._openjpegHandles.put(self._openjpeg)
         try:
             self.sizeY, self.sizeX = self._openjpeg.shape[:2]
-        except IndexError:
-            raise TileSourceError('File cannot be opened via Glymur and OpenJPEG.')
+        except IndexError as exc:
+            raise TileSourceError('File cannot be opened via Glymur and OpenJPEG: %r' % exc)
         self.levels = int(self._openjpeg.codestream.segment[2].num_res) + 1
         self._minlevel = 0
         self.tileWidth = self.tileHeight = 2 ** int(math.ceil(max(

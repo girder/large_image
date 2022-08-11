@@ -34,6 +34,32 @@ colormap = {
 }
 
 
+class ImageBytes(bytes):
+    """Wrapper class to make repr of image bytes better in ipython."""
+
+    def __new__(cls, source: bytes, mimetype: str = None):
+        self = super().__new__(cls, source)
+        self._mime_type = mimetype
+        return self
+
+    @property
+    def mimetype(self):
+        return self._mime_type
+
+    def _repr_png_(self):
+        if self.mimetype == 'image/png':
+            return self
+
+    def _repr_jpeg_(self):
+        if self.mimetype == 'image/jpeg':
+            return self
+
+    def __repr__(self):
+        if self.mimetype:
+            return f'ImageBytes<{len(self)}> ({self.mimetype})'
+        return f'ImageBytes<{len(self)}> (wrapped image bytes)'
+
+
 def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompression):
     """
     Encode a PIL Image to a binary representation of the image (a jpeg, png, or
@@ -55,13 +81,13 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
         if image.mode not in ({'L', 'RGB', 'RGBA'} if simplejpeg else {'L', 'RGB'}):
             image = image.convert('RGB' if image.mode != 'LA' else 'L')
         if simplejpeg:
-            return simplejpeg.encode_jpeg(
+            return ImageBytes(simplejpeg.encode_jpeg(
                 _imageToNumpy(image)[0],
                 quality=jpegQuality,
                 colorspace=image.mode if image.mode in {'RGB', 'RGBA'} else 'GRAY',
                 colorsubsampling={-1: '444', 0: '444', 1: '422', 2: '420'}.get(
                     jpegSubsampling, str(jpegSubsampling).strip(':')),
-            )
+            ), mimetype='image/jpeg')
         params['quality'] = jpegQuality
         params['subsampling'] = jpegSubsampling
     elif encoding in {'TIFF', 'TILED'}:
@@ -74,7 +100,10 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
         params['compress_level'] = 2
     output = io.BytesIO()
     image.save(output, encoding, **params)
-    return output.getvalue()
+    return ImageBytes(
+        output.getvalue(),
+        mimetype=f'image/{encoding.lower().replace("tiled", "tiff")}'
+    )
 
 
 def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
@@ -955,3 +984,23 @@ def histogramThreshold(histogram, threshold, fromMax=False):
             return edges[idx]
         tally += hist[idx]
     return edges[-1]
+
+
+def addPILFormatsToOutputOptions():
+    """
+    Check PIL for available formats that be saved and add them to the lists of
+    of available formats.
+    """
+    # Call this to actual register the extensions
+    PIL.Image.registered_extensions()
+    for key, value in PIL.Image.MIME.items():
+        if key not in TileOutputMimeTypes and key in PIL.Image.SAVE:
+            TileOutputMimeTypes[key] = value
+    for key, value in PIL.Image.registered_extensions().items():
+        key = key.lstrip('.')
+        if (key not in TileOutputMimeTypes and value in TileOutputMimeTypes and
+                key not in TileOutputPILFormat):
+            TileOutputPILFormat[key] = value
+
+
+addPILFormatsToOutputOptions()

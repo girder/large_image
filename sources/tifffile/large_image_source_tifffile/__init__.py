@@ -1,3 +1,4 @@
+import logging
 import math
 import os
 import threading
@@ -41,6 +42,7 @@ def _lazyImport():
         if not hasattr(tifffile.TiffTag, 'dtype_name') or not hasattr(tifffile.TiffPage, 'aszarr'):
             tifffile = None
             raise TileSourceError('tifffile module is too old.')
+        logging.getLogger('tifffile.tifffile').setLevel(logging.ERROR)
 
 
 def et_findall(tag, text):
@@ -75,6 +77,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _minImageSize = 128
     _minTileSize = 128
     _maxTileSize = 2048
+    _minAssociatedImageSize = 64
     _maxAssociatedImageSize = 8192
 
     def __init__(self, path, **kwargs):
@@ -95,17 +98,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via tifffile.')
-        # Find the series with the most pixels.  Use all series that have the
-        # same dimensionality and resolution.  They can differ in X, Y size.
-        maxseries = None
-        maxsamples = 0
-        for idx, s in enumerate(self._tf.series):
-            samples = numpy.prod(s.shape)
-            if samples > maxsamples and 'X' in s.axes and 'Y' in s.axes:
-                maxseries = idx
-                maxsamples = samples
-        if maxseries is None:
-            raise TileSourceError('File cannot be opened via tifffile source.')
+        maxseries, maxsamples = self._biggestSeries()
         self.tileWidth = self.tileHeight = self._tileSize
         s = self._tf.series[maxseries]
         self._baseSeries = s
@@ -135,6 +128,32 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if (key.startswith('is_') and hasattr(self, '_handle_' + key[3:]) and
                     getattr(self._tf, key)):
                 getattr(self, '_handle_' + key[3:])()
+
+    def _biggestSeries(self):
+        """
+        Find the series with the most pixels.  Use all series that have the
+        same dimensionality and resolution.  They can differ in X, Y size.
+
+        :returns: index of the largest series, number of pixels in a frame in
+            that series.
+        """
+        maxseries = None
+        maxsamples = 0
+        ex = 'no maximum series'
+        try:
+            for idx, s in enumerate(self._tf.series):
+                samples = numpy.prod(s.shape)
+                if samples > maxsamples and 'X' in s.axes and 'Y' in s.axes:
+                    maxseries = idx
+                    maxsamples = samples
+        except Exception as exc:
+            self.logger.debug('Cannot use tifffile: %r', exc)
+            ex = exc
+            maxseries = None
+        if maxseries is None:
+            raise TileSourceError(
+                'File cannot be opened via tifffile source: %r' % ex)
+        return maxseries, maxsamples
 
     def _findMatchingSeries(self):
         """
@@ -191,7 +210,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Find associated images from unused pages and series.
         """
-        pagesInSeries = [p for s in self._tf.series for l in s.pages.levels for p in l.pages]
+        pagesInSeries = [p for s in self._tf.series for ll in s.pages.levels for p in ll.pages]
         self._associatedImages = {}
         for p in self._tf.pages:
             if (p not in pagesInSeries and p.keyframe is not None and
@@ -201,8 +220,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 entry['width'] = p.shape[p.axes.index('X')]
                 entry['height'] = p.shape[p.axes.index('Y')]
                 if (id not in self._associatedImages and
-                        entry['width'] <= self._maxAssociatedImageSize and
-                        entry['height'] <= self._maxAssociatedImageSize):
+                        max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
+                        max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
                     self._associatedImages[id] = entry
         for sidx, s in enumerate(self._tf.series):
             if sidx not in self._series and not len(set(s.axes) - set('YXS')):
@@ -213,8 +232,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 entry['width'] = s.shape[s.axes.index('X')]
                 entry['height'] = s.shape[s.axes.index('Y')]
                 if (id not in self._associatedImages and
-                        entry['width'] <= self._maxAssociatedImageSize and
-                        entry['height'] <= self._maxAssociatedImageSize):
+                        max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
+                        max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
                     self._associatedImages[id] = entry
 
     def _handle_scn(self):  # noqa
@@ -316,7 +335,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         result = {}
         pages = [s.pages[0] for s in self._tf.series]
-        pagesInSeries = [p for s in self._tf.series for l in s.pages.levels for p in l.pages]
+        pagesInSeries = [p for s in self._tf.series for ll in s.pages.levels for p in ll.pages]
         pages.extend([page for page in self._tf.pages if page not in pagesInSeries])
         for page in pages:
             for tag in getattr(page, 'tags', []):
@@ -388,11 +407,11 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if hasattr(za[0], 'get_basic_selection'):
             bza = za[0]
             # we could cache this
-            for l in range(len(series.levels) - 1, 0, -1):
-                scale = round(max(za[0].shape[xidx] / za[l].shape[xidx],
-                                  za[0].shape[yidx] / za[l].shape[yidx]))
+            for ll in range(len(series.levels) - 1, 0, -1):
+                scale = round(max(za[0].shape[xidx] / za[ll].shape[xidx],
+                                  za[0].shape[yidx] / za[ll].shape[yidx]))
                 if scale <= step and step // scale == step / scale:
-                    bza = za[l]
+                    bza = za[ll]
                     x0 //= scale
                     x1 //= scale
                     y0 //= scale

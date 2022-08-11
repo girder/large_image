@@ -37,16 +37,16 @@ NEW_IMAGE_PATH_FLAG = '__new_image__'
 
 
 TileOutputMimeTypes = {
-    # JFIF forces conversion to JPEG through PIL to ensure the image is in a
-    # common colorspace.  JPEG colorspace is complex: see
-    #   https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/
-    #                           doc-files/jpeg_metadata.html
-    'JFIF': 'image/jpeg',
     'JPEG': 'image/jpeg',
     'PNG': 'image/png',
     'TIFF': 'image/tiff',
     # TILED indicates the region output should be generated as a tiled TIFF
     'TILED': 'image/tiff',
+    # JFIF forces conversion to JPEG through PIL to ensure the image is in a
+    # common colorspace.  JPEG colorspace is complex: see
+    #   https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/
+    #                           doc-files/jpeg_metadata.html
+    'JFIF': 'image/jpeg',
 }
 TileOutputPILFormat = {
     'JFIF': 'JPEG'

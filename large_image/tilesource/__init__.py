@@ -55,7 +55,11 @@ def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTil
     :param entryPointName: the name of the entry points to load.
     :param sourceDict: a dictionary to populate with the loaded sources.
     """
-    for entryPoint in entry_points()[entryPointName]:
+    epoints = entry_points()
+    # Python 3.10 uses select and deprecates dictionary interface
+    epointList = epoints.select(group=entryPointName) if hasattr(
+        epoints, 'select') else epoints.get(entryPointName, [])
+    for entryPoint in epointList:
         try:
             sourceClass = entryPoint.load()
             if sourceClass.name and None in sourceClass.extensions:
@@ -81,7 +85,7 @@ def getSortedSourceList(availableSources, pathOrUri, *args, **kwargs):
     isLargeImageUri = str(pathOrUri).startswith('large_image://')
     extensions = [ext.lower() for ext in os.path.basename(uriWithoutProtocol).split('.')[1:]]
     properties = {
-        'geospatial': isGeospatial(pathOrUri),
+        '_geospatial_source': isGeospatial(pathOrUri),
     }
     sourceList = []
     for sourceName in availableSources:

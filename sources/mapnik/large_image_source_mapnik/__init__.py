@@ -71,7 +71,6 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         'image/tiff': SourcePriority.LOWER,
         'image/x-tiff': SourcePriority.LOWER,
     }
-    geospatial = True
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
         """
@@ -177,7 +176,9 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
 
     def _setDefaultStyle(self):
         """Don't inherit from GDAL tilesource."""
-        pass
+        with self._getTileLock:
+            if hasattr(self, '_mapnikMap'):
+                del self._mapnikMap
 
     @staticmethod
     def interpolateMinMax(start, stop, count):

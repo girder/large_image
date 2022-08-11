@@ -25,7 +25,7 @@ $(function () {
     describe('test accessing a multi-frame image', function () {
         it('go to users page', girderTest.goToUsersPage());
 
-        it('Got to a user page and then the Public folder', function () {
+        it('Go to a user page and then the Public folder', function () {
             runs(function () {
                 $('a.g-user-link').trigger('click');
             });
@@ -183,6 +183,60 @@ $(function () {
             waitsFor(function () {
                 return $('.g-item-image-viewer-select').length > 0 && $('.g-large-image-remove').length > 0;
             }, 'job to complete', 15000);
+            girderTest.waitForLoad();
+        });
+    });
+    describe('test metadata in item lists', function () {
+        it('go to users page', girderTest.goToUsersPage());
+        it('Go to a user page and then the Public folder', function () {
+            runs(function () {
+                $('a.g-user-link').trigger('click');
+            });
+            waitsFor(function () {
+                return (
+                    $('button:contains("Actions")').length === 1 &&
+                    $('a.g-folder-list-link:contains(Public):visible').length === 1);
+            }, 'user page to appear');
+            runs(function () {
+                $('a.g-folder-list-link:contains(Public)').trigger('click');
+            });
+            waitsFor(function () {
+                return $('.g-folder-actions-button:visible').length === 1;
+            }, 'the folder to appear');
+            girderTest.waitForLoad();
+        });
+        it('test the metadata columns are not shown', function () {
+            runs(function () {
+                expect($('.large_image_container').length).toBeGreaterThan(0);
+                expect($('.large_image_thumbnail').length).toBeGreaterThan(0);
+                expect($('.li-column-metadata').length).toBe(0);
+            });
+        });
+        it('upload test file', function () {
+            girderTest.waitForLoad();
+            runs(function () {
+                $('.g-folder-list-link:first').click();
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                girderTest.binaryUpload('${large_image}/../../test/test_files/.large_image_config.yaml');
+            });
+            girderTest.waitForLoad();
+        });
+        it('test the metadata columns is shown', function () {
+            runs(function () {
+                expect($('.large_image_container').length).toBe(0);
+                expect($('.large_image_thumbnail').length).toBeGreaterThan(0);
+                expect($('.li-column-metadata').length).toBeGreaterThan(0);
+            });
+        });
+        it('navigate back to image', function () {
+            waitsFor(function () {
+                return $('span.g-item-list-link').filter(function () { return $(this).text() !== '.large_image_config.yaml'; }).length > 0;
+            }, 'link to appear');
+            runs(function () {
+                $('span.g-item-list-link').filter(function () { return $(this).text() !== '.large_image_config.yaml'; }).click();
+            });
             girderTest.waitForLoad();
         });
     });
