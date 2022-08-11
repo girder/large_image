@@ -562,3 +562,23 @@ def testVfsCogValidation():
         imagePath, projection='EPSG:3857', encoding='PNG')
     with pytest.raises(TileSourceInefficientError):
         source.validateCOG()
+        
+def testAlphaProjection():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857')
+    base = source.getThumbnail(encoding='PNG')[0]
+    basenp = source.getThumbnail(format='numpy')[0]
+    assert numpy.count_nonzero(basenp[:, :, 3] == 255) > 30000
+    source = large_image_source_gdal.open(
+        imagePath, projection='EPSG:3857',
+        style={'bands': [
+            {'band': 1, 'palette': 'R'},
+            {'band': 2, 'palette': 'G'},
+            {'band': 3, 'palette': 'B'}]})
+    assert source.getThumbnail(encoding='PNG')[0] == base
+    assert not (source.getThumbnail(format='numpy')[0] - basenp).any()
+    source = large_image_source_gdal.open(
+        imagePath)
+    assert numpy.count_nonzero(source.getThumbnail(format='numpy')[0][:, :, 3] == 255) > 30000
