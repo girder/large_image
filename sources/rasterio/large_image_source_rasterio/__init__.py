@@ -23,25 +23,18 @@ from urllib.parse import urlencode, urlparse
 
 import numpy as np
 import PIL.Image
+import pyproj
 import rasterio as rio
 from rasterio.errors import RasterioIOError
-import pyproj
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
-from large_image.constants import (
-    TILE_FORMAT_IMAGE,
-    TILE_FORMAT_NUMPY,
-    TILE_FORMAT_PIL,
-    SourcePriority,
-    TileInputUnits,
-    TileOutputMimeTypes,
-)
-from large_image.exceptions import (
-    TileSourceError,
-    TileSourceFileNotFoundError,
-    TileSourceInefficientError,
-)
+from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
+                                   TILE_FORMAT_PIL, SourcePriority,
+                                   TileInputUnits, TileOutputMimeTypes)
+from large_image.exceptions import (TileSourceError,
+                                    TileSourceFileNotFoundError,
+                                    TileSourceInefficientError)
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
