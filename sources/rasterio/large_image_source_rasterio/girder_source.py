@@ -30,15 +30,18 @@ class RasterioGirderTileSource(RasterioFileTileSource, GirderTileSource):
     Provides tile access to Girder items for rasterio layers.
     """
 
-    name = 'rasterio'
-    cacheName = 'tilesource'
+    name = "rasterio"
+    cacheName = "tilesource"
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        projection = kwargs.get('projection', args[1] if len(args) >= 2 else None)
-        unitPerPixel = kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None)
-        
-        return GirderTileSource.getLRUHash(*args, **kwargs) + f",{projection},{unitPerPixel}"
+        projection = kwargs.get("projection", args[1] if len(args) >= 2 else None)
+        unitPerPixel = kwargs.get("unitsPerPixel", args[3] if len(args) >= 4 else None)
+
+        return (
+            GirderTileSource.getLRUHash(*args, **kwargs)
+            + f",{projection},{unitPerPixel}"
+        )
 
     def _getLargeImagePath(self):
         """
@@ -46,15 +49,15 @@ class RasterioGirderTileSource(RasterioFileTileSource, GirderTileSource):
         is a link file, try to use it.
         """
         try:
-            largeImageFileId = self.item['largeImage']['fileId']
+            largeImageFileId = self.item["largeImage"]["fileId"]
             largeImageFile = File().load(largeImageFileId, force=True)
             if (
-                largeImageFile.get('linkUrl') 
-                and not largeImageFile.get('assetstoreId') 
-                and re.match(r'(http(|s)|ftp)://', largeImageFile['linkUrl']
+                largeImageFile.get("linkUrl")
+                and not largeImageFile.get("assetstoreId")
+                and re.match(r"(http(|s)|ftp)://", largeImageFile["linkUrl"])
             ):
-                largeImagePath = '/vsicurl/' + largeImageFile['linkUrl']
-                logger.info('Using %s' % largeImagePath)
+                largeImagePath = "/vsicurl/" + largeImageFile["linkUrl"]
+                logger.info("Using %s" % largeImagePath)
                 return largeImagePath
         except Exception:
             pass

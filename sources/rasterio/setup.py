@@ -2,8 +2,8 @@ import os
 
 from setuptools import find_packages, setup
 
-description = 'A rasterio tilesource for large_image.'
-long_description = description + '\n\nSee the large-image package for more details.'
+description = "A rasterio tilesource for large_image."
+long_description = description + "\n\nSee the large-image package for more details."
 
 
 def prerelease_local_scheme(version):
@@ -17,8 +17,8 @@ def prerelease_local_scheme(version):
     """
     from setuptools_scm.version import get_local_node_and_date
 
-    if os.getenv('CIRCLE_BRANCH') in ('master', ):
-        return ''
+    if os.getenv("CIRCLE_BRANCH") in ("master",):
+        return ""
     else:
         return get_local_node_and_date(version)
 
@@ -26,50 +26,53 @@ def prerelease_local_scheme(version):
 try:
     from setuptools_scm import get_version
 
-    version = get_version(root='../..', local_scheme=prerelease_local_scheme)
-    limit_version = f'>={version}' if '+' not in version else ''
+    version = get_version(root="../..", local_scheme=prerelease_local_scheme)
+    limit_version = f">={version}" if "+" not in version else ""
 except (ImportError, LookupError):
-    limit_version = ''
+    limit_version = ""
 
 setup(
-    name='large-image-source-rasterio',
-    use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
-                     'fallback_version': 'development'},
-    setup_requires=['setuptools-scm'],
+    name="large-image-source-rasterio",
+    use_scm_version={
+        "root": "../..",
+        "local_scheme": prerelease_local_scheme,
+        "fallback_version": "development",
+    },
+    setup_requires=["setuptools-scm"],
     description=description,
     long_description=long_description,
-    license='Apache Software License 2.0',
-    author='Kitware, Inc.',
-    author_email='kitware@kitware.com',
+    license="Apache Software License 2.0",
+    author="Kitware, Inc.",
+    author_email="kitware@kitware.com",
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
+        "Development Status :: 5 - Production/Stable",
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
     install_requires=[
-        f'large-image{limit_version}',
-        'rasterio',
-        'packaging',
+        f"large-image{limit_version}",
+        "rasterio",
+        "packaging",
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
-        'girder': f'girder-large-image{limit_version}',
+        "girder": f"girder-large-image{limit_version}",
     },
-    keywords='large_image, tile source',
-    packages=find_packages(exclude=['test', 'test.*']),
-    url='https://github.com/girder/large_image',
-    python_requires='>=3.6',
+    keywords="large_image, tile source",
+    packages=find_packages(exclude=["test", "test.*"]),
+    url="https://github.com/girder/large_image",
+    python_requires=">=3.6",
     entry_points={
-        'large_image.source': [
-            'gdal = large_image_source_rasterio:RasterioFileTileSource'
+        "large_image.source": [
+            "gdal = large_image_source_rasterio:RasterioFileTileSource"
         ],
-        'girder_large_image.source': [
-            'gdal = large_image_source_rasterio.girder_source:RasterioGirderTileSource'
-        ]
+        "girder_large_image.source": [
+            "gdal = large_image_source_rasterio.girder_source:RasterioGirderTileSource"
+        ],
     },
 )
