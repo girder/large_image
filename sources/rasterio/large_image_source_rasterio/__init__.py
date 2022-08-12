@@ -133,7 +133,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._bounds = {}
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
-        self.projection = CRS(projection) if projection else None
+        self._projection = CRS(projection) if projection else None
 
         # get width and height parameters
         with self._getDatasetLock:
@@ -149,7 +149,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         # raise an error if we are missing some information about the projection
         # i.e. we don't know where to place it on a map
-        isProjected = self.projection or self.dataset.driver.lower() in {"png"}
+        isProjected = self._projection or self.dataset.driver.lower() in {"png"}
         if isProjected and not scale:
             raise TileSourceError(
                 "File does not have a projected scale, "
@@ -163,7 +163,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.sourceLevels = self.levels = int(max(0, computedLevel) + 1)
 
         self._unitsPerPixel = unitsPerPixel
-        self.projection is None or self._initWithProjection(unitsPerPixel)
+        self._projection is None or self._initWithProjection(unitsPerPixel)
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
 
@@ -286,7 +286,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if bstyle.get("nodata") == "auto":
                     bandInfo = self.getOneBandInformation(bstyle.get("band", 0))
                     bstyle["nodata"] = bandInfo.get("nodata", None)
-            if not hasAlpha and self.projection:
+            if not hasAlpha and self._projection:
                 style.append(
                     {
                         "band": len(self.getBandInformation()) + 1,
@@ -334,8 +334,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             }
         else:
             kwargs = {}
-            if self.projection:
-                bounds = self.getBounds(self.projection)
+            if self._projection:
+                bounds = self.getBounds(self._projection)
                 kwargs = {
                     "region": {
                         "left": bounds["xmin"],
@@ -371,7 +371,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         srcCrs = CRS(4326)
         # Since we already converted to bytes decoding is safe here
-        dstCrs = self.projection
+        dstCrs = self._projection
         if dstCrs.is_geographic:
             raise TileSourceError(
                 "Projection must not be geographic (it needs to use linear "
@@ -381,14 +381,14 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if unitsPerPixel is not None:
             self.unitsAcrossLevel0 = float(unitsPerPixel) * self.tileSize
         else:
-            self.unitsAcrossLevel0 = ProjUnitsAcrossLevel0.get(self.projection.srs)
+            self.unitsAcrossLevel0 = ProjUnitsAcrossLevel0.get(self._projection.srs)
             if self.unitsAcrossLevel0 is None:
                 # If unitsPerPixel is not specified, the horizontal distance
                 # between -180,0 and +180,0 is used.  Some projections (such as
                 # stereographic) will fail in this case; they must have a unitsPerPixel specified.
-                equator = Transformer.from_proj(srcCrs, dstCrs, always_xy=True)
-                xx, yy = equator.transform([-180, 180], [0, 0])
-                self.unitsAcrossLevel0 = abs(xx[1] - xx[0])
+                equator = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
+                east, west = equator.itransform([(-180, 0), (180, 0)])
+                self.unitsAcrossLevel0 = abs(east[0] - west[0])
                 if not self.unitsAcrossLevel0:
                     raise TileSourceError(
                         "unitsPerPixel must be specified for this projection"
@@ -396,11 +396,11 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if len(ProjUnitsAcrossLevel0) >= ProjUnitsAcrossLevel0_MaxSize:
                     ProjUnitsAcrossLevel0.clear()
                     
-                ProjUnitsAcrossLevel0[self.projection.srs] = self.unitsAcrossLevel0
+                ProjUnitsAcrossLevel0[self._projection.srs] = self.unitsAcrossLevel0
                 
         # for consistency, it should probably always be (0, 0).  Whatever
         # renders the map would need the same offset as used here.
-        self.projectionOrigin = (0, 0)
+        self._projectionOrigin = (0, 0)
 
         # Calculate values for this projection
         width = self.getPixelSizeInMeters() * self.tileWidth
@@ -424,7 +424,6 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         source = super(RasterioFileTileSource, RasterioFileTileSource)
         lru = source.getLRUHash(*args, **kwargs)
         info = f",{projection},{unitsPerPixel}"
-        
 
         return lru + info
 
@@ -433,7 +432,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         TODO docstring
         """
         
-        return super().getState() + f",{self.projection.srs},{self._unitsPerPixel}"
+        return super().getState() + f",{self._projection.srs},{self._unitsPerPixel}"
 
     @staticmethod
     def getHexColors(palette):
@@ -515,21 +514,23 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             "mm_x": scale * 100 if scale else None,
             "mm_y": scale * 100 if scale else None,
         }
-
-    def _getGeoTransform(self):
+    
+    def _getAffine(self)
         """
-        Get the GeoTransform.  If GCPs are used, get the appropriate transform
-        for those.
+        Get the Affine.  If GCPs are used, get the appropriate Affine
+        for those. be carefule, Rasterio have deprecated GDAL styled transform in favor 
+        of ``Affine`` objects. See their documentation for more information: 
+        shorturl.at/bcdGL 
 
         :returns: a six-component array with the transform
         """
 
         with self._getDatasetLock:
-            gt = self.dataset.transform
+            affine = self.dataset.transform
             if len(self.dataset.gcps[0]) != 0 and self.dataset.gcps[1]:
-                gt = rio.transform.from_gcps(self.dataset.gcps[0])
+                affine = rio.transform.from_gcps(self.dataset.gcps[0])
 
-        return gt
+        return affine
 
     def getBounds(self, crs=None):
         """
@@ -549,7 +550,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return self._bounds[dstCrs.srs]
 
         # extract the projection informations
-        gt = self._getGeoTransform()
+        af = self._getAffine()
         srcCrs = self.getCrs()
         
         # set bounds to none and exit if no crs is set for the dataset 
@@ -561,20 +562,20 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Cannot only rely on bounds because of rotated and non-affine coordinate systems
         bounds = {
             'll': {
-                'x': gt[0] + self.sourceSizeY * gt[2],
-                'y': gt[3] + self.sourceSizeY * gt[5]
+                'x': af[2] + self.sourceSizeY * af[1],
+                'y': af[5] + self.sourceSizeY * af[4]
             },
             'ul': {
-                'x': gt[0],
-                'y': gt[3],
+                'x': af[2],
+                'y': af[5],
             },
             'lr': {
-                'x': gt[0] + self.sourceSizeX * gt[1] + self.sourceSizeY * gt[2],
-                'y': gt[3] + self.sourceSizeX * gt[4] + self.sourceSizeY * gt[5]
+                'x': af[2] + self.sourceSizeX * af[0] + self.sourceSizeY * af[1],
+                'y': af[5] + self.sourceSizeX * af[3] + self.sourceSizeY * af[4]
             },
             'ur': {
-                'x': gt[0] + self.sourceSizeX * gt[1],
-                'y': gt[3] + self.sourceSizeX * gt[4]
+                'x': af[2] + self.sourceSizeX * af[0],
+                'y': af[5] + self.sourceSizeX * af[3]
             },
         }
         
@@ -706,7 +707,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 "sourceSizeY": self.sourceSizeY,
                 "tileWidth": self.tileWidth,
                 "tileHeight": self.tileHeight,
-                "bounds": self.getBounds(self.projection),
+                "bounds": self.getBounds(self._projection),
                 "sourceBounds": self.getBounds(),
                 "bands": self.getBandInformation(),
             }
@@ -732,7 +733,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # result['fileList'] = self.dataset.GetFileList()
             result["RasterXSize"] = self.dataset.width
             result["RasterYSize"] = self.dataset.height
-            result["GeoTransform"] = self._getGeoTransform()
+            result["Affine"] = self._getAffine()
             result["Projection"] = self.dataset.crs
             result["strProjection"] = self.dataset.crs.to_string()
             result["GCPProjection"] = self.dataset.gcps[1]
@@ -768,7 +769,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         x, y = float(x), float(y)
 
-        if self.projection:
+        if self._projection:
 
             # Scale tile into the range [-0.5, 0.5], [-0.5, 0.5]
             xmin = -0.5 + x / 2.0**z
@@ -777,10 +778,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ymax = 0.5 - y / 2.0**z
 
             # Convert to projection coordinates
-            xmin = self.projectionOrigin[0] + xmin * self.unitsAcrossLevel0
-            xmax = self.projectionOrigin[0] + xmax * self.unitsAcrossLevel0
-            ymin = self.projectionOrigin[1] + ymin * self.unitsAcrossLevel0
-            ymax = self.projectionOrigin[1] + ymax * self.unitsAcrossLevel0
+            xmin = self._projectionOrigin[0] + xmin * self.unitsAcrossLevel0
+            xmax = self._projectionOrigin[0] + xmax * self.unitsAcrossLevel0
+            ymin = self._projectionOrigin[1] + ymin * self.unitsAcrossLevel0
+            ymax = self._projectionOrigin[1] + ymax * self.unitsAcrossLevel0
 
         else:
 
@@ -833,7 +834,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         TODO missing docstring
         """
 
-        if not self.projection:
+        if not self._projection:
 
             self._xyzInRange(x, y, z)
             factor = int(2 ** (self.levels - 1 - z))
@@ -851,7 +852,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         else:
             xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
-            bounds = self.getBounds(self.projection)
+            bounds = self.getBounds(self._projection)
 
             # return empty image when I'm out of bounds
             if (
@@ -867,7 +868,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             # read the image as a warp vrt
             with self._getDatasetLock:
-                with rio.vrt.WarpedVRT(self.dataset, crs=self.projection) as vrt:
+                with rio.vrt.WarpedVRT(self.dataset, crs=self._projection) as vrt:
                     window = vrt.window(xmin, ymin, xmax, ymax)
 
                     # TODO understand how to define the width and height of the tile itself
@@ -927,7 +928,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             )
 
         # compute the pixel coordinates of the corners if no projection is set
-        if not self.projection:
+        if not self._projection:
             pleft, ptop = self.toNativePixelCoordinates(
                 right if left is None else left, 
                 bottom if top is None else top, 
@@ -944,7 +945,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             with self._getDatasetLock:
                 srcCrs = self.dataset.crs
-            dstCrs = self.projection
+            dstCrs = self._projection
 
             transformer = Transformer.from_crs(
                 srcCrs, dstCrs, always_xy=True
@@ -1013,8 +1014,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 left, top, right, bottom, width, height, units, **kwargs
             )
 
-        if units == "projection" and self.projection:
-            bounds = self.getBounds(self.projection)
+        if units == "projection" and self._projection:
+            bounds = self.getBounds(self._projection)
 
             # Fill in missing values
             if left is None:
@@ -1031,10 +1032,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 width = height = None
 
             # Convert to [-0.5, 0.5], [-0.5, 0.5] coordinate range
-            left = (left - self.projectionOrigin[0]) / self.unitsAcrossLevel0
-            right = (right - self.projectionOrigin[0]) / self.unitsAcrossLevel0
-            top = (top - self.projectionOrigin[1]) / self.unitsAcrossLevel0
-            bottom = (bottom - self.projectionOrigin[1]) / self.unitsAcrossLevel0
+            left = (left - self._projectionOrigin[0]) / self.unitsAcrossLevel0
+            right = (right - self._projectionOrigin[0]) / self.unitsAcrossLevel0
+            top = (top - self._projectionOrigin[1]) / self.unitsAcrossLevel0
+            bottom = (bottom - self._projectionOrigin[1]) / self.unitsAcrossLevel0
 
             # Convert to worldwide 'base pixels' and crop to the world
             xScale = 2 ** (self.levels - 1) * self.tileWidth
@@ -1067,12 +1068,12 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             level = self.levels - 1
 
         # if no projection is set build the pixel values using the geotransform
-        if not self.projection:
-            gt = self._getGeoTransform()
+        if not self._projection:
+            af = self._getAffine()
             x *= 2 ** (self.levels - 1 - level)
             y *= 2 ** (self.levels - 1 - level)
-            x = gt[0] + gt[1] * x + gt[2] * y
-            y = gt[3] + gt[4] * x + gt[5] * y
+            x = af[2] + af[0] * x + af[1] * y
+            y = af[5] + af[3] * x + af[4] * y
 
         # else we used the projection set in __init__
         else:
@@ -1080,8 +1081,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             yScale = 2**level * self.tileHeight
             x = x / xScale - 0.5
             y = 0.5 - y / yScale
-            x = x * self.unitsAcrossLevel0 + self.projectionOrigin[0]
-            y = y * self.unitsAcrossLevel0 + self.projectionOrigin[1]
+            x = x * self.unitsAcrossLevel0 + self._projectionOrigin[0]
+            y = y * self.unitsAcrossLevel0 + self._projectionOrigin[1]
 
         return x, y
 
@@ -1102,7 +1103,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: thumbData, thumbMime: the image data and the mime type.
         """
         # if no projection is found, call the thumbnail method for non geogrpahic images
-        if not self.projection:
+        if not self._projection:
             return super().getThumbnail(width, height, **kwargs)
 
         # image is too small if the size is None or 1 pixels or lower
@@ -1133,7 +1134,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :return: (x, y) the pixel coordinate.
         """
 
-        srcCrs = self.projection if crs is None else CRS(crs)
+        srcCrs = self._projection if crs is None else CRS(crs)
 
         # convert to the native projection
         dstCrs = CRS(self.getCrs())
@@ -1141,10 +1142,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         px, py = transformer.transform(x, y)
 
         # convert to native pixel coordinates
-        gt = self._getGeoTransform()
-        d = gt[2] * gt[4] - gt[1] * gt[5]
-        x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
-        y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
+        af = self._getAffine()
+        d = af[1] * af[3] - af[0] * af[4]
+        x = (af[2] * af[4] - af[1] * af[5] - af[4] * px + af[1] * py) / d
+        y = (af[0] * af[5] - af[2] * af[3] + af[3] * px - af[0] * py) / d
 
         # convert to integer if requested
         if roundResults:
@@ -1176,13 +1177,13 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # Coordinates in the max level tile
             x, y = tile["gx"], tile["gy"]
 
-            if self.projection:
+            if self._projection:
                 # convert to a scale of [-0.5, 0.5]
                 x = 0.5 + x / 2 ** (self.levels - 1) / self.tileWidth
                 y = 0.5 - y / 2 ** (self.levels - 1) / self.tileHeight
                 # convert to projection coordinates
-                x = self.projectionOrigin[0] + x * self.unitsAcrossLevel0
-                y = self.projectionOrigin[1] + y * self.unitsAcrossLevel0
+                x = self._projectionOrigin[0] + x * self.unitsAcrossLevel0
+                y = self._projectionOrigin[1] + y * self.unitsAcrossLevel0
                 # convert to native pixel coordinates
                 x, y = self.toNativePixelCoordinates(x, y)
 
@@ -1315,7 +1316,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return super().getRegion(format_, **kwargs)
 
         # extract parameter of the projection
-        dstCrs = self.projection or self.getCrs()
+        dstCrs = self._projection or self.getCrs()
         top = iterInfo["region"]["top"]
         left = iterInfo["region"]["left"]
         bottom = iterInfo["region"]["bottom"]
