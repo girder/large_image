@@ -483,7 +483,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Returns bounds of the image.
 
-        :param srs: the projection for the bounds.  None for the default.
+        :param srs: the projection for the bounds.  None for the default 4326.
         :returns: an object with the four corners and the projection that was
             used.  None if we don't know the original projection.
         """

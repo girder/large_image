@@ -22,7 +22,7 @@ from .tiledict import LazyTileDict
 from .utilities import (_encodeImage, _encodeImageBinary,  # noqa: F401
                         _gdalParameters, _imageToNumpy, _imageToPIL,
                         _letterboxImage, _makeSameChannelDepth, _vipsCast,
-                        _vipsParameters, dictToEtree, etreeToDict,
+                        _vipsParameters, dictToEtree, etreeToDict, _rasterioParameters,
                         getPaletteColors, histogramThreshold, nearPowerOfTwo)
 
 
