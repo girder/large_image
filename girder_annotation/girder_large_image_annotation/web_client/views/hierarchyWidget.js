@@ -4,77 +4,35 @@ import { wrap } from '@girder/core/utilities/PluginUtils';
 import { restRequest } from '@girder/core/rest';
 import AccessWidget from '@girder/core/views/widgets/AccessWidget';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
-import UserCollection from '@girder/core/collections/UserCollection';
 
-import AnnotationCollection from '../collections/AnnotationCollection';
+import AnnotationModel from '../models/AnnotationModel';
 
 wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
     initialize.call(this, settings);
 
-    if (this.parentModel.get('_modelType') === 'folder') {
-        fetchCollections(this, this.parentModel.id);
-    }
     this.folderListView.on('g:folderClicked', () => {
-        fetchCollections(this, this.parentModel.id);
-        addAccessControl(this);
+        ownAnnotation(this, this.parentModel.id);
     });
 });
 
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);
 
-    if (this.parentModel.get('_modelType') === 'folder' && this.recurseCollection) {
-        addAccessControl(this);
+    if (this.parentModel.get('_modelType') === 'folder') {
+        ownAnnotation(this, this.parentModel.id);
     }
 });
 
-function fetchCollections(root, folderId) {
+function ownAnnotation(root, folderId) {
     restRequest({
         type: 'GET',
         url: 'annotation/folder/' + folderId + '/present',
         data: {
-            id: folderId,
             recurse: true
         }
-    }).done((resp) => {
-        if (resp) {
-            root.users = new UserCollection();
-
-            root.recurseCollection = new AnnotationCollection([], {comparator: null});
-            root.recurseCollection.altUrl = 'annotation/folder/' + folderId;
-            root.recurseCollection.fetch({
-                id: folderId,
-                sort: 'created',
-                sortDir: -1,
-                recurse: true
-            }).done(() => {
-                root.recurseCollection.each((model) => {
-                    root.users.add({'_id': model.get('creatorId')});
-                });
-                $.when.apply($, root.users.map((model) => {
-                    return model.fetch();
-                })).always(() => {
-                    root.render();
-                });
-            });
-
-            root.collection = new AnnotationCollection([], {comparator: null});
-            root.collection.altUrl = 'annotation/folder/' + folderId;
-            root.collection.fetch({
-                id: folderId,
-                sort: 'created',
-                sortDir: -1,
-                recurse: false
-            }).done(() => {
-                root.collection.each((model) => {
-                    root.users.add({'_id': model.get('creatorId')});
-                });
-                $.when.apply($, root.users.map((model) => {
-                    return model.fetch();
-                })).always(() => {
-                    root.render();
-                });
-            });
+    }).done((ownsAnnot) => {
+        if (ownsAnnot) {
+            addAccessControl(root);
         }
     });
 }
@@ -107,44 +65,41 @@ function addAccessControl(root) {
 }
 
 function editAnnotAccess() {
-    const model = this.recurseCollection.at(0).clone();
-    model.get('annotation').name = 'Your Annotations';
-    model.save = () => {};
-    model.updateAccess = (settings) => {
-        const access = {
-            access: model.get('access'),
-            public: model.get('public'),
-            publicFlags: model.get('publicFlags')
-        };
-        if (settings.recurse) {
-            this.recurseCollection.each((loopModel) => {
-                loopModel.set(access);
-                loopModel.updateAccess();
-            });
-        } else {
-            this.collection.each((loopModel) => {
-                loopModel.set(access);
-                loopModel.updateAccess();
-            });
+    restRequest({
+        type: 'GET',
+        url: 'annotation/folder/' + this.parentModel.get('_id'),
+        data: {
+            recurse: true,
+            limit: 1
         }
-
-        this.collection.fetch(null, true);
-        this.recurseCollection.fetch(null, true);
-        model.trigger('g:accessListSaved');
-    };
-    model.fetchAccess(true)
-        .done(() => {
-            new AccessWidget({
-                el: $('#g-dialog-container'),
-                modelType: 'annotation',
-                model,
-                hideRecurseOption: false,
-                parentView: this
-            }).on('g:accessListSaved', () => {
-                this.collection.fetch(null, true);
-                this.recurseCollection.fetch(null, true);
+    }).done((resp) => {
+        const model = new AnnotationModel(resp[0]);
+        model.get('annotation').name = 'Your Annotations';
+        model.save = () => {};
+        model.updateAccess = (settings) => {
+            const access = {
+                access: model.get('access'),
+                public: model.get('public'),
+                publicFlags: model.get('publicFlags')
+            };
+            const defaultUpdateModel = new AnnotationModel();
+            defaultUpdateModel.id = this.parentModel.get('_id');
+            defaultUpdateModel.altUrl = 'annotation/folder';
+            defaultUpdateModel.set(access);
+            defaultUpdateModel.updateAccess(settings);
+            model.trigger('g:accessListSaved');
+        };
+        model.fetchAccess(true)
+            .done(() => {
+                new AccessWidget({
+                    el: $('#g-dialog-container'),
+                    modelType: 'annotation',
+                    model,
+                    hideRecurseOption: false,
+                    parentView: this
+                });
             });
-        });
+    });
 }
 
 export default HierarchyWidget;

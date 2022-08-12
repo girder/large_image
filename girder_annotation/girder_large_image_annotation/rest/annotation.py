@@ -61,6 +61,7 @@ class AnnotationResource(Resource):
         self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
         self.route('GET', ('folder', ':id'), self.returnFolderAnnotations)
         self.route('GET', ('folder', ':id', 'present'), self.existFolderAnnotations)
+        self.route('PUT', ('folder', ':id', 'access'), self.setFolderAnnotationAccess)
         self.route('GET', ('old',), self.getOldAnnotations)
         self.route('DELETE', ('old',), self.deleteOldAnnotations)
         self.route('GET', ('counts',), self.getItemListAnnotationCounts)
@@ -662,6 +663,34 @@ class AnnotationResource(Resource):
 
         annotations.count = count
         return annotations
+
+    @autoDescribeRoute(
+        Description('Set the access for all the annotations from the items in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .param('access', 'The JSON-encoded access control list.')
+        .param('public', 'Whether the annotation should be publicly visible.',
+               dataType='boolean', required=False)
+        .param('recurse', 'Whether or not to retrieve all '
+               'annotations from subfolders', required=False, default=False, dataType='boolean')
+        .errorResponse('ID was invalid.')
+    )
+    @access.user
+    def setFolderAnnotationAccess(self, id, params):
+        user = self.getCurrentUser()
+        access = json.loads(params['access'])
+        public = self.boolParam('public', params, False)
+        for annotation in self.getFolderAnnotations(id, params['recurse'], user):
+            annot = Annotation().load(annotation['_id'], user=user, getElements=False)
+            annot = Annotation().setPublic(annot, public)
+            annot = Annotation().setAccessList(
+                annot, access, save=False, user=user)
+            Annotation().update({'_id': annot['_id']}, {'$set': {
+                key: annot[key] for key in ('access', 'public', 'publicFlags')
+                if key in annot
+            }})
+            yield annot
+
+
 
     @autoDescribeRoute(
         Description('Report on old annotations.')
