@@ -585,7 +585,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # set the vertical bounds 
             # some projection system don't cover the poles so we need to adapt 
             # the values of ybounds accordingly
-            has_poles = Proj(dstCrs)(0, 90)[1] != float("inf")
+            transformer = Transformer.from_crs(4326, dstCrs, always_xy=True)
+            has_poles = transformer.transform(0, 90)[1] != float("inf")
             yBounds = 90 if has_poles else 89.999999
             
             # for each corner fix the latitude within -yBounds yBounds 
@@ -599,10 +600,15 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             while any(v['x'] < -180 for v in bounds.values()):
                 for k in bounds:
                     bounds[k]['x'] += 360
+                    
+            # if one of the corner is 180 set all the corner to world width
+            if any(abs(v["x"]) == 180 for v in bounds.values()):
+                bounds['ul']['x'] = bounds['ll']['x'] = -180
+                bounds['ur']['x'] = bounds['lr']['x'] = 180
         
             # reproject the pts in the destination coordinate system if necessary 
             if dstCrs and dstCrs != srcCrs:
-                transformer = Transformer.from_proj(srcCrs, dstCrs, always_xy=True)
+                transformer = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
                 for k, pt in bounds.values():
                     pt["x"], pt["y"] = transformer.transform(pt["x"], pt["y"])
                     
@@ -652,33 +658,33 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             # loop in the bands to get the indicidative stats (bands are 1 indexed)
             infoSet = {}
-            for i in dataset.indexes:
+            for i in dataset.indexes:  # 1 indexed
 
                 # get the stats
-                stats = dataset.statistics(i + 1)
+                stats = dataset.statistics(i)
 
                 info = {
                     "min": stats.min,
                     "max": stats.max,
                     "mean": stats.mean,
                     "stdev": stats.std,
-                    "nodata": dataset.nodatavals[i],
-                    "scale": dataset.scales[i],
-                    "offset": dataset.offsets[i],
-                    "units": dataset.units[i],
-                    "categories": dataset.descriptions[i],
-                    "interpretation": dataset.colorinterp[i],
-                    "maskband": dataset.read_mask(i + 1),
+                    "nodata": dataset.nodatavals[i-1],
+                    "scale": dataset.scales[i-1],
+                    "offset": dataset.offsets[i-1],
+                    "units": dataset.units[i-1],
+                    "categories": dataset.descriptions[i-1],
+                    "interpretation": dataset.colorinterp[i-1],
+                    "maskband": dataset.read_mask(i),
                 }
 
                 # add extra informations if available
                 try:
-                    info.update(colortable=dataset.colormap(i + 1))
+                    info.update(colortable=dataset.colormap(i))
                 except ValueError:
                     pass
 
                 # Only keep values that aren't None or the empty string
-                infoSet[i + 1] = {k: v for k, v in info.items() if v not in (None, "")}
+                infoSet[i] = {k: v for k, v in info.items() if v not in (None, "")}
 
         # set the value to cache if needed
         cache is False or setattr(self, "_bandInfo", infoSet)
@@ -695,10 +701,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # check if the file is geospatial
             has_projection = self.dataset.crs
             has_gcps = len(self.dataset.gcps[0]) != 0 and self.dataset.gcps[1]
-            has_transform = self.dataset.transform
+            has_affine = self.dataset.transform
 
             metadata = {
-                "geospatial": has_projection or has_gcps or has_transform,
+                "geospatial": has_projection or has_gcps or has_affine,
                 "levels": self.levels,
                 "sizeX": self.sizeX,
                 "sizeY": self.sizeY,
@@ -741,18 +747,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             # add gcp of available
             if len(self.dataset.gcp[0]) != 0:
-                result["GCPs"] = [
-                    {
-                        "id": gcp.id,
-                        "line": gcp.row,
-                        "pixel": gcp.col,
-                        "x": gcp.x,
-                        "y": gcp.y,
-                        "z": gcp.z,
-                        "info": gcp.info,
-                    }
-                    for gcp in self.dataset.gcp[0]
-                ]
+                result["GCPs"] = [gcp.asdict() for gcp in self.dataset.gcp[0]]
 
         return result
 
@@ -947,9 +942,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 srcCrs = self.dataset.crs
             dstCrs = self._projection
 
-            transformer = Transformer.from_crs(
-                srcCrs, dstCrs, always_xy=True
-            )
+            transformer = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
             
             # note for the next developer 
             # you cannot simplify it with "or" as left and right can be 0
@@ -1192,10 +1185,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     for i in self.dataset.indexes:
                         window = rio.window.Window(int(x), int(y), 1, 1)
                         try:
-                            value = self.dataset.read(i + 1, window=window)
+                            value = self.dataset.read(i, window=window)
                             value = value.astype(np.single)
                             value = value[0][0]  # there should be 1 single pixel
-                            pixel.setdefault("bands", {})[i + 1] = struct.unpack(
+                            pixel.setdefault("bands", {})[i] = struct.unpack(
                                 "f", value
                             )[0]
                         except RuntimeError:
@@ -1275,8 +1268,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 with rio.open(output.name, "w", **profile) as dst:
                     for i in src.indexes:
                         rio.warp.reproject(
-                            source=rio.band(src, i + 1),
-                            destination=rio.band(dst, i + 1),
+                            source=rio.band(src, i),
+                            destination=rio.band(dst, i),
                             src_crs=src.crs,
                             dst_crs=dstCrs,
                         )
@@ -1357,8 +1350,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             with rio.open(output.name, "w", **profile) as dst:
                 for i in self.dataset.indexes:
                     rio.warp.reproject(
-                        source=rio.band(self.dataset, i + 1),
-                        destination=rio.band(dst, i + 1),
+                        source=rio.band(self.dataset, i),
+                        destination=rio.band(dst, i),
                         src_crs=self.dataset.crs,
                         dst_crs=dstCrs,
                     )
