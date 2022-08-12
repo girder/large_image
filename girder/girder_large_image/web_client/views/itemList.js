@@ -109,7 +109,22 @@ wrap(ItemListWidget, 'render', function (render) {
         return this._liconfig ? (this.$el.closest('.modal-dialog').length ? this._liconfig.itemListDialog : this._liconfig.itemList) : undefined;
     };
 
+    this._setSort = () => {
+        this.collection.offset = 0;
+        this.collection.comparator = _.constant(0);
+        this.collection.sortField = JSON.stringify(this._lastSort.map((e) => [
+            (e.type === 'metadata' ? 'meta.' : '') + e.value,
+            e.dir === 'down' ? 1 : -1
+        ]));
+        this.collection.fetch({folderId: this.parentView.parentModel.id});
+    };
+
     function itemListRender() {
+        if (!this._lastSort && this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
+            this._lastSort = this._confList().defaultSort;
+            this._setSort();
+            return;
+        }
         this.$el.html(ItemListTemplate({
             items: this.collection.toArray(),
             isParentPublic: this.public,
@@ -199,13 +214,7 @@ function sortColumn(evt) {
     }
     this._lastSort = this._lastSort.filter((e) => e.type !== entry.type || e.value !== entry.value);
     this._lastSort.unshift(entry);
-    this.collection.offset = 0;
-    this.collection.comparator = _.constant(0);
-    this.collection.sortField = JSON.stringify(this._lastSort.map((e) => [
-        (e.type === 'metadata' ? 'meta.' : '') + e.value,
-        e.dir === 'down' ? 1 : -1
-    ]));
-    this.collection.fetch({folderId: this.parentView.parentModel.id});
+    this._setSort();
 }
 
 export default ItemListWidget;
