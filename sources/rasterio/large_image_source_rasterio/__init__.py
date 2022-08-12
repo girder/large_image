@@ -23,7 +23,7 @@ from urllib.parse import urlencode, urlparse
 
 import numpy as np
 import PIL.Image
-import pyproj
+from pyproj import CRS, Transformer, Geod, Proj
 import rasterio as rio
 from rasterio.errors import RasterioIOError
 
@@ -133,7 +133,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._bounds = {}
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
-        self.projection = pyproj.crs.CRS(projection) if projection else None
+        self.projection = CRS(projection) if projection else None
 
         # get width and height parameters
         with self._getDatasetLock:
@@ -369,7 +369,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param unitsPerPixel: optional default to None
         """
 
-        srcCrs = pyproj.crs.CRS(4326)
+        srcCrs = CRS(4326)
         # Since we already converted to bytes decoding is safe here
         dstCrs = self.projection
         if dstCrs.is_geographic:
@@ -386,7 +386,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 # If unitsPerPixel is not specified, the horizontal distance
                 # between -180,0 and +180,0 is used.  Some projections (such as
                 # stereographic) will fail in this case; they must have a unitsPerPixel specified.
-                equator = pyproj.Transformer.from_proj(srcCrs, dstCrs, always_xy=True)
+                equator = Transformer.from_proj(srcCrs, dstCrs, always_xy=True)
                 xx, yy = equator.transform([-180, 180], [0, 0])
                 self.unitsAcrossLevel0 = abs(xx[1] - xx[0])
                 if not self.unitsAcrossLevel0:
@@ -467,7 +467,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 crs = self.dataset.crs
 
             # if no crs is set consider it unprojected in epsg:4326
-            crs = crs or pyproj.crs.CRS(4326)
+            crs = crs or CRS(4326)
 
             return crs
 
@@ -485,7 +485,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not bounds: 
             return None
         
-        geod = pyproj.Geod(ellps="WGS84")
+        geod = Geod(ellps="WGS84")
 
         # extract the corner corrdinates
         ll = bounds['ll']['x'], bounds['ll']['y']
@@ -542,7 +542,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
 
         # read the crs as a crs if needed
-        dstCrs = pyproj.crs.CRS(crs) if crs else None
+        dstCrs = CRS(crs) if crs else None
 
         # exit if it's already set
         if dstCrs.srs in self._bounds:
@@ -584,7 +584,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # set the vertical bounds 
             # some projection system don't cover the poles so we need to adapt 
             # the values of ybounds accordingly
-            has_poles = pyproj.Proj(dstCrs)(0, 90)[1] != float("inf")
+            has_poles = Proj(dstCrs)(0, 90)[1] != float("inf")
             yBounds = 90 if has_poles else 89.999999
             
             # for each corner fix the latitude within -yBounds yBounds 
@@ -601,7 +601,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         
             # reproject the pts in the destination coordinate system if necessary 
             if dstCrs and dstCrs != srcCrs:
-                transformer = pyproj.Transformer.from_proj(srcCrs, dstCrs, always_xy=True)
+                transformer = Transformer.from_proj(srcCrs, dstCrs, always_xy=True)
                 for k, pt in bounds.values():
                     pt["x"], pt["y"] = transformer.transform(pt["x"], pt["y"])
                     
@@ -946,7 +946,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 srcCrs = self.dataset.crs
             dstCrs = self.projection
 
-            transformer = pyproj.Transformer.from_crs(
+            transformer = Transformer.from_crs(
                 srcCrs, dstCrs, always_xy=True
             )
             
@@ -1133,11 +1133,11 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :return: (x, y) the pixel coordinate.
         """
 
-        srcCrs = self.projection if crs is None else pyproj.crs.CRS(crs)
+        srcCrs = self.projection if crs is None else CRS(crs)
 
         # convert to the native projection
-        dstCrs = pyproj.crs.CRS(self.getCrs())
-        transformer = pyproj.Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
+        dstCrs = CRS(self.getCrs())
+        transformer = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
         px, py = transformer.transform(x, y)
 
         # convert to native pixel coordinates
@@ -1241,7 +1241,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 left = iterInfo["region"]["left"]
                 bottom = iterInfo["region"]["bottom"]
                 right = iterInfo["region"]["right"]
-                dstCrs = pyproj.crs.CRS(iterInfo["metadata"]["bounds"]["srs"])
+                dstCrs = CRS(iterInfo["metadata"]["bounds"]["srs"])
 
                 # compute the transformation
                 transform, width, height = rio.warp.calculate_default_transform(
