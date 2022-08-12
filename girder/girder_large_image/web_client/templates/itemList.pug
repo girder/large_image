@@ -43,7 +43,7 @@ ul.g-item-list.li-item-list
               if showSizes
                 .g-item-size= formatSize(item.get('size'))
           else if column.type === 'image' && item.get('largeImage')
-            .large_image_thumbnail(extra-image=column.value !== 'thumbnail' ? column.value : undefined, style=column.width ? `width: ${column.width}px` : undefined, g-item-cid=column.value === 'thumbnail' ? item.cid : undefined)
+            .large_image_thumbnail(extra-image=column.value !== 'thumbnail' ? column.value : undefined, style=`width: ${column.width || 160}px; height: ${column.height || 100}px`, g-item-cid=column.value === 'thumbnail' ? item.cid : undefined)
               - var imageName = column.value === 'thumbnail' ? column.value : `images/${column.value}`;
               img.waiting(deferred-src=`${apiRoot}/item/${item.id}/tiles/${imageName}?width=${column.width || 160}&height=${column.height || 100}`)
           else if column.type === 'metadata'

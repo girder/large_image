@@ -96,3 +96,32 @@ This is used to specify how items appear in item lists.  There are two settings,
           # the length of arrays.
           value: gloms.length
           title: Number of Gloms
+      defaultSort:
+        # The default lists a sort order for sortable columns.  This must have
+        # type, value, and dir for each entry, where dir is either "up" or
+        # "down".
+        -
+          type: metadata
+          value: Stain
+          dir: up
+        -
+          type: record
+          value: name
+          dir: down
+    itemListDialog:
+      # Show these columns
+      columns:
+        -
+          type: image
+          value: thumbnail
+          title: Thumbnail
+        -
+          type: record
+          value: name
+        -
+          type: metadata
+          value: Stain
+          format: text
+        -
+          type: record
+          value: size
