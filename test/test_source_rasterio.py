@@ -566,12 +566,12 @@ def testVfsCogValidation():
 def testAlphaProjection():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
-    source = large_image_source_gdal.open(
+    source = large_image_source_rasterio.open(
         imagePath, projection='EPSG:3857')
     base = source.getThumbnail(encoding='PNG')[0]
     basenp = source.getThumbnail(format='numpy')[0]
     assert numpy.count_nonzero(basenp[:, :, 3] == 255) > 30000
-    source = large_image_source_gdal.open(
+    source = large_image_source_rasterio.open(
         imagePath, projection='EPSG:3857',
         style={'bands': [
             {'band': 1, 'palette': 'R'},
@@ -579,6 +579,6 @@ def testAlphaProjection():
             {'band': 3, 'palette': 'B'}]})
     assert source.getThumbnail(encoding='PNG')[0] == base
     assert not (source.getThumbnail(format='numpy')[0] - basenp).any()
-    source = large_image_source_gdal.open(
+    source = large_image_source_rasterio.open(
         imagePath)
     assert numpy.count_nonzero(source.getThumbnail(format='numpy')[0][:, :, 3] == 255) > 30000

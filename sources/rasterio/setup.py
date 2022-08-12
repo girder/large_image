@@ -56,7 +56,7 @@ setup(
     ],
     install_requires=[
         f"large-image{limit_version}",
-        "rasterio",
+        "rasterio>=1.3",  # to get the statistics attribute (<=> gdalinfo)
         "packaging",
         'importlib-metadata ; python_version < "3.8"',
     ],
@@ -69,10 +69,10 @@ setup(
     python_requires=">=3.6",
     entry_points={
         "large_image.source": [
-            "gdal = large_image_source_rasterio:RasterioFileTileSource"
+            "rasterio = large_image_source_rasterio:RasterioFileTileSource"
         ],
         "girder_large_image.source": [
-            "gdal = large_image_source_rasterio.girder_source:RasterioGirderTileSource"
+            "rasterio = large_image_source_rasterio.girder_source:RasterioGirderTileSource"
         ],
     },
 )

@@ -133,7 +133,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._bounds = {}
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
-        self._projection = pyproj.crs.CRS(projection) if projection else None
+        self.projection = pyproj.crs.CRS(projection) if projection else None
 
         # get width and height parameters
         with self._getDatasetLock:
@@ -433,7 +433,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         TODO docstring
         """
         
-        return super().getState() + f",{self._projection.srs},{self._unitsPerPixel}"
+        return super().getState() + f",{self.projection.srs},{self._unitsPerPixel}"
 
     @staticmethod
     def getHexColors(palette):
@@ -585,7 +585,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # some projection system don't cover the poles so we need to adapt 
             # the values of ybounds accordingly
             has_poles = pyproj.Proj(dstCrs)(0, 90)[1] != float("inf")
-            yBounds = 90 i has_poles else 89.999999
+            yBounds = 90 if has_poles else 89.999999
             
             # for each corner fix the latitude within -yBounds yBounds 
             for k in bounds:
@@ -651,7 +651,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             # loop in the bands to get the indicidative stats (bands are 1 indexed)
             infoSet = {}
-            for i in range(dataset.count):
+            for i in dataset.indexes:
 
                 # get the stats
                 stats = dataset.statistics(i + 1)
@@ -1188,7 +1188,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             if 0 <= int(x) < self.sizeX and 0 <= int(y) < self.sizeY:
                 with self._getDatasetLock:
-                    for i in range(self.dataset.count):
+                    for i in self.dataset.indexes:
                         window = rio.window.Window(int(x), int(y), 1, 1)
                         try:
                             value = self.dataset.read(i + 1, window=window)
@@ -1272,7 +1272,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
                 # reproject every band
                 with rio.open(output.name, "w", **profile) as dst:
-                    for i in range(src.count):
+                    for i in src.indexes:
                         rio.warp.reproject(
                             source=rio.band(src, i + 1),
                             destination=rio.band(dst, i + 1),
@@ -1354,7 +1354,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             # reproject every band
             with rio.open(output.name, "w", **profile) as dst:
-                for i in range(self.dataset.count):
+                for i in self.dataset.indexes:
                     rio.warp.reproject(
                         source=rio.band(self.dataset, i + 1),
                         destination=rio.band(dst, i + 1),
