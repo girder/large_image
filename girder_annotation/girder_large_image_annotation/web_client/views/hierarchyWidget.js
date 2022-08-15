@@ -41,14 +41,13 @@ function addAccessControl(root) {
                 '</li>'
             );
         } else {
-            root.$('.g-folder-actions-menu > .dropdown-header').after(
+            root.$('ul.g-folder-actions-menu').append(
                 '<li role="presentation">' +
                     '<a class="g-edit-annotation-access" role="menuitem">' +
                         '<i class="icon-lock"></i>' +
                         'Annotation access control' +
                     '</a>' +
-                '</li>' +
-                '<li class="divider" role="presentation">'
+                '</li>'
             );
         }
         root.events['click .g-edit-annotation-access'] = editAnnotAccess;
