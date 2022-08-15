@@ -7,14 +7,6 @@ import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
 
 import AnnotationModel from '../models/AnnotationModel';
 
-wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
-    initialize.call(this, settings);
-
-    this.folderListView.on('g:folderClicked', () => {
-        ownAnnotation(this, this.parentModel.id);
-    });
-});
-
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);
 
