@@ -14,6 +14,9 @@ wrap(ItemListWidget, 'render', function (render) {
 
     function addLargeImageAnnotationBadge(item, parent, numAnnotations) {
         const thumbnail = $('.large_image_thumbnail[g-item-cid="' + item.cid + '"]', parent).first();
+        if (!thumbnail.length) {
+            return;
+        }
 
         let badge = thumbnail.find('.large_image_annotation_badge');
         if (badge.length === 0) {
@@ -32,7 +35,6 @@ wrap(ItemListWidget, 'render', function (render) {
             return;
         }
         const items = this.collection.toArray();
-        const parent = this.$el;
         const hasAnyLargeImage = _.some(items, (item) => item.has('largeImage'));
 
         if (!hasAnyLargeImage) {
@@ -66,7 +68,7 @@ wrap(ItemListWidget, 'render', function (render) {
         promise.then(() => {
             this.collection.forEach((item) => {
                 if (item._annotationCount !== undefined) {
-                    addLargeImageAnnotationBadge(item, parent, item._annotationCount);
+                    addLargeImageAnnotationBadge(item, this.$el, item._annotationCount);
                 }
             });
             return null;
