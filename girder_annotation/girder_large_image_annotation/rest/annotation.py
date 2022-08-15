@@ -694,7 +694,7 @@ class AnnotationResource(Resource):
             annot = Annotation().load(annotation['_id'], user=user, getElements=False)
             annot = Annotation().setPublic(annot, public)
             annot = Annotation().setAccessList(
-                annot, access, save=False, user=user)
+                annot, access, user=user)
             Annotation().update({'_id': annot['_id']}, {'$set': {
                 key: annot[key] for key in ('access', 'public', 'publicFlags')
                 if key in annot
