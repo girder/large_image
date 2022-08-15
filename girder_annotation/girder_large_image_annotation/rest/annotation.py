@@ -699,7 +699,6 @@ class AnnotationResource(Resource):
             yield annot
 
 
-
     @autoDescribeRoute(
         Description('Report on old annotations.')
         .param('age', 'The minimum age in days.', required=False,
