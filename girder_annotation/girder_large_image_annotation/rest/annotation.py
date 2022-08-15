@@ -573,7 +573,11 @@ class AnnotationResource(Resource):
                 'as': '__children'
             }},
             {'$unwind': {'path': '$__children'}},
-            {'$replaceRoot': {'newRoot': '$__children'}}] if recurse else []
+            {'$replaceRoot': {'newRoot': '$__children'}},
+            {'$unionWith': {
+                'coll': 'folder',
+                'pipeline': [{'$match': {'_id': ObjectId(id)}}]
+            }}] if recurse else []
         accessPipeline = [
             {'$match': {
                 '$or': [
@@ -596,10 +600,7 @@ class AnnotationResource(Resource):
                 'coll': 'folder',
                 'pipeline': [{'$match': {'_id': ObjectId(id)}}] +
                 recursivePipeline +
-                [{'$unionWith': {
-                    'coll': 'folder',
-                    'pipeline': [{'$match': {'_id': ObjectId(id)}}]
-                }}, {'$lookup': {
+                [{'$lookup': {
                     'from': 'item',
                     'localField': '_id',
                     'foreignField': 'folderId',
