@@ -91,7 +91,7 @@ function editAnnotAccess() {
         };
         model.fetchAccess(true)
             .done(() => {
-                new AccessWidget({
+                AccessWidget({
                     el: $('#g-dialog-container'),
                     modelType: 'annotation',
                     model,
