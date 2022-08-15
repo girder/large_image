@@ -91,7 +91,7 @@ function editAnnotAccess() {
         };
         model.fetchAccess(true)
             .done(() => {
-                AccessWidget({
+                new AccessWidget({// eslint-disable-line no-new
                     el: $('#g-dialog-container'),
                     modelType: 'annotation',
                     model,
