@@ -683,11 +683,13 @@ class AnnotationResource(Resource):
     )
     @access.user
     def setFolderAnnotationAccess(self, id, params):
+        setResponseTimeLimit(86400)
         user = self.getCurrentUser()
         if not user:
             return []
         access = json.loads(params['access'])
         public = self.boolParam('public', params, False)
+        count = 0
         for annotation in self.getFolderAnnotations(id, params['recurse'], user):
             annot = Annotation().load(annotation['_id'], user=user, getElements=False)
             annot = Annotation().setPublic(annot, public)
@@ -697,7 +699,9 @@ class AnnotationResource(Resource):
                 key: annot[key] for key in ('access', 'public', 'publicFlags')
                 if key in annot
             }})
-            yield annot
+            count += 1
+
+        return {'updated': count}
 
     @autoDescribeRoute(
         Description('Report on old annotations.')
