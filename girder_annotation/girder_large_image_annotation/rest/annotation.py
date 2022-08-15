@@ -625,7 +625,7 @@ class AnnotationResource(Resource):
         return Annotation().collection.aggregate(pipeline)
 
     @autoDescribeRoute(
-        Description('Check if there are any annotations from the items in a folder')
+        Description('Check if the user owns any annotations for the items in a folder')
         .param('id', 'The ID of the folder', required=True, paramType='path')
         .param('recurse', 'Whether or not to recursively check '
                'subfolders for annotations', required=False, default=True, dataType='boolean')
@@ -633,7 +633,10 @@ class AnnotationResource(Resource):
     )
     @access.public
     def existFolderAnnotations(self, id, recurse):
-        annotations = self.getFolderAnnotations(id, recurse, self.getCurrentUser(), 1)
+        user = self.getCurrentUser()
+        if not user:
+            return []
+        annotations = self.getFolderAnnotations(id, recurse, user, 1)
         try:
             next(annotations)
             return True
@@ -641,7 +644,7 @@ class AnnotationResource(Resource):
             return False
 
     @autoDescribeRoute(
-        Description('Get the annotations from the items in a folder')
+        Description('Get the user-owned annotations from the items in a folder')
         .param('id', 'The ID of the folder', required=True, paramType='path')
         .param('recurse', 'Whether or not to retrieve all '
                'annotations from subfolders', required=False, default=False, dataType='boolean')
@@ -650,7 +653,10 @@ class AnnotationResource(Resource):
     )
     @access.public
     def returnFolderAnnotations(self, id, recurse, limit, offset, sort):
-        annotations = self.getFolderAnnotations(id, recurse, self.getCurrentUser(), limit, offset,
+        user = self.getCurrentUser()
+        if not user:
+            return []
+        annotations = self.getFolderAnnotations(id, recurse, user, limit, offset,
                                                 sort[0][0], sort[0][1])
 
         def count():
@@ -665,7 +671,7 @@ class AnnotationResource(Resource):
         return annotations
 
     @autoDescribeRoute(
-        Description('Set the access for all the annotations from the items in a folder')
+        Description('Set the access for all the user-owned annotations from the items in a folder')
         .param('id', 'The ID of the folder', required=True, paramType='path')
         .param('access', 'The JSON-encoded access control list.')
         .param('public', 'Whether the annotation should be publicly visible.',
@@ -677,6 +683,8 @@ class AnnotationResource(Resource):
     @access.user
     def setFolderAnnotationAccess(self, id, params):
         user = self.getCurrentUser()
+        if not user:
+            return []
         access = json.loads(params['access'])
         public = self.boolParam('public', params, False)
         for annotation in self.getFolderAnnotations(id, params['recurse'], user):
