@@ -220,11 +220,6 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 basis *= sizes.get(axis, 1)
             frames.append(frame)
         self._addMetadataFrameInformation(result, self._channels)
-        for frame in result['frames']:
-            frame['OriginalIndex'] = sum(
-                frame[k] * self._nd2origindex.get(
-                    k.split('Index')[1] if k != 'IndexXY' else 'P', 1)
-                for k in frame if k.startswith('Index') and k != 'Index')
         return result
 
     def getInternalMetadata(self, **kwargs):
