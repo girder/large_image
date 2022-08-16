@@ -3,8 +3,15 @@
 ## 1.16.1
 
 ### Improvements
+- Add annotation access controls at the folder level ([905](../../pull/905))
 - Reduce error messages and make canRead results more accurate ([918](../../pull/918), [919](../../pull/919), [920](../../pull/920))
-- Sort columns in item lists based ([925](../../pull/925))
+- Sort columns in item lists based ([925](../../pull/925), [928](../../pull/928))
+- Better handle tiffs with orientation flags in pil source ([924](../../pull/924))
+
+### Changes
+- Remove some extraneous values from metadata responses ([932](../../pull/932))
+- Reduce some messages to stderr from other libraries ([919](../../pull/919))
+- Avoid some warnings in Python 3.10 ([913](../../pull/913))
 
 ## 1.16.0
 
