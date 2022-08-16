@@ -18,6 +18,7 @@ div.large_image_container
 ul.g-item-list
   &.li-item-list
     display table
+    background #fff
     >li
       display table-row
       &.li-item-list-header
@@ -39,7 +40,8 @@ ul.g-item-list
             content "\002b61"
       >.li-item-list-cell
         display table-cell
-        padding-top 4px 3px 3px 3px
+        padding 4px 3px 3px
+        vertical-align top
         &.li-column-record-size
           div
             float none
@@ -54,3 +56,8 @@ ul.g-item-list
       >span.li-column-metadata
         padding-left 5px
         padding-right 5px
+      div.large_image_thumbnail
+        display flex
+        align-items flex-end
+        justify-content center
+        width inherit

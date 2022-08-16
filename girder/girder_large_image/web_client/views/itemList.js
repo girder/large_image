@@ -22,8 +22,11 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     restRequest({
         url: `folder/${settings.folderId}/yaml_config/.large_image_config.yaml`
     }).done((val) => {
-        this._liconfig = val || {};
-        this.render();
+        if (!_.isEqual(val, this._liconfig)) {
+            delete this._lastSort;
+            this._liconfig = val || {};
+            this.render();
+        }
     });
     this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
     this.delegateEvents();
