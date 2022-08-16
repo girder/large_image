@@ -1,6 +1,7 @@
 import * as viewers from '@girder/large_image/views/imageViewerWidget';
 
 import ConfigView from './configView';
+import HierarchyWidget from './hierarchyWidget';
 import ImageViewerSelectWidget from './imageViewerSelectWidget';
 import ItemListWidget from './itemList';
 import ImageViewerWidgetAnnotationExtension from './imageViewerWidget/base';
@@ -15,6 +16,7 @@ for (var key in viewers) {
 
 export {
     ConfigView,
+    HierarchyWidget,
     ImageViewerSelectWidget,
     ItemListWidget,
     viewers as ViewerWidget
