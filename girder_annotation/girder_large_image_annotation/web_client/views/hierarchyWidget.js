@@ -87,7 +87,8 @@ function editAnnotAccess() {
                     modelType: 'annotation',
                     model,
                     hideRecurseOption: false,
-                    parentView: this
+                    parentView: this,
+                    noAccessFlag: true
                 });
             });
     });
