@@ -15,6 +15,7 @@
 #############################################################################
 
 from girder import events
+from girder.constants import registerAccessFlag
 from girder.exceptions import ValidationException
 from girder.plugin import GirderPlugin, getPlugin
 from girder.settings import SettingDefault
@@ -57,6 +58,10 @@ def validateBoolean(doc):
 SettingDefault.defaults.update({
     constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY: True,
 })
+
+# Access flags
+
+registerAccessFlag('createAnnots', 'Create annotations', 'Allow user to create annotations')
 
 
 class LargeImageAnnotationPlugin(GirderPlugin):
