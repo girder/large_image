@@ -7,6 +7,7 @@
 - Reduce error messages and make canRead results more accurate ([918](../../pull/918), [919](../../pull/919), [920](../../pull/920))
 - Sort columns in item lists based ([925](../../pull/925), [928](../../pull/928))
 - Better handle tiffs with orientation flags in pil source ([924](../../pull/924))
+Support a bands parameter for the test source ([935](../../pull/935))
 
 ### Changes
 - Remove some extraneous values from metadata responses ([932](../../pull/932))

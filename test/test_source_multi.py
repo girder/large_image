@@ -146,3 +146,13 @@ def testCanRead():
     assert large_image_source_multi.canRead(imagePath) is True
     imagePath2 = os.path.join(testDir, 'test_files', 'test_orient1.tif')
     assert large_image_source_multi.canRead(imagePath2) is False
+
+
+def testMultiBand():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_band.yml')
+    source = large_image_source_multi.open(imagePath)
+    metadata = source.getMetadata()
+    assert len(metadata['bands']) == 5
+    image, mimeType = source.getThumbnail(encoding='PNG')
+    assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
