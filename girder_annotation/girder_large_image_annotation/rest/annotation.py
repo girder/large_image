@@ -258,22 +258,29 @@ class AnnotationResource(Resource):
         .param('body', 'A JSON object containing the annotation.',
                paramType='body')
         .errorResponse('ID was invalid.')
-        .errorResponse('Write access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403)
         .errorResponse('Invalid JSON passed in request body.')
         .errorResponse("Validation Error: JSON doesn't follow schema.")
     )
     @access.user
-    @loadmodel(map={'itemId': 'item'}, model='item', level=AccessType.WRITE)
+    @loadmodel(map={'itemId': 'item'}, model='item', level=AccessType.READ)
     @filtermodel(model='annotation', plugin='large_image')
     def createAnnotation(self, item, params):
-        try:
-            return Annotation().createAnnotation(
-                item, self.getCurrentUser(), self.getBodyJson())
-        except ValidationException as exc:
-            logger.exception('Failed to validate annotation')
-            raise RestException(
-                "Validation Error: JSON doesn't follow schema (%r)." % (
-                    exc.args, ))
+        user = self.getCurrentUser()
+        folder = Folder().load(id=item['folderId'], user=user, level=AccessType.READ)
+        if Folder().hasAccess(folder, user, AccessType.WRITE) or Folder(
+        ).hasAccessFlags(folder, user, 'createAnnots'):
+            try:
+                return Annotation().createAnnotation(
+                    item, self.getCurrentUser(), self.getBodyJson())
+            except ValidationException as exc:
+                logger.exception('Failed to validate annotation')
+                raise RestException(
+                    "Validation Error: JSON doesn't follow schema (%r)." % (
+                        exc.args, ))
+        else:
+            raise RestException('Write access and annotation creation access '
+                                'were denied for the item.', code=403)
 
     @describeRoute(
         Description('Copy an annotation from one item to an other.')
