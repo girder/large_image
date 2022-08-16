@@ -74,7 +74,7 @@ const AnnotationListWidget = View.extend({
                 apiRoot: getApiRoot(),
                 AccessType
             }));
-        })
+        });
         return this;
     },
 
