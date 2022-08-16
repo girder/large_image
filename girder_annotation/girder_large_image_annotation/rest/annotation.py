@@ -28,6 +28,7 @@ from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource, filtermodel, loadmodel, setResponseHeader
 from girder.constants import AccessType, SortDir, TokenScope
 from girder.exceptions import AccessException, RestException, ValidationException
+from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.user import User
 from girder.utility import JsonEncoder
@@ -61,6 +62,7 @@ class AnnotationResource(Resource):
         self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
         self.route('GET', ('folder', ':id'), self.returnFolderAnnotations)
         self.route('GET', ('folder', ':id', 'present'), self.existFolderAnnotations)
+        self.route('GET', ('folder', ':id', 'create'), self.canCreateFolderAnnotations)
         self.route('PUT', ('folder', ':id', 'access'), self.setFolderAnnotationAccess)
         self.route('GET', ('old',), self.getOldAnnotations)
         self.route('DELETE', ('old',), self.deleteOldAnnotations)
@@ -670,6 +672,18 @@ class AnnotationResource(Resource):
 
         annotations.count = count
         return annotations
+
+    @autoDescribeRoute(
+        Description('Check if the user can create annotations in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .errorResponse('ID was invalid.')
+    )
+    @access.user
+    @loadmodel(model='folder', level=AccessType.READ)
+    def canCreateFolderAnnotations(self, folder):
+        user = self.getCurrentUser()
+        return Folder().hasAccess(folder, user, AccessType.WRITE) or Folder().hasAccessFlags(
+            folder, user, 'createAnnots')
 
     @autoDescribeRoute(
         Description('Set the access for all the user-owned annotations from the items in a folder')
