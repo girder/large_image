@@ -1,11 +1,13 @@
 import $ from 'jquery';
 import _ from 'underscore';
+import Backbone from 'backbone';
 
 import { wrap } from '@girder/core/utilities/PluginUtils';
 import { getApiRoot, restRequest } from '@girder/core/rest';
 import { getCurrentUser } from '@girder/core/auth';
 import { AccessType } from '@girder/core/constants';
-import { formatSize } from '@girder/core/misc';
+import { formatSize, parseQueryString, splitRoute } from '@girder/core/misc';
+import router from '@girder/core/router';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
@@ -13,7 +15,7 @@ import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 
 wrap(ItemListWidget, 'initialize', function (initialize, settings) {
-    initialize.call(this, settings);
+    let result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
 
     if (!settings.folderId) {
@@ -25,11 +27,26 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         if (!_.isEqual(val, this._liconfig)) {
             delete this._lastSort;
             this._liconfig = val || {};
+            const curRoute = Backbone.history.fragment;
+            const routeParts = splitRoute(curRoute);
+            const query = parseQueryString(routeParts.name);
+            if (query.sort) {
+                this._lastSort = query.sort.split(',').map((chunk) => {
+                    const parts = chunk.split(':');
+                    return {
+                        type: parts[0],
+                        value: parts[1],
+                        dir: parts[2]
+                    };
+                });
+                this._setSort();
+            }
             this.render();
         }
     });
     this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
     this.delegateEvents();
+    return result;
 });
 
 wrap(ItemListWidget, 'render', function (render) {
@@ -200,6 +217,7 @@ wrap(ItemListWidget, 'render', function (render) {
         }
         return this;
     });
+    return this;
 });
 
 function sortColumn(evt) {
@@ -212,12 +230,22 @@ function sortColumn(evt) {
     const nextDir = curDir === 'down' ? 'up' : 'down';
     header.toggleClass('down', nextDir === 'down').toggleClass('up', nextDir === 'up');
     entry.dir = nextDir;
+    const oldSort = this._lastSort;
     if (!this._lastSort) {
         this._lastSort = [];
     }
     this._lastSort = this._lastSort.filter((e) => e.type !== entry.type || e.value !== entry.value);
     this._lastSort.unshift(entry);
     this._setSort();
+    if (!_.isEqual(this._lastSort, oldSort)) {
+        const curRoute = Backbone.history.fragment;
+        const routeParts = splitRoute(curRoute);
+        const query = parseQueryString(routeParts.name);
+        query.sort = this._lastSort.map((e) => `${e.type}:${e.value}:${e.dir}`).join(',');
+        if (router.enabled()) {
+            router.navigate(routeParts.base + '?' + $.param(query));
+        }
+    }
 }
 
 export default ItemListWidget;
