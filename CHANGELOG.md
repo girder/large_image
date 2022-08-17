@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.16.2
+
+### Improvements
+- Add a general filter control to item lists ([938](../../pull/938))
+
 ## 1.16.1
 
 ### Improvements

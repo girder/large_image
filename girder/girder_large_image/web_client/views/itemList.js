@@ -7,10 +7,11 @@ import { getApiRoot, restRequest } from '@girder/core/rest';
 import { getCurrentUser } from '@girder/core/auth';
 import { AccessType } from '@girder/core/constants';
 import { formatSize, parseQueryString, splitRoute } from '@girder/core/misc';
-import router from '@girder/core/router';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
+import { addToRoute } from '../routes';
+
 import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 
@@ -24,25 +25,36 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     restRequest({
         url: `folder/${settings.folderId}/yaml_config/.large_image_config.yaml`
     }).done((val) => {
-        if (!_.isEqual(val, this._liconfig)) {
-            delete this._lastSort;
-            this._liconfig = val || {};
-            const curRoute = Backbone.history.fragment;
-            const routeParts = splitRoute(curRoute);
-            const query = parseQueryString(routeParts.name);
-            if (query.sort) {
-                this._lastSort = query.sort.split(',').map((chunk) => {
-                    const parts = chunk.split(':');
-                    return {
-                        type: parts[0],
-                        value: parts[1],
-                        dir: parts[2]
-                    };
-                });
-                this._setSort();
-            }
-            this.render();
+        val = val || {};
+        if (_.isEqual(val, this._liconfig)) {
+            return;
         }
+        delete this._lastSort;
+        this._liconfig = val;
+        const curRoute = Backbone.history.fragment;
+        const routeParts = splitRoute(curRoute);
+        const query = parseQueryString(routeParts.name);
+        let update = false;
+        if (query.sort) {
+            this._lastSort = query.sort.split(',').map((chunk) => {
+                const parts = chunk.split(':');
+                return {
+                    type: parts[0],
+                    value: parts[1],
+                    dir: parts[2]
+                };
+            });
+            update = true;
+        }
+        if (query.filter) {
+            this._generalFilter = query.filter;
+            this._setFilter();
+            update = true;
+        }
+        if (update) {
+            this._setSort();
+        }
+        this.render();
     });
     this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
     this.delegateEvents();
@@ -129,17 +141,113 @@ wrap(ItemListWidget, 'render', function (render) {
         return this._liconfig ? (this.$el.closest('.modal-dialog').length ? this._liconfig.itemListDialog : this._liconfig.itemList) : undefined;
     };
 
+    /**
+     * Set sort on the collection and perform a debounced re-fetch.
+     */
     this._setSort = () => {
-        this.collection.offset = 0;
-        this.collection.comparator = _.constant(0);
-        this.collection.sortField = JSON.stringify(this._lastSort.map((e) => [
-            (e.type === 'metadata' ? 'meta.' : '') + e.value,
-            e.dir === 'down' ? 1 : -1
-        ]));
-        this.collection.fetch({folderId: this.parentView.parentModel.id});
+        if (!this._inFetch) {
+            this._inFetch = true;
+            this._needsFetch = false;
+            if (this._lastSort) {
+                this.collection.comparator = _.constant(0);
+                this.collection.sortField = JSON.stringify(this._lastSort.map((e) => [
+                    (e.type === 'metadata' ? 'meta.' : '') + e.value,
+                    e.dir === 'down' ? 1 : -1
+                ]));
+            }
+            this.collection._totalCount = 0;
+            this.collection.fetch(_.extend({}, {folderId: this.parentView.parentModel.id}, this.collection.params), true).done(() => {
+                const oldPages = this._totalPages;
+                const pages = Math.ceil(this.collection.getTotalCount() / this.collection.pageLimit);
+                this._totalPages = pages;
+                this._inFetch = false;
+                if (this._needsFetch) {
+                    this._setSort();
+                }
+                if (oldPages !== pages) {
+                    this.collection.trigger('g:changed');
+                }
+            });
+        } else {
+            this._needsFetch = true;
+        }
+    };
+
+    this._updateFilter = (evt) => {
+        this._generalFilter = $(evt.target).val().trim();
+        this._setFilter();
+        addToRoute({filter: this._generalFilter});
+    };
+
+    this._setFilter = () => {
+        let val = this._generalFilter;
+        let filter;
+        if (val !== undefined && val !== '') {
+            const columns = (this._confList() || {}).columns || [];
+            filter = [];
+            val.match(/"[^"]*"|'[^']*'|\S+/g).forEach((phrase) => {
+                if (!phrase.length) {
+                    return;
+                }
+                if (phrase[0] === phrase.substr(phrase.length - 1) && ['"', "'"].includes(phrase[0])) {
+                    phrase = phrase.substr(1, phrase.length - 2);
+                }
+                phrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                let clause = [];
+                columns.forEach((col) => {
+                    let entry = {};
+
+                    if (col.type === 'record' && col.value !== 'controls') {
+                        entry[col.value] = {'$regex': phrase};
+                    } else if (col.type === 'metadata') {
+                        entry['meta.' + col.value] = {'$regex': phrase};
+                    }
+                    if (Object.keys(entry).length) {
+                        entry[Object.keys(entry)[0]]['$options'] = 'i';
+                        clause.push(entry);
+                    }
+                });
+                filter.push({'$or': clause});
+            });
+            if (filter.length === 0) {
+                filter = undefined;
+            } else {
+                if (filter.length === 1) {
+                    filter = filter[0];
+                } else {
+                    filter = {'$and': filter};
+                }
+                filter = '_filter_:' + JSON.stringify(filter);
+            }
+        }
+        if (filter !== this._filter) {
+            this._filter = filter;
+            this.collection.params = this.collection.params || {};
+            this.collection.params.text = this._filter;
+            this._setSort();
+        }
     };
 
     function itemListRender() {
+        let root = this.$el.closest('.g-hierarchy-widget');
+        if (!root.find('.li-item-list-filter').length) {
+            let base = root.find('.g-hierarchy-actions-header .g-folder-header-buttons').eq(0);
+            let func = 'after';
+            if (!base.length) {
+                base = root.find('.g-hierarchy-breadcrumb-bar>.breadcrumb>div').eq(0);
+                func = 'before';
+            }
+            if (base.length) {
+                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input""></input></span>');
+                if (this._generalFilter) {
+                    root.find('.li-item-list-filter-input').val(this._generalFilter);
+                }
+                this.parentView.events['change .li-item-list-filter-input'] = this._updateFilter;
+                this.parentView.events['input .li-item-list-filter-input'] = this._updateFilter;
+                this.parentView.delegateEvents();
+            }
+        }
+
         if (!this._lastSort && this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
             this._lastSort = this._confList().defaultSort;
             this._setSort();
@@ -220,6 +328,15 @@ wrap(ItemListWidget, 'render', function (render) {
     return this;
 });
 
+wrap(ItemListWidget, 'remove', function (remove) {
+    let root = this.$el.closest('.g-hierarchy-widget');
+    root.remove('.li-item-list-filter');
+    delete this.parentView.events['change .li-item-list-filter-input'];
+    delete this.parentView.events['input .li-item-list-filter-input'];
+    this.parentView.delegateEvents();
+    return remove.call(this);
+});
+
 function sortColumn(evt) {
     const header = $(evt.target);
     const entry = {
@@ -238,13 +355,7 @@ function sortColumn(evt) {
     this._lastSort.unshift(entry);
     this._setSort();
     if (!_.isEqual(this._lastSort, oldSort)) {
-        const curRoute = Backbone.history.fragment;
-        const routeParts = splitRoute(curRoute);
-        const query = parseQueryString(routeParts.name);
-        query.sort = this._lastSort.map((e) => `${e.type}:${e.value}:${e.dir}`).join(',');
-        if (router.enabled()) {
-            router.navigate(routeParts.base + '?' + $.param(query));
-        }
+        addToRoute({sort: this._lastSort.map((e) => `${e.type}:${e.value}:${e.dir}`).join(',')});
     }
 }
 

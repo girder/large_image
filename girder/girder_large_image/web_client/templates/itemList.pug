@@ -6,19 +6,10 @@ ul.g-item-list.li-item-list
       span.li-item-list-header(
           class=((column.type === 'record' && column.value !== 'controls') || column.type === 'metadata' ? 'sortable' : '') + ' ' + (sort && sort[0].type === column.type && sort[0].value === column.value ? sort[0].dir : ''),
           column_type=column.type, column_value=column.value)
-        if column.type === 'record'
-          if column.title !== undefined
-            = column.title
-          else if column.value === 'name'
-            | Name
-          else if column.value === 'controls'
-            | Controls
-          else if column.value === 'size'
-            | Size
-        else if column.type === 'image'
-          = column.title !== undefined ? column.title : column.value
-        else if column.type === 'metadata'
-          = column.title !== undefined ? column.title : column.value
+        if column.title !== undefined
+          = column.title
+        else
+          = `${column.value.substr(0, 1).toUpperCase()}${column.value.substr(1)}`
   each item in items
     li.g-item-list-entry(class=(highlightItem && item.id === selectedItemId ? 'g-selected' : ''), public=(isParentPublic ? 'true' : 'false'))
       if checkboxes
@@ -45,8 +36,9 @@ ul.g-item-list.li-item-list
                     href=item.downloadUrl({contentDisposition: 'inline'}))
                   i.icon-eye
             else if column.value === 'size'
-              if showSizes
-                .g-item-size= formatSize(item.get('size'))
+              .g-item-size= formatSize(item.get('size'))
+            else if column.value === 'description'
+              = item.get(column.value)
           else if column.type === 'image' && item.get('largeImage')
             .large_image_thumbnail(extra-image=column.value !== 'thumbnail' ? column.value : undefined, style=`width: ${column.width || 160}px; height: ${column.height || 100}px`, g-item-cid=column.value === 'thumbnail' ? item.cid : undefined)
               - var imageName = column.value === 'thumbnail' ? column.value : `images/${column.value}`;
