@@ -61,7 +61,8 @@ SettingDefault.defaults.update({
 
 # Access flags
 
-registerAccessFlag('createAnnots', 'Create annotations', 'Allow user to create annotations')
+registerAccessFlag(constants.ANNOTATION_ACCESS_FLAG, 'Create annotations',
+                   'Allow user to create annotations')
 
 
 class LargeImageAnnotationPlugin(GirderPlugin):

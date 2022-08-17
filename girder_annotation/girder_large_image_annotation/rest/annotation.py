@@ -34,6 +34,7 @@ from girder.models.user import User
 from girder.utility import JsonEncoder
 from girder.utility.progress import setResponseTimeLimit
 
+from .. import constants
 from ..models.annotation import Annotation, AnnotationSchema
 from ..models.annotationelement import Annotationelement
 
@@ -269,7 +270,7 @@ class AnnotationResource(Resource):
         user = self.getCurrentUser()
         folder = Folder().load(id=item['folderId'], user=user, level=AccessType.READ)
         if Folder().hasAccess(folder, user, AccessType.WRITE) or Folder(
-        ).hasAccessFlags(folder, user, 'createAnnots'):
+        ).hasAccessFlags(folder, user, constants.ANNOTATION_ACCESS_FLAG):
             try:
                 return Annotation().createAnnotation(
                     item, self.getCurrentUser(), self.getBodyJson())
@@ -690,7 +691,7 @@ class AnnotationResource(Resource):
     def canCreateFolderAnnotations(self, folder):
         user = self.getCurrentUser()
         return Folder().hasAccess(folder, user, AccessType.WRITE) or Folder().hasAccessFlags(
-            folder, user, 'createAnnots')
+            folder, user, constants.ANNOTATION_ACCESS_FLAG)
 
     @autoDescribeRoute(
         Description('Set the access for all the user-owned annotations from the items in a folder')
