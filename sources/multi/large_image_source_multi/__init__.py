@@ -676,6 +676,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                             self._nativeMagnification[key] or tsMag.get(key))
                 numChecked += 1
                 tsMeta = ts.getMetadata()
+                if 'bands' in tsMeta:
+                    if not hasattr(self, '_bands'):
+                        self._bands = {}
+                    self._bands.update(tsMeta['bands'])
             bbox = self._sourceBoundingBox(source, tsMeta['sizeX'], tsMeta['sizeY'])
             computedWidth = max(computedWidth, int(math.ceil(bbox['right'])))
             computedHeight = max(computedHeight, int(math.ceil(bbox['bottom'])))
@@ -774,6 +778,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 {k: v for k, v in frame.items() if k.startswith('Index')}
                 for frame in self._frames]
             self._addMetadataFrameInformation(result, self._channels)
+        if hasattr(self, '_bands'):
+            result['bands'] = self._bands.copy()
         return result
 
     def getInternalMetadata(self, **kwargs):

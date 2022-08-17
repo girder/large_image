@@ -18,12 +18,14 @@ import colorsys
 import itertools
 import math
 
+import numpy
 from PIL import Image, ImageDraw, ImageFont
 
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
-from large_image.constants import TILE_FORMAT_PIL, SourcePriority
+from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError
 from large_image.tilesource import TileSource
+from large_image.tilesource.utilities import _imageToNumpy
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -52,7 +54,8 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
 
     def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
-                 fractal=False, frames=None, monochrome=False, **kwargs):
+                 fractal=False, frames=None, monochrome=False, bands=None,
+                 **kwargs):
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -71,6 +74,8 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         :param frames: if present, this is either a single number for generic
             frames, or comma-separated list of c,z,t,xy.
         :param monochrome: if True, return single channel tiles.
+        :param bands: if present, a comma-separated list of band names.
+            Defaults to red,green,blue.
         """
         if not kwargs.get('encoding'):
             kwargs = kwargs.copy()
@@ -93,6 +98,8 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight))))
         self.frameSpec = frames or None
         self.monochrome = bool(monochrome)
+        self.bandSpec = bands or None
+        self._bands = bands.split(',') if bands else None
         # Used for reporting tile information
         self.levels = self.maxLevel + 1
         if frames:
@@ -156,6 +163,9 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         if hasattr(self, '_frames') and len(self._frames) > 1:
             result['frames'] = self._frames
             self._addMetadataFrameInformation(result)
+        if self._bands:
+            result['bands'] = {n + 1: {'interpretation': val}
+                               for n, val in enumerate(self._bands)}
         return result
 
     def getInternalMetadata(self, **kwargs):
@@ -227,7 +237,17 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         _counters['tiles'] += 1
         if self.monochrome:
             image = image.convert('L')
-        return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, **kwargs)
+        if not self._bands or len(self._bands) == len(image.mode):
+            return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, **kwargs)
+        image = _imageToNumpy(image)[0]
+        newimg = numpy.zeros((image.shape[0], image.shape[1], len(self._bands)))
+        newimg[:, :, :image.shape[2]] = image
+        for b in range(image.shape[2], len(self._bands)):
+            newimg[:, :, b] = (b / len(self._bands) + (1 - b / len(self._bands)) * xFraction) * 255
+            newimg[image[:, :, 0] == 0] = 255 if self._bands[b] in {'alpha', 'A'} else 0
+            newimg[image[:, :, 0] == 255] = 255
+        image = newimg
+        return self._outputTile(image, TILE_FORMAT_NUMPY, x, y, z, **kwargs)
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -238,13 +258,14 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             kwargs.get('tileWidth'), kwargs.get('tileHeight'),
             kwargs.get('fractal'), kwargs.get('sizeX'), kwargs.get('sizeY'),
             kwargs.get('frames'), kwargs.get('monochrome'),
+            kwargs.get('bands'),
         )
 
     def getState(self):
-        return 'test %r %r %r %r %r %r %r %r %r %r' % (
+        return 'test %r %r %r %r %r %r %r %r %r %r %r' % (
             super().getState(), self.minLevel, self.maxLevel, self.tileWidth,
             self.tileHeight, self.fractal, self.sizeX, self.sizeY,
-            self.frameSpec, self.monochrome)
+            self.frameSpec, self.monochrome, self.bandSpec)
 
 
 def open(*args, **kwargs):
