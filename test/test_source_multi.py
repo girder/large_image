@@ -153,6 +153,6 @@ def testMultiBand():
     imagePath = os.path.join(testDir, 'test_files', 'multi_band.yml')
     source = large_image_source_multi.open(imagePath)
     metadata = source.getMetadata()
-    assert len(metadata['bands']) == 5
+    assert len(metadata['bands']) == 6
     image, mimeType = source.getThumbnail(encoding='PNG')
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader

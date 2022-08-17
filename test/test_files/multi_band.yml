@@ -11,7 +11,7 @@ sources:
       sizeY: 7500
       fractal: True
       # c,z,t,xy OR frames
-      frames: "4,6,1,1"
+      frames: "4,5,1,1"
       monochrome: False
       # multiband
-      bands: "red,green,blue,ir1,ir2"
+      bands: "red,green,blue,ir1,ir2,grey"

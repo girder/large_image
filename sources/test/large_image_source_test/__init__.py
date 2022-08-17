@@ -25,7 +25,7 @@ from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError
 from large_image.tilesource import TileSource
-from large_image.tilesource.utilities import _imageToNumpy
+from large_image.tilesource.utilities import _imageToNumpy, _imageToPIL
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -178,6 +178,63 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         """
         return {'fractal': self.fractal, 'monochrome': self.monochrome}
 
+    def _tileImage(self, rgbColor, x, y, z, frame, band=None, bandnum=0):
+        image = Image.new(
+            mode='RGB',
+            size=(self.tileWidth, self.tileHeight),
+            color=(rgbColor if not self.fractal else (255, 255, 255))
+        )
+        if self.fractal:
+            self.fractalTile(image, x, y, 2 ** z, rgbColor)
+
+        bandtext = '\n' if band is not None else ''
+        if bandnum and band and band.lower() not in {
+                'r', 'red', 'g', 'green', 'b', 'blue', 'grey', 'gray', 'alpha'}:
+            bandtext += band
+            image = _imageToNumpy(image)[0].astype(float)
+            vstripe = numpy.array([
+                int(x / (self.tileWidth / bandnum / 2)) % 2
+                for x in range(self.tileWidth)])
+            hstripe = numpy.array([
+                int(y / (self.tileHeight / (bandnum % self.tileWidth) / 2)) % 2
+                if bandnum > self.tileWidth else 1 for y in range(self.tileHeight)])
+            simage = image.copy()
+            simage[hstripe == 0, :, :] /= 2
+            simage[:, vstripe == 0, :] /= 2
+            image = numpy.where(image != 255, simage, image)
+            image = image.astype(numpy.uint8)
+            image = _imageToPIL(image)
+
+        imageDraw = ImageDraw.Draw(image)
+
+        fontsize = 0.15
+        text = 'x=%d\ny=%d\nz=%d' % (x, y, z)
+        if hasattr(self, '_frames'):
+            if self._framesParts == 1:
+                text += '\nf=%d' % frame
+            else:
+                for k1, k2 in [('C', 'IndexC'), ('Z', 'IndexZ'),
+                               ('T', 'IndexT'), ('XY', 'IndexXY')]:
+                    if k2 in self._frames[frame]:
+                        text += '\n%s=%d' % (k1, self._frames[frame][k2])
+        text += bandtext
+        fontsize = min(fontsize, 0.8 / len(text.split('\n')))
+        try:
+            # the font size should fill the whole tile
+            imageDrawFont = ImageFont.truetype(
+                font='/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
+                size=int(fontsize * min(self.tileWidth, self.tileHeight))
+            )
+        except OSError:
+            imageDrawFont = ImageFont.load_default()
+        imageDraw.multiline_text(
+            xy=(10, 10),
+            text=text,
+            fill=(0, 0, 0) if band != 'alpha' else (255, 255, 255),
+            font=imageDrawFont
+        )
+        return image
+
     @methodcache()
     def getTile(self, x, y, z, *args, **kwargs):
         frame = self._getFrame(**kwargs)
@@ -185,6 +242,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
 
         if not (self.minLevel <= z <= self.maxLevel):
             raise TileSourceError('z layer does not exist')
+        _counters['tiles'] += 1
 
         xFraction = (x + 0.5) * self.tileWidth * 2 ** (self.levels - 1 - z) / self.sizeX
         yFraction = (y + 0.5) * self.tileHeight * 2 ** (self.levels - 1 - z) / self.sizeY
@@ -199,55 +257,22 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         )
         rgbColor = tuple(int(val * 255) for val in backgroundColor)
 
-        image = Image.new(
-            mode='RGB',
-            size=(self.tileWidth, self.tileHeight),
-            color=(rgbColor if not self.fractal else (255, 255, 255))
-        )
-        imageDraw = ImageDraw.Draw(image)
-
-        if self.fractal:
-            self.fractalTile(image, x, y, 2 ** z, rgbColor)
-
-        fontsize = 0.15
-        text = 'x=%d\ny=%d\nz=%d' % (x, y, z)
-        if hasattr(self, '_frames'):
-            if self._framesParts == 1:
-                text += '\nf=%d' % frame
-            else:
-                for k1, k2 in [('C', 'IndexC'), ('Z', 'IndexZ'),
-                               ('T', 'IndexT'), ('XY', 'IndexXY')]:
-                    if k2 in self._frames[frame]:
-                        text += '\n%s=%d' % (k1, self._frames[frame][k2])
-                fontsize = min(fontsize, 0.8 / len(text.split('\n')))
-        try:
-            # the font size should fill the whole tile
-            imageDrawFont = ImageFont.truetype(
-                font='/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
-                size=int(fontsize * min(self.tileWidth, self.tileHeight))
-            )
-        except OSError:
-            imageDrawFont = ImageFont.load_default()
-        imageDraw.multiline_text(
-            xy=(10, 10),
-            text=text,
-            fill=(0, 0, 0),
-            font=imageDrawFont
-        )
-        _counters['tiles'] += 1
-        if self.monochrome:
-            image = image.convert('L')
-        if not self._bands or len(self._bands) == len(image.mode):
-            return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, **kwargs)
-        image = _imageToNumpy(image)[0]
-        newimg = numpy.zeros((image.shape[0], image.shape[1], len(self._bands)))
-        newimg[:, :, :image.shape[2]] = image
-        for b in range(image.shape[2], len(self._bands)):
-            newimg[:, :, b] = (b / len(self._bands) + (1 - b / len(self._bands)) * xFraction) * 255
-            newimg[image[:, :, 0] == 0] = 255 if self._bands[b] in {'alpha', 'A'} else 0
-            newimg[image[:, :, 0] == 255] = 255
-        image = newimg
-        return self._outputTile(image, TILE_FORMAT_NUMPY, x, y, z, **kwargs)
+        if not self._bands or len(self._bands) == (1 if self.monochrome else 3):
+            image = self._tileImage(rgbColor, x, y, z, frame)
+            if self.monochrome:
+                image = image.convert('L')
+            format = TILE_FORMAT_PIL
+        else:
+            image = numpy.zeros(
+                (self.tileHeight, self.tileWidth, len(self._bands)), dtype=numpy.uint8)
+            for bandnum, band in enumerate(self._bands):
+                bandimg = self._tileImage(rgbColor, x, y, z, frame, band, bandnum)
+                bandimg = _imageToNumpy(bandimg)[0]
+                if self.monochrome or band.upper() in {'grey', 'gray', 'alpha'}:
+                    bandimg = bandimg.convert('L')
+                image[:, :, bandnum] = bandimg[:, :, bandnum % bandimg.shape[2]]
+            format = TILE_FORMAT_NUMPY
+        return self._outputTile(image, format, x, y, z, **kwargs)
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
