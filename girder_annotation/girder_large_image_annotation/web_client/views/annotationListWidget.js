@@ -59,16 +59,22 @@ const AnnotationListWidget = View.extend({
     },
 
     render() {
-        this.$el.html(annotationList({
-            item: this.model,
-            accessLevel: this.model.getAccessLevel(),
-            annotations: this.collection,
-            users: this.users,
-            canDraw: this._viewer && this._viewer.annotationAPI(),
-            drawn: this._drawn,
-            apiRoot: getApiRoot(),
-            AccessType
-        }));
+        restRequest({
+            type: 'GET',
+            url: 'annotation/folder/' + this.model.get('folderId') + '/create'
+        }).done((createResp) => {
+            this.$el.html(annotationList({
+                item: this.model,
+                accessLevel: this.model.getAccessLevel(),
+                creationAccess: createResp,
+                annotations: this.collection,
+                users: this.users,
+                canDraw: this._viewer && this._viewer.annotationAPI(),
+                drawn: this._drawn,
+                apiRoot: getApiRoot(),
+                AccessType
+            }));
+        });
         return this;
     },
 
@@ -185,7 +191,8 @@ const AnnotationListWidget = View.extend({
             type: 'annotation',
             hideRecurseOption: true,
             parentView: this,
-            model
+            model,
+            noAccessFlag: true
         }).on('g:accessListSaved', () => {
             this.collection.fetch(null, true);
         });

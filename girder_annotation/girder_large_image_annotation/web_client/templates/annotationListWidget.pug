@@ -5,7 +5,7 @@
     if annotations.length
       a.g-annotation-download(href=`${apiRoot}/annotation/item/${item.id}`, title='Download annotations', download=`${item.get('name')}_annotations.json`)
         i.icon-download
-    if accessLevel >= AccessType.WRITE
+    if creationAccess
       a.g-annotation-upload(title='Upload annotation')
         i.icon-upload
     if accessLevel >= AccessType.ADMIN && annotations.length

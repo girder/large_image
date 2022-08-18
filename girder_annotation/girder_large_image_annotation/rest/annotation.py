@@ -28,11 +28,13 @@ from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource, filtermodel, loadmodel, setResponseHeader
 from girder.constants import AccessType, SortDir, TokenScope
 from girder.exceptions import AccessException, RestException, ValidationException
+from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.user import User
 from girder.utility import JsonEncoder
 from girder.utility.progress import setResponseTimeLimit
 
+from .. import constants
 from ..models.annotation import Annotation, AnnotationSchema
 from ..models.annotationelement import Annotationelement
 
@@ -61,6 +63,7 @@ class AnnotationResource(Resource):
         self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
         self.route('GET', ('folder', ':id'), self.returnFolderAnnotations)
         self.route('GET', ('folder', ':id', 'present'), self.existFolderAnnotations)
+        self.route('GET', ('folder', ':id', 'create'), self.canCreateFolderAnnotations)
         self.route('PUT', ('folder', ':id', 'access'), self.setFolderAnnotationAccess)
         self.route('GET', ('old',), self.getOldAnnotations)
         self.route('DELETE', ('old',), self.deleteOldAnnotations)
@@ -256,22 +259,29 @@ class AnnotationResource(Resource):
         .param('body', 'A JSON object containing the annotation.',
                paramType='body')
         .errorResponse('ID was invalid.')
-        .errorResponse('Write access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403)
         .errorResponse('Invalid JSON passed in request body.')
         .errorResponse("Validation Error: JSON doesn't follow schema.")
     )
     @access.user
-    @loadmodel(map={'itemId': 'item'}, model='item', level=AccessType.WRITE)
+    @loadmodel(map={'itemId': 'item'}, model='item', level=AccessType.READ)
     @filtermodel(model='annotation', plugin='large_image')
     def createAnnotation(self, item, params):
-        try:
-            return Annotation().createAnnotation(
-                item, self.getCurrentUser(), self.getBodyJson())
-        except ValidationException as exc:
-            logger.exception('Failed to validate annotation')
-            raise RestException(
-                "Validation Error: JSON doesn't follow schema (%r)." % (
-                    exc.args, ))
+        user = self.getCurrentUser()
+        folder = Folder().load(id=item['folderId'], user=user, level=AccessType.READ)
+        if Folder().hasAccess(folder, user, AccessType.WRITE) or Folder(
+        ).hasAccessFlags(folder, user, constants.ANNOTATION_ACCESS_FLAG):
+            try:
+                return Annotation().createAnnotation(
+                    item, self.getCurrentUser(), self.getBodyJson())
+            except ValidationException as exc:
+                logger.exception('Failed to validate annotation')
+                raise RestException(
+                    "Validation Error: JSON doesn't follow schema (%r)." % (
+                        exc.args, ))
+        else:
+            raise RestException('Write access and annotation creation access '
+                                'were denied for the item.', code=403)
 
     @describeRoute(
         Description('Copy an annotation from one item to an other.')
@@ -670,6 +680,18 @@ class AnnotationResource(Resource):
 
         annotations.count = count
         return annotations
+
+    @autoDescribeRoute(
+        Description('Check if the user can create annotations in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .errorResponse('ID was invalid.')
+    )
+    @access.user
+    @loadmodel(model='folder', level=AccessType.READ)
+    def canCreateFolderAnnotations(self, folder):
+        user = self.getCurrentUser()
+        return Folder().hasAccess(folder, user, AccessType.WRITE) or Folder().hasAccessFlags(
+            folder, user, constants.ANNOTATION_ACCESS_FLAG)
 
     @autoDescribeRoute(
         Description('Set the access for all the user-owned annotations from the items in a folder')
