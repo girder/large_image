@@ -9,6 +9,8 @@ div.large_image_thumbnail
 div.large_image_container
   display inline-block
   min-width 160px
+div.large_image_container+span
+  white-space nowrap
 [large_image_columns="2"]
   div.large_image_container
     min-width 320px
@@ -63,3 +65,10 @@ ul.g-item-list
         width inherit
 .li-item-list-filter
   padding-left 12px
+@media (min-width: 768px)
+  .modal-dialog.li-item-list-dialog
+    width inherit
+@media (min-width: 900px)
+  .modal-dialog.li-item-list-dialog
+    width 70%
+    max-width 1000px

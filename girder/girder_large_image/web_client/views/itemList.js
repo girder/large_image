@@ -62,6 +62,8 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
 });
 
 wrap(ItemListWidget, 'render', function (render) {
+    this.$el.closest('.modal-dialog').addClass('li-item-list-dialog');
+
     /* Chrome limits the number of connections to a single domain, which means
      * that time-consuming requests for thumbnails can bind-up the web browser.
      * To avoid this, limit the maximum number of thumbnails that are requested
@@ -182,8 +184,8 @@ wrap(ItemListWidget, 'render', function (render) {
     this._setFilter = () => {
         let val = this._generalFilter;
         let filter;
-        if (val !== undefined && val !== '') {
-            const columns = (this._confList() || {}).columns || [];
+        const columns = (this._confList() || {}).columns || [];
+        if (val !== undefined && val !== '' && columns.length) {
             filter = [];
             val.match(/"[^"]*"|'[^']*'|\S+/g).forEach((phrase) => {
                 if (!phrase.length) {
@@ -318,7 +320,8 @@ wrap(ItemListWidget, 'render', function (render) {
                             }
                         });
                     }
-                    $('a[g-item-cid="' + item.cid + '"]>i', parent).before(elem);
+                    var inner = $('<span>').html($('a[g-item-cid="' + item.cid + '"]').html());
+                    $('a[g-item-cid="' + item.cid + '"]', parent).empty().append(elem, inner);
                     _loadMoreImages(parent);
                 });
             }
