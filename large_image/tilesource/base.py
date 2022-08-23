@@ -534,7 +534,7 @@ class TileSource:
         outWidth, outHeight, calcScale = self._calculateWidthHeight(
             maxWidth, maxHeight, regionWidth, regionHeight)
         requestedScale = calcScale if requestedScale is None else requestedScale
-        if (regionWidth == 0 or regionHeight == 0 or outWidth == 0 or
+        if (regionWidth < 0 or regionHeight < 0 or outWidth == 0 or
                 outHeight == 0):
             return None
 
@@ -609,11 +609,11 @@ class TileSource:
         # size of the region is reduced by the overlap.  This factor is stored
         # in the overlap offset_*.
         xmin = int(left / tile_size['width'])
-        xmax = int(math.ceil((float(right) - tile_overlap['range_x']) /
-                             tile_size['width']))
+        xmax = max(int(math.ceil((float(right) - tile_overlap['range_x']) /
+                                 tile_size['width'])), xmin + 1)
         ymin = int(top / tile_size['height'])
-        ymax = int(math.ceil((float(bottom) - tile_overlap['range_y']) /
-                             tile_size['height']))
+        ymax = max(int(math.ceil((float(bottom) - tile_overlap['range_y']) /
+                                 tile_size['height'])), ymin + 1)
         tile_overlap.update({'xmin': xmin, 'xmax': xmax,
                              'ymin': ymin, 'ymax': ymax})
 

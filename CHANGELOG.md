@@ -6,6 +6,9 @@
 - Add a general filter control to item lists ([938](../../pull/938))
 - Item list modal dialogs are wider ([939](../../pull/939))
 
+### Bug Fixes
+- Fix iterating tiles where the overlap larger than the tile size ([940](../../pull/940))
+
 ## 1.16.1
 
 ### Improvements
