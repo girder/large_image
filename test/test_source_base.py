@@ -285,6 +285,15 @@ def testTileOverlap():
         (60, 120, 60, 30, 15),
         (75, 120, 45, 30, 0),
     ]
+    assert [(
+        tiles['x'], tiles['x'] + tiles['width'], tiles['width'],
+        tiles['tile_overlap']['left'], tiles['tile_overlap']['right']
+    ) for tiles in ts.tileIterator(
+        tile_size=dict(width=60, height=60), tile_overlap=dict(x=40, y=40),
+        region=dict(left=55, top=65, width=15, height=15))
+    ] == [
+        (55, 70, 15, 0, 0)
+    ]
 
 
 def testLazyTileRelease():
