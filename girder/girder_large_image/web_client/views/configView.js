@@ -139,7 +139,6 @@ var ConfigView = View.extend({
     },
 
     _openBrowser: function () {
-        console.log('A');
         this._browserWidgetView.setElement($('#g-dialog-container')).render();
     }
 }, {
