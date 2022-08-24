@@ -3,7 +3,7 @@
 ## 1.16.2
 
 ### Improvements
-- Add a general filter control to item lists ([938](../../pull/938))
+- Add a general filter control to item lists ([938](../../pull/938), [941](../../pull/941))
 - Item list modal dialogs are wider ([939](../../pull/939))
 
 ### Bug Fixes
