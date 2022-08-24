@@ -79,7 +79,10 @@ registry = {
     'TC_NG_SFBay_US_Geo.tif': 'sha512:da2e66528f77a5e10af5de9e496074b77277c3da81dafc69790189510e5a7e18dba9e966329d36c979f1b547f0d36a82fbc4cfccc65ae9ef9e2747b5a9ee77b0',  # noqa
     # Geospatial tiff - cloud optimized
     'TC_NG_SFBay_US_Geo_COG.tif': 'sha512:5e56cdb8fb1a02615698a153862c10d5292b1ad42836a6e8bce5627e93a387dc0d3c9b6cfbd539796500bc2d3e23eafd07550f8c214e9348880bbbc6b3b0ea0c',  # noqa
-
+    # Tiff with extra overview that was originally misinterpreted as a layer
+    # Source: generated from a tifftools dump with the image descriptions and
+    #  topmost layer removed.
+    'extraoverview.tiff': 'sha512:22793cc6285ad11fbb47927c3d546d35e531a73852b79a9248ba489b421792e3a55da61e00079372bcf72a7e11b12e1ee69d553620edf46ff8d86ad2a9da9fc5',  # noqa
 }
 
 
