@@ -57,6 +57,9 @@ except PackageNotFoundError:
     pass
 
 
+mimetypes = None
+
+
 # Girder 3 is pinned to use pymongo < 4; its warnings aren't relevant until
 # that changes.
 warnings.filterwarnings('ignore', category=UserWarning, module='pymongo')
@@ -217,6 +220,33 @@ def handleRemoveFile(event):
             ImageItem().delete(item, [fileObj['_id']])
 
 
+def handleFinalizeUploadBefore(event):
+    """
+    When a file is uploaded, mark its mime type based on its extension if we
+    would otherwise just mark it as generic application/octet-stream.
+    """
+    fileObj = event.info['file']
+    if fileObj.get('mimeType', None) in {None, 'application/octet-stream'}:
+        global mimetypes
+
+        if not mimetypes:
+            import mimetypes
+
+            if not mimetypes.inited:
+                mimetypes.init()
+            # Augment the standard mimetypes with some additional values
+            for mimeType, ext, std in [
+                ('text/yaml', '.yaml', True),
+                ('text/yaml', '.yml', False),
+            ]:
+                if ext not in mimetypes.types_map:
+                    mimetypes.add_type(mimeType, ext, std)
+
+        alt = mimetypes.guess_type(fileObj.get('name', ''))[0]
+        if alt is not None:
+            fileObj['mimeType'] = alt
+
+
 # Validators
 
 @setting_utilities.validator({
@@ -356,3 +386,4 @@ class LargeImagePlugin(GirderPlugin):
         events.bind('model.item.remove', 'large_image.removeThumbnails', removeThumbnails)
         events.bind('server_fuse.unmount', 'large_image', large_image.cache_util.cachesClear)
         events.bind('model.file.remove', 'large_image', handleRemoveFile)
+        events.bind('model.file.finalizeUpload.before', 'large_image', handleFinalizeUploadBefore)

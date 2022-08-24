@@ -5,6 +5,7 @@
 ### Improvements
 - Add a general filter control to item lists ([938](../../pull/938), [941](../../pull/941))
 - Item list modal dialogs are wider ([939](../../pull/939))
+- Improve mimetypes on upload to Girder ([943](../../pull/943))
 
 ### Bug Fixes
 - Fix iterating tiles where the overlap larger than the tile size ([940](../../pull/940))
