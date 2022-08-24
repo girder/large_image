@@ -43,11 +43,11 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|tif.*)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.)',
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview)',  # noqa
         'skipTiles': r'one_layer_missing'},
     'pil': {
         'read': r'\.(jpeg|png|tif.*)$',
-        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo)'},
+        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo|extraoverview)'},
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'\.(ptif|scn|svs|tif.*)$',
@@ -57,7 +57,7 @@ SourceAndFiles = {
     'vips': {
         'read': r'',
         'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
-        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2)'},  # noqa
+        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'},  # noqa
 }
 if sys.version_info >= (3, 7):
     SourceAndFiles.update({
@@ -70,8 +70,7 @@ if sys.version_info >= (3, 7):
 else:
     # Python 3.6 has an older version of PIL that won't read some of the
     # ome.tif files.
-    SourceAndFiles['pil']['noread'] = \
-        r'(G10-3|JK-kidney|d042-353|huron|sample.*ome|one_layer_missing|US_Geo)'
+    SourceAndFiles['pil']['noread'] = SourceAndFiles['pil']['noread'][:-1] + '|sample.*ome)'
 
 
 def testNearPowerOfTwo():

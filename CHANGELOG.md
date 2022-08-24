@@ -8,6 +8,7 @@
 
 ### Bug Fixes
 - Fix iterating tiles where the overlap larger than the tile size ([940](../../pull/940))
+- Better ignore tiff directories that aren't part of the pyramid ([943](../../pull/943))
 
 ## 1.16.1
 

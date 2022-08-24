@@ -85,7 +85,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     _maxAssociatedImageSize = 8192
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -141,6 +141,18 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     ((td.imageHeight % td.tileHeight) and
                         not nearPowerOfTwo(td.imageHeight, highest.imageHeight))):
                 continue
+            # If a layer is a multiple of the tile size, the number of tiles
+            # should be a power of two rounded up from the primary.
+            if (not (td.imageWidth % td.tileWidth) and not (td.imageHeight % td.tileHeight)):
+                htw = highest.imageWidth // td.tileWidth
+                hth = highest.imageHeight // td.tileHeight
+                ttw = td.imageWidth // td.tileWidth
+                tth = td.imageHeight // td.tileHeight
+                while (htw > ttw and htw > 1) or (hth > tth and hth > 1):
+                    htw = (htw + 1) // 2
+                    hth = (hth + 1) // 2
+                if htw != ttw or hth != tth:
+                    continue
             directories[level] = td
         if not len(directories) or (len(directories) < 2 and max(directories.keys()) + 1 > 4):
             raise TileSourceError(

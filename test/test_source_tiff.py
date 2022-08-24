@@ -868,3 +868,9 @@ def testTileFrames():
     info = tifftools.read_tiff(image)
     assert len(info['ifds']) == 3
     os.unlink(image)
+
+
+def testExtraOverview():
+    imagePath = datastore.fetch('extraoverview.tiff')
+    source = large_image_source_tiff.open(imagePath)
+    assert len([d for d in source._tiffDirectories if d is not None]) == 3
