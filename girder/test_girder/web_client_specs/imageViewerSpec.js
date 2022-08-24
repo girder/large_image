@@ -239,7 +239,7 @@ $(function () {
                 expect($('.g-item-list-entry').length >= 1);
             });
             runs(function () {
-                $('.li-item-list-filter-input').val('ybxxx').trigger('input');
+                $('.li-item-list-filter-input').val('ybxxx 1.2 -0.6').trigger('input');
             });
             girderTest.waitForLoad();
             runs(function () {
