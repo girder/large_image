@@ -184,29 +184,44 @@ wrap(ItemListWidget, 'render', function (render) {
     this._setFilter = () => {
         let val = this._generalFilter;
         let filter;
+        const usedPhrases = {};
         const columns = (this._confList() || {}).columns || [];
         if (val !== undefined && val !== '' && columns.length) {
             filter = [];
             val.match(/"[^"]*"|'[^']*'|\S+/g).forEach((phrase) => {
-                if (!phrase.length) {
+                if (!phrase.length || usedPhrases[phrase]) {
                     return;
                 }
+                usedPhrases[phrase] = true;
                 if (phrase[0] === phrase.substr(phrase.length - 1) && ['"', "'"].includes(phrase[0])) {
                     phrase = phrase.substr(1, phrase.length - 2);
                 }
+                let numval = +phrase;
+                /* If numval is a non-zero number not in exponential notation.
+                 * delta is the value of one for the least significant digit.
+                 * This will be NaN if phrase is not a number. */
+                let delta = Math.abs(+numval.toString().replace(/\d(?=.*[1-9](0*\.|)0*$)/g, '0').replace(/[1-9]/, '1'));
+                // escape for regex
                 phrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 let clause = [];
                 columns.forEach((col) => {
-                    let entry = {};
+                    let key;
 
                     if (col.type === 'record' && col.value !== 'controls') {
-                        entry[col.value] = {'$regex': phrase};
+                        key = col.value;
                     } else if (col.type === 'metadata') {
-                        entry['meta.' + col.value] = {'$regex': phrase};
+                        key = 'meta.' + col.value;
                     }
-                    if (Object.keys(entry).length) {
-                        entry[Object.keys(entry)[0]]['$options'] = 'i';
-                        clause.push(entry);
+                    if (key) {
+                        clause.push({[key]: {'$regex': phrase, '$options': 'i'}});
+                        if (!_.isNaN(numval)) {
+                            clause.push({[key]: {'$eq': numval}});
+                            if (numval > 0 && delta) {
+                                clause.push({[key]: {'$gte': numval, '$lt': numval + delta}});
+                            } else if (numval < 0 && delta) {
+                                clause.push({[key]: {'$lte': numval, '$gt': numval + delta}});
+                            }
+                        }
                     }
                 });
                 filter.push({'$or': clause});
