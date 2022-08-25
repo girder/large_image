@@ -9,7 +9,7 @@ There are some general plugin settings that affect large_image as a Girder plugi
 YAML Configuration Files
 ------------------------
 
-Some settings can be specified per-folder tree using yaml files.  For these settings, if the configuration file exists in the current folder it is used.  If not, the parent folders are checked iteratively up to the parent collection or user.  If no configuration file is found, the ``.config`` folder in the collection or user is checked for the file.  Lastly, the ``Configuration Folder`` specified on the plugin settings paghe is checked for the configuration file.
+Some settings can be specified per-folder tree using yaml files.  For these settings, if the configuration file exists in the current folder it is used.  If not, the parent folders are checked iteratively up to the parent collection or user.  If no configuration file is found, the ``.config`` folder in the collection or user is checked for the file.  Lastly, the ``Configuration Folder`` specified on the plugin settings page is checked for the configuration file.
 
 The configuration files can have different configurations based on the user's access level and group membership.
 
