@@ -656,7 +656,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         scale = 1
         dirlist = self._tiffDirectories
         frame = self._getFrame(**kwargs)
-        if frame > 0:
+        if frame > 0 and hasattr(self, '_frames'):
             dirlist = self._frames[frame]['dirs']
         while dirlist[z] is None:
             scale *= 2
