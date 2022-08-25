@@ -18,7 +18,7 @@ ul.g-item-list.li-item-list
       for column in itemList.columns
         -
           var divtype = column.type !== 'record' || column.value !== 'controls' ? 'a' : 'span';
-          var classes = [];
+          var classes = divtype == 'a' ? ['g-item-list-link']: [];
           if (('' + column.type + column.value).match(/^[a-zA-Z][a-zA-Z0-9-_]*$/))  classes.push(`li-column-${column.type}-${column.value}`);
           if (('' + column.type).match(/^[a-zA-Z][a-zA-Z0-9-_]*$/))  classes.push(`li-column-${column.type}`);
         #{divtype}.li-item-list-cell(class=classes.join(' '), g-item-cid=item.cid, href=`#item/${item.id}`)
