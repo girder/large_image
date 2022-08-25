@@ -5,11 +5,12 @@
 ### Improvements
 - Add a general filter control to item lists ([938](../../pull/938), [941](../../pull/941))
 - Item list modal dialogs are wider ([939](../../pull/939))
-- Improve mimetypes on upload to Girder ([943](../../pull/943))
+- Improve mimetypes on upload to Girder ([944](../../pull/944))
 
 ### Bug Fixes
 - Fix iterating tiles where the overlap larger than the tile size ([940](../../pull/940))
 - Better ignore tiff directories that aren't part of the pyramid ([943](../../pull/943))
+- Fix an issue with styling frames in ome tiffs ([945](../../pull/945))
 
 ## 1.16.1
 
