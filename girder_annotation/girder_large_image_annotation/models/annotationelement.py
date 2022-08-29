@@ -75,6 +75,7 @@ class Annotationelement(Model):
                 ('created', SortDir.ASCENDING),
                 ('_version', SortDir.ASCENDING),
             ], {}),
+            'element.girderId',
         ])
 
         self.exposeFields(AccessType.READ, (
