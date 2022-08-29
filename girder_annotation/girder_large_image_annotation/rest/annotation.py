@@ -766,4 +766,8 @@ class AnnotationResource(Resource):
                 {'_active': {'$ne': False}, 'itemId': item['_id']},
                 user=self.getCurrentUser(), level=AccessType.READ, limit=-1)
             results[itemId] = annotations.count()
+            if Annotationelement().findOne({'element.girderId': itemId}):
+                if 'referenced' not in results:
+                    results['referenced'] = {}
+                results['referenced'][itemId] = True
         return results
