@@ -544,22 +544,22 @@ def testImageBytes():
     assert ib._repr_png_() is None
 
 
-def testOutputFormats():
+@pytest.mark.parametrize('format', [
+    format for format in large_image.constants.TileOutputMimeTypes
+    if format not in {'TILED'}])
+def testOutputFormats(format):
     imagePath = datastore.fetch('sample_image.ptif')
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePathRGBA = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
-    for format in large_image.constants.TileOutputMimeTypes:
-        if format == 'TILED':
-            continue
 
-        ts = large_image.open(imagePath, encoding=format)
-        img = PIL.Image.open(io.BytesIO(ts.getTile(0, 0, 0)))
-        assert (img.width, img.height) == (256, 256)
-        img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
-        assert (img.width, img.height) == (256, 53)
+    ts = large_image.open(imagePath, encoding=format)
+    img = PIL.Image.open(io.BytesIO(ts.getTile(0, 0, 0)))
+    assert (img.width, img.height) == (256, 256)
+    img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
+    assert (img.width, img.height) == (256, 53)
 
-        ts = large_image.open(imagePathRGBA, encoding=format)
-        img = PIL.Image.open(io.BytesIO(ts.getTile(0, 0, 0)))
-        assert (img.width, img.height) == (256, 256)
-        img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
-        assert (img.width, img.height) == (256, 256)
+    ts = large_image.open(imagePathRGBA, encoding=format)
+    img = PIL.Image.open(io.BytesIO(ts.getTile(0, 0, 0)))
+    assert (img.width, img.height) == (256, 256)
+    img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
+    assert (img.width, img.height) == (256, 256)
