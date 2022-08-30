@@ -1,8 +1,10 @@
+import io
 import os
 import re
 import sys
 from pathlib import Path
 
+import PIL.Image
 import pytest
 
 import large_image
@@ -540,3 +542,24 @@ def testImageBytes():
     assert 'ImageBytes' in repr(ib)
     assert ib._repr_jpeg_() is None
     assert ib._repr_png_() is None
+
+
+@pytest.mark.parametrize('format', [
+    format for format in large_image.constants.TileOutputMimeTypes
+    if format not in {'TILED'}])
+def testOutputFormats(format):
+    imagePath = datastore.fetch('sample_image.ptif')
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePathRGBA = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
+
+    ts = large_image.open(imagePath, encoding=format)
+    img = PIL.Image.open(io.BytesIO(ts.getTile(0, 0, 0)))
+    assert (img.width, img.height) == (256, 256)
+    img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
+    assert (img.width, img.height) == (256, 53)
+
+    ts = large_image.open(imagePathRGBA, encoding=format)
+    img = PIL.Image.open(io.BytesIO(ts.getTile(0, 0, 0)))
+    assert (img.width, img.height) == (256, 256)
+    img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
+    assert (img.width, img.height) == (256, 256)

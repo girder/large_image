@@ -12,6 +12,7 @@
 - Better ignore tiff directories that aren't part of the pyramid ([943](../../pull/943))
 - Fix an issue with styling frames in ome tiffs ([945](../../pull/945))
 - Better handle large user records in annotation elements ([949](../../pull/949))
+- Harden which output formats are supported ([950](../../pull/950))
 
 ### Changes
 - Adjusted rest request logging rates for region endpoint ([948](../../pull/948))
