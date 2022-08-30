@@ -12,6 +12,9 @@
 - Better ignore tiff directories that aren't part of the pyramid ([943](../../pull/943))
 - Fix an issue with styling frames in ome tiffs ([945](../../pull/945))
 
+### Changes
+- Adjusted rest request logging rates for region endpoint ([948](../../pull/948))
+
 ## 1.16.1
 
 ### Improvements
