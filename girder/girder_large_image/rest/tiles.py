@@ -165,12 +165,19 @@ class TilesItemResource(ItemResource):
                            self.getDZITile)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'internal_metadata'),
                            self.getInternalMetadata)
+        # Logging rate limiters
         filter_logging.addLoggingFilter(
             'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}',
-            frequency=250)
+            frequency=250, duration=10)
+        filter_logging.addLoggingFilter(
+            'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/fzxy(/[^/ ?#]+){3}',
+            frequency=250, duration=10)
         filter_logging.addLoggingFilter(
             'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/dzi_files(/[^/ ?#]+){2}',
-            frequency=250)
+            frequency=250, duration=10)
+        filter_logging.addLoggingFilter(
+            'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/region',
+            frequency=100, duration=10)
         # Cache the model singleton
         self.imageItemModel = ImageItem()
 
