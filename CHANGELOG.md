@@ -11,6 +11,7 @@
 - Fix iterating tiles where the overlap larger than the tile size ([940](../../pull/940))
 - Better ignore tiff directories that aren't part of the pyramid ([943](../../pull/943))
 - Fix an issue with styling frames in ome tiffs ([945](../../pull/945))
+- Better handle large user records in annotation elements ([949](../../pull/949))
 
 ### Changes
 - Adjusted rest request logging rates for region endpoint ([948](../../pull/948))
