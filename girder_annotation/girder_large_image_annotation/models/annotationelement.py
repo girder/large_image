@@ -36,6 +36,7 @@ from girder.models.upload import Upload
 # store part of them in an associated file.  This is slower, so don't do it for
 # small ones.
 MAX_ELEMENT_DOCUMENT = 10000
+MAX_ELEMENT_USER_DOCUMENT = 1000000
 
 
 class Annotationelement(Model):
@@ -291,6 +292,17 @@ class Annotationelement(Model):
                             data.write(chunk)
                     data.seek(0)
                     element[datafile['key']] = pickle.load(data)
+                    if 'userFileId' in datafile:
+                        data = io.BytesIO()
+                        chunksize = 1024 ** 2
+                        with File().open(File().load(datafile['userFileId'], force=True)) as fptr:
+                            while True:
+                                chunk = fptr.read(chunksize)
+                                if not len(chunk):
+                                    break
+                                data.write(chunk)
+                        data.seek(0)
+                        element['user'] = pickle.load(data)
                 if region.get('bbox') and 'bbox' in entry:
                     element['_bbox'] = entry['bbox']
                     if 'bbox' not in info:
@@ -327,9 +339,11 @@ class Annotationelement(Model):
         attachedQuery = query.copy()
         attachedQuery['datafile'] = {'$exists': True}
         for element in self.collection.find(attachedQuery):
-            file = File().load(element['datafile']['fileId'], force=True)
-            if file:
-                File().remove(file)
+            for key in {'fileId', 'userFileId'}:
+                if key in element['datafile']:
+                    file = File().load(element['datafile'][key], force=True)
+                    if file:
+                        File().remove(file)
         self.collection.bulk_write([pymongo.DeleteMany(query)], ordered=False)
 
     def removeElements(self, annotation):
@@ -505,10 +519,19 @@ class Annotationelement(Model):
             io.BytesIO(data), size=len(data), name='_annotationElementData',
             parentType='item', parent=item, user=None,
             mimeType='application/json', attachParent=True)
+        userdata = None
+        if 'user' in element:
+            userdata = pickle.dumps(element.pop('user'), protocol=4)
+            userFile = Upload().uploadFromFile(
+                io.BytesIO(userdata), size=len(userdata), name='_annotationElementUserData',
+                parentType='item', parent=item, user=None,
+                mimeType='application/json', attachParent=True)
         entries[0]['datafile'] = {
             'key': key,
             'fileId': elementFile['_id'],
         }
+        if userdata:
+            entries[0]['datafile']['userFileId'] = userFile['_id']
 
     def updateElementChunk(self, elements, chunk, chunkSize, annotation, now):
         """
@@ -525,8 +548,10 @@ class Annotationelement(Model):
             'element': element
         } for element in elements[chunk:chunk + chunkSize]]
         prepTime = time.time() - chunkStartTime
-        if (len(entries) == 1 and len(entries[0]['element'].get(
-                'points', entries[0]['element'].get('values', []))) > MAX_ELEMENT_DOCUMENT):
+        if (len(entries) == 1 and (len(entries[0]['element'].get(
+                'points', entries[0]['element'].get('values', []))) > MAX_ELEMENT_DOCUMENT or (
+                'user' in entries[0]['element'] and
+                len(pickle.dumps(entries[0]['element'], protocol=4) > MAX_ELEMENT_USER_DOCUMENT)))):
             self.saveElementAsFile(annotation, entries)
         res = self.collection.insert_many(entries, ordered=False)
         for pos, entry in enumerate(entries):
