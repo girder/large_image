@@ -336,7 +336,7 @@ wrap(ItemListWidget, 'render', function (render) {
                         });
                     }
                     var inner = $('<span>').html($('a[g-item-cid="' + item.cid + '"]').html());
-                    $('a[g-item-cid="' + item.cid + '"]', parent).empty().append(elem, inner);
+                    $('a[g-item-cid="' + item.cid + '"]', parent).first().empty().append(elem, inner);
                     _loadMoreImages(parent);
                 });
             }

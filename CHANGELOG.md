@@ -6,6 +6,9 @@
 - Reduce rest calls to get settings ([953](../../pull/953))
 - Add an endpoint to delete all annotations in a folder ([954](../../pull/954))
 
+### Bug Fixes
+- Harden adding images to the item list ([955](../../pull/955))
+
 ## 1.16.2
 
 ### Improvements
