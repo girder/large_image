@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.16.3
+
+### Improvements
+- Reduce rest calls to get settings ([953](../../pull/953))
+- Add an endpoint to delete all annotations in a folder ([954](../../pull/954))
+
 ## 1.16.2
 
 ### Improvements
