@@ -179,8 +179,8 @@ var ConfigView = View.extend({
      *      without any delay.
      */
     getSettings: function (callback) {
-        if (!ConfigView.settings) {
-            restRequest({
+        if (!ConfigView.settings && !ConfigView._settingsRequest) {
+            ConfigView._settingsRequest = restRequest({
                 type: 'GET',
                 url: 'large_image/settings'
             }).done((resp) => {
@@ -212,10 +212,10 @@ var ConfigView = View.extend({
                     callback(ConfigView.settings);
                 }
             });
-        } else {
-            if (callback) {
+        } else if (callback) {
+            ConfigView._settingsRequest.done(() => {
                 callback(ConfigView.settings);
-            }
+            });
         }
     },
 
@@ -224,6 +224,7 @@ var ConfigView = View.extend({
      */
     clearSettings: function () {
         delete ConfigView.settings;
+        delete ConfigView._settingsRequest;
     }
 });
 
