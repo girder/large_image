@@ -551,7 +551,7 @@ class Annotationelement(Model):
         if (len(entries) == 1 and (len(entries[0]['element'].get(
                 'points', entries[0]['element'].get('values', []))) > MAX_ELEMENT_DOCUMENT or (
                 'user' in entries[0]['element'] and
-                len(pickle.dumps(entries[0]['element'], protocol=4) > MAX_ELEMENT_USER_DOCUMENT)))):
+                len(pickle.dumps(entries[0]['element'], protocol=4)) > MAX_ELEMENT_USER_DOCUMENT))):
             self.saveElementAsFile(annotation, entries)
         res = self.collection.insert_many(entries, ordered=False)
         for pos, entry in enumerate(entries):

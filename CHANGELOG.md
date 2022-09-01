@@ -8,6 +8,7 @@
 
 ### Bug Fixes
 - Harden adding images to the item list ([955](../../pull/955))
+- Fix checking user annotation document length ([956](../../pull/956))
 
 ## 1.16.2
 
