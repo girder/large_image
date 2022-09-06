@@ -156,3 +156,35 @@ def testMultiBand():
     assert len(metadata['bands']) == 6
     image, mimeType = source.getThumbnail(encoding='PNG')
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
+
+
+def testFramesAsAxes():
+    baseSource = {'sources': [{
+        'sourceName': 'test', 'path': '__none__', 'params': {
+            'sizeX': 1000, 'sizeY': 1000, 'frames': 60}}]}
+    source = large_image_source_multi.open(json.dumps(baseSource))
+    tileMetadata = source.getMetadata()
+    assert len(tileMetadata['frames']) == 60
+    assert 'IndexZ' not in tileMetadata['frames'][0]
+
+    asAxesSource1 = {'sources': [{
+        'sourceName': 'test', 'path': '__none__', 'params': {
+            'sizeX': 1000, 'sizeY': 1000, 'frames': 60},
+        'framesAsAxes': {'c': 1, 'z': 5}}]}
+    source = large_image_source_multi.open(json.dumps(asAxesSource1))
+    tileMetadata = source.getMetadata()
+    assert len(tileMetadata['frames']) == 60
+    assert 'IndexZ' in tileMetadata['frames'][0]
+    assert tileMetadata['IndexRange']['IndexC'] == 5
+    assert tileMetadata['IndexRange']['IndexZ'] == 12
+
+    asAxesSource1 = {'sources': [{
+        'sourceName': 'test', 'path': '__none__', 'params': {
+            'sizeX': 1000, 'sizeY': 1000, 'frames': 60},
+        'framesAsAxes': {'c': 1, 'z': 7}}]}
+    source = large_image_source_multi.open(json.dumps(asAxesSource1))
+    tileMetadata = source.getMetadata()
+    assert len(tileMetadata['frames']) == 56
+    assert 'IndexZ' in tileMetadata['frames'][0]
+    assert tileMetadata['IndexRange']['IndexC'] == 7
+    assert tileMetadata['IndexRange']['IndexZ'] == 8
