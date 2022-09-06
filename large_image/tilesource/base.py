@@ -1424,9 +1424,10 @@ class TileSource:
                 if key in frame and frame[key] + 1 > maxref.get(key, 0):
                     maxref[key] = frame[key] + 1
             frame['Frame'] = idx
-            if idx and any(
+            if idx and (any(
                     frame.get(key) != metadata['frames'][idx - 1].get(key)
-                    for key in refkeys if key != 'IndexC'):
+                    for key in refkeys if key != 'IndexC') or not any(
+                    metadata['frames'][idx].get(key) for key in refkeys)):
                 index += 1
             frame['Index'] = index
         if any(val > 1 for val in maxref.values()):
