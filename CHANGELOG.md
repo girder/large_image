@@ -6,6 +6,7 @@
 - Reduce rest calls to get settings ([953](../../pull/953))
 - Add an endpoint to delete all annotations in a folder ([954](../../pull/954))
 - Support relabeling axes in the multi source ([957](../../pull/957))
+- Reduce a restriction on reading some tiff files ([958](../../pull/958))
 
 ### Bug Fixes
 - Harden adding images to the item list ([955](../../pull/955))

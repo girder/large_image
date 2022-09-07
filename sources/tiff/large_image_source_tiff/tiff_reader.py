@@ -229,8 +229,7 @@ class TiledTiffDirectory:
         # should only be done if necessary, which would require the conversion
         # job to check output and perform subsequent processing as needed.
         if (not self._tiffInfo.get('samplesperpixel') or
-                (self._tiffInfo.get('samplesperpixel') != 1 and
-                 self._tiffInfo.get('samplesperpixel') < 3)):
+                self._tiffInfo.get('samplesperpixel') < 1):
             raise ValidationTiffException(
                 'Only RGB and greyscale TIFF files are supported')
 
