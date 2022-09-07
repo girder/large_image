@@ -11,6 +11,7 @@
 ### Bug Fixes
 - Harden adding images to the item list ([955](../../pull/955))
 - Fix checking user annotation document length ([956](../../pull/956))
+- Improve scaled overlays ([959](../../pull/959))
 
 ## 1.16.2
 
