@@ -4,6 +4,7 @@ import re
 import sys
 from pathlib import Path
 
+import numpy
 import PIL.Image
 import pytest
 
@@ -563,3 +564,77 @@ def testOutputFormats(format):
     assert (img.width, img.height) == (256, 256)
     img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
     assert (img.width, img.height) == (256, 256)
+
+
+def testStyleFunctions():
+    imagePath = datastore.fetch('extraoverview.tiff')
+    source = large_image.open(imagePath)
+    region1, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    sourceFunc2 = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.utilities.maskPixelValues',
+            'context': True,
+            'parameters': {'values': [164, 165]}},
+        'bands': []})
+    region2, _ = sourceFunc2.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert numpy.any(region2 != region1)
+    sourceFunc3 = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.utilities.maskPixelValues',
+            'context': True,
+            'parameters': {'values': [[63, 63, 63]]}},
+        'bands': []})
+    region3, _ = sourceFunc3.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert numpy.any(region3 != region2)
+    sourceFunc4 = large_image.open(imagePath, style={
+        'function': [{
+            'name': 'large_image.tilesource.utilities.maskPixelValues',
+            'context': 'context',
+            'parameters': {'values': [164, 165]}}],
+        'bands': []})
+    region4, _ = sourceFunc4.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert numpy.all(region4 == region2)
+
+
+def testStyleFunctionsWarnings():
+    imagePath = datastore.fetch('extraoverview.tiff')
+    source = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.utilities.maskPixelValues',
+            'context': True,
+            'parameters': {'values': ['bad value']}},
+        'bands': []})
+    region, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert source._styleFunctionWarnings
+
+    source = large_image.open(imagePath, style={
+        'function': {
+            'name': 'no_such_module.maskPixelValues',
+            'context': True,
+            'parameters': {'values': [100]}},
+        'bands': []})
+    region, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert source._styleFunctionWarnings
+
+    source = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.utilities.noSuchFunction',
+            'context': True,
+            'parameters': {'values': [100]}},
+        'bands': []})
+    region, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert source._styleFunctionWarnings
