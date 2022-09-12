@@ -80,7 +80,7 @@ A band definition is an object which can contain the following keys:
 
   The function parameter can be a single function or a list of functions.  Items in a list of functions can, themselves, be lists of functions.  A single function can be an object or a string.  If a string, this is shorthand for ``{"name": <function>}``.  The function object contains (all but ``name`` are optional):
 
-  - ``name``: The name of a Python module and function that is installed in the same environment as large_image.  For instance, ``large_image.tilesource.utilities.maskPixelValues`` will use the function ``maskPixelValues`` in the ``large_image.tilesource.utilities`` module.  The function must be a Python function that takes a numpy array as the first parameter (the image) and has named parameters or kwargs for any passed parameters and possibly the style context.
+  - ``name``: The name of a Python module and function that is installed in the same environment as large_image.  For instance, ``large_image.tilesource.stylefuncs.maskPixelValues`` will use the function ``maskPixelValues`` in the ``large_image.tilesource.stylefuncs`` module.  The function must be a Python function that takes a numpy array as the first parameter (the image) and has named parameters or kwargs for any passed parameters and possibly the style context.
 
   - ``parameters``: A dictionary of parameters to pass to the function.
 

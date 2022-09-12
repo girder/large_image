@@ -574,7 +574,7 @@ def testStyleFunctions():
         format=large_image.constants.TILE_FORMAT_NUMPY)
     sourceFunc2 = large_image.open(imagePath, style={
         'function': {
-            'name': 'large_image.tilesource.utilities.maskPixelValues',
+            'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
             'context': True,
             'parameters': {'values': [164, 165]}},
         'bands': []})
@@ -584,7 +584,7 @@ def testStyleFunctions():
     assert numpy.any(region2 != region1)
     sourceFunc3 = large_image.open(imagePath, style={
         'function': {
-            'name': 'large_image.tilesource.utilities.maskPixelValues',
+            'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
             'context': True,
             'parameters': {'values': [[63, 63, 63]]}},
         'bands': []})
@@ -594,7 +594,7 @@ def testStyleFunctions():
     assert numpy.any(region3 != region2)
     sourceFunc4 = large_image.open(imagePath, style={
         'function': [{
-            'name': 'large_image.tilesource.utilities.maskPixelValues',
+            'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
             'context': 'context',
             'parameters': {'values': [164, 165]}}],
         'bands': []})
@@ -608,7 +608,7 @@ def testStyleFunctionsWarnings():
     imagePath = datastore.fetch('extraoverview.tiff')
     source = large_image.open(imagePath, style={
         'function': {
-            'name': 'large_image.tilesource.utilities.maskPixelValues',
+            'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
             'context': True,
             'parameters': {'values': ['bad value']}},
         'bands': []})
@@ -630,7 +630,7 @@ def testStyleFunctionsWarnings():
 
     source = large_image.open(imagePath, style={
         'function': {
-            'name': 'large_image.tilesource.utilities.noSuchFunction',
+            'name': 'large_image.tilesource.stylefuncs.noSuchFunction',
             'context': True,
             'parameters': {'values': [100]}},
         'bands': []})
