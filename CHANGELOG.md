@@ -11,6 +11,9 @@
 - Support relabeling axes in the multi source ([957](../../pull/957))
 - Reduce a restriction on reading some tiff files ([958](../../pull/958))
 
+### Changes
+- Improve internals for handling large annotation elements ([961](../../pull/961))
+
 ### Bug Fixes
 - Harden adding images to the item list ([955](../../pull/955))
 - Fix checking user annotation document length ([956](../../pull/956))
