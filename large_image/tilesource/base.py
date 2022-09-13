@@ -6,6 +6,7 @@ import re
 import tempfile
 import threading
 import time
+import types
 
 import numpy
 import PIL
@@ -1120,6 +1121,76 @@ class TileSource:
                 value = 255
         return float(value)
 
+    def _applyStyleFunction(self, image, sc, stage, function=None):
+        """
+        Check if a style ahs a style function for the current stage.  If so,
+        apply it.
+
+        :param image: the numpy image to adjust.  This varies by stage:
+            For pre, this is the source image.
+            For preband, this is the band image (often the source image).
+            For band, this is the scaled band image before palette has been
+                applied.
+            For postband, this is the output image at the current time.
+            For main, this is the output image before adjusting to the target
+                style.
+            For post, this is the final output image.
+        :param sc: the style context.
+        :param stage: one of the stages: pre, preband, band, postband, main,
+            post.
+        :param function: if None, this is taken from the sc.style object using
+            the appropriate band index.  Otherwise, this is a style: either a
+            list of style objects, or a style object with name (the
+            module.function_name), stage (either a stage or a list of stages
+            that this function applies to), context (falsy to not pass the
+            style context to the function, True to pass it as the parameter
+            'context', or a string to pass it as a parameter of that name),
+            parameters (a dictionary of parameters to pass to the function).
+            If function is a string, it is shorthand for {'name': <function>}.
+        :returns: the modified numpy image.
+        """
+        import importlib
+
+        if function is None:
+            function = (
+                sc.style.get('function') if not hasattr(sc, 'styleIndex') else
+                sc.style['bands'][sc.styleIndex].get('function'))
+            if function is None:
+                return image
+        if isinstance(function, (list, tuple)):
+            for func in function:
+                image = self._applyStyleFunction(image, sc, stage, func)
+            return image
+        if isinstance(function, str):
+            function = {'name': function}
+        useOnStages = (
+            [function['stage']] if isinstance(function.get('stage'), str)
+            else function.get('stage', ['main', 'band']))
+        if stage not in useOnStages:
+            return image
+        sc.stage = stage
+        try:
+            module_name, func_name = function['name'].rsplit('.', 1)
+            module = importlib.import_module(module_name)
+            func = getattr(module, func_name)
+        except Exception as exc:
+            self._styleFunctionWarnings = getattr(self, '_styleFunctionWarnings', {})
+            if function['name'] not in self._styleFunctionWarnings:
+                self._styleFunctionWarnings[function['name']] = exc
+                self.logger.exception('Failed to import style function %s' % function['name'])
+            return image
+        kwargs = function.get('parameters', {}).copy()
+        if function.get('context'):
+            kwargs['context' if function['context'] is True else function['context']] = sc
+        try:
+            return func(image, **kwargs)
+        except Exception as exc:
+            self._styleFunctionWarnings = getattr(self, '_styleFunctionWarnings', {})
+            if function['name'] not in self._styleFunctionWarnings:
+                self._styleFunctionWarnings[function['name']] = exc
+                self.logger.exception('Failed to execute style function %s' % function['name'])
+            return image
+
     def _applyStyle(self, image, style, x, y, z, frame=None):  # noqa
         """
         Apply a style to a numpy image.
@@ -1132,71 +1203,80 @@ class TileSource:
         :param frame: the frame to use for auto ranging.
         :returns: a styled image.
         """
-        dtype = style.get('dtype')
-        axis = style.get('axis')
-        style = style['bands'] if 'bands' in style else [style]
-        output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
-        mainImage = image
-        mainFrame = frame
-        for eidx, entry in enumerate(style):
-            dtype = dtype if dtype is not None else entry.get('dtype')
-            axis = axis if axis is not None else entry.get('axis')
-            bandidx = 0 if image.shape[2] <= 2 else 1
-            band = None
+        sc = types.SimpleNamespace(
+            image=image, originalStyle=style, x=x, y=y, z=z, frame=frame,
+            mainImage=image, mainFrame=frame)
+        sc.dtype = style.get('dtype')
+        sc.axis = style.get('axis')
+        sc.style = style if 'bands' in style else {'bands': [style]}
+        sc.output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
+        image = self._applyStyleFunction(image, sc, 'pre')
+        for eidx, entry in enumerate(sc.style['bands']):
+            sc.styleIndex = eidx
+            sc.dtype = sc.dtype if sc.dtype is not None else entry.get('dtype')
+            sc.axis = sc.axis if sc.axis is not None else entry.get('axis')
+            sc.bandidx = 0 if image.shape[2] <= 2 else 1
+            sc.band = None
             if ((entry.get('frame') is None and not entry.get('framedelta')) or
                     entry.get('frame') == frame):
-                image = mainImage
-                frame = mainFrame
+                image = sc.mainImage
+                frame = sc.mainFrame
             else:
                 frame = entry['frame'] if entry.get('frame') is not None else (
-                    mainFrame + entry['framedelta'])
+                    sc.mainFrame + entry['framedelta'])
                 self._skipStyle = True
                 # Divert the tile cache while querying unstyled tiles
                 classkey = self._classkey
                 self._classkey = self._unstyledClassKey()
                 try:
                     image = self.getTile(x, y, z, frame=frame, numpyAllowed=True)
-                    image = image[:mainImage.shape[0], :mainImage.shape[1], :mainImage.shape[2]]
+                    image = image[:sc.mainImage.shape[0],
+                                  :sc.mainImage.shape[1],
+                                  :sc.mainImage.shape[2]]
                 finally:
                     del self._skipStyle
                     self._classkey = classkey
             if (isinstance(entry.get('band'), int) and
                     entry['band'] >= 1 and entry['band'] <= image.shape[2]):
-                bandidx = entry['band'] - 1
-            composite = entry.get('composite', 'lighten')
+                sc.bandidx = entry['band'] - 1
+            sc.composite = entry.get('composite', 'lighten')
             if (hasattr(self, '_bandnames') and entry.get('band') and
                     str(entry['band']).lower() in self._bandnames and
                     image.shape[2] > self._bandnames[str(entry['band']).lower()]):
-                bandidx = self._bandnames[str(entry['band']).lower()]
+                sc.bandidx = self._bandnames[str(entry['band']).lower()]
             if entry.get('band') == 'red' and image.shape[2] > 2:
-                bandidx = 0
+                sc.bandidx = 0
             elif entry.get('band') == 'blue' and image.shape[2] > 2:
-                bandidx = 2
-                band = image[:, :, 2]
+                sc.bandidx = 2
+                sc.band = image[:, :, 2]
             elif entry.get('band') == 'alpha':
-                bandidx = image.shape[2] - 1 if image.shape[2] in (2, 4) else None
-                band = (image[:, :, -1] if image.shape[2] in (2, 4) else
-                        numpy.full(image.shape[:2], 255, numpy.uint8))
-                composite = entry.get('composite', 'multiply')
-            if band is None:
-                band = image[:, :, bandidx]
-            palette = getPaletteColors(entry.get(
+                sc.bandidx = image.shape[2] - 1 if image.shape[2] in (2, 4) else None
+                sc.band = (image[:, :, -1] if image.shape[2] in (2, 4) else
+                           numpy.full(image.shape[:2], 255, numpy.uint8))
+                sc.composite = entry.get('composite', 'multiply')
+            if sc.band is None:
+                sc.band = image[:, :, sc.bandidx]
+            sc.band = self._applyStyleFunction(sc.band, sc, 'preband')
+            sc.palette = getPaletteColors(entry.get(
                 'palette', ['#000', '#FFF']
                 if entry.get('band') != 'alpha' else ['#FFF0', '#FFFF']))
-            discrete = entry.get('scheme') == 'discrete'
-            palettebase = numpy.linspace(0, 1, len(palette), endpoint=True)
-            nodata = entry.get('nodata')
-            min = self._getMinMax('min', entry.get('min', 'auto'), image.dtype, bandidx, frame)
-            max = self._getMinMax('max', entry.get('max', 'auto'), image.dtype, bandidx, frame)
-            clamp = entry.get('clamp', True)
-            delta = max - min if max != min else 1
-            if nodata is not None:
-                keep = band != float(nodata)
+            sc.discrete = entry.get('scheme') == 'discrete'
+            sc.palettebase = numpy.linspace(0, 1, len(sc.palette), endpoint=True)
+            sc.nodata = entry.get('nodata')
+            sc.min = self._getMinMax(
+                'min', entry.get('min', 'auto'), image.dtype, sc.bandidx, frame)
+            sc.max = self._getMinMax(
+                'max', entry.get('max', 'auto'), image.dtype, sc.bandidx, frame)
+            sc.clamp = entry.get('clamp', True)
+            delta = sc.max - sc.min if sc.max != sc.min else 1
+            if sc.nodata is not None:
+                sc.mask = sc.band != float(sc.nodata)
             else:
-                keep = numpy.full(image.shape[:2], True)
-            band = (band - min) / delta
-            if not clamp:
-                keep = keep & (band >= 0) & (band <= 1)
+                sc.mask = numpy.full(image.shape[:2], True)
+            sc.band = (sc.band - sc.min) / delta
+            if not sc.clamp:
+                sc.mask = sc.mask & (sc.band >= 0) & (sc.band <= 1)
+            sc.band = self._applyStyleFunction(sc.band, sc, 'band')
             # To implement anything other multiply or lighten, we should mimic
             # mapnik (and probably delegate to a family of functions).
             # mapnik's options are: clear src dst src_over dst_over src_in
@@ -1208,39 +1288,46 @@ class TileSource:
             # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html for
             # some details.
             for channel in range(4):
-                if numpy.all(palette[:, channel] == palette[0, channel]):
-                    if ((palette[0, channel] == 0 and composite != 'multiply') or
-                            (palette[0, channel] == 255 and composite == 'multiply')):
+                if numpy.all(sc.palette[:, channel] == sc.palette[0, channel]):
+                    if ((sc.palette[0, channel] == 0 and sc.composite != 'multiply') or
+                            (sc.palette[0, channel] == 255 and sc.composite == 'multiply')):
                         continue
-                    clrs = numpy.full(band.shape, palette[0, channel], dtype=band.dtype)
+                    clrs = numpy.full(sc.band.shape, sc.palette[0, channel], dtype=sc.band.dtype)
                 else:
-                    # Don't recompute if the palette is repeated two channels
+                    # Don't recompute if the sc.palette is repeated two channels
                     # in a row.
-                    if not channel or numpy.any(palette[:, channel] != palette[:, channel - 1]):
-                        if not discrete:
-                            clrs = numpy.interp(band, palettebase, palette[:, channel])
+                    if not channel or numpy.any(
+                            sc.palette[:, channel] != sc.palette[:, channel - 1]):
+                        if not sc.discrete:
+                            clrs = numpy.interp(sc.band, sc.palettebase, sc.palette[:, channel])
                         else:
-                            clrs = palette[numpy.floor(band * len(palette)).astype(int).clip(
-                                0, len(palette) - 1), channel]
-                if composite == 'multiply':
+                            clrs = sc.palette[
+                                numpy.floor(sc.band * len(sc.palette)).astype(int).clip(
+                                    0, len(sc.palette) - 1), channel]
+                if sc.composite == 'multiply':
                     if eidx:
-                        output[:keep.shape[0], :keep.shape[1], channel] = numpy.multiply(
-                            output[:keep.shape[0], :keep.shape[1], channel],
-                            numpy.where(keep, clrs / 255, 1))
+                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = numpy.multiply(
+                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
+                            numpy.where(sc.mask, clrs / 255, 1))
                 else:
                     if not eidx:
-                        output[:keep.shape[0], :keep.shape[1], channel] = numpy.where(keep, clrs, 0)
+                        sc.output[:sc.mask.shape[0],
+                                  :sc.mask.shape[1],
+                                  channel] = numpy.where(sc.mask, clrs, 0)
                     else:
-                        output[:keep.shape[0], :keep.shape[1], channel] = numpy.maximum(
-                            output[:keep.shape[0], :keep.shape[1], channel],
-                            numpy.where(keep, clrs, 0))
-        if dtype == 'uint16':
-            output = (output * 65535 / 255).astype(numpy.uint16)
-        elif dtype == 'float':
-            output /= 255
-        if axis is not None and 0 <= int(axis) < output.shape[2]:
-            output = output[:, :, axis:axis + 1]
-        return output
+                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = numpy.maximum(
+                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
+                            numpy.where(sc.mask, clrs, 0))
+            sc.output = self._applyStyleFunction(sc.output, sc, 'postband')
+        sc.output = self._applyStyleFunction(sc.output, sc, 'main')
+        if sc.dtype == 'uint16':
+            sc.output = (sc.output * 65535 / 255).astype(numpy.uint16)
+        elif sc.dtype == 'float':
+            sc.output /= 255
+        if sc.axis is not None and 0 <= int(sc.axis) < sc.output.shape[2]:
+            sc.output = sc.output[:, :, sc.axis:sc.axis + 1]
+        sc.output = self._applyStyleFunction(sc.output, sc, 'post')
+        return sc.output
 
     def _outputTileNumpyStyle(self, tile, applyStyle, x, y, z, frame=None):
         """

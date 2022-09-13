@@ -1,6 +1,9 @@
 # Change Log
 
-## 1.16.3
+## 1.17.0
+
+### Features
+- Style functions ([960](../../pull/960))
 
 ### Improvements
 - Reduce rest calls to get settings ([953](../../pull/953))
