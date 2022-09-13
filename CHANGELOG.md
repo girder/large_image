@@ -3,171 +3,171 @@
 ## 1.17.0
 
 ### Features
-- Style functions ([960](../../pull/960))
+- Style functions ([#960](../../pull/960))
 
 ### Improvements
-- Reduce rest calls to get settings ([953](../../pull/953))
-- Add an endpoint to delete all annotations in a folder ([954](../../pull/954))
-- Support relabeling axes in the multi source ([957](../../pull/957))
-- Reduce a restriction on reading some tiff files ([958](../../pull/958))
+- Reduce rest calls to get settings ([#953](../../pull/953))
+- Add an endpoint to delete all annotations in a folder ([#954](../../pull/954))
+- Support relabeling axes in the multi source ([#957](../../pull/957))
+- Reduce a restriction on reading some tiff files ([#958](../../pull/958))
 
 ### Changes
-- Improve internals for handling large annotation elements ([961](../../pull/961))
+- Improve internals for handling large annotation elements ([#961](../../pull/961))
 
 ### Bug Fixes
-- Harden adding images to the item list ([955](../../pull/955))
-- Fix checking user annotation document length ([956](../../pull/956))
-- Improve scaled overlays ([959](../../pull/959))
+- Harden adding images to the item list ([#955](../../pull/955))
+- Fix checking user annotation document length ([#956](../../pull/956))
+- Improve scaled overlays ([#959](../../pull/959))
 
 ## 1.16.2
 
 ### Improvements
-- Add a general filter control to item lists ([938](../../pull/938), [941](../../pull/941))
-- Item list modal dialogs are wider ([939](../../pull/939))
-- Improve mimetypes on upload to Girder ([944](../../pull/944))
+- Add a general filter control to item lists ([#938](../../pull/938), [#941](../../pull/941))
+- Item list modal dialogs are wider ([#939](../../pull/939))
+- Improve mimetypes on upload to Girder ([#944](../../pull/944))
 
 ### Bug Fixes
-- Fix iterating tiles where the overlap larger than the tile size ([940](../../pull/940))
-- Better ignore tiff directories that aren't part of the pyramid ([943](../../pull/943))
-- Fix an issue with styling frames in ome tiffs ([945](../../pull/945))
-- Better handle large user records in annotation elements ([949](../../pull/949))
-- Harden which output formats are supported ([950](../../pull/950))
+- Fix iterating tiles where the overlap larger than the tile size ([#940](../../pull/940))
+- Better ignore tiff directories that aren't part of the pyramid ([#943](../../pull/943))
+- Fix an issue with styling frames in ome tiffs ([#945](../../pull/945))
+- Better handle large user records in annotation elements ([#949](../../pull/949))
+- Harden which output formats are supported ([#950](../../pull/950))
 
 ### Changes
-- Adjusted rest request logging rates for region endpoint ([948](../../pull/948))
+- Adjusted rest request logging rates for region endpoint ([#948](../../pull/948))
 
 ## 1.16.1
 
 ### Improvements
-- Add annotation access controls at the folder level ([905](../../pull/905))
-- Reduce error messages and make canRead results more accurate ([918](../../pull/918), [919](../../pull/919), [920](../../pull/920))
-- Sort columns in item lists based ([925](../../pull/925), [928](../../pull/928))
-- Better handle tiffs with orientation flags in pil source ([924](../../pull/924))
-- Support a bands parameter for the test source ([935](../../pull/935))
-- Add annotation creation access flag ([937](../../pull/937))
+- Add annotation access controls at the folder level ([#905](../../pull/905))
+- Reduce error messages and make canRead results more accurate ([#918](../../pull/918), [#919](../../pull/919), [#920](../../pull/920))
+- Sort columns in item lists based ([#925](../../pull/925), [#928](../../pull/928))
+- Better handle tiffs with orientation flags in pil source ([#924](../../pull/924))
+- Support a bands parameter for the test source ([#935](../../pull/935))
+- Add annotation creation access flag ([#937](../../pull/937))
 
 ### Changes
-- Remove some extraneous values from metadata responses ([932](../../pull/932))
-- Reduce some messages to stderr from other libraries ([919](../../pull/919))
-- Avoid some warnings in Python 3.10 ([913](../../pull/913))
+- Remove some extraneous values from metadata responses ([#932](../../pull/932))
+- Reduce some messages to stderr from other libraries ([#919](../../pull/919))
+- Avoid some warnings in Python 3.10 ([#913](../../pull/913))
 
 ## 1.16.0
 
 ### Features
-- Add a tifffile tile source ([885](../../pull/885), [896](../../pull/896), [903](../../pull/903))
-- Added a canReadList method to large_image to show which source can be used ([895](../../pull/895))
-- Optionally show metadata in item lists ([901](../../pull/901))
-- Register the tile output formats from PIL ([904](../../pull/904))
-- Copy tilesource instances to add styles ([894](../../pull/894))
+- Add a tifffile tile source ([#885](../../pull/885), [#896](../../pull/896), [#903](../../pull/903))
+- Added a canReadList method to large_image to show which source can be used ([#895](../../pull/895))
+- Optionally show metadata in item lists ([#901](../../pull/901))
+- Register the tile output formats from PIL ([#904](../../pull/904))
+- Copy tilesource instances to add styles ([#894](../../pull/894))
 
 ### Improvements
-- Pass options to the annotationLayer mode ([881](../../pull/881))
-- Support more style range options ([883](../../pull/883))
-- When converting girder images locally, prefer mount paths ([886](../../pull/886))
-- Store the id of job results for easier post-job work ([887](../../pull/887))
-- Harden style compositing of partial tiles ([889](../../pull/889))
-- Cache read_tiff calls to speed up restyling ([891](../../pull/891))
-- Speed up styling by doing less ([892](../../pull/892))
-- Add local color definitions ([858](../../pull/858))
-- Inheritable config files ([897](../../pull/897))
-- Add geospatial property ([818](../../pull/818), [908](../../pull/908))
-- Improve repr of image bytes ([902](../../pull/902))
-- Handle nodata style when specified as a string ([914](../../pull/914))
+- Pass options to the annotationLayer mode ([#881](../../pull/881))
+- Support more style range options ([#883](../../pull/883))
+- When converting girder images locally, prefer mount paths ([#886](../../pull/886))
+- Store the id of job results for easier post-job work ([#887](../../pull/887))
+- Harden style compositing of partial tiles ([#889](../../pull/889))
+- Cache read_tiff calls to speed up restyling ([#891](../../pull/891))
+- Speed up styling by doing less ([#892](../../pull/892))
+- Add local color definitions ([#858](../../pull/858))
+- Inheritable config files ([#897](../../pull/897))
+- Add geospatial property ([#818](../../pull/818), [#908](../../pull/908))
+- Improve repr of image bytes ([#902](../../pull/902))
+- Handle nodata style when specified as a string ([#914](../../pull/914))
 
 ### Changes
-- Be more consistent in source class name attribute assignment ([884](../../pull/884))
+- Be more consistent in source class name attribute assignment ([#884](../../pull/884))
 
 ### Bug Fixes
-- Fix alpha on GDAL sources with a projection that have an explicit alpha channel ([909](../../pull/909), [915](../../pull/915))
+- Fix alpha on GDAL sources with a projection that have an explicit alpha channel ([#909](../../pull/909), [#915](../../pull/915))
 
 ## 1.15.1
 
 ### Improvements
-- When scaling heatmap annoations, use an appropriate value ([878](../../pull/878))
-- Use the girder client build time for cache control ([879](../../pull/879))
+- When scaling heatmap annoations, use an appropriate value ([#878](../../pull/878))
+- Use the girder client build time for cache control ([#879](../../pull/879))
 
 ## 1.15.0
 
 ### Features
-- Abstract caching and support entrypoints ([876](../../pull/876))
+- Abstract caching and support entrypoints ([#876](../../pull/876))
 
 ### Bug Fixes
-- Fix getPixel for single channel sources ([875](../../pull/875))
+- Fix getPixel for single channel sources ([#875](../../pull/875))
 
 ## 1.14.5
 
 ### Improvements
-- Speed up ingesting annotations ([870](../../pull/870))
-- Reduce the chance of blinking on annotation layers ([871](../../pull/871))
-- Reduce updates when modifying annotations ([872](../../pull/872))
+- Speed up ingesting annotations ([#870](../../pull/870))
+- Reduce the chance of blinking on annotation layers ([#871](../../pull/871))
+- Reduce updates when modifying annotations ([#872](../../pull/872))
 
 ### Bug Fixes
-- Improve annotation upload; support full annotation documents ([869](../../pull/869))
+- Improve annotation upload; support full annotation documents ([#869](../../pull/869))
 
 ## 1.14.4
 
 ### Improvements
-- Better handle editing polygons with holes ([857](../../pull/857))
-- Support fetching yaml config files ([860](../../pull/860))
-- Optionally include bounding box information with annotation queries ([851](../../pull/851))
-- Reduce memory copying in the nd2 reader ([853](../../pull/853))
-- Add support for boolean annotation operations ([865](../../pull/865))
-- Speed up removing all annotations from an item ([863](../../pull/863))
+- Better handle editing polygons with holes ([#857](../../pull/857))
+- Support fetching yaml config files ([#860](../../pull/860))
+- Optionally include bounding box information with annotation queries ([#851](../../pull/851))
+- Reduce memory copying in the nd2 reader ([#853](../../pull/853))
+- Add support for boolean annotation operations ([#865](../../pull/865))
+- Speed up removing all annotations from an item ([#863](../../pull/863))
 
 ### Bug Fixes
-- Fix issues with the nd2 reader ([866](../../pull/866), [867](../../pull/867))
-- Honor the highlight size limit with centroid annotations ([861](../../pull/861))
+- Fix issues with the nd2 reader ([#866](../../pull/866), [#867](../../pull/867))
+- Honor the highlight size limit with centroid annotations ([#861](../../pull/861))
 
 ## 1.14.3
 
 ### Improvements
-- Support polygon annotations with holes ([844](../../pull/844))
-- New annotations get a default name if they do not have one ([843](../../pull/843))
-- Explicitly mark vips output as tiled ([848](../../pull/848))
-- Change how annotations are uploaded from the UI ([845](../../pull/845))
+- Support polygon annotations with holes ([#844](../../pull/844))
+- New annotations get a default name if they do not have one ([#843](../../pull/843))
+- Explicitly mark vips output as tiled ([#848](../../pull/848))
+- Change how annotations are uploaded from the UI ([#845](../../pull/845))
 
 ## 1.14.2
 
 ### Improvements
-- Improve handling for vips pixel formats in addTile ([838](../../pull/838))
-- Add validateCOG method to GDALFileTileSource ([835](../../pull/835))
+- Improve handling for vips pixel formats in addTile ([#838](../../pull/838))
+- Add validateCOG method to GDALFileTileSource ([#835](../../pull/835))
 
 ### Changes
-- The default logger now uses the null handler ([840](../../pull/840))
+- The default logger now uses the null handler ([#840](../../pull/840))
 
 ## 1.14.1
 
 ### Changes
-- The sources extra_installs didn't include all sources ([833](../../pull/833))
+- The sources extra_installs didn't include all sources ([#833](../../pull/833))
 
 ## 1.14.0
 
 ### Features
-- Vips tile source and tiled file writer ([816](../../pull/816), [827](../../pull/827), [830](../../pull/830))
+- Vips tile source and tiled file writer ([#816](../../pull/816), [#827](../../pull/827), [#830](../../pull/830))
 
 ### Improvements
-- Handle file URLs with GDAL ([820](../../pull/820))
-- Add a hasAlpha flag to image annotations ([823](../../pull/823))
-- Allow dict for style ([817](../../pull/817))
-- Support drawing multipolygon regions ([832](../../pull/832))
+- Handle file URLs with GDAL ([#820](../../pull/820))
+- Add a hasAlpha flag to image annotations ([#823](../../pull/823))
+- Allow dict for style ([#817](../../pull/817))
+- Support drawing multipolygon regions ([#832](../../pull/832))
 
 ### Bug Fixes
-- Fix a range check for pixelmap annotations ([815](../../pull/815))
-- Harden checking if a PIL Image can be read directly from a file pointer ([822](../../pull/822))
+- Fix a range check for pixelmap annotations ([#815](../../pull/815))
+- Harden checking if a PIL Image can be read directly from a file pointer ([#822](../../pull/822))
 
 ### Changes
-- Handle PIL deprecations ([824](../../pull/824))
+- Handle PIL deprecations ([#824](../../pull/824))
 
 ## Version 1.13.0
 
 ### Features
-- Add support for ellipse and circle annotations ([811](../../pull/811))
-- Support pickle output of numpy arrays for region, thumbnail, and tile_frames endpoints ([812](../../pull/812))
+- Add support for ellipse and circle annotations ([#811](../../pull/811))
+- Support pickle output of numpy arrays for region, thumbnail, and tile_frames endpoints ([#812](../../pull/812))
 
 ### Improvements
-- Improve parsing OME TIFF channel names ([806](../../pull/806))
-- Improve handling when a file vanishes ([807](../../pull/807))
-- Add TileSourceXYZRangeError ([809](../../pull/809))
+- Improve parsing OME TIFF channel names ([#806](../../pull/806))
+- Improve handling when a file vanishes ([#807](../../pull/807))
+- Add TileSourceXYZRangeError ([#809](../../pull/809))
 
 ## Version 1.12.0
 
