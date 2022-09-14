@@ -4,6 +4,7 @@
 
 ### Features
 - Style functions ([#960](../../pull/960))
+- Annotation metadata endpoints ([#963](../../pull/963))
 
 ### Improvements
 - Reduce rest calls to get settings ([#953](../../pull/953))

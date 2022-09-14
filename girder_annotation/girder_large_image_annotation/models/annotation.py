@@ -1371,3 +1371,63 @@ class Annotation(AccessControlledModel):
             logger.info('Done compacting collections')
         logger.info('Finished checking old annotations, %r' % report)
         return report
+
+    def setMetadata(self, annotation, metadata, allowNull=False):
+        """
+        Set metadata on an annotation.  A `ValidationException` is thrown in
+        the cases where the metadata JSON object is badly formed, or if any of
+        the metadata keys contains a period ('.').
+
+        :param annotation: The annotation to set the metadata on.
+        :type annotation: dict
+        :param metadata: A dictionary containing key-value pairs to add to
+                         the annotations meta field
+        :type metadata: dict
+        :param allowNull: Whether to allow `null` values to be set in the
+            annotation's metadata. If set to `False` or omitted, a `null` value
+            will cause that metadata field to be deleted.
+        :returns: the annotation document
+        """
+        if 'attributes' not in annotation['annotation']:
+            annotation['annotation']['attributes'] = {}
+
+        # Add new metadata to existing metadata
+        annotation['annotation']['attributes'].update(metadata.items())
+
+        # Remove metadata fields that were set to null
+        if not allowNull:
+            toDelete = [k for k, v in metadata.items() if v is None]
+            for key in toDelete:
+                del annotation['annotation']['attributes'][key]
+
+        self.validateKeys(annotation['annotation']['attributes'])
+
+        annotation['updated'] = datetime.datetime.utcnow()
+
+        # Validate and save the annotation
+        return super().save(annotation)
+
+    def deleteMetadata(self, annotation, fields):
+        """
+        Delete metadata on an annotation. A `ValidationException` is thrown if
+        the metadata field names contain a period ('.') or begin with a dollar
+        sign ('$').
+
+        :param annotation: The annotation to delete metadata from.
+        :type annotation: dict
+        :param fields: An array containing the field names to delete from the
+            annotation's meta field
+        :type field: list
+        :returns: the annotation document
+        """
+        self.validateKeys(fields)
+
+        if 'attributes' not in annotation['annotation']:
+            annotation['annotation']['attributes'] = {}
+
+        for field in fields:
+            annotation['annotation']['attributes'].pop(field, None)
+
+        annotation['updated'] = datetime.datetime.utcnow()
+
+        return super().save(annotation)

@@ -1,6 +1,7 @@
 import _ from 'underscore';
 import AccessControlledModel from '@girder/core/models/AccessControlledModel';
 import { restRequest } from '@girder/core/rest';
+import MetadataMixin from '@girder/core/models/MetadataMixin';
 
 import ElementCollection from '../collections/ElementCollection';
 import convert from '../annotations/convert';
@@ -20,7 +21,7 @@ import style from '../annotations/style.js';
  * and updates its own attribute in response.  Users
  * should not modify the "elements" attribute directly.
  */
-export default AccessControlledModel.extend({
+let AnnotationModel = AccessControlledModel.extend({
     resourceName: 'annotation',
 
     defaults: {
@@ -448,3 +449,7 @@ export default AccessControlledModel.extend({
         return this._elements;
     }
 });
+
+_.extend(AnnotationModel.prototype, MetadataMixin);
+
+export default AnnotationModel;
