@@ -54,7 +54,6 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'python-bioformats>=1.5.2',
-        'scikit-image',
         'importlib-metadata ; python_version < "3.8"',
     ],
     extras_require={
