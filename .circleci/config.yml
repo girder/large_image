@@ -4,9 +4,6 @@ executors:
     working_directory: ~/project
     docker:
       - image: girder/tox-and-node
-      # - image: memcached
-      # - image: circleci/mongo:5.0-ram
-      # - image: rabbitmq
 commands:
   tox:
     description: "Run tox"
@@ -139,7 +136,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.7.13
+          version: 3.7.14
           node: v12
       - tox:
           env: test-py37
@@ -152,7 +149,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.8.13
+          version: 3.8.14
           node: v12
       - tox:
           env: test-py38
@@ -165,7 +162,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.9.13
+          version: 3.9.14
           node: v12
       - tox:
           env: test-py39
@@ -178,7 +175,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.10.5
+          version: 3.10.7
           node: v12
       - tox:
           env: test-py310
@@ -210,7 +207,7 @@ jobs:
           path: ~/wheels
   release:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7
     steps:
       - checkout
       - run:
