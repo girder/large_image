@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.17.1
+
+### Improvements
+- Fallback when server notification streams are turned off ([#967](../../pull/967))
+
 ## 1.17.0
 
 ### Features

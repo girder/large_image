@@ -57,6 +57,9 @@ var ConfigView = View.extend({
             }, {
                 key: 'large_image.config_folder',
                 value: (this.$('#g-large-image-config-folder').val() || '').split(' ')[0]
+            }, {
+                key: 'large_image.notification_stream_fallback',
+                value: this.$('.g-large-image-stream-fallback').prop('checked')
             }]);
         },
         'click .g-open-browser': '_openBrowser'
