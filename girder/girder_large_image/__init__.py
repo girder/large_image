@@ -237,7 +237,7 @@ def handleFinalizeUploadBefore(event):
             # Augment the standard mimetypes with some additional values
             for mimeType, ext, std in [
                 ('text/yaml', '.yaml', True),
-                ('text/yaml', '.yml', False),
+                ('text/yaml', '.yml', True),
             ]:
                 if ext not in mimetypes.types_map:
                     mimetypes.add_type(mimeType, ext, std)

@@ -26,6 +26,7 @@ def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):
 @pytest.mark.plugin('large_image')
 @pytest.mark.parametrize('spec', (
     'largeImageSpec.js',
+    'otherFeatures.js',
 ))
 def testWebClientNoWorker(boundServer, fsAssetstore, db, spec):
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)

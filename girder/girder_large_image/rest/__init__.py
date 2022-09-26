@@ -140,6 +140,8 @@ def getYAMLConfigFile(self, folder, name):
                     continue
                 with File().open(file) as fptr:
                     config = yaml.safe_load(fptr)
+                    if isinstance(config, list) and len(config) == 1:
+                        config = config[0]
                     # combine and adjust config values based on current user
                     if isinstance(config, dict) and 'access' in config or 'group' in config:
                         config = adjustConfigForUser(config, user)

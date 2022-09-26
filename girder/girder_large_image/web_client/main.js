@@ -6,6 +6,7 @@ import './eventStream';
 import './views/fileList';
 import './views/itemList';
 import './views/itemView';
+import './views/itemViewCodemirror';
 import './views/imageViewerSelectWidget';
 
 // expose symbols under girder.plugins
