@@ -4,7 +4,7 @@
 
 ### Improvements
 - Fallback when server notification streams are turned off ([#967](../../pull/967))
-- Show and edit yaml and json files using codemirror ([#969](../../pull/969))
+- Show and edit yaml and json files using codemirror ([#969](../../pull/969), [#971](../../pull/971))
 - Show configured item lists even if there are no large image s ([#972](../../pull/972))
 
 ## 1.17.0
