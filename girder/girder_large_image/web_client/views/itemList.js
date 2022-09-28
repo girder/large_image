@@ -283,6 +283,7 @@ wrap(ItemListWidget, 'render', function (render) {
             selectedItemId: (this._selectedItem || {}).id,
             paginated: this._paginated,
             apiRoot: getApiRoot(),
+            hasAnyLargeImage: this._hasAnyLargeImage,
             itemList: this._confList(),
             sort: this._lastSort
         }));
@@ -310,16 +311,16 @@ wrap(ItemListWidget, 'render', function (render) {
         return itemListRender.apply(this, _.rest(arguments));
     }
 
-    render.call(this);
     largeImageConfig.getSettings((settings) => {
         var items = this.collection.toArray();
         var parent = this.$el;
         this._hasAnyLargeImage = !!_.some(items, function (item) {
             return item.has('largeImage');
         });
-        if (this._confList() && this._hasAnyLargeImage) {
+        if (this._confList()) {
             return itemListRender.apply(this, _.rest(arguments));
         }
+        render.call(this);
         if (settings['large_image.show_thumbnails'] === false ||
                 this.$('.large_image_container').length > 0) {
             return this;
