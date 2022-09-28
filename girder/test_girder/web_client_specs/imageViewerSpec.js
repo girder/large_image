@@ -153,7 +153,7 @@ $(function () {
                 return !$('.g-item-image-viewer-select').length;
             }, 'select button to vanish', 15000);
             girderTest.waitForLoad();
-        });
+        }, 30000);
         it('upload test file', function () {
             girderTest.waitForLoad();
             runs(function () {
@@ -184,7 +184,7 @@ $(function () {
                 return $('.g-item-image-viewer-select').length > 0 && $('.g-large-image-remove').length > 0;
             }, 'job to complete', 15000);
             girderTest.waitForLoad();
-        });
+        }, 30000);
     });
     describe('test metadata in item lists', function () {
         it('go to users page', girderTest.goToUsersPage());
