@@ -46,4 +46,4 @@ def testWebClientNoStream(boundServer, fsAssetstore, db, spec, girderWorker):
     Setting().set(SettingKey.ENABLE_NOTIFICATION_STREAM, False)
 
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
-    runWebClientTest(boundServer, spec, 15000)
+    runWebClientTest(boundServer, spec, 60000)
