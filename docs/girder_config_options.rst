@@ -128,3 +128,9 @@ This is used to specify how items appear in item lists.  There are two settings,
 
 If there are no large images in a folder, none of the image columns will appear.
 
+Editing Configuration Files
+---------------------------
+
+Some file types can be edited on their item page.  This is detected based on the mime type associated with the file: ``application/json`` for json files and ``text/yaml`` or ``text/x-yaml`` for yaml files.  If a user has enough permissions, these can be modified and saved.  Note that this does not alter imported files; rather, on save it will create a new file in the assetstore and use that; this works fine for using the configuration files.
+
+For admins, there is also support for the ``application/x-girder-ini`` mime type for Girder configuration files.   This has a special option to replace the existing Girder configuration and restart the server and should be used with due caution.

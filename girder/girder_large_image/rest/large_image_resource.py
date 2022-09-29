@@ -16,18 +16,23 @@
 
 import concurrent.futures
 import datetime
+import io
 import json
+import os
+import pprint
 import re
+import shutil
 import sys
 import time
 
+import cherrypy
 import psutil
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
 from girder import logger
 from girder.api import access
-from girder.api.describe import Description, describeRoute
+from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource
 from girder.exceptions import RestException
 from girder.models.file import File
@@ -219,6 +224,9 @@ class LargeImageResource(Resource):
         self.resourceName = 'large_image'
         self.route('GET', ('cache', ), self.cacheInfo)
         self.route('PUT', ('cache', 'clear'), self.cacheClear)
+        self.route('POST', ('config', 'format'), self.configFormat)
+        self.route('POST', ('config', 'validate'), self.configValidate)
+        self.route('POST', ('config', 'replace'), self.configReplace)
         self.route('GET', ('settings',), self.getPublicSettings)
         self.route('GET', ('sources',), self.listSources)
         self.route('GET', ('thumbnails',), self.countThumbnails)
@@ -489,3 +497,170 @@ class LargeImageResource(Resource):
             File().remove(file)
             removed += 1
         return removed
+
+    def _configValidateException(self, exc, lineno=None):
+        """
+        Report a config validation exception with a line number.
+        """
+        try:
+            msg = str(exc)
+            matches = re.search(r'line: (\d+)', msg)
+            if not matches:
+                matches = re.search(r'\[line[ ]*(\d+)\]', msg)
+            if matches:
+                line = int(matches.groups()[0])
+                msg = msg.split('\n')[0].strip() or 'General error'
+                msg = msg.rsplit(": '<string>'", 1)[0].rsplit("'<string>'", 1)[-1].strip()
+                return [{'line': line - 1, 'message': msg}]
+        except Exception:
+            pass
+        if lineno is not None:
+            return [{'line': lineno, 'message': str(exc)}]
+        return [{'line': 0, 'message': 'General error'}]
+
+    def _configValidate(self, config):
+        """
+        Check if a Girder config file will validate.  If not, return an
+        array of lines where it fails to validate.
+
+        :param config: The string representation of the config file to
+            validate.
+        :returns: a list of errors, though usually only the first one.
+        """
+        parser = cherrypy.lib.reprconf.Parser()
+        try:
+            parser.read_string(config)
+        except Exception as exc:
+            return self._configValidateException(exc)
+        err = None
+        try:
+            parser.as_dict()
+            return []
+        except Exception as exc:
+            err = exc
+            try:
+                parser.as_dict(raw=True)
+                return self._configValidateException(exc)
+            except Exception:
+                pass
+        lines = io.StringIO(config).readlines()
+        for pos in range(len(lines), 0, -1):
+            try:
+                parser = cherrypy.lib.reprconf.Parser()
+                parser.read_string(''.join(lines[:pos]))
+                parser.as_dict()
+                return self._configValidateException('Config values must be valid Python.', pos)
+            except Exception:
+                pass
+        return self._configValidateException(err)
+
+    @autoDescribeRoute(
+        Description('Validate a Girder config file')
+        .notes('Returns a list of errors found.')
+        .param('config', 'The contents of config file to validate.',
+               paramType='body')
+    )
+    @access.admin
+    def configValidate(self, config):
+        config = config.read().decode('utf8')
+        return self._configValidate(config)
+
+    @autoDescribeRoute(
+        Description('Reformat a Girder config file')
+        .param('config', 'The contents of config file to format.',
+               paramType='body')
+    )
+    @access.admin
+    def configFormat(self, config):  # noqa
+        config = config.read().decode('utf8')
+        if len(self._configValidate(config)):
+            return config
+        # reformat here
+        # collect comments
+        comments = ['[__comment__]\n']
+        for line in io.StringIO(config):
+            if line.strip()[:1] in {'#', ';'}:
+                line = '__comment__%d = %r\n' % (len(comments), line)
+                # If a comment is in the middle of a value, hoist it up
+                for pos in range(len(comments), 0, -1):
+                    try:
+                        parser = cherrypy.lib.reprconf.Parser()
+                        parser.read_string(''.join(comments[:pos]))
+                        parser.as_dict(raw=True)
+                        comments[pos:pos] = [line]
+                        break
+                    except Exception:
+                        pass
+            else:
+                comments.append(line)
+        parser = cherrypy.lib.reprconf.Parser()
+        parser.read_string(''.join(comments))
+        results = parser.as_dict(raw=True)
+        # Build results
+        out = []
+        for section in results:
+            if section != '__comment__':
+                out.append('[%s]\n' % section)
+            for key, val in results[section].items():
+                if not key.startswith('__comment__'):
+                    valstr = repr(val)
+                    if len(valstr) + len(key) + 3 >= 79:
+                        try:
+                            valstr = pprint.pformat(
+                                val, width=79, indent=2, compact=True, sort_dicts=False)
+                        except Exception:
+                            # sort_dicts isn't an option before Python 3.8
+                            valstr = pprint.pformat(
+                                val, width=79, indent=2, compact=True)
+                    out.append('%s = %s\n' % (key, valstr))
+                else:
+                    out.append(val)
+            if section != '__comment__':
+                out.append('\n')
+        return ''.join(out)
+
+    @autoDescribeRoute(
+        Description('Replace the existing Girder config file')
+        .param('restart', 'Whether to restart the server after updating the '
+               'config file', required=False, dataType='boolean', default=True)
+        .param('config', 'The new contents of config file.',
+               paramType='body')
+    )
+    @access.admin
+    def configReplace(self, config, restart):
+        config = config.read().decode('utf8')
+        if len(self._configValidate(config)):
+            raise RestException('Invalid config file')
+        path = os.path.join(os.path.expanduser('~'), '.girder', 'girder.cfg')
+        if 'GIRDER_CONFIG' in os.environ:
+            path = os.environ['GIRDER_CONFIG']
+        if os.path.exists(path):
+            contents = open(path).read()
+            if contents == config:
+                return {'status': 'no change'}
+            newpath = path + '.' + time.strftime(
+                '%Y%m%d-%H%M%S', time.localtime(os.stat(path).st_mtime))
+            logger.info('Copying existing config file from %s to %s' % (path, newpath))
+            shutil.copy2(path, newpath)
+        logger.warning('Replacing config file %s' % (path))
+        open(path, 'w').write(config)
+
+        class Restart(cherrypy.process.plugins.Monitor):
+            def __init__(self, bus, frequency=1):
+                cherrypy.process.plugins.Monitor.__init__(
+                    self, bus, self.run, frequency)
+
+            def start(self):
+                cherrypy.process.plugins.Monitor.start(self)
+
+            def run(self):
+                self.bus.log('Restarting.')
+                self.thread.cancel()
+                self.bus.restart()
+
+        if restart:
+            restart = Restart(cherrypy.engine)
+            restart.subscribe()
+            restart.start()
+            return {'restarted': datetime.datetime.utcnow()}
+        return {'status': 'updated', 'time': datetime.datetime.utcnow()}
