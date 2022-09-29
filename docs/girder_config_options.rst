@@ -125,3 +125,6 @@ This is used to specify how items appear in item lists.  There are two settings,
         -
           type: record
           value: size
+
+If there are no large images in a folder, none of the image columns will appear.
+
