@@ -38,6 +38,18 @@ sampleAnnotation = {
         'height': 15.0,
     }]
 }
+sampleAnnotationWithMetadata = {
+    'name': 'sample',
+    'attributes': {
+        'key1': 'value1'
+    },
+    'elements': [{
+        'type': 'rectangle',
+        'center': [20.0, 25.0, 0],
+        'width': 14.0,
+        'height': 15.0,
+    }]
+}
 
 
 def makeLargeSampleAnnotation():

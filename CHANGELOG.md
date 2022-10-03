@@ -5,7 +5,8 @@
 ### Improvements
 - Fallback when server notification streams are turned off ([#967](../../pull/967))
 - Show and edit yaml and json files using codemirror ([#969](../../pull/969), [#971](../../pull/971))
-- Show configured item lists even if there are no large image s ([#972](../../pull/972))
+- Show configured item lists even if there are no large images ([#972](../../pull/972))
+- Add metadata and annotation metadata search modes to Girder ([#974](../../pull/974))
 
 ## 1.17.0
 
