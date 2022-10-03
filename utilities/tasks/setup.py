@@ -59,7 +59,7 @@ setup(
     install_requires=[
         # Packages required by both producer and consumer side installations
         'girder-worker-utils>=0.8.5',
-        'importlib-metadata ; python_version < "3.8"',
+        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'girder': [

@@ -54,7 +54,7 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         f'large-image-source-tiff{limit_version}',
-        'importlib-metadata ; python_version < "3.8"'
+        'importlib-metadata<5 ; python_version < "3.8"'
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
