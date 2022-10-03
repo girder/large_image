@@ -55,7 +55,7 @@ setup(
         'jsonschema>=2.5.1',
         f'girder-large-image{limit_version}',
         'orjson',
-        'importlib-metadata ; python_version < "3.8"',
+        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'tasks': [

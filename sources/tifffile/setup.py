@@ -56,7 +56,7 @@ setup(
         'tifffile[all]',
         'zarr ; python_version >= "3.8"',
         'zarr<2.11 ; python_version < "3.8"',
-        'importlib-metadata ; python_version < "3.8"',
+        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
