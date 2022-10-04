@@ -2,12 +2,12 @@
   i.icon-pencil
   |  Annotations
   .btn-group.pull-right
-    if annotations.length
-      a.g-annotation-download(href=`${apiRoot}/annotation/item/${item.id}`, title='Download annotations', download=`${item.get('name')}_annotations.json`)
-        i.icon-download
     if creationAccess
       a.g-annotation-upload(title='Upload annotation')
         i.icon-upload
+    if annotations.length
+      a.g-annotation-download(href=`${apiRoot}/annotation/item/${item.id}`, title='Download annotations', download=`${item.get('name')}_annotations.json`)
+        i.icon-download
     if accessLevel >= AccessType.ADMIN && annotations.length
       a.g-annotation-permissions(title='Adjust permissions')
         i.icon-lock
@@ -17,29 +17,65 @@
 if annotations.length
   table.g-annotation-list.table.table-hover.table-condensed
     thead
+      //
+        th.g-annotation-select
+          input.g-select-all(type='checkbox')
       th.g-annotation-toggle
-      th.g-annotation-name Name
-      th.g-annotation-user Creator
-      th.g-annotation-date Date
+        a.g-annotation-toggle-all(class=canDraw ? 'disabled' : '', title='Hide or show all annotations')
+          - let anyDrawn = annotations.models.some((annotation) => drawn.has(annotation.id))
+          if anyDrawn
+            i.icon-eye
+          else
+            i.icon-eye-off
+      for column in confList.columns || []
+        if column.type !== 'record' || column.value !== 'controls'
+          th.g-annotation-column
+            if column.title !== undefined
+              = column.title
+            else
+              = `${column.value.substr(0, 1).toUpperCase()}${column.value.substr(1)}`
       th.g-annotation-actions
     tbody
       for annotation in annotations.models
-        - var name = annotation.get('annotation').name;
-        - var creatorModel = users.get(annotation.get('creatorId'));
-        - var creator = creatorModel ? creatorModel.get('login') : annotation.get('creatorId');
+        -
+          var name = annotation.get('annotation').name;
+          var creatorModel = users.get(annotation.get('creatorId'));
+          var creator = creatorModel ? creatorModel.get('login') : annotation.get('creatorId');
+          var updatedModel = users.get(annotation.get('updatedId'));
+          var updater = updatedModel ? updatedModel.get('login') : annotation.get('updatedId');
         tr.g-annotation-row(data-annotation-id=annotation.id)
+          //
+            td.g-annotation-select
+              input(type='checkbox', title='Select annotation for bulk actions')
           td.g-annotation-toggle
-            input(type='checkbox', disabled=!canDraw, checked=drawn.has(annotation.id), title='Show annotation')
-          td.g-annotation-name(title=name)
-            = name
-
-          td.g-annotation-user
-            a(href=`#user/${annotation.get('creatorId')}`)
-              = creator
-
-          td.g-annotation-date
-            = (new Date(annotation.get('created'))).toLocaleString()
+            a.g-annotation-toggle-select(class=canDraw ? 'disabled' : '', title='Show annotation')
+              if drawn.has(annotation.id)
+                i.icon-eye
+              else
+                i.icon-eye-off
+          for column in confList.columns || []
+            if column.type !== 'record' || column.value !== 'controls'
+              -
+                var value = (column.type === 'record' ? annotation.get(column.value) || annotation.get('annotation')[column.value] : (column.type === 'metadata' ? ((annotation.get('annotation').attributes || {})[column.value] || '') : '')) || '';
+                if (column.type === 'record' && column.value === 'creator') {
+                  value = creator;
+                }
+                if (column.type === 'record' && column.value === 'updatedId') {
+                  value = updater;
+                }
+              td.g-annotation-entry(title=value)
+                if column.format === 'user'
+                  a(href=`#user/${annotation.get(column.value) || annotation.get(column.value + 'Id')}`)
+                    = value
+                else if column.format === 'date'
+                  = (new Date(value)).toLocaleString()
+                else
+                  = value
           td.g-annotation-actions
+            //
+              if annotation.get('_accessLevel') >= AccessType.WRITE
+                a.g-annotation-edit(title='Edit annotation')
+                  i.icon-cog
             a.g-annotation-download(href=`${apiRoot}/annotation/${annotation.id}`, title='Download', download=`${name}.json`)
               i.icon-download
             if annotation.get('_accessLevel') >= AccessType.ADMIN

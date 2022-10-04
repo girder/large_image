@@ -7,14 +7,16 @@
   font-weight bold
 
 .g-annotation-list
+  &.table
+    width initial
+    max-width initial
+    min-width 100%
   table-layout fixed
 
   td
     white-space nowrap
-    text-overflow ellipsis
-    overflow hidden
 
-  .g-annotation-toggle
+  .g-annotation-toggle, .g-annotation-select
     width 30px
 
   .g-annotation-actions

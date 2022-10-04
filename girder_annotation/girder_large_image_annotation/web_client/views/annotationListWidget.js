@@ -20,15 +20,17 @@ import '../stylesheets/annotationListWidget.styl';
 
 const AnnotationListWidget = View.extend({
     events: {
-        'change .g-annotation-toggle': '_displayAnnotation',
+        'click .g-annotation-toggle-select': '_displayAnnotation',
+        'click .g-annotation-toggle-all': '_displayAllAnnotations',
         'click .g-annotation-delete': '_deleteAnnotation',
         'click .g-annotation-upload': '_uploadAnnotation',
         'click .g-annotation-permissions': '_changePermissions',
+        'click .g-annotation-metadata': '_annotationMetadata',
         'click .g-annotation-row'(evt) {
             var $el = $(evt.currentTarget);
-            $el.find('.g-annotation-toggle > input').click();
+            $el.find('.g-annotation-toggle-select').click();
         },
-        'click .g-annotation-row a,input'(evt) {
+        'click .g-annotation-row a,.g-annotation-toggle-select'(evt) {
             evt.stopPropagation();
         }
     },
@@ -49,32 +51,76 @@ const AnnotationListWidget = View.extend({
         this.listenTo(eventStream, 'g:event.large_image_annotation.create', () => this.collection.fetch(null, true));
         this.listenTo(eventStream, 'g:event.large_image_annotation.remove', () => this.collection.fetch(null, true));
 
-        this.collection.fetch({
-            itemId: this.model.id,
-            sort: 'created',
-            sortdir: -1
-        }).done(() => {
-            this._fetchUsers();
-        });
-    },
-
-    render() {
         restRequest({
             type: 'GET',
             url: 'annotation/folder/' + this.model.get('folderId') + '/create'
         }).done((createResp) => {
-            this.$el.html(annotationList({
-                item: this.model,
-                accessLevel: this.model.getAccessLevel(),
-                creationAccess: createResp,
-                annotations: this.collection,
-                users: this.users,
-                canDraw: this._viewer && this._viewer.annotationAPI(),
-                drawn: this._drawn,
-                apiRoot: getApiRoot(),
-                AccessType
-            }));
+            this.createResp = createResp;
+            restRequest({
+                url: `folder/${this.model.get('folderId')}/yaml_config/.large_image_config.yaml`
+            }).done((val) => {
+                this._liconfig = val || {};
+                this._confList = this._liconfig.annotationList || {
+                    columns: [{
+                        type: 'record',
+                        value: 'name'
+                    }, {
+                        type: 'record',
+                        value: 'creator',
+                        format: 'user'
+                    }, {
+                        type: 'record',
+                        value: 'created',
+                        format: 'date'
+                    }]
+                };
+                this.collection.comparator = _.constant(0);
+                this._lastSort = this._confList.defaultSort || [{
+                    type: 'record',
+                    value: 'updated',
+                    dir: 'up'
+                }, {
+                    type: 'record',
+                    value: 'updated',
+                    dir: 'down'
+                }];
+                this.collection.sortField = JSON.stringify(this._lastSort.reduce((result, e) => {
+                    result.push([
+                        (e.type === 'metadata' ? 'annotation.attributes.' : '') + e.value,
+                        e.dir === 'down' ? 1 : -1
+                    ]);
+                    if (e.type === 'record') {
+                        result.push([
+                            `annotation.${e.value}`,
+                            e.dir === 'down' ? 1 : -1
+                        ]);
+                    }
+                    return result;
+                }, []));
+                this.collection.fetch({
+                    itemId: this.model.id,
+                    sort: this.collection.sortField || 'created',
+                    sortdir: -1
+                }).done(() => {
+                    this._fetchUsers();
+                });
+            });
         });
+    },
+
+    render() {
+        this.$el.html(annotationList({
+            item: this.model,
+            accessLevel: this.model.getAccessLevel(),
+            creationAccess: this.createResp,
+            annotations: this.collection,
+            users: this.users,
+            canDraw: this._viewer && this._viewer.annotationAPI(),
+            drawn: this._drawn,
+            apiRoot: getApiRoot(),
+            confList: this._confList,
+            AccessType
+        }));
         return this;
     },
 
@@ -85,10 +131,14 @@ const AnnotationListWidget = View.extend({
     },
 
     _displayAnnotation(evt) {
-        const $el = $(evt.currentTarget);
-        const id = $el.parent().data('annotationId');
+        if (!this._viewer || !this._viewer.annotationAPI()) {
+            return;
+        }
+        const $el = $(evt.currentTarget).closest('.g-annotation-row');
+        const id = $el.data('annotationId');
         const annotation = this.collection.get(id);
-        if ($el.find('input').prop('checked')) {
+        const startedOn = $el.find('.g-annotation-toggle-select i.icon-eye').length;
+        if (!startedOn) {
             this._drawn.add(id);
             annotation.fetch().then(() => {
                 if (this._drawn.has(id)) {
@@ -100,6 +150,36 @@ const AnnotationListWidget = View.extend({
             this._drawn.delete(id);
             this._viewer.removeAnnotation(annotation);
         }
+        $el.find('.g-annotation-toggle-select i').toggleClass('icon-eye', !startedOn).toggleClass('icon-eye-off', !!startedOn);
+        const anyOn = this.collection.some((annotation) => this._drawn.has(annotation.id));
+        this.$el.find('th.g-annotation-toggle i').toggleClass('icon-eye', !!anyOn).toggleClass('icon-eye-off', !anyOn);
+    },
+
+    _displayAllAnnotations(evt) {
+        if (!this._viewer || !this._viewer.annotationAPI()) {
+            return;
+        }
+        const anyOn = this.collection.some((annotation) => this._drawn.has(annotation.id));
+        this.collection.forEach((annotation) => {
+            const id = annotation.id;
+            let isDrawn = this._drawn.has(annotation.id);
+            if (anyOn && isDrawn) {
+                this._drawn.delete(id);
+                this._viewer.removeAnnotation(annotation);
+                isDrawn = false;
+            } else if (!anyOn && !isDrawn) {
+                this._drawn.add(id);
+                annotation.fetch().then(() => {
+                    if (this._drawn.has(id)) {
+                        this._viewer.drawAnnotation(annotation);
+                    }
+                    return null;
+                });
+                isDrawn = true;
+            }
+            this.$el.find(`.g-annotation-row[data-annotation-id="${id}"] .g-annotation-toggle-select i`).toggleClass('icon-eye', !!isDrawn).toggleClass('icon-eye-off', !isDrawn);
+        });
+        this.$el.find('th.g-annotation-toggle i').toggleClass('icon-eye', !anyOn).toggleClass('icon-eye-off', !!anyOn);
     },
 
     _deleteAnnotation(evt) {
@@ -201,6 +281,7 @@ const AnnotationListWidget = View.extend({
     _fetchUsers() {
         this.collection.each((model) => {
             this.users.add({'_id': model.get('creatorId')});
+            this.users.add({'_id': model.get('updatedId')});
         });
         $.when.apply($, this.users.map((model) => {
             return model.fetch();

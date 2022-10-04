@@ -186,7 +186,7 @@ describe('AnnotationListWidget', function () {
             runs(function () {
                 expect($el.length).toBe(10);
                 $el.each(function () {
-                    expect($(this).find('.g-annotation-name').text()).toMatch(/annotation [0-9]+/);
+                    expect($(this).find('.g-annotation-entry').eq(0).text()).toMatch(/annotation [0-9]+/);
                 });
             });
         });
@@ -247,7 +247,7 @@ describe('AnnotationListWidget', function () {
             runs(function () {
                 expect($el.length).toBe(9);
                 $el.each(function () {
-                    expect($(this).find('.g-annotation-name').text()).toMatch(/annotation [0-9]+/);
+                    expect($(this).find('.g-annotation-entry').eq(0).text()).toMatch(/annotation [0-9]+/);
                 });
             });
         });
@@ -265,20 +265,40 @@ describe('AnnotationListWidget', function () {
             expect($el.find('.g-annotation-permissions').length).toBe(0);
         });
         it('check visibility checkbox tooltip', function () {
-            expect($('.g-annotation-list .g-annotation-toggle input:first').prop('title')).toBe(
+            expect($('.g-annotation-list .g-annotation-row .g-annotation-toggle a:first').prop('title')).toBe(
                 'Show annotation');
         });
         it('toggle annotation visibility', function () {
-            var id = $('.g-annotation-list .g-annotation-row:first').data('annotationId');
-            $('.g-annotation-list .g-annotation-row:first').click();
-
+            var id;
+            runs(function () {
+                id = $('.g-annotation-list .g-annotation-row:first').data('annotationId');
+                $('.g-annotation-list .g-annotation-row:first').click();
+            });
             waitsFor(function () {
                 return drawnAnnotations[id];
             }, 'annotation to draw');
+            girderTest.waitForLoad();
             runs(function () {
-                expect($('.g-annotation-list .g-annotation-toggle input:first').prop('checked')).toBe(true);
+                expect($('.g-annotation-list .g-annotation-toggle a:first i').hasClass('icon-eye')).toBe(true);
                 $('.g-annotation-list .g-annotation-row:first').click();
-                expect($('.g-annotation-list .g-annotation-toggle input:first').prop('checked')).toBe(false);
+                expect($('.g-annotation-list .g-annotation-toggle a:first i').hasClass('icon-eye')).toBe(false);
+                expect(drawnAnnotations[id]).toBeUndefined();
+            });
+        });
+        it('toggle annotation visibility via view all button', function () {
+            var id;
+            runs(function () {
+                id = $('.g-annotation-list .g-annotation-row:first').data('annotationId');
+                $('.g-annotation-list .g-annotation-toggle-all').click();
+            });
+            waitsFor(function () {
+                return drawnAnnotations[id];
+            }, 'annotation to draw');
+            girderTest.waitForLoad();
+            runs(function () {
+                expect($('.g-annotation-list .g-annotation-toggle a:first i').hasClass('icon-eye')).toBe(true);
+                $('.g-annotation-list .g-annotation-toggle-all').click();
+                expect($('.g-annotation-list .g-annotation-toggle a:first i').hasClass('icon-eye')).toBe(false);
                 expect(drawnAnnotations[id]).toBeUndefined();
             });
         });
@@ -287,10 +307,16 @@ describe('AnnotationListWidget', function () {
             expect($('.g-annotation-list-header .g-annotation-delete').length).toBe(0);
         });
         it('switch to a viewer that does not support annotations', function () {
+            var id;
             $('.g-item-image-viewer-select select').val('leaflet').trigger('change');
             waitForLargeImageViewer('leaflet');
             runs(function () {
-                expect($('.g-annotation-list .g-annotation-toggle input:first').prop('disabled')).toBe(true);
+                id = $('.g-annotation-list .g-annotation-row:first').data('annotationId');
+                $('.g-annotation-list .g-annotation-row:first').click();
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                expect(drawnAnnotations[id]).toBeUndefined();
             });
         });
     });

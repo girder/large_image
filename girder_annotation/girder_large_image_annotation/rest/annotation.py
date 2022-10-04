@@ -90,6 +90,8 @@ class AnnotationResource(Resource):
     @filtermodel(model='annotation', plugin='large_image')
     def find(self, params):
         limit, offset, sort = self.getPagingParameters(params, 'lowerName')
+        if sort and sort[0][0][0] == '[':
+            sort = json.loads(sort[0][0])
         query = {'_active': {'$ne': False}}
         if 'itemId' in params:
             item = Item().load(params.get('itemId'), force=True)
