@@ -83,9 +83,13 @@ def _handleETag(key, item, *args, **kwargs):
 
     :param key: key for making a distinc etag.
     :param item: item used for the item _id and updated timestamp.
+    :param max_age: the maximum cache duration.
     :param *args, **kwargs: additional arguments for generating an etag.
     """
-    etag = hashlib.md5(strhash(key, str(item['_id']), *args, **kwargs).encode()).hexdigest()
+    max_age = kwargs.get('max_age', 3600)
+    id = str(item['_id'])
+    date = item.get('updated', item.get('created'))
+    etag = hashlib.md5(strhash(key, id, date, *args, **kwargs).encode()).hexdigest()
     setResponseHeader('ETag', etag)
     conditions = [str(x) for x in cherrypy.request.headers.elements('If-Match') or []]
     if conditions and not (conditions == ['*'] or etag in conditions):
@@ -95,7 +99,7 @@ def _handleETag(key, item, *args, **kwargs):
     if conditions == ['*'] or etag in conditions:
         raise cherrypy.HTTPRedirect([], 304)
     # Explicitly set a max-age to recheck the cache after a while
-    setResponseHeader('Cache-control', 'max-age=3600')
+    setResponseHeader('Cache-control', f'max-age={max_age}')
 
 
 def _pickleParams(params):

@@ -8,6 +8,7 @@
 - Show configured item lists even if there are no large images ([#972](../../pull/972))
 - Add metadata and annotation metadata search modes to Girder ([#974](../../pull/974))
 - Add the ability to show annotation metadata in item annotation lists ([#977](../../pull/977))
+- Support ETAG in annotation rest responses for better browser caching ([#978](../../pull/978))
 
 ## 1.17.0
 
