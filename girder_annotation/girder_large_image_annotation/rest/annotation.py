@@ -21,6 +21,7 @@ import time
 import cherrypy
 import orjson
 from bson.objectid import ObjectId
+from girder_large_image.rest.tiles import _handleETag
 
 from girder import logger
 from girder.api import access
@@ -168,24 +169,23 @@ class AnnotationResource(Resource):
     @access.public(cookie=True)
     def getAnnotation(self, id, params):
         user = self.getCurrentUser()
-        return self._getAnnotation(user, id, params)
+        annotation = Annotation().load(
+            id, region=params, user=user, level=AccessType.READ, getElements=False)
+        _handleETag('getAnnotation', annotation, params, max_age=86400 * 30)
+        if annotation is None:
+            raise RestException('Annotation not found', 404)
+        return self._getAnnotation(annotation, params)
 
-    def _getAnnotation(self, user, id, params):
+    def _getAnnotation(self, annotation, params):
         """
         Get a generator function that will yield the json of an annotation.
 
-        :param user: the user that needs read access on the annotation and its
-            parent item.
-        :param id: the annotation id.
+        :param annotation: the annotation document without elements.
         :param params: paging and region parameters for the annotation.
         :returns: a function that will return a generator.
         """
         # Set the response time limit to a very long value
         setResponseTimeLimit(86400)
-        annotation = Annotation().load(
-            id, region=params, user=user, level=AccessType.READ, getElements=False)
-        if annotation is None:
-            raise RestException('Annotation not found', 404)
         # Ensure that we have read access to the parent item.  We could fail
         # faster when there are permissions issues if we didn't load the
         # annotation elements before checking the item access permissions.
@@ -509,7 +509,9 @@ class AnnotationResource(Resource):
                 if not first:
                     yield b',\n'
                 try:
-                    annotationGenerator = self._getAnnotation(user, annotation['_id'], {})()
+                    annotation = Annotation().load(
+                        annotation['_id'], user=user, level=AccessType.READ, getElements=False)
+                    annotationGenerator = self._getAnnotation(annotation, {})()
                 except AccessException:
                     continue
                 yield from annotationGenerator
