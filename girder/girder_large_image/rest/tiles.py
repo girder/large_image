@@ -147,6 +147,8 @@ class TilesItemResource(ItemResource):
         apiRoot.item.route('GET', (':itemId', 'tiles'), self.getTilesInfo)
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'), self.getTilesThumbnail)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnails'), self.listTilesThumbnails)
+        apiRoot.item.route('DELETE', (':itemId', 'tiles', 'thumbnails'), self.deleteTilesThumbnails)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'region'), self.getTilesRegion)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames'), self.tileFrames)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames', 'quad_info'),
@@ -1399,3 +1401,25 @@ class TilesItemResource(ItemResource):
                 result['scheduledJob'] = str(self.imageItemModel._scheduleTileFrames(
                     item, needed, self.getCurrentUser())['_id'])
         return result
+
+    @autoDescribeRoute(
+        Description('List all thumbnail and data files associated with a large_image item.')
+        .modelParam('itemId', model=Item, level=AccessType.READ)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.admin
+    def listTilesThumbnails(self, item):
+        return self.imageItemModel.removeThumbnailFiles(item, onlyList=True)
+
+    @autoDescribeRoute(
+        Description('Delete thumbnail and data files associated with a large_image item.')
+        .modelParam('itemId', model=Item, level=AccessType.READ)
+        .param('keep', 'Number of thumbnails to keep.', dataType='integer',
+               required=False, default=10000)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.admin
+    def deleteTilesThumbnails(self, item, keep):
+        return self.imageItemModel.removeThumbnailFiles(item, keep=keep or 0)

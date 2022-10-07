@@ -9,6 +9,7 @@
 - Add metadata and annotation metadata search modes to Girder ([#974](../../pull/974))
 - Add the ability to show annotation metadata in item annotation lists ([#977](../../pull/977))
 - Support ETAG in annotation rest responses for better browser caching ([#978](../../pull/978))
+- Thumbnail maintenance endpoints ([#979](../../pull/979))
 
 ## 1.17.0
 
