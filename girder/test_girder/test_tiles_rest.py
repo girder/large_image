@@ -1448,3 +1448,36 @@ def testTileFramesQuadInfo(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     assert 'cached' in resp.json
     assert resp.json['cached'][0] is True
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testThumbnailMaintenance(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample_image.ptif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    # Get a thumbnail
+    resp = server.request(path='/item/%s/tiles/thumbnail' % itemId,
+                          user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+
+    # Check that we list a thumbnail
+    resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 1
+
+    # Ask to delete it
+    resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, method='DELETE', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == [1, 0]
+
+    resp = server.request(
+        path='/item/%s/tiles/thumbnails' % itemId, method='DELETE', user=admin,
+        params={'keep': 0})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == [1, 1]
+
+    # It should be gone
+    resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 0
