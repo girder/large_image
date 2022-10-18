@@ -12,6 +12,9 @@
 - Thumbnail maintenance endpoints ([#980](../../pull/980))
 - Handle lif file extensions ([#981](../../pull/981))
 
+### Bug Fixes
+- Fixed an issue with compositing multiple frames ([#982](../../pull/982))
+
 ## 1.17.0
 
 ### Features
