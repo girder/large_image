@@ -31,6 +31,9 @@ let AnnotationModel = AccessControlledModel.extend({
     },
 
     initialize() {
+        if (!this.get('updated')) {
+            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+        }
         this._region = {
             maxDetails: this.get('maxDetails'),
             sort: 'size',
@@ -61,7 +64,13 @@ let AnnotationModel = AccessControlledModel.extend({
         var url = (this.altUrl || this.resourceName) + '/' + this.get('_id');
         var restOpts = {
             url: url,
-            data: {sort: 'size', sortdir: -1, centroids: true, limit: this.get('maxCentroids')},
+            data: {
+                sort: 'size',
+                sortdir: -1,
+                centroids: true,
+                limit: this.get('maxCentroids'),
+                _: (this.get('updated') || this.get('created')) + '_' + this.get('_version')
+            },
             xhrFields: {
                 responseType: 'arraybuffer'
             },
@@ -180,7 +189,7 @@ let AnnotationModel = AccessControlledModel.extend({
         var restOpts = {
             url: (this.altUrl || this.resourceName) + '/' + this.get('_id'),
             /* Add our region request into the query */
-            data: this._region
+            data: Object.assign({}, this._region, {_: (this.get('updated') || this.get('created')) + '_' + this.get('_version')})
         };
         if (opts.extraPath) {
             restOpts.url += '/' + opts.extraPath;
@@ -280,6 +289,7 @@ let AnnotationModel = AccessControlledModel.extend({
         } else {
             url = `annotation/${this.id}`;
             method = 'PUT';
+            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
         }
 
         if (this._pageElements === false || isNew) {
@@ -339,6 +349,7 @@ let AnnotationModel = AccessControlledModel.extend({
         this.trigger('g:delete', this, this.collection, options);
         let xhr = false;
         if (!this.isNew()) {
+            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
             xhr = restRequest({
                 url: `annotation/${this.id}`,
                 method: 'DELETE'
