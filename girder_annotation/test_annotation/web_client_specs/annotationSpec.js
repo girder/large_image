@@ -451,10 +451,12 @@ describe('Annotations', function () {
         it('destroy an existing annotation', function () {
             var done;
 
-            annotation.destroy().done(function () {
-                done = true;
-            }).fail(function (resp) {
-                console.error(resp);
+            runs(function () {
+                annotation.destroy().done(function () {
+                    done = true;
+                }).fail(function (resp) {
+                    console.error(resp);
+                });
             });
             waitsFor(function () {
                 return done;

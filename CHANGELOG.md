@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.17.2
+
+### Bug Fixes
+- Fixed overcaching annotations ([#983](../../pull/983))
+
 ## 1.17.1
 
 ### Improvements
