@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 - Fixed overcaching annotations ([#983](../../pull/983))
+- Depending on timing, annotations could be inappropriately paged ([#984](../../pull/984))
 
 ## 1.17.1
 

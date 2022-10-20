@@ -229,6 +229,8 @@ let AnnotationModel = AccessControlledModel.extend({
                         }
                         return null;
                     });
+                } else {
+                    this._nextFetch = null;
                 }
             }
             if (this._inFetch !== 'centroids') {
@@ -247,7 +249,9 @@ let AnnotationModel = AccessControlledModel.extend({
                 if (this._nextFetch) {
                     var nextFetch = this._nextFetch;
                     this._nextFetch = null;
-                    nextFetch();
+                    if (this._pageElements !== false) {
+                        nextFetch();
+                    }
                 }
             }
         });
