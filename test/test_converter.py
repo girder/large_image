@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import sys
 
 import large_image_converter
 import large_image_converter.__main__ as main
@@ -247,6 +248,7 @@ def testConverterMainNonImageFile(tmpdir):
     assert not os.path.exists(outputPath)
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires scikit-image')
 def testConverterMainStats(tmpdir):
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
@@ -257,6 +259,7 @@ def testConverterMainStats(tmpdir):
     assert 'conversion_stats' in desc['large_image_converter']
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires scikit-image')
 def testConverterMainFullStats(tmpdir):
     imagePath = datastore.fetch('sample_Easy1.png')
     outputPath = os.path.join(tmpdir, 'out.tiff')
@@ -266,6 +269,7 @@ def testConverterMainFullStats(tmpdir):
     assert 'psnr' in desc['large_image_converter']['conversion_stats']
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires scikit-image')
 def testConverterMainFullStatsWithWebp(tmpdir):
     imagePath = datastore.fetch('d042-353.crop.small.float32.tif')
     outputPath = os.path.join(tmpdir, 'out.tiff')

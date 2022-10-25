@@ -49,11 +49,12 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        # 'Programming Language :: Python :: 3.11',
     ],
     install_requires=[
         f'large-image{limit_version}',
         'dask[array]',
-        'nd2[legacy]>=0.2.3 ; python_version >= "3.7"',
+        'nd2[legacy]>=0.2.3 ; python_version >= "3.7" and python_version < "3.11"',
         'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={

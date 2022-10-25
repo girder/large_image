@@ -8,6 +8,7 @@ from .datastore import datastore
 
 
 @pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python3.7 or higher')
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires python3.11 wheels')
 def testTilesFromND2():
     imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
     source = large_image_source_nd2.open(imagePath)
@@ -31,6 +32,7 @@ def testTilesFromND2():
 
 
 @pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python3.7 or higher')
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires python3.11 wheels')
 def testInternalMetadata():
     imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
     source = large_image_source_nd2.open(imagePath)
