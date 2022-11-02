@@ -62,15 +62,18 @@ SourceAndFiles = {
         'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'},  # noqa
 }
-if sys.version_info >= (3, 7):
+if sys.version_info >= (3, 7) and sys.version_info < (3, 11):
     SourceAndFiles.update({
         'nd2': {'read': r'\.(nd2)$'},
+    })
+if sys.version_info >= (3, 7) and sys.version_info < (3, 11):
+    SourceAndFiles.update({
         'tifffile': {
             'read': r'',
             'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2)$',
         },
     })
-else:
+if sys.version_info < (3, 7):
     # Python 3.6 has an older version of PIL that won't read some of the
     # ome.tif files.
     SourceAndFiles['pil']['noread'] = SourceAndFiles['pil']['noread'][:-1] + '|sample.*ome)'

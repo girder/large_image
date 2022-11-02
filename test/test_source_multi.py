@@ -74,6 +74,7 @@ def testTilesFromMultiSimpleScaling():
 
 
 @pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for a sub-source')
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires python3.11 wheels')
 def testTilesFromMultiMultiSource(multiSourceImagePath):
     imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)
@@ -124,6 +125,7 @@ def testTilesFromMultiString():
 
 
 @pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for a sub-source')
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires python3.11 wheels')
 def testInternalMetadata(multiSourceImagePath):
     imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)
@@ -132,6 +134,7 @@ def testInternalMetadata(multiSourceImagePath):
 
 
 @pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for a sub-source')
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires python3.11 wheels')
 def testAssociatedImages(multiSourceImagePath):
     imagePath = multiSourceImagePath
     source = large_image_source_multi.open(imagePath)
