@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.17.3
+
+### Changes
+- Test on Python 3.11 ([#986](../../pull/986))
+
 ## 1.17.2
 
 ### Bug Fixes
