@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.17.4
+
+### Bug Fixes
+- Use open.read rather than download to access files in Girder ([#989](../../pull/989))
+
 ## 1.17.3
 
 ### Changes

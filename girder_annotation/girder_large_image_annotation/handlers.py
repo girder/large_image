@@ -124,7 +124,7 @@ def process_annotations(event):  # noqa: C901
         logger.error('Could not load models from the database')
         return
     try:
-        data = orjson.loads(b''.join(File().download(file)()).decode())
+        data = orjson.loads(File().open(file).read().decode())
     except Exception:
         logger.error('Could not parse annotation file')
         raise
