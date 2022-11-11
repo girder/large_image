@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 - Use open.read rather than download to access files in Girder ([#989](../../pull/989))
+- Fix nd2 source scale ([#990](../../pull/990))
 
 ## 1.17.3
 
