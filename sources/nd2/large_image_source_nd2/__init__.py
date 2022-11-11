@@ -184,8 +184,8 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         microns = None
         try:
             microns = self._nd2.voxel_size()
-            mm_x = microns.x * 1000
-            mm_y = microns.y * 1000
+            mm_x = microns.x * 0.001
+            mm_y = microns.y * 0.001
         except Exception:
             pass
         # Estimate the magnification; we don't have a direct value
