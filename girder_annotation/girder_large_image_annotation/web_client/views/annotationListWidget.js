@@ -53,7 +53,8 @@ const AnnotationListWidget = View.extend({
 
         restRequest({
             type: 'GET',
-            url: 'annotation/folder/' + this.model.get('folderId') + '/create'
+            url: 'annotation/folder/' + this.model.get('folderId') + '/create',
+            error: null
         }).done((createResp) => {
             this.createResp = createResp;
             restRequest({
