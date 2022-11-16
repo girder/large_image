@@ -191,7 +191,7 @@ jobs:
           version: 3.11.0
           node: v12
       - tox:
-          env: core-py311
+          env: test-py311
       - coverage
       - store_artifacts:
           path: build/test/artifacts
