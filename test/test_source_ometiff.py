@@ -90,6 +90,7 @@ def testStyleAutoMinMax():
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
     imageB = imageB[:, :, :1]
     assert numpy.any(image != imageB)
+    imageB = imageB.astype(numpy.uint16) * 257
     assert image.shape == imageB.shape
     assert image[128][128][0] < imageB[128][128][0]
     assert image[0][128][0] < imageB[0][128][0]
