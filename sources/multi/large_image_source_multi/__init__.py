@@ -100,6 +100,26 @@ SourceEntrySchema = {
             'type': 'integer',
             'minimum': 0,
         },
+        'zSet': {
+            'description': 'Override value for frame',
+            'type': 'integer',
+            'minimum': 0,
+        },
+        'tSet': {
+            'description': 'Override value for frame',
+            'type': 'integer',
+            'minimum': 0,
+        },
+        'xySet': {
+            'description': 'Override value for frame',
+            'type': 'integer',
+            'minimum': 0,
+        },
+        'cSet': {
+            'description': 'Override value for frame',
+            'type': 'integer',
+            'minimum': 0,
+        },
         'zValues': {
             'description':
                 'The numerical z position of the different z indices of the '
@@ -124,10 +144,10 @@ SourceEntrySchema = {
         },
         'xyValues': {
             'description':
-                'The numerical zy position of the different zy indices of the '
+                'The numerical xy position of the different xy indices of the '
                 'source.  If only one value is specified, other indices are '
                 'shifted based on the source.  If fewer values are given than '
-                'zy indices, the last two value given imply a stride for the '
+                'xy indices, the last two value given imply a stride for the '
                 'remainder.',
             'type': 'array',
             'items': {'type': 'number'},
@@ -533,6 +553,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param key: the axis key.  One of frame, c, z, t, xy.
         :returns: the axis key (an integer).
         """
+        if source.get('%sSet' % key) is not None:
+            return source.get('%sSet' % key)
         vals = source.get('%sValues' % key) or []
         if not vals:
             axisKey = value + source.get(key, 0)
@@ -868,12 +890,16 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             base = numpy.zeros((0, 0, tile.shape[2]), dtype=tile.dtype)
         base, tile = _makeSameChannelDepth(base, tile)
         if base.shape[0] < tile.shape[0] + y:
-            vfill = numpy.zeros((tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]))
+            vfill = numpy.zeros(
+                (tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]),
+                dtype=base.dtype)
             if base.shape[2] == 2 or base.shape[2] == 4:
                 vfill[:, :, -1] = 1
             base = numpy.vstack((base, vfill))
         if base.shape[1] < tile.shape[1] + x:
-            hfill = numpy.zeros((base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]))
+            hfill = numpy.zeros(
+                (base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]),
+                dtype=base.dtype)
             if base.shape[2] == 2 or base.shape[2] == 4:
                 hfill[:, :, -1] = 1
             base = numpy.hstack((base, hfill))

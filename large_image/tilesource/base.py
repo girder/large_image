@@ -1866,11 +1866,14 @@ class TileSource:
         if tiled:
             return self._encodeTiledImage(image, outWidth, outHeight, iterInfo, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
+            dtype = image.dtype
             image = _imageToPIL(image, mode).resize(
                 (outWidth, outHeight),
                 getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
                 if outWidth > regionWidth else
                 getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+            if dtype == numpy.uint16 and TILE_FORMAT_NUMPY in format:
+                image = _imageToNumpy(image)[0].astype(dtype) * 257
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:
