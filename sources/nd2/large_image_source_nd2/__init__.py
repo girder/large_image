@@ -140,7 +140,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via nd2reader.')
         # We use dask to allow lazy reading of large images
-        self._nd2array = self._nd2.to_dask(copy=False)
+        self._nd2array = self._nd2.to_dask(copy=False, wrapper=False)  # ##DWM::
         arrayOrder = list(self._nd2.sizes)
         # Reorder this so that it is XY (P), T, Z, C, Y, X, S (or at least end
         # in Y, X[, S]).
@@ -260,7 +260,8 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tileframe = tileframe[fp // fc]
             fp = fp % fc
         with self._tileLock:
-            tile = tileframe[y0:y1:step, x0:x1:step].compute().copy()
+            # Have dask use single-threaded since we are using a lock anyway.
+            tile = tileframe[y0:y1:step, x0:x1:step].compute(scheduler='single-threaded').copy()
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
