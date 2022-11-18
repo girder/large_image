@@ -46,10 +46,10 @@ def _assertImageMatches(image, testRootName, saveTestImageFailurePath='/tmp'):
 
 
 def testTileFromGeotiffs():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    
+
     source = large_image_source_rasterio.open(imagePath)
     tileMetadata = source.getMetadata()
 
@@ -93,7 +93,7 @@ def testTileFromGeotiffs():
 
 
 def testTileStyleFromGeotiffs():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     style = {'band': 1, 'min': 0, 'max': 100,
@@ -106,7 +106,7 @@ def testTileStyleFromGeotiffs():
 
 
 def testTileLinearStyleFromGeotiffs():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     style = {'band': 1, 'min': 0, 'max': 100,
@@ -119,9 +119,9 @@ def testTileLinearStyleFromGeotiffs():
 
 
 def testTileStyleBadInput():
-    
+
     def _assertStyleResponse(imagePath, style, message):
-        
+
         with pytest.raises((TileSourceError, ValueError), match=message):
             source = large_image_source_rasterio.open(
                 imagePath, projection='EPSG:3857', style=style, encoding='PNG')
@@ -147,15 +147,15 @@ def testTileStyleBadInput():
 
 
 def testThumbnailFromGeotiffs():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     source = large_image_source_rasterio.open(imagePath)
-    
+
     # We get a thumbnail without a projection
     image, mimeType = source.getThumbnail(encoding='PNG')
     assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
-    
+
     # We get a different thumbnail with a projection
     source = large_image_source_rasterio.open(imagePath, projection='EPSG:3857')
     image2, mimeType = source.getThumbnail(encoding='PNG')
@@ -164,7 +164,7 @@ def testThumbnailFromGeotiffs():
 
 
 def testPixel():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
 
@@ -217,24 +217,24 @@ def testPixel():
 
 
 def testSourceErrors():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
-    
+
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     with pytest.raises(TileSourceError, match='must not be geographic'):
         large_image_source_rasterio.open(imagePath, 'EPSG:4326')
-        
+
     imagePath = os.path.join(testDir, 'test_files', 'zero_gi.tif')
     with pytest.raises(TileSourceError, match='File cannot be opened via rasterio'):
         large_image_source_rasterio.open(imagePath)
-        
+
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
     with pytest.raises(TileSourceError, match='does not have a projected scale'):
         large_image_source_rasterio.open(imagePath)
 
 
 def testStereographicProjection():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     # We will fail if we ask for a stereographic projection and don't
@@ -246,7 +246,7 @@ def testStereographicProjection():
 
 
 def testConvertProjectionUnits():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     tsNoProj = large_image_source_rasterio.open(imagePath)
@@ -293,7 +293,7 @@ def testConvertProjectionUnits():
 
 
 def testGuardAgainstBadLatLong():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'global_dem.tif')
     source = large_image_source_rasterio.open(imagePath)
@@ -306,7 +306,7 @@ def testGuardAgainstBadLatLong():
 
 
 def testPalettizedGeotiff():
-    
+
     imagePath = datastore.fetch('landcover_sample_1000.tif')
     source = large_image_source_rasterio.open(imagePath)
     tileMetadata = source.getMetadata()
@@ -319,7 +319,7 @@ def testPalettizedGeotiff():
     assert tileMetadata['geospatial'] is True
     assert len(tileMetadata['bands']) == 1
     assert tileMetadata['bands'][1]['interpretation'].name == 'palette'
-    
+
     # Getting the metadata with a specified projection will be different
     source = large_image_source_rasterio.open(
         imagePath, projection='EPSG:3857', encoding='PNG')
@@ -343,7 +343,7 @@ def testPalettizedGeotiff():
 
 
 def testRetileProjection():
-    
+
     imagePath = datastore.fetch('landcover_sample_1000.tif')
     ts = large_image_source_rasterio.open(imagePath, projection='EPSG:3857')
     ti = ts.getSingleTile(tile_size=dict(width=1000, height=1000), tile_position=1000)
@@ -353,7 +353,7 @@ def testRetileProjection():
 
 
 def testInternalMetadata():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     source = large_image_source_rasterio.open(imagePath)
@@ -362,7 +362,7 @@ def testInternalMetadata():
 
 
 def testGetRegionWithProjection():
-    
+
     imagePath = datastore.fetch('landcover_sample_1000.tif')
     ts = large_image_source_rasterio.open(imagePath, projection='EPSG:3857')
     region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
@@ -371,7 +371,7 @@ def testGetRegionWithProjection():
 
 
 def testGCPProjection():
-    
+
     imagePath = datastore.fetch('region_gcp.tiff')
     source = large_image_source_rasterio.open(imagePath)
     tileMetadata = source.getMetadata()
@@ -398,7 +398,7 @@ def testGCPProjection():
 
 
 def testGetTiledRegion():
-    
+
     imagePath = datastore.fetch('landcover_sample_1000.tif')
     ts = large_image_source_rasterio.open(imagePath)
     region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
@@ -414,7 +414,7 @@ def testGetTiledRegion():
 
 
 def testGetTiledRegionWithProjection():
-    
+
     imagePath = datastore.fetch('landcover_sample_1000.tif')
     ts = large_image_source_rasterio.open(imagePath, projection='EPSG:3857')
     # This gets the whole world
@@ -446,7 +446,7 @@ def testGetTiledRegionWithProjection():
 
 
 def testGetTiledRegion16Bit():
-    
+
     imagePath = datastore.fetch('region_gcp.tiff')
     ts = large_image_source_rasterio.open(imagePath)
     region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
@@ -462,7 +462,7 @@ def testGetTiledRegion16Bit():
 
 
 def testGetTiledRegionWithStyle():
-    
+
     imagePath = datastore.fetch('landcover_sample_1000.tif')
     ts = large_image_source_rasterio.open(imagePath, style='{"bands":[]}')
     region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
@@ -478,7 +478,7 @@ def testGetTiledRegionWithStyle():
 
 
 def testGetTiledRegionWithProjectionAndStyle():
-    
+
     imagePath = datastore.fetch('landcover_sample_1000.tif')
     ts = large_image_source_rasterio.open(imagePath, projection='EPSG:3857', style='{"bands":[]}')
     # This gets the whole world
@@ -510,7 +510,7 @@ def testGetTiledRegionWithProjectionAndStyle():
 
 
 def testGetTiledRegion16BitWithStyle():
-    
+
     imagePath = datastore.fetch('region_gcp.tiff')
     ts = large_image_source_rasterio.open(imagePath, style='{"bands":[]}')
     region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
@@ -526,7 +526,7 @@ def testGetTiledRegion16BitWithStyle():
 
 
 def testFileWithoutProjection():
-    
+
     imagePath = datastore.fetch('oahu-dense.tiff')
     ts = large_image_source_rasterio.open(imagePath, projection='EPSG:3857')
     tileMetadata = ts.getMetadata()
@@ -538,7 +538,7 @@ def testFileWithoutProjection():
 
 
 def testMatplotlibPalette():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
@@ -552,7 +552,7 @@ def testMatplotlibPalette():
 
 
 def testHttpVfsPath():
-    
+
     imagePath = datastore.get_url('landcover_sample_1000.tif')
     source = large_image_source_rasterio.open(
         imagePath, projection='EPSG:3857', encoding='PNG')
@@ -571,7 +571,7 @@ def testHttpVfsPath():
 
 
 def testVfsCogValidation():
-    
+
     imagePath = datastore.get_url('TC_NG_SFBay_US_Geo_COG.tif')
     source = large_image_source_rasterio.open(
         imagePath, projection='EPSG:3857', encoding='PNG')
@@ -581,9 +581,9 @@ def testVfsCogValidation():
         imagePath, projection='EPSG:3857', encoding='PNG')
     with pytest.raises(TileSourceInefficientError):
         source.validateCOG()
-        
+
 def testAlphaProjection():
-    
+
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
     source = large_image_source_rasterio.open(
