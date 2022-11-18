@@ -767,10 +767,13 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             result["RasterXSize"] = self.dataset.width
             result["RasterYSize"] = self.dataset.height
             result["Affine"] = self._getAffine()
-            result["Projection"] = self.dataset.crs
-            result["strProjection"] = self.dataset.crs.to_string()
+            result["Projection"] = self.dataset.crs.to_string()
             result["GCPProjection"] = self.dataset.gcps[1]
-            result["Metadata"] = self.dataset.meta
+
+            meta = self.dataset.meta
+            meta['crs'] = meta['crs'].to_string()
+            meta['transform'] = meta['transform'].to_gdal()
+            result["Metadata"] = meta
 
             # add gcp of available
             if len(self.dataset.gcps[0]) != 0:
