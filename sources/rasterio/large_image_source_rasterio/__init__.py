@@ -28,7 +28,7 @@ import PIL.Image
 from pyproj import CRS, Transformer, Geod
 from pyproj.exceptions import CRSError
 import rasterio as rio
-from rasterio.warp import calculate_default_transform, reproject 
+from rasterio.warp import calculate_default_transform, reproject
 from rasterio.errors import RasterioIOError
 
 import large_image
@@ -119,7 +119,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         # set the large_image path
         self._largeImagePath = self._getLargeImagePath()
-        
+
         # create a thred lock
         self._getDatasetLock = threading.RLock()
 
@@ -170,16 +170,16 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._projection is None or self._initWithProjection(unitsPerPixel)
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
-        
+
     def _setStyle(self, style):
         """
         Check and set the specified style from a json string or a dictionary.
 
         :param style: The new style.
         """
-        
+
         super()._setStyle(style)
-        
+
         if hasattr(self, '_getTileLock'):
             self._setDefaultStyle()
 
@@ -331,10 +331,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param analysisSize: optional default to 1024
         :param onlyMinMax: optional default to True
         """
-        
+
         # default frame to 0 in case it is set to None from outside
         frame = frame or 0
-        
+
         # read band informations
         bandInfo = self.getBandInformation()
 
@@ -410,9 +410,9 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     )
                 if len(ProjUnitsAcrossLevel0) >= ProjUnitsAcrossLevel0_MaxSize:
                     ProjUnitsAcrossLevel0.clear()
-                    
+
                 ProjUnitsAcrossLevel0[self._projection.to_string()] = self.unitsAcrossLevel0
-                
+
         # for consistency, it should probably always be (0, 0).  Whatever
         # renders the map would need the same offset as used here.
         self._projectionOrigin = (0, 0)
@@ -448,7 +448,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         proj = self._projection.to_string() if self._projection else None
         unit = self._unitsPerPixel
-        
+
         return super().getState() + f",{proj},{unit}"
 
     @staticmethod
@@ -486,7 +486,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # consider it as 4326
             hasTransform = self.dataset.transform != Affine.identity()
             isNitf = self.dataset.driver.lower() in {"NITF"}
-            if not crs and ( hasTransform or isNitf): 
+            if not crs and ( hasTransform or isNitf):
                 crs = CRS(4326)
 
             return crs
@@ -500,11 +500,11 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
 
         bounds = self.getBounds(4326)
-        
-        # exit with nothing if no bounds are found 
-        if not bounds: 
+
+        # exit with nothing if no bounds are found
+        if not bounds:
             return None
-        
+
         geod = Geod(ellps="WGS84")
 
         # extract the corner corrdinates
@@ -529,19 +529,19 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
 
         scale = self.getPixelSizeInMeters()
-        
+
         return {
             "magnification": None,
             "mm_x": scale * 100 if scale else None,
             "mm_y": scale * 100 if scale else None,
         }
-    
+
     def _getAffine(self):
         """
         Get the Affine transformation.  If GCPs are used, get the appropriate Affine
-        for those. be carefule, Rasterio have deprecated GDAL styled transform in favor 
-        of ``Affine`` objects. See their documentation for more information: 
-        shorturl.at/bcdGL 
+        for those. be carefule, Rasterio have deprecated GDAL styled transform in favor
+        of ``Affine`` objects. See their documentation for more information:
+        shorturl.at/bcdGL
 
         :returns: a six-component array with the transform
         """
@@ -574,14 +574,14 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # extract the projection informations
         af = self._getAffine()
         srcCrs = self.getCrs()
-        
-        # set bounds to none and exit if no crs is set for the dataset 
+
+        # set bounds to none and exit if no crs is set for the dataset
         if not srcCrs:
             self._bounds[strDstCrs] = None
             return
-        
-        # compute the corner coordinates using the affine transformation as 
-        # longitudes and latitudes. Cannot only rely on bounds because of 
+
+        # compute the corner coordinates using the affine transformation as
+        # longitudes and latitudes. Cannot only rely on bounds because of
         # rotated coordinate systems
         bounds = {
             'll': {
@@ -601,21 +601,21 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'y': af[5] + self.sourceSizeX * af[3]
             },
         }
-        
+
         # ensure that the coordinates are within the projection limits
         if srcCrs.is_geographic and dstCrs:
-            
-            # set the vertical bounds 
-            # some projection system don't cover the poles so we need to adapt 
+
+            # set the vertical bounds
+            # some projection system don't cover the poles so we need to adapt
             # the values of ybounds accordingly
             transformer = Transformer.from_crs(4326, dstCrs, always_xy=True)
             has_poles = transformer.transform(0, 90)[1] != float("inf")
             yBounds = 90 if has_poles else 89.999999
-            
-            # for each corner fix the latitude within -yBounds yBounds 
+
+            # for each corner fix the latitude within -yBounds yBounds
             for k in bounds:
                 bounds[k]["y"] = max(min(bounds[k]["y"], yBounds), -yBounds)
-                
+
             # for each corner rotate longitude until it's within -180, 180
             while any(v['x'] > 180 for v in bounds.values()):
                 for k in bounds:
@@ -623,19 +623,19 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             while any(v['x'] < -180 for v in bounds.values()):
                 for k in bounds:
                     bounds[k]['x'] += 360
-                    
+
             # if one of the corner is > 180 set all the corner to world width
             if any(v["x"] >= 180 for v in bounds.values()):
                 bounds['ul']['x'] = bounds['ll']['x'] = -180
                 bounds['ur']['x'] = bounds['lr']['x'] = 180
-        
-        # reproject the pts in the destination coordinate system if necessary 
-        needProjection = dstCrs and dstCrs != srcCrs 
+
+        # reproject the pts in the destination coordinate system if necessary
+        needProjection = dstCrs and dstCrs != srcCrs
         if needProjection:
             transformer = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
             for pt in bounds.values():
                 pt["x"], pt["y"] = transformer.transform(pt["x"], pt["y"])
-                    
+
         # extract min max coordinates from the corners
         ll = bounds["ll"]["x"], bounds["ll"]["y"]
         ul = bounds["ul"]["x"], bounds["ul"]["y"]
@@ -645,13 +645,13 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         bounds["xmax"] = max(ll[0], ul[0], lr[0], ur[0])
         bounds["ymin"] = min(ll[1], ul[1], lr[1], ur[1])
         bounds["ymax"] = max(ll[1], ul[1], lr[1], ur[1])
-                    
-        # set the srs in the bounds 
+
+        # set the srs in the bounds
         bounds["srs"] = dstCrs.to_string() if needProjection else srcCrs.to_string()
-        
-        # write the bounds in memeory 
+
+        # write the bounds in memeory
         self._bounds[strDstCrs] = bounds
-        
+
         return bounds
 
     def getBandInformation(self, statistics=True, dataset=None, **kwargs):
@@ -670,8 +670,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # exit if the value is already set
         if getattr(self, "_bandInfo", None) and not dataset:
             return self._bandInfo
-        
-        # check if the dataset is cached 
+
+        # check if the dataset is cached
         cache = not dataset
 
         # do everything inside the dataset lock to avoid multiple read
@@ -686,9 +686,9 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
                 # get the stats
                 stats = dataset.statistics(i)
-                
+
                 # rasterio doesn't provide support for maskband as for RCF 15
-                # instead the whole mask numpy array is rendered. We don't want to save it 
+                # instead the whole mask numpy array is rendered. We don't want to save it
                 # in the metadata
                 info = {
                     "min": stats.min,
@@ -706,7 +706,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
                 # Only keep values that aren't None or the empty string
                 infoSet[i] = {k: v for k, v in info.items() if v not in (None, "")}
-                
+
                  # add extra informations if available
                 try:
                     info.update(colortable=dataset.colormap(i))
@@ -724,7 +724,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
 
         with self._getDatasetLock:
-            
+
             # check if the file is geospatial
             has_projection = self.dataset.crs
             has_gcps = len(self.dataset.gcps[0]) != 0 and self.dataset.gcps[1]
@@ -952,8 +952,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # compute the pixel coordinates of the corners if no projection is set
         if not self._projection:
             pleft, ptop = self.toNativePixelCoordinates(
-                right if left is None else left, 
-                bottom if top is None else top, 
+                right if left is None else left,
+                bottom if top is None else top,
                 units
             )
             pright, pbottom = self.toNativePixelCoordinates(
@@ -969,8 +969,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             dstCrs = self._projection
 
             transformer = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
-            
-            # note for the next developer 
+
+            # note for the next developer
             # you cannot simplify it with "or" as left and right can be 0
             # that's just a proxy as we need 2 coordinates for the transformer
             tmpLeft = right if left is None else left
@@ -1023,11 +1023,11 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: left, top, right, bottom bounds in pixels.
         """
-        
+
         isUnits = units is not None
         units = TileInputUnits.get(units.lower() if isUnits else None, units)
-        
-        # check if the units is a string or projection material 
+
+        # check if the units is a string or projection material
         isProj = False
         with suppress(CRSError): isproj = CRS(units) is not None
 
