@@ -1324,7 +1324,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         return pathlib.Path(output.name), TileOutputMimeTypes["TILED"]
 
-    def getRegion(self, format_=(TILE_FORMAT_IMAGE,), **kwargs):
+    def getRegion(self, format=(TILE_FORMAT_IMAGE,), **kwargs):
         """
         Get a rectangular region from the current tile source.  Aspect ratio is preserved.
         If neither width nor height is given, the original size of the highest
@@ -1342,7 +1342,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
 
         # cast format as a tuple if needed
-        format_ = format_ if isinstance(format_, (tuple, set, list)) else (format_,)
+        format = format if isinstance(format, (tuple, set, list)) else (format,)
 
         # The tile iterator handles determining the output region
         iterInfo = self._tileIteratorInfo(**kwargs)
@@ -1351,10 +1351,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not (
             iterInfo
             and not self._jsonstyle
-            and TILE_FORMAT_IMAGE in format_
+            and TILE_FORMAT_IMAGE in format
             and kwargs.get("encoding") == "TILED"
         ):
-            return super().getRegion(format_, **kwargs)
+            return super().getRegion(format, **kwargs)
 
         # extract parameter of the projection
         dstCrs = self._projection or self.getCrs()
