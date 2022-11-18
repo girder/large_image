@@ -37,6 +37,15 @@ access:
         -
           type: record
           value: controls
+      defaultSort:
+        -
+          type: metadata
+          value: Classification
+          dir: up
+        -
+          type: record
+          value: name
+          dir: down
     itemListDialog:
       # Show these columns
       columns:

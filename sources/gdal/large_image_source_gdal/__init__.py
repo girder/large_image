@@ -802,7 +802,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     resampleAlg=gdal.GRA_NearestNeighbour,
                     multithread=True,
                     # We might get a speed-up with acceptable distortion if we
-                    # set the polynomicalOrder or ask for an optimal transform
+                    # set the polynomialOrder or ask for an optimal transform
                     # around the outputBounds.
                     polynomialOrder=1,
                     xRes=res, yRes=res, outputBounds=[xmin, ymin, xmax, ymax])
@@ -921,7 +921,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param height: the height of the region to process.  Ignores if both
             top and bottom are specified.
         :param units: either 'projection', a string starting with 'proj4:',
-            'epsg:' or a enumarted value like 'wgs84', or one of the super's
+            'epsg:' or a enumerated value like 'wgs84', or one of the super's
             values.
         :param kwargs: optional parameters.  See above.
         :returns: left, top, right, bottom bounds in pixels.
@@ -1028,7 +1028,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :param x: the x coordinate it the native projection.
         :param y: the y coordinate it the native projection.
-        :param proj: input projection.  None to use the sources's projection.
+        :param proj: input projection.  None to use the source's projection.
         :param roundResults: if True, round the results to the nearest pixel.
         :return: (x, y) the pixel coordinate.
         """

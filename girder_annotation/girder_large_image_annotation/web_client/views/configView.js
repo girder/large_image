@@ -3,6 +3,7 @@ import View from '@girder/core/views/View';
 import PluginConfigBreadcrumbWidget from '@girder/core/views/widgets/PluginConfigBreadcrumbWidget';
 import { restRequest } from '@girder/core/rest';
 import events from '@girder/core/events';
+import largeImageConfig from '@girder/large_image/views/configView';
 
 import ConfigViewTemplate from '../templates/largeImageAnnotationConfig.pug';
 
@@ -78,30 +79,12 @@ var ConfigView = View.extend({
      *      fetched.  If the settings are already present, this is called
      *      without any delay.
      */
-    getSettings: function (callback) {
-        if (!ConfigView.settings) {
-            restRequest({
-                type: 'GET',
-                url: 'large_image/settings'
-            }).done((resp) => {
-                ConfigView.settings = resp;
-                if (callback) {
-                    callback(ConfigView.settings);
-                }
-            });
-        } else {
-            if (callback) {
-                callback(ConfigView.settings);
-            }
-        }
-    },
+    getSettings: largeImageConfig.getSettings,
 
     /**
      * Clear the settings so that getSettings will refetch them.
      */
-    clearSettings: function () {
-        delete ConfigView.settings;
-    }
+    clearSettings: largeImageConfig.clearSettings
 });
 
 export default ConfigView;

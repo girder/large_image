@@ -1,5 +1,5 @@
 ---
-name: Multi orientationa
+name: Multi orientation
 sources:
   - path: ./test_orient1.tif
     channel: CY3

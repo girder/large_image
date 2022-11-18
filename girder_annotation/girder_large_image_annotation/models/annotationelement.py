@@ -35,7 +35,9 @@ from girder.models.upload import Upload
 # Some annotation elements can be very large.  If they pass a size threshold,
 # store part of them in an associated file.  This is slower, so don't do it for
 # small ones.
+MAX_ELEMENT_CHECK = 100
 MAX_ELEMENT_DOCUMENT = 10000
+MAX_ELEMENT_USER_DOCUMENT = 1000000
 
 
 class Annotationelement(Model):
@@ -75,6 +77,7 @@ class Annotationelement(Model):
                 ('created', SortDir.ASCENDING),
                 ('_version', SortDir.ASCENDING),
             ], {}),
+            'element.girderId',
         ])
 
         self.exposeFields(AccessType.READ, (
@@ -290,6 +293,17 @@ class Annotationelement(Model):
                             data.write(chunk)
                     data.seek(0)
                     element[datafile['key']] = pickle.load(data)
+                    if 'userFileId' in datafile:
+                        data = io.BytesIO()
+                        chunksize = 1024 ** 2
+                        with File().open(File().load(datafile['userFileId'], force=True)) as fptr:
+                            while True:
+                                chunk = fptr.read(chunksize)
+                                if not len(chunk):
+                                    break
+                                data.write(chunk)
+                        data.seek(0)
+                        element['user'] = pickle.load(data)
                 if region.get('bbox') and 'bbox' in entry:
                     element['_bbox'] = entry['bbox']
                     if 'bbox' not in info:
@@ -326,9 +340,11 @@ class Annotationelement(Model):
         attachedQuery = query.copy()
         attachedQuery['datafile'] = {'$exists': True}
         for element in self.collection.find(attachedQuery):
-            file = File().load(element['datafile']['fileId'], force=True)
-            if file:
-                File().remove(file)
+            for key in {'fileId', 'userFileId'}:
+                if key in element['datafile']:
+                    file = File().load(element['datafile'][key], force=True)
+                    if file:
+                        File().remove(file)
         self.collection.bulk_write([pymongo.DeleteMany(query)], ordered=False)
 
     def removeElements(self, annotation):
@@ -486,6 +502,22 @@ class Annotationelement(Model):
         # simplify to points
         return bbox
 
+    def _entryIsLarge(self, entry):
+        """
+        Return True is an entry is alrge enough it might not fit in a mongo
+        document.
+
+        :param entry: the entry to check.
+        :returns: True if the entry is large.
+        """
+        if len(entry['element'].get('points', entry['element'].get(
+                'values', []))) > MAX_ELEMENT_DOCUMENT:
+            return True
+        if ('user' in entry['element'] and
+                len(pickle.dumps(entry['element'], protocol=4)) > MAX_ELEMENT_USER_DOCUMENT):
+            return True
+        return False
+
     def saveElementAsFile(self, annotation, entries):
         """
         If an element has a large points or values array, save that array to an
@@ -495,19 +527,33 @@ class Annotationelement(Model):
         :param entries: the database entries document.  Modified.
         """
         item = Item().load(annotation['itemId'], force=True)
-        element = entries[0]['element'].copy()
-        entries[0]['element'] = element
-        key = 'points' if 'points' in element else 'values'
-        # Use the highest protocol support by all python versions we support
-        data = pickle.dumps(element.pop(key), protocol=4)
-        elementFile = Upload().uploadFromFile(
-            io.BytesIO(data), size=len(data), name='_annotationElementData',
-            parentType='item', parent=item, user=None,
-            mimeType='application/json', attachParent=True)
-        entries[0]['datafile'] = {
-            'key': key,
-            'fileId': elementFile['_id'],
-        }
+        for idx, entry in enumerate(entries[:MAX_ELEMENT_CHECK]):
+            if not self._entryIsLarge(entry):
+                continue
+            element = entry['element'].copy()
+            entries[idx]['element'] = element
+            key = 'points' if 'points' in element else 'values'
+            # Use the highest protocol support by all python versions we
+            # support
+            data = pickle.dumps(element.pop(key), protocol=4)
+            elementFile = Upload().uploadFromFile(
+                io.BytesIO(data), size=len(data), name='_annotationElementData',
+                parentType='item', parent=item, user=None,
+                mimeType='application/json', attachParent=True)
+            userdata = None
+            if 'user' in element:
+                userdata = pickle.dumps(element.pop('user'), protocol=4)
+                userFile = Upload().uploadFromFile(
+                    io.BytesIO(userdata), size=len(userdata), name='_annotationElementUserData',
+                    parentType='item', parent=item, user=None,
+                    mimeType='application/json', attachParent=True)
+            entry['datafile'] = {
+                'key': key,
+                'fileId': elementFile['_id'],
+            }
+            if userdata:
+                entry['datafile']['userFileId'] = userFile['_id']
+            logger.debug('Storing element as file (%r)', entry)
 
     def updateElementChunk(self, elements, chunk, chunkSize, annotation, now):
         """
@@ -524,8 +570,8 @@ class Annotationelement(Model):
             'element': element
         } for element in elements[chunk:chunk + chunkSize]]
         prepTime = time.time() - chunkStartTime
-        if (len(entries) == 1 and len(entries[0]['element'].get(
-                'points', entries[0]['element'].get('values', []))) > MAX_ELEMENT_DOCUMENT):
+        if (len(entries) <= MAX_ELEMENT_CHECK and any(
+                self._entryIsLarge(entry) for entry in entries[:MAX_ELEMENT_CHECK])):
             self.saveElementAsFile(annotation, entries)
         res = self.collection.insert_many(entries, ordered=False)
         for pos, entry in enumerate(entries):

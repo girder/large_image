@@ -198,3 +198,9 @@ def testXMLParsing():
                 assert len(metadata[key]) == value
             else:
                 assert metadata[key] == value
+
+
+def testFrameStyleOMETiff():
+    imagePath = datastore.fetch('DDX58_AXL_EGFR_well2_XY01.ome.tif')
+    source = large_image_source_ometiff.open(imagePath, style={'bands': [{'frame': 4}]})
+    assert source.getTile(0, 0, 2)

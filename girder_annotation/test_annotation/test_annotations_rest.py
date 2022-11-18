@@ -5,7 +5,9 @@ import struct
 import pytest
 
 from . import girder_utilities as utilities
-from .test_annotations import makeLargeSampleAnnotation, sampleAnnotation, sampleAnnotationEmpty
+from .test_annotations import (makeLargeSampleAnnotation, sampleAnnotation,
+                               sampleAnnotationEmpty,
+                               sampleAnnotationWithMetadata)
 
 pytestmark = pytest.mark.girder
 
@@ -763,3 +765,46 @@ class TestLargeImageAnnotationElementGroups:
         resp = server.request('/annotation/%s' % resp.json['_id'], user=admin)
         assert utilities.respStatus(resp) == 200
         assert resp.json['groups'] == ['d']
+
+
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
+@pytest.mark.plugin('large_image_annotation')
+def testMetadataSearch(server, admin, fsAssetstore):
+    file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    item = Item().load(id=itemId, force=True)
+    Item().setMetadata(item, {'key1': 'value1'})
+    Annotation().createAnnotation(item, admin, sampleAnnotation)
+
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'value', 'mode': 'li_annotation_metadata', 'types': '["item"]'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'item': []}
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'key:key1 value', 'mode': 'li_annotation_metadata', 'types': '["item"]'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'item': []}
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'key:key2 value', 'mode': 'li_annotation_metadata', 'types': '["item"]'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'item': []}
+    Annotation().createAnnotation(item, admin, sampleAnnotationWithMetadata)
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'value', 'mode': 'li_annotation_metadata', 'types': '["item"]'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json != {'item': []}
+    assert len(resp.json['item']) == 1
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'key:key1 value', 'mode': 'li_annotation_metadata', 'types': '["item"]'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json['item']) == 1
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'key:key2 value', 'mode': 'li_annotation_metadata', 'types': '["item"]'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json['item']) == 0

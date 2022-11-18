@@ -64,6 +64,61 @@ A band definition is an object which can contain the following keys:
 
 - ``axis``: if specified, keep on the specified axis (channel) of the intermediate numpy array.  This is typically between 0 and 3 for the red, green, blue, and alpha channels.  Only the first such value is used, and this can be specified as a base key if ``bands`` is specified.
 
+- ``function``: if specified, call a function to modify the resulting image.  This can be specified as a base key and as a band key.  Style functions can be called at multiple stages in the styling pipeline:
+
+  - ``pre`` stage: this passes the original tile image to the function before any band data is applied.
+
+  - ``preband`` stage: this passes the band image (often the original tile image if a different frame is not specified) to the function before any scaling.
+
+  - ``band`` stage: this passes the band image after scaling (via ``min`` and ``max``) and generating a ``nodata`` mask.
+
+  - ``postband`` stage: this passes the in-progress output image after the band has been applied to it.
+
+  - ``main`` stage: this passes the in-progress output image after all bands have been applied but before it is adjusted for ``dtype``.
+
+  - ``post`` stage: this passes the output image just before the style function returns.
+
+  The function parameter can be a single function or a list of functions.  Items in a list of functions can, themselves, be lists of functions.  A single function can be an object or a string.  If a string, this is shorthand for ``{"name": <function>}``.  The function object contains (all but ``name`` are optional):
+
+  - ``name``: The name of a Python module and function that is installed in the same environment as large_image.  For instance, ``large_image.tilesource.stylefuncs.maskPixelValues`` will use the function ``maskPixelValues`` in the ``large_image.tilesource.stylefuncs`` module.  The function must be a Python function that takes a numpy array as the first parameter (the image) and has named parameters or kwargs for any passed parameters and possibly the style context.
+
+  - ``parameters``: A dictionary of parameters to pass to the function.
+
+  - ``stage``: A string for a single matching stage or a list of stages that this function should be applied to.  This defaults to ``["band", "main"]``.
+
+  - ``context``: If this is present and not falsy, pass the style context to the function.  If this is ``true``, the style context is passed as the ``context`` parameter.  Otherwise, this is the name of the parameter that is passed to the function.  The style context is a namespace that contains (depending on stage), a variety of information:
+
+    - ``image``: the source image as a numpy array.
+
+    - ``originalStyle``: the style object from the tile source.
+
+    - ``style``: the normalized style object (always an object with a ``bands`` key containing a list of bands).
+
+    - ``x``, ``y``, ``z``, and ``frame``: the tile position in the source.
+
+    - ``dtype``, ``axis``: the value specified from the style for these parameters.
+
+    - ``output``: the output image as a numpy array.
+
+    - ``stage``: the current stage of style processing.
+
+    - ``styleIndex``: if in a band stage, the 0-based index within the style bands.
+
+    - ``band``: the band numpy image in a band stage.
+
+    - ``mask``: a mask numpy image to use when applying the band.
+
+    - ``palette``: the normalized palette for a band.
+
+    - ``palettebase``: a numpy linear interpolation array for non-discrete paletes.
+    - ``discete``: True if the scheme is discrete.
+
+    - ``nodata``: the nodata value for the band or None.
+
+    - ``min``, ``max``: the resolved numerical minimum and maximum value for the band.
+
+    - ``clamp``: the clamp value for the band.
+
 Note that some tile sources add additional options to the ``style`` parameter.
 
 Examples

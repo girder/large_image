@@ -1,0 +1,17 @@
+.li-item-view-codemirror-header.g-item-info-header
+  if accessLevel >= AccessType.WRITE
+    .li-item-header-btn-group.pull-right
+      for but in buttonList
+        button.g-view-codemirror-general-button.btn.btn-sm.btn-default(title=but.title, button-key=(but.key || but.text))
+          = but.text
+        = ' '
+      button.g-view-codemirror-revert-button.btn.btn-sm.btn-default Revert
+      = ' '
+      button.g-view-codemirror-format-button.btn.btn-sm.btn-default(title='This may remove comments') Format
+      = ' '
+      button.g-view-codemirror-save-button.btn.btn-sm.btn-primary Save
+  i.icon-edit
+  span
+    = ` ${formatName} File Contents`
+.li-item-view-codemirror
+  .editor

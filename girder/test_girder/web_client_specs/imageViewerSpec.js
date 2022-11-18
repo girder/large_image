@@ -153,7 +153,7 @@ $(function () {
                 return !$('.g-item-image-viewer-select').length;
             }, 'select button to vanish', 15000);
             girderTest.waitForLoad();
-        });
+        }, 30000);
         it('upload test file', function () {
             girderTest.waitForLoad();
             runs(function () {
@@ -184,7 +184,7 @@ $(function () {
                 return $('.g-item-image-viewer-select').length > 0 && $('.g-large-image-remove').length > 0;
             }, 'job to complete', 15000);
             girderTest.waitForLoad();
-        });
+        }, 30000);
     });
     describe('test metadata in item lists', function () {
         it('go to users page', girderTest.goToUsersPage());
@@ -223,11 +223,34 @@ $(function () {
             });
             girderTest.waitForLoad();
         });
-        it('test the metadata columns is shown', function () {
+        it('test the metadata columns are shown', function () {
             runs(function () {
                 expect($('.large_image_container').length).toBe(0);
                 expect($('.large_image_thumbnail').length).toBeGreaterThan(0);
                 expect($('.li-column-metadata').length).toBeGreaterThan(0);
+            });
+        });
+        it('apply a filter', function () {
+            runs(function () {
+                $('.li-item-list-filter-input').val('yb').trigger('input');
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                expect($('.g-item-list-entry').length >= 1);
+            });
+            runs(function () {
+                $('.li-item-list-filter-input').val('ybxxx 1.2 -0.6').trigger('input');
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                expect(!$('.g-item-list-entry').length);
+            });
+            runs(function () {
+                $('.li-item-list-filter-input').val('').trigger('input');
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                expect(!$('.g-item-list-entry').length);
             });
         });
         it('navigate back to image', function () {

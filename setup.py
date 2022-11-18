@@ -90,6 +90,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     install_requires=[
         'cachetools>=3.0.0',
@@ -98,7 +99,7 @@ setup(
         'Pillow',
         'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
-        'importlib-metadata ; python_version < "3.8"',
+        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require=extraReqs,
     include_package_data=True,

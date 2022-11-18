@@ -198,6 +198,20 @@ SourceEntrySchema = {
             'type': 'integer',
             'exclusiveMinimum': 0,
         },
+        'framesAsAxes': {
+            'description':
+                'An object with keys as axes and values as strides to '
+                'interpret the source frames.  This overrides the internal '
+                'metadata for frames.',
+            'type': 'object',
+            'patternProperties': {
+                '^(c|t|z|xy)$': {
+                    'type': 'integer',
+                    'exclusiveMinimum': 0,
+                }
+            },
+            'additionalProperties': False,
+        },
         'position': {
             'type': 'object',
             'additionalProperties': False,
@@ -531,6 +545,33 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                        (value - len(vals) + source.get(key, 0)))
         return axisKey
 
+    def _adjustFramesAsAxes(self, frames, idx, framesAsAxes):
+        """
+        Given a dictionary of axes and strides, relabel the indices in a frame
+        as if it was based on those strides.
+
+        :param frames: a list of frames from the tile source.
+        :param idx: 0-based index of the frame to adjust.
+        :param framesAsAxes: dictionary of axes and strides to apply.
+        :returns: the adjusted frame record.
+        """
+        axisRange = {}
+        slen = len(frames)
+        check = 1
+        for stride, axis in sorted([[v, k] for k, v in framesAsAxes.items()], reverse=True):
+            axisRange[axis] = slen // stride
+            slen = stride
+            check *= axisRange[axis]
+        if check != len(frames) and not hasattr(self, '_warnedAdjustFramesAsAxes'):
+            self.logger.warning('framesAsAxes strides do not use all frames.')
+            self._warnedAdjustFramesAsAxes = True
+        frame = frames[idx].copy()
+        for axis in ['c', 'z', 't', 'xy']:
+            frame.pop('Index' + axis.upper(), None)
+        for axis, stride in framesAsAxes.items():
+            frame['Index' + axis.upper()] = (idx // stride) % axisRange[axis]
+        return frame
+
     def _addSourceToFrames(self, tsMeta, source, sourceIdx, frameDict):
         """
         Add a source to the all appropriate frames.
@@ -561,6 +602,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for frameIdx, frame in enumerate(frames):
             if 'frames' in source and frameIdx not in source['frames']:
                 continue
+            if source.get('framesAsAxes'):
+                frame = self._adjustFramesAsAxes(frames, frameIdx, source.get('framesAsAxes'))
             fKey = self._axisKey(source, frameIdx, 'frame')
             cIdx = frame.get('IndexC', 0)
             zIdx = frame.get('IndexZ', 0)
@@ -588,8 +631,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'frame': frameIdx,
                 'kwargs': kwargs,
             })
-            frameDict['axesAllowed'] = frameDict['axesAllowed'] and (
-                len(frames) <= 1 or 'IndexRange' in tsMeta)
+            frameDict['axesAllowed'] = (frameDict['axesAllowed'] and (
+                len(frames) <= 1 or 'IndexRange' in tsMeta)) or aKey != (0, 0, 0, 0)
             frameDict['byAxes'].setdefault(aKey, [])
             frameDict['byAxes'][aKey].append({
                 'sourcenum': sourceIdx,
@@ -676,6 +719,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                             self._nativeMagnification[key] or tsMag.get(key))
                 numChecked += 1
                 tsMeta = ts.getMetadata()
+                if 'bands' in tsMeta:
+                    if not hasattr(self, '_bands'):
+                        self._bands = {}
+                    self._bands.update(tsMeta['bands'])
             bbox = self._sourceBoundingBox(source, tsMeta['sizeX'], tsMeta['sizeY'])
             computedWidth = max(computedWidth, int(math.ceil(bbox['right'])))
             computedHeight = max(computedHeight, int(math.ceil(bbox['bottom'])))
@@ -774,6 +821,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 {k: v for k, v in frame.items() if k.startswith('Index')}
                 for frame in self._frames]
             self._addMetadataFrameInformation(result, self._channels)
+        if hasattr(self, '_bands'):
+            result['bands'] = self._bands.copy()
         return result
 
     def getInternalMetadata(self, **kwargs):

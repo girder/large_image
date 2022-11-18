@@ -1,8 +1,11 @@
+import io
 import os
 import re
 import sys
 from pathlib import Path
 
+import numpy
+import PIL.Image
 import pytest
 
 import large_image
@@ -43,11 +46,11 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|tif.*)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.)',
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview)',  # noqa
         'skipTiles': r'one_layer_missing'},
     'pil': {
         'read': r'\.(jpeg|png|tif.*)$',
-        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo)'},
+        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo|extraoverview)'},
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'\.(ptif|scn|svs|tif.*)$',
@@ -57,21 +60,23 @@ SourceAndFiles = {
     'vips': {
         'read': r'',
         'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
-        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2)'},  # noqa
+        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'},  # noqa
 }
-if sys.version_info >= (3, 7):
+if sys.version_info >= (3, 7) and sys.version_info < (3, 11):
     SourceAndFiles.update({
         'nd2': {'read': r'\.(nd2)$'},
+    })
+if sys.version_info >= (3, 7) and sys.version_info < (3, 11):
+    SourceAndFiles.update({
         'tifffile': {
             'read': r'',
             'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2)$',
         },
     })
-else:
+if sys.version_info < (3, 7):
     # Python 3.6 has an older version of PIL that won't read some of the
     # ome.tif files.
-    SourceAndFiles['pil']['noread'] = \
-        r'(G10-3|JK-kidney|d042-353|huron|sample.*ome|one_layer_missing|US_Geo)'
+    SourceAndFiles['pil']['noread'] = SourceAndFiles['pil']['noread'][:-1] + '|sample.*ome)'
 
 
 def testNearPowerOfTwo():
@@ -284,6 +289,15 @@ def testTileOverlap():
         (45, 120, 75, 30, 30),
         (60, 120, 60, 30, 15),
         (75, 120, 45, 30, 0),
+    ]
+    assert [(
+        tiles['x'], tiles['x'] + tiles['width'], tiles['width'],
+        tiles['tile_overlap']['left'], tiles['tile_overlap']['right']
+    ) for tiles in ts.tileIterator(
+        tile_size=dict(width=60, height=60), tile_overlap=dict(x=40, y=40),
+        region=dict(left=55, top=65, width=15, height=15))
+    ] == [
+        (55, 70, 15, 0, 0)
     ]
 
 
@@ -532,3 +546,98 @@ def testImageBytes():
     assert 'ImageBytes' in repr(ib)
     assert ib._repr_jpeg_() is None
     assert ib._repr_png_() is None
+
+
+@pytest.mark.parametrize('format', [
+    format for format in large_image.constants.TileOutputMimeTypes
+    if format not in {'TILED'}])
+def testOutputFormats(format):
+    imagePath = datastore.fetch('sample_image.ptif')
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePathRGBA = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
+
+    ts = large_image.open(imagePath, encoding=format)
+    img = PIL.Image.open(io.BytesIO(ts.getTile(0, 0, 0)))
+    assert (img.width, img.height) == (256, 256)
+    img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
+    assert (img.width, img.height) == (256, 53)
+
+    ts = large_image.open(imagePathRGBA, encoding=format)
+    img = PIL.Image.open(io.BytesIO(ts.getTile(0, 0, 0)))
+    assert (img.width, img.height) == (256, 256)
+    img = PIL.Image.open(io.BytesIO(ts.getThumbnail(encoding=format)[0]))
+    assert (img.width, img.height) == (256, 256)
+
+
+def testStyleFunctions():
+    imagePath = datastore.fetch('extraoverview.tiff')
+    source = large_image.open(imagePath)
+    region1, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    sourceFunc2 = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
+            'context': True,
+            'parameters': {'values': [164, 165]}},
+        'bands': []})
+    region2, _ = sourceFunc2.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert numpy.any(region2 != region1)
+    sourceFunc3 = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
+            'context': True,
+            'parameters': {'values': [[63, 63, 63]]}},
+        'bands': []})
+    region3, _ = sourceFunc3.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert numpy.any(region3 != region2)
+    sourceFunc4 = large_image.open(imagePath, style={
+        'function': [{
+            'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
+            'context': 'context',
+            'parameters': {'values': [164, 165]}}],
+        'bands': []})
+    region4, _ = sourceFunc4.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert numpy.all(region4 == region2)
+
+
+def testStyleFunctionsWarnings():
+    imagePath = datastore.fetch('extraoverview.tiff')
+    source = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
+            'context': True,
+            'parameters': {'values': ['bad value']}},
+        'bands': []})
+    region, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert source._styleFunctionWarnings
+
+    source = large_image.open(imagePath, style={
+        'function': {
+            'name': 'no_such_module.maskPixelValues',
+            'context': True,
+            'parameters': {'values': [100]}},
+        'bands': []})
+    region, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert source._styleFunctionWarnings
+
+    source = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.stylefuncs.noSuchFunction',
+            'context': True,
+            'parameters': {'values': [100]}},
+        'bands': []})
+    region, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert source._styleFunctionWarnings

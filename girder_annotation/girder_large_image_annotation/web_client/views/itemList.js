@@ -12,8 +12,11 @@ import '../stylesheets/itemList.styl';
 wrap(ItemListWidget, 'render', function (render) {
     render.apply(this, _.rest(arguments));
 
-    function addLargeImageAnnotationBadge(item, parent, numAnnotations) {
+    function addLargeImageAnnotationBadge(item, parent, numAnnotations, flag) {
         const thumbnail = $('.large_image_thumbnail[g-item-cid="' + item.cid + '"]', parent).first();
+        if (!thumbnail.length) {
+            return;
+        }
 
         let badge = thumbnail.find('.large_image_annotation_badge');
         if (badge.length === 0) {
@@ -21,7 +24,7 @@ wrap(ItemListWidget, 'render', function (render) {
         }
         // update badge
         badge
-            .attr('title', `${numAnnotations} annotation${numAnnotations === 1 ? '' : 's'}`)
+            .attr('title', !flag ? `${numAnnotations} annotation${numAnnotations === 1 ? '' : 's'}` : 'Referenced by an annotation')
             .text(numAnnotations)
             .toggleClass('hidden', !numAnnotations);
     }
@@ -32,7 +35,6 @@ wrap(ItemListWidget, 'render', function (render) {
             return;
         }
         const items = this.collection.toArray();
-        const parent = this.$el;
         const hasAnyLargeImage = _.some(items, (item) => item.has('largeImage'));
 
         if (!hasAnyLargeImage) {
@@ -41,6 +43,7 @@ wrap(ItemListWidget, 'render', function (render) {
 
         const needCounts = items.filter((item) => item._annotationCount === undefined && item.has('largeImage')).map((item) => {
             item._annotationCount = null; // pending
+            delete item._annotationReferenced;
             return item.id;
         });
         let promise;
@@ -57,7 +60,13 @@ wrap(ItemListWidget, 'render', function (render) {
                 error: null
             }).done((resp) => {
                 Object.entries(resp).forEach(([id, count]) => {
-                    if (this.collection.get(id)) {
+                    if (id === 'referenced') {
+                        Object.keys(count).forEach((rid) => {
+                            if (this.collection.get(rid)) {
+                                this.collection.get(rid)._annotationReferenced = true;
+                            }
+                        });
+                    } else if (this.collection.get(id)) {
                         this.collection.get(id)._annotationCount = count;
                     }
                 });
@@ -66,7 +75,11 @@ wrap(ItemListWidget, 'render', function (render) {
         promise.then(() => {
             this.collection.forEach((item) => {
                 if (item._annotationCount !== undefined) {
-                    addLargeImageAnnotationBadge(item, parent, item._annotationCount);
+                    if (!item._annotationReferenced) {
+                        addLargeImageAnnotationBadge(item, this.$el, item._annotationCount);
+                    } else {
+                        addLargeImageAnnotationBadge(item, this.$el, '*', true);
+                    }
                 }
             });
             return null;

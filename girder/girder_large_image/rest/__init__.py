@@ -31,6 +31,12 @@ def addSystemEndpoints(apiRoot):
     def altItemFind(self, folderId, text, name, limit, offset, sort, filters=None):
         if sort and sort[0][0][0] == '[':
             sort = json.loads(sort[0][0])
+        if filters is None and text and text.startswith('_filter_:'):
+            try:
+                filters = json.loads(text.split('_filter_:', 1)[1].strip())
+                text = None
+            except Exception as exc:
+                logger.warning('Failed to parse _filter_ from text field: %r', exc)
         return origItemFind(folderId, text, name, limit, offset, sort, filters)
 
     @boundHandler(apiRoot.item)
@@ -134,6 +140,8 @@ def getYAMLConfigFile(self, folder, name):
                     continue
                 with File().open(file) as fptr:
                     config = yaml.safe_load(fptr)
+                    if isinstance(config, list) and len(config) == 1:
+                        config = config[0]
                     # combine and adjust config values based on current user
                     if isinstance(config, dict) and 'access' in config or 'group' in config:
                         config = adjustConfigForUser(config, user)

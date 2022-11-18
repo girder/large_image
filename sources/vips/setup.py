@@ -42,13 +42,14 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     install_requires=[
         'large-image',
         'numpy',
         'packaging',
         'pyvips',
-        'importlib-metadata ; python_version < "3.8"',
+        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'girder': 'girder-large-image',

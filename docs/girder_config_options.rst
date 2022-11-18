@@ -9,7 +9,7 @@ There are some general plugin settings that affect large_image as a Girder plugi
 YAML Configuration Files
 ------------------------
 
-Some settings can be specified per-folder tree using yaml files.  For these settings, if the configuration file exists in the current folder it is used.  If not, the parent folders are checked iteratively up to the parent collection or user.  If no configuration file is found, the ``.config`` folder in the collection or user is checked for the file.  Lastly, the ``Configuration Folder`` specified on the plugin settings paghe is checked for the configuration file.
+Some settings can be specified per-folder tree using yaml files.  For these settings, if the configuration file exists in the current folder it is used.  If not, the parent folders are checked iteratively up to the parent collection or user.  If no configuration file is found, the ``.config`` folder in the collection or user is checked for the file.  Lastly, the ``Configuration Folder`` specified on the plugin settings page is checked for the configuration file.
 
 The configuration files can have different configurations based on the user's access level and group membership.
 
@@ -96,3 +96,41 @@ This is used to specify how items appear in item lists.  There are two settings,
           # the length of arrays.
           value: gloms.length
           title: Number of Gloms
+      defaultSort:
+        # The default lists a sort order for sortable columns.  This must have
+        # type, value, and dir for each entry, where dir is either "up" or
+        # "down".
+        -
+          type: metadata
+          value: Stain
+          dir: up
+        -
+          type: record
+          value: name
+          dir: down
+    itemListDialog:
+      # Show these columns
+      columns:
+        -
+          type: image
+          value: thumbnail
+          title: Thumbnail
+        -
+          type: record
+          value: name
+        -
+          type: metadata
+          value: Stain
+          format: text
+        -
+          type: record
+          value: size
+
+If there are no large images in a folder, none of the image columns will appear.
+
+Editing Configuration Files
+---------------------------
+
+Some file types can be edited on their item page.  This is detected based on the mime type associated with the file: ``application/json`` for json files and ``text/yaml`` or ``text/x-yaml`` for yaml files.  If a user has enough permissions, these can be modified and saved.  Note that this does not alter imported files; rather, on save it will create a new file in the assetstore and use that; this works fine for using the configuration files.
+
+For admins, there is also support for the ``application/x-girder-ini`` mime type for Girder configuration files.   This has a special option to replace the existing Girder configuration and restart the server and should be used with due caution.

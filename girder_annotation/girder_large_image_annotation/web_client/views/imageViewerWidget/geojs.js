@@ -88,12 +88,22 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _getOverlayTransformProjString: function (overlay) {
             const transformInfo = overlay.transform || {};
             let xOffset = transformInfo.xoffset || 0;
-            const yOffset = transformInfo.yoffset || 0;
+            let yOffset = transformInfo.yoffset || 0;
             const matrix = transformInfo.matrix || [[1, 0], [0, 1]];
-            const s11 = matrix[0][0];
-            const s12 = matrix[0][1];
-            const s21 = matrix[1][0];
-            const s22 = matrix[1][1];
+            let s11 = matrix[0][0];
+            let s12 = matrix[0][1];
+            let s21 = matrix[1][0];
+            let s22 = matrix[1][1];
+
+            const scale = 2 ** this._getOverlayRelativeScale(overlay);
+            if (scale && scale !== 1) {
+                s11 /= scale;
+                s12 /= scale;
+                s21 /= scale;
+                s22 /= scale;
+                xOffset *= scale;
+                yOffset *= scale;
+            }
 
             let projString = '+proj=longlat +axis=enu';
             if (xOffset !== 0) {
@@ -110,6 +120,25 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 projString = projString + ` +s11=${1 / s11} +s12=${s12} +s21=${s21} +s22=${1 / s22}`;
             }
             return projString;
+        },
+
+        /**
+         * Given an overlay with a transform matrix, compute an approximate
+         * scale compaared to the base.
+         *
+         * @param {object} overlay The overlay annotation record.
+         * @returns {number} The approximate scale as an integer power of two.
+         */
+        _getOverlayRelativeScale: function (overlay) {
+            const transformInfo = overlay.transform || {};
+            const matrix = transformInfo.matrix || [[1, 0], [0, 1]];
+            const s11 = matrix[0][0];
+            const s12 = matrix[0][1];
+            const s21 = matrix[1][0];
+            const s22 = matrix[1][1];
+
+            let scale = Math.sqrt(Math.abs(s11 * s22 - s12 * s21)) || 1;
+            return Math.floor(Math.log2(scale));
         },
 
         /**
@@ -136,7 +165,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _addPixelmapLayerParams(layerParams, pixelmapElement, levelDifference) {
             // For pixelmap overlays, there are additional parameters to set
             layerParams.keepLower = false;
-            if (levelDifference !== 0) {
+            if (typeof layerParams.url === 'function' || levelDifference) {
                 layerParams.url = (x, y, z) => 'api/v1/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
             } else {
                 layerParams.url = layerParams.url + '?encoding=PNG';
@@ -193,7 +222,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             params.layer.opacity = overlay.opacity || 1;
             params.layer.opacity *= this._globalAnnotationOpacity;
 
-            const levelDifference = this.levels - overlayImageMetadata.levels;
+            let levelDifference = this.levels - overlayImageMetadata.levels;
+
+            levelDifference -= this._getOverlayRelativeScale(overlay);
+
             if (this.levels !== overlayImageMetadata.levels) {
                 params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
                 params.layer.minLevel = levelDifference;

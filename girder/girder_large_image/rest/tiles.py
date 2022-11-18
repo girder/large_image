@@ -83,9 +83,13 @@ def _handleETag(key, item, *args, **kwargs):
 
     :param key: key for making a distinc etag.
     :param item: item used for the item _id and updated timestamp.
+    :param max_age: the maximum cache duration.
     :param *args, **kwargs: additional arguments for generating an etag.
     """
-    etag = hashlib.md5(strhash(key, str(item['_id']), *args, **kwargs).encode()).hexdigest()
+    max_age = kwargs.get('max_age', 3600)
+    id = str(item['_id'])
+    date = item.get('updated', item.get('created'))
+    etag = hashlib.md5(strhash(key, id, date, *args, **kwargs).encode()).hexdigest()
     setResponseHeader('ETag', etag)
     conditions = [str(x) for x in cherrypy.request.headers.elements('If-Match') or []]
     if conditions and not (conditions == ['*'] or etag in conditions):
@@ -95,7 +99,7 @@ def _handleETag(key, item, *args, **kwargs):
     if conditions == ['*'] or etag in conditions:
         raise cherrypy.HTTPRedirect([], 304)
     # Explicitly set a max-age to recheck the cache after a while
-    setResponseHeader('Cache-control', 'max-age=3600')
+    setResponseHeader('Cache-control', f'max-age={max_age}')
 
 
 def _pickleParams(params):
@@ -143,6 +147,8 @@ class TilesItemResource(ItemResource):
         apiRoot.item.route('GET', (':itemId', 'tiles'), self.getTilesInfo)
         apiRoot.item.route('DELETE', (':itemId', 'tiles'), self.deleteTiles)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'), self.getTilesThumbnail)
+        apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnails'), self.listTilesThumbnails)
+        apiRoot.item.route('DELETE', (':itemId', 'tiles', 'thumbnails'), self.deleteTilesThumbnails)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'region'), self.getTilesRegion)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames'), self.tileFrames)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames', 'quad_info'),
@@ -165,12 +171,19 @@ class TilesItemResource(ItemResource):
                            self.getDZITile)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'internal_metadata'),
                            self.getInternalMetadata)
+        # Logging rate limiters
         filter_logging.addLoggingFilter(
             'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/zxy(/[^/ ?#]+){3}',
-            frequency=250)
+            frequency=250, duration=10)
+        filter_logging.addLoggingFilter(
+            'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/fzxy(/[^/ ?#]+){3}',
+            frequency=250, duration=10)
         filter_logging.addLoggingFilter(
             'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/dzi_files(/[^/ ?#]+){2}',
-            frequency=250)
+            frequency=250, duration=10)
+        filter_logging.addLoggingFilter(
+            'GET (/[^/ ?#]+)*/item/[^/ ?#]+/tiles/region',
+            frequency=100, duration=10)
         # Cache the model singleton
         self.imageItemModel = ImageItem()
 
@@ -1388,3 +1401,25 @@ class TilesItemResource(ItemResource):
                 result['scheduledJob'] = str(self.imageItemModel._scheduleTileFrames(
                     item, needed, self.getCurrentUser())['_id'])
         return result
+
+    @autoDescribeRoute(
+        Description('List all thumbnail and data files associated with a large_image item.')
+        .modelParam('itemId', model=Item, level=AccessType.READ)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.admin
+    def listTilesThumbnails(self, item):
+        return self.imageItemModel.removeThumbnailFiles(item, onlyList=True)
+
+    @autoDescribeRoute(
+        Description('Delete thumbnail and data files associated with a large_image item.')
+        .modelParam('itemId', model=Item, level=AccessType.READ)
+        .param('keep', 'Number of thumbnails to keep.', dataType='integer',
+               required=False, default=10000)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.admin
+    def deleteTilesThumbnails(self, item, keep):
+        return self.imageItemModel.removeThumbnailFiles(item, keep=keep or 0)

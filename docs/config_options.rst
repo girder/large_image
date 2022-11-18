@@ -60,7 +60,7 @@ For the Girder plugin, these can also be set in the ``girder.cfg`` file in a ``l
   max_small_image_size = 4096
   # The bioformats tilesource won't read files that end in a comma-separated
   # list of extensions
-  source_bioformats_ignored_extensions = '.jpg,.jpeg,.jpe,.png,.tif,.tiff,.ndpi'
+  source_bioformats_ignored_names = r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'
 
 Logging from Python
 -------------------

@@ -317,8 +317,9 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for idx in range(self._framecount):
                 frame = {'Frame': idx}
                 for axis, (basis, _pos, count) in self._basis.items():
-                    frame['Index' + (axis.upper() if axis.upper() != 'P' else 'XY')] = (
-                        idx // basis) % count
+                    if axis != 'I':
+                        frame['Index' + (axis.upper() if axis.upper() != 'P' else 'XY')] = (
+                            idx // basis) % count
                 frames.append(frame)
             self._addMetadataFrameInformation(result, getattr(self, '_channels', None))
             if any(v != self._seriesShape[0] for v in self._seriesShape):

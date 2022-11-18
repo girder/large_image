@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 import time
 from unittest import mock
 
@@ -538,3 +539,110 @@ def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
     assert resp.json['keyB'] == 'value2'
     assert resp.json['keyC'] == 'value3'
     assert resp.json['keyE'] == 'value7'
+
+
+@pytest.mark.singular
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testConfigFileEndpoints(server, admin, fsAssetstore):
+    config1 = (
+        '[global]\nA = "B"\nC = {\n# comment\n  "key1": "value1"\n  }\n'
+        'D = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,'
+        '25,26,27,28,29,30,31,32,33,34,35,36,37,38,39]\n')
+    config2 = '[global]\nA = B'
+    config3 = 'A[global]\nA = "B"'
+
+    resp = server.request(
+        method='POST', path='/large_image/config/validate', body=config1,
+        user=admin, type='application/x-girder-ini')
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == []
+
+    for config in (config2, config3):
+        resp = server.request(
+            method='POST', path='/large_image/config/validate', body=config,
+            user=admin, type='application/x-girder-ini')
+        assert utilities.respStatus(resp) == 200
+        assert len(resp.json) == 1
+
+    resp = server.request(
+        method='POST', path='/large_image/config/format', body=config1,
+        user=admin, type='application/x-girder-ini')
+    assert utilities.respStatus(resp) == 200
+    assert resp.json != config1
+    formatted = resp.json
+
+    resp = server.request(
+        method='POST', path='/large_image/config/format', body=config2,
+        user=admin, type='application/x-girder-ini')
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == config2
+
+    oldGirderConfig = os.environ.pop('GIRDER_CONFIG', None)
+    try:
+        with tempfile.TemporaryDirectory() as tempDir:
+            os.environ['GIRDER_CONFIG'] = os.path.join(tempDir, 'girder.cfg')
+            resp = server.request(
+                method='POST', path='/large_image/config/replace',
+                params=dict(restart='false'), body=config1, user=admin,
+                type='application/x-girder-ini')
+            assert utilities.respStatus(resp) == 200
+            assert os.path.exists(os.environ['GIRDER_CONFIG'])
+            assert open(os.environ['GIRDER_CONFIG']).read() == config1
+
+            resp = server.request(
+                method='POST', path='/large_image/config/replace',
+                params=dict(restart='false'), body=config2, user=admin,
+                type='application/x-girder-ini')
+            assert utilities.respStatus(resp) == 400
+
+            resp = server.request(
+                method='POST', path='/large_image/config/replace',
+                params=dict(restart='false'), body=formatted, user=admin,
+                type='application/x-girder-ini')
+            assert utilities.respStatus(resp) == 200
+            assert open(os.environ['GIRDER_CONFIG']).read() == formatted
+    finally:
+        os.environ.pop('GIRDER_CONFIG', None)
+        if oldGirderConfig is not None:
+            os.environ['GIRDER_CONFIG'] = oldGirderConfig
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testMetadataSearch(server, admin, fsAssetstore):
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'value', 'mode': 'li_metadata', 'types': '["item","folder"]'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'item': [], 'folder': []}
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'key:key1 value', 'mode': 'li_metadata', 'types': '["item","folder"]'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'item': [], 'folder': []}
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'key:key2 value', 'mode': 'li_metadata', 'types': '["item","folder"]'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'item': [], 'folder': []}
+    file = utilities.uploadTestFile('yb10kx5k.png', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    item = Item().load(id=itemId, force=True)
+    Item().setMetadata(item, {'key1': 'value1'})
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'value', 'mode': 'li_metadata', 'types': '["item","folder"]'})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json != {'item': [], 'folder': []}
+    assert len(resp.json['item']) == 1
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'key:key1 value', 'mode': 'li_metadata', 'types': '["item","folder"]'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json['item']) == 1
+    resp = server.request(
+        path='/resource/search', user=admin,
+        params={'q': 'key:key2 value', 'mode': 'li_metadata', 'types': '["item","folder"]'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json['item']) == 0

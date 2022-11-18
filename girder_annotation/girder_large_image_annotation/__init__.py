@@ -15,10 +15,11 @@
 #############################################################################
 
 from girder import events
+from girder.constants import registerAccessFlag
 from girder.exceptions import ValidationException
 from girder.plugin import GirderPlugin, getPlugin
 from girder.settings import SettingDefault
-from girder.utility import setting_utilities
+from girder.utility import search, setting_utilities
 from girder.utility.model_importer import ModelImporter
 
 from . import constants, handlers
@@ -36,6 +37,15 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+
+def metadataSearchHandler(*args, **kwargs):
+    import girder_large_image
+
+    return girder_large_image.metadataSearchHandler(
+        models=['item'],
+        searchModels={('annotation', 'large_image'): {'model': 'item', 'reference': 'itemId'}},
+        metakey='annotation.attributes', *args, **kwargs)
 
 
 # Validators
@@ -57,6 +67,11 @@ def validateBoolean(doc):
 SettingDefault.defaults.update({
     constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY: True,
 })
+
+# Access flags
+
+registerAccessFlag(constants.ANNOTATION_ACCESS_FLAG, 'Create annotations',
+                   'Allow user to create annotations')
 
 
 class LargeImageAnnotationPlugin(GirderPlugin):
@@ -87,3 +102,6 @@ class LargeImageAnnotationPlugin(GirderPlugin):
         events.bind(
             'data.process', 'large_image_annotation.annotations',
             handlers.process_annotations)
+
+        search._allowedSearchMode.pop('li_annotation_metadata', None)
+        search.addSearchMode('li_annotation_metadata', metadataSearchHandler)

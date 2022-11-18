@@ -416,7 +416,8 @@ class ImageItem(Item):
                 logger.warning('Could not cache data for large image')
         return imageData, imageMime
 
-    def removeThumbnailFiles(self, item, keep=0, sort=None, imageKey=None, **kwargs):
+    def removeThumbnailFiles(self, item, keep=0, sort=None, imageKey=None,
+                             onlyList=False, **kwargs):
         """
         Remove all large image thumbnails from an item.
 
@@ -426,6 +427,8 @@ class ImageItem(Item):
             sort order are kept.
         :param imageKey: None for the basic thumbnail, otherwise an associated
             imageKey.
+        :param onlyList: if True, return a list of known thumbnails or data
+            files that would be removed, but don't remove them.
         :param kwargs: additional parameters to determine which files to
             remove.
         :returns: a tuple of (the number of files before removal, the number of
@@ -436,6 +439,9 @@ class ImageItem(Item):
             keys.append('isLargeImageData')
         if not sort:
             sort = [('_id', SortDir.DESCENDING)]
+        results = []
+        present = 0
+        removed = 0
         for key in keys:
             query = {
                 'attachedToType': 'item',
@@ -448,15 +454,18 @@ class ImageItem(Item):
                 else:
                     query['thumbnailKey'] = {'$regex': '"imageKey":"%s"' % imageKey}
             query.update(kwargs)
-            present = 0
-            removed = 0
             for file in File().find(query, sort=sort):
                 present += 1
                 if keep > 0:
                     keep -= 1
                     continue
-                File().remove(file)
+                if onlyList:
+                    results.append(file)
+                else:
+                    File().remove(file)
                 removed += 1
+        if onlyList:
+            return results
         return (present, removed)
 
     def getRegion(self, item, **kwargs):

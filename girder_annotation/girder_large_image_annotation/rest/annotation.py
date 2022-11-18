@@ -20,6 +20,8 @@ import time
 
 import cherrypy
 import orjson
+from bson.objectid import ObjectId
+from girder_large_image.rest.tiles import _handleETag
 
 from girder import logger
 from girder.api import access
@@ -27,11 +29,13 @@ from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource, filtermodel, loadmodel, setResponseHeader
 from girder.constants import AccessType, SortDir, TokenScope
 from girder.exceptions import AccessException, RestException, ValidationException
+from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.user import User
 from girder.utility import JsonEncoder
 from girder.utility.progress import setResponseTimeLimit
 
+from .. import constants
 from ..models.annotation import Annotation, AnnotationSchema
 from ..models.annotationelement import Annotationelement
 
@@ -43,24 +47,31 @@ class AnnotationResource(Resource):
 
         self.resourceName = 'annotation'
         self.route('GET', (), self.find)
+        self.route('POST', (), self.createAnnotation)
         self.route('GET', ('schema',), self.getAnnotationSchema)
         self.route('GET', ('images',), self.findAnnotatedImages)
         self.route('GET', (':id',), self.getAnnotation)
-        self.route('GET', (':id', 'history'), self.getAnnotationHistoryList)
-        self.route('GET', (':id', 'history', ':version'), self.getAnnotationHistory)
-        self.route('PUT', (':id', 'history', 'revert'), self.revertAnnotationHistory)
-        self.route('POST', (), self.createAnnotation)
-        self.route('POST', (':id', 'copy'), self.copyAnnotation)
         self.route('PUT', (':id',), self.updateAnnotation)
         self.route('DELETE', (':id',), self.deleteAnnotation)
         self.route('GET', (':id', 'access'), self.getAnnotationAccess)
         self.route('PUT', (':id', 'access'), self.updateAnnotationAccess)
+        self.route('POST', (':id', 'copy'), self.copyAnnotation)
+        self.route('GET', (':id', 'history'), self.getAnnotationHistoryList)
+        self.route('GET', (':id', 'history', ':version'), self.getAnnotationHistory)
+        self.route('PUT', (':id', 'history', 'revert'), self.revertAnnotationHistory)
+        self.route('PUT', (':id', 'metadata'), self.setMetadata)
+        self.route('DELETE', (':id', 'metadata'), self.deleteMetadata)
         self.route('GET', ('item', ':id'), self.getItemAnnotations)
         self.route('POST', ('item', ':id'), self.createItemAnnotations)
         self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
+        self.route('GET', ('folder', ':id'), self.returnFolderAnnotations)
+        self.route('GET', ('folder', ':id', 'present'), self.existFolderAnnotations)
+        self.route('GET', ('folder', ':id', 'create'), self.canCreateFolderAnnotations)
+        self.route('PUT', ('folder', ':id', 'access'), self.setFolderAnnotationAccess)
+        self.route('DELETE', ('folder', ':id'), self.deleteFolderAnnotations)
+        self.route('GET', ('counts',), self.getItemListAnnotationCounts)
         self.route('GET', ('old',), self.getOldAnnotations)
         self.route('DELETE', ('old',), self.deleteOldAnnotations)
-        self.route('GET', ('counts',), self.getItemListAnnotationCounts)
 
     @describeRoute(
         Description('Search for annotations.')
@@ -80,6 +91,8 @@ class AnnotationResource(Resource):
     @filtermodel(model='annotation', plugin='large_image')
     def find(self, params):
         limit, offset, sort = self.getPagingParameters(params, 'lowerName')
+        if sort and sort[0][0][0] == '[':
+            sort = json.loads(sort[0][0])
         query = {'_active': {'$ne': False}}
         if 'itemId' in params:
             item = Item().load(params.get('itemId'), force=True)
@@ -97,7 +110,8 @@ class AnnotationResource(Resource):
             query['annotation.name'] = params['name']
         fields = list(
             (
-                'annotation.name', 'annotation.description', 'access', 'groups', '_version'
+                'annotation.name', 'annotation.description', 'annotation.attributes',
+                'access', 'groups', '_version'
             ) + Annotation().baseFields)
         return Annotation().findWithPermissions(
             query, sort=sort, fields=fields, user=self.getCurrentUser(),
@@ -155,24 +169,23 @@ class AnnotationResource(Resource):
     @access.public(cookie=True)
     def getAnnotation(self, id, params):
         user = self.getCurrentUser()
-        return self._getAnnotation(user, id, params)
+        annotation = Annotation().load(
+            id, region=params, user=user, level=AccessType.READ, getElements=False)
+        _handleETag('getAnnotation', annotation, params, max_age=86400 * 30)
+        if annotation is None:
+            raise RestException('Annotation not found', 404)
+        return self._getAnnotation(annotation, params)
 
-    def _getAnnotation(self, user, id, params):
+    def _getAnnotation(self, annotation, params):
         """
         Get a generator function that will yield the json of an annotation.
 
-        :param user: the user that needs read access on the annotation and its
-            parent item.
-        :param id: the annotation id.
+        :param annotation: the annotation document without elements.
         :param params: paging and region parameters for the annotation.
         :returns: a function that will return a generator.
         """
         # Set the response time limit to a very long value
         setResponseTimeLimit(86400)
-        annotation = Annotation().load(
-            id, region=params, user=user, level=AccessType.READ, getElements=False)
-        if annotation is None:
-            raise RestException('Annotation not found', 404)
         # Ensure that we have read access to the parent item.  We could fail
         # faster when there are permissions issues if we didn't load the
         # annotation elements before checking the item access permissions.
@@ -252,22 +265,29 @@ class AnnotationResource(Resource):
         .param('body', 'A JSON object containing the annotation.',
                paramType='body')
         .errorResponse('ID was invalid.')
-        .errorResponse('Write access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403)
         .errorResponse('Invalid JSON passed in request body.')
         .errorResponse("Validation Error: JSON doesn't follow schema.")
     )
     @access.user
-    @loadmodel(map={'itemId': 'item'}, model='item', level=AccessType.WRITE)
+    @loadmodel(map={'itemId': 'item'}, model='item', level=AccessType.READ)
     @filtermodel(model='annotation', plugin='large_image')
     def createAnnotation(self, item, params):
-        try:
-            return Annotation().createAnnotation(
-                item, self.getCurrentUser(), self.getBodyJson())
-        except ValidationException as exc:
-            logger.exception('Failed to validate annotation')
-            raise RestException(
-                "Validation Error: JSON doesn't follow schema (%r)." % (
-                    exc.args, ))
+        user = self.getCurrentUser()
+        folder = Folder().load(id=item['folderId'], user=user, level=AccessType.READ)
+        if Folder().hasAccess(folder, user, AccessType.WRITE) or Folder(
+        ).hasAccessFlags(folder, user, constants.ANNOTATION_ACCESS_FLAG):
+            try:
+                return Annotation().createAnnotation(
+                    item, self.getCurrentUser(), self.getBodyJson())
+            except ValidationException as exc:
+                logger.exception('Failed to validate annotation')
+                raise RestException(
+                    "Validation Error: JSON doesn't follow schema (%r)." % (
+                        exc.args, ))
+        else:
+            raise RestException('Write access and annotation creation access '
+                                'were denied for the item.', code=403)
 
     @describeRoute(
         Description('Copy an annotation from one item to an other.')
@@ -489,7 +509,9 @@ class AnnotationResource(Resource):
                 if not first:
                     yield b',\n'
                 try:
-                    annotationGenerator = self._getAnnotation(user, annotation['_id'], {})()
+                    annotation = Annotation().load(
+                        annotation['_id'], user=user, level=AccessType.READ, getElements=False)
+                    annotationGenerator = self._getAnnotation(annotation, {})()
                 except AccessException:
                     continue
                 yield from annotationGenerator
@@ -558,6 +580,180 @@ class AnnotationResource(Resource):
                 count += 1
         return count
 
+    def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
+                             sortDir=False, count=False):
+        recursivePipeline = [
+            {'$graphLookup': {
+                'from': 'folder',
+                'startWith': '$_id',
+                'connectFromField': '_id',
+                'connectToField': 'parentId',
+                'as': '__children'
+            }},
+            {'$unwind': {'path': '$__children'}},
+            {'$replaceRoot': {'newRoot': '$__children'}},
+            {'$unionWith': {
+                'coll': 'folder',
+                'pipeline': [{'$match': {'_id': ObjectId(id)}}]
+            }}] if recurse else []
+        accessPipeline = [
+            {'$match': {
+                '$or': [
+                    {'access.users':
+                        {'$elemMatch': {
+                            'id': user['_id'],
+                            'level': {'$gte': 2}
+                        }}},
+                    {'access.groups':
+                        {'$elemMatch': {
+                            'id': {'$in': user['groups']},
+                            'level': {'$gte': 2}
+                        }}}
+                ]
+            }}
+        ] if not user['admin'] else []
+        pipeline = [
+            {'$match': {'_id': 'none'}},
+            {'$unionWith': {
+                'coll': 'folder',
+                'pipeline': [{'$match': {'_id': ObjectId(id)}}] +
+                recursivePipeline +
+                [{'$lookup': {
+                    'from': 'item',
+                    'localField': '_id',
+                    'foreignField': 'folderId',
+                    'as': '__items'
+                }}, {'$lookup': {
+                    'from': 'annotation',
+                    'localField': '__items._id',
+                    'foreignField': 'itemId',
+                    'as': '__annotations'
+                }}, {'$unwind': '$__annotations'},
+                    {'$replaceRoot': {'newRoot': '$__annotations'}},
+                    {'$match': {'_active': {'$ne': False}}}
+                ] + accessPipeline
+            }},
+        ]
+        if count:
+            pipeline += [{'$count': 'count'}]
+        else:
+            pipeline = pipeline + [{'$sort': {sort: sortDir}}] if sort else pipeline
+            pipeline = pipeline + [{'$skip': offset}] if offset else pipeline
+            pipeline = pipeline + [{'$limit': limit}] if limit else pipeline
+
+        return Annotation().collection.aggregate(pipeline)
+
+    @autoDescribeRoute(
+        Description('Check if the user owns any annotations for the items in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .param('recurse', 'Whether or not to recursively check '
+               'subfolders for annotations', required=False, default=True, dataType='boolean')
+        .errorResponse()
+    )
+    @access.public
+    def existFolderAnnotations(self, id, recurse):
+        user = self.getCurrentUser()
+        if not user:
+            return []
+        annotations = self.getFolderAnnotations(id, recurse, user, 1)
+        try:
+            next(annotations)
+            return True
+        except StopIteration:
+            return False
+
+    @autoDescribeRoute(
+        Description('Get the user-owned annotations from the items in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .param('recurse', 'Whether or not to retrieve all '
+               'annotations from subfolders', required=False, default=False, dataType='boolean')
+        .pagingParams(defaultSort='created', defaultSortDir=-1)
+        .errorResponse()
+    )
+    @access.public
+    def returnFolderAnnotations(self, id, recurse, limit, offset, sort):
+        user = self.getCurrentUser()
+        if not user:
+            return []
+        annotations = self.getFolderAnnotations(id, recurse, user, limit, offset,
+                                                sort[0][0], sort[0][1])
+
+        def count():
+            try:
+                return next(self.getFolderAnnotations(id, recurse, self.getCurrentUser(),
+                                                      count=True))['count']
+            except StopIteration:
+                # If there are no values to iterate over, the count is 0 and should be returned
+                return 0
+
+        annotations.count = count
+        return annotations
+
+    @autoDescribeRoute(
+        Description('Check if the user can create annotations in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .errorResponse('ID was invalid.')
+    )
+    @access.user
+    @loadmodel(model='folder', level=AccessType.READ)
+    def canCreateFolderAnnotations(self, folder):
+        user = self.getCurrentUser()
+        return Folder().hasAccess(folder, user, AccessType.WRITE) or Folder().hasAccessFlags(
+            folder, user, constants.ANNOTATION_ACCESS_FLAG)
+
+    @autoDescribeRoute(
+        Description('Set the access for all the user-owned annotations from the items in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .param('access', 'The JSON-encoded access control list.')
+        .param('public', 'Whether the annotation should be publicly visible.',
+               dataType='boolean', required=False)
+        .param('recurse', 'Whether or not to retrieve all '
+               'annotations from subfolders', required=False, default=False, dataType='boolean')
+        .errorResponse('ID was invalid.')
+    )
+    @access.user
+    def setFolderAnnotationAccess(self, id, params):
+        setResponseTimeLimit(86400)
+        user = self.getCurrentUser()
+        if not user:
+            return []
+        access = json.loads(params['access'])
+        public = self.boolParam('public', params, False)
+        count = 0
+        for annotation in self.getFolderAnnotations(id, params['recurse'], user):
+            annot = Annotation().load(annotation['_id'], user=user, getElements=False)
+            annot = Annotation().setPublic(annot, public)
+            annot = Annotation().setAccessList(
+                annot, access, user=user)
+            Annotation().update({'_id': annot['_id']}, {'$set': {
+                key: annot[key] for key in ('access', 'public', 'publicFlags')
+                if key in annot
+            }})
+            count += 1
+
+        return {'updated': count}
+
+    @autoDescribeRoute(
+        Description('Delete all user-owned annotations from the items in a folder')
+        .param('id', 'The ID of the folder', required=True, paramType='path')
+        .param('recurse', 'Whether or not to retrieve all '
+               'annotations from subfolders', required=False, default=False, dataType='boolean')
+        .errorResponse('ID was invalid.')
+    )
+    @access.user
+    def deleteFolderAnnotations(self, id, params):
+        setResponseTimeLimit(86400)
+        user = self.getCurrentUser()
+        if not user:
+            return []
+        count = 0
+        for annotation in self.getFolderAnnotations(id, params['recurse'], user):
+            annot = Annotation().load(annotation['_id'], user=user, getElements=False)
+            Annotation().remove(annot)
+            count += 1
+
+        return {'deleted': count}
+
     @autoDescribeRoute(
         Description('Report on old annotations.')
         .param('age', 'The minimum age in days.', required=False,
@@ -599,4 +795,52 @@ class AnnotationResource(Resource):
                 {'_active': {'$ne': False}, 'itemId': item['_id']},
                 user=self.getCurrentUser(), level=AccessType.READ, limit=-1)
             results[itemId] = annotations.count()
+            if Annotationelement().findOne({'element.girderId': itemId}):
+                if 'referenced' not in results:
+                    results['referenced'] = {}
+                results['referenced'][itemId] = True
         return results
+
+    @access.user(scope=TokenScope.DATA_WRITE)
+    @filtermodel(model='annotation', plugin='large_image')
+    @autoDescribeRoute(
+        Description('Set metadata (annotation.attributes) fields on an annotation.')
+        .responseClass('Annotation')
+        .notes('Set metadata fields to null in order to delete them.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .jsonParam('metadata', 'A JSON object containing the metadata keys to add',
+                   paramType='body', requireObject=True)
+        .param('allowNull', 'Whether "null" is allowed as a metadata value.', required=False,
+               dataType='boolean', default=False)
+        .errorResponse(('ID was invalid.',
+                        'Invalid JSON passed in request body.',
+                        'Metadata key name was invalid.'))
+        .errorResponse('Write access was denied for the annotation.', 403)
+    )
+    @loadmodel(model='annotation', plugin='large_image', getElements=False, level=AccessType.WRITE)
+    def setMetadata(self, annotation, metadata, allowNull):
+        return Annotation().setMetadata(annotation, metadata, allowNull=allowNull)
+
+    @access.user(scope=TokenScope.DATA_WRITE)
+    @filtermodel(model='annotation', plugin='large_image')
+    @autoDescribeRoute(
+        Description('Delete metadata (annotation.attributes) fields on an annotation.')
+        .responseClass('Item')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .jsonParam(
+            'fields', 'A JSON list containing the metadata fields to delete',
+            paramType='body', schema={
+                'type': 'array',
+                'items': {
+                    'type': 'string'
+                }
+            }
+        )
+        .errorResponse(('ID was invalid.',
+                        'Invalid JSON passed in request body.',
+                        'Metadata key name was invalid.'))
+        .errorResponse('Write access was denied for the annotation.', 403)
+    )
+    @loadmodel(model='annotation', plugin='large_image', getElements=False, level=AccessType.WRITE)
+    def deleteMetadata(self, annotation, fields):
+        return Annotation().deleteMetadata(annotation, fields)

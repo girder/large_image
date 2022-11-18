@@ -50,12 +50,13 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     install_requires=[
         f'large-image{limit_version}',
         'openslide-python>=1.1.0',
         'tifftools>=1.2.0',
-        'importlib-metadata ; python_version < "3.8"',
+        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',

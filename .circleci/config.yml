@@ -4,9 +4,6 @@ executors:
     working_directory: ~/project
     docker:
       - image: girder/tox-and-node
-      # - image: memcached
-      # - image: circleci/mongo:5.0-ram
-      # - image: rabbitmq
 commands:
   tox:
     description: "Run tox"
@@ -139,7 +136,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.7.13
+          version: 3.7.15
           node: v12
       - tox:
           env: test-py37
@@ -152,7 +149,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.8.13
+          version: 3.8.15
           node: v12
       - tox:
           env: test-py38
@@ -165,7 +162,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.9.13
+          version: 3.9.15
           node: v12
       - tox:
           env: test-py39
@@ -178,10 +175,23 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.10.5
+          version: 3.10.8
           node: v12
       - tox:
           env: test-py310
+      - coverage
+      - store_artifacts:
+          path: build/test/artifacts
+  py311:
+    machine:
+      image: ubuntu-2004:202111-02
+    steps:
+      - checkout
+      - allservices:
+          version: 3.11.0
+          node: v12
+      - tox:
+          env: test-py311
       - coverage
       - store_artifacts:
           path: build/test/artifacts
@@ -210,7 +220,7 @@ jobs:
           path: ~/wheels
   release:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7
     steps:
       - checkout
       - run:
@@ -296,6 +306,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      - py311:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - lint_and_docs:
           filters:
             tags:
@@ -309,7 +326,8 @@ workflows:
             - py37
             - py38
             - py39
-            # - py310
+            - py310
+            # - py311
             - lint_and_docs
           filters:
             tags:
@@ -324,6 +342,7 @@ workflows:
             - py38
             - py39
             - py310
+            - py311
             - lint_and_docs
           filters:
             tags:
@@ -337,6 +356,7 @@ workflows:
             - py38
             - py39
             - py310
+            - py311
             - lint_and_docs
           filters:
             tags:
@@ -360,5 +380,6 @@ workflows:
       - py38
       - py39
       - py310
+      - py311
       - lint_and_docs
       - wheels

@@ -16,6 +16,7 @@
 
 import datetime
 import json
+import re
 import warnings
 
 from girder_jobs.constants import JobStatus
@@ -25,7 +26,7 @@ import girder
 import large_image
 from girder import events, logger
 from girder.constants import AccessType
-from girder.exceptions import ValidationException
+from girder.exceptions import RestException, ValidationException
 from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
@@ -33,7 +34,7 @@ from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.plugin import GirderPlugin, getPlugin
 from girder.settings import SettingDefault
-from girder.utility import config, setting_utilities
+from girder.utility import config, search, setting_utilities
 from girder.utility.model_importer import ModelImporter
 
 from . import constants, girder_tilesource
@@ -55,6 +56,9 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+
+mimetypes = None
 
 
 # Girder 3 is pinned to use pymongo < 4; its warnings aren't relevant until
@@ -217,11 +221,133 @@ def handleRemoveFile(event):
             ImageItem().delete(item, [fileObj['_id']])
 
 
+def handleFinalizeUploadBefore(event):
+    """
+    When a file is uploaded, mark its mime type based on its extension if we
+    would otherwise just mark it as generic application/octet-stream.
+    """
+    fileObj = event.info['file']
+    if fileObj.get('mimeType', None) in {None, 'application/octet-stream'}:
+        global mimetypes
+
+        if not mimetypes:
+            import mimetypes
+
+            if not mimetypes.inited:
+                mimetypes.init()
+            # Augment the standard mimetypes with some additional values
+            for mimeType, ext, std in [
+                ('text/yaml', '.yaml', True),
+                ('text/yaml', '.yml', True),
+            ]:
+                if ext not in mimetypes.types_map:
+                    mimetypes.add_type(mimeType, ext, std)
+
+        alt = mimetypes.guess_type(fileObj.get('name', ''))[0]
+        if alt is not None:
+            fileObj['mimeType'] = alt
+
+
+def metadataSearchHandler(  # noqa
+        query, types, user=None, level=None, limit=0, offset=0, models=None,
+        searchModels=None, metakey='meta'):
+    """
+    Provide a substring search on metadata.
+    """
+    models = models or {'item', 'folder'}
+    if any(typ not in models for typ in types):
+        raise RestException('The metadata search is only able to search in %r.' % models)
+    if not isinstance(query, str):
+        raise RestException('The search query must be a string.')
+    # If we have the beginning of the field specifier, don't do a search
+    if re.match(r'^(k|ke|key|key:)$', query.strip()):
+        return {k: [] for k in types}
+    phrases = re.findall(r'"[^"]*"|\'[^\']*\'|\S+', query)
+    fields = set(phrase.split('key:', 1)[1] for phrase in phrases
+                 if phrase.startswith('key:') and len(phrase.split('key:', 1)[1]))
+    phrases = [phrase for phrase in phrases
+               if not phrase.startswith('key:') or not len(phrase.split('key:', 1)[1])]
+    if not len(fields):
+        pipeline = [
+            {'$project': {'arrayofkeyvalue': {'$objectToArray': '$$ROOT.%s' % metakey}}},
+            {'$unwind': '$arrayofkeyvalue'},
+            {'$group': {'_id': None, 'allkeys': {'$addToSet': '$arrayofkeyvalue.k'}}}
+        ]
+        for model in (searchModels or types):
+            modelInst = ModelImporter.model(*model if isinstance(model, tuple) else [model])
+            result = list(modelInst.collection.aggregate(pipeline, allowDiskUse=True))
+            if len(result):
+                fields.update(list(result)[0]['allkeys'])
+    if not len(fields):
+        return {k: [] for k in types}
+    logger.debug('Will search the following fields: %r', fields)
+    usedPhrases = set()
+    filter = []
+    for phrase in phrases:
+        if phrase[0] == phrase[-1] and phrase[0] in '"\'':
+            phrase = phrase[1:-1]
+        if not len(phrase) or phrase in usedPhrases:
+            continue
+        usedPhrases.add(phrase)
+        try:
+            numval = float(phrase)
+            delta = abs(float(re.sub(r'[1-9]', '1', re.sub(
+                r'\d(?=.*[1-9](0*\.|)0*$)', '0', str(numval)))))
+        except Exception:
+            numval = None
+        phrase = re.escape(phrase)
+        clause = []
+        for field in fields:
+            key = '%s.%s' % (metakey, field)
+            clause.append({key: {'$regex': phrase, '$options': 'i'}})
+            if numval is not None:
+                clause.append({key: {'$eq': numval}})
+                if numval > 0 and delta:
+                    clause.append({key: {'$gte': numval, '$lt': numval + delta}})
+                elif numval < 0 and delta:
+                    clause.append({key: {'$lte': numval, '$gt': numval + delta}})
+        if len(clause) > 1:
+            filter.append({'$or': clause})
+        else:
+            filter.append(clause[0])
+    if not len(filter):
+        return []
+    filter = {'$and': filter} if len(filter) > 1 else filter[0]
+    result = {}
+    logger.debug('Metadata search uses filter: %r' % filter)
+    for model in searchModels or types:
+        modelInst = ModelImporter.model(*model if isinstance(model, tuple) else [model])
+        if searchModels is None:
+            result[model] = [
+                modelInst.filter(doc, user)
+                for doc in modelInst.filterResultsByPermission(
+                    modelInst.find(filter), user, level, limit, offset)]
+        else:
+            resultModelInst = ModelImporter.model(searchModels[model]['model'])
+            result[searchModels[model]['model']] = []
+            foundIds = set()
+            for doc in modelInst.filterResultsByPermission(modelInst.find(filter), user, level):
+                id = doc[searchModels[model]['reference']]
+                if id in foundIds:
+                    continue
+                foundIds.add(id)
+                entry = resultModelInst.load(id=id, user=user, level=level, exc=False)
+                if entry is not None and offset:
+                    offset -= 1
+                    continue
+                elif entry is not None:
+                    result[searchModels[model]['model']].append(resultModelInst.filter(entry, user))
+                    if limit and len(result[searchModels[model]['model']]) == limit:
+                        break
+    return result
+
+
 # Validators
 
 @setting_utilities.validator({
     constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
     constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
+    constants.PluginSettings.LARGE_IMAGE_NOTIFICATION_STREAM_FALLBACK,
 })
 def validateBoolean(doc):
     val = doc['value']
@@ -305,6 +431,7 @@ SettingDefault.defaults.update({
     constants.PluginSettings.LARGE_IMAGE_AUTO_SET: True,
     constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES: 10,
     constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE: 4096,
+    constants.PluginSettings.LARGE_IMAGE_NOTIFICATION_STREAM_FALLBACK: True,
 })
 
 
@@ -356,3 +483,7 @@ class LargeImagePlugin(GirderPlugin):
         events.bind('model.item.remove', 'large_image.removeThumbnails', removeThumbnails)
         events.bind('server_fuse.unmount', 'large_image', large_image.cache_util.cachesClear)
         events.bind('model.file.remove', 'large_image', handleRemoveFile)
+        events.bind('model.file.finalizeUpload.before', 'large_image', handleFinalizeUploadBefore)
+
+        search._allowedSearchMode.pop('li_metadata', None)
+        search.addSearchMode('li_metadata', metadataSearchHandler)

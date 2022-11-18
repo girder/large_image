@@ -1,6 +1,7 @@
 import _ from 'underscore';
 import AccessControlledModel from '@girder/core/models/AccessControlledModel';
 import { restRequest } from '@girder/core/rest';
+import MetadataMixin from '@girder/core/models/MetadataMixin';
 
 import ElementCollection from '../collections/ElementCollection';
 import convert from '../annotations/convert';
@@ -20,7 +21,7 @@ import style from '../annotations/style.js';
  * and updates its own attribute in response.  Users
  * should not modify the "elements" attribute directly.
  */
-export default AccessControlledModel.extend({
+let AnnotationModel = AccessControlledModel.extend({
     resourceName: 'annotation',
 
     defaults: {
@@ -30,6 +31,9 @@ export default AccessControlledModel.extend({
     },
 
     initialize() {
+        if (!this.get('updated')) {
+            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+        }
         this._region = {
             maxDetails: this.get('maxDetails'),
             sort: 'size',
@@ -60,7 +64,13 @@ export default AccessControlledModel.extend({
         var url = (this.altUrl || this.resourceName) + '/' + this.get('_id');
         var restOpts = {
             url: url,
-            data: {sort: 'size', sortdir: -1, centroids: true, limit: this.get('maxCentroids')},
+            data: {
+                sort: 'size',
+                sortdir: -1,
+                centroids: true,
+                limit: this.get('maxCentroids'),
+                _: (this.get('updated') || this.get('created')) + '_' + this.get('_version')
+            },
             xhrFields: {
                 responseType: 'arraybuffer'
             },
@@ -179,7 +189,7 @@ export default AccessControlledModel.extend({
         var restOpts = {
             url: (this.altUrl || this.resourceName) + '/' + this.get('_id'),
             /* Add our region request into the query */
-            data: this._region
+            data: Object.assign({}, this._region, {_: (this.get('updated') || this.get('created')) + '_' + this.get('_version')})
         };
         if (opts.extraPath) {
             restOpts.url += '/' + opts.extraPath;
@@ -219,6 +229,8 @@ export default AccessControlledModel.extend({
                         }
                         return null;
                     });
+                } else {
+                    this._nextFetch = null;
                 }
             }
             if (this._inFetch !== 'centroids') {
@@ -237,7 +249,9 @@ export default AccessControlledModel.extend({
                 if (this._nextFetch) {
                     var nextFetch = this._nextFetch;
                     this._nextFetch = null;
-                    nextFetch();
+                    if (this._pageElements !== false) {
+                        nextFetch();
+                    }
                 }
             }
         });
@@ -279,6 +293,7 @@ export default AccessControlledModel.extend({
         } else {
             url = `annotation/${this.id}`;
             method = 'PUT';
+            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
         }
 
         if (this._pageElements === false || isNew) {
@@ -338,6 +353,7 @@ export default AccessControlledModel.extend({
         this.trigger('g:delete', this, this.collection, options);
         let xhr = false;
         if (!this.isNew()) {
+            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
             xhr = restRequest({
                 url: `annotation/${this.id}`,
                 method: 'DELETE'
@@ -448,3 +464,7 @@ export default AccessControlledModel.extend({
         return this._elements;
     }
 });
+
+_.extend(AnnotationModel.prototype, MetadataMixin);
+
+export default AnnotationModel;

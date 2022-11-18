@@ -99,7 +99,19 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
     elif encoding == 'PNG':
         params['compress_level'] = 2
     output = io.BytesIO()
-    image.save(output, encoding, **params)
+    try:
+        image.save(output, encoding, **params)
+    except Exception:
+        retry = True
+        if image.mode not in {'RGB', 'L'}:
+            image = image.convert('RGB')
+            try:
+                image.convert('RGB').save(output, encoding, **params)
+                retry = False
+            except Exception:
+                pass
+        if retry:
+            image.convert('1').save(output, encoding, **params)
     return ImageBytes(
         output.getvalue(),
         mimetype=f'image/{encoding.lower().replace("tiled", "tiff")}'
@@ -1014,6 +1026,10 @@ def addPILFormatsToOutputOptions():
     # Call this to actual register the extensions
     PIL.Image.registered_extensions()
     for key, value in PIL.Image.MIME.items():
+        # We don't support these formats; ICNS and ICO have fixed sizes; PALM
+        # and PDF can't be read back by PIL without extensions
+        if key in {'ICNS', 'ICO', 'PALM', 'PDF'}:
+            continue
         if key not in TileOutputMimeTypes and key in PIL.Image.SAVE:
             TileOutputMimeTypes[key] = value
     for key, value in PIL.Image.registered_extensions().items():

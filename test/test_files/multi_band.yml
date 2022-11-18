@@ -1,0 +1,17 @@
+---
+sources:
+  - sourceName: test
+    path: __none__
+    params:
+      minLevel: 0
+      maxLevel: 6
+      tileWidth: 256
+      tileHeight: 256
+      sizeX: 10000
+      sizeY: 7500
+      fractal: True
+      # c,z,t,xy OR frames
+      frames: "4,5,1,1"
+      monochrome: False
+      # multiband
+      bands: "red,green,blue,ir1,ir2,grey"

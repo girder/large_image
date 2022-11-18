@@ -55,6 +55,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     install_requires=[
         'gdal',
@@ -63,7 +64,7 @@ setup(
         'psutil',
         'pyvips',
         'tifftools',
-        'importlib-metadata ; python_version < "3.8"',
+        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'jp2k': [
@@ -74,7 +75,7 @@ setup(
         ],
         'stats': [
             'packaging',
-            'scikit-image',
+            'scikit-image ; python_version < "3.11"',
         ],
     },
     packages=find_packages(),

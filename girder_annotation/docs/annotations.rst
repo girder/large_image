@@ -180,7 +180,7 @@ near by values aggregate together when viewed.
                                        # spread
     "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"],  # A list of colors corresponding to
                                        # the rangeValues.  Optional
-    "rangeValues: [0, 1],              # A list of range values corresponding to the colorRange list
+    "rangeValues": [0, 1],             # A list of range values corresponding to the colorRange list
                                        # and possibly normalized to a scale of [0, 1].  Optional
     "normalizeRange": true,            # If true, the rangeValues are normalized to [0, 1].  If
                                        # false, the rangeValues are in the
@@ -209,7 +209,7 @@ choropleth, a grid with a list of values can be specified.
     "dy": 32,                          # Grid spacing in y.  Optional
     "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"], # A list of colors corresponding to
                                        # the rangeValues.  Optional
-    "rangeValues: [0, 1],              # A list of range values corresponding to the colorRange list.
+    "rangeValues": [0, 1],             # A list of range values corresponding to the colorRange list.
                                        # This should have the same number of entries as colorRange
                                        # unless a contour where stepped is true.  Possibly normalized
                                        # to a scale of [0, 1].  Optional

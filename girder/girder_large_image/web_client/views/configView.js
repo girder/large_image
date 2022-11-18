@@ -57,6 +57,9 @@ var ConfigView = View.extend({
             }, {
                 key: 'large_image.config_folder',
                 value: (this.$('#g-large-image-config-folder').val() || '').split(' ')[0]
+            }, {
+                key: 'large_image.notification_stream_fallback',
+                value: this.$('.g-large-image-stream-fallback').prop('checked')
             }]);
         },
         'click .g-open-browser': '_openBrowser'
@@ -139,7 +142,6 @@ var ConfigView = View.extend({
     },
 
     _openBrowser: function () {
-        console.log('A');
         this._browserWidgetView.setElement($('#g-dialog-container')).render();
     }
 }, {
@@ -180,8 +182,8 @@ var ConfigView = View.extend({
      *      without any delay.
      */
     getSettings: function (callback) {
-        if (!ConfigView.settings) {
-            restRequest({
+        if (!ConfigView.settings && !ConfigView._settingsRequest) {
+            ConfigView._settingsRequest = restRequest({
                 type: 'GET',
                 url: 'large_image/settings'
             }).done((resp) => {
@@ -213,10 +215,10 @@ var ConfigView = View.extend({
                     callback(ConfigView.settings);
                 }
             });
-        } else {
-            if (callback) {
+        } else if (callback) {
+            ConfigView._settingsRequest.done(() => {
                 callback(ConfigView.settings);
-            }
+            });
         }
     },
 
@@ -225,6 +227,7 @@ var ConfigView = View.extend({
      */
     clearSettings: function () {
         delete ConfigView.settings;
+        delete ConfigView._settingsRequest;
     }
 });
 
