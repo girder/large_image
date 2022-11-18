@@ -1421,8 +1421,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: the validity of the cogtiff
         """
-
-        from rio_cogeo.cogeo import cog_validate
+        try:
+            from rio_cogeo.cogeo import cog_validate
+        except ImportError:
+            raise ImportError('Please insall `rio-cogeo` to check COG validity.')
 
         isValid, errors, warnings = cog_validate(self._largeImagePath, strict=strict)
 
