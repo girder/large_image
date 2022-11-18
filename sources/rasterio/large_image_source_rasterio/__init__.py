@@ -14,39 +14,32 @@
 #  limitations under the License.
 #############################################################################
 
-from contextlib import suppress
 import math
 import pathlib
 import struct
 import tempfile
 import threading
+from contextlib import suppress
 from urllib.parse import urlencode, urlparse
 
-from affine import Affine
 import numpy as np
 import PIL.Image
-from pyproj import CRS, Transformer, Geod
-from pyproj.exceptions import CRSError
 import rasterio as rio
-from rasterio.warp import calculate_default_transform, reproject
+from affine import Affine
+from pyproj import CRS, Geod, Transformer
+from pyproj.exceptions import CRSError
 from rasterio.enums import ColorInterp, Resampling
 from rasterio.errors import RasterioIOError
+from rasterio.warp import calculate_default_transform, reproject
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
-from large_image.constants import (
-    TILE_FORMAT_IMAGE,
-    TILE_FORMAT_NUMPY,
-    TILE_FORMAT_PIL,
-    SourcePriority,
-    TileInputUnits,
-    TileOutputMimeTypes,
-)
-from large_image.exceptions import (
-    TileSourceError,
-    TileSourceFileNotFoundError,
-    TileSourceInefficientError,
-)
+from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
+                                   TILE_FORMAT_PIL, SourcePriority,
+                                   TileInputUnits, TileOutputMimeTypes)
+from large_image.exceptions import (TileSourceError,
+                                    TileSourceFileNotFoundError,
+                                    TileSourceInefficientError)
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
