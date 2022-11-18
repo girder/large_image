@@ -553,7 +553,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         return affine
 
-    def getBounds(self, crs=None):
+    def getBounds(self, crs=None, **kwargs):
         """
         Returns bounds of the image.
 
@@ -562,6 +562,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: an object with the four corners and the projection that was used.
             None if we don't know the original projection.
         """
+        if crs is None and 'srs' in kwargs:
+            crs = kwargs.get('srs')
 
         # read the crs as a crs if needed
         dstCrs = CRS(crs) if crs else None
