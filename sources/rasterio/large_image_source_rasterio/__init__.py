@@ -29,6 +29,7 @@ from pyproj import CRS, Transformer, Geod
 from pyproj.exceptions import CRSError
 import rasterio as rio
 from rasterio.warp import calculate_default_transform, reproject
+from rasterio.enums import Resampling
 from rasterio.errors import RasterioIOError
 
 import large_image
@@ -862,7 +863,6 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
 
         if not self._projection:
-
             self._xyzInRange(x, y, z)
             factor = int(2 ** (self.levels - 1 - z))
             xmin = int(x * factor * self.tileWidth)
@@ -893,15 +893,22 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs
                 )
 
+            xres = (xmax - xmin) / self.tileWidth
+            yres = (ymax - ymin) / self.tileHeight
+            dst_transform = Affine(xres, 0.0, xmin, 0.0, -yres, ymax)
+
             # read the image as a warp vrt
             with self._getDatasetLock:
-                with rio.vrt.WarpedVRT(self.dataset, crs=self._projection) as vrt:
-                    window = vrt.window(xmin, ymin, xmax, ymax)
-
-                    # TODO understand how to define the width and height of the tile itself
-                    # what is written here seems false
-                    outShape = (self.dataset.count, self.tileWidth, self.tileHeight)
-                    tile = vrt.read(window=window, out_shape=outShape)
+                with rio.vrt.WarpedVRT(
+                        self.dataset,
+                        resampling=Resampling.nearest,
+                        crs=self._projection,
+                        transform=dst_transform,
+                        height=self.tileHeight,
+                        width=self.tileWidth,
+                        add_alpha=True,
+                    ) as vrt:
+                    tile = vrt.read()
 
             # if necessary for multispectral images set the coordinates first and the
             # bands at the end
