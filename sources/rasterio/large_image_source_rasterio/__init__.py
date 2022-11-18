@@ -29,7 +29,7 @@ from pyproj import CRS, Transformer, Geod
 from pyproj.exceptions import CRSError
 import rasterio as rio
 from rasterio.warp import calculate_default_transform, reproject
-from rasterio.enums import Resampling
+from rasterio.enums import ColorInterp, Resampling
 from rasterio.errors import RasterioIOError
 
 import large_image
@@ -897,6 +897,14 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             yres = (ymax - ymin) / self.tileHeight
             dst_transform = Affine(xres, 0.0, xmin, 0.0, -yres, ymax)
 
+            # Adding an alpha band when the source has one is trouble.
+            # It will result in suprisingly unmasked data.
+            src_alpha_band = 0
+            for i, interp in enumerate(self.dataset.colorinterp):
+                if interp == ColorInterp.alpha:
+                    src_alpha_band = i
+            add_alpha = not src_alpha_band
+
             # read the image as a warp vrt
             with self._getDatasetLock:
                 with rio.vrt.WarpedVRT(
@@ -906,7 +914,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         transform=dst_transform,
                         height=self.tileHeight,
                         width=self.tileWidth,
-                        add_alpha=True,
+                        add_alpha=add_alpha,
                     ) as vrt:
                     tile = vrt.read()
 
