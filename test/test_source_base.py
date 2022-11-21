@@ -26,57 +26,64 @@ SourceAndFiles = {
         'noread': r'(JK-kidney_B|TCGA-AA-A02O|\.scn$)',
         # We need to modify the bioformats reader similar to tiff's
         # getTileFromEmptyDirectory
-        'skipTiles': r'(TCGA-DU-6399|sample_jp2k_33003)'},
+        'skipTiles': r'(TCGA-DU-6399|sample_jp2k_33003)',
+    },
     'deepzoom': {},
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
         'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
-        'skipTiles': r'\.*nc$'},
+        'skipTiles': r'\.*nc$',
+    },
     'mapnik': {
         'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         # we should only test this with a projection
-        'skipTiles': r''},
+        'skipTiles': r'',
+    },
     'multi': {
         'read': r'\.(yml|yaml)$',
         'skip': r'(multi_source\.yml)$',
+    },
+    'nd2': {
+        'read': r'\.(nd2)$',
+        'python': sys.version_info >= (3, 7) and sys.version_info < (3, 11),
     },
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|tif.*)$',
         'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview)',  # noqa
-        'skipTiles': r'one_layer_missing'},
+        'skipTiles': r'one_layer_missing',
+    },
     'pil': {
         'read': r'\.(jpeg|png|tif.*)$',
-        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo|extraoverview)'},
+        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo|extraoverview' + (
+            r'|sample.*ome' if sys.version_info < (3, 7) else r'') + r')',
+    },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'\.(ptif|scn|svs|tif.*)$',
         'noread': r'(oahu|DDX58_AXL|G10-3_pelvis_crop|'
                   r'd042-353\.crop\.small\.float|landcover_sample|US_Geo\.)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
+    'tifffile': {
+        'read': r'',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2)$',
+        'python': sys.version_info >= (3, 7) and sys.version_info < (3, 11),
+    },
     'vips': {
         'read': r'',
         'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
-        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'},  # noqa
+        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'  # noqa
+    },
 }
-if sys.version_info >= (3, 7) and sys.version_info < (3, 11):
-    SourceAndFiles.update({
-        'nd2': {'read': r'\.(nd2)$'},
-    })
-if sys.version_info >= (3, 7) and sys.version_info < (3, 11):
-    SourceAndFiles.update({
-        'tifffile': {
-            'read': r'',
-            'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2)$',
-        },
-    })
-if sys.version_info < (3, 7):
-    # Python 3.6 has an older version of PIL that won't read some of the
-    # ome.tif files.
-    SourceAndFiles['pil']['noread'] = SourceAndFiles['pil']['noread'][:-1] + '|sample.*ome)'
+
+
+# Remove sources that don't meet python requirements from our list
+for source, entry in list(SourceAndFiles.items()):
+    if entry.get('python', True) is False:
+        SourceAndFiles.pop(source, None)
 
 
 def testNearPowerOfTwo():
