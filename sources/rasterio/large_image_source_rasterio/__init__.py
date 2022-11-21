@@ -16,7 +16,6 @@
 
 import math
 import pathlib
-import struct
 import tempfile
 import threading
 from contextlib import suppress
@@ -34,12 +33,19 @@ from rasterio.warp import calculate_default_transform, reproject
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
-from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileInputUnits, TileOutputMimeTypes)
-from large_image.exceptions import (TileSourceError,
-                                    TileSourceFileNotFoundError,
-                                    TileSourceInefficientError)
+from large_image.constants import (
+    TILE_FORMAT_IMAGE,
+    TILE_FORMAT_NUMPY,
+    TILE_FORMAT_PIL,
+    SourcePriority,
+    TileInputUnits,
+    TileOutputMimeTypes,
+)
+from large_image.exceptions import (
+    TileSourceError,
+    TileSourceFileNotFoundError,
+    TileSourceInefficientError,
+)
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
@@ -174,7 +180,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         super()._setStyle(style)
 
-        if hasattr(self, '_getTileLock'):
+        if hasattr(self, "_getTileLock"):
             self._setDefaultStyle()
 
     def _getLargeImagePath(self):
@@ -286,7 +292,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if "palette" in bstyle:
                     if bstyle["palette"] == "colortable":
                         bandInfo = self.getOneBandInformation(bstyle.get("band", 0))
-                        color = lambda i: "#" + i * "{:x02}"  # noqa E731
+
+                        def color(i):
+                            return "#" + i * "{:x02}"  # noqa E731
+
                         bstyle["palette"] = [
                             (color(len(entry)).format(entry))
                             for entry in bandInfo["colortable"]
@@ -336,7 +345,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         hasMin = all(b.get("min") is not None for b in bandInfo.values())
         hasMax = all(b.get("max") is not None for b in bandInfo.values())
         if not frame and onlyMinMax and hasMax and hasMin:
-            with self._getDatasetLock: dtype = self.dataset.profile["dtype"]
+            with self._getDatasetLock:
+                dtype = self.dataset.profile["dtype"]
             self._bandRanges[0] = {
                 "min": np.array([b["min"] for b in bandInfo.values()], dtype=dtype),
                 "max": np.array([b["max"] for b in bandInfo.values()], dtype=dtype),
@@ -390,7 +400,9 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if unitsPerPixel is not None:
             self.unitsAcrossLevel0 = float(unitsPerPixel) * self.tileSize
         else:
-            self.unitsAcrossLevel0 = ProjUnitsAcrossLevel0.get(self._projection.to_string())
+            self.unitsAcrossLevel0 = ProjUnitsAcrossLevel0.get(
+                self._projection.to_string()
+            )
             if self.unitsAcrossLevel0 is None:
                 # If unitsPerPixel is not specified, the horizontal distance
                 # between -180,0 and +180,0 is used.  Some projections (such as
@@ -405,7 +417,9 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if len(ProjUnitsAcrossLevel0) >= ProjUnitsAcrossLevel0_MaxSize:
                     ProjUnitsAcrossLevel0.clear()
 
-                ProjUnitsAcrossLevel0[self._projection.to_string()] = self.unitsAcrossLevel0
+                ProjUnitsAcrossLevel0[
+                    self._projection.to_string()
+                ] = self.unitsAcrossLevel0
 
         # for consistency, it should probably always be (0, 0).  Whatever
         # renders the map would need the same offset as used here.
@@ -459,7 +473,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         palette = getPaletteColors(palette)
         palette = [[int(v) for v in c] for c in palette]
 
-        return [("#"+4*"{:02x}").format(*c) for c in palette]
+        return [("#" + 4 * "{:02x}").format(*c) for c in palette]
 
     def getCrs(self):
         """
@@ -480,7 +494,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # consider it as 4326
             hasTransform = self.dataset.transform != Affine.identity()
             isNitf = self.dataset.driver.lower() in {"NITF"}
-            if not crs and ( hasTransform or isNitf):
+            if not crs and (hasTransform or isNitf):
                 crs = CRS(4326)
 
             return crs
@@ -502,10 +516,10 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         geod = Geod(ellps="WGS84")
 
         # extract the corner corrdinates
-        ll = bounds['ll']['x'], bounds['ll']['y']
-        ul = bounds['ul']['x'], bounds['ul']['y']
-        lr = bounds['lr']['x'], bounds['lr']['y']
-        ur = bounds['ur']['x'], bounds['ur']['y']
+        ll = bounds["ll"]["x"], bounds["ll"]["y"]
+        ul = bounds["ul"]["x"], bounds["ul"]["y"]
+        lr = bounds["lr"]["x"], bounds["lr"]["y"]
+        ur = bounds["ur"]["x"], bounds["ur"]["y"]
 
         # compute the geods from the different corners of the image
         az12, az21, s1 = geod.inv(*ul, *ur)
@@ -556,8 +570,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: an object with the four corners and the projection that was used.
             None if we don't know the original projection.
         """
-        if crs is None and 'srs' in kwargs:
-            crs = kwargs.get('srs')
+        if crs is None and "srs" in kwargs:
+            crs = kwargs.get("srs")
 
         # read the crs as a crs if needed
         dstCrs = CRS(crs) if crs else None
@@ -580,21 +594,21 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # longitudes and latitudes. Cannot only rely on bounds because of
         # rotated coordinate systems
         bounds = {
-            'll': {
-                'x': af[2] + self.sourceSizeY * af[1],
-                'y': af[5] + self.sourceSizeY * af[4]
+            "ll": {
+                "x": af[2] + self.sourceSizeY * af[1],
+                "y": af[5] + self.sourceSizeY * af[4],
             },
-            'ul': {
-                'x': af[2],
-                'y': af[5],
+            "ul": {
+                "x": af[2],
+                "y": af[5],
             },
-            'lr': {
-                'x': af[2] + self.sourceSizeX * af[0] + self.sourceSizeY * af[1],
-                'y': af[5] + self.sourceSizeX * af[3] + self.sourceSizeY * af[4]
+            "lr": {
+                "x": af[2] + self.sourceSizeX * af[0] + self.sourceSizeY * af[1],
+                "y": af[5] + self.sourceSizeX * af[3] + self.sourceSizeY * af[4],
             },
-            'ur': {
-                'x': af[2] + self.sourceSizeX * af[0],
-                'y': af[5] + self.sourceSizeX * af[3]
+            "ur": {
+                "x": af[2] + self.sourceSizeX * af[0],
+                "y": af[5] + self.sourceSizeX * af[3],
             },
         }
 
@@ -613,17 +627,17 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 bounds[k]["y"] = max(min(bounds[k]["y"], yBounds), -yBounds)
 
             # for each corner rotate longitude until it's within -180, 180
-            while any(v['x'] > 180 for v in bounds.values()):
+            while any(v["x"] > 180 for v in bounds.values()):
                 for k in bounds:
                     bounds[k]["x"] -= 180
-            while any(v['x'] < -180 for v in bounds.values()):
+            while any(v["x"] < -180 for v in bounds.values()):
                 for k in bounds:
-                    bounds[k]['x'] += 360
+                    bounds[k]["x"] += 360
 
             # if one of the corner is > 180 set all the corner to world width
             if any(v["x"] >= 180 for v in bounds.values()):
-                bounds['ul']['x'] = bounds['ll']['x'] = -180
-                bounds['ur']['x'] = bounds['lr']['x'] = 180
+                bounds["ul"]["x"] = bounds["ll"]["x"] = -180
+                bounds["ur"]["x"] = bounds["lr"]["x"] = 180
 
         # reproject the pts in the destination coordinate system if necessary
         needProjection = dstCrs and dstCrs != srcCrs
@@ -691,19 +705,19 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     "max": stats.max,
                     "mean": stats.mean,
                     "stdev": stats.std,
-                    "nodata": dataset.nodatavals[i-1],
-                    "scale": dataset.scales[i-1],
-                    "offset": dataset.offsets[i-1],
-                    "units": dataset.units[i-1],
-                    "categories": dataset.descriptions[i-1],
-                    "interpretation": dataset.colorinterp[i-1],
-                    #"maskband": dataset.read_masks(i),
+                    "nodata": dataset.nodatavals[i - 1],
+                    "scale": dataset.scales[i - 1],
+                    "offset": dataset.offsets[i - 1],
+                    "units": dataset.units[i - 1],
+                    "categories": dataset.descriptions[i - 1],
+                    "interpretation": dataset.colorinterp[i - 1],
+                    # "maskband": dataset.read_masks(i),
                 }
 
                 # Only keep values that aren't None or the empty string
                 infoSet[i] = {k: v for k, v in info.items() if v not in (None, "")}
 
-                 # add extra informations if available
+                # add extra informations if available
                 try:
                     info.update(colortable=dataset.colormap(i))
                 except ValueError:
@@ -763,12 +777,20 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             result["RasterXSize"] = self.dataset.width
             result["RasterYSize"] = self.dataset.height
             result["Affine"] = self._getAffine()
-            result["Projection"] = self.dataset.crs.to_string() if self.dataset.crs else None
+            result["Projection"] = (
+                self.dataset.crs.to_string() if self.dataset.crs else None
+            )
             result["GCPProjection"] = self.dataset.gcps[1]
 
             meta = self.dataset.meta
-            meta['crs'] = meta['crs'].to_string() if ('crs' in meta and meta['crs'] is not None) else None
-            meta['transform'] = meta['transform'].to_gdal() if 'transform' in meta else None
+            meta["crs"] = (
+                meta["crs"].to_string()
+                if ("crs" in meta and meta["crs"] is not None)
+                else None
+            )
+            meta["transform"] = (
+                meta["transform"].to_gdal() if "transform" in meta else None
+            )
             result["Metadata"] = meta
 
             # add gcp of available
@@ -901,14 +923,14 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # read the image as a warp vrt
             with self._getDatasetLock:
                 with rio.vrt.WarpedVRT(
-                        self.dataset,
-                        resampling=Resampling.nearest,
-                        crs=self._projection,
-                        transform=dst_transform,
-                        height=self.tileHeight,
-                        width=self.tileWidth,
-                        add_alpha=add_alpha,
-                    ) as vrt:
+                    self.dataset,
+                    resampling=Resampling.nearest,
+                    crs=self._projection,
+                    transform=dst_transform,
+                    height=self.tileHeight,
+                    width=self.tileWidth,
+                    add_alpha=add_alpha,
+                ) as vrt:
                     tile = vrt.read()
 
             # if necessary for multispectral images set the coordinates first and the
@@ -965,9 +987,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # compute the pixel coordinates of the corners if no projection is set
         if not self._projection:
             pleft, ptop = self.toNativePixelCoordinates(
-                right if left is None else left,
-                bottom if top is None else top,
-                units
+                right if left is None else left, bottom if top is None else top, units
             )
             pright, pbottom = self.toNativePixelCoordinates(
                 left if right is None else right,
@@ -1042,7 +1062,8 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         # check if the units is a string or projection material
         isProj = False
-        with suppress(CRSError): isproj = CRS(units) is not None
+        with suppress(CRSError):
+            isproj = CRS(units) is not None
 
         # convert the coordinates if a projection exist
         if isUnits and isProj:
@@ -1055,11 +1076,13 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             # Fill in missing values
             if left is None:
-                left = bounds["xmin"] if right is None or width is None else right - width # fmt: skip
+                left = bounds["xmin"] if right is None or width is None else right - \
+                    width  # fmt: skip
             if right is None:
                 right = bounds["xmax"] if width is None else left + width
             if top is None:
-                top = bounds["ymax"] if bottom is None or height is None else bottom - height # fmt: skip
+                top = bounds["ymax"] if bottom is None or height is None else bottom - \
+                    height  # fmt: skip
             if bottom is None:
                 bottom = bounds["ymin"] if height is None else top + height
 
@@ -1417,7 +1440,7 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             from rio_cogeo.cogeo import cog_validate
         except ImportError:
-            raise ImportError('Please insall `rio-cogeo` to check COG validity.')
+            raise ImportError("Please insall `rio-cogeo` to check COG validity.")
 
         isValid, errors, warnings = cog_validate(self._largeImagePath, strict=strict)
 

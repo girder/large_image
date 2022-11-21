@@ -39,26 +39,6 @@ class RasterioGirderTileSource(RasterioFileTileSource, GirderTileSource):
         unitPerPixel = kwargs.get("unitsPerPixel", args[3] if len(args) >= 4 else None)
 
         return (
-            GirderTileSource.getLRUHash(*args, **kwargs)
-            + f",{projection},{unitPerPixel}"
+            GirderTileSource.getLRUHash(*args, **kwargs) +
+            f",{projection},{unitPerPixel}"
         )
-
-    def _getLargeImagePath(self):
-        """
-        GDAL can read directly from http/https/ftp via /vsicurl. If this
-        is a link file, try to use it.
-        """
-        try:
-            largeImageFileId = self.item["largeImage"]["fileId"]
-            largeImageFile = File().load(largeImageFileId, force=True)
-            if (
-                largeImageFile.get("linkUrl")
-                and not largeImageFile.get("assetstoreId")
-                and re.match(r"(http(|s)|ftp)://", largeImageFile["linkUrl"])
-            ):
-                largeImagePath = "/vsicurl/" + largeImageFile["linkUrl"]
-                logger.info("Using %s" % largeImagePath)
-                return largeImagePath
-        except Exception:
-            pass
-        return GirderTileSource._getLargeImagePath(self)
