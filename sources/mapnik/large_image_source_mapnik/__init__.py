@@ -196,7 +196,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         return [float(start + i * step) for i in range(count)]
 
     def getOneBandInformation(self, band):
-        if type(band) is not tuple:
+        if not isinstance(band, tuple):
             bandInfo = super().getOneBandInformation(band)
         else:  # netcdf
             with self._getDatasetLock:
@@ -282,7 +282,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         lyr.srs = layerSrs
         gdalpath = self._largeImagePath
         gdalband = band
-        if hasattr(self, '_netcdf') and type(band) is tuple:
+        if hasattr(self, '_netcdf') and isinstance(band, tuple):
             gdalband = band[1]
             gdalpath = self._netcdf['datasets'][band[0]]['name']
         lyr.datasource = mapnik.Gdal(

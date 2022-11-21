@@ -269,7 +269,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     _import_pyvips()
     convertParams = large_image.tilesource.base._vipsParameters(forTiled, **kwargs)
     status = (', ' + status) if status else ''
-    if type(inputPathOrBuffer) == pyvips.vimage.Image:
+    if isinstance(inputPathOrBuffer, pyvips.vimage.Image):
         source = 'vips image'
         image = inputPathOrBuffer
     elif isinstance(inputPathOrBuffer, bytes):

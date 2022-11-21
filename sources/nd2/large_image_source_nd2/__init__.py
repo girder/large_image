@@ -87,7 +87,7 @@ def diffObj(obj1, obj2):
     """
     if obj1 == obj2:
         return None
-    if type(obj1) != type(obj2):
+    if not isinstance(obj1, type(obj2)):
         return obj1
     if isinstance(obj1, (list, tuple)):
         return [diffObj(obj1[idx], obj2[idx]) for idx in range(len(obj1))]
