@@ -7,8 +7,9 @@
         = ' '
       button.g-view-codemirror-revert-button.btn.btn-sm.btn-default Revert
       = ' '
-      button.g-view-codemirror-format-button.btn.btn-sm.btn-default(title='This may remove comments') Format
-      = ' '
+      if formatRecord.format
+        button.g-view-codemirror-format-button.btn.btn-sm.btn-default(title='This may remove comments') Format
+        = ' '
       button.g-view-codemirror-save-button.btn.btn-sm.btn-primary Save
   i.icon-edit
   span

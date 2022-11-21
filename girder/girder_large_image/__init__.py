@@ -221,13 +221,15 @@ def handleRemoveFile(event):
             ImageItem().delete(item, [fileObj['_id']])
 
 
-def handleFinalizeUploadBefore(event):
+def handleFileSave(event):
     """
-    When a file is uploaded, mark its mime type based on its extension if we
+    When a file is first saved, mark its mime type based on its extension if we
     would otherwise just mark it as generic application/octet-stream.
     """
-    fileObj = event.info['file']
-    if fileObj.get('mimeType', None) in {None, 'application/octet-stream'}:
+    fileObj = event.info
+    if fileObj.get('mimeType', None) in {None, ''} or (
+            '_id' not in fileObj and
+            fileObj.get('mimeType', None) in {'application/octet-stream'}):
         global mimetypes
 
         if not mimetypes:
@@ -483,7 +485,7 @@ class LargeImagePlugin(GirderPlugin):
         events.bind('model.item.remove', 'large_image.removeThumbnails', removeThumbnails)
         events.bind('server_fuse.unmount', 'large_image', large_image.cache_util.cachesClear)
         events.bind('model.file.remove', 'large_image', handleRemoveFile)
-        events.bind('model.file.finalizeUpload.before', 'large_image', handleFinalizeUploadBefore)
+        events.bind('model.file.save', 'large_image', handleFileSave)
 
         search._allowedSearchMode.pop('li_metadata', None)
         search.addSearchMode('li_metadata', metadataSearchHandler)
