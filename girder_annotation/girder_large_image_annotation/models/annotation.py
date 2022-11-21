@@ -998,7 +998,7 @@ class Annotation(AccessControlledModel):
         # This function exceeds the recommended complexity, but since it is
         # needs to be relatively fast, breaking it into smaller functions is
         # probably undesirable.
-        if type(a) != type(b):
+        if not isinstance(a, type(b)):
             return False
         if isinstance(a, dict):
             if len(a) != len(b):

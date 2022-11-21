@@ -305,7 +305,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             MULTIBAND.  In this case, the mask option cannot be used.
         """
         self._checkEditable()
-        if type(tile) != pyvips.vimage.Image:
+        if not isinstance(tile, pyvips.vimage.Image):
             tile, mode = _imageToNumpy(tile)
             interpretation = interpretation or mode
         with self._addLock:
