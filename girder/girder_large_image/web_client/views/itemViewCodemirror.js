@@ -52,6 +52,12 @@ const Formats = {
          * more work. */
         format: (val) => jsyaml.dump(val, {lineWidth: -1, noRefs: true})
     },
+    'text/plain': {
+        name: 'Text',
+        mode: 'text',
+        validator: (val) => val,
+        format: null
+    },
     'application/x-girder-ini': {
         name: 'Configuration',
         mode: 'properties',
@@ -198,6 +204,7 @@ var CodemirrorEditWidget = View.extend({
             formatName: Formats[this.mimeType].name,
             accessLevel: this.accessLevel,
             buttonList: Formats[this.mimeType].buttons || [],
+            formatRecord: Formats[this.mimeType],
             AccessType: AccessType
         }));
         this.code = CodeMirror(this.$el.find('.editor')[0], {
