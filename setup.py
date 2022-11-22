@@ -54,11 +54,11 @@ sources = {
     'openjpeg': [f'large-image-source-openjpeg{limit_version}'],
     'openslide': [f'large-image-source-openslide{limit_version}'],
     'pil': [f'large-image-source-pil{limit_version}'],
+    'rasterio': [f'large-image-source-rasterio{limit_version}'],
     'test': [f'large-image-source-test{limit_version}'],
     'tiff': [f'large-image-source-tiff{limit_version}'],
     'tifffile': [f'large-image-source-tifffile{limit_version}'],
     'vips': [f'large-image-source-vips{limit_version}'],
-    'rasterio': [f'large-image-source-rasterio{limit_version}'],
 }
 if sys.version_info >= (3, 7):
     sources.update({

@@ -7,6 +7,7 @@
 -e sources/openjpeg
 -e sources/openslide
 -e sources/pil
+-e sources/rasterio
 -e sources/test
 -e sources/tiff
 -e sources/tifffile

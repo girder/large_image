@@ -290,16 +290,19 @@ def _vipsCast(image, mustBe8Bit=False, originalScale=None):
 
 def _rasterioParameters(defaultCompression=None, eightbit=None, **kwargs):
     """
-    return a dictionnary of creation option for the rasterio driver
+    Return a dictionary of creation option for the rasterio driver
 
     :param defaultCompression: if not specified, use this value.
-    :param eightbit: True or False to indicate that the bit depth per sample is known.  None for unknown.
+    :param eightbit: True or False to indicate that the bit depth per sample
+        s known.  None for unknown.
 
     Optional parameters that can be specified in kwargs:
 
     :param tileSize: the horizontal and vertical tile size.
-    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits', 'zstd', or 'none'.
-    :param quality: a jpeg quality passed to gdal.  0 is small, 100 is high quality.  90 or above is recommended.
+    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
+        zstd', or 'none'.
+    :param quality: a jpeg quality passed to gdal.  0 is small, 100 is high
+        uality.  90 or above is recommended.
     :param level: compression level for zstd, 1-22 (default is 10).
     :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and deflate.
 
@@ -346,7 +349,10 @@ def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
         deflate.
     :returns: a dictionary of parameters.
     """
-    options = _rasterioParameters(defaultCompression=defaultCompression, eightbit=eightbit, **kwargs)
+    options = _rasterioParameters(
+        defaultCompression=defaultCompression,
+        eightbit=eightbit,
+        **kwargs)
     cmdopt = ['-of', 'COG', '-co', 'BIGTIFF=%s' % options['bigtiff']]
     cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
     cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]

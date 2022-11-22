@@ -43,6 +43,8 @@ cd "$ROOTPATH/sources/openslide"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/pil"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
+cd "$ROOTPATH/sources/rasterio"
+pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/test"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/tiff"
