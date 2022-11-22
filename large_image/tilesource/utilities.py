@@ -353,6 +353,7 @@ def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
         defaultCompression=defaultCompression,
         eightbit=eightbit,
         **kwargs)
+    predictor = options['predictor']
     cmdopt = ['-of', 'COG', '-co', 'BIGTIFF=%s' % options['bigtiff']]
     cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
     cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
