@@ -20,7 +20,6 @@ import pathlib
 import struct
 import tempfile
 import threading
-from urllib.parse import urlencode, urlparse
 
 import numpy
 import PIL.Image
@@ -44,7 +43,7 @@ from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
-from large_image.tilesource import FileTileSource
+from large_image.tilesource.geo import GeoFileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
 try:
@@ -77,22 +76,8 @@ InitPrefix = '+init='
 NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else InitPrefix
 
 
-def make_vsi(url: str, **options):
-    if str(url).startswith('s3://'):
-        s3_path = url.replace('s3://', '')
-        vsi = f'/vsis3/{s3_path}'
-    else:
-        gdal_options = {
-            'url': str(url),
-            'use_head': 'no',
-            'list_dir': 'no',
-        }
-        gdal_options.update(options)
-        vsi = f'/vsicurl?{urlencode(gdal_options)}'
-    return vsi
 
-
-class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
+class GDALFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
     """
@@ -192,17 +177,6 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super()._setStyle(style)
         if hasattr(self, '_getTileLock'):
             self._setDefaultStyle()
-
-    def _getLargeImagePath(self):
-        """Get GDAL-compatible image path.
-
-        This will cast the output to a string and can also handle URLs
-        ('http', 'https', 'ftp', 's3') for use with GDAL
-        `Virtual Filesystems Interface <https://gdal.org/user/virtual_file_systems.html>`_.
-        """
-        if urlparse(str(self.largeImagePath)).scheme in {'http', 'https', 'ftp', 's3'}:
-            return make_vsi(self.largeImagePath)
-        return str(self.largeImagePath)
 
     def _checkNetCDF(self):
         if self._getDriver() == 'netCDF':

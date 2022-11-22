@@ -19,7 +19,6 @@ import pathlib
 import tempfile
 import threading
 from contextlib import suppress
-from urllib.parse import urlencode, urlparse
 
 import numpy as np
 import PIL.Image
@@ -46,7 +45,7 @@ from large_image.exceptions import (
     TileSourceFileNotFoundError,
     TileSourceInefficientError,
 )
-from large_image.tilesource import FileTileSource
+from large_image.tilesource.geo import GeoFileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
 try:
@@ -76,7 +75,7 @@ ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
 
-class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
+class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
     """
@@ -98,7 +97,6 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         "image/tiff": SourcePriority.LOW,
         "image/x-tiff": SourcePriority.LOW,
     }
-    geospatial = True
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
         """
@@ -182,34 +180,6 @@ class RasterioFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         if hasattr(self, "_getTileLock"):
             self._setDefaultStyle()
-
-    def _getLargeImagePath(self):
-        """
-        Get rasterio-compatible image path.
-
-        This will cast the output to a string and can also handle
-        URLs ('http', 'https', 'ftp', 's3') for use with fiona
-        `Virtual Filesystems Interface <https://gdal.org/user/virtual_file_systems.html>`_.
-        """
-
-        # init with largeimage full path
-        path = str(self.largeImagePath)
-
-        # check if it's remote and update the str accordingly
-        url = urlparse(path)
-        if url.scheme in {"http", "https", "ftp", "s3"}:
-            if url.scheme == "s3":
-                s3Path = path.replace("s3://", "")
-                path = f"/vsis3/{s3Path}"
-            else:
-                rasterioOptions = {
-                    "url": path,
-                    "use_head": "no",
-                    "list_dir": "no",
-                }
-                path = f"/vsicurl?{urlencode(rasterioOptions)}"
-
-        return path
 
     def _styleBands(self):
 
