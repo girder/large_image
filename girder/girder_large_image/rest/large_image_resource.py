@@ -34,6 +34,7 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource
+from girder.constants import TokenScope
 from girder.exceptions import RestException
 from girder.models.file import File
 from girder.models.item import Item
@@ -263,7 +264,7 @@ class LargeImageResource(Resource):
     @describeRoute(
         Description('Get public settings for large image display.')
     )
-    @access.public
+    @access.public(scope=TokenScope.DATA_READ)
     def getPublicSettings(self, params):
         keys = [getattr(constants.PluginSettings, key)
                 for key in dir(constants.PluginSettings)
@@ -450,7 +451,7 @@ class LargeImageResource(Resource):
                     'higher priority for an extension of mime type with that '
                     'source.')
     )
-    @access.public
+    @access.public(scope=TokenScope.DATA_READ)
     def listSources(self, params):
         results = {}
         for key, source in girder_tilesource.AvailableGirderTileSources.items():
@@ -565,7 +566,7 @@ class LargeImageResource(Resource):
         config = config.read().decode('utf8')
         return self._configValidate(config)
 
-    @autoDescribeRoute(
+    @autoDescribeRoute(  # noqa
         Description('Reformat a Girder config file')
         .param('config', 'The contents of config file to format.',
                paramType='body')
