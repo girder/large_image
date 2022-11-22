@@ -2,6 +2,7 @@ import glob
 import io
 import json
 import os
+import sys
 
 import large_image_source_rasterio
 import numpy
@@ -14,6 +15,9 @@ from large_image.exceptions import TileSourceError, TileSourceInefficientError
 
 from . import utilities
 from .datastore import datastore
+
+if sys.version_info < (3, 8):
+    pytest.skip(reason="requires python3.8 or higher", allow_module_level=True)
 
 
 def _assertImageMatches(image, testRootName, saveTestImageFailurePath="/tmp"):
