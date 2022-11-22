@@ -32,19 +32,12 @@ from rasterio.warp import calculate_default_transform, reproject
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
-from large_image.constants import (
-    TILE_FORMAT_IMAGE,
-    TILE_FORMAT_NUMPY,
-    TILE_FORMAT_PIL,
-    SourcePriority,
-    TileInputUnits,
-    TileOutputMimeTypes,
-)
-from large_image.exceptions import (
-    TileSourceError,
-    TileSourceFileNotFoundError,
-    TileSourceInefficientError,
-)
+from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
+                                   TILE_FORMAT_PIL, SourcePriority,
+                                   TileInputUnits, TileOutputMimeTypes)
+from large_image.exceptions import (TileSourceError,
+                                    TileSourceFileNotFoundError,
+                                    TileSourceInefficientError)
 from large_image.tilesource.geo import GeoFileTileSource
 from large_image.tilesource.utilities import getPaletteColors
 
@@ -208,9 +201,9 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                 # or this is gray or palette and we already added another band,
                 # skip this interpretation.
                 if (
-                    band is None
-                    or (interp == "alpha" and not len(style))
-                    or (interp in ("gray", "palette") and len(style))
+                    band is None or
+                    (interp == "alpha" and not len(style)) or
+                    (interp in ("gray", "palette") and len(style))
                 ):
                     continue
 
@@ -246,9 +239,9 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         if hasattr(self, "style"):
             styleBands = self.style["bands"] if "bands" in self.style else [self.style]
             if not len(styleBands) or (
-                len(styleBands) == 1
-                and isinstance(styleBands[0].get("band", 1), int)
-                and styleBands[0].get("band", 1) <= 0
+                len(styleBands) == 1 and
+                isinstance(styleBands[0].get("band", 1), int) and
+                styleBands[0].get("band", 1) <= 0
             ):
                 del self.style
         style = self._styleBands()
@@ -868,10 +861,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
             # return empty image when I'm out of bounds
             if (
-                xmin >= bounds["xmax"]
-                or xmax <= bounds["xmin"]
-                or ymin >= bounds["ymax"]
-                or ymax <= bounds["ymin"]
+                xmin >= bounds["xmax"] or
+                xmax <= bounds["xmin"] or
+                ymin >= bounds["ymax"] or
+                ymax <= bounds["ymin"]
             ):
                 pilimg = PIL.Image.new("RGBA", (self.tileWidth, self.tileHeight))
                 return self._outputTile(
@@ -1335,10 +1328,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
         # gdal warp is not required if the original region has be istyled
         if not (
-            iterInfo
-            and not self._jsonstyle
-            and TILE_FORMAT_IMAGE in format
-            and kwargs.get("encoding") == "TILED"
+            iterInfo and
+            not self._jsonstyle and
+            TILE_FORMAT_IMAGE in format and
+            kwargs.get("encoding") == "TILED"
         ):
             return super().getRegion(format, **kwargs)
 

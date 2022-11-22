@@ -22,9 +22,10 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
 from .tiledict import LazyTileDict
 from .utilities import (_encodeImage, _encodeImageBinary,  # noqa: F401
                         _gdalParameters, _imageToNumpy, _imageToPIL,
-                        _letterboxImage, _makeSameChannelDepth, _vipsCast,
-                        _vipsParameters, dictToEtree, etreeToDict, _rasterioParameters,
-                        getPaletteColors, histogramThreshold, nearPowerOfTwo)
+                        _letterboxImage, _makeSameChannelDepth,
+                        _rasterioParameters, _vipsCast, _vipsParameters,
+                        dictToEtree, etreeToDict, getPaletteColors,
+                        histogramThreshold, nearPowerOfTwo)
 
 
 class TileSource:

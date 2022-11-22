@@ -713,6 +713,6 @@ def testAlphaProjection():
     assert not (source.getThumbnail(format="numpy")[0] - basenp).any()
     source = large_image_source_rasterio.open(imagePath)
     assert (
-        numpy.count_nonzero(source.getThumbnail(format="numpy")[0][:, :, 3] == 255)
-        > 30000
+        numpy.count_nonzero(source.getThumbnail(format="numpy")[0][:, :, 3] == 255) >
+        30000
     )

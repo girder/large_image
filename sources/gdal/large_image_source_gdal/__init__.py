@@ -76,7 +76,6 @@ InitPrefix = '+init='
 NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else InitPrefix
 
 
-
 class GDALFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
