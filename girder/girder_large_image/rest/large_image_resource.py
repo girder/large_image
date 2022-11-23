@@ -242,7 +242,7 @@ class LargeImageResource(Resource):
     @describeRoute(
         Description('Clear tile source caches to release resources and file handles.')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def cacheClear(self, params):
         before = cache_util.cachesInfo()
         cache_util.cachesClear()
@@ -257,7 +257,7 @@ class LargeImageResource(Resource):
     @describeRoute(
         Description('Get information on caches.')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_READ)
     def cacheInfo(self, params):
         return cache_util.cachesInfo()
 
@@ -279,7 +279,7 @@ class LargeImageResource(Resource):
                'specifications typically include width, height, encoding, and '
                'encoding options.', required=False)
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_READ)
     def countThumbnails(self, params):
         return self._countCachedImages(params.get('spec'))
 
@@ -290,7 +290,7 @@ class LargeImageResource(Resource):
                'specified key', required=False)
         .notes('The imageKey can also be "tileFrames".')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_READ)
     def countAssociatedImages(self, params):
         return self._countCachedImages(
             None, associatedImages=True, imageKey=params.get('imageKey'))
@@ -338,7 +338,7 @@ class LargeImageResource(Resource):
                'making thumbnails.  0 or unspecified to base this on the '
                'number of reported cpus.', required=False, dataType='int')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def createThumbnails(self, params):
         self.requireParams(['spec'], params)
         try:
@@ -376,7 +376,7 @@ class LargeImageResource(Resource):
                'specifications typically include width, height, encoding, and '
                'encoding options.', required=False)
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteThumbnails(self, params):
         return self._deleteCachedImages(params.get('spec'))
 
@@ -385,7 +385,7 @@ class LargeImageResource(Resource):
         .param('imageKey', 'If specific, only include images with the '
                'specified key', required=False)
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteAssociatedImages(self, params):
         return self._deleteCachedImages(
             None, associatedImages=True, imageKey=params.get('imageKey'))
@@ -425,7 +425,7 @@ class LargeImageResource(Resource):
                'cancelled.  The return value is the number of items that were '
                'adjusted.')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteIncompleteTiles(self, params):
         result = {'removed': 0}
         while True:
@@ -473,7 +473,7 @@ class LargeImageResource(Resource):
     @describeRoute(
         Description('Count the number of cached histograms for large_image items.')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_READ)
     def countHistograms(self, params):
         query = {
             'isLargeImageData': True,
@@ -486,7 +486,7 @@ class LargeImageResource(Resource):
     @describeRoute(
         Description('Delete cached histograms from large_image items.')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteHistograms(self, params):
         query = {
             'isLargeImageData': True,
@@ -561,7 +561,7 @@ class LargeImageResource(Resource):
         .param('config', 'The contents of config file to validate.',
                paramType='body')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def configValidate(self, config):
         config = config.read().decode('utf8')
         return self._configValidate(config)
@@ -571,7 +571,7 @@ class LargeImageResource(Resource):
         .param('config', 'The contents of config file to format.',
                paramType='body')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def configFormat(self, config):  # noqa
         config = config.read().decode('utf8')
         if len(self._configValidate(config)):
@@ -627,7 +627,7 @@ class LargeImageResource(Resource):
         .param('config', 'The new contents of config file.',
                paramType='body')
     )
-    @access.admin
+    @access.admin(scope=TokenScope.USER_AUTH)
     def configReplace(self, config, restart):
         config = config.read().decode('utf8')
         if len(self._configValidate(config)):
