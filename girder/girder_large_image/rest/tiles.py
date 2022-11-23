@@ -546,7 +546,7 @@ class TilesItemResource(ItemResource):
     # LoadModelCache, three database lookups are avoided, which saves around
     # 6 ms in tests. We also avoid the @access.public decorator and directly
     # set the accessLevel attribute on the method.
-    #   @access.public(cookie=True)
+    #   @access.public(cookie=True, scope=TokenScope.DATA_READ)
     #   @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     #   def getTile(self, item, z, x, y, params):
     #       return self._getTile(item, z, x, y, params, True)
@@ -561,6 +561,7 @@ class TilesItemResource(ItemResource):
         return self._getTile(item, z, x, y, params, mayRedirect=redirect)
     getTile.accessLevel = 'public'
     getTile.cookieAuth = True
+    getTile.requiredScopes = TokenScope.DATA_READ
 
     @describeRoute(
         Description('Get a large image tile with a frame number.')
@@ -1408,7 +1409,7 @@ class TilesItemResource(ItemResource):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_READ)
     def listTilesThumbnails(self, item):
         return self.imageItemModel.removeThumbnailFiles(item, onlyList=True)
 
@@ -1420,6 +1421,6 @@ class TilesItemResource(ItemResource):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteTilesThumbnails(self, item, keep):
         return self.imageItemModel.removeThumbnailFiles(item, keep=keep or 0)

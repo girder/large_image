@@ -6,7 +6,7 @@
 - Better control dtype on multi sources ([#993](../../pull/993))
 - Don't use dask threads when using nd2 to fetch tiles ([#994](../../pull/994))
 - Set mime type for imported girder files ([#995](../../pull/995))
-- Specify token scopes for girder endpoint  ([#999](../../pull/999))
+- Specify token scopes for girder endpoints ([#999](../../pull/999), [#1000](../../pull/1000))
 
 ### Bug Fixes
 - Use open.read rather than download to access files in Girder ([#989](../../pull/989))
