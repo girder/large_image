@@ -267,9 +267,9 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                 (self.tileHeight, self.tileWidth, len(self._bands)), dtype=numpy.uint8)
             for bandnum, band in enumerate(self._bands):
                 bandimg = self._tileImage(rgbColor, x, y, z, frame, band, bandnum)
-                bandimg = _imageToNumpy(bandimg)[0]
                 if self.monochrome or band.upper() in {'grey', 'gray', 'alpha'}:
                     bandimg = bandimg.convert('L')
+                bandimg = _imageToNumpy(bandimg)[0]
                 image[:, :, bandnum] = bandimg[:, :, bandnum % bandimg.shape[2]]
             format = TILE_FORMAT_NUMPY
         return self._outputTile(image, format, x, y, z, **kwargs)

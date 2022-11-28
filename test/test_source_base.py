@@ -29,6 +29,10 @@ SourceAndFiles = {
         'skipTiles': r'(TCGA-DU-6399|sample_jp2k_33003)',
     },
     'deepzoom': {},
+    'dicom': {
+        'read': r'\.dcm$',
+        'python': sys.version_info >= (3, 8),
+    },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
         'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*)$',
@@ -69,12 +73,12 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2)$',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2|dcm)$',
         'python': sys.version_info >= (3, 7) and sys.version_info < (3, 11),
     },
     'vips': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn|dcm)$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'  # noqa
     },
 }

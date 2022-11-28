@@ -1,6 +1,9 @@
 # Change Log
 
-## 1.17.4
+## 1.18.0
+
+### Features
+- Add a DICOM tile source ([#1005](../../pull/1005))
 
 ### Improvements
 - Better control dtype on multi sources ([#993](../../pull/993))

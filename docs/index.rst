@@ -18,6 +18,7 @@
    _build/large_image/modules
    _build/large_image_source_bioformats/modules
    _build/large_image_source_deepzoom/modules
+   _build/large_image_source_dicom/modules
    _build/large_image_source_dummy/modules
    _build/large_image_source_gdal/modules
    _build/large_image_source_mapnik/modules

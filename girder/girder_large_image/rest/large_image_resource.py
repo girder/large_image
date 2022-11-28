@@ -448,7 +448,7 @@ class LargeImageResource(Resource):
     @describeRoute(
         Description('List all Girder tile sources with associated extensions, '
                     'mime types, and versions.  Lower values indicate a '
-                    'higher priority for an extension of mime type with that '
+                    'higher priority for an extension or mime type with that '
                     'source.')
     )
     @access.public(scope=TokenScope.DATA_READ)

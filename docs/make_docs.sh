@@ -20,6 +20,7 @@ python -c 'import large_image_source_multi, json;print(json.dumps(large_image_so
 sphinx-apidoc -f -o _build/large_image ../large_image
 sphinx-apidoc -f -o _build/large_image_source_bioformats ../sources/bioformats/large_image_source_bioformats
 sphinx-apidoc -f -o _build/large_image_source_deepzoom ../sources/deepzoom/large_image_source_deepzoom
+sphinx-apidoc -f -o _build/large_image_source_dicom ../sources/dicom/large_image_source_dicom
 sphinx-apidoc -f -o _build/large_image_source_dummy ../sources/dummy/large_image_source_dummy
 sphinx-apidoc -f -o _build/large_image_source_gdal ../sources/gdal/large_image_source_gdal
 sphinx-apidoc -f -o _build/large_image_source_mapnik ../sources/mapnik/large_image_source_mapnik
