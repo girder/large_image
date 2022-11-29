@@ -7,6 +7,7 @@
 - Don't use dask threads when using nd2 to fetch tiles ([#994](../../pull/994))
 - Set mime type for imported girder files ([#995](../../pull/995))
 - Specify token scopes for girder endpoints ([#999](../../pull/999), [#1000](../../pull/1000))
+- Set the qptiff extension to prefer the tiff reader ([#1003](../../pull/1003))
 
 ### Bug Fixes
 - Use open.read rather than download to access files in Girder ([#989](../../pull/989))
