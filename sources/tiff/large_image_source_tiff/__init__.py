@@ -67,6 +67,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'tiff': SourcePriority.HIGH,
         'ptif': SourcePriority.PREFERRED,
         'ptiff': SourcePriority.PREFERRED,
+        'qptiff': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
