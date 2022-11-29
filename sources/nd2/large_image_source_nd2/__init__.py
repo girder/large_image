@@ -100,7 +100,7 @@ def diffObj(obj1, obj2):
 
 class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
-    Provides tile access to nd2 files the nd2 or nd2reader library can read.
+    Provides tile access to nd2 files the nd2 library can read.
     """
 
     cacheName = 'tilesource'
@@ -138,7 +138,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via nd2reader.')
+            raise TileSourceError('File cannot be opened via the nd2 source.')
         # We use dask to allow lazy reading of large images
         self._nd2array = self._nd2.to_dask(copy=False, wrapper=False)  # ##DWM::
         arrayOrder = list(self._nd2.sizes)

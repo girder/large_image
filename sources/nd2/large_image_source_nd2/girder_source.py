@@ -22,13 +22,10 @@ from . import ND2FileTileSource
 class ND2GirderTileSource(ND2FileTileSource, GirderTileSource):
     """
     Provides tile access to Girder items with an ND2 file or other files that
-    the nd2reader library can read.
+    the nd2 library can read.
     """
 
     cacheName = 'tilesource'
     name = 'nd2'
 
-    def mayHaveAdjacentFiles(self, largeImageFile):
-        # As of nd2reader 3.3.0, the extension is required to be nd2.  Set this
-        # to true to ensure the extension appears as expected.
-        return True
+    _mayHaveAdjacentFiles = True
