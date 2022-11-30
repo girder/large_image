@@ -10,6 +10,7 @@ from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import _imageToNumpy, _imageToPIL
 
+pydicom = None
 wsidicom = None
 
 try:
@@ -31,14 +32,50 @@ def _lazyImport():
     module initialization because it is slow.
     """
     global wsidicom
+    global pydicom
 
     if wsidicom is None:
         try:
+            import pydicom
             import wsidicom
         except ImportError:
             raise TileSourceError('nd2 module not found.')
         warnings.filterwarnings('ignore', category=UserWarning, module='wsidicom')
         warnings.filterwarnings('ignore', category=UserWarning, module='pydicom')
+
+
+def dicom_to_dict(ds, base=None):
+    """
+    Convert a pydicom dataset to a fairly flat python dictionary for purposes
+    of reporting.  This is not invertable without extra work.
+
+    :param ds: a pydicom dataset.
+    :param base: a base dataset entry within the dataset.
+    :returns: a dictionary of values.
+    """
+    if base is None:
+        base = ds.to_json_dict(
+            bulk_data_threshold=0,
+            bulk_data_element_handler=lambda x: '<%s bytes>' % len(x.value))
+    info = {}
+    for k, v in base.items():
+        key = k
+        try:
+            key = pydicom.datadict.DicomDictionary[int(k, 16)][-1]
+        except Exception:
+            pass
+        if v.get('vr') in {None, 'OB'}:
+            continue
+        if not len(v.get('Value', [])):
+            continue
+        if isinstance(v['Value'][0], dict):
+            val = [dicom_to_dict(ds, entry) for entry in v['Value']]
+        elif len(v['Value']) == 1:
+            val = v['Value'][0]
+        else:
+            val = v['Value']
+        info[key] = val
+    return info
 
 
 class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -145,6 +182,18 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a dictionary of data or None.
         """
         result = {}
+        idx = 0
+        for level in self._dicom.levels:
+            for ds in level.datasets:
+                result.setdefault('dicom', {})
+                info = dicom_to_dict(ds)
+                if not idx:
+                    result['dicom'] = info
+                else:
+                    for k, v in info.items():
+                        if k not in result['dicom'] or v != result['dicom'][k]:
+                            result['dicom']['%s:%d' % (k, idx)] = v
+                idx += 1
         return result
 
     @methodcache()
