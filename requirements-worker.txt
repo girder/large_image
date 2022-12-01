@@ -1,5 +1,6 @@
 -e sources/bioformats
 -e sources/deepzoom
+-e sources/dicom
 -e sources/dummy
 -e sources/gdal
 -e sources/multi
