@@ -1,5 +1,3 @@
-import os
-
 from girder_large_image.girder_tilesource import GirderTileSource
 
 from girder.models.file import File
@@ -23,7 +21,7 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
     def _getLargeImagePath(self):
         filelist = [
             File().getLocalFilePath(file) for file in Item().childFiles(self.item)
-            if os.path.splitext(file['name'])[-1][1:] in self.extensions]
+            if self._pathMightBeDicom(file['name'])]
         if len(filelist) > 1:
             return filelist
         filelist = []
@@ -31,8 +29,6 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
         for item in Folder().childItems(folder):
             if len(list(Item().childFiles(item, limit=2))) == 1:
                 file = next(Item().childFiles(item, limit=2))
-                if os.path.splitext(file['name'])[-1][1:] in self.extensions:
+                if self._pathMightBeDicom(file['name']):
                     filelist.append(File().getLocalFilePath(file))
-        # TODO: fail if this file is level-(n) and a file that is
-        # level-(n-1) exists
         return filelist

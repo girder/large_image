@@ -1,5 +1,6 @@
 import math
 import os
+import re
 import warnings
 
 import numpy
@@ -61,7 +62,7 @@ def dicom_to_dict(ds, base=None):
     for k, v in base.items():
         key = k
         try:
-            key = pydicom.datadict.DicomDictionary[int(k, 16)][-1]
+            key = pydicom.datadict.keyword_for_tag(k)
         except Exception:
             pass
         if v.get('vr') in {None, 'OB'}:
@@ -96,6 +97,9 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'application/dicom': SourcePriority.PREFERRED,
     }
 
+    _minTileSize = 64
+    _maxTileSize = 4096
+
     def __init__(self, path, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
@@ -117,11 +121,9 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._largeImagePath = [
                 os.path.join(root, entry) for entry in os.listdir(root)
                 if os.path.isfile(os.path.join(root, entry)) and
-                os.path.splitext(entry)[-1][1:] in self.extensions]
+                self._pathMightBeDicom(entry)]
             if path not in self._largeImagePath:
                 self._largeImagePath = [path]
-            # TODO: fail if this file is level-(n) and a file that is
-            # level-(n-1) exists
         else:
             self._largeImagePath = path
         _lazyImport()
@@ -133,8 +135,10 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.sizeY = int(self._dicom.image_size.height)
         self.tileWidth = int(self._dicom.tile_size.width)
         self.tileHeight = int(self._dicom.tile_size.height)
+        self.tileWidth = min(max(self.tileWidth, self._minTileSize), self._maxTileSize)
+        self.tileHeight = min(max(self.tileHeight, self._minTileSize), self._maxTileSize)
         self.levels = int(max(1, math.ceil(math.log(
-            float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
+            max(self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
 
     def __del__(self):
         if getattr(self, '_dicom', None) is not None:
@@ -142,6 +146,21 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._dicom.close()
             finally:
                 self._dicom = None
+
+    def _pathMightBeDicom(self, path):
+        """
+        Return True if the path looks like it might be a dicom file based on
+        its name or extension.
+
+        :param path: the path to check.
+        :returns: True if this might be a dicom, False otherwise.
+        """
+        path = os.path.basename(path)
+        if os.path.splitext(path)[-1][1:] in self.extensions:
+            return True
+        if re.match(r'^([1-9][0-9]*|0)(\.([1-9][0-9]*|0))+$', path) and len(path) <= 64:
+            return True
+        return False
 
     def getNativeMagnification(self):
         """
