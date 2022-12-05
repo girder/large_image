@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.18.1
+
+### Changes
+Don't report filename in internal PIL metadata ([#1006](../../pull/1006))
+
 ## 1.18.0
 
 ### Features
