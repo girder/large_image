@@ -177,7 +177,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a dictionary of data or None.
         """
         results = {'pil': {}}
-        for key in ('filename', 'format', 'mode', 'size', 'width', 'height', 'palette', 'info'):
+        for key in ('format', 'mode', 'size', 'width', 'height', 'palette', 'info'):
             try:
                 results['pil'][key] = getattr(self._pilImage, key)
             except Exception:
