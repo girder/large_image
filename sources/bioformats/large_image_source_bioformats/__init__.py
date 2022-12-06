@@ -28,6 +28,7 @@ import math
 import os
 import threading
 import types
+import weakref
 
 import numpy
 
@@ -71,6 +72,7 @@ def _monitor_thread():
             javabridge.attach()
             while len(_openImages):
                 source = _openImages.pop()
+                source = source()
                 try:
                     source._bioimage.close()
                 except Exception:
@@ -195,7 +197,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
                 self.logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
                 raise TileSourceError('File cannot be opened via Bioformats (%r)' % exc)
-            _openImages.append(self)
+            _openImages.append(weakref.ref(self))
 
             rdr = self._bioimage.rdr
             # Bind additional functions not done by bioformats module.
@@ -295,7 +297,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 javabridge.attach()
                 self._bioimage.close()
-                _openImages.remove(self)
+                del self._bioimage
+                _openImages.remove(weakref.ref(self))
             finally:
                 if javabridge.get_env():
                     javabridge.detach()

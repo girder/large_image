@@ -244,6 +244,8 @@ class LargeImageResource(Resource):
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def cacheClear(self, params):
+        import gc
+
         before = cache_util.cachesInfo()
         cache_util.cachesClear()
         after = cache_util.cachesInfo()
@@ -252,6 +254,7 @@ class LargeImageResource(Resource):
         while time.time() < stoptime and any(after[key]['used'] for key in after):
             time.sleep(0.1)
             after = cache_util.cachesInfo()
+        gc.collect()
         return {'cacheCleared': datetime.datetime.utcnow(), 'before': before, 'after': after}
 
     @describeRoute(

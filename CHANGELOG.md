@@ -2,8 +2,11 @@
 
 ## 1.18.1
 
+### Improvements
+- Better release file handles ([#1007](../../pull/1007))
+
 ### Changes
-Don't report filename in internal PIL metadata ([#1006](../../pull/1006))
+- Don't report filename in internal PIL metadata ([#1006](../../pull/1006))
 
 ## 1.18.0
 
