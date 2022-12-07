@@ -14,7 +14,7 @@ girder-jobs>=3.0.3
 -e sources/pil
 -e sources/test
 -e sources/tiff
--e sources/tifffile ; python_version >= '3.7'
+-e sources/tifffile
 -e sources/vips
 # must be after sources/tiff
 -e sources/ometiff
