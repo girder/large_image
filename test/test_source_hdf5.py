@@ -1,9 +1,10 @@
-import large_image
-import numpy
 import pathlib
 import random
 import tempfile
 
+import numpy
+
+import large_image
 
 possible_axes = {
     'x': [1, 10],
@@ -100,7 +101,8 @@ def testImageGeneration():
     expected.fill(0)
     max_x, max_y = 0, 0
 
-    print(f'placing {tile_grid[0] * tile_grid[1]} random tiles in available space: {expected_shape}')
+    print(
+        f'placing {tile_grid[0] * tile_grid[1]} random tiles in available space: {expected_shape}')
     print('tile overlap ratio:', tile_overlap_ratio)
     for x in range(tile_grid[0]):
         for y in range(tile_grid[1]):
