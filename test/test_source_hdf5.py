@@ -64,10 +64,10 @@ def random_tile(data_range):
     return (tile, mask)
 
 
-def frame_with_zeros(data, desired_size, start_location=[]):
+def frame_with_zeros(data, desired_size, start_location=None):
     if len(desired_size) == 0:
         return data
-    if len(start_location) == 0:
+    if not start_location or len(start_location) == 0:
         start_location = [0]
     framed = [
         frame_with_zeros(
