@@ -4,6 +4,7 @@
 
 ### Improvements
 - Better release file handles ([#1007](../../pull/1007))
+- Support tiny images from the test source ([#1011](../../pull/1011))
 
 ### Changes
 - Don't report filename in internal PIL metadata ([#1006](../../pull/1006))
