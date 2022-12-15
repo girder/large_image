@@ -94,8 +94,8 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                       if not sizeX else sizeX)
         self.sizeY = (((2 ** self.maxLevel) * self.tileHeight)
                       if not sizeY else sizeY)
-        self.maxLevel = int(math.ceil(math.log2(max(
-            self.sizeX / self.tileWidth, self.sizeY / self.tileHeight))))
+        self.maxLevel = max(0, int(math.ceil(math.log2(max(
+            self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)))))
         self.frameSpec = frames or None
         self.monochrome = bool(monochrome)
         self.bandSpec = bands or None
