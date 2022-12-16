@@ -2572,6 +2572,13 @@ class TileSource:
                     pixel.update(dict(zip([img.mode.lower()], [img.load()[0, 0]])))
         return pixel
 
+    @property
+    def frames(self):
+        """A property with the number of frames."""
+        if not hasattr(self, '_frameCount'):
+            self._frameCount = len(self.getMetadata().get('frames', [])) or 1
+        return self._frameCount
+
 
 class FileTileSource(TileSource):
 

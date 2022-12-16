@@ -172,7 +172,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = int(max(1, math.ceil(math.log(
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
         try:
-            self._framecount = (
+            self._frameCount = (
                 self._nd2.metadata.contents.channelCount * self._nd2.metadata.contents.frameCount)
         except Exception:
             self._nd2.close()
@@ -224,7 +224,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         axes = self._nd2order[:self._nd2order.index('Y')][::-1]
         sizes = self._nd2.sizes
         result['frames'] = frames = []
-        for idx in range(self._framecount):
+        for idx in range(self._frameCount):
             frame = {'Frame': idx}
             basis = 1
             ref = {}
@@ -265,10 +265,10 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         frame = self._getFrame(**kwargs)
-        self._xyzInRange(x, y, z, frame, self._framecount)
+        self._xyzInRange(x, y, z, frame, self._frameCount)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         tileframe = self._nd2array
-        fc = self._framecount
+        fc = self._frameCount
         fp = frame
         for axis in self._nd2order[:self._nd2order.index('Y')]:
             fc //= self._nd2.sizes[axis]
