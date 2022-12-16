@@ -1,10 +1,13 @@
 # Change Log
 
-## 1.18.1
+## 1.19.0
+
+### Features
+- Add a frames property to the tile source as a short hand for getting the number of frames from the metadata ([#1014](../../pull/1014))
 
 ### Improvements
 - Better release file handles ([#1007](../../pull/1007))
-- Support tiny images from the test source ([#1011](../../pull/1011))
+- Support tiny images from the test source ([#1013](../../pull/1013))
 
 ### Changes
 - Don't report filename in internal PIL metadata ([#1006](../../pull/1006))
