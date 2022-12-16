@@ -29,9 +29,9 @@ possible_data_ranges = [
     [0, 2**8, numpy.uint8],
     [0, 2**16, numpy.uint16],
     [0, 2**32, numpy.uint32],
-    [-2**7 + 1, 2**7, numpy.int8],
-    [-2**15 + 1, 2**15, numpy.int16],
-    [-2**31 + 1, 2**31, numpy.int32],
+    [-2**7, 2**7, numpy.int8],
+    [-2**15, 2**15, numpy.int16],
+    [-2**31, 2**31, numpy.int32],
     [-1, 1, float]
 ]
 
