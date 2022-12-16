@@ -403,7 +403,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     if start[:1] not in ('{', '#', '-') and (start[:1] < 'a' or start[:1] > 'z'):
                         raise TileSourceError('File cannot be opened via multi-source reader.')
                     fptr.seek(0)
-                    self._info = yaml.safe_load(fptr)
+                    try:
+                        import orjson
+                        self._info = orjson.loads(fptr.read())
+                    except Exception:
+                        fptr.seek(0)
+                        self._info = yaml.safe_load(fptr)
             except (json.JSONDecodeError, yaml.YAMLError, UnicodeDecodeError):
                 raise TileSourceError('File cannot be opened via multi-source reader.')
             self._validator.validate(self._info)
