@@ -218,24 +218,26 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: metadata dictionary.
         """
-        result = super().getMetadata()
+        if not hasattr(self, '_computedMetadata'):
+            result = super().getMetadata()
 
-        sizes = self._nd2.sizes
-        axes = self._nd2order[:self._nd2order.index('Y')][::-1]
-        sizes = self._nd2.sizes
-        result['frames'] = frames = []
-        for idx in range(self._frameCount):
-            frame = {'Frame': idx}
-            basis = 1
-            ref = {}
-            for axis in axes:
-                ref[axis] = (idx // basis) % sizes[axis]
-                frame['Index' + (axis.upper() if axis.upper() != 'P' else 'XY')] = (
-                    idx // basis) % sizes[axis]
-                basis *= sizes.get(axis, 1)
-            frames.append(frame)
-        self._addMetadataFrameInformation(result, self._channels)
-        return result
+            sizes = self._nd2.sizes
+            axes = self._nd2order[:self._nd2order.index('Y')][::-1]
+            sizes = self._nd2.sizes
+            result['frames'] = frames = []
+            for idx in range(self._frameCount):
+                frame = {'Frame': idx}
+                basis = 1
+                ref = {}
+                for axis in axes:
+                    ref[axis] = (idx // basis) % sizes[axis]
+                    frame['Index' + (axis.upper() if axis.upper() != 'P' else 'XY')] = (
+                        idx // basis) % sizes[axis]
+                    basis *= sizes.get(axis, 1)
+                frames.append(frame)
+            self._addMetadataFrameInformation(result, self._channels)
+            self._computedMetadata = result
+        return self._computedMetadata
 
     def getInternalMetadata(self, **kwargs):
         """
