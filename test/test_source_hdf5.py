@@ -1,7 +1,6 @@
 import pathlib
 import random
 import tempfile
-
 import numpy
 
 import large_image
@@ -26,14 +25,25 @@ include_axes = {
 }
 
 possible_data_ranges = [
-    [0, 1],
-    [0, 255],
-    [0, 65535],
-    [-1, 1]
+    [0, 1, float],
+    [0, 2**8, numpy.uint8],
+    [0, 2**16, numpy.uint16],
+    [0, 2**32, numpy.uint32],
+    [-2**7 + 1, 2**7, numpy.int8],
+    [-2**15 + 1, 2**15, numpy.int16],
+    [-2**31 + 1, 2**31, numpy.int32],
+    [-1, 1, float]
 ]
 
 max_tile_size = 100
 tile_overlap_ratio = 0.5
+
+
+# https://stackoverflow.com/questions/18915378/rounding-to-significant-figures-in-numpy
+def signif(x):
+    if x == 0:
+        return 0
+    return round(x, -2)
 
 
 def get_dims(x, y, s, max=False):
@@ -60,6 +70,7 @@ def random_tile(data_range):
     tile = numpy.random.rand(*tile_shape)
     tile *= (data_range[1] - data_range[0])
     tile += data_range[0]
+    tile = tile.astype(data_range[2])  # apply dtype
     mask = numpy.random.randint(2, size=tile_shape[:-1])
     return (tile, mask)
 
@@ -104,6 +115,7 @@ def testImageGeneration():
     print(
         f'placing {tile_grid[0] * tile_grid[1]} random tiles in available space: {expected_shape}')
     print('tile overlap ratio:', tile_overlap_ratio)
+    print('data range:', data_range)
     for x in range(tile_grid[0]):
         for y in range(tile_grid[1]):
             start_location = [
@@ -113,53 +125,52 @@ def testImageGeneration():
             tile, mask = random_tile(data_range)
             tile_shape = tile.shape
             source.addTile(tile, *start_location, mask=mask)
-
-            tile.transpose(1, 0, *range(2, len(tile.shape)))
-            mask.transpose(1, 0, *range(2, len(mask.shape)))
-            start_location.reverse()
-
-            # print(f'add {tile_shape} data at {start_location} with mask')
-            # print(mask)
-            far_x = start_location[0] + tile_shape[0]
-            far_y = start_location[1] + tile_shape[1]
-            if far_x > max_x:
-                max_x = far_x
-            if far_y > max_y:
-                max_y = far_y
+            max_x = max(max_x, start_location[1] + tile_shape[0])
+            max_y = max(max_y, start_location[0] + tile_shape[1])
 
             framed_tile = numpy.array(frame_with_zeros(
                 tile,
                 expected.shape,
-                start_location=start_location
+                start_location=start_location[::-1]
             ))
             framed_mask = numpy.array(frame_with_zeros(
                 mask.repeat(tile_shape[-1], -1).reshape(tile_shape),
                 expected.shape,
-                start_location=start_location
+                start_location=start_location[::-1]
             ))
 
             numpy.putmask(expected, framed_mask, framed_tile)
-
-    # if color is not all zeros, apply full alpha value to it
-    expected = numpy.apply_along_axis(
-        lambda color: [*color[:3], 255] if color.any() else color, -1,
-        expected
-    )
-    # trim unused space
-    expected = expected[:max_x, :max_y]
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         # TODO: make destination use mdf5 extension
         destination = pathlib.Path(tmp_dir, 'sample.tiff')
         source.write(destination, lossy=False)
         result, _ = source.getRegion(format='numpy')
-        result.transpose(1, 0, *range(2, len(result.shape)))
 
-        result = result.round(2)
-        expected = expected.round(2)
+    # trim unused space from expected
+    expected = expected[:max_x, :max_y]
 
-        assert numpy.array_equal(result, expected)
-        print(f'Success; result matrix {result.shape} equals expected matrix {expected.shape}.')
+    # round to -2 precision
+    precision_vector = numpy.vectorize(signif)
+    expected = precision_vector(expected)
+    result = precision_vector(result)
+
+    # ignore alpha values for now
+    expected = expected.take(indices=range(0, -1), axis=-1)
+    result = result.take(indices=range(0, -1), axis=-1)
+
+    # For debugging
+    # difference = numpy.subtract(result, expected)
+    # print(difference)
+    # print(expected[numpy.nonzero(difference)])
+    # print(result[numpy.nonzero(difference)])
+
+    assert numpy.array_equal(result, expected)
+    # resultFromFile, _ = large_image.open(destination).getRegion(format='numpy')
+    # print(resultFromFile.shape, result.shape)
+    # assert numpy.array_equal(result, resultFromFile)
+    print(f'Success; result matrix {result.shape} equals expected matrix {expected.shape}.')
 
 
-testImageGeneration()
+if __name__ == '__main__':
+    testImageGeneration()
