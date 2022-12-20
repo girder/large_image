@@ -175,7 +175,9 @@ def _imageToPIL(image, setMode=None):
             mode = ['L', 'LA', 'RGB', 'RGBA'][image.shape[2] - 1]
         if len(image.shape) == 3 and image.shape[2] == 1:
             image = numpy.resize(image, image.shape[:2])
-        if image.dtype == numpy.uint16:
+        if image.dtype == numpy.uint32:
+            image = numpy.floor_divide(image, 2 ** 24).astype(numpy.uint8)
+        elif image.dtype == numpy.uint16:
             image = numpy.floor_divide(image, 256).astype(numpy.uint8)
         # TODO: The scaling of float data needs to be identical across all
         # tiles of an image.  This means that we need a reference to the parent
