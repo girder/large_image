@@ -1,7 +1,7 @@
 import pathlib
 import random
 import tempfile
-
+import pytest
 import numpy
 
 import large_image
@@ -97,13 +97,15 @@ def frame_with_zeros(data, desired_size, start_location=None):
     return numpy.array(framed)
 
 
-def testImageGeneration():
+@pytest.mark.parametrize('data_range', possible_data_ranges)
+def testImageGeneration(data_range):
     source = large_image.new()
     tile_grid = [
         int(random.randint(*possible_axes['x'])),
         int(random.randint(*possible_axes['y']))
     ]
-    data_range = random.choice(possible_data_ranges)
+    if data_range is None:
+        data_range = random.choice(possible_data_ranges)
 
     # create comparison matrix at max size and fill with zeros
     expected_shape = get_dims(
@@ -174,4 +176,4 @@ def testImageGeneration():
 
 
 if __name__ == '__main__':
-    testImageGeneration()
+    testImageGeneration(None)
