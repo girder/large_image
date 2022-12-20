@@ -420,8 +420,11 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             trunk = baseimg.copy()
             branch = baseimg.copy()
             for idx, entry in enumerate(self._output['images']):
+                entryimage = entry['image']
+                if img.format == 'float' and entry['image'].format == 'double':
+                    entryimage = entryimage.cast(img.format)
                 branch = branch.composite(
-                    entry['image'], pyvips.BlendMode.OVER, x=entry['x'], y=entry['y'])
+                    entryimage, pyvips.BlendMode.OVER, x=entry['x'], y=entry['y'])
                 if not ((idx + 1) % leaves) or idx + 1 == len(self._output['images']):
                     trunk = trunk.composite(branch, pyvips.BlendMode.OVER, x=0, y=0)
                     branch = baseimg.copy()
