@@ -1,8 +1,9 @@
 import pathlib
 import random
 import tempfile
-import pytest
+
 import numpy
+import pytest
 
 import large_image
 
