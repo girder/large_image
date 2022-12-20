@@ -9,6 +9,7 @@
 - Better release file handles ([#1007](../../pull/1007))
 - Support tiny images from the test source ([#1013](../../pull/1013))
 - Speed up loading or parsing some multi sources ([#1015](../../pull/1015))
+- Better scale uint32 images ([#1017](../../pull/1017))
 
 ### Changes
 - Don't report filename in internal PIL metadata ([#1006](../../pull/1006))
