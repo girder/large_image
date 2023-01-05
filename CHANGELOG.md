@@ -16,6 +16,7 @@
 
 ### Bug Fixes
 - Better output new vips images as float32 ([#1016](../../pull/1016))
+- Pin tinycolor2 for annotations ([#1018](../../pull/1018))
 
 ## 1.18.0
 
