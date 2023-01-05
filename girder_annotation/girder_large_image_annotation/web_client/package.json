@@ -16,7 +16,7 @@
         "@girder/large_image": "*"
     },
     "dependencies": {
-        "tinycolor2": "^1.4.1"
+        "tinycolor2": "~1.4.1"
     },
     "main": "./index.js",
     "girderPlugin": {

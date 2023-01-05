@@ -106,8 +106,6 @@ def methodcache(key=None):
 
 
 class LruCacheMetaclass(type):
-    """
-    """
     namedCaches = {}
     classCaches = {}
 
