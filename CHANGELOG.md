@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.19.1
+
+### Improvements
+- Improve tifffile associated image detection ([#1019](../../pull/1019))
+
 ## 1.19.0
 
 ### Features
