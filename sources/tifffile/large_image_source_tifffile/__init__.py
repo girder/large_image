@@ -168,6 +168,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._seriesShape = []
         for idx, s in enumerate(self._tf.series):
             if s != base:
+                if s.name.lower() in {'label', 'macro', 'thumbnail', 'map'}:
+                    continue
                 if 'P' in base.axes or s.axes != base.axes:
                     continue
                 if not all(base.axes[sidx] in 'YX' or sl == base.shape[sidx]
