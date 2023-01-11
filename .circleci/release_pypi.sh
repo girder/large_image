@@ -46,6 +46,12 @@ cp "$ROOTPATH/LICENSE" .
 python setup.py sdist
 pip wheel . --no-deps -w dist
 twine upload --verbose dist/*
+cd "$ROOTPATH/sources/dicom"
+cp "$ROOTPATH/README.rst" .
+cp "$ROOTPATH/LICENSE" .
+python setup.py sdist
+pip wheel . --no-deps -w dist
+twine upload --verbose dist/*
 cd "$ROOTPATH/sources/dummy"
 cp "$ROOTPATH/README.rst" .
 cp "$ROOTPATH/LICENSE" .

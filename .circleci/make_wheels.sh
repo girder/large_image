@@ -25,6 +25,8 @@ cd "$ROOTPATH/sources/bioformats"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/deepzoom"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
+cd "$ROOTPATH/sources/dicom"
+pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/dummy"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/gdal"
