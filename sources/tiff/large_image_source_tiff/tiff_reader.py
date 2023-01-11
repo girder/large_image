@@ -850,6 +850,8 @@ class TiledTiffDirectory:
                     self._pixelInfo = {
                         'magnification': float(meta.split('AppMag = ')[1].split('|')[0].strip())
                     }
+                    self._pixelInfo['mm_x'] = self._pixelInfo['mm_y'] = float(
+                        meta.split('|MPP = ', 1)[1].split('|')[0].strip()) * 0.001
                 except Exception:
                     pass
             return
