@@ -290,6 +290,18 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         except Exception:
                             pass
 
+    def _handle_svs(self):
+        """
+        For SVS files, parse the magnification and pixel size.
+        """
+        try:
+            meta = self._tf.pages[0].description
+            self._magnification = float(meta.split('AppMag = ')[1].split('|')[0].strip())
+            self._mm_x = self._mm_y = float(
+                meta.split('|MPP = ', 1)[1].split('|')[0].strip()) * 0.001
+        except Exception:
+            pass
+
     def getNativeMagnification(self):
         """
         Get the magnification at a particular level.
