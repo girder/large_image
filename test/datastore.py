@@ -85,8 +85,8 @@ registry = {
     'extraoverview.tiff': 'sha512:22793cc6285ad11fbb47927c3d546d35e531a73852b79a9248ba489b421792e3a55da61e00079372bcf72a7e11b12e1ee69d553620edf46ff8d86ad2a9da9fc5',  # noqa
     # DICOM WSI files generated from TCGA-02-0010-01Z-00-DX4...svs and only
     # keeping two levels
-    'level-0-frames-0-320.dcm': 'sha512:c3c39e133988f29a99d87107f3b8fbef1c6f530350a9192671f237862731d6f44d18965773a499867d853cbf22aaed9ea1670ce0defda125efe6a8c0cc63c316', # noqa
-    'level-1-frames-0-20.dcm': 'sha512:cc414f0ec2f6ea0d41fa7677e5ce58d72b7541c21dd5c3a0106bf2d1814903daaeba61ae3c3cc3c46ed86210f04c7ed5cff0fc76c7305765f82642ad7ed4caa7', # noqa
+    'level-0-frames-0-320.dcm': 'sha512:c3c39e133988f29a99d87107f3b8fbef1c6f530350a9192671f237862731d6f44d18965773a499867d853cbf22aaed9ea1670ce0defda125efe6a8c0cc63c316',  # noqa
+    'level-1-frames-0-20.dcm': 'sha512:cc414f0ec2f6ea0d41fa7677e5ce58d72b7541c21dd5c3a0106bf2d1814903daaeba61ae3c3cc3c46ed86210f04c7ed5cff0fc76c7305765f82642ad7ed4caa7',  # noqa
 }
 
 
