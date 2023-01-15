@@ -153,6 +153,7 @@ const Formats = {
         }
     }
 };
+Formats['application/vnd.geo+json'] = Formats['application/json'];
 Formats['text/x-yaml'] = Formats['text/yaml'];
 
 function lintGirderIni(text, callback) {

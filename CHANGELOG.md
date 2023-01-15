@@ -4,6 +4,7 @@
 
 ### Improvements
 - Better parse svs pixel size in tiff and tifffile sources ([#1021](../../pull/1021))
+- Add geojson to known mime types ([#1022](../../pull/1022))
 
 ## 1.19.1
 
