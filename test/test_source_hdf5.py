@@ -27,14 +27,14 @@ include_axes = {
 }
 
 possible_data_ranges = [
-    [0, 1, float],
-    [0, 2**8, numpy.uint8],
-    [0, 2**16, numpy.uint16],
-    [0, 2**32, numpy.uint32],
-    [-2**7, 2**7, numpy.int8],
-    [-2**15, 2**15, numpy.int16],
-    [-2**31, 2**31, numpy.int32],
-    [-1, 1, float]
+    [0, 1, 2, float],
+    [0, 2**8, -1, numpy.uint8],
+    [0, 2**16, -2, numpy.uint16],
+    [0, 2**32, -4, numpy.uint32],
+    [-2**7, 2**7, -1, numpy.int8],
+    [-2**15, 2**15, -2, numpy.int16],
+    [-2**31, 2**31, -4, numpy.int32],
+    [-1, 1, 2, float]
 ]
 
 max_tile_size = 100
@@ -42,10 +42,10 @@ tile_overlap_ratio = 0.5
 
 
 # https://stackoverflow.com/questions/18915378/rounding-to-significant-figures-in-numpy
-def signif(x):
+def signif(x, minval, maxval, digits):
     if x == 0:
         return 0
-    return round(x, -2)
+    return max(min(round(x, digits), max(1, maxval - 1)), minval)
 
 
 def get_dims(x, y, s, max=False):
@@ -72,7 +72,7 @@ def random_tile(data_range):
     tile = numpy.random.rand(*tile_shape)
     tile *= (data_range[1] - data_range[0])
     tile += data_range[0]
-    tile = tile.astype(data_range[2])  # apply dtype
+    tile = tile.astype(data_range[3])  # apply dtype
     mask = numpy.random.randint(2, size=tile_shape[:-1])
     return (tile, mask)
 
@@ -154,10 +154,10 @@ def testImageGeneration(data_range):
     # trim unused space from expected
     expected = expected[:max_x, :max_y]
 
-    # round to -2 precision
+    # round to specified precision
     precision_vector = numpy.vectorize(signif)
-    expected = precision_vector(expected)
-    result = precision_vector(result)
+    expected = precision_vector(expected, data_range[0], data_range[1], data_range[2])
+    result = precision_vector(result, data_range[0], data_range[1], data_range[2])
 
     # ignore alpha values for now
     expected = expected.take(indices=range(0, -1), axis=-1)
