@@ -338,7 +338,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             newarr = numpy.zeros(
                 (tile.shape[0], tile.shape[1], tile.shape[2] + 1), dtype=tile.dtype)
             newarr[:, :, :tile.shape[2]] = tile
-            newarr[:, :, -1] = 255
+            newarr[:, :, -1] = min(numpy.iinfo(
+                tile.dtype).max, 255) if tile.dtype.kind in 'iu' else 255
             tile = newarr
         if mask is not None:
             if len(mask.shape) == 3:
