@@ -1,10 +1,11 @@
 # Change Log
 
-## 1.19.1
+## 1.19.2
 
 ### Improvements
 - Better parse svs pixel size in tiff and tifffile sources ([#1021](../../pull/1021))
 - Add geojson to known mime types ([#1022](../../pull/1022))
+- Handle upcoming matplotlib deprecations ([#1025](../../pull/1025))
 
 ## 1.19.1
 
