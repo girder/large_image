@@ -28,13 +28,28 @@ include_axes = {
 
 possible_data_ranges = [
     [0, 1, 2, float],
+    [0, 1, 2, numpy.float16],
+    [0, 1, 2, numpy.float32],
+    [0, 1, 2, numpy.float64],
     [0, 2**8, -1, numpy.uint8],
+    [0, 2**8, -1, float],
+    [0, 2**8, -1, int],
     [0, 2**16, -2, numpy.uint16],
-    [0, 2**32, -4, numpy.uint32],
+    [0, 2**16, -2, float],
+    [0, 2**32, -4, int],
     [-2**7, 2**7, -1, numpy.int8],
+    [-2**7, 2**7, -1, float],
+    [-2**7, 2**7, -1, int],
     [-2**15, 2**15, -2, numpy.int16],
+    [-2**15, 2**15, -2, float],
+    [-2**15, 2**15, -2, int],
     [-2**31, 2**31, -4, numpy.int32],
-    [-1, 1, 2, float]
+    [-2**31, 2**31, -4, float],
+    [-2**31, 2**31, -4, int],
+    [-1, 1, 2, float],
+    [-1, 1, 2, numpy.float16],
+    [-1, 1, 2, numpy.float32],
+    [-1, 1, 2, numpy.float64],
 ]
 
 max_tile_size = 100
