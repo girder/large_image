@@ -6,6 +6,7 @@ import numpy
 import pytest
 
 import large_image
+from large_image.cache_util import cachesClear
 
 possible_axes = {
     'x': [1, 10],
@@ -189,6 +190,9 @@ def testImageGeneration(data_range):
     # print(resultFromFile.shape, result.shape)
     # assert numpy.array_equal(result, resultFromFile)
     print(f'Success; result matrix {result.shape} equals expected matrix {expected.shape}.')
+
+    source = None
+    cachesClear()
 
 
 if __name__ == '__main__':
