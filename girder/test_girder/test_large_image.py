@@ -646,3 +646,61 @@ def testMetadataSearch(server, admin, fsAssetstore):
         params={'q': 'key:key2 value', 'mode': 'li_metadata', 'types': '["item","folder"]'})
     assert utilities.respStatus(resp) == 200
     assert len(resp.json['item']) == 0
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testFlattenItemLists(server, admin, user, fsAssetstore):
+    collection = Collection().createCollection(
+        'collection A', admin)
+    colFolderA = Folder().createFolder(
+        collection, 'folder A', parentType='collection',
+        creator=admin)
+    colFolderB = Folder().createFolder(
+        colFolderA, 'folder B', creator=admin)
+    utilities.uploadText(
+        json.dumps({'keyA': 'value1'}),
+        admin, fsAssetstore, colFolderA, 'sample1.json')
+    utilities.uploadText(
+        json.dumps({'keyB': 'value2'}),
+        admin, fsAssetstore, colFolderB, 'sample2.json')
+    resp = server.request(
+        path='/item', user=admin,
+        params={'folderId': str(colFolderA['_id'])})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 1
+    resp = server.request(
+        path='/item', user=admin,
+        params={'folderId': str(colFolderB['_id'])})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 1
+    resp = server.request(
+        path='/item', user=admin,
+        params={'folderId': str(colFolderA['_id']), 'text': '_recurse_:'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 2
+    resp = server.request(
+        path='/item', user=admin,
+        params={'folderId': str(colFolderB['_id']), 'text': '_recurse_:'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 1
+    resp = server.request(
+        path='/item', user=admin,
+        params={'folderId': str(colFolderA['_id']), 'text': '_recurse_:sample1'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 1
+    resp = server.request(
+        path='/item', user=admin,
+        params={'folderId': str(colFolderB['_id']), 'text': '_recurse_:sample1'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 0
+    resp = server.request(
+        path='/item', user=admin,
+        params={'folderId': str(colFolderA['_id']), 'text': '_recurse_:', 'name': 'sample1.json'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 1
+    resp = server.request(
+        path='/item', user=admin,
+        params={'folderId': str(colFolderB['_id']), 'text': '_recurse_:', 'name': 'sample1.json'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 0
