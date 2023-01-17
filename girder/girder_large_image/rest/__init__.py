@@ -31,12 +31,19 @@ def addSystemEndpoints(apiRoot):
     def altItemFind(self, folderId, text, name, limit, offset, sort, filters=None):
         if sort and sort[0][0][0] == '[':
             sort = json.loads(sort[0][0])
+        recurse = False
+        if text and text.startswith('_recurse_:'):
+            recurse = True
+            text = text.split('_recurse_:', 1)[1]
         if filters is None and text and text.startswith('_filter_:'):
             try:
                 filters = json.loads(text.split('_filter_:', 1)[1].strip())
                 text = None
             except Exception as exc:
                 logger.warning('Failed to parse _filter_ from text field: %r', exc)
+        if recurse:
+            return _itemFindRecursive(
+                self, origItemFind, folderId, text, name, limit, offset, sort, filters)
         return origItemFind(folderId, text, name, limit, offset, sort, filters)
 
     @boundHandler(apiRoot.item)
@@ -50,6 +57,50 @@ def addSystemEndpoints(apiRoot):
         altItemFind._origFunc = origItemFind
         apiRoot.folder._find = altFolderFind
         altFolderFind._origFunc = origFolderFind
+
+
+def _itemFindRecursive(self, origItemFind, folderId, text, name, limit, offset, sort, filters):
+    """
+    If a recursive search within a folderId is specified, use an aggregation to
+    find all folders that are descendants of the specified folder.  If there
+    are any, then perform a search that matches any of those folders rather
+    than just the parent.
+
+    :param self: A reference to the Item() resource record.
+    :param origItemFind: the original _find method, used as a fallback.
+
+    For the remaining parameters, see girder/api/v1/item._find
+    """
+    from bson.objectid import ObjectId
+
+    if folderId:
+        pipeline = [
+            {'$match': {'_id': ObjectId(folderId)}},
+            {'$graphLookup': {
+                'from': 'folder',
+                'connectFromField': '_id',
+                'connectToField': 'parentId',
+                'depthField': '_depth',
+                'as': '_folder',
+                'startWith': '$_id'
+            }},
+            {'$group': {'_id': '$_folder._id'}}
+        ]
+        children = [ObjectId(folderId)] + next(Folder().collection.aggregate(pipeline))['_id']
+        if len(children) > 1:
+            filters = (filters.copy() if filters else {})
+            if text:
+                filters['$text'] = {
+                    '$search': text
+                }
+            if name:
+                filters['name'] = name
+            filters['folderId'] = {'$in': children}
+            user = self.getCurrentUser()
+            if isinstance(sort, list):
+                sort.append(('parentId', 1))
+            return Item().findWithPermissions(filters, offset, limit, sort=sort, user=user)
+    return origItemFind(folderId, text, name, limit, offset, sort, filters)
 
 
 def _mergeDictionaries(a, b):

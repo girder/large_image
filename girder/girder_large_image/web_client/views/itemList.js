@@ -7,6 +7,8 @@ import { getApiRoot, restRequest } from '@girder/core/rest';
 import { getCurrentUser } from '@girder/core/auth';
 import { AccessType } from '@girder/core/constants';
 import { formatSize, parseQueryString, splitRoute } from '@girder/core/misc';
+import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
+import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
@@ -14,6 +16,34 @@ import { addToRoute } from '../routes';
 
 import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
+
+wrap(HierarchyWidget, 'render', function (render) {
+    render.call(this);
+    if (!this.$('#flattenitemlist').length && this.$('.g-item-list-container').length && this.itemListView && this.itemListView.setFlatten) {
+        $('button.g-checked-actions-button').parent().after(
+            '<div class="li-flatten-item-list" title="Check to show items in all subfolders in this list"><input type="checkbox" id="flattenitemlist"></input><label for="flattenitemlist">Flatten</label></div>'
+        );
+        if ((this.itemListView || {})._recurse) {
+            this.$('#flattenitemlist').prop('checked', true);
+        }
+        this.events['click #flattenitemlist'] = (evt) => {
+            this.itemListView.setFlatten(this.$('#flattenitemlist').is(':checked'));
+        };
+        this.delegateEvents();
+    }
+    if (this.$('#flattenitemlist').length && this.parentModel.get('_modelType') !== 'folder') {
+        this.$('.li-flatten-item-list').addClass('hidden');
+    } else {
+        this.$('.li-flatten-item-list').removeClass('hidden');
+    }
+});
+
+wrap(FolderListWidget, 'checkAll', function (checkAll, checked) {
+    if (checked && (this.parentView.itemListView || {})._recurse) {
+        return;
+    }
+    return checkAll.call(this, checked);
+});
 
 wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     let result = initialize.call(this, settings);
@@ -26,7 +56,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         url: `folder/${settings.folderId}/yaml_config/.large_image_config.yaml`
     }).done((val) => {
         val = val || {};
-        if (_.isEqual(val, this._liconfig)) {
+        if (_.isEqual(val, this._liconfig) && !this._recurse) {
             return;
         }
         delete this._lastSort;
@@ -46,7 +76,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             });
             update = true;
         }
-        if (query.filter) {
+        if (query.filter || this._recurse) {
             this._generalFilter = query.filter;
             this._setFilter();
             update = true;
@@ -58,6 +88,13 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     });
     this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
     this.delegateEvents();
+    this.setFlatten = (flatten) => {
+        if (!!flatten !== !!this._recurse) {
+            this._recurse = !!flatten;
+            this._setFilter();
+            this.render();
+        }
+    };
     return result;
 });
 
@@ -167,8 +204,10 @@ wrap(ItemListWidget, 'render', function (render) {
                     this._setSort();
                 }
                 if (oldPages !== pages) {
+                    this.trigger('g:paginated');
                     this.collection.trigger('g:changed');
                 }
+                this.bindOnChanged();
             });
         } else {
             this._needsFetch = true;
@@ -237,7 +276,10 @@ wrap(ItemListWidget, 'render', function (render) {
                 filter = '_filter_:' + JSON.stringify(filter);
             }
         }
-        if (filter !== this._filter) {
+        if (this._recurse) {
+            filter = '_recurse_:' + (filter || '');
+        }
+        if (filter !== this._filter || filter !== (this.collection.params || {}).text) {
             this._filter = filter;
             this.collection.params = this.collection.params || {};
             this.collection.params.text = this._filter;
@@ -319,6 +361,12 @@ wrap(ItemListWidget, 'render', function (render) {
         });
         if (this._confList()) {
             return itemListRender.apply(this, _.rest(arguments));
+        }
+
+        if (this._recurse && !((this.collection || {}).params || {}).text) {
+            this._setFilter();
+            this.render();
+            return;
         }
         render.call(this);
         if (settings['large_image.show_thumbnails'] === false ||

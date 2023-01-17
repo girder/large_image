@@ -253,6 +253,22 @@ $(function () {
                 expect(!$('.g-item-list-entry').length);
             });
         });
+        it('flatten the item list', function () {
+            runs(function () {
+                $('.li-flatten-item-list #flattenitemlist').click();
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                expect($('.li-flatten-item-list #flattenitemlist:checked').length);
+            });
+            runs(function () {
+                $('.li-flatten-item-list #flattenitemlist').click();
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                expect(!$('.li-flatten-item-list #flattenitemlist:checked').length);
+            });
+        });
         it('navigate back to image', function () {
             waitsFor(function () {
                 return $('span.g-item-list-link').filter(function () { return $(this).text() !== '.large_image_config.yaml'; }).length > 0;
