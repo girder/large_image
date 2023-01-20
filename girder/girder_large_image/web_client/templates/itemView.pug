@@ -28,7 +28,7 @@ mixin tableentry(value, depth, keyname)
     td.subtable.large_image_metadata_table(keyname=keyname)
       +maketable(value, (depth || 0) + 1, keyname)
   else if Array.isArray(value) || (value && value.constructor.name === 'Object')
-    if yaml.dump(value).split('\n').length <= 100
+    if ((Array.isArray(value) && value.length <= 25) || Object.keys(value).length <= 25) && yaml.dump(value).split('\n').length <= 100
       td.yaml.large_image_metadata_value(keyname=keyname) #{yaml.dump(value)}
     else
       td.json.large_image_metadata_value(keyname=keyname) #{JSON.stringify(value)}
