@@ -5,6 +5,9 @@
 ### Improvements
 - Speed up rendering Girder item page metadata in some instances ([#1031](../../pull/1031))
 
+### Bug Fixes
+- Fix an issue with non-square tiles in the multi source ([#1032](../../pull/1032))
+
 ## 1.19.2
 
 ### Improvements
