@@ -1024,7 +1024,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if fill:
             colors = self._info.get('backgroundColor')
             if colors:
-                tile = numpy.full((self.tileWidth, self.tileHeight, len(colors)), colors)
+                tile = numpy.full((self.tileHeight, self.tileWidth, len(colors)), colors)
         # Add each source to the tile
         for sourceEntry in sourceList:
             tile = self._addSourceToTile(tile, sourceEntry, corners, scale)
@@ -1032,7 +1032,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # TODO number of channels?
             colors = self._info.get('backgroundColor', [0])
             if colors:
-                tile = numpy.full((self.tileWidth, self.tileHeight, len(colors)), colors)
+                tile = numpy.full((self.tileHeight, self.tileWidth, len(colors)), colors)
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
