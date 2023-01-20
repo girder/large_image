@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.19.3
+
+### Improvements
+- Speed up rendering Girder item page metadata in some instances ([#1031](../../pull/1031))
+
 ## 1.19.2
 
 ### Improvements
