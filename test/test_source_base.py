@@ -48,7 +48,7 @@ SourceAndFiles = {
     },
     'multi': {
         'read': r'\.(yml|yaml)$',
-        'skip': r'(multi_source\.yml)$',
+        'skip': r'(multi_source\.yml|multi-source-composite\.yaml)$',
     },
     'nd2': {
         'read': r'\.(nd2)$',

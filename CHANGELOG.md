@@ -4,6 +4,7 @@
 
 ### Improvements
 - Speed up rendering Girder item page metadata in some instances ([#1031](../../pull/1031))
+- Speed up opening some multi source files ([#1033](../../pull/1033))
 
 ### Bug Fixes
 - Fix an issue with non-square tiles in the multi source ([#1032](../../pull/1032))

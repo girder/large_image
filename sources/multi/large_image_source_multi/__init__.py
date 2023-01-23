@@ -701,12 +701,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 frames.append(frame)
         return frames
 
-    def _collectFrames(self, checkAll=False):
+    def _collectFrames(self):
         """
         Using the specification in _info, enumerate the source files and open
         at least the first two of them to build up the frame specifications.
-
-        :param checkAll: if True, open all source files.
         """
         self._sources = sources = self._resolveFramePaths(self._info['sources'])
         self.logger.debug('Sources: %r', sources)
@@ -730,11 +728,16 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Walk through the sources, opening at least the first two, and
         # construct a frame list.  Each frame is a list of sources that affect
         # it along with the frame number from that source.
+        lastSource = None
         for sourceIdx, source in enumerate(sources):
             path = source['path']
             if os.path.abspath(path) == absLargeImagePath:
                 raise TileSourceError('Multi source specification is self-referential')
-            if numChecked < 2 or checkAll or not self._info.get('uniformSources'):
+            similar = False
+            if (lastSource and source['path'] == lastSource['path'] and
+                    source.get('params') == lastSource.get('params')):
+                similar = True
+            if not similar and (numChecked < 2 or not self._info.get('uniformSources')):
                 # need kwargs of frame, style?
                 ts = self._openSource(source)
                 self.tileWidth = self.tileWidth or ts.tileWidth
@@ -750,6 +753,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     if not hasattr(self, '_bands'):
                         self._bands = {}
                     self._bands.update(tsMeta['bands'])
+                lastSource = source
             bbox = self._sourceBoundingBox(source, tsMeta['sizeX'], tsMeta['sizeY'])
             computedWidth = max(computedWidth, int(math.ceil(bbox['right'])))
             computedHeight = max(computedHeight, int(math.ceil(bbox['bottom'])))
@@ -809,7 +813,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             openFunc = large_image.tilesource.AvailableTileSources[source['sourceName']]
         if params is None:
             params = source.get('params', {})
-        return openFunc(source['path'], **params, format=format)
+        return openFunc(source['path'], **params)
 
     def getAssociatedImage(self, imageKey, *args, **kwargs):
         """

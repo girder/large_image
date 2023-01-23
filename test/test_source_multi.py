@@ -191,3 +191,21 @@ def testFramesAsAxes():
     assert 'IndexZ' in tileMetadata['frames'][0]
     assert tileMetadata['IndexRange']['IndexC'] == 7
     assert tileMetadata['IndexRange']['IndexZ'] == 8
+
+
+@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for a sub-source')
+@pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires python3.11 wheels')
+def testMultiComposite():
+    datastore.fetch('ITGA3Hi_export_crop2.nd2')
+    imagePath = datastore.fetch('multi-source-composite.yaml')
+
+    source = large_image_source_multi.open(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 1024
+    assert tileMetadata['tileHeight'] == 1022
+    assert tileMetadata['sizeX'] == 25906
+    assert tileMetadata['sizeY'] == 19275
+    assert tileMetadata['levels'] == 6
+    assert len(tileMetadata['frames']) == 116
+
+    utilities.checkTilesZXY(source, tileMetadata)
