@@ -8,7 +8,6 @@ from .datastore import datastore
 
 pytestmark = [
     pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python3.7 or higher'),
-    pytest.mark.skipif(sys.version_info >= (3, 11), reason='requires python3.11 wheels'),
 ]
 
 
