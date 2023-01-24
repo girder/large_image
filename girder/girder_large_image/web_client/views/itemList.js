@@ -207,7 +207,6 @@ wrap(ItemListWidget, 'render', function (render) {
                     this.trigger('g:paginated');
                     this.collection.trigger('g:changed');
                 }
-                this.bindOnChanged();
             });
         } else {
             this._needsFetch = true;
