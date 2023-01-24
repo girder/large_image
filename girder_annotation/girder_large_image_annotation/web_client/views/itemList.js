@@ -37,7 +37,7 @@ wrap(ItemListWidget, 'render', function (render) {
         const items = this.collection.toArray();
         const hasAnyLargeImage = _.some(items, (item) => item.has('largeImage'));
 
-        if (!hasAnyLargeImage) {
+        if (!hasAnyLargeImage || this._inFetch || this._needsFetch) {
             return;
         }
 
