@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.19.4
+
+### Improvements
+- Speed up generating tiles for some multi source files ([#1035](../../pull/1035))
+
 ## 1.19.3
 
 ### Improvements
