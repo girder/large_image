@@ -169,6 +169,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _singleTileThreshold = 2048
     _tileSize = 512
     _associatedImageMaxSize = 8192
+    _maxSkippedLevels = 3
 
     def __init__(self, path, **kwargs):  # noqa
         """
@@ -482,6 +483,35 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         return self._metadata
 
+    def _getTileFromEmptyLevel(self, x, y, z, **kwargs):
+        """
+        Composite tiles from missing levels from larger levels in pieces to
+        avoid using too much memory.
+        """
+        fac = int(2 ** self._maxSkippedLevels)
+        z += self._maxSkippedLevels
+        scale = 2 ** (self.levels - 1 - z)
+        result = None
+        for tx in range(fac - 1, -1, -1):
+            if x * fac + tx >= int(math.ceil(self.sizeX / self.tileWidth / scale)):
+                continue
+            for ty in range(fac - 1, -1, -1):
+                if y * fac + ty >= int(math.ceil(self.sizeY / self.tileHeight / scale)):
+                    continue
+                tile = self.getTile(
+                    x * fac + tx, y * fac + ty, z, pilImageAllowed=False,
+                    numpyAllowed=True, **kwargs)
+                if result is None:
+                    result = numpy.zeros((
+                        ty * fac + tile.shape[0],
+                        tx * fac + tile.shape[1],
+                        tile.shape[2]), dtype=tile.dtype)
+                result[
+                    ty * fac:ty * fac + tile.shape[0],
+                    tx * fac:tx * fac + tile.shape[1],
+                    ::] = tile
+        return result[::scale, ::scale, ::]
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         self._xyzInRange(x, y, z)
@@ -514,31 +544,36 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         width = min(width, sizeXAtScale - offsetx)
         height = min(height, sizeYAtScale - offsety)
 
-        with self._tileLock:
-            try:
-                javabridge.attach()
-                if width > 0 and height > 0:
-                    tile = self._bioimage.read(
-                        c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
-                        rescale=False,  # return internal data types
-                        XYWH=(offsetx, offsety, width, height))
-                else:
-                    # We need the same dtype, so read 1x1 at 0x0
-                    tile = self._bioimage.read(
-                        c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
-                        rescale=False,  # return internal data types
-                        XYWH=(0, 0, 1, 1))
-                    tile = numpy.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
-                format = TILE_FORMAT_NUMPY
-            except javabridge.JavaException as exc:
-                es = javabridge.to_string(exc.throwable)
-                raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
-                    fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx, offsety, width, height)))
-            finally:
-                if javabridge.get_env():
-                    javabridge.detach()
-        if scale > 1:
-            tile = tile[::scale, ::scale]
+        if scale >= 2 ** self._maxSkippedLevels:
+            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            format = TILE_FORMAT_NUMPY
+        else:
+            with self._tileLock:
+                try:
+                    javabridge.attach()
+                    if width > 0 and height > 0:
+                        tile = self._bioimage.read(
+                            c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
+                            rescale=False,  # return internal data types
+                            XYWH=(offsetx, offsety, width, height))
+                    else:
+                        # We need the same dtype, so read 1x1 at 0x0
+                        tile = self._bioimage.read(
+                            c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
+                            rescale=False,  # return internal data types
+                            XYWH=(0, 0, 1, 1))
+                        tile = numpy.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
+                    format = TILE_FORMAT_NUMPY
+                except javabridge.JavaException as exc:
+                    es = javabridge.to_string(exc.throwable)
+                    raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
+                        fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx,
+                        offsety, width, height)))
+                finally:
+                    if javabridge.get_env():
+                        javabridge.detach()
+            if scale > 1:
+                tile = tile[::scale, ::scale]
         if tile.shape[:2] != (finalHeight, finalWidth):
             fillValue = 0
             if tile.dtype == numpy.uint16:
