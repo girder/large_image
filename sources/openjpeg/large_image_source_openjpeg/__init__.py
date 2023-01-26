@@ -154,6 +154,10 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 for segment in box.codestream.segment:
                     if segment.marker_id == 'CME' and hasattr(segment, 'ccme'):
                         self._parseMetadataXml(segment.ccme)
+            if hasattr(box, 'box'):
+                for subbox in box.box:
+                    if getattr(subbox, 'icc_profile', None):
+                        self._iccprofiles = [subbox.icc_profile]
 
     def getNativeMagnification(self):
         """

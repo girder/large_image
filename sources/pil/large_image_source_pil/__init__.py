@@ -125,6 +125,8 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         maxWidth, maxHeight = getMaxSize(maxSize, self.defaultMaxSize())
         if maxwh > max(maxWidth, maxHeight):
             raise TileSourceError('PIL tile size is too large.')
+        if self._pilImage.info.get('icc_profile', None):
+            self._iccprofiles = [self._pilImage.info.get('icc_profile')]
         # If the rotation flag exists, loading the image may change the width
         # and height
         if getattr(self._pilImage, '_tile_orientation', None) not in {None, 1}:

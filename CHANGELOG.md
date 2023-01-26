@@ -1,6 +1,9 @@
 # Change Log
 
-## 1.19.4
+## 1.20.0
+
+### Features
+- ICC color profile support ([#1037](../../pull/1037))
 
 ### Improvements
 - Speed up generating tiles for some multi source files ([#1035](../../pull/1035))

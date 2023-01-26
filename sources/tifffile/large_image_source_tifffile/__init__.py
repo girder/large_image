@@ -109,6 +109,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if ('TileLength' in page.tags and
                 self._minTileSize <= page.tags['TileLength'].value <= self._maxTileSize):
             self.tileHeight = page.tags['TileLength'].value
+        if 'InterColorProfile' in page.tags:
+            self._iccprofiles = [page.tags['InterColorProfile'].value]
         self.sizeX = s.shape[s.axes.index('X')]
         self.sizeY = s.shape[s.axes.index('Y')]
         try:
