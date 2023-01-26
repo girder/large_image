@@ -23,8 +23,9 @@ from .datastore import datastore, registry
 # a download order.
 SourceAndFiles = {
     'bioformats': {
-        'read': r'\.(czi|jp2|svs|scn)$',
-        'noread': r'(JK-kidney_B|TCGA-AA-A02O|\.scn$)',
+        'read': r'\.(czi|jp2|svs|scn|dcm)$',
+        'noread': r'JK-kidney_B',
+        'skip': r'TCGA-AA-A02O.*\.svs',
         # We need to modify the bioformats reader similar to tiff's
         # getTileFromEmptyDirectory
         'skipTiles': r'(TCGA-DU-6399|sample_jp2k_33003)',
