@@ -318,7 +318,7 @@ def testGetPixel():
     imagePath = datastore.fetch(
         'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
         '4a70-9ae3-50e3ab45e242.svs')
-    source = large_image_source_openslide.open(imagePath)
+    source = large_image_source_openslide.open(imagePath, style={'icc': False})
 
     pixel = source.getPixel(region={'left': 12125, 'top': 10640})
     assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255}

@@ -95,6 +95,9 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if libtiff_ctypes:
             try:
                 self._tiffinfo = tifftools.read_tiff(self._largeImagePath)
+                if tifftools.Tag.ICCProfile.value in self._tiffinfo['ifds'][0]['tags']:
+                    self._iccprofiles = [self._tiffinfo['ifds'][0]['tags'][
+                        tifftools.Tag.ICCProfile.value]['data']]
             except Exception:
                 pass
 

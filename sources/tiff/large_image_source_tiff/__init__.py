@@ -308,6 +308,13 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                             frames[-1][key] = frameMetadata[key]
                 except Exception:
                     pass
+                if tifftools.Tag.ICCProfile.value in ifd['tags']:
+                    if not hasattr(self, '_iccprofiles'):
+                        self._iccprofiles = []
+                    while len(self._iccprofiles) < len(frames) - 1:
+                        self._iccprofiles.append(None)
+                    self._iccprofiles.append(ifd['tags'][
+                        tifftools.Tag.ICCProfile.value]['data'])
             # otherwise, add to the first frame missing that level
             elif level < self.levels - 1 and any(
                     frame for frame in frames if frame['dirs'][level] is None):

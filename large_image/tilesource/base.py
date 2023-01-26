@@ -1,3 +1,4 @@
+import io
 import json
 import math
 import os
@@ -11,6 +12,7 @@ import types
 import numpy
 import PIL
 import PIL.Image
+import PIL.ImageCms
 import PIL.ImageColor
 import PIL.ImageDraw
 
@@ -1191,6 +1193,73 @@ class TileSource:
                 self.logger.exception('Failed to execute style function %s' % function['name'])
             return image
 
+    def getICCProfiles(self, idx=None):
+        """
+        Get a list of all ICC profiles that are available for the source, or
+        get a specific profile.
+
+        :param idx: a 0-based index into the profiles to get one profile, or
+            None to get a list of all profiles.
+        :returns: either one or a list of PIL.ImageCms.CmsProfile objects, or
+            None if no profiles are available.  If a list, entries in the list
+            may be None.
+        """
+        if not hasattr(self, '_iccprofiles'):
+            return None
+        results = []
+        for pidx, prof in enumerate(self._iccprofiles):
+            if idx is not None and pidx != idx:
+                continue
+            if hasattr(self, '_iccprofilesObjects') and self._iccprofilesObjects[pidx] is not None:
+                prof = self._iccprofilesObjects[pidx]['profile']
+            elif not isinstance(prof, PIL.ImageCms.ImageCmsProfile):
+                prof = PIL.ImageCms.getOpenProfile(io.BytesIO(prof))
+            if idx == pidx:
+                return prof
+            results.append(prof)
+        return results
+
+    def _applyICCProfile(self, sc, frame):
+        """
+        Apply an ICC profile to an image.
+
+        :param sc: the style context.
+        :param frame: the frame to use for auto ranging.
+        :returns: an image with the icc profile, if any, applied.
+        """
+        profileIdx = frame if frame and len(self._iccprofiles) >= frame + 1 else 0
+        sc.iccimage = sc.image
+        sc.iccapplied = False
+        if not self._iccprofiles[profileIdx]:
+            return sc.image
+        if not hasattr(self, '_iccprofilesObjects'):
+            self._iccprofilesObjects = [None] * len(self._iccprofiles)
+        image = _imageToPIL(sc.image)
+        mode = image.mode
+        if not hasattr(self, '_iccsrgbprofile'):
+            self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
+        try:
+            if self._iccprofilesObjects[profileIdx] is None:
+                self._iccprofilesObjects[profileIdx] = {
+                    'profile': self.getICCProfiles(profileIdx)
+                }
+                if mode not in self._iccprofilesObjects[profileIdx]:
+                    self._iccprofilesObjects[profileIdx][mode] = \
+                        PIL.ImageCms.buildTransformFromOpenProfiles(
+                            self._iccprofilesObjects[profileIdx]['profile'],
+                            self._iccsrgbprofile, mode, mode)
+            transform = self._iccprofilesObjects[profileIdx][mode]
+
+            PIL.ImageCms.applyTransform(image, transform, inPlace=True)
+            sc.iccimage = _imageToNumpy(image)[0]
+            sc.iccapplied = True
+        except Exception as exc:
+            raise
+            if not hasattr(self, '_iccerror'):
+                self._iccerror = exc
+                self.logger.exception('Failed to apply ICC profile')
+        return sc.iccimage
+
     def _applyStyle(self, image, style, x, y, z, frame=None):  # noqa
         """
         Apply a style to a numpy image.
@@ -1205,11 +1274,19 @@ class TileSource:
         """
         sc = types.SimpleNamespace(
             image=image, originalStyle=style, x=x, y=y, z=z, frame=frame,
-            mainImage=image, mainFrame=frame)
-        sc.dtype = style.get('dtype')
-        sc.axis = style.get('axis')
-        sc.style = style if 'bands' in style else {'bands': [style]}
-        sc.output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
+            mainImage=image, mainFrame=frame, dtype=None, axis=None)
+        if style is None:
+            sc.style = {'bands': []}
+        else:
+            sc.style = style if 'bands' in style else {'bands': [style]}
+            sc.dtype = style.get('dtype')
+            sc.axis = style.get('axis')
+        if hasattr(self, '_iccprofiles') and sc.style.get('icc', True):
+            image = self._applyICCProfile(sc, frame)
+        if style is None or (len(style) == 1 and 'icc' in style):
+            sc.output = image
+        else:
+            sc.output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
         image = self._applyStyleFunction(image, sc, 'pre')
         for eidx, entry in enumerate(sc.style['bands']):
             sc.styleIndex = eidx
@@ -1343,10 +1420,10 @@ class TileSource:
         :returns: a numpy array and a target PIL image mode.
         """
         tile, mode = _imageToNumpy(tile)
-        if applyStyle and getattr(self, 'style', None):
+        if applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')):
             with self._styleLock:
                 if not getattr(self, '_skipStyle', False):
-                    tile = self._applyStyle(tile, self.style, x, y, z, frame)
+                    tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = numpy.zeros(
                 (self.tileHeight, self.tileWidth, tile.shape[2]),
@@ -1386,8 +1463,10 @@ class TileSource:
                 not isEdge and (not applyStyle or not getattr(self, 'style', None))):
             return tile
         mode = None
-        if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
-                (applyStyle and getattr(self, 'style', None)) or isEdge):
+        if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or (applyStyle and (
+                (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
+                getattr(self, 'style', None) != {'icc': False})) or
+                isEdge):
             tile, mode = self._outputTileNumpyStyle(
                 tile, applyStyle, x, y, z, self._getFrame(**kwargs))
         if isEdge:
