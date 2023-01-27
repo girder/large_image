@@ -226,35 +226,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 setattr(rdr, name, types.MethodType(
                     javabridge.jutil.make_method(name, params, desc), rdr))
             # rdr.setFlattenedResolutions(False)
-            self._metadata = {
-                'dimensionOrder': rdr.getDimensionOrder(),
-                'metadata': javabridge.jdictionary_to_string_dictionary(
-                    rdr.getMetadata()),
-                'seriesMetadata': javabridge.jdictionary_to_string_dictionary(
-                    rdr.getSeriesMetadata()),
-                'seriesCount': rdr.getSeriesCount(),
-                'imageCount': rdr.getImageCount(),
-                'rgbChannelCount': rdr.getRGBChannelCount(),
-                'sizeColorPlanes': rdr.getSizeC(),
-                'sizeT': rdr.getSizeT(),
-                'sizeZ': rdr.getSizeZ(),
-                'sizeX': rdr.getSizeX(),
-                'sizeY': rdr.getSizeY(),
-                'pixelType': rdr.getPixelType(),
-                'isLittleEndian': rdr.isLittleEndian(),
-                'isRGB': rdr.isRGB(),
-                'isInterleaved': rdr.isInterleaved(),
-                'isIndexed': rdr.isIndexed(),
-                'bitsPerPixel': rdr.getBitsPerPixel(),
-                'sizeC': rdr.getEffectiveSizeC(),
-                'normalized': rdr.isNormalized(),
-                'metadataComplete': rdr.isMetadataComplete(),
-                # 'domains': rdr.getDomains(),
-                'optimalTileWidth': rdr.getOptimalTileWidth(),
-                'optimalTileHeight': rdr.getOptimalTileHeight(),
-                'resolutionCount': rdr.getResolutionCount(),
-                'flattenedResolutions': rdr.hasFlattenedResolutions(),
-            }
+            self._metadataForCurrentSeries(rdr)
             self._checkSeries(rdr)
             bmd = bioformats.metadatatools.MetadataRetrieve(self._bioimage.metadata)
             try:
@@ -276,6 +248,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self.logger.debug('File cannot be opened via Bioformats. (%s)' % es)
             raise TileSourceError('File cannot be opened via Bioformats. (%s)' % es)
         except (AttributeError, UnicodeDecodeError):
+            raise
             self.logger.exception('The bioformats reader threw an unhandled exception.')
             raise TileSourceError('The bioformats reader threw an unhandled exception.')
         finally:
@@ -303,6 +276,38 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             finally:
                 if javabridge.get_env():
                     javabridge.detach()
+
+    def _metadataForCurrentSeries(self, rdr):
+        self._metadata = getattr(self, '_metadata', {})
+        self._metadata.update({
+            'dimensionOrder': rdr.getDimensionOrder(),
+            'metadata': javabridge.jdictionary_to_string_dictionary(
+                rdr.getMetadata()),
+            'seriesMetadata': javabridge.jdictionary_to_string_dictionary(
+                rdr.getSeriesMetadata()),
+            'seriesCount': rdr.getSeriesCount(),
+            'imageCount': rdr.getImageCount(),
+            'rgbChannelCount': rdr.getRGBChannelCount(),
+            'sizeColorPlanes': rdr.getSizeC(),
+            'sizeT': rdr.getSizeT(),
+            'sizeZ': rdr.getSizeZ(),
+            'sizeX': rdr.getSizeX(),
+            'sizeY': rdr.getSizeY(),
+            'pixelType': rdr.getPixelType(),
+            'isLittleEndian': rdr.isLittleEndian(),
+            'isRGB': rdr.isRGB(),
+            'isInterleaved': rdr.isInterleaved(),
+            'isIndexed': rdr.isIndexed(),
+            'bitsPerPixel': rdr.getBitsPerPixel(),
+            'sizeC': rdr.getEffectiveSizeC(),
+            'normalized': rdr.isNormalized(),
+            'metadataComplete': rdr.isMetadataComplete(),
+            # 'domains': rdr.getDomains(),
+            'optimalTileWidth': rdr.getOptimalTileWidth(),
+            'optimalTileHeight': rdr.getOptimalTileHeight(),
+            'resolutionCount': rdr.getResolutionCount(),
+            'flattenedResolutions': rdr.hasFlattenedResolutions(),
+        })
 
     def _getSeriesStarts(self, rdr):  # noqa
         self._metadata['frameSeries'] = [{
@@ -381,6 +386,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for frame in self._metadata['frameSeries']:
             for level in range(len(frame['series'])):
                 rdr.setSeries(frame['series'][level])
+                self._metadataForCurrentSeries(rdr)
                 info = {
                     'sizeX': rdr.getSizeX(),
                     'sizeY': rdr.getSizeY(),
