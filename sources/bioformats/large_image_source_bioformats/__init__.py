@@ -203,25 +203,25 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             rdr = self._bioimage.rdr
             # Bind additional functions not done by bioformats module.
             # Functions are listed at https://downloads.openmicroscopy.org
-            # //bio-formats/5.1.5/api/loci/formats/IFormatReader.html
+            # /bio-formats/5.1.5/api/loci/formats/IFormatReader.html
             for (name, params, desc) in [
                 ('getBitsPerPixel', '()I', 'Get the number of bits per pixel'),
-                ('getEffectiveSizeC', '()I', 'effectiveC * Z * T = imageCount'),
-                ('isNormalized', '()Z', 'Is float data normalized'),
-                ('isMetadataComplete', '()Z', 'True if metadata is completely parsed'),
                 ('getDomains', '()[Ljava/lang/String;', 'Get a list of domains'),
-                ('getZCTCoords', '(I)[I', 'Gets the Z, C and T coordinates '
-                 '(real sizes) corresponding to the given rasterized index value.'),
-                ('getOptimalTileWidth', '()I', 'the optimal sub-image width '
-                 'for use with openBytes'),
+                ('getEffectiveSizeC', '()I', 'effectiveC * Z * T = imageCount'),
                 ('getOptimalTileHeight', '()I', 'the optimal sub-image height '
                  'for use with openBytes'),
+                ('getOptimalTileWidth', '()I', 'the optimal sub-image width '
+                 'for use with openBytes'),
+                ('getResolution', '()I', 'The current resolution level'),
                 ('getResolutionCount', '()I', 'The number of resolutions for '
                  'the current series'),
-                ('setResolution', '(I)V', 'Set the resolution level'),
-                ('getResolution', '()I', 'The current resolution level'),
+                ('getZCTCoords', '(I)[I', 'Gets the Z, C and T coordinates '
+                 '(real sizes) corresponding to the given rasterized index value.'),
                 ('hasFlattenedResolutions', '()Z', 'True if resolutions have been flattened'),
+                ('isMetadataComplete', '()Z', 'True if metadata is completely parsed'),
+                ('isNormalized', '()Z', 'Is float data normalized'),
                 ('setFlattenedResolutions', '(Z)V', 'Set if resolution should be flattened'),
+                ('setResolution', '(I)V', 'Set the resolution level'),
             ]:
                 setattr(rdr, name, types.MethodType(
                     javabridge.jutil.make_method(name, params, desc), rdr))
@@ -304,7 +304,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if javabridge.get_env():
                     javabridge.detach()
 
-    def _getSeriesStarts(self, rdr):
+    def _getSeriesStarts(self, rdr):  # noqa
         self._metadata['frameSeries'] = [{
             'series': [0],
             'sizeX': self._metadata['sizeX'],
@@ -333,16 +333,25 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception as exc:
             self.logger.debug('Failed to parse series information: %s', exc)
             rdr.setSeries(0)
-            return 1
-        if not len(seriesMetadata):
+            if any(key for key in seriesMetadata if key.startswith('Series ')):
+                return 1
+        if not len(seriesMetadata) or not any(
+                key for key in seriesMetadata if key.startswith('Series ')):
             frameList = [[0]]
             nextSeriesNum = 1
             for idx in range(1, self._metadata['seriesCount']):
                 rdr.setSeries(idx)
-                if rdr.getSizeX() == self.sizeX and rdr.getSizeY == self.sizeY:
+                if (rdr.getSizeX() == self._metadata['sizeX'] and
+                        rdr.getSizeY == self._metadata['sizeY']):
                     frameList.append([idx])
                     if nextSeriesNum == idx:
                         nextSeriesNum = idx + 1
+                if (rdr.getSizeX() * rdr.getSizeY() >
+                        self._metadata['sizeX'] * self._metadata['sizeY']):
+                    frameList = [[idx]]
+                    nextSeriesNum = idx + 1
+                    self._metadata['sizeX'] = self.sizeX = rdr.getSizeX()
+                    self._metadata['sizeY'] = self.sizeY = rdr.getSizeY()
         frameList = [fl for fl in frameList if len(fl)]
         self._metadata['frameSeries'] = [{
             'series': fl,
