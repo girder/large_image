@@ -8,6 +8,7 @@
 ### Improvements
 - Speed up generating tiles for some multi source files ([#1035](../../pull/1035))
 - Render item lists faster ([#1036](../../pull/1036))
+- Reduce bioformats source memory usage ([#1038](../../pull/1038))
 
 ## 1.19.3
 
