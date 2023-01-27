@@ -1254,7 +1254,6 @@ class TileSource:
             sc.iccimage = _imageToNumpy(image)[0]
             sc.iccapplied = True
         except Exception as exc:
-            raise
             if not hasattr(self, '_iccerror'):
                 self._iccerror = exc
                 self.logger.exception('Failed to apply ICC profile')
