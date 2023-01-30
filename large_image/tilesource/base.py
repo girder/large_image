@@ -1193,13 +1193,15 @@ class TileSource:
                 self.logger.exception('Failed to execute style function %s' % function['name'])
             return image
 
-    def getICCProfiles(self, idx=None):
+    def getICCProfiles(self, idx=None, onlyInfo=False):
         """
         Get a list of all ICC profiles that are available for the source, or
         get a specific profile.
 
         :param idx: a 0-based index into the profiles to get one profile, or
             None to get a list of all profiles.
+        :param onlyInfo: if idx is None and this is true, just return the
+            profile information.
         :returns: either one or a list of PIL.ImageCms.CmsProfile objects, or
             None if no profiles are available.  If a list, entries in the list
             may be None.
@@ -1217,6 +1219,10 @@ class TileSource:
             if idx == pidx:
                 return prof
             results.append(prof)
+        if onlyInfo:
+            results = [
+                PIL.ImageCms.getProfileInfo(prof).strip() or 'present'
+                if prof else None for prof in results]
         return results
 
     def _applyICCProfile(self, sc, frame):
