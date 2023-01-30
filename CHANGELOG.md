@@ -1,11 +1,68 @@
 # Change Log
 
-## 1.17.4
+## 1.20.0
+
+### Features
+- ICC color profile support ([#1037](../../pull/1037))
+
+### Improvements
+- Speed up generating tiles for some multi source files ([#1035](../../pull/1035))
+- Render item lists faster ([#1036](../../pull/1036))
+- Reduce bioformats source memory usage ([#1038](../../pull/1038))
+- Better pick the largest image from bioformats ([#1039](../../pull/1039), [#1040](../../pull/1040))
+
+## 1.19.3
+
+### Improvements
+- Speed up rendering Girder item page metadata in some instances ([#1031](../../pull/1031))
+- Speed up opening some multi source files ([#1033](../../pull/1033))
+- Test nd2 source on Python 3.11 ([#1034](../../pull/1034))
+
+### Bug Fixes
+- Fix an issue with non-square tiles in the multi source ([#1032](../../pull/1032))
+
+## 1.19.2
+
+### Improvements
+- Better parse svs pixel size in tiff and tifffile sources ([#1021](../../pull/1021))
+- Add geojson to known mime types ([#1022](../../pull/1022))
+- Handle upcoming matplotlib deprecations ([#1025](../../pull/1025))
+- Handle upcoming numpy deprecations ([#1026](../../pull/1026))
+
+## 1.19.1
+
+### Improvements
+- Improve tifffile associated image detection ([#1019](../../pull/1019))
+
+## 1.19.0
+
+### Features
+- Add a frames property to the tile source as a short hand for getting the number of frames from the metadata ([#1014](../../pull/1014))
+
+### Improvements
+- Better release file handles ([#1007](../../pull/1007))
+- Support tiny images from the test source ([#1013](../../pull/1013))
+- Speed up loading or parsing some multi sources ([#1015](../../pull/1015))
+- Better scale uint32 images ([#1017](../../pull/1017))
+
+### Changes
+- Don't report filename in internal PIL metadata ([#1006](../../pull/1006))
+
+### Bug Fixes
+- Better output new vips images as float32 ([#1016](../../pull/1016))
+- Pin tinycolor2 for annotations ([#1018](../../pull/1018))
+
+## 1.18.0
+
+### Features
+- Add a DICOM tile source ([#1005](../../pull/1005))
 
 ### Improvements
 - Better control dtype on multi sources ([#993](../../pull/993))
 - Don't use dask threads when using nd2 to fetch tiles ([#994](../../pull/994))
 - Set mime type for imported girder files ([#995](../../pull/995))
+- Specify token scopes for girder endpoints ([#999](../../pull/999), [#1000](../../pull/1000))
+- Set the qptiff extension to prefer the tiff reader ([#1003](../../pull/1003))
 
 ### Bug Fixes
 - Use open.read rather than download to access files in Girder ([#989](../../pull/989))

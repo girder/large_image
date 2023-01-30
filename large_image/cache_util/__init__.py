@@ -26,6 +26,8 @@ except ImportError:
 
 from .cachefactory import CacheFactory, pickAvailableCache
 
+_cacheClearFuncs = []
+
 
 @atexit.register
 def cachesClear(*args, **kwargs):
@@ -44,6 +46,8 @@ def cachesClear(*args, **kwargs):
                 tileCache.clear()
         except Exception:
             pass
+    for func in _cacheClearFuncs:
+        func()
 
 
 def cachesInfo(*args, **kwargs):

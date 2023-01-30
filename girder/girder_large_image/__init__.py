@@ -241,6 +241,7 @@ def handleFileSave(event):
             for mimeType, ext, std in [
                 ('text/yaml', '.yaml', True),
                 ('text/yaml', '.yml', True),
+                ('application/vnd.geo+json', '.geojson', True),
             ]:
                 if ext not in mimetypes.types_map:
                     mimetypes.add_type(mimeType, ext, std)

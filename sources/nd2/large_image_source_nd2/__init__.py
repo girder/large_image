@@ -100,7 +100,7 @@ def diffObj(obj1, obj2):
 
 class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
-    Provides tile access to nd2 files the nd2 or nd2reader library can read.
+    Provides tile access to nd2 files the nd2 library can read.
     """
 
     cacheName = 'tilesource'
@@ -138,9 +138,13 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via nd2reader.')
+            raise TileSourceError('File cannot be opened via the nd2 source.')
         # We use dask to allow lazy reading of large images
-        self._nd2array = self._nd2.to_dask(copy=False, wrapper=False)  # ##DWM::
+        try:
+            self._nd2array = self._nd2.to_dask(copy=False, wrapper=False)
+        except TypeError as exc:
+            self.logger.debug('Failed to read nd2 file: %s', exc)
+            raise TileSourceError('File cannot be opened via the nd2 source.')
         arrayOrder = list(self._nd2.sizes)
         # Reorder this so that it is XY (P), T, Z, C, Y, X, S (or at least end
         # in Y, X[, S]).
@@ -167,12 +171,23 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self.tileHeight = self.sizeY
         self.levels = int(max(1, math.ceil(math.log(
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
-        self._framecount = (
-            self._nd2.metadata.contents.channelCount * self._nd2.metadata.contents.frameCount)
+        try:
+            self._frameCount = (
+                self._nd2.metadata.contents.channelCount * self._nd2.metadata.contents.frameCount)
+        except Exception:
+            self._nd2.close()
+            del self._nd2
+            raise TileSourceError(
+                'File cannot be parsed with the nd2 source.  Is it a legacy nd2 file?')
         self._bandnames = {
             chan.channel.name.lower(): idx for idx, chan in enumerate(self._nd2.metadata.channels)}
         self._channels = [chan.channel.name for chan in self._nd2.metadata.channels]
         self._tileLock = threading.RLock()
+
+    def __del__(self):
+        if hasattr(self, '_nd2'):
+            self._nd2.close()
+            del self._nd2
 
     def getNativeMagnification(self):
         """
@@ -203,24 +218,26 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: metadata dictionary.
         """
-        result = super().getMetadata()
+        if not hasattr(self, '_computedMetadata'):
+            result = super().getMetadata()
 
-        sizes = self._nd2.sizes
-        axes = self._nd2order[:self._nd2order.index('Y')][::-1]
-        sizes = self._nd2.sizes
-        result['frames'] = frames = []
-        for idx in range(self._framecount):
-            frame = {'Frame': idx}
-            basis = 1
-            ref = {}
-            for axis in axes:
-                ref[axis] = (idx // basis) % sizes[axis]
-                frame['Index' + (axis.upper() if axis.upper() != 'P' else 'XY')] = (
-                    idx // basis) % sizes[axis]
-                basis *= sizes.get(axis, 1)
-            frames.append(frame)
-        self._addMetadataFrameInformation(result, self._channels)
-        return result
+            sizes = self._nd2.sizes
+            axes = self._nd2order[:self._nd2order.index('Y')][::-1]
+            sizes = self._nd2.sizes
+            result['frames'] = frames = []
+            for idx in range(self._frameCount):
+                frame = {'Frame': idx}
+                basis = 1
+                ref = {}
+                for axis in axes:
+                    ref[axis] = (idx // basis) % sizes[axis]
+                    frame['Index' + (axis.upper() if axis.upper() != 'P' else 'XY')] = (
+                        idx // basis) % sizes[axis]
+                    basis *= sizes.get(axis, 1)
+                frames.append(frame)
+            self._addMetadataFrameInformation(result, self._channels)
+            self._computedMetadata = result
+        return self._computedMetadata
 
     def getInternalMetadata(self, **kwargs):
         """
@@ -250,10 +267,10 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         frame = self._getFrame(**kwargs)
-        self._xyzInRange(x, y, z, frame, self._framecount)
+        self._xyzInRange(x, y, z, frame, self._frameCount)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         tileframe = self._nd2array
-        fc = self._framecount
+        fc = self._frameCount
         fp = frame
         for axis in self._nd2order[:self._nd2order.index('Y')]:
             fc //= self._nd2.sizes[axis]

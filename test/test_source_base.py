@@ -9,6 +9,7 @@ import PIL.Image
 import pytest
 
 import large_image
+from large_image.cache_util import cachesClear
 from large_image.tilesource import nearPowerOfTwo
 
 from . import utilities
@@ -22,13 +23,18 @@ from .datastore import datastore, registry
 # a download order.
 SourceAndFiles = {
     'bioformats': {
-        'read': r'\.(czi|jp2|svs|scn)$',
-        'noread': r'(JK-kidney_B|TCGA-AA-A02O|\.scn$)',
+        'read': r'\.(czi|jp2|svs|scn|dcm)$',
+        'noread': r'JK-kidney_B',
+        'skip': r'TCGA-AA-A02O.*\.svs',
         # We need to modify the bioformats reader similar to tiff's
         # getTileFromEmptyDirectory
         'skipTiles': r'(TCGA-DU-6399|sample_jp2k_33003)',
     },
     'deepzoom': {},
+    'dicom': {
+        'read': r'\.dcm$',
+        'python': sys.version_info >= (3, 8),
+    },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
         'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*)$',
@@ -43,7 +49,7 @@ SourceAndFiles = {
     },
     'multi': {
         'read': r'\.(yml|yaml)$',
-        'skip': r'(multi_source\.yml)$',
+        'skip': r'(multi_source\.yml|multi-source-composite\.yaml)$',
     },
     'nd2': {
         'read': r'\.(nd2)$',
@@ -70,12 +76,12 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2)$',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2|dcm)$',
         'python': sys.version_info >= (3, 7) and sys.version_info < (3, 11),
     },
     'vips': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn|dcm)$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'  # noqa
     },
 }
@@ -139,6 +145,8 @@ def testSourcesCanRead(source, filename):
     mod = sys.modules[sourceClass.__module__]
     assert bool(mod.canRead(imagePath)) is bool(canRead)
 
+    cachesClear()
+
 
 @pytest.mark.parametrize('filename', registry)
 @pytest.mark.parametrize('source', SourceAndFiles)
@@ -153,6 +161,8 @@ def testSourcesCanReadPath(source, filename):
     large_image.tilesource.loadTileSources()
     sourceClass = large_image.tilesource.AvailableTileSources[source]
     assert bool(sourceClass.canRead(Path(imagePath))) is bool(canRead)
+
+    cachesClear()
 
 
 @pytest.mark.parametrize('filename', registry)
@@ -183,7 +193,9 @@ def testSourcesTilesAndMethods(source, filename):
     #  assert len(ts.histogram()['histogram']) >= 1
     #  assert ts.histogram(onlyMinMax=True)['min'][0] is not None
     # Test multiple frames if they exist
+    assert ts.frames >= 1
     if len(tileMetadata.get('frames', [])) > 1:
+        assert ts.frames == len(tileMetadata['frames'])
         tsf = sourceClass(imagePath, frame=len(tileMetadata['frames']) - 1)
         tileMetadata = tsf.getMetadata()
         utilities.checkTilesZXY(tsf, tileMetadata)
@@ -197,6 +209,8 @@ def testSourcesTilesAndMethods(source, filename):
     mod = sys.modules[sourceClass.__module__]
     assert mod.open(imagePath) is not None
 
+    cachesClear()
+
 
 @pytest.mark.parametrize('filename,isgeo', [
     ('04091217_ruc.nc', True),
@@ -208,6 +222,8 @@ def testSourcesTilesAndMethods(source, filename):
 def testIsGeospatial(filename, isgeo):
     imagePath = datastore.fetch(filename)
     assert large_image.tilesource.isGeospatial(imagePath) == isgeo
+
+    cachesClear()
 
 
 @pytest.mark.parametrize('palette', [

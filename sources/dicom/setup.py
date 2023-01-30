@@ -2,7 +2,7 @@ import os
 
 from setuptools import find_packages, setup
 
-description = 'An nd2 (NIS Elements) tilesource for large_image.'
+description = 'A DICOM tilesource for large_image.'
 long_description = description + '\n\nSee the large-image package for more details.'
 
 
@@ -32,7 +32,7 @@ except (ImportError, LookupError):
     limit_version = ''
 
 setup(
-    name='large-image-source-nd2',
+    name='large-image-source-dicom',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
                      'fallback_version': 'development'},
     setup_requires=['setuptools-scm'],
@@ -45,7 +45,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -53,8 +52,7 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'dask[array]',
-        'nd2[legacy]>=0.2.3 ; python_version >= "3.7"',
+        'wsidicom ; python_version >= "3.8"',
         'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
@@ -66,10 +64,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'nd2 = large_image_source_nd2:ND2FileTileSource'
+            'dicom = large_image_source_dicom:DICOMFileTileSource'
         ],
         'girder_large_image.source': [
-            'nd2 = large_image_source_nd2.girder_source:ND2GirderTileSource'
+            'dicom = large_image_source_dicom.girder_source:DICOMGirderTileSource'
         ]
     },
 )

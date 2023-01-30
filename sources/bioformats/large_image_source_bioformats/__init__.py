@@ -28,6 +28,7 @@ import math
 import os
 import threading
 import types
+import weakref
 
 import numpy
 
@@ -60,7 +61,7 @@ _openImages = []
 
 # Default to ignoring files with no extension and some specific extensions.
 config.ConfigValues['source_bioformats_ignored_names'] = \
-    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2))$'
+    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2|ome|nc|json|isyntax))$'
 
 
 def _monitor_thread():
@@ -71,6 +72,7 @@ def _monitor_thread():
             javabridge.attach()
             while len(_openImages):
                 source = _openImages.pop()
+                source = source()
                 try:
                     source._bioimage.close()
                 except Exception:
@@ -167,6 +169,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _singleTileThreshold = 2048
     _tileSize = 512
     _associatedImageMaxSize = 8192
+    _maxSkippedLevels = 3
 
     def __init__(self, path, **kwargs):  # noqa
         """
@@ -195,63 +198,35 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
                 self.logger.debug('File cannot be opened via Bioformats. (%r)' % exc)
                 raise TileSourceError('File cannot be opened via Bioformats (%r)' % exc)
-            _openImages.append(self)
+            _openImages.append(weakref.ref(self))
 
             rdr = self._bioimage.rdr
             # Bind additional functions not done by bioformats module.
             # Functions are listed at https://downloads.openmicroscopy.org
-            # //bio-formats/5.1.5/api/loci/formats/IFormatReader.html
+            # /bio-formats/5.1.5/api/loci/formats/IFormatReader.html
             for (name, params, desc) in [
                 ('getBitsPerPixel', '()I', 'Get the number of bits per pixel'),
-                ('getEffectiveSizeC', '()I', 'effectiveC * Z * T = imageCount'),
-                ('isNormalized', '()Z', 'Is float data normalized'),
-                ('isMetadataComplete', '()Z', 'True if metadata is completely parsed'),
                 ('getDomains', '()[Ljava/lang/String;', 'Get a list of domains'),
-                ('getZCTCoords', '(I)[I', 'Gets the Z, C and T coordinates '
-                 '(real sizes) corresponding to the given rasterized index value.'),
-                ('getOptimalTileWidth', '()I', 'the optimal sub-image width '
-                 'for use with openBytes'),
+                ('getEffectiveSizeC', '()I', 'effectiveC * Z * T = imageCount'),
                 ('getOptimalTileHeight', '()I', 'the optimal sub-image height '
                  'for use with openBytes'),
+                ('getOptimalTileWidth', '()I', 'the optimal sub-image width '
+                 'for use with openBytes'),
+                ('getResolution', '()I', 'The current resolution level'),
                 ('getResolutionCount', '()I', 'The number of resolutions for '
                  'the current series'),
-                ('setResolution', '(I)V', 'Set the resolution level'),
-                ('getResolution', '()I', 'The current resolution level'),
+                ('getZCTCoords', '(I)[I', 'Gets the Z, C and T coordinates '
+                 '(real sizes) corresponding to the given rasterized index value.'),
                 ('hasFlattenedResolutions', '()Z', 'True if resolutions have been flattened'),
+                ('isMetadataComplete', '()Z', 'True if metadata is completely parsed'),
+                ('isNormalized', '()Z', 'Is float data normalized'),
                 ('setFlattenedResolutions', '(Z)V', 'Set if resolution should be flattened'),
+                ('setResolution', '(I)V', 'Set the resolution level'),
             ]:
                 setattr(rdr, name, types.MethodType(
                     javabridge.jutil.make_method(name, params, desc), rdr))
             # rdr.setFlattenedResolutions(False)
-            self._metadata = {
-                'dimensionOrder': rdr.getDimensionOrder(),
-                'metadata': javabridge.jdictionary_to_string_dictionary(
-                    rdr.getMetadata()),
-                'seriesMetadata': javabridge.jdictionary_to_string_dictionary(
-                    rdr.getSeriesMetadata()),
-                'seriesCount': rdr.getSeriesCount(),
-                'imageCount': rdr.getImageCount(),
-                'rgbChannelCount': rdr.getRGBChannelCount(),
-                'sizeColorPlanes': rdr.getSizeC(),
-                'sizeT': rdr.getSizeT(),
-                'sizeZ': rdr.getSizeZ(),
-                'sizeX': rdr.getSizeX(),
-                'sizeY': rdr.getSizeY(),
-                'pixelType': rdr.getPixelType(),
-                'isLittleEndian': rdr.isLittleEndian(),
-                'isRGB': rdr.isRGB(),
-                'isInterleaved': rdr.isInterleaved(),
-                'isIndexed': rdr.isIndexed(),
-                'bitsPerPixel': rdr.getBitsPerPixel(),
-                'sizeC': rdr.getEffectiveSizeC(),
-                'normalized': rdr.isNormalized(),
-                'metadataComplete': rdr.isMetadataComplete(),
-                # 'domains': rdr.getDomains(),
-                'optimalTileWidth': rdr.getOptimalTileWidth(),
-                'optimalTileHeight': rdr.getOptimalTileHeight(),
-                'resolutionCount': rdr.getResolutionCount(),
-                'flattenedResolutions': rdr.hasFlattenedResolutions(),
-            }
+            self._metadataForCurrentSeries(rdr)
             self._checkSeries(rdr)
             bmd = bioformats.metadatatools.MetadataRetrieve(self._bioimage.metadata)
             try:
@@ -273,6 +248,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self.logger.debug('File cannot be opened via Bioformats. (%s)' % es)
             raise TileSourceError('File cannot be opened via Bioformats. (%s)' % es)
         except (AttributeError, UnicodeDecodeError):
+            raise
             self.logger.exception('The bioformats reader threw an unhandled exception.')
             raise TileSourceError('The bioformats reader threw an unhandled exception.')
         finally:
@@ -295,12 +271,45 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 javabridge.attach()
                 self._bioimage.close()
-                _openImages.remove(self)
+                del self._bioimage
+                _openImages.remove(weakref.ref(self))
             finally:
                 if javabridge.get_env():
                     javabridge.detach()
 
-    def _getSeriesStarts(self, rdr):
+    def _metadataForCurrentSeries(self, rdr):
+        self._metadata = getattr(self, '_metadata', {})
+        self._metadata.update({
+            'dimensionOrder': rdr.getDimensionOrder(),
+            'metadata': javabridge.jdictionary_to_string_dictionary(
+                rdr.getMetadata()),
+            'seriesMetadata': javabridge.jdictionary_to_string_dictionary(
+                rdr.getSeriesMetadata()),
+            'seriesCount': rdr.getSeriesCount(),
+            'imageCount': rdr.getImageCount(),
+            'rgbChannelCount': rdr.getRGBChannelCount(),
+            'sizeColorPlanes': rdr.getSizeC(),
+            'sizeT': rdr.getSizeT(),
+            'sizeZ': rdr.getSizeZ(),
+            'sizeX': rdr.getSizeX(),
+            'sizeY': rdr.getSizeY(),
+            'pixelType': rdr.getPixelType(),
+            'isLittleEndian': rdr.isLittleEndian(),
+            'isRGB': rdr.isRGB(),
+            'isInterleaved': rdr.isInterleaved(),
+            'isIndexed': rdr.isIndexed(),
+            'bitsPerPixel': rdr.getBitsPerPixel(),
+            'sizeC': rdr.getEffectiveSizeC(),
+            'normalized': rdr.isNormalized(),
+            'metadataComplete': rdr.isMetadataComplete(),
+            # 'domains': rdr.getDomains(),
+            'optimalTileWidth': rdr.getOptimalTileWidth(),
+            'optimalTileHeight': rdr.getOptimalTileHeight(),
+            'resolutionCount': rdr.getResolutionCount(),
+            'flattenedResolutions': rdr.hasFlattenedResolutions(),
+        })
+
+    def _getSeriesStarts(self, rdr):  # noqa
         self._metadata['frameSeries'] = [{
             'series': [0],
             'sizeX': self._metadata['sizeX'],
@@ -329,16 +338,25 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception as exc:
             self.logger.debug('Failed to parse series information: %s', exc)
             rdr.setSeries(0)
-            return 1
-        if not len(seriesMetadata):
+            if any(key for key in seriesMetadata if key.startswith('Series ')):
+                return 1
+        if not len(seriesMetadata) or not any(
+                key for key in seriesMetadata if key.startswith('Series ')):
             frameList = [[0]]
             nextSeriesNum = 1
             for idx in range(1, self._metadata['seriesCount']):
                 rdr.setSeries(idx)
-                if rdr.getSizeX() == self.sizeX and rdr.getSizeY == self.sizeY:
+                if (rdr.getSizeX() == self._metadata['sizeX'] and
+                        rdr.getSizeY == self._metadata['sizeY']):
                     frameList.append([idx])
                     if nextSeriesNum == idx:
                         nextSeriesNum = idx + 1
+                if (rdr.getSizeX() * rdr.getSizeY() >
+                        self._metadata['sizeX'] * self._metadata['sizeY']):
+                    frameList = [[idx]]
+                    nextSeriesNum = idx + 1
+                    self._metadata['sizeX'] = self.sizeX = rdr.getSizeX()
+                    self._metadata['sizeY'] = self.sizeY = rdr.getSizeY()
         frameList = [fl for fl in frameList if len(fl)]
         self._metadata['frameSeries'] = [{
             'series': fl,
@@ -368,6 +386,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for frame in self._metadata['frameSeries']:
             for level in range(len(frame['series'])):
                 rdr.setSeries(frame['series'][level])
+                self._metadataForCurrentSeries(rdr)
                 info = {
                     'sizeX': rdr.getSizeX(),
                     'sizeY': rdr.getSizeY(),
@@ -479,6 +498,35 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         return self._metadata
 
+    def _getTileFromEmptyLevel(self, x, y, z, **kwargs):
+        """
+        Composite tiles from missing levels from larger levels in pieces to
+        avoid using too much memory.
+        """
+        fac = int(2 ** self._maxSkippedLevels)
+        z += self._maxSkippedLevels
+        scale = 2 ** (self.levels - 1 - z)
+        result = None
+        for tx in range(fac - 1, -1, -1):
+            if x * fac + tx >= int(math.ceil(self.sizeX / self.tileWidth / scale)):
+                continue
+            for ty in range(fac - 1, -1, -1):
+                if y * fac + ty >= int(math.ceil(self.sizeY / self.tileHeight / scale)):
+                    continue
+                tile = self.getTile(
+                    x * fac + tx, y * fac + ty, z, pilImageAllowed=False,
+                    numpyAllowed=True, **kwargs)
+                if result is None:
+                    result = numpy.zeros((
+                        ty * fac + tile.shape[0],
+                        tx * fac + tile.shape[1],
+                        tile.shape[2]), dtype=tile.dtype)
+                result[
+                    ty * fac:ty * fac + tile.shape[0],
+                    tx * fac:tx * fac + tile.shape[1],
+                    ::] = tile
+        return result[::scale, ::scale, ::]
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         self._xyzInRange(x, y, z)
@@ -511,31 +559,36 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         width = min(width, sizeXAtScale - offsetx)
         height = min(height, sizeYAtScale - offsety)
 
-        with self._tileLock:
-            try:
-                javabridge.attach()
-                if width > 0 and height > 0:
-                    tile = self._bioimage.read(
-                        c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
-                        rescale=False,  # return internal data types
-                        XYWH=(offsetx, offsety, width, height))
-                else:
-                    # We need the same dtype, so read 1x1 at 0x0
-                    tile = self._bioimage.read(
-                        c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
-                        rescale=False,  # return internal data types
-                        XYWH=(0, 0, 1, 1))
-                    tile = numpy.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
-                format = TILE_FORMAT_NUMPY
-            except javabridge.JavaException as exc:
-                es = javabridge.to_string(exc.throwable)
-                raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
-                    fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx, offsety, width, height)))
-            finally:
-                if javabridge.get_env():
-                    javabridge.detach()
-        if scale > 1:
-            tile = tile[::scale, ::scale]
+        if scale >= 2 ** self._maxSkippedLevels:
+            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            format = TILE_FORMAT_NUMPY
+        else:
+            with self._tileLock:
+                try:
+                    javabridge.attach()
+                    if width > 0 and height > 0:
+                        tile = self._bioimage.read(
+                            c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
+                            rescale=False,  # return internal data types
+                            XYWH=(offsetx, offsety, width, height))
+                    else:
+                        # We need the same dtype, so read 1x1 at 0x0
+                        tile = self._bioimage.read(
+                            c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
+                            rescale=False,  # return internal data types
+                            XYWH=(0, 0, 1, 1))
+                        tile = numpy.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
+                    format = TILE_FORMAT_NUMPY
+                except javabridge.JavaException as exc:
+                    es = javabridge.to_string(exc.throwable)
+                    raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
+                        fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx,
+                        offsety, width, height)))
+                finally:
+                    if javabridge.get_env():
+                        javabridge.detach()
+            if scale > 1:
+                tile = tile[::scale, ::scale]
         if tile.shape[:2] != (finalHeight, finalWidth):
             fillValue = 0
             if tile.dtype == numpy.uint16:

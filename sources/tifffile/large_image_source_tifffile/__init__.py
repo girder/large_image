@@ -109,6 +109,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if ('TileLength' in page.tags and
                 self._minTileSize <= page.tags['TileLength'].value <= self._maxTileSize):
             self.tileHeight = page.tags['TileLength'].value
+        if 'InterColorProfile' in page.tags:
+            self._iccprofiles = [page.tags['InterColorProfile'].value]
         self.sizeX = s.shape[s.axes.index('X')]
         self.sizeY = s.shape[s.axes.index('Y')]
         try:
@@ -168,6 +170,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._seriesShape = []
         for idx, s in enumerate(self._tf.series):
             if s != base:
+                if s.name.lower() in {'label', 'macro', 'thumbnail', 'map'}:
+                    continue
                 if 'P' in base.axes or s.axes != base.axes:
                     continue
                 if not all(base.axes[sidx] in 'YX' or sl == base.shape[sidx]
@@ -287,6 +291,18 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                 channels.get(idx)['name'] for idx in range(len(channels))]
                         except Exception:
                             pass
+
+    def _handle_svs(self):
+        """
+        For SVS files, parse the magnification and pixel size.
+        """
+        try:
+            meta = self._tf.pages[0].description
+            self._magnification = float(meta.split('AppMag = ')[1].split('|')[0].strip())
+            self._mm_x = self._mm_y = float(
+                meta.split('|MPP = ', 1)[1].split('|')[0].strip()) * 0.001
+        except Exception:
+            pass
 
     def getNativeMagnification(self):
         """

@@ -4,6 +4,7 @@ girder>=3.0.13.dev6 ; python_version >= '3.8'
 girder-jobs>=3.0.3
 -e sources/bioformats
 -e sources/deepzoom
+-e sources/dicom
 -e sources/dummy
 -e sources/gdal
 -e sources/multi
@@ -14,7 +15,7 @@ girder-jobs>=3.0.3
 -e sources/rasterio
 -e sources/test
 -e sources/tiff
--e sources/tifffile ; python_version >= '3.7'
+-e sources/tifffile
 -e sources/vips
 # must be after sources/tiff
 -e sources/ometiff

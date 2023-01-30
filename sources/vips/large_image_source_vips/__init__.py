@@ -11,7 +11,7 @@ import numpy
 import pyvips
 
 from large_image import config
-from large_image.cache_util import LruCacheMetaclass, methodcache
+from large_image.cache_util import LruCacheMetaclass, _cacheClearFuncs, methodcache
 from large_image.constants import (NEW_IMAGE_PATH_FLAG, TILE_FORMAT_NUMPY,
                                    GValueToDtype, SourcePriority,
                                    dtypeToGValue)
@@ -22,6 +22,18 @@ from large_image.tilesource.utilities import _imageToNumpy
 # Default to ignoring files with no extension and some specific extensions.
 config.ConfigValues['source_vips_ignored_names'] = \
     r'(^[^.]*|\.(yml|yaml|json|png|svs))$'
+
+
+def _clearVipsCache():
+    old = pyvips.voperation.cache_get_max_files()
+    pyvips.voperation.cache_set_max_files(0)
+    pyvips.voperation.cache_set_max_files(old)
+    old = pyvips.voperation.cache_get_max()
+    pyvips.voperation.cache_set_max(0)
+    pyvips.voperation.cache_set_max(old)
+
+
+_cacheClearFuncs.append(_clearVipsCache)
 
 
 class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -79,6 +91,10 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._frames = [page]
             self.sizeX = subImage.width
             self.sizeY = subImage.height
+            try:
+                self._image.close()
+            except Exception:
+                pass
             self._image = subImage
         self.levels = int(max(1, math.ceil(math.log(
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))
@@ -322,7 +338,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             newarr = numpy.zeros(
                 (tile.shape[0], tile.shape[1], tile.shape[2] + 1), dtype=tile.dtype)
             newarr[:, :, :tile.shape[2]] = tile
-            newarr[:, :, -1] = 255
+            newarr[:, :, -1] = min(numpy.iinfo(
+                tile.dtype).max, 255) if tile.dtype.kind in 'iu' else 255
             tile = newarr
         if mask is not None:
             if len(mask.shape) == 3:
@@ -404,8 +421,11 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             trunk = baseimg.copy()
             branch = baseimg.copy()
             for idx, entry in enumerate(self._output['images']):
+                entryimage = entry['image']
+                if img.format == 'float' and entry['image'].format == 'double':
+                    entryimage = entryimage.cast(img.format)
                 branch = branch.composite(
-                    entry['image'], pyvips.BlendMode.OVER, x=entry['x'], y=entry['y'])
+                    entryimage, pyvips.BlendMode.OVER, x=entry['x'], y=entry['y'])
                 if not ((idx + 1) % leaves) or idx + 1 == len(self._output['images']):
                     trunk = trunk.composite(branch, pyvips.BlendMode.OVER, x=0, y=0)
                     branch = baseimg.copy()
