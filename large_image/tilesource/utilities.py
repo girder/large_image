@@ -908,6 +908,9 @@ def getTileFramesQuadInfo(metadata, options=None):
     return status
 
 
+_recentThresholds = {}
+
+
 def histogramThreshold(histogram, threshold, fromMax=False):
     """
     Given a histogram and a threshold on a scale of [0, 1], return the bin
@@ -922,6 +925,9 @@ def histogramThreshold(histogram, threshold, fromMax=False):
     :returns: the value the excludes no more than the threshold from the
         specified end.
     """
+    key = (id(histogram), threshold, fromMax)
+    if key in _recentThresholds:
+        return _recentThresholds[key]
     hist = histogram['hist']
     edges = histogram['bin_edges']
     samples = histogram['samples'] if not histogram.get('density') else 1
@@ -929,13 +935,19 @@ def histogramThreshold(histogram, threshold, fromMax=False):
         hist = hist[::-1]
         edges = edges[::-1]
     tally = 0
+    result = edges[-1]
     for idx in range(len(hist)):
-        if tally >= threshold * samples:
+        if tally + hist[idx] > threshold * samples:
             if not idx:
-                return histogram['min' if not fromMax else 'max']
-            return edges[idx]
+                result = histogram['min' if not fromMax else 'max']
+            else:
+                result = edges[idx]
+            break
         tally += hist[idx]
-    return edges[-1]
+    if len(_recentThresholds) > 100:
+        _recentThresholds.empty()
+    _recentThresholds[key] = result
+    return result
 
 
 def addPILFormatsToOutputOptions():
