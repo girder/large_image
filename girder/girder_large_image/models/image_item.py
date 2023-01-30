@@ -246,7 +246,7 @@ class ImageItem(Item):
     def getInternalMetadata(self, item, **kwargs):
         tileSource = self._loadTileSource(item, **kwargs)
         result = tileSource.getInternalMetadata() or {}
-        if tileSource.getICCProfiles():
+        if tileSource.getICCProfiles(onlyInfo=True):
             result['iccprofiles'] = tileSource.getICCProfiles(onlyInfo=True)
         result['tilesource'] = tileSource.name
         return result
