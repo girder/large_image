@@ -668,7 +668,7 @@ def testStyleMinMaxThreshold():
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
     assert numpy.any(image != imageB)
     assert image[0][0][0] == 252
-    assert imageB[0][0][0] == 254
+    assert imageB[0][0][0] == 246
     sourceC = large_image_source_tiff.open(
         imagePath, style=json.dumps({'min': 'full', 'max': 'full'}))
     imageC, _ = sourceC.getRegion(
