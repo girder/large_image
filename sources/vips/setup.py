@@ -26,7 +26,7 @@ def prerelease_local_scheme(version):
 setup(
     name='large-image-source-vips',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
-                     'fallback_version': 'development'},
+                     'fallback_version': '0.0.0'},
     setup_requires=['setuptools-scm'],
     description=description,
     long_description=long_description,
