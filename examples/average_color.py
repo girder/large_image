@@ -18,7 +18,7 @@ def average_color(imagePath, magnification=None):
     :param imagePath: path of the file to analyze.
     :param magnification: optional magnification to use for the analysis.
     """
-    source = large_image.getTileSource(imagePath)
+    source = large_image.open(imagePath)
     # get a thumbnail no larger than 1024x1024 pixels
     thumbnail, mimeType = source.getThumbnail(
         width=1024, height=1024, encoding='JPEG')

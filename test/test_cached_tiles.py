@@ -93,7 +93,7 @@ class LargeImageCachedTilesTest:
         imagePath = datastore.fetch(
             'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
             '4a70-9ae3-50e3ab45e242.svs')
-        source = large_image.getTileSource(imagePath)
+        source = large_image.open(imagePath)
         tileMetadata = source.getMetadata()
         params = {
             'region': {
@@ -132,13 +132,13 @@ class LargeImageCachedTilesTest:
         TiledTiffDirectory.__init__ = countInit
         self.initCount = 0
         self.delCount = 0
-        source = large_image.getTileSource(imagePath)
+        source = large_image.open(imagePath)
         assert source is not None
         assert self.initCount == 11
         assert self.delCount < 11
         # Create another source; we shouldn't init it again, as it should be
         # cached.
-        source = large_image.getTileSource(imagePath)
+        source = large_image.open(imagePath)
         assert source is not None
         assert self.initCount == 11
         assert self.delCount < 11

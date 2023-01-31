@@ -363,5 +363,5 @@ def testTileFromNetCDF():
 
 def testTileSourceFromNetCDF():
     imagePath = datastore.fetch('04091217_ruc.nc')
-    ts = large_image.getTileSource(imagePath)
+    ts = large_image.open(imagePath)
     assert 'mapnik' in ts.name
