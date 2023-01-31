@@ -80,7 +80,7 @@ def _data_from_large_image(path, outputPath, **kwargs):
     _import_pyvips()
     if not path.startswith('large_image://test'):
         try:
-            ts = large_image.getTileSource(path)
+            ts = large_image.open(path)
         except Exception:
             return
     else:
@@ -90,7 +90,7 @@ def _data_from_large_image(path, outputPath, **kwargs):
             k: int(v[0]) if v[0].isdigit() else v[0]
             for k, v in urllib.parse.parse_qs(
                 path.split('?', 1)[1] if '?' in path else '').items()}
-        ts = large_image.getTileSource('large_image://test', **tsparams)
+        ts = large_image.open('large_image://test', **tsparams)
     results = {
         'metadata': ts.getMetadata(),
         'internal_metadata': ts.getInternalMetadata(),
