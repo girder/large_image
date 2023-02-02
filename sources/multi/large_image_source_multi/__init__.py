@@ -5,6 +5,7 @@ import json
 import math
 import os
 import re
+import threading
 import warnings
 from pathlib import Path
 
@@ -388,6 +389,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super().__init__(path, **kwargs)
 
         self._largeImagePath = self._getLargeImagePath()
+        self._lastOpenSourceLock = threading.RLock()
         if not os.path.isfile(self._largeImagePath):
             try:
                 possibleYaml = self._largeImagePath.split('multi://', 1)[-1]
@@ -804,10 +806,11 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param params: a dictionary of parameters to pass to the open call.
         :returns: a tile source.
         """
-        if (hasattr(self, '_lastOpenSource') and
-                self._lastOpenSource['source'] == source and
-                self._lastOpenSource['params'] == params):
-            return self._lastOpenSource['ts']
+        with self._lastOpenSourceLock:
+            if (hasattr(self, '_lastOpenSource') and
+                    self._lastOpenSource['source'] == source and
+                    self._lastOpenSource['params'] == params):
+                return self._lastOpenSource['ts']
         if not len(large_image.tilesource.AvailableTileSources):
             large_image.tilesource.loadTileSources()
         if ('sourceName' not in source or
@@ -815,14 +818,16 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             openFunc = large_image.open
         else:
             openFunc = large_image.tilesource.AvailableTileSources[source['sourceName']]
-        self._lastOpenSource = {
-            'source': source,
-            'params': params,
-        }
+        origParams = params
         if params is None:
             params = source.get('params', {})
         ts = openFunc(source['path'], **params)
-        self._lastOpenSource['ts'] = ts
+        with self._lastOpenSourceLock:
+            self._lastOpenSource = {
+                'source': source,
+                'params': origParams,
+                'ts': ts
+            }
         return ts
 
     def getAssociatedImage(self, imageKey, *args, **kwargs):

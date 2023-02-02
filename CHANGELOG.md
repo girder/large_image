@@ -6,7 +6,7 @@
 - ICC color profile support ([#1037](../../pull/1037), [#1043](../../pull/1043))
 
 ### Improvements
-- Speed up generating tiles for some multi source files ([#1035](../../pull/1035))
+- Speed up generating tiles for some multi source files ([#1035](../../pull/1035), [#1047](../../pull/1047))
 - Render item lists faster ([#1036](../../pull/1036))
 - Reduce bioformats source memory usage ([#1038](../../pull/1038))
 - Better pick the largest image from bioformats ([#1039](../../pull/1039), [#1040](../../pull/1040))
