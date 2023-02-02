@@ -1280,7 +1280,7 @@ class TileSource:
         sc = types.SimpleNamespace(
             image=image, originalStyle=style, x=x, y=y, z=z, frame=frame,
             mainImage=image, mainFrame=frame, dtype=None, axis=None)
-        if style is None:
+        if style is None or style == {'icc': True}:
             sc.style = {'bands': []}
         else:
             sc.style = style if 'bands' in style else {'bands': [style]}

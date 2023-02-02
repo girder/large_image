@@ -336,6 +336,18 @@ def testGetPixel():
     assert 'tile' in pixel
 
 
+def testGetPixelWithICCCorrection():
+    imagePath = datastore.fetch(
+        'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        '4a70-9ae3-50e3ab45e242.svs')
+    source = large_image_source_openslide.open(imagePath)
+    pixel = source.getPixel(region={'left': 12125, 'top': 10640})
+    assert pixel == {'r': 169, 'g': 99, 'b': 151, 'a': 255}
+    source = large_image_source_openslide.open(imagePath, style={'icc': True})
+    pixel2 = source.getPixel(region={'left': 12125, 'top': 10640})
+    assert pixel == pixel2
+
+
 def testTilesFromPowerOf3Tiles():
     imagePath = datastore.fetch('G10-3_pelvis_crop-powers-of-3.tif')
     source = large_image_source_openslide.open(imagePath)
