@@ -64,7 +64,7 @@ A band definition is an object which can contain the following keys:
 
 - ``axis``: if specified, keep on the specified axis (channel) of the intermediate numpy array.  This is typically between 0 and 3 for the red, green, blue, and alpha channels.  Only the first such value is used, and this can be specified as a base key if ``bands`` is specified.
 
-- ``icc``: by default, sources that expose ICC color profiles will apply those profiles to the image data, converting the results to the sRGB profile.  To use the raw image data without ICC profile adjustments, specify an ``icc`` value of ``false``.  If the entire style is ``{"icc": false}``, the results will be the same as the default bands with only the adjustment being skipped.  Note that not all tile sources expose ICC color profile information, even if the base file format contains it.
+- ``icc``: by default, sources that expose ICC color profiles will apply those profiles to the image data, converting the results to the sRGB profile.  To use the raw image data without ICC profile adjustments, specify an ``icc`` value of ``false``.  If the entire style is ``{"icc": false}``, the results will be the same as the default bands with only the adjustment being skipped.  Similarly, if the entire style is ``{"icc": true}``, this is the same as the default style with where the adjustment is applied.  Note that not all tile sources expose ICC color profile information, even if the base file format contains it.
 
 - ``function``: if specified, call a function to modify the resulting image.  This can be specified as a base key and as a band key.  Style functions can be called at multiple stages in the styling pipeline:
 
