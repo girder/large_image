@@ -769,7 +769,9 @@ def testFromTiffRGBJPEG():
         'TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs')
     source = large_image_source_tiff.open(imagePath)
     tile = source.getSingleTile()
-    assert list(tile['tile'][0, 0]) == [243, 243, 243]
+    # Handle ICC Profiles
+    assert list(tile['tile'][0, 0]) == [243, 243, 243] or list(
+        tile['tile'][0, 0]) == [242, 243, 242]
 
 
 def testTilesFromMultiFrameTiff():
