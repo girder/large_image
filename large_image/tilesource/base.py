@@ -1280,15 +1280,15 @@ class TileSource:
         sc = types.SimpleNamespace(
             image=image, originalStyle=style, x=x, y=y, z=z, frame=frame,
             mainImage=image, mainFrame=frame, dtype=None, axis=None)
-        if style is None or style == {'icc': True}:
-            sc.style = {'bands': []}
+        if style is None or ('icc' in style and len(style) == 1):
+            sc.style = {'icc': (style or {}).get('icc', True), 'bands': []}
         else:
             sc.style = style if 'bands' in style else {'bands': [style]}
             sc.dtype = style.get('dtype')
             sc.axis = style.get('axis')
         if hasattr(self, '_iccprofiles') and sc.style.get('icc', True):
             image = self._applyICCProfile(sc, frame)
-        if style is None or (len(style) == 1 and 'icc' in style):
+        if style is None or ('icc' in style and len(style) == 1):
             sc.output = image
         else:
             sc.output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
