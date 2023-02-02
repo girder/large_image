@@ -1463,15 +1463,16 @@ class TileSource:
             maxX = (x + 1) * self.tileWidth
             maxY = (y + 1) * self.tileHeight
             isEdge = maxX > sizeX or maxY > sizeY
+        hasStyle = (
+            (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
+            getattr(self, 'style', None) != {'icc': False})
         if (tileEncoding not in (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY) and
                 numpyAllowed != 'always' and tileEncoding == self.encoding and
-                not isEdge and (not applyStyle or not getattr(self, 'style', None))):
+                not isEdge and (not applyStyle or not hasStyle)):
             return tile
         mode = None
-        if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or (applyStyle and (
-                (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
-                getattr(self, 'style', None) != {'icc': False})) or
-                isEdge):
+        if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
+                (applyStyle and hasStyle) or isEdge):
             tile, mode = self._outputTileNumpyStyle(
                 tile, applyStyle, x, y, z, self._getFrame(**kwargs))
         if isEdge:

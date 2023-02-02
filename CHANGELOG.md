@@ -3,7 +3,7 @@
 ## 1.20.0
 
 ### Features
-- ICC color profile support ([#1037](../../pull/1037), [#1043](../../pull/1043))
+- ICC color profile support ([#1037](../../pull/1037), [#1043](../../pull/1043), [#1046](../../pull/1046))
 
 ### Improvements
 - Speed up generating tiles for some multi source files ([#1035](../../pull/1035))
