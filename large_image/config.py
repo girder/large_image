@@ -30,6 +30,9 @@ ConfigValues = {
     'cache_tilesource_maximum': 0,
 
     'max_small_image_size': 4096,
+
+    # Should ICC color correction be applied by default
+    'icc_correction': True,
 }
 
 

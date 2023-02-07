@@ -60,6 +60,9 @@ var ConfigView = View.extend({
             }, {
                 key: 'large_image.notification_stream_fallback',
                 value: this.$('.g-large-image-stream-fallback').prop('checked')
+            }, {
+                key: 'large_image.icc_correction',
+                value: this.$('.g-large-image-icc-correction').prop('checked')
             }]);
         },
         'click .g-open-browser': '_openBrowser'

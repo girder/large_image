@@ -50,6 +50,20 @@ form#g-large-image-form(role="form")
         each viewer in viewers
           option(value=viewer.name, selected=(settings['large_image.default_viewer'] === viewer.name)) #{viewer.label}
   .form-group
+    label ICC Profile Color Correction
+    p.g-large-image-description
+      | Some images have ICC Profile information.  If present, this can be used
+      | to adjust to the sRGB color space.  Note: if you change this setting,
+      | you may need to clear your browser cache to see changes.  Some caches
+      | may take an hour or longer to clear on their own.
+    .g-large-image-viewer-container
+      label.radio-inline
+        input.g-large-image-icc-correction(type="radio", name="g-large-image-icc-correction", checked=settings['large_image.icc_correction'] !== false ? 'checked': undefined)
+        | Apply ICC Profile adjustments
+      label.radio-inline
+        input.g-large-image-icc-correction-off(type="radio", name="g-large-image-icc-correction", checked=settings['large_image.icc_correction'] !== false ? undefined : 'checked')
+        | Do not apply ICC Profile adjustments
+  .form-group
     - var detailplaceholder = 'A JSON object listing extra details to show.  For example: {"metadata": ["tile", "internal"], "images": ["label", "macro", "*"]}'
     - var detailtitle = 'This can be specified images and metadata as a JSON object such as {"metadata": ["tile", "internal"], "images": ["label", "macro", "*"]}'
     label
