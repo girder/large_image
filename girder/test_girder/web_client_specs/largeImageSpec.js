@@ -49,6 +49,7 @@ describe('Test the large image plugin', function () {
             $('.g-large-image-show-item-extra-public').val('{}');
             $('.g-large-image-show-item-extra').val('{}');
             $('.g-large-image-show-item-extra-admin').val('{"metadata": ["tile", "internal"], "images": ["label", "macro", "*"]}');
+            $('.g-large-image-icc-correction-off').trigger('click');
             $('#g-large-image-form input.btn-primary').click();
         });
         girderTest.waitForLoad();
@@ -74,6 +75,12 @@ describe('Test the large image plugin', function () {
             expect(settings['large_image.show_item_extra_public']).toBe('{}');
             expect(settings['large_image.show_item_extra']).toBe('{}');
             expect(JSON.parse(settings['large_image.show_item_extra_admin'])).toEqual({'metadata': ['tile', 'internal'], 'images': ['label', 'macro', '*']});
+            expect(settings['large_image.icc_correction']).toBe(false);
+        });
+        girderTest.waitForLoad();
+        runs(function () {
+            $('.g-large-image-icc-correction').trigger('click');
+            $('#g-large-image-form input.btn-primary').click();
         });
         girderTest.waitForLoad();
     });
