@@ -39,20 +39,20 @@ def testTileRedirects():
     # Test redirects, use a JPEG
     imagePath = datastore.fetch('sample_Easy1.jpeg')
     rawimage = open(imagePath, 'rb').read()
-    source = large_image_source_pil.open(imagePath)
+    source = large_image_source_pil.open(imagePath, style={'icc': False})
     # No encoding or redirect should just get a JPEG
     image = source.getTile(0, 0, 0)
     assert image == rawimage
     # quality 75 should work
-    source = large_image_source_pil.open(imagePath, jpegQuality=95)
+    source = large_image_source_pil.open(imagePath, style={'icc': False}, jpegQuality=95)
     image = source.getTile(0, 0, 0)
     assert image == rawimage
     # redirect with a different quality shouldn't
-    source = large_image_source_pil.open(imagePath, jpegQuality=75)
+    source = large_image_source_pil.open(imagePath, style={'icc': False}, jpegQuality=75)
     image = source.getTile(0, 0, 0)
     assert image != rawimage
     # redirect with a different encoding shouldn't
-    source = large_image_source_pil.open(imagePath, encoding='PNG')
+    source = large_image_source_pil.open(imagePath, style={'icc': False}, encoding='PNG')
     image = source.getTile(0, 0, 0)
     assert image != rawimage
 

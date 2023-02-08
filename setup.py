@@ -74,7 +74,7 @@ extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
 setup(
     name='large-image',
     use_scm_version={'local_scheme': prerelease_local_scheme,
-                     'fallback_version': 'development'},
+                     'fallback_version': '0.0.0'},
     setup_requires=[
         'setuptools-scm<7 ; python_version < "3.7"',
         'setuptools-scm ; python_version >= "3.7"',

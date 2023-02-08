@@ -251,6 +251,28 @@ def handleFileSave(event):
             fileObj['mimeType'] = alt
 
 
+def handleSettingSave(event):
+    """
+    When certain settings are changed, clear the caches.
+    """
+    if event.info.get('key') == constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION:
+        if event.info['value'] == Setting().get(
+                constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION):
+            return
+        import gc
+
+        from girder.api.rest import setResponseHeader
+
+        large_image.config.setConfig('icc_correction', bool(event.info['value']))
+        large_image.cache_util.cachesClear()
+        gc.collect()
+        try:
+            # ask the browser to clear the cache; it probably won't be honored
+            setResponseHeader('Clear-Site-Data', '"cache"')
+        except Exception:
+            pass
+
+
 def metadataSearchHandler(  # noqa
         query, types, user=None, level=None, limit=0, offset=0, models=None,
         searchModels=None, metakey='meta'):
@@ -351,6 +373,7 @@ def metadataSearchHandler(  # noqa
     constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
     constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
     constants.PluginSettings.LARGE_IMAGE_NOTIFICATION_STREAM_FALLBACK,
+    constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION,
 })
 def validateBoolean(doc):
     val = doc['value']
@@ -435,6 +458,7 @@ SettingDefault.defaults.update({
     constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES: 10,
     constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE: 4096,
     constants.PluginSettings.LARGE_IMAGE_NOTIFICATION_STREAM_FALLBACK: True,
+    constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION: True,
 })
 
 
@@ -462,6 +486,8 @@ class LargeImagePlugin(GirderPlugin):
         curConfig = config.getConfig().get('large_image')
         for key, value in (curConfig or {}).items():
             large_image.config.setConfig(key, value)
+        large_image.config.setConfig('icc_correction', bool(Setting().get(
+            constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION)))
         addSystemEndpoints(info['apiRoot'])
 
         girder_tilesource.loadGirderTileSources()
@@ -487,6 +513,7 @@ class LargeImagePlugin(GirderPlugin):
         events.bind('server_fuse.unmount', 'large_image', large_image.cache_util.cachesClear)
         events.bind('model.file.remove', 'large_image', handleRemoveFile)
         events.bind('model.file.save', 'large_image', handleFileSave)
+        events.bind('model.setting.save', 'large_image', handleSettingSave)
 
         search._allowedSearchMode.pop('li_metadata', None)
         search.addSearchMode('li_metadata', metadataSearchHandler)

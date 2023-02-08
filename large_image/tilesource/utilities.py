@@ -35,7 +35,11 @@ colormap = {
 
 
 class ImageBytes(bytes):
-    """Wrapper class to make repr of image bytes better in ipython."""
+    """
+    Wrapper class to make repr of image bytes better in ipython.
+
+    Display the number of bytes and, if known, the mimetype.
+    """
 
     def __new__(cls, source: bytes, mimetype: str = None):
         self = super().__new__(cls, source)
@@ -723,14 +727,14 @@ def _computeFramesPerTexture(opts, numFrames, sizeX, sizeY):
     :param numFrames: the number of frames that need to be included.
     :param sizeX: the size of one frame of the image.
     :param sizeY: the size of one frame of the image.
-    :returns: a tuple consisting of:
-        fw: the width of an individual frame in the texture.
-        fh: the height of an individual frame in the texture.
-        fhorz:  the number of frames across the texture/
-        fperframe: the number of frames per texture.  The last texture may have
-            fewer frames.
-        textures: the number of textures to be used.  This many calls will need
-            to be made to tileFrames.
+    :returns:
+        :fw: the width of an individual frame in the texture.
+        :fh: the height of an individual frame in the texture.
+        :fhorz: the number of frames across the texture.
+        :fperframe: the number of frames per texture.  The last texture may
+            have fewer frames.
+        :textures: the number of textures to be used.  This many calls will
+            need to be made to tileFrames.
     """
     # defining fw, fh, fhorz, fvert, fperframe
     alignment = opts['alignment'] or 16
@@ -791,43 +795,46 @@ def getTileFramesQuadInfo(metadata, options=None):
     """
     Compute what tile_frames need to be requested for a particular condition.
 
-    :param metadata: the tile source metadata.  Needs to contain sizeX, sizeY,
-        tileWidth, tileHeight, and a list of frames.
-    :param options: dictionary of
-        format: The compression and format for the texture.  Defaults to
+    Options is a dictionary of:
+        :format: The compression and format for the texture.  Defaults to
             {'encoding': 'JPEG', 'jpegQuality': 85, 'jpegSubsampling': 1}.
-        query: Additional query options to add to the tile source, such as
+        :query: Additional query options to add to the tile source, such as
             style.
-        frameBase: (default 0) Starting frame number used.  c/z/xy/z to step
+        :frameBase: (default 0) Starting frame number used.  c/z/xy/z to step
             through that index length (0 to 1 less than the value), which is
             probably only useful for cache reporting or scheduling.
-        frameStride: (default 1) Only use every ``frameStride`` frame of the
+        :frameStride: (default 1) Only use every ``frameStride`` frame of the
             image.  c/z/xy/z to use that axis length.
-        frameGroup: (default 1) If above 1 and multiple textures are used, each
+        :frameGroup: (default 1) If above 1 and multiple textures are used, each
             texture will have an even multiple of the group size number of
             frames.  This helps control where texture loading transitions
             occur.  c/z/xy/z to use that axis length.
-        frameGroupFactor: (default 4) If ``frameGroup`` would reduce the size
+        :frameGroupFactor: (default 4) If ``frameGroup`` would reduce the size
             of the tile images beyond this factor, don't use it.
-        frameGroupStride: (default 1) If ``frameGroup`` is above 1 and multiple
+        :frameGroupStride: (default 1) If ``frameGroup`` is above 1 and multiple
             textures are used, then the frames are reordered based on this
             stride value.  "auto" to use frameGroup / frameStride if that
             value is an integer.
-        maxTextureSize: Limit the maximum texture size to a square of this
+        :maxTextureSize: Limit the maximum texture size to a square of this
             size.
-        maxTextures: (default 1) If more than one, allow multiple textures to
+        :maxTextures: (default 1) If more than one, allow multiple textures to
             increase the size of the individual frames.  The number of textures
             will be capped by ``maxTotalTexturePixels`` as well as this number.
-        maxTotalTexturePixels: (default 1073741824) Limit the maximum texture
+        :maxTotalTexturePixels: (default 1073741824) Limit the maximum texture
             size and maximum number of textures so that the combined set does
             not exceed this number of pixels.
-        alignment: (default 16) Individual frames are buffered to an alignment
+        :alignment: (default 16) Individual frames are buffered to an alignment
             of this maxy pixels.  If JPEG compression is used, this should
             be 8 for monochrome images or jpegs without subsampling, or 16 for
             jpegs with moderate subsampling to avoid compression artifacts from
             leaking between frames.
-        maxFrameSize: If set, limit the maximum width and height of an
+        :maxFrameSize: If set, limit the maximum width and height of an
             individual frame to this value.
+
+
+    :param metadata: the tile source metadata.  Needs to contain sizeX, sizeY,
+        tileWidth, tileHeight, and a list of frames.
+    :param options: dictionary of options, as described above.
     :returns: a dictionary of values to use for making calls to tile_frames.
     """
     defaultOptions = {
@@ -940,6 +947,9 @@ def getTileFramesQuadInfo(metadata, options=None):
     return status
 
 
+_recentThresholds = {}
+
+
 def histogramThreshold(histogram, threshold, fromMax=False):
     """
     Given a histogram and a threshold on a scale of [0, 1], return the bin
@@ -954,6 +964,9 @@ def histogramThreshold(histogram, threshold, fromMax=False):
     :returns: the value the excludes no more than the threshold from the
         specified end.
     """
+    key = (id(histogram), threshold, fromMax)
+    if key in _recentThresholds:
+        return _recentThresholds[key]
     hist = histogram['hist']
     edges = histogram['bin_edges']
     samples = histogram['samples'] if not histogram.get('density') else 1
@@ -961,13 +974,19 @@ def histogramThreshold(histogram, threshold, fromMax=False):
         hist = hist[::-1]
         edges = edges[::-1]
     tally = 0
+    result = edges[-1]
     for idx in range(len(hist)):
-        if tally >= threshold * samples:
+        if tally + hist[idx] > threshold * samples:
             if not idx:
-                return histogram['min' if not fromMax else 'max']
-            return edges[idx]
+                result = histogram['min' if not fromMax else 'max']
+            else:
+                result = edges[idx]
+            break
         tally += hist[idx]
-    return edges[-1]
+    if len(_recentThresholds) > 100:
+        _recentThresholds.empty()
+    _recentThresholds[key] = result
+    return result
 
 
 def addPILFormatsToOutputOptions():

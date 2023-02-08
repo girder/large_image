@@ -668,7 +668,7 @@ def testStyleMinMaxThreshold():
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
     assert numpy.any(image != imageB)
     assert image[0][0][0] == 252
-    assert imageB[0][0][0] == 254
+    assert imageB[0][0][0] == 246
     sourceC = large_image_source_tiff.open(
         imagePath, style=json.dumps({'min': 'full', 'max': 'full'}))
     imageC, _ = sourceC.getRegion(
@@ -769,7 +769,9 @@ def testFromTiffRGBJPEG():
         'TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs')
     source = large_image_source_tiff.open(imagePath)
     tile = source.getSingleTile()
-    assert list(tile['tile'][0, 0]) == [243, 243, 243]
+    # Handle ICC Profiles
+    assert list(tile['tile'][0, 0]) == [243, 243, 243] or list(
+        tile['tile'][0, 0]) == [242, 243, 242]
 
 
 def testTilesFromMultiFrameTiff():

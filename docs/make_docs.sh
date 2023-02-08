@@ -40,7 +40,7 @@ sphinx-apidoc -f -o _build/large_image_tasks ../utilities/tasks/large_image_task
 sphinx-apidoc -f -o _build/girder_large_image ../girder/girder_large_image
 sphinx-apidoc -f -o _build/girder_large_image_annotation ../girder_annotation/girder_large_image_annotation
 
-sphinx-build -b html . ../build/docs
+sphinx-build -W -b html . ../build/docs
 
 rm _build || true
 

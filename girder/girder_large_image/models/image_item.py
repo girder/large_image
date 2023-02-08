@@ -18,7 +18,6 @@ import io
 import json
 import pickle
 
-import PIL.ImageCms
 import pymongo
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
@@ -247,10 +246,8 @@ class ImageItem(Item):
     def getInternalMetadata(self, item, **kwargs):
         tileSource = self._loadTileSource(item, **kwargs)
         result = tileSource.getInternalMetadata() or {}
-        if tileSource.getICCProfiles():
-            result['iccprofiles'] = [
-                PIL.ImageCms.getProfileInfo(prof).strip() or 'present' if prof else None
-                for prof in tileSource.getICCProfiles()]
+        if tileSource.getICCProfiles(onlyInfo=True):
+            result['iccprofiles'] = tileSource.getICCProfiles(onlyInfo=True)
         result['tilesource'] = tileSource.name
         return result
 
