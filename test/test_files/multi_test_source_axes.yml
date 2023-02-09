@@ -1,0 +1,18 @@
+---
+axes:
+  - c
+  - i
+  - j
+sources:
+  - sourceName: test
+    path: __none__
+    params:
+      minLevel: 0
+      maxLevel: 6
+      tileWidth: 256
+      tileHeight: 256
+      sizeX: 10000
+      sizeY: 7500
+      fractal: True
+      frames: "c=4,i=5,j=3"
+      monochrome: False

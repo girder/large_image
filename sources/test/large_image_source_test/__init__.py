@@ -72,7 +72,8 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         :param fractal: if True, and the tile size is square and a power of
             two, draw a simple fractal on the tiles.
         :param frames: if present, this is either a single number for generic
-            frames, or comma-separated list of c,z,t,xy.
+            frames, a comma-separated list of c,z,t,xy, or a string of the
+            form '<axis>=<count>,<axis>=<count>,...'.
         :param monochrome: if True, return single channel tiles.
         :param bands: if present, a comma-separated list of band names.
             Defaults to red,green,blue.
@@ -104,17 +105,26 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         self.levels = self.maxLevel + 1
         if frames:
             frameList = []
-            counts = [int(part) for part in str(frames).split(',')]
-            self._framesParts = len(counts)
-            for fidx in itertools.product(*(range(part) for part in counts[::-1])):
+            if '=' not in str(frames) and ',' not in str(frames):
+                self._axes = [('f', 'Index', int(frames))]
+            elif '=' not in str(frames):
+                self._axes = [
+                    (axis, f'Index{axis.upper()}', int(part))
+                    for axis, part in zip(['c', 'z', 't', 'xy'], frames.split(','))]
+            else:
+                self._axes = [
+                    (part.split('=', 1)[0],
+                     f'Index{part.split("=", 1)[0].upper()}',
+                     int(part.split('=', 1)[1])) for part in frames.split(',')]
+            self._framesParts = len(self._axes)
+            axes = self._axes[::-1]
+            for fidx in itertools.product(*(range(part[-1]) for part in axes)):
                 curframe = {}
-                if len(fidx) > 1:
-                    for idx, (k, v) in enumerate(zip([
-                            'IndexC', 'IndexZ', 'IndexT', 'IndexXY'], list(fidx)[::-1])):
-                        if counts[idx] > 1:
-                            curframe[k] = v
-                else:
-                    curframe['Index'] = fidx[0]
+                for idx in range(len(fidx)):
+                    k = axes[idx][1]
+                    v = fidx[idx]
+                    if axes[idx][-1] > 1:
+                        curframe[k] = v
                 frameList.append(curframe)
             if len(frameList) > 1:
                 self._frames = frameList
@@ -210,13 +220,9 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         fontsize = 0.15
         text = 'x=%d\ny=%d\nz=%d' % (x, y, z)
         if hasattr(self, '_frames'):
-            if self._framesParts == 1:
-                text += '\nf=%d' % frame
-            else:
-                for k1, k2 in [('C', 'IndexC'), ('Z', 'IndexZ'),
-                               ('T', 'IndexT'), ('XY', 'IndexXY')]:
-                    if k2 in self._frames[frame]:
-                        text += '\n%s=%d' % (k1, self._frames[frame][k2])
+            for k1, k2, _ in self._axes:
+                if k2 in self._frames[frame]:
+                    text += '\n%s=%d' % (k1.upper(), self._frames[frame][k2])
         text += bandtext
         fontsize = min(fontsize, 0.8 / len(text.split('\n')))
         try:
