@@ -1549,6 +1549,8 @@ class TileSource:
                 :IndexZ: optional if unique.  A 0-based index for z values
                 :IndexXY: optional if unique.  A 0-based index for view (xy)
                     values
+                :Index<axis>: optional if unique.  A 0-based index for an
+                    arbitrary axis.
                 :Index: a 0-based index of non-channel unique sets.  If the
                     frames vary only by channel and are adjacent, they will
                     have the same index.
@@ -1557,6 +1559,8 @@ class TileSource:
                 frames if greater than 1 (e.g., if an entry like IndexXY is not
                 present, then all frames either do not have that value or have
                 a value of 0).
+            :IndexStride: a dictionary of the spacing between frames where
+                unique axes values change.
             :channels: optional.  If known, a list of channel names
             :channelmap: optional.  If known, a dictionary of channel names
                 with their offset into the channel list.
@@ -1591,9 +1595,11 @@ class TileSource:
         if 'frames' not in metadata:
             return
         maxref = {}
-        refkeys = {'IndexC', 'IndexZ', 'IndexXY', 'IndexT'}
+        refkeys = {'IndexC'}
         index = 0
         for idx, frame in enumerate(metadata['frames']):
+            refkeys |= {key for key in frame
+                        if key.startswith('Index') and len(key.split('Index', 1)[1])}
             for key in refkeys:
                 if key in frame and frame[key] + 1 > maxref.get(key, 0):
                     maxref[key] = frame[key] + 1
