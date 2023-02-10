@@ -205,3 +205,17 @@ def testMultiComposite():
     assert len(tileMetadata['frames']) == 116
 
     utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testTilesWithMoreAxes():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_test_source_axes.yml')
+    source = large_image_source_multi.open(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 10000
+    assert tileMetadata['sizeY'] == 7500
+    assert tileMetadata['levels'] == 7
+    assert len(tileMetadata['frames']) == 60
+    utilities.checkTilesZXY(source, tileMetadata)

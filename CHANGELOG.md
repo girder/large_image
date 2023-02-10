@@ -5,6 +5,10 @@
 ### Features
 - ICC color profile support ([#1037](../../pull/1037), [#1043](../../pull/1043), [#1046](../../pull/1046), [#1048](../../pull/1048), [#1052](../../pull/1052))
 
+  Note: ICC color profile adjustment to sRGB is the new default.  This can be disabled with a config setting or on a per tile source basis.
+
+- Support arbitrary axes in the test and multi sources ([#1054](../../pull/1054))
+
 ### Improvements
 - Speed up generating tiles for some multi source files ([#1035](../../pull/1035), [#1047](../../pull/1047))
 - Render item lists faster ([#1036](../../pull/1036))

@@ -86,6 +86,8 @@ RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
 RUN pyenv update && \
     pyenv install --list && \
     echo $PYTHON_VERSIONS | xargs -P `nproc` -n 1 pyenv install && \
+    # ensure newest pip and setuptools for all python versions \
+    echo $PYTHON_VERSIONS | xargs -n 1 bash -c 'pyenv global "${0}" && pip install -U setuptools pip' && \
     pyenv global $(pyenv versions --bare) && \
     find $PYENV_ROOT/versions -type d '(' -name '__pycache__' -o -name 'test' -o -name 'tests' ')' -exec rm -rfv '{}' + >/dev/null && \
     find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
