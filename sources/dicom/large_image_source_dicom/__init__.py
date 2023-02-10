@@ -2,6 +2,8 @@ import math
 import os
 import re
 import warnings
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import numpy
 
@@ -14,12 +16,6 @@ from large_image.tilesource.utilities import _imageToNumpy, _imageToPIL
 pydicom = None
 wsidicom = None
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:
