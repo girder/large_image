@@ -811,7 +811,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             with self._getDatasetLock:
                 window = rio.windows.Window(xmin, ymin, xmax - xmin, ymax - ymin)
                 count = self.dataset.count
-                tile = self.dataset.read(window=window, out_shape=(count, w, h))
+                tile = self.dataset.read(window=window, out_shape=(count, h, w))
 
         else:
             xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
@@ -854,10 +854,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                 ) as vrt:
                     tile = vrt.read()
 
-            # if necessary for multispectral images set the coordinates first and the
-            # bands at the end
-            if len(tile.shape) == 3:
-                tile = np.moveaxis(tile, 0, 2)
+        # necessary for multispectral images:
+        # set the coordinates first and the bands at the end
+        if len(tile.shape) == 3:
+            tile = np.moveaxis(tile, 0, 2)
 
         return self._outputTile(
             tile, TILE_FORMAT_NUMPY, x, y, z, pilImageAllowed, numpyAllowed, **kwargs
