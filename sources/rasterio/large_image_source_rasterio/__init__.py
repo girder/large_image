@@ -1274,6 +1274,9 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         # cast format as a tuple if needed
         format = format if isinstance(format, (tuple, set, list)) else (format,)
 
+        if self._projection is None:
+            return super().getRegion(format, **kwargs)
+
         # The tile iterator handles determining the output region
         iterInfo = self._tileIteratorInfo(**kwargs)
 
