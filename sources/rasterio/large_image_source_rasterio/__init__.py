@@ -1026,7 +1026,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         # check if the units is a string or projection material
         isProj = False
         with suppress(CRSError):
-            isproj = CRS(units) is not None
+            isProj = CRS(units) is not None
 
         # convert the coordinates if a projection exist
         if isUnits and isProj:
