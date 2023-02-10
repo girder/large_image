@@ -314,7 +314,6 @@ def _rasterioParameters(defaultCompression=None, eightbit=None, **kwargs):
 
     :returns: a dictionary of parameters.
     """
-
     # some default option and parameters
     options = {"blocksize": 256, "compress": "lzw", "quality": 90}
 
@@ -359,13 +358,15 @@ def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
         defaultCompression=defaultCompression,
         eightbit=eightbit,
         **kwargs)
-    predictor = options['predictor']
+    # Remap for different names bewtwee rasterio/gdal
+    options['tileSize'] = options.pop('blocksize')
+    options['compression'] = options.pop('compress')
     cmdopt = ['-of', 'COG', '-co', 'BIGTIFF=%s' % options['bigtiff']]
     cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
     cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
     cmdopt += ['-co', 'QUALITY=%s' % options['quality']]
     if 'predictor' in options:
-        cmdopt += ['-co', 'PREDICTOR=%s' % predictor[options['predictor']]]
+        cmdopt += ['-co', 'PREDICTOR=%s' % options['predictor']]
     if 'level' in options:
         cmdopt += ['-co', 'LEVEL=%s' % options['level']]
     return cmdopt

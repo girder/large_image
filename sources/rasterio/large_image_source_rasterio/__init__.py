@@ -69,9 +69,7 @@ ProjUnitsAcrossLevel0_MaxSize = 100
 
 
 class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
-    """
-    Provides tile access to geospatial files.
-    """
+    """Provides tile access to geospatial files."""
 
     cacheName = "tilesource"
     name = "rasterio"
@@ -92,9 +90,9 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
     }
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
-        """
-        Initialize the tile class.  See the base class for other available
-        parameters.
+        """Initialize the tile class.
+
+        See the base class for other available parameters.
 
         :param path: a filesystem path for the tile source.
         :param projection: None to use pixel space, otherwise a crs compatible with pyproj.
@@ -103,8 +101,8 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             which is the distance between (-180,0) and (180,0) in EPSG:4326 converted to the
             projection divided by the tile size. crs projections that are not latlong
             (is_geographic is False) must specify unitsPerPixel.
-        """
 
+        """
         # init the object
         super().__init__(path, **kwargs)
 
@@ -163,19 +161,16 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         self._setDefaultStyle()
 
     def _setStyle(self, style):
-        """
-        Check and set the specified style from a json string or a dictionary.
+        """Check and set the specified style from a json string or a dictionary.
 
         :param style: The new style.
+
         """
-
         super()._setStyle(style)
-
         if hasattr(self, "_getTileLock"):
             self._setDefaultStyle()
 
     def _styleBands(self):
-
         interpColorTable = {
             "red": ["#000000", "#ff0000"],
             "green": ["#000000", "#00ff00"],
@@ -232,10 +227,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return style
 
     def _setDefaultStyle(self):
-        """
-        If not style was specified, create a default style.
-        """
-
+        """If not style was specified, create a default style."""
         if hasattr(self, "style"):
             styleBands = self.style["bands"] if "bands" in self.style else [self.style]
             if not len(styleBands) or (
@@ -286,8 +278,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                 self._bandNames[band["interpretation"].name.lower()] = idx
 
     def _scanForMinMax(self, dtype, frame=0, analysisSize=1024, onlyMinMax=True):
-        """
-        Update the band range of the data type to the end of the range list.
+        """Update the band range of the data type to the end of the range list.
 
         This will change autocalling behavior, and for non-integer data types,
         this adds the range [0, 1].
@@ -297,7 +288,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         :param analysisSize: optional default to 1024
         :param onlyMinMax: optional default to True
         """
-
         # default frame to 0 in case it is set to None from outside
         frame = frame or 0
 
@@ -345,12 +335,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         band_frame["min"] = np.append(band_frame["min"], 0)
 
     def _initWithProjection(self, unitsPerPixel=None):
-        """
-        Initialize aspects of the class when a projection is set.
+        """Initialize aspects of the class when a projection is set.
 
         :param unitsPerPixel: optional default to None
         """
-
         srcCrs = CRS(4326)
         # Since we already converted to bytes decoding is safe here
         dstCrs = self._projection
@@ -400,10 +388,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        """
-        TODO docstring
-        """
-
         projection = kwargs.get("projection", args[1] if len(args) >= 2 else None)
         unitsPerPixel = kwargs.get("unitsPerPixel", args[3] if len(args) >= 4 else None)
 
@@ -414,9 +398,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return lru + info
 
     def getState(self):
-        """
-        TODO docstring
-        """
         proj = self._projection.to_string() if self._projection else None
         unit = self._unitsPerPixel
 
@@ -424,14 +405,12 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
     @staticmethod
     def getHexColors(palette):
-        """
-        Returns list of hex colors for a given color palette
+        """Returns list of hex colors for a given color palette
 
         :param palette: the color palette
 
         :returns: List of colors
         """
-
         # get the palette as int values
         palette = getPaletteColors(palette)
         palette = [[int(v) for v in c] for c in palette]
@@ -439,12 +418,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return [("#" + 4 * "{:02x}").format(*c) for c in palette]
 
     def getCrs(self):
-        """
-        Returns crs object for the given dataset
+        """Returns crs object for the given dataset
 
         :returns: The crs or None.
         """
-
         with self._getDatasetLock:
 
             # use gcp if available
@@ -463,13 +440,13 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             return crs
 
     def getPixelSizeInMeters(self):
-        """
-        Get the approximate base pixel size in meters.  This is calculated as
-        the average scale of the four edges in the WGS84 ellipsoid.
+        """Get the approximate base pixel size in meters.
+
+        This is calculated as the average scale of the four edges in
+        the WGS84 ellipsoid.
 
         :returns: the pixel size in meters or None.
         """
-
         bounds = self.getBounds(4326)
 
         # exit with nothing if no bounds are found
@@ -493,12 +470,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return (s1 + s2 + s3 + s4) / (self.sourceSizeX * 2 + self.sourceSizeY * 2)
 
     def getNativeMagnification(self):
-        """
-        Get the magnification at the base level.
+        """Get the magnification at the base level.
 
         :return: width of a pixel in mm, height of a pixel in mm.
         """
-
         scale = self.getPixelSizeInMeters()
 
         return {
@@ -508,15 +483,15 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         }
 
     def _getAffine(self):
-        """
-        Get the Affine transformation.  If GCPs are used, get the appropriate Affine
-        for those. be carefule, Rasterio have deprecated GDAL styled transform in favor
+        """Get the Affine transformation.
+
+        If GCPs are used, get the appropriate Affine for those. Be careful,
+        Rasterio have deprecated GDAL styled transform in favor
         of ``Affine`` objects. See their documentation for more information:
         shorturl.at/bcdGL
 
         :returns: a six-component array with the transform
         """
-
         with self._getDatasetLock:
             affine = self.dataset.transform
             if len(self.dataset.gcps[0]) != 0 and self.dataset.gcps[1]:
@@ -525,8 +500,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return affine
 
     def getBounds(self, crs=None, **kwargs):
-        """
-        Returns bounds of the image.
+        """Returns bounds of the image.
 
         :param crs: the projection for the bounds.  None for the default.
 
@@ -628,8 +602,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return bounds
 
     def getBandInformation(self, statistics=True, dataset=None, **kwargs):
-        """
-        Get information about each band in the image.
+        """Get information about each band in the image.
 
         :param statistics: if True, compute statistics if they don't already exist.
             Ignored: always treated as True.
@@ -639,7 +612,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             known values such as interpretation, min, max, mean, stdev, nodata,
             scale, offset, units, categories, colortable, maskband.
         """
-
         # exit if the value is already set
         if getattr(self, "_bandInfo", None) and not dataset:
             return self._bandInfo
@@ -687,17 +659,12 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                     pass
 
         # set the value to cache if needed
-        cache is False or setattr(self, "_bandInfo", infoSet)
+        cache is False or getattr(self, "_bandInfo", infoSet)
 
         return infoSet
 
     def getMetadata(self):
-        """
-        TODO missing docstring
-        """
-
         with self._getDatasetLock:
-
             # check if the file is geospatial
             has_projection = self.dataset.crs
             has_gcps = len(self.dataset.gcps[0]) != 0 and self.dataset.gcps[1]
@@ -724,14 +691,13 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return metadata
 
     def getInternalMetadata(self, **kwargs):
-        """
-        Return additional known metadata about the tile source.
+        """Return additional known metadata about the tile source.
+
         Data returned from this method is not guaranteed to be in
         any particular format or have specific values.
 
         :returns: a dictionary of data or None.
         """
-
         result = {}
         with self._getDatasetLock:
             result["driverShortName"] = self.dataset.driver
@@ -763,8 +729,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return result
 
     def getTileCorners(self, z, x, y):
-        """
-        Returns bounds of a tile for a given x,y,z index.
+        """Returns bounds of a tile for a given z,x,y index.
 
         :param z: tile level
         :param x: tile offset from left
@@ -772,7 +737,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: (xmin, ymin, xmax, ymax) in the current projection or base pixels.
         """
-
         x, y = float(x), float(y)
 
         if self._projection:
@@ -800,8 +764,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return xmin, ymin, xmax, ymax
 
     def _bandNumber(self, band, exc=True):
-        """
-        Given a band number or interpretation name, return a validated band number.
+        """Given a band number or interpretation name, return a validated band number.
 
         :param band: either -1, a positive integer, or the name of a band interpretation
             that is present in the tile source.
@@ -810,7 +773,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         :returns: a validated band, either 1 or a positive integer, or None if no
             matching band and exceptions are not enabled.
         """
-
         # retreive the bands informations from the initial dataset or cache
         bands = self.getBandInformation()
 
@@ -836,10 +798,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        """
-        TODO missing docstring
-        """
-
         if not self._projection:
             self._xyzInRange(x, y, z)
             factor = int(2 ** (self.levels - 1 - z))
@@ -908,7 +866,8 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
     def _convertProjectionUnits(
         self, left, top, right, bottom, width, height, units, **kwargs
     ):
-        """
+        """Convert projection units.
+
         Given bound information and a units that consists of a projection (srs or crs),
         convert the bounds to either pixel or the class projection coordinates.
 
@@ -927,7 +886,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         :returns: left, top, right, bottom, units.  The new bounds in the either
             pixel or class projection units.
         """
-
         # build the different corner from the parameters
         if not kwargs.get("unitsWH") or kwargs.get("unitsWH") == units:
             if left is None and right is not None and width is not None:
@@ -998,7 +956,8 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         units=None,
         **kwargs,
     ):
-        """
+        """Get region bounds.
+
         Given a set of arguments that can include left, right, top, bottom, width,
         height, and units, generate actual pixel values for left, top, right, and bottom.
         If units is `'projection'`, use the source's projection.  If units is a
@@ -1019,7 +978,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: left, top, right, bottom bounds in pixels.
         """
-
         isUnits = units is not None
         units = TileInputUnits.get(units.lower() if isUnits else None, units)
 
@@ -1077,15 +1035,13 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         )
 
     def pixelToProjection(self, x, y, level=None):
-        """
-        Convert from pixels back to projection coordinates.
+        """Convert from pixels back to projection coordinates.
 
         :param x, y: base pixel coordinates.
         :param level: the level of the pixel.  None for maximum level.
 
         :returns: px, py in projection coordinates.
         """
-
         if level is None:
             level = self.levels - 1
 
@@ -1110,7 +1066,8 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getThumbnail(self, width=None, height=None, **kwargs):
-        """
+        """Get thumbnail.
+
         Get a basic thumbnail from the current tile source.  Aspect ratio is preserved.
         If neither width nor height is given, a default value is used.  If both are given,
         the thumbnail will be no larger than either size.  A thumbnail has the same
@@ -1145,8 +1102,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return self.getRegion(**params)
 
     def toNativePixelCoordinates(self, x, y, crs=None, roundResults=True):
-        """
-        Convert a coordinate in the native projection to pixel coordinates.
+        """Convert a coordinate in the native projection to pixel coordinates.
 
         :param x: the x coordinate it the native projection.
         :param y: the y coordinate it the native projection.
@@ -1155,7 +1111,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
         :return: (x, y) the pixel coordinate.
         """
-
         srcCrs = self._projection if crs is None else CRS(crs)
 
         # convert to the native projection
@@ -1176,8 +1131,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return x, y
 
     def getPixel(self, **kwargs):
-        """
-        Get a single pixel from the current tile source.
+        """Get a single pixel from the current tile source.
 
         :param kwargs: optional arguments.  Some options are region, output, encoding,
             jpegQuality, jpegSubsampling, tiffCompression, fill.  See tileIterator.
@@ -1186,7 +1140,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             scale of [0-255], including alpha, if available.  This may contain
             additional information.
         """
-
         # TODO: netCFD - currently this will read the values from the
         # default subdatatset; we may want it to read values from all
         # subdatasets and the main raster bands (if they exist), and label the
@@ -1224,8 +1177,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return pixel
 
     def _encodeTiledImageFromVips(self, vimg, iterInfo, image, **kwargs):
-        """
-        Save a vips image as a tiled tiff.
+        """Save a vips image as a tiled tiff.
 
         :param vimg: a vips image.
         :param iterInfo: information about the region based on the tile iterator.
@@ -1238,7 +1190,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: a pathlib.Path of the output file and the output mime type.
         """
-
         # set up the parameters for conversion on vips image
         convertParams = large_image.tilesource.base._vipsParameters(
             defaultCompression="lzw", **kwargs
@@ -1304,7 +1255,8 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return pathlib.Path(output.name), TileOutputMimeTypes["TILED"]
 
     def getRegion(self, format=(TILE_FORMAT_IMAGE,), **kwargs):
-        """
+        """Get region.
+
         Get a rectangular region from the current tile source.  Aspect ratio is preserved.
         If neither width nor height is given, the original size of the highest
         resolution level is used.  If both are given, the returned image will be
@@ -1319,7 +1271,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         :returns: regionData, formatOrRegionMime: the image data and either the
             mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
-
         # cast format as a tuple if needed
         format = format if isinstance(format, (tuple, set, list)) else (format,)
 
@@ -1386,8 +1337,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             return pathlib.Path(output.name), TileOutputMimeTypes["TILED"]
 
     def validateCOG(self, strict=True, warn=True):
-        """
-        Check if this image is a valid Cloud Optimized GeoTiff.
+        """Check if this image is a valid Cloud Optimized GeoTiff.
 
         This will raise a :class:`large_image.exceptions.TileSourceInefficientError`
         if not a valid Cloud Optimized GeoTiff. Otherwise, returns True. Requires
@@ -1419,16 +1369,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
 
 def open(*args, **kwargs):
-    """
-    Create an instance of the module class.
-    """
-
+    """Create an instance of the module class."""
     return RasterioFileTileSource(*args, **kwargs)
 
 
 def canRead(*args, **kwargs):
-    """
-    Check if an input can be read by the module class.
-    """
-
+    """Check if an input can be read by the module class."""
     return RasterioFileTileSource.canRead(*args, **kwargs)

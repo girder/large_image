@@ -14,13 +14,8 @@
 #  limitations under the License.
 #############################################################################
 
-import re
-
 import packaging.version  # noqa F401
 from girder_large_image.girder_tilesource import GirderTileSource
-
-from girder import logger
-from girder.models.file import File
 
 from . import RasterioFileTileSource
 
