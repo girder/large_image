@@ -1,6 +1,9 @@
 import sys
 
-import large_image_source_nd2
+try:
+    import large_image_source_nd2
+except ImportError:
+    pass
 import pytest
 
 from . import utilities

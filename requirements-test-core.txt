@@ -1,0 +1,31 @@
+# Top level dependencies
+sources/bioformats
+sources/deepzoom
+sources/dicom ; python_version >= '3.8'
+sources/dummy
+sources/gdal
+sources/multi
+sources/nd2 ; python_version >= '3.7'
+sources/openjpeg
+sources/openslide
+sources/pil
+sources/test
+sources/tiff
+sources/tifffile
+sources/vips
+# must be after sources/tiff
+sources/ometiff
+# must be after source/gdal
+sources/mapnik
+# Don't specify other extras for the converter; they are already present above
+utilities/converter[stats]
+
+# Extras from main setup.py
+pylibmc>=1.5.1
+matplotlib
+
+# External dependencies
+pip>=9
+tox
+twine
+virtualenv

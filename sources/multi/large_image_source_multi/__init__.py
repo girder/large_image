@@ -340,6 +340,14 @@ MultiSourceSchema = {
                 'layout and size, assume all sources are so similar',
             'type': 'boolean',
         },
+        'axes': {
+            'description': 'A list of additional axes that will be parsed.  '
+                           'The default axes are z, t, xy, and c.  It is '
+                           'recommended that additional axes use terse names '
+                           'and avoid x, y, and s.',
+            'type': 'array',
+            'items': {'type': 'string'},
+        },
         'sources': {
             'type': 'array',
             'items': SourceEntrySchema
@@ -390,6 +398,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         self._largeImagePath = self._getLargeImagePath()
         self._lastOpenSourceLock = threading.RLock()
+        # 'c' must be first as channels are special because they can have names
+        self._axesList = ['c', 'z', 't', 'xy']
         if not os.path.isfile(self._largeImagePath):
             try:
                 possibleYaml = self._largeImagePath.split('multi://', 1)[-1]
@@ -416,6 +426,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._validator.validate(self._info)
             self._basePath = Path(self._largeImagePath).parent
         self._basePath /= Path(self._info.get('basePath', '.'))
+        for axis in self._info.get('axes', []):
+            if axis not in self._axesList:
+                self._axesList.append(axis)
         self._collectFrames()
 
     def _resolvePathPatterns(self, sources, source):
@@ -454,7 +467,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 else:
                     subsource[k] = v
             subsource['path'] = entry
-            for axis in ['z', 't', 'xy', 'c']:
+            for axis in self._axesList:
                 stepKey = '%sStep' % axis
                 valuesKey = '%sValues' % axis
                 if stepKey in source:
@@ -595,7 +608,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self.logger.warning('framesAsAxes strides do not use all frames.')
             self._warnedAdjustFramesAsAxes = True
         frame = frames[idx].copy()
-        for axis in ['c', 'z', 't', 'xy']:
+        for axis in self._axesList:
             frame.pop('Index' + axis.upper(), None)
         for axis, stride in framesAsAxes.items():
             frame['Index' + axis.upper()] = (idx // stride) % axisRange[axis]
@@ -621,13 +634,15 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if len(channels) > len(self._channels):
             self._channels += channels[len(self._channels):]
         if not any(key in source for key in {
-                'frame', 'c', 'z', 't', 'xy',
-                'frameValues', 'cValues', 'zValues', 'tValues', 'xyValues'}):
+                'frame', 'frameValues'} |
+                set(self._axesList) |
+                {f'{axis}Values' for axis in self._axesList}):
             source = source.copy()
             if len(frameDict['byFrame']):
                 source['frame'] = max(frameDict['byFrame'].keys()) + 1
             if len(frameDict['byAxes']):
-                source['z'] = max(aKey[1] for aKey in frameDict['byAxes']) + 1
+                source['z'] = max(
+                    aKey[self._axesList.index('z')] for aKey in frameDict['byAxes']) + 1
         for frameIdx, frame in enumerate(frames):
             if 'frames' in source and frameIdx not in source['frames']:
                 continue
@@ -635,20 +650,15 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 frame = self._adjustFramesAsAxes(frames, frameIdx, source.get('framesAsAxes'))
             fKey = self._axisKey(source, frameIdx, 'frame')
             cIdx = frame.get('IndexC', 0)
-            zIdx = frame.get('IndexZ', 0)
-            tIdx = frame.get('IndexT', 0)
-            xyIdx = frame.get('IndexXY', 0)
-            aKey = (self._axisKey(source, cIdx, 'c'),
-                    self._axisKey(source, zIdx, 'z'),
-                    self._axisKey(source, tIdx, 't'),
-                    self._axisKey(source, xyIdx, 'xy'))
+            aKey = tuple(self._axisKey(source, frame.get(f'Index{axis.upper()}') or 0, axis)
+                         for axis in self._axesList)
             channel = channels[cIdx] if cIdx < len(channels) else None
             if channel and channel not in self._channels and (
                     'channel' in source or 'channels' in source):
                 self._channels.append(channel)
             if (channel and channel in self._channels and
                     'c' not in source and 'cValues' not in source):
-                aKey = (self._channels.index(channel), aKey[1], aKey[2], aKey[3])
+                aKey = tuple([self._channels.index(channel)] + list(aKey[1:]))
             kwargs = source.get('params', {}).copy()
             if 'style' in source:
                 kwargs['style'] = source['style']
@@ -661,7 +671,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'kwargs': kwargs,
             })
             frameDict['axesAllowed'] = (frameDict['axesAllowed'] and (
-                len(frames) <= 1 or 'IndexRange' in tsMeta)) or aKey != (0, 0, 0, 0)
+                len(frames) <= 1 or 'IndexRange' in tsMeta)) or aKey != tuple([0] * len(aKey))
             frameDict['byAxes'].setdefault(aKey, [])
             frameDict['byAxes'][aKey].append({
                 'sourcenum': sourceIdx,
@@ -684,22 +694,16 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 frame = {'sources': frameDict['byFrame'].get(frameIdx, [])}
                 frames.append(frame)
         else:
-            axesCount = [max(aKey[idx] for aKey in frameDict['byAxes']) + 1 for idx in range(4)]
-            for xy, t, z, c in itertools.product(
-                    range(axesCount[3]), range(axesCount[2]),
-                    range(axesCount[1]), range(axesCount[0])):
-                aKey = (c, z, t, xy)
+            axesCount = [max(aKey[idx] for aKey in frameDict['byAxes']) + 1
+                         for idx in range(len(self._axesList))]
+            for aKey in itertools.product(*[range(count) for count in axesCount][::-1]):
+                aKey = tuple(aKey[::-1])
                 frame = {
                     'sources': frameDict['byAxes'].get(aKey, []),
                 }
-                if axesCount[0] > 1:
-                    frame['IndexC'] = c
-                if axesCount[1] > 1:
-                    frame['IndexZ'] = z
-                if axesCount[2] > 1:
-                    frame['IndexT'] = t
-                if axesCount[3] > 1:
-                    frame['IndexXY'] = xy
+                for idx, axis in enumerate(self._axesList):
+                    if axesCount[idx] > 1:
+                        frame[f'Index{axis.upper()}'] = aKey[idx]
                 frames.append(frame)
         return frames
 

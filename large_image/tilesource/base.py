@@ -1281,12 +1281,14 @@ class TileSource:
             image=image, originalStyle=style, x=x, y=y, z=z, frame=frame,
             mainImage=image, mainFrame=frame, dtype=None, axis=None)
         if style is None or ('icc' in style and len(style) == 1):
-            sc.style = {'icc': (style or {}).get('icc', True), 'bands': []}
+            sc.style = {'icc': (style or {}).get(
+                'icc', config.getConfig('icc_correction', True)), 'bands': []}
         else:
             sc.style = style if 'bands' in style else {'bands': [style]}
             sc.dtype = style.get('dtype')
             sc.axis = style.get('axis')
-        if hasattr(self, '_iccprofiles') and sc.style.get('icc', True):
+        if hasattr(self, '_iccprofiles') and sc.style.get(
+                'icc', config.getConfig('icc_correction', True)):
             image = self._applyICCProfile(sc, frame)
         if style is None or ('icc' in style and len(style) == 1):
             sc.output = image
@@ -1464,8 +1466,8 @@ class TileSource:
             maxY = (y + 1) * self.tileHeight
             isEdge = maxX > sizeX or maxY > sizeY
         hasStyle = (
-            (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
-            getattr(self, 'style', None) != {'icc': False})
+            len(set(getattr(self, 'style', {})) - {'icc'}) or
+            getattr(self, 'style', {}).get('icc', config.getConfig('icc_correction', True)))
         if (tileEncoding not in (TILE_FORMAT_PIL, TILE_FORMAT_NUMPY) and
                 numpyAllowed != 'always' and tileEncoding == self.encoding and
                 not isEdge and (not applyStyle or not hasStyle)):
@@ -1547,6 +1549,8 @@ class TileSource:
                 :IndexZ: optional if unique.  A 0-based index for z values
                 :IndexXY: optional if unique.  A 0-based index for view (xy)
                     values
+                :Index<axis>: optional if unique.  A 0-based index for an
+                    arbitrary axis.
                 :Index: a 0-based index of non-channel unique sets.  If the
                     frames vary only by channel and are adjacent, they will
                     have the same index.
@@ -1555,6 +1559,8 @@ class TileSource:
                 frames if greater than 1 (e.g., if an entry like IndexXY is not
                 present, then all frames either do not have that value or have
                 a value of 0).
+            :IndexStride: a dictionary of the spacing between frames where
+                unique axes values change.
             :channels: optional.  If known, a list of channel names
             :channelmap: optional.  If known, a dictionary of channel names
                 with their offset into the channel list.
@@ -1589,9 +1595,11 @@ class TileSource:
         if 'frames' not in metadata:
             return
         maxref = {}
-        refkeys = {'IndexC', 'IndexZ', 'IndexXY', 'IndexT'}
+        refkeys = {'IndexC'}
         index = 0
         for idx, frame in enumerate(metadata['frames']):
+            refkeys |= {key for key in frame
+                        if key.startswith('Index') and len(key.split('Index', 1)[1])}
             for key in refkeys:
                 if key in frame and frame[key] + 1 > maxref.get(key, 0):
                     maxref[key] = frame[key] + 1

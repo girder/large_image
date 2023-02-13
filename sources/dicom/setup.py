@@ -52,8 +52,7 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'wsidicom ; python_version >= "3.8"',
-        'importlib-metadata<5 ; python_version < "3.8"',
+        'wsidicom',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
@@ -61,7 +60,7 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     entry_points={
         'large_image.source': [
             'dicom = large_image_source_dicom:DICOMFileTileSource'
