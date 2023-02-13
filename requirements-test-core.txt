@@ -1,11 +1,11 @@
 # Top level dependencies
 sources/bioformats
 sources/deepzoom
-sources/dicom
+sources/dicom ; python_version >= '3.8'
 sources/dummy
 sources/gdal
 sources/multi
-sources/nd2
+sources/nd2 ; python_version >= '3.7'
 sources/openjpeg
 sources/openslide
 sources/pil
