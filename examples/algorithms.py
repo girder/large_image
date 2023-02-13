@@ -1,22 +1,4 @@
 import numpy as np
-from scipy import ndimage
-
-
-def rgb2gray(rgb):
-    return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
-
-
-def erode(data):
-    gray = rgb2gray(data)
-    binary = 1.0 * ((gray > 50) & (gray < 200))
-    eroded = ndimage.binary_erosion(
-        binary,
-        structure=np.ones((30, 30)),
-        border_value=1,
-    )
-    data[eroded == 0] = 0
-    data[:, :, 3] = 255
-    return data
 
 
 class Labels:
@@ -29,32 +11,39 @@ class Labels:
 def rgb_to_hsi(im):
     """
     Convert to H/S/I the R/G/B pixels in im.
-
     Adapted from
     https://en.wikipedia.org/wiki/HSL_and_HSV#Hue_and_chroma.
     """
     im = np.moveaxis(im, -1, 0)
     if len(im) not in (3, 4):
-        raise ValueError('Expected 3-channel RGB or 4-channel RGBA image; '
-                         'received a {}-channel image'.format(len(im)))
+        raise ValueError(
+            "Expected 3-channel RGB or 4-channel RGBA image; "
+            "received a {}-channel image".format(len(im))
+        )
     im = im[:3]
-    hues = (np.arctan2(3**0.5 * (im[1] - im[2]),
-                       2 * im[0] - im[1] - im[2]) / (2 * np.pi)) % 1
+    hues = (
+        np.arctan2(3**0.5 * (im[1] - im[2]), 2 * im[0] - im[1] - im[2]) / (2 * np.pi)
+    ) % 1
     intensities = im.mean(0)
     saturations = np.where(
-        intensities, 1 - im.min(0) / np.maximum(intensities, 1e-10), 0)
+        intensities, 1 - im.min(0) / np.maximum(intensities, 1e-10), 0
+    )
     return np.stack([hues, saturations, intensities], -1)
 
 
 def positive_pixel_count(
-        image, hue_value=0.83, hue_width=0.15, saturation_minimum=0.05,
-        intensity_upper_limit=0.95, intensity_lower_limit=0.05,
-        intensity_weak_threshold=0.65, intensity_strong_threshold=0.35):
-
-    image_hsi = rgb_to_hsi(image / 255)
+    data,
+    hue_value=0.83,
+    hue_width=0.15,
+    saturation_minimum=0.05,
+    intensity_upper_limit=0.95,
+    intensity_lower_limit=0.05,
+    intensity_weak_threshold=0.65,
+    intensity_strong_threshold=0.35,
+):
+    image_hsi = rgb_to_hsi(data / 255)
     mask_all_positive = (
-        (np.abs(((image_hsi[..., 0] - hue_value + 0.5) % 1) - 0.5) <=
-         hue_width / 2) &
+        (np.abs(((image_hsi[..., 0] - hue_value + 0.5) % 1) - 0.5) <= hue_width / 2) &
         (image_hsi[..., 1] >= saturation_minimum) &
         (image_hsi[..., 2] < intensity_upper_limit) &
         (image_hsi[..., 2] >= intensity_lower_limit)
@@ -64,11 +53,9 @@ def positive_pixel_count(
     mask_strong = all_positive_i < intensity_strong_threshold
     mask_pos = ~(mask_weak | mask_strong)
 
-    label_image = np.full(image.shape[:-1], Labels.NEGATIVE, dtype=np.uint8)
+    label_image = np.full(data.shape[:-1], Labels.NEGATIVE, dtype=np.uint8)
     label_image[mask_all_positive] = (
-        mask_weak * Labels.WEAK +
-        mask_pos * Labels.PLAIN +
-        mask_strong * Labels.STRONG
+        mask_weak * Labels.WEAK + mask_pos * Labels.PLAIN + mask_strong * Labels.STRONG
     )
     color_map = np.empty((4, 4), dtype=np.uint8)
     color_map[Labels.NEGATIVE] = 255, 255, 255, 255
@@ -77,3 +64,15 @@ def positive_pixel_count(
     color_map[Labels.STRONG] = 180, 4, 38, 255
     ppcimg = color_map[label_image]
     return ppcimg
+
+
+ALGORITHM_CODES = {
+    "ppc": positive_pixel_count,
+}
+
+ALGORITHM_DEFAULT_PARAM_SPREADS = {
+    "ppc": {
+        "hue_value": np.linspace(0, 1, 4),
+        "hue_width": np.linspace(0.05, 0.25, 4),
+    }
+}
