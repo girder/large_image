@@ -17,8 +17,8 @@ def rgb_to_hsi(im):
     im = np.moveaxis(im, -1, 0)
     if len(im) not in (3, 4):
         raise ValueError(
-            "Expected 3-channel RGB or 4-channel RGBA image; "
-            "received a {}-channel image".format(len(im))
+            'Expected 3-channel RGB or 4-channel RGBA image; '
+            'received a {}-channel image'.format(len(im))
         )
     im = im[:3]
     hues = (
@@ -67,12 +67,12 @@ def positive_pixel_count(
 
 
 ALGORITHM_CODES = {
-    "ppc": positive_pixel_count,
+    'ppc': positive_pixel_count,
 }
 
 ALGORITHM_DEFAULT_PARAM_SPREADS = {
-    "ppc": {
-        "hue_value": np.linspace(0, 1, 4),
-        "hue_width": np.linspace(0.05, 0.25, 4),
+    'ppc': {
+        'hue_value': np.linspace(0, 1, 4),
+        'hue_width': np.linspace(0.05, 0.25, 4),
     }
 }
