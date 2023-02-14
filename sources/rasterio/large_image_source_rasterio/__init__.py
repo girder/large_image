@@ -18,7 +18,7 @@ import math
 import pathlib
 import tempfile
 import threading
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 
 import numpy as np
 import PIL.Image
@@ -29,6 +29,7 @@ from pyproj.exceptions import CRSError
 from rasterio.enums import ColorInterp, Resampling
 from rasterio.errors import RasterioIOError
 from rasterio.warp import calculate_default_transform, reproject
+from rasterio.windows import Window, from_bounds
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
@@ -796,6 +797,36 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
         return band
 
+    @contextmanager
+    def _getRegionVrt(self, xmin, xmax, ymin, ymax, width, height, add_alpha=None):
+        xres = (xmax - xmin) / width
+        yres = (ymax - ymin) / height
+        dst_transform = Affine(xres, 0.0, xmin, 0.0, -yres, ymax)
+
+        # Adding an alpha band when the source has one is trouble.
+        # It will result in suprisingly unmasked data.
+        if add_alpha is None:
+            src_alpha_band = 0
+            for i, interp in enumerate(self.dataset.colorinterp):
+                if interp == ColorInterp.alpha:
+                    src_alpha_band = i
+            add_alpha = not src_alpha_band
+        else:
+            add_alpha = add_alpha
+
+        # read the image as a warp vrt
+        with self._getDatasetLock:
+            with rio.vrt.WarpedVRT(
+                self.dataset,
+                resampling=Resampling.nearest,
+                crs=self._projection,
+                transform=dst_transform,
+                height=height,
+                width=width,
+                add_alpha=add_alpha,
+            ) as vrt:
+                yield vrt, dst_transform
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         if not self._projection:
@@ -864,7 +895,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         )
 
     def _convertProjectionUnits(
-        self, left, top, right, bottom, width, height, units, **kwargs
+        self, left, top, right, bottom, width=None, height=None, units="base_pixels", **kwargs
     ):
         """Convert projection units.
 
@@ -920,20 +951,15 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         # compute the coordinates if the projection exist
         else:
             srcCrs = CRS(units)
-            dstCrs = self._projection
-
+            dstCrs = self.dataset.crs  # use the CRS native to the file
             transformer = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
-
-            # note for the next developer
-            # you cannot simplify it with "or" as left and right can be 0
-            # that's just a proxy as we need 2 coordinates for the transformer
-            tmpLeft = right if left is None else left
-            tmpBottom = bottom if top is None else top
-            tmpRight = left if right is None else right
-            tmpTop = top if bottom is None else bottom
-            pleft, ptop = transformer.transform(tmpLeft, tmpTop)
-            pright, pbottom = transformer.transform(tmpRight, tmpBottom)
-            units = "projection"
+            pleft, ptop = transformer.transform(
+                right if left is None else left,
+                bottom if top is None else top)
+            pright, pbottom = transformer.transform(
+                left if right is None else right,
+                top if bottom is None else bottom)
+            units = 'projection'
 
         # set the corner value in pixel coordinates if the coordinate was initially
         # set else leave it to None
@@ -1177,82 +1203,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         return pixel
 
     def _encodeTiledImageFromVips(self, vimg, iterInfo, image, **kwargs):
-        """Save a vips image as a tiled tiff.
-
-        :param vimg: a vips image.
-        :param iterInfo: information about the region based on the tile iterator.
-        :param image: a record with partial vips images and the current output size.
-
-        Additional parameters are available as kwargs.
-
-        :param compression: the internal compression format.  This can handle a
-            variety of options similar to the converter utility.
-
-        :returns: a pathlib.Path of the output file and the output mime type.
-        """
-        # set up the parameters for conversion on vips image
-        convertParams = large_image.tilesource.base._vipsParameters(
-            defaultCompression="lzw", **kwargs
-        )
-        convertParams.pop("pyramid", None)
-
-        isCompressed = convertParams["compression"] in {"webp", "jpeg"}
-        vimg = large_image.tilesource.base._vipsCast(vimg, isCompressed)
-
-        # write the data to a temp file to make it readable for rasterio
-        with tempfile.NamedTemporaryFile(suffix=".tiff", prefix="tiledRegion_") as f:
-            vimg.write_to_file(f, **convertParams)
-
-            # write the data to an outputFile this file will be deleted manually
-            with rio.open(f.name) as src, tempfile.NamedTemporaryFile(
-                suffix=".tiff", prefix="tiledGeoRegion_", delete=False
-            ) as output:
-
-                # extract information from the iterInfo
-                top = iterInfo["region"]["top"]
-                left = iterInfo["region"]["left"]
-                bottom = iterInfo["region"]["bottom"]
-                right = iterInfo["region"]["right"]
-                dstCrs = CRS(iterInfo["metadata"]["bounds"]["srs"])
-
-                # compute the transformation
-                transform, width, height = calculate_default_transform(
-                    src.crs,
-                    dstCrs,
-                    src.width,
-                    src.height,
-                    *src.bounds,
-                    dst_width=right - left,
-                    dst_height=top - bottom,
-                )
-
-                # extract the profile of the destination file and update it with
-                # first the creation parameter of a Gtiff file
-                # then the features of the projected output
-                profile = src.profile.copy()
-                profile.update(
-                    large_image.tilesource.base._rasterioParameters(
-                        defaultCompression="lzw", **kwargs
-                    )
-                )
-                profile.update(
-                    width=right - left,
-                    height=top - bottom,
-                    transform=transform,
-                    crs=dstCrs,
-                )
-
-                # reproject every band
-                with rio.open(output.name, "w", **profile) as dst:
-                    for i in src.indexes:
-                        reproject(
-                            source=rio.band(src, i),
-                            destination=rio.band(dst, i),
-                            src_crs=src.crs,
-                            dst_crs=dstCrs,
-                        )
-
-        return pathlib.Path(output.name), TileOutputMimeTypes["TILED"]
+        raise NotImplementedError
 
     def getRegion(self, format=(TILE_FORMAT_IMAGE,), **kwargs):
         """Get region.
@@ -1290,52 +1241,43 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             return super().getRegion(format, **kwargs)
 
         # extract parameter of the projection
-        dstCrs = self._projection or self.getCrs()
-        top = iterInfo["region"]["top"]
-        left = iterInfo["region"]["left"]
-        bottom = iterInfo["region"]["bottom"]
-        right = iterInfo["region"]["right"]
+        crs = self.dataset.crs  # Bounds
+
+        left, top = self.pixelToProjection(
+            iterInfo['region']['left'], iterInfo['region']['top'], iterInfo['level'])
+        right, bottom = self.pixelToProjection(
+            iterInfo['region']['right'], iterInfo['region']['bottom'], iterInfo['level'])
 
         with self._getDatasetLock, tempfile.NamedTemporaryFile(
             suffix=".tiff", prefix="tiledGeoRegion_", delete=False
         ) as output:
-
-            # compute the transformation
-            transform, width, height = calculate_default_transform(
-                self.dataset.crs,
-                dstCrs,
-                self.dataset.width,
-                self.dataset.height,
-                *self.dataset.bounds,
-                dst_width=abs(right - left),
-                dst_height=abs(top - bottom),
+            window = from_bounds(
+                left=left,
+                bottom=bottom,
+                right=right,
+                top=top,
+                transform=self.dataset.transform,
             )
 
-            # extract the profile of the destination file and update it with
-            # first the creation parameter of a Gtiff file
-            # then the features of the projected output
-            profile = self.dataset.profile.copy()
+            # Read the window region
+            data = self.dataset.read(window=window)
+
+            # Create a new cropped raster to write to
+            profile = self.dataset.meta.copy()
             profile.update(
                 large_image.tilesource.base._rasterioParameters(
                     defaultCompression="lzw", **kwargs
                 )
             )
-            profile.update(
-                width=abs(right - left),
-                height=abs(top - bottom),
-                transform=transform,
-                crs=dstCrs,
-            )
+            profile.update({
+                'crs': crs,
+                'height': window.height,
+                'width': window.width,
+                'transform': self.dataset.window_transform(window),
+            })
 
-            # reproject every band
             with rio.open(output.name, "w", **profile) as dst:
-                for i in self.dataset.indexes:
-                    reproject(
-                        source=rio.band(self.dataset, i),
-                        destination=rio.band(dst, i),
-                        src_crs=self.dataset.crs,
-                        dst_crs=dstCrs,
-                    )
+                dst.write(data)
 
             return pathlib.Path(output.name), TileOutputMimeTypes["TILED"]
 
