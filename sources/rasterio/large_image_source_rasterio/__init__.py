@@ -18,7 +18,7 @@ import math
 import pathlib
 import tempfile
 import threading
-from contextlib import contextmanager, suppress
+from contextlib import suppress
 
 import numpy as np
 import PIL.Image
@@ -796,36 +796,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             )
 
         return band
-
-    @contextmanager
-    def _getRegionVrt(self, xmin, xmax, ymin, ymax, width, height, add_alpha=None):
-        xres = (xmax - xmin) / width
-        yres = (ymax - ymin) / height
-        dst_transform = Affine(xres, 0.0, xmin, 0.0, -yres, ymax)
-
-        # Adding an alpha band when the source has one is trouble.
-        # It will result in suprisingly unmasked data.
-        if add_alpha is None:
-            src_alpha_band = 0
-            for i, interp in enumerate(self.dataset.colorinterp):
-                if interp == ColorInterp.alpha:
-                    src_alpha_band = i
-            add_alpha = not src_alpha_band
-        else:
-            add_alpha = add_alpha
-
-        # read the image as a warp vrt
-        with self._getDatasetLock:
-            with rio.vrt.WarpedVRT(
-                self.dataset,
-                resampling=Resampling.nearest,
-                crs=self._projection,
-                transform=dst_transform,
-                height=height,
-                width=width,
-                add_alpha=add_alpha,
-            ) as vrt:
-                yield vrt, dst_transform
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
