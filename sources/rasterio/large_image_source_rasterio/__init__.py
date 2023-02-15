@@ -1210,9 +1210,6 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         ):
             return super().getRegion(format, **kwargs)
 
-        # extract parameter of the projection
-        crs = self.dataset.crs  # Bounds
-
         left, top = self.pixelToProjection(
             iterInfo['region']['left'], iterInfo['region']['top'], iterInfo['level'])
         right, bottom = self.pixelToProjection(
@@ -1232,6 +1229,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             # Read the window region
             data = self.dataset.read(window=window)
 
+            src_transform = self.dataset.window_transform(window)
+            dst_transform, _, _ = calculate_default_transform(
+                self.dataset.crs, self._projection, window.width, window.height, left, bottom, right, top,
+            )
             # Create a new cropped raster to write to
             profile = self.dataset.meta.copy()
             profile.update(
@@ -1240,14 +1241,26 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                 )
             )
             profile.update({
-                'crs': crs,
+                'crs': self._projection,
                 'height': window.height,
                 'width': window.width,
-                'transform': self.dataset.window_transform(window),
+                'transform': dst_transform,
             })
 
             with rio.open(output.name, "w", **profile) as dst:
-                dst.write(data)
+                # Reproject to the project this source was opened with
+                for i, band in enumerate(data, 1):
+                    dest = np.zeros_like(band)
+                    reproject(
+                        band,
+                        dest,
+                        src_transform=src_transform,
+                        src_crs=self.dataset.crs,
+                        dst_transform=dst_transform,
+                        dst_crs=self._projection,
+                        resampling=Resampling.nearest,
+                    )
+                    dst.write(dest, indexes=i)
 
             return pathlib.Path(output.name), TileOutputMimeTypes["TILED"]
 
