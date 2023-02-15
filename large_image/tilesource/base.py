@@ -166,6 +166,9 @@ class TileSource:
     def __repr__(self):
         return self.getState()
 
+    def _repr_png_(self):
+        return self.getThumbnail(encoding='PNG')[0]
+
     @staticmethod
     def getLRUHash(*args, **kwargs):
         """
