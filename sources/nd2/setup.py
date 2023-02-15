@@ -54,7 +54,7 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'dask[array]',
-        'nd2[legacy]>=0.2.3 ; python_version >= "3.7"',
+        'nd2[legacy]>=0.2.3',
         'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
@@ -63,7 +63,7 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     entry_points={
         'large_image.source': [
             'nd2 = large_image_source_nd2:ND2FileTileSource'

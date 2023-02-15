@@ -220,7 +220,7 @@ jobs:
           path: ~/wheels
   release:
     docker:
-      - image: cimg/python:3.7
+      - image: cimg/python:3.10
     steps:
       - checkout
       - run:
