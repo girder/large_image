@@ -18,7 +18,7 @@ def make_vsi(url: str, **options):
     return vsi
 
 
-class GeoFileTileSource(FileTileSource):
+class GeoFileTileSource(FileTileSource):  # TODO: name GDAL
     """Abstract base class for geospatial tile sources.
 
     This base class assumes the underlying library is powered by GDAL
