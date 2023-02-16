@@ -113,15 +113,18 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._iccprofiles = [page.tags['InterColorProfile'].value]
         self.sizeX = s.shape[s.axes.index('X')]
         self.sizeY = s.shape[s.axes.index('Y')]
+        self._mm_x = self._mm_y = None
         try:
             unit = {2: 25.4, 3: 10}[page.tags['ResolutionUnit'].value.real]
 
-            self._mm_x = (unit * page.tags['XResolution'].value[1] /
-                          page.tags['XResolution'].value[0])
-            self._mm_y = (unit * page.tags['YResolution'].value[1] /
-                          page.tags['YResolution'].value[0])
+            if page.tags['XResolution'].value[1] >= 100:
+                self._mm_x = (unit * page.tags['XResolution'].value[1] /
+                              page.tags['XResolution'].value[0])
+            if page.tags['YResolution'].value[1] >= 100:
+                self._mm_y = (unit * page.tags['YResolution'].value[1] /
+                              page.tags['YResolution'].value[0])
         except Exception:
-            self._mm_x = self._mm_y = None
+            pass
         self._findMatchingSeries()
         self.levels = int(max(1, math.ceil(math.log(
             float(max(self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2)) + 1))

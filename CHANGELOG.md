@@ -16,6 +16,7 @@
 - Better pick the largest image from bioformats ([#1039](../../pull/1039), [#1040](../../pull/1040))
 - Cache histogram thresholds ([#1042](../../pull/1042))
 - Add `_repr_png_` for Jupyter ([#1058](../../pull/1058))
+- Ignore bogus tifffile resolutions ([#1062](../../pull/1062))
 
 ## 1.19.3
 
