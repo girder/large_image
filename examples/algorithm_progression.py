@@ -11,41 +11,44 @@ import yaml
 
 import large_image
 
-VARIABLE_LAYERS = ["z", "c", "t"]
+VARIABLE_LAYERS = ['z', 'c', 't']
 
 
 argparser = argparse.ArgumentParser(
-    prog="Algorithm Progression",
-    description="Apply an algorithm to an input image for every parameter set in a given parameter space",
+    prog='Algorithm Progression',
+    description='Apply an algorithm to an input image '
+                'for every parameter set in a given parameter space',
 )
 argparser.add_argument(
-    "algorithm_code",
+    'algorithm_code',
     choices=algorithms.ALGORITHM_CODES.keys(),
-    help="Code to specify which of the available algorithms should be used",
+    help='Code to specify which of the available algorithms should be used',
 )
-argparser.add_argument("input_filename", help="Path to an image to use as input")
+argparser.add_argument('input_filename', help='Path to an image to use as input')
 argparser.add_argument(
-    "-o",
-    "--output_dir",
+    '-o',
+    '--output_dir',
     required=False,
-    help="Name for a new directory in this location, wherein result images will be stored",
+    help='Name for a new directory in this location, wherein result images will be stored',
 )
 argparser.add_argument(
-    "-w",
-    "--num_workers",
+    '-w',
+    '--num_workers',
     required=False,
     default=4,
     type=int,
-    help="Number of workers to use for processing alogrithm iterations",
+    help='Number of workers to use for processing algorithm iterations',
 )
 argparser.add_argument(
-    "-p",
-    "--param",
-    action="append",
+    '-p',
+    '--param',
+    action='append',
     required=False,
-    nargs="*",
-    help="A parameter to pass to the algorithm; instead of using the default value, "
-    "Pass every item in the number space, specified as `--param=param_name,start,end,num_items[,open]`",
+    nargs='*',
+    help='A parameter to pass to the algorithm; '
+         'instead of using the default value, '
+         'Pass every item in the number space, '
+         'specified as `--param=param_name,start,end,num_items[,open]`',
 )
 
 
@@ -55,35 +58,35 @@ def apply_algorithm(algorithm, source, params):
         format=large_image.tilesource.TILE_FORMAT_NUMPY,
         tile_size=dict(width=2048, height=2048),
     ):
-        altered_data = algorithm(tile["tile"], *params)
-    new_source.addTile(altered_data, tile["x"], tile["y"])
+        altered_data = algorithm(tile['tile'], *params)
+    new_source.addTile(altered_data, tile['x'], tile['y'])
     return new_source
 
 
 def save_result(source, iteration, params, output_dir, algorithm_name):
-    filename = f"{algorithm_name} {iteration}.tiff"
+    filename = f'{algorithm_name} {iteration}.tiff'
     filepath = Path(output_dir, filename)
     source.write(str(filepath), lossy=False)
-    desc = {"path": filename}
+    desc = {'path': filename}
     for i, v in enumerate(params):
         desc[VARIABLE_LAYERS[i]] = float(v)
     return desc
 
 
 def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_workers):
-    algorithm_name = algorithm.__name__.replace("_", " ").title()
+    algorithm_name = algorithm.__name__.replace('_', ' ').title()
     yaml_dict = {
-        "name": f"{algorithm_name} iterative results",
-        "description": f"{algorithm_name} algorithm performed on {input_filename}",
-        "sources": [{"path": input_filename}],
+        'name': f'{algorithm_name} iterative results',
+        'description': f'{algorithm_name} algorithm performed on {input_filename}',
+        'sources': [{'path': input_filename}],
     }
     param_desc = [
-        f"{VARIABLE_LAYERS[i]} = {n}"
+        f'{VARIABLE_LAYERS[i]} = {n}'
         for i, (n, p) in enumerate(input_params.items())
         if len(p) > 1 and i < len(VARIABLE_LAYERS)
     ]
     if len(param_desc) > 0:
-        yaml_dict["description"] += f", where {', '.join(param_desc)}"
+        yaml_dict['description'] += f', where {",".join(param_desc)}'
 
     source = large_image.open(input_filename)
     param_space_combos = list(itertools.product(*input_params.values()))
@@ -91,7 +94,7 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
         itertools.product(*[p for p in input_params.values() if len(p) > 1])
     )
 
-    print(f"Beginning {len(param_space_combos)} runs on {max_workers} threads...")
+    print(f'Beginning {len(param_space_combos)} runs on {max_workers} threads...')
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         for index, combo in enumerate(param_space_combos):
             unique = combos_uniques[index]
@@ -101,9 +104,9 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
                 output_dir,
                 algorithm_name,
             )
-            yaml_dict["sources"].append(result)
+            yaml_dict['sources'].append(result)
 
-    with open(Path(output_dir, "results.yml"), "w") as f:
+    with open(Path(output_dir, 'results.yml'), 'w') as f:
         yaml.dump(
             yaml_dict,
             f,
@@ -112,7 +115,7 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
         )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     args = argparser.parse_args()
 
     algorithm_code = args.algorithm_code
@@ -120,7 +123,7 @@ if __name__ == "__main__":
     output_dir = args.output_dir
     max_workers = args.num_workers
     input_params = {
-        p[0].split(",")[0]: [i.strip() for i in p[0].split(",")[1:]] for p in args.param
+        p[0].split(',')[0]: [i.strip() for i in p[0].split(',')[1:]] for p in args.param
     }
     input_params = {
         key: np.linspace(
@@ -131,17 +134,17 @@ if __name__ == "__main__":
     }
 
     if not Path(input_filename).exists():
-        raise ValueError(f"Cannot locate file {input_filename}.")
+        raise ValueError(f'Cannot locate file {input_filename}.')
 
     algorithm = algorithms.ALGORITHM_CODES[algorithm_code]
     sig = inspect.signature(algorithm)
 
     if not output_dir:
-        output_dir = f"{algorithm.__name__}_output"
+        output_dir = f'{algorithm.__name__}_output'
         i = 0
         while Path(output_dir).exists():
             i += 1
-            output_dir = f"{algorithm.__name__}_output_{i}"
+            output_dir = f'{algorithm.__name__}_output_{i}'
         os.mkdir(output_dir)
     else:
         if not Path(output_dir).exists():
@@ -158,6 +161,6 @@ if __name__ == "__main__":
         for param in sig.parameters.values()
     }
 
-    del params["data"]
+    del params['data']
     sweep_algorithm(algorithm, input_filename, params, output_dir, max_workers)
-    print("Process complete.")
+    print('Process complete.')
