@@ -344,6 +344,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 key for key in seriesMetadata if key.startswith('Series ')):
             frameList = [[0]]
             nextSeriesNum = 1
+            rdr.setSeries(0)
+            lastX, lastY = rdr.getSizeX(), rdr.getSizeY()
             for idx in range(1, self._metadata['seriesCount']):
                 rdr.setSeries(idx)
                 if (rdr.getSizeX() == self._metadata['sizeX'] and
@@ -351,12 +353,23 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     frameList.append([idx])
                     if nextSeriesNum == idx:
                         nextSeriesNum = idx + 1
+                    lastX, lastY = self._metadata['sizeX'], self._metadata['sizeY']
                 if (rdr.getSizeX() * rdr.getSizeY() >
                         self._metadata['sizeX'] * self._metadata['sizeY']):
                     frameList = [[idx]]
                     nextSeriesNum = idx + 1
-                    self._metadata['sizeX'] = self.sizeX = rdr.getSizeX()
-                    self._metadata['sizeY'] = self.sizeY = rdr.getSizeY()
+                    self._metadata['sizeX'] = self.sizeX = lastX = rdr.getSizeX()
+                    self._metadata['sizeY'] = self.sizeY = lastY = rdr.getSizeY()
+                if (lastX and lastY and
+                        nearPowerOfTwo(rdr.getSizeX(), lastX) and rdr.getSizeX() < lastX and
+                        nearPowerOfTwo(rdr.getSizeY(), lastY) and rdr.getSizeY() < lastY):
+                    steps = int(round(math.log(
+                        lastX * lastY / (rdr.getSizeX() * rdr.getSizeY())) / math.log(2) / 2))
+                    frameList[-1] += [None] * (steps - 1)
+                    frameList[-1].append(idx)
+                    lastX, lastY = rdr.getSizeX(), rdr.getSizeY()
+                    if nextSeriesNum == idx:
+                        nextSeriesNum = idx + 1
         frameList = [fl for fl in frameList if len(fl)]
         self._metadata['frameSeries'] = [{
             'series': fl,
@@ -385,6 +398,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         validate = None
         for frame in self._metadata['frameSeries']:
             for level in range(len(frame['series'])):
+                if level and frame['series'][level] is None:
+                    continue
                 rdr.setSeries(frame['series'][level])
                 self._metadataForCurrentSeries(rdr)
                 info = {
@@ -400,6 +415,9 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                             not nearPowerOfTwo(frame['sizeY'], info['sizeY'])):
                         frame['series'] = frame['series'][:level]
                         validate = True
+                        break
+            rdr.setSeries(frame['series'][0])
+            self._metadataForCurrentSeries(rdr)
             if validate is None:
                 validate = False
         rdr.setSeries(0)
@@ -545,7 +563,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             fseries = self._metadata['frameSeries'][fxy]
         seriesLevel = self.levels - 1 - z
         scale = 1
-        while seriesLevel >= len(fseries['series']):
+        while seriesLevel >= len(fseries['series']) or fseries['series'][seriesLevel] is None:
             seriesLevel -= 1
             scale *= 2
         offsetx = x * self.tileWidth * scale
