@@ -1,6 +1,5 @@
 import itertools
 import os
-import sys
 
 from setuptools import setup
 
@@ -45,10 +44,12 @@ extraReqs = {
 sources = {
     'bioformats': [f'large-image-source-bioformats{limit_version}'],
     'deepzoom': [f'large-image-source-deepzoom{limit_version}'],
+    'dicom': [f'large-image-source-dicom{limit_version} ; python_version < "3.8"'],
     'dummy': [f'large-image-source-dummy{limit_version}'],
     'gdal': [f'large-image-source-gdal{limit_version}'],
     'mapnik': [f'large-image-source-mapnik{limit_version}'],
     'multi': [f'large-image-source-multi{limit_version}'],
+    'nd2': [f'large-image-source-nd2{limit_version} ; python_version < "3.7"'],
     'ometiff': [f'large-image-source-ometiff{limit_version}'],
     'openjpeg': [f'large-image-source-openjpeg{limit_version}'],
     'openslide': [f'large-image-source-openslide{limit_version}'],
@@ -58,14 +59,6 @@ sources = {
     'tifffile': [f'large-image-source-tifffile{limit_version}'],
     'vips': [f'large-image-source-vips{limit_version}'],
 }
-if sys.version_info >= (3, 7):
-    sources.update({
-        'nd2': [f'large-image-source-nd2{limit_version}'],
-    })
-if sys.version_info >= (3, 8):
-    sources.update({
-        'dicom': [f'large-image-source-dicom{limit_version}'],
-    })
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
 extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
