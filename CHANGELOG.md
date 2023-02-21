@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.20.1
+
+### Bug Fixes
+- Fix packaging listing various source requirements  ([#1064](../../pull/1064))
+
 ## 1.20.0
 
 ### Features
