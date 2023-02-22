@@ -1,9 +1,14 @@
 # Change Log
 
+## 1.20.2
+
+### Improvements
+- Allow ICC correction to specify intent ([#1066](../../pull/1066))
+
 ## 1.20.1
 
 ### Bug Fixes
-- Fix packaging listing various source requirements  ([#1064](../../pull/1064))
+- Fix packaging listing various source requirements ([#1064](../../pull/1064))
 
 ## 1.20.0
 

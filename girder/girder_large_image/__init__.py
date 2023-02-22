@@ -263,7 +263,7 @@ def handleSettingSave(event):
 
         from girder.api.rest import setResponseHeader
 
-        large_image.config.setConfig('icc_correction', bool(event.info['value']))
+        large_image.config.setConfig('icc_correction', event.info['value'])
         large_image.cache_util.cachesClear()
         gc.collect()
         try:
@@ -373,13 +373,29 @@ def metadataSearchHandler(  # noqa
     constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
     constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
     constants.PluginSettings.LARGE_IMAGE_NOTIFICATION_STREAM_FALLBACK,
-    constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION,
 })
 def validateBoolean(doc):
     val = doc['value']
     if str(val).lower() not in ('false', 'true', ''):
         raise ValidationException('%s must be a boolean.' % doc['key'], 'value')
     doc['value'] = (str(val).lower() != 'false')
+
+
+@setting_utilities.validator({
+    constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION,
+})
+def validateBooleanOrICCIntent(doc):
+    import PIL.ImageCms
+
+    val = doc['value']
+    if ((hasattr(PIL.ImageCms, 'Intent') and hasattr(PIL.ImageCms.Intent, str(val).upper())) or
+            hasattr(PIL.ImageCms, 'INTENT_' + str(val).upper())):
+        doc['value'] = str(val).upper()
+    else:
+        if str(val).lower() not in ('false', 'true', ''):
+            raise ValidationException(
+                '%s must be a boolean or a named intent.' % doc['key'], 'value')
+        doc['value'] = (str(val).lower() != 'false')
 
 
 @setting_utilities.validator({
@@ -486,8 +502,8 @@ class LargeImagePlugin(GirderPlugin):
         curConfig = config.getConfig().get('large_image')
         for key, value in (curConfig or {}).items():
             large_image.config.setConfig(key, value)
-        large_image.config.setConfig('icc_correction', bool(Setting().get(
-            constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION)))
+        large_image.config.setConfig('icc_correction', Setting().get(
+            constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION))
         addSystemEndpoints(info['apiRoot'])
 
         girder_tilesource.loadGirderTileSources()
