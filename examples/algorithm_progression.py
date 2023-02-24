@@ -105,7 +105,7 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
             )
             for combo, unique in zip(param_space_combos, combos_uniques)
         ]
-        for i, future in enumerate(concurrent.futures.as_completed(futures)):
+        for future in enumerate(concurrent.futures.as_completed(futures)):
             yaml_dict['sources'].append(future.result())
 
     with open(Path(output_dir, 'results.yml'), 'w') as f:
