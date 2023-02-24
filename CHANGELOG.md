@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.20.2
+
+### Improvements
+- Allow ICC correction to specify intent ([#1066](../../pull/1066))
+
+## 1.20.1
+
+### Bug Fixes
+- Fix packaging listing various source requirements ([#1064](../../pull/1064))
+
 ## 1.20.0
 
 ### Features
@@ -14,8 +24,10 @@
 - Render item lists faster ([#1036](../../pull/1036))
 - Reduce bioformats source memory usage ([#1038](../../pull/1038))
 - Better pick the largest image from bioformats ([#1039](../../pull/1039), [#1040](../../pull/1040))
+- Speed up some images handled with bioformats ([#1063](../../pull/1063))
 - Cache histogram thresholds ([#1042](../../pull/1042))
 - Add `_repr_png_` for Jupyter ([#1058](../../pull/1058))
+- Ignore bogus tifffile resolutions ([#1062](../../pull/1062))
 
 ## 1.19.3
 

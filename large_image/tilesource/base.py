@@ -1245,19 +1245,29 @@ class TileSource:
             self._iccprofilesObjects = [None] * len(self._iccprofiles)
         image = _imageToPIL(sc.image)
         mode = image.mode
+        if hasattr(PIL.ImageCms, 'Intent'):  # PIL >= 9
+            intent = getattr(PIL.ImageCms.Intent, str(sc.style.get('icc')).upper(),
+                             PIL.ImageCms.Intent.PERCEPTUAL)
+        else:
+            intent = getattr(PIL.ImageCms, 'INTENT_' + str(sc.style.get('icc')).upper(),
+                             PIL.ImageCms.INTENT_PERCEPTUAL)
         if not hasattr(self, '_iccsrgbprofile'):
             self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
         try:
+            key = (mode, intent)
             if self._iccprofilesObjects[profileIdx] is None:
                 self._iccprofilesObjects[profileIdx] = {
                     'profile': self.getICCProfiles(profileIdx)
                 }
-                if mode not in self._iccprofilesObjects[profileIdx]:
-                    self._iccprofilesObjects[profileIdx][mode] = \
+                if key not in self._iccprofilesObjects[profileIdx]:
+                    self._iccprofilesObjects[profileIdx][key] = \
                         PIL.ImageCms.buildTransformFromOpenProfiles(
                             self._iccprofilesObjects[profileIdx]['profile'],
-                            self._iccsrgbprofile, mode, mode)
-            transform = self._iccprofilesObjects[profileIdx][mode]
+                            self._iccsrgbprofile, mode, mode,
+                            renderingIntent=intent)
+                    self.logger.debug(
+                        'Created an ICC profile transform for mode %s, intent %s', mode, intent)
+            transform = self._iccprofilesObjects[profileIdx][key]
 
             PIL.ImageCms.applyTransform(image, transform, inPlace=True)
             sc.iccimage = _imageToNumpy(image)[0]
