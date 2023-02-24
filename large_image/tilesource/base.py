@@ -1254,19 +1254,20 @@ class TileSource:
         if not hasattr(self, '_iccsrgbprofile'):
             self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
         try:
+            key = (mode, intent)
             if self._iccprofilesObjects[profileIdx] is None:
                 self._iccprofilesObjects[profileIdx] = {
                     'profile': self.getICCProfiles(profileIdx)
                 }
-                if mode not in self._iccprofilesObjects[profileIdx]:
-                    self._iccprofilesObjects[profileIdx][(mode, intent)] = \
+                if key not in self._iccprofilesObjects[profileIdx]:
+                    self._iccprofilesObjects[profileIdx][key] = \
                         PIL.ImageCms.buildTransformFromOpenProfiles(
                             self._iccprofilesObjects[profileIdx]['profile'],
                             self._iccsrgbprofile, mode, mode,
                             renderingIntent=intent)
                     self.logger.debug(
                         'Created an ICC profile transform for mode %s, intent %s', mode, intent)
-            transform = self._iccprofilesObjects[profileIdx][(mode, intent)]
+            transform = self._iccprofilesObjects[profileIdx][key]
 
             PIL.ImageCms.applyTransform(image, transform, inPlace=True)
             sc.iccimage = _imageToNumpy(image)[0]
