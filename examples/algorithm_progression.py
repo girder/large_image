@@ -37,7 +37,7 @@ argparser.add_argument(
     required=False,
     default=4,
     type=int,
-    help='Number of workers to use for processing algorithm iterations',
+    help='Number of workers to use for processing alogrithm iterations',
 )
 argparser.add_argument(
     '-p',
@@ -52,7 +52,14 @@ argparser.add_argument(
 )
 
 
-def apply_algorithm(algorithm, source, params):
+def apply_algorithm(algorithm, input_filename, output_dir, params, unique_params):
+    source = large_image.open(input_filename)
+    filename = f'{algorithm.__name__}_{"_".join(["{:.2f}".format(v) for v in unique_params])}.tiff'
+    filepath = Path(output_dir, filename)
+    desc = {'path': filename}
+    for i, v in enumerate(unique_params):
+        desc[VARIABLE_LAYERS[i]] = float(v)
+
     new_source = large_image.new()
     for tile in source.tileIterator(
         format=large_image.tilesource.TILE_FORMAT_NUMPY,
@@ -60,16 +67,7 @@ def apply_algorithm(algorithm, source, params):
     ):
         altered_data = algorithm(tile['tile'], *params)
     new_source.addTile(altered_data, tile['x'], tile['y'])
-    return new_source
-
-
-def save_result(source, iteration, params, output_dir, algorithm_name):
-    filename = f'{algorithm_name} {iteration}.tiff'
-    filepath = Path(output_dir, filename)
-    source.write(str(filepath), lossy=False)
-    desc = {'path': filename}
-    for i, v in enumerate(params):
-        desc[VARIABLE_LAYERS[i]] = float(v)
+    new_source.write(str(filepath), lossy=False)
     return desc
 
 
@@ -86,25 +84,29 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
         if len(p) > 1 and i < len(VARIABLE_LAYERS)
     ]
     if len(param_desc) > 0:
-        yaml_dict['description'] += f', where {",".join(param_desc)}'
+        yaml_dict['description'] += f', where {", ".join(param_desc)}'
 
-    source = large_image.open(input_filename)
     param_space_combos = list(itertools.product(*input_params.values()))
     combos_uniques = list(
         itertools.product(*[p for p in input_params.values() if len(p) > 1])
     )
 
-    print(f'Beginning {len(param_space_combos)} runs on {max_workers} threads...')
+    print(f'Beginning {len(param_space_combos)} runs on {max_workers} workers...')
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-        for index, combo in enumerate(param_space_combos):
-            unique = combos_uniques[index]
-            result = save_result(
-                executor.submit(apply_algorithm, algorithm, source, combo),
-                *unique,
+        # cannot pass source through submitted task; it is unpickleable
+        futures = [
+            executor.submit(
+                apply_algorithm,
+                algorithm,
+                input_filename,
                 output_dir,
-                algorithm_name,
+                combo,
+                unique,
             )
-            yaml_dict['sources'].append(result)
+            for combo, unique in zip(param_space_combos, combos_uniques)
+        ]
+        for i, future in enumerate(concurrent.futures.as_completed(futures)):
+            yaml_dict['sources'].append(future.result())
 
     with open(Path(output_dir, 'results.yml'), 'w') as f:
         yaml.dump(
@@ -122,9 +124,13 @@ if __name__ == '__main__':
     input_filename = args.input_filename
     output_dir = args.output_dir
     max_workers = args.num_workers
-    input_params = {
-        p[0].split(',')[0]: [i.strip() for i in p[0].split(',')[1:]] for p in args.param
-    }
+    if args.param:
+        input_params = {
+            p[0].split(',')[0]: [i.strip() for i in p[0].split(',')[1:]]
+            for p in args.param
+        }
+    else:
+        input_params = {}
     input_params = {
         key: np.linspace(
             float(value[0]), float(value[1]), int(value[2]), endpoint=len(value) > 3
