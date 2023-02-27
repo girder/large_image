@@ -199,11 +199,15 @@ class LruCacheMetaclass(type):
                 result.__dict__ = subresult.__dict__.copy()
                 result._setStyle(kwargs['style'])
                 result._classkey = key
+                # for pickling
+                result._initValues = (args, kwargs.copy())
                 with cacheLock:
                     cache[key] = result
                     return result
             try:
                 instance = super().__call__(*args, **kwargs)
+                # for pickling
+                instance._initValues = (args, kwargs.copy())
             except Exception as exc:
                 with cacheLock:
                     try:
