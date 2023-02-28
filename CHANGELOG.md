@@ -5,6 +5,9 @@
 ### Improvements
 - Allow ICC correction to specify intent ([#1066](../../pull/1066))
 
+### Bug Fixes
+- The cache could reuse a class inappropriately ([#1070](../../pull/1070))
+
 ## 1.20.1
 
 ### Bug Fixes
