@@ -14,52 +14,60 @@ import large_image
 VARIABLE_LAYERS = ['z', 'c', 't']
 
 
-argparser = argparse.ArgumentParser(
-    prog='Algorithm Progression',
-    description='Apply an algorithm to an input image '
-                'for every parameter set in a given parameter space',
-)
-argparser.add_argument(
-    'algorithm_code',
-    choices=algorithms.ALGORITHM_CODES.keys(),
-    help='Code to specify which of the available algorithms should be used',
-)
-argparser.add_argument('input_filename', help='Path to an image to use as input')
-argparser.add_argument(
-    '-o',
-    '--output_dir',
-    required=False,
-    help='Name for a new directory in this location, wherein result images will be stored',
-)
-argparser.add_argument(
-    '-w',
-    '--num_workers',
-    required=False,
-    default=4,
-    type=int,
-    help='Number of workers to use for processing alogrithm iterations',
-)
-argparser.add_argument(
-    '-p',
-    '--param',
-    action='append',
-    required=False,
-    nargs='*',
-    help='A parameter to pass to the algorithm; '
-         'instead of using the default value, '
-         'Pass every item in the number space, '
-         'specified as `--param=param_name,start,end,num_items[,open]`',
-)
+def create_argparser():
+    argparser = argparse.ArgumentParser(
+        prog='Algorithm Progression',
+        description='Apply an algorithm to an input image '
+                    'for every parameter set in a given parameter space',
+    )
+    argparser.add_argument(
+        'algorithm_code',
+        choices=algorithms.ALGORITHM_CODES.keys(),
+        help='Code to specify which of the available algorithms should be used',
+    )
+    argparser.add_argument('input_filename', help='Path to an image to use as input')
+    argparser.add_argument(
+        '-o',
+        '--output_dir',
+        required=False,
+        help='Name for a new directory in this location, wherein result images will be stored',
+    )
+    argparser.add_argument(
+        '-w',
+        '--num_workers',
+        required=False,
+        default=4,
+        type=int,
+        help='Number of workers to use for processing alogrithm iterations',
+    )
+    argparser.add_argument(
+        '-p',
+        '--param',
+        action='append',
+        required=False,
+        nargs='*',
+        help='A parameter to pass to the algorithm; '
+             'instead of using the default value, '
+             'Pass every item in the number space, '
+             'specified as `--param=param_name,start,end,num_items[,open]`',
+    )
+    return argparser
 
 
-def apply_algorithm(algorithm, input_filename, output_dir, params, unique_params):
-    source = large_image.open(input_filename)
-    filename = f'{algorithm.__name__}_{"_".join(["{:.2f}".format(v) for v in unique_params])}.tiff'
+def apply_algorithm(algorithm, input_filename, output_dir, params, param_space):
+    iteration_id = [
+        list(values).index(params[i]) for i, values in enumerate(param_space.values())
+        if len(values) > 1
+    ]
+    filename = f'{algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.tiff'
     filepath = Path(output_dir, filename)
-    desc = {'path': filename}
-    for i, v in enumerate(unique_params):
-        desc[VARIABLE_LAYERS[i]] = float(v)
 
+    desc = dict(
+        **{'path': filename},
+        **{VARIABLE_LAYERS[i]: v for i, v in enumerate(iteration_id)}
+    )
+
+    source = large_image.open(input_filename)
     new_source = large_image.new()
     for tile in source.tileIterator(
         format=large_image.tilesource.TILE_FORMAT_NUMPY,
@@ -79,18 +87,15 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
         'sources': [{'path': input_filename}],
     }
     param_desc = [
-        f'{VARIABLE_LAYERS[i]} = {n}'
-        for i, (n, p) in enumerate(input_params.items())
+        f'{VARIABLE_LAYERS[i]} represents change in {n} as an index of {p}'
         if len(p) > 1 and i < len(VARIABLE_LAYERS)
+        else f'{n} remains unchanged per run with a value of {p[0]}'
+        for i, (n, p) in enumerate(input_params.items())
     ]
     if len(param_desc) > 0:
-        yaml_dict['description'] += f', where {", ".join(param_desc)}'
+        yaml_dict['description'] += f', where {",".join(param_desc)}'
 
     param_space_combos = list(itertools.product(*input_params.values()))
-    combos_uniques = list(
-        itertools.product(*[p for p in input_params.values() if len(p) > 1])
-    )
-
     print(f'Beginning {len(param_space_combos)} runs on {max_workers} workers...')
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         # cannot pass source through submitted task; it is unpickleable
@@ -101,11 +106,12 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
                 input_filename,
                 output_dir,
                 combo,
-                unique,
+                input_params
             )
-            for combo, unique in zip(param_space_combos, combos_uniques)
+            for combo in param_space_combos
         ]
-        for future in enumerate(concurrent.futures.as_completed(futures)):
+        for future in concurrent.futures.as_completed(futures):
+            print('Completed run.')
             yaml_dict['sources'].append(future.result())
 
     with open(Path(output_dir, 'results.yml'), 'w') as f:
@@ -118,6 +124,7 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
 
 
 if __name__ == '__main__':
+    argparser = create_argparser()
     args = argparser.parse_args()
 
     algorithm_code = args.algorithm_code
