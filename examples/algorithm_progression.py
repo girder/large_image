@@ -94,7 +94,7 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
         for i, (n, p) in enumerate(input_params.items())
     ]
     if len(param_desc) > 0:
-        yaml_dict['description'] += f', where {",".join(param_desc)}'
+        yaml_dict['description'] += f', where {", ".join(param_desc)}'
 
     param_space_combos = list(itertools.product(*input_params.values()))
     print(f'Beginning {len(param_space_combos)} runs on {max_workers} workers...')
@@ -170,8 +170,6 @@ if __name__ == '__main__':
         param.name: (
             input_params[param.name]
             if param.name in input_params
-            else algorithms.ALGORITHM_DEFAULT_PARAM_SPREADS[algorithm_code][param.name]
-            if param.name in algorithms.ALGORITHM_DEFAULT_PARAM_SPREADS[algorithm_code]
             else [param.default]
         )
         for param in sig.parameters.values()

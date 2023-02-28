@@ -69,10 +69,3 @@ def positive_pixel_count(
 ALGORITHM_CODES = {
     'ppc': positive_pixel_count,
 }
-
-ALGORITHM_DEFAULT_PARAM_SPREADS = {
-    'ppc': {
-        'hue_value': np.linspace(0, 1, 4),
-        'hue_width': np.linspace(0.05, 0.25, 4),
-    }
-}
