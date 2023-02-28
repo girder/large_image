@@ -97,6 +97,7 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
 
     param_space_combos = list(itertools.product(*input_params.values()))
     print(f'Beginning {len(param_space_combos)} runs on {max_workers} workers...')
+    num_done = 0
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         # cannot pass source through submitted task; it is unpickleable
         futures = [
@@ -111,7 +112,8 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
             for combo in param_space_combos
         ]
         for future in concurrent.futures.as_completed(futures):
-            print('Completed run.')
+            num_done += 1
+            print(f'Completed {num_done} of {len(param_space_combos)} runs.')
             yaml_dict['sources'].append(future.result())
 
     with open(Path(output_dir, 'results.yml'), 'w') as f:
