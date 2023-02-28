@@ -38,7 +38,7 @@ def create_argparser():
         required=False,
         default=4,
         type=int,
-        help='Number of workers to use for processing alogrithm iterations',
+        help='Number of workers to use for processing algorithm iterations',
     )
     argparser.add_argument(
         '-p',
@@ -85,6 +85,7 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
         'name': f'{algorithm_name} iterative results',
         'description': f'{algorithm_name} algorithm performed on {input_filename}',
         'sources': [],
+        'uniformSources': True,
     }
     param_desc = [
         f'{VARIABLE_LAYERS[i]} represents change in {n} as an index of {p}'
