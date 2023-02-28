@@ -84,7 +84,7 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
     yaml_dict = {
         'name': f'{algorithm_name} iterative results',
         'description': f'{algorithm_name} algorithm performed on {input_filename}',
-        'sources': [{'path': input_filename}],
+        'sources': [],
     }
     param_desc = [
         f'{VARIABLE_LAYERS[i]} represents change in {n} as an index of {p}'
