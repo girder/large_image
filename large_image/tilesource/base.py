@@ -143,6 +143,35 @@ class TileSource:
         self.edge = edge
         self._setStyle(style)
 
+    def __getstate__(self):
+        """
+        Allow pickling.
+
+        We reconstruct our state via the creation caused by the inverse of
+        reduce, so we don't report state here.
+        """
+        return None
+
+    def __reduce__(self):
+        """
+        Allow pickling.
+
+        Reduce can pass the args but not the kwargs, so use a partial class
+        call to recosntruct kwargs.
+        """
+        import functools
+        import pickle
+
+        if not hasattr(self, '_initValues') or hasattr(self, '_unpickleable'):
+            raise pickle.PicklingError('Source cannot be pickled')
+        return functools.partial(type(self), **self._initValues[1]), self._initValues[0]
+
+    def __repr__(self):
+        return self.getState()
+
+    def _repr_png_(self):
+        return self.getThumbnail(encoding='PNG')[0]
+
     def _setStyle(self, style):
         """
         Check and set the specified style from a json string or a dictionary.
@@ -162,12 +191,6 @@ class TileSource:
                         raise TypeError
                 except TypeError:
                     raise exceptions.TileSourceError('Style is not a valid json object.')
-
-    def __repr__(self):
-        return self.getState()
-
-    def _repr_png_(self):
-        return self.getThumbnail(encoding='PNG')[0]
 
     @staticmethod
     def getLRUHash(*args, **kwargs):

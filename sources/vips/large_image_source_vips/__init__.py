@@ -106,6 +106,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Initialize the tile class for creating a new image.
         """
+        # Make unpickleable
+        self._unpickleable = True
         self._largeImagePath = None
         self._image = None
         self.sizeX = self.sizeY = self.levels = 0
