@@ -54,11 +54,12 @@ def create_argparser():
     return argparser
 
 
-def apply_algorithm(algorithm, input_filename, output_dir, params, param_space):
-    iteration_id = [
-        list(values).index(params[i]) for i, values in enumerate(param_space.values())
-        if len(values) > 1
-    ]
+def apply_algorithm(algorithm, input_filename, output_dir, params, param_space, param_order):
+    param_indices = {
+        param_name: list(values).index(params[index])
+        for index, (param_name, values) in enumerate(param_space.items())
+    }
+    iteration_id = [param_indices[param_name] for param_name in param_order]
     filename = f'{algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.tiff'
     filepath = Path(output_dir, filename)
 
@@ -79,7 +80,7 @@ def apply_algorithm(algorithm, input_filename, output_dir, params, param_space):
     return desc
 
 
-def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_workers):
+def sweep_algorithm(algorithm, input_filename, input_params, param_oder, output_dir, max_workers):
     algorithm_name = algorithm.__name__.replace('_', ' ').title()
     yaml_dict = {
         'name': f'{algorithm_name} iterative results',
@@ -108,7 +109,8 @@ def sweep_algorithm(algorithm, input_filename, input_params, output_dir, max_wor
                 input_filename,
                 output_dir,
                 combo,
-                input_params
+                input_params,
+                param_order,
             )
             for combo in param_space_combos
         ]
@@ -148,6 +150,7 @@ if __name__ == '__main__':
         for key, value in input_params.items()
         if len(value) >= 3
     }
+    param_order = list(input_params.keys())
 
     if not Path(input_filename).exists():
         raise ValueError(f'Cannot locate file {input_filename}.')
@@ -176,5 +179,5 @@ if __name__ == '__main__':
     }
 
     del params['data']
-    sweep_algorithm(algorithm, input_filename, params, output_dir, max_workers)
+    sweep_algorithm(algorithm, input_filename, params, param_order, output_dir, max_workers)
     print('Process complete.')
