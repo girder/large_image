@@ -53,7 +53,7 @@ SourceAndFiles = {
     },
     'nd2': {
         'read': r'\.(nd2)$',
-        'python': sys.version_info >= (3, 7) and sys.version_info < (3, 11),
+        'python': sys.version_info >= (3, 7),
     },
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
@@ -76,7 +76,7 @@ SourceAndFiles = {
     'tifffile': {
         'read': r'',
         'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2|dcm)$',
-        'python': sys.version_info >= (3, 7) and sys.version_info < (3, 11),
+        'python': sys.version_info >= (3, 7),
     },
     'vips': {
         'read': r'',
