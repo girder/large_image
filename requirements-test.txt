@@ -14,7 +14,7 @@ sources/openslide
 sources/pil
 sources/test
 sources/tiff
-sources/tifffile
+sources/tifffile ; python_version >= '3.7'
 sources/vips
 # must be after sources/tiff
 sources/ometiff
