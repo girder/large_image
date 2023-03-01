@@ -544,7 +544,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         xres = 0
         if self._image:
             xres = self._image.get('xres') or 0
-        return 1.0 / xres if xres else None
+        return 1.0 / xres if xres and xres != 1 else None
 
     @mm_x.setter
     def mm_x(self, value):
@@ -563,7 +563,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         yres = 0
         if self._image:
             yres = self._image.get('yres') or 0
-        return 1.0 / yres if yres else None
+        return 1.0 / yres if yres and yres != 1 else None
 
     @mm_y.setter
     def mm_y(self, value):
