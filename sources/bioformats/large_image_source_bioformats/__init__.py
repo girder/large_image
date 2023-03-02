@@ -26,6 +26,7 @@ import atexit
 import logging
 import math
 import os
+import re
 import threading
 import types
 import weakref
@@ -445,15 +446,30 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._magnification = {}
         metadata = self._metadata['metadata']
         valuekeys = {
-            'x': ['Scaling|Distance|Value #1'],
-            'y': ['Scaling|Distance|Value #2'],
+            'x': [('Scaling|Distance|Value #1', 1e3)],
+            'y': [('Scaling|Distance|Value #2', 1e3)],
         }
-        magkeys = ['Information|Instrument|Objective|NominalMagnification #1']
-        units = 1e3
+        tuplekeys = [
+            ('Physical pixel size', 1e-3),
+        ]
+        magkeys = [
+            'Information|Instrument|Objective|NominalMagnification #1',
+            'Magnification #1',
+        ]
         for axis in {'x', 'y'}:
-            for key in valuekeys[axis]:
+            for key, units in valuekeys[axis]:
                 if metadata.get(key):
                     self._magnification['mm_' + axis] = float(metadata[key]) * units
+        if 'mm_x' not in self._magnification and 'mm_y' not in self._magnification:
+            for key, units in tuplekeys:
+                if metadata.get(key):
+                    found = re.match(r'^\D*(\d+(|\.\d+))\D+(\d+(|\.\d+))\D*$', metadata[key])
+                    if found:
+                        try:
+                            self._magnification['mm_x'], self._magnification['mm_y'] = (
+                                float(found.groups()[0]) * units, float(found.groups()[2]) * units)
+                        except Exception:
+                            pass
         for key in magkeys:
             if metadata.get(key):
                 self._magnification['magnification'] = float(metadata[key])

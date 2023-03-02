@@ -5,6 +5,7 @@
 ### Improvements
 - Allow ICC correction to specify intent ([#1066](../../pull/1066))
 - Make tile sources pickleable ([#1071](../../pull/1071))
+- Extract scale information from more bioformats files ([#1073](../../pull/1073))
 
 ### Bug Fixes
 - The cache could reuse a class inappropriately ([#1070](../../pull/1070))
