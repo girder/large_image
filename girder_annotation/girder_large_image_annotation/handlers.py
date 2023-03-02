@@ -124,7 +124,16 @@ def process_annotations(event):  # noqa: C901
         logger.error('Could not load models from the database')
         return
     try:
-        data = orjson.loads(File().open(file).read().decode())
+        if file['size'] > 1 * 1024 ** 3:
+            raise Exception('File is larger than will be read into memory.')
+        data = []
+        with File().open(file) as fptr:
+            while True:
+                chunk = fptr.read(1024 ** 2)
+                if not len(chunk):
+                    break
+                data.append(chunk)
+        data = orjson.loads(b''.join(data).decode())
     except Exception:
         logger.error('Could not parse annotation file')
         raise
