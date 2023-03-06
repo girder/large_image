@@ -11,53 +11,53 @@ from xarray_sweep import sweep_algorithm_xarray
 
 def create_argparser():
     argparser = argparse.ArgumentParser(
-        prog="Algorithm Progression",
-        description="Apply an algorithm to an input image "
-        "for every parameter set in a given parameter space",
+        prog='Algorithm Progression',
+        description='Apply an algorithm to an input image '
+        'for every parameter set in a given parameter space',
     )
     argparser.add_argument(
-        "algorithm_code",
+        'algorithm_code',
         choices=algorithms.ALGORITHM_CODES.keys(),
-        help="Code to specify which of the available algorithms should be used",
+        help='Code to specify which of the available algorithms should be used',
     )
-    argparser.add_argument("input_filename", help="Path to an image to use as input")
+    argparser.add_argument('input_filename', help='Path to an image to use as input')
     argparser.add_argument(
-        "-o",
-        "--output_dir",
+        '-o',
+        '--output_dir',
         required=False,
-        help="Name for a new directory in this location, wherein result images will be stored",
+        help='Name for a new directory in this location, wherein result images will be stored',
     )
     argparser.add_argument(
-        "-f",
-        "--format",
+        '-f',
+        '--format',
         required=False,
-        choices=["multisource", "xarray", "hdf5"],
-        default="multisource",
-        help="Storage mechanism and output format",
+        choices=['multisource', 'xarray', 'hdf5'],
+        default='multisource',
+        help='Storage mechanism and output format',
     )
     argparser.add_argument(
-        "-w",
-        "--num_workers",
+        '-w',
+        '--num_workers',
         required=False,
         default=4,
         type=int,
-        help="Number of workers to use for processing algorithm iterations",
+        help='Number of workers to use for processing algorithm iterations',
     )
     argparser.add_argument(
-        "-p",
-        "--param",
-        action="append",
+        '-p',
+        '--param',
+        action='append',
         required=False,
-        nargs="*",
-        help="A parameter to pass to the algorithm; "
-        "instead of using the default value, "
-        "Pass every item in the number space, "
-        "specified as `--param=param_name,start,end,num_items[,open]`",
+        nargs='*',
+        help='A parameter to pass to the algorithm; '
+        'instead of using the default value, '
+        'Pass every item in the number space, '
+        'specified as `--param=param_name,start,end,num_items[,open]`',
     )
     return argparser
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     argparser = create_argparser()
     args = argparser.parse_args()
 
@@ -68,12 +68,12 @@ if __name__ == "__main__":
     max_workers = args.num_workers
 
     sweep_function = sweep_algorithm_multisource
-    if output_format == "xarray":
+    if output_format == 'xarray':
         sweep_function = sweep_algorithm_xarray
 
     if args.param:
         input_params = {
-            p[0].split(",")[0]: [i.strip() for i in p[0].split(",")[1:]]
+            p[0].split(',')[0]: [i.strip() for i in p[0].split(',')[1:]]
             for p in args.param
         }
     else:
@@ -88,17 +88,17 @@ if __name__ == "__main__":
     param_order = list(input_params.keys())
 
     if not Path(input_filename).exists():
-        raise ValueError(f"Cannot locate file {input_filename}.")
+        raise ValueError(f'Cannot locate file {input_filename}.')
 
     algorithm = algorithms.ALGORITHM_CODES[algorithm_code]
     sig = inspect.signature(algorithm)
 
     if not output_dir:
-        output_dir = f"{algorithm.__name__}_output"
+        output_dir = f'{algorithm.__name__}_output'
         i = 0
         while Path(output_dir).exists():
             i += 1
-            output_dir = f"{algorithm.__name__}_output_{i}"
+            output_dir = f'{algorithm.__name__}_output_{i}'
         os.mkdir(output_dir)
     else:
         if not Path(output_dir).exists():
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         for param in sig.parameters.values()
     }
 
-    del params["data"]
+    del params['data']
     sweep_function(
         algorithm,
         input_filename,
@@ -120,4 +120,4 @@ if __name__ == "__main__":
         output_dir,
         max_workers,
     )
-    print("Process complete.")
+    print('Process complete.')
