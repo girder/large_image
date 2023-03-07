@@ -1,7 +1,7 @@
 from pathlib import Path
-from algorithm_sweep import AlgorithmSweep
 
 import yaml
+from algorithm_sweep import AlgorithmSweep
 
 import large_image
 

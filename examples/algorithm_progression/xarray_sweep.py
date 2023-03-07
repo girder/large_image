@@ -1,8 +1,10 @@
-from algorithm_sweep import AlgorithmSweep
+from pathlib import Path
+
 import numpy as np
 import xarray as xr
+from algorithm_sweep import AlgorithmSweep
+
 import large_image
-from pathlib import Path
 
 
 class AlgorithmSweepXArray(AlgorithmSweep):
