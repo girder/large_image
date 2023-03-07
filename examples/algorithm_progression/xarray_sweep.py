@@ -33,8 +33,8 @@ class AlgorithmSweepXArray(AlgorithmSweep):
                 tile_size=dict(width=2048, height=2048),
             ):
                 output_data[
-                    tile["x"]: tile["x"] + tile["width"],
                     tile["y"]: tile["y"] + tile["height"],
+                    tile["x"]: tile["x"] + tile["width"],
                 ] = self.algorithm(tile["tile"], *param_combo)
 
             xr.DataArray(
