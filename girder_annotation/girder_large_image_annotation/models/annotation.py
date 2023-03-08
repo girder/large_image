@@ -1009,6 +1009,8 @@ class Annotation(AccessControlledModel):
                 if k == 'id':
                     if not isinstance(b[k], str) or not self.idRegex.match(b[k]):
                         return False
+                elif parentKey == 'user':
+                    continue
                 elif parentKey != 'label' or k != 'value':
                     if not self._similarElementStructure(a[k], b[k], k):
                         return False
