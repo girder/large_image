@@ -48,20 +48,22 @@ class AlgorithmSweepXArray(AlgorithmSweep):
         self.output_files.append(result)
 
     def complete_storage(self):
-        results = [xr.open_dataarray(filename) for filename in self.output_files]
-        if len(results) > 0:
-            dims = dict(
-                **{k: len(v) for k, v in self.input_params.items()},
-                **results[0].sizes,
-            )
-            composite_xr = xr.DataArray(
-                np.empty(tuple(dims.values())),
-                coords=self.input_params,
-                dims=dims,
-            )
+        if len(self.output_files) == 0:
+            return None
 
-            for result in results:
-                composite_xr.loc[result.attrs] = result.astype(int)
-            composite_xr.to_netcdf(Path(self.output_dir, "results.nc"))
-            for output_filename in self.output_files:
-                output_filename.unlink()
+        first_result = xr.open_dataarray(self.output_files[0])
+        dims = dict(
+            **{k: len(v) for k, v in self.input_params.items()},
+            **first_result.sizes,
+        )
+        composite = xr.DataArray(
+            np.empty(tuple(dims.values())),
+            coords=self.input_params,
+            dims=dims,
+        )
+
+        for filename in self.output_files:
+            result = xr.open_dataarray(filename)
+            composite.loc[result.attrs] = result.astype(int)
+            filename.unlink()
+        composite.to_netcdf(Path(self.output_dir, "results.nc"))
