@@ -36,7 +36,7 @@ def _lazyImport():
             import pydicom
             import wsidicom
         except ImportError:
-            raise TileSourceError('nd2 module not found.')
+            raise TileSourceError('dicom modules not found.')
         warnings.filterwarnings('ignore', category=UserWarning, module='wsidicom')
         warnings.filterwarnings('ignore', category=UserWarning, module='pydicom')
 
