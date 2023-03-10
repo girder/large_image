@@ -165,7 +165,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _addPixelmapLayerParams(layerParams, pixelmapElement, levelDifference) {
             // For pixelmap overlays, there are additional parameters to set
             layerParams.keepLower = false;
-            if (typeof layerParams.url === 'function' || levelDifference) {
+            if (_.isFunction(layerParams.url) || levelDifference) {
                 layerParams.url = (x, y, z) => 'api/v1/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
             } else {
                 layerParams.url = layerParams.url + '?encoding=PNG';

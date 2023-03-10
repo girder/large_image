@@ -85,14 +85,17 @@ class AnnotationSchema:
     colorSchema = {
         'type': 'string',
         # We accept colors of the form
-        #   #aabbcc                 six digit RRGGBB hex
-        #   #abc                    three digit RGB hex
+        #   #rrggbb                 six digit RRGGBB hex
+        #   #rgb                    three digit RGB hex
+        #   #rrggbbaa               eight digit RRGGBBAA hex
+        #   #rgba                   four digit RGBA hex
         #   rgb(255, 255, 255)      rgb decimal triplet
         #   rgba(255, 255, 255, 1)  rgba quad with RGB in the range [0-255] and
         #                           alpha [0-1]
         # TODO: make rgb and rgba spec validate that rgb is [0-255] and a is
         # [0-1], rather than just checking if they are digits and such.
-        'pattern': r'^(#[0-9a-fA-F]{3,6}|rgb\(\d+,\s*\d+,\s*\d+\)|'
+        'pattern': r'^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|'
+                   r'rgb\(\d+,\s*\d+,\s*\d+\)|'
                    r'rgba\(\d+,\s*\d+,\s*\d+,\s*(\d?\.|)\d+\))$',
     }
 
@@ -1009,7 +1012,7 @@ class Annotation(AccessControlledModel):
                 if k == 'id':
                     if not isinstance(b[k], str) or not self.idRegex.match(b[k]):
                         return False
-                elif parentKey == 'user':
+                elif parentKey in {'user'} or k in {'fillColor', 'lineColor'}:
                     continue
                 elif parentKey != 'label' or k != 'value':
                     if not self._similarElementStructure(a[k], b[k], k):
