@@ -82,5 +82,6 @@ class AlgorithmSweepXArray(AlgorithmSweep):
         pass
 
     def complete_storage(self):
+        # Read it back
         ds = xr.open_zarr(self.zarr_path)
         print(ds)

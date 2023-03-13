@@ -5,6 +5,7 @@ from pathlib import Path
 
 import algorithms
 import numpy as np
+from hdf5_sweep import AlgorithmSweepHDF5
 from multisource_sweep import AlgorithmSweepMultiSource
 from xarray_sweep import AlgorithmSweepXArray
 
@@ -110,6 +111,8 @@ if __name__ == "__main__":
     del params["data"]
     if output_format == "xarray":
         sweep_class = AlgorithmSweepXArray
+    elif output_format == "hdf5":
+        sweep_class = AlgorithmSweepHDF5
     else:
         sweep_class = AlgorithmSweepMultiSource
 
