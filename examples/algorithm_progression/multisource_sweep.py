@@ -5,25 +5,25 @@ from algorithm_sweep import AlgorithmSweep
 
 import large_image
 
-VARIABLE_LAYERS = ["z", "c", "t"]
+VARIABLE_LAYERS = ['z', 'c', 't']
 
 
 class AlgorithmSweepMultiSource(AlgorithmSweep):
     def initialize_storage(self):
         self.yaml_dict = {
-            "name": f"{self.algorithm_name} iterative results",
-            "description": f"{self.algorithm_name} algorithm performed on {self.input_filename}",
-            "sources": [],
-            "uniformSources": True,
+            'name': f'{self.algorithm_name} iterative results',
+            'description': f'{self.algorithm_name} algorithm performed on {self.input_filename}',
+            'sources': [],
+            'uniformSources': True,
         }
         param_desc = [
-            f"{VARIABLE_LAYERS[i]} represents change in {n} as an index of {p}"
+            f'{VARIABLE_LAYERS[i]} represents change in {n} as an index of {p}'
             if len(p) > 1 and i < len(VARIABLE_LAYERS)
-            else f"{n} remains unchanged per run with a value of {p[0]}"
+            else f'{n} remains unchanged per run with a value of {p[0]}'
             for i, (n, p) in enumerate(self.input_params.items())
         ]
         if len(param_desc) > 0:
-            self.yaml_dict["description"] += f', where {", ".join(param_desc)}'
+            self.yaml_dict['description'] += f', where {", ".join(param_desc)}'
 
     def apply_algorithm(self, param_combo):
         param_indices = {
@@ -37,7 +37,7 @@ class AlgorithmSweepMultiSource(AlgorithmSweep):
         filepath = Path(self.output_dir, filename)
 
         desc = dict(
-            **{"path": filename},
+            **{'path': filename},
             **{VARIABLE_LAYERS[i]: v for i, v in enumerate(iteration_id)},
         )
 
@@ -47,16 +47,16 @@ class AlgorithmSweepMultiSource(AlgorithmSweep):
             format=large_image.tilesource.TILE_FORMAT_NUMPY,
             tile_size=dict(width=2048, height=2048),
         ):
-            altered_data = self.algorithm(tile["tile"], *param_combo)
-            new_source.addTile(altered_data, tile["x"], tile["y"])
+            altered_data = self.algorithm(tile['tile'], *param_combo)
+            new_source.addTile(altered_data, tile['x'], tile['y'])
         new_source.write(str(filepath), lossy=False)
         return desc
 
     def handle_result(self, result):
-        self.yaml_dict["sources"].append(result)
+        self.yaml_dict['sources'].append(result)
 
     def complete_storage(self):
-        with open(Path(self.output_dir, "results.yml"), "w") as f:
+        with open(Path(self.output_dir, 'results.yml'), 'w') as f:
             yaml.dump(
                 self.yaml_dict,
                 f,

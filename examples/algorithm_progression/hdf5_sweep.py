@@ -13,11 +13,11 @@ class AlgorithmSweepHDF5(AlgorithmSweep):
         source = large_image.open(self.input_filename)
         self.source_metadata = source.getMetadata()
 
-        self.filepath = Path(self.output_dir, "results.h5")
+        self.filepath = Path(self.output_dir, 'results.h5')
         self.iteration_dims = {
-            "y": self.source_metadata["sizeY"],
-            "x": self.source_metadata["sizeX"],
-            "c": 4,
+            'y': self.source_metadata['sizeY'],
+            'x': self.source_metadata['sizeX'],
+            'c': 4,
         }
         self.param_dims = {k: len(v) for k, v in self.input_params.items()}
         self.layout = h5py.VirtualLayout(
@@ -31,14 +31,14 @@ class AlgorithmSweepHDF5(AlgorithmSweep):
         state = self.__dict__.copy()
 
         # don't pickle the parameter fun.
-        del state["layout"]
+        del state['layout']
         return state
 
     def apply_algorithm(self, param_combo):
         output_data = np.empty(
             (
-                self.source_metadata["sizeY"],
-                self.source_metadata["sizeX"],
+                self.source_metadata['sizeY'],
+                self.source_metadata['sizeX'],
                 4,
             )
         )
@@ -48,23 +48,23 @@ class AlgorithmSweepHDF5(AlgorithmSweep):
             tile_size=dict(width=2048, height=2048),
         ):
             output_data[
-                tile["y"]: tile["y"] + tile["height"],
-                tile["x"]: tile["x"] + tile["width"],
-            ] = self.algorithm(tile["tile"], *param_combo)
+                tile['y']: tile['y'] + tile['height'],
+                tile['x']: tile['x'] + tile['width'],
+            ] = self.algorithm(tile['tile'], *param_combo)
         return (output_data, param_combo)
 
     def handle_result(self, result, **kwargs):
         output_data, param_combo = result
         output_file = Path(
-            self.output_dir, "{}.h5".format("_".join(str(v) for v in param_combo))
+            self.output_dir, '{}.h5'.format('_'.join(str(v) for v in param_combo))
         )
-        with h5py.File(output_file, "w") as f:
+        with h5py.File(output_file, 'w') as f:
             f.create_dataset(
-                "data", tuple(self.iteration_dims.values()), "i8", output_data
+                'data', tuple(self.iteration_dims.values()), 'i8', output_data
             )
         vsource = h5py.VirtualSource(
             output_file,
-            "data",
+            'data',
             shape=tuple(self.iteration_dims.values()),
         )
         slice_index = tuple(
@@ -74,13 +74,13 @@ class AlgorithmSweepHDF5(AlgorithmSweep):
         self.layout[slice_index] = vsource
 
     def complete_storage(self):
-        f = h5py.File(self.filepath, "w", libver="latest")
-        f.create_virtual_dataset("vdata", self.layout)
+        f = h5py.File(self.filepath, 'w', libver='latest')
+        f.create_virtual_dataset('vdata', self.layout)
         for k, v in self.input_params.items():
-            f["vdata"].attrs[k] = list(v)
+            f['vdata'].attrs[k] = list(v)
         f.close()
 
         # Read it back
-        with h5py.File(self.filepath, "r") as f:
-            print(f["vdata"][...])
-            print(dict(f["vdata"].attrs))
+        with h5py.File(self.filepath, 'r') as f:
+            print(f['vdata'][...])
+            print(dict(f['vdata'].attrs))

@@ -12,15 +12,15 @@ class AlgorithmSweepXArray(AlgorithmSweep):
         dim_sizes = dict(
             **{k: len(v) for k, v in self.input_params.items()},
             **{
-                "y": self.source_metadata["sizeY"],
-                "x": self.source_metadata["sizeX"],
-                "c": 4,
+                'y': self.source_metadata['sizeY'],
+                'x': self.source_metadata['sizeX'],
+                'c': 4,
             },
         )
 
         ds = xr.Dataset(
             {
-                "results": (
+                'results': (
                     list(dim_sizes.keys()),
                     np.zeros(
                         tuple(dim_sizes.values()),
@@ -29,8 +29,8 @@ class AlgorithmSweepXArray(AlgorithmSweep):
             },
             coords=self.input_params,
             attrs={
-                "name": f"{self.algorithm_name} iterative results",
-                "description": f"{self.algorithm_name} algorithm performed on {self.input_filename}",
+                'name': f'{self.algorithm_name} iterative results',
+                'description': f'{self.algorithm_name} performed on {self.input_filename}',
             },
         )
         return ds
@@ -38,9 +38,9 @@ class AlgorithmSweepXArray(AlgorithmSweep):
     def initialize_storage(self):
         self.source = large_image.open(self.input_filename)
         self.source_metadata = self.source.getMetadata()
-        self.zarr_path = Path(self.output_dir, "results.zarr")
+        self.zarr_path = Path(self.output_dir, 'results.zarr')
         ds = self.create_ds()
-        ds.to_zarr(self.zarr_path, mode="w", compute=False)
+        ds.to_zarr(self.zarr_path, mode='w', compute=False)
 
     def apply_algorithm(self, param_combo):
         current_coords = {
@@ -48,8 +48,8 @@ class AlgorithmSweepXArray(AlgorithmSweep):
         }
         output_data = np.empty(
             (
-                self.source_metadata["sizeY"],
-                self.source_metadata["sizeX"],
+                self.source_metadata['sizeY'],
+                self.source_metadata['sizeX'],
                 4,
             )
         )
@@ -58,23 +58,23 @@ class AlgorithmSweepXArray(AlgorithmSweep):
             tile_size=dict(width=2048, height=2048),
         ):
             output_data[
-                tile["y"]: tile["y"] + tile["height"],
-                tile["x"]: tile["x"] + tile["width"],
-            ] = self.algorithm(tile["tile"], *param_combo)
+                tile['y']: tile['y'] + tile['height'],
+                tile['x']: tile['x'] + tile['width'],
+            ] = self.algorithm(tile['tile'], *param_combo)
 
         output_ds = self.create_ds()
-        output_ds["results"].loc[current_coords] = output_data
+        output_ds['results'].loc[current_coords] = output_data
 
         current_index_region = {
             k: list(v.values).index(current_coords[k][0])
-            for k, v in output_ds["results"].coords.items()
+            for k, v in output_ds['results'].coords.items()
         }
         current_index_region_slice = {
             k: slice(i, i + 1) for k, i in current_index_region.items()
         }
         output_ds.isel(current_index_region_slice).to_zarr(
             self.zarr_path,
-            mode="a",
+            mode='a',
             region=current_index_region_slice,
         )
 

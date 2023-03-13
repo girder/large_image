@@ -19,14 +19,14 @@ class AlgorithmSweep:
         self.output_dir = output_dir
         self.max_workers = max_workers
 
-        self.algorithm_name = algorithm.__name__.replace("_", " ").title()
+        self.algorithm_name = algorithm.__name__.replace('_', ' ').title()
         self.param_space_combos = list(itertools.product(*input_params.values()))
 
         self.initialize_storage()
 
     def sweep(self):
         print(
-            f"Beginning {len(self.param_space_combos)} runs on {self.max_workers} workers..."
+            f'Beginning {len(self.param_space_combos)} runs on {self.max_workers} workers...'
         )
         num_done = 0
         with concurrent.futures.ProcessPoolExecutor(
@@ -42,7 +42,7 @@ class AlgorithmSweep:
             ]
             for future in concurrent.futures.as_completed(futures):
                 num_done += 1
-                print(f"Completed {num_done} of {len(self.param_space_combos)} runs.")
+                print(f'Completed {num_done} of {len(self.param_space_combos)} runs.')
                 self.handle_result(future.result())
         self.complete_storage()
 
