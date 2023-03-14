@@ -3,7 +3,10 @@ import os
 import sys
 
 import large_image_source_multi
+import numpy
 import pytest
+
+import large_image
 
 from . import utilities
 from .datastore import datastore
@@ -219,3 +222,21 @@ def testTilesWithMoreAxes():
     assert tileMetadata['levels'] == 7
     assert len(tileMetadata['frames']) == 60
     utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testTilesWithMoreComplexBands():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_test_source_bands.yml')
+    source = large_image_source_multi.open(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 10000
+    assert tileMetadata['sizeY'] == 6000
+    assert tileMetadata['levels'] == 7
+    utilities.checkTilesZXY(source, tileMetadata)
+    region1, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert region1.shape == (30, 50, 4)
+    assert region1.dtype == numpy.uint16
