@@ -126,6 +126,15 @@ def testTilesFromMultiString():
         large_image_source_multi.open('invalid' + sourceString)
 
 
+def testTilesFromNonschemaMultiString():
+    sourceString = json.dumps({'sources': [{
+        'sourceName': 'test', 'path': '__none__',
+        'notAKnownKey': 'X',
+        'params': {'sizeX': 10000, 'sizeY': 10000}}]})
+    with pytest.raises(large_image.exceptions.TileSourceError):
+        large_image_source_multi.open(sourceString)
+
+
 @pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for a sub-source')
 def testInternalMetadata(multiSourceImagePath):
     imagePath = multiSourceImagePath
