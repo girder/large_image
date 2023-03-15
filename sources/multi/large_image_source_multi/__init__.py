@@ -423,7 +423,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         self._info = yaml.safe_load(fptr)
             except (json.JSONDecodeError, yaml.YAMLError, UnicodeDecodeError):
                 raise TileSourceError('File cannot be opened via multi-source reader.')
-            self._validator.validate(self._info)
+            try:
+                self._validator.validate(self._info)
+            except jsonschema.ValidationError:
+                raise TileSourceError('File cannot be validated via multi-source reader.')
             self._basePath = Path(self._largeImagePath).parent
         self._basePath /= Path(self._info.get('basePath', '.'))
         for axis in self._info.get('axes', []):
