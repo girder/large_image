@@ -14,6 +14,7 @@
 ### Bug Fixes
 - The cache could reuse a class inappropriately ([#1070](../../pull/1070))
 - Increase size of annotation json that will be parsed ([#1075](../../pull/1075))
+- Quote ETag tags ([#1084](../../pull/1084))
 
 ## 1.20.1
 
