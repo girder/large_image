@@ -23,7 +23,6 @@
         "jsonlint-mod": "^1.7.6",
         "js-yaml": "^4.1.0",
         "sinon": "^2.1.0",
-        "slideatlas-viewer": "^4.4.1",
         "webpack": "^2.7.0",
         "yaml": "^2.1.1"
     },
