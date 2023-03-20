@@ -17,7 +17,7 @@
 - Quote ETag tags ([#1084](../../pull/1084))
 
 ### Changes
--
+- Stop packaging the slideatlas viewer directly ([#1085](../../pull/1085))
 
 ## 1.20.1
 
