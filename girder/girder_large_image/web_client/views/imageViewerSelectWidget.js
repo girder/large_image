@@ -11,6 +11,8 @@ import * as viewers from './imageViewerWidget';
 
 import imageViewerSelectWidget from '../templates/imageViewerSelectWidget.pug';
 import '../stylesheets/imageViewerSelectWidget.styl';
+import FrameSelector from '../vue/components/FrameSelector.vue';
+
 
 wrap(ItemView, 'render', function (render) {
     // ItemView is a special case in which rendering is done asynchronously,
@@ -19,7 +21,7 @@ wrap(ItemView, 'render', function (render) {
         if (this.model.get('largeImage') &&
             this.model.get('largeImage').fileId) {
             this.imageViewerSelect = new ImageViewerSelectWidget({
-                el: $('<div>', {class: 'g-item-image-viewer-select'})
+                el: $('<div>', { class: 'g-item-image-viewer-select' })
                     .insertAfter(this.$('.g-item-info')),
                 parentView: this,
                 imageModel: this.model
@@ -57,12 +59,24 @@ var ImageViewerSelectWidget = View.extend({
             viewers: largeImageConfig.viewers
         }));
         var name = largeImageConfig.settings['large_image.default_viewer'];
-        if (_.findWhere(largeImageConfig.viewers, {name: name}) === undefined) {
+        if (_.findWhere(largeImageConfig.viewers, { name: name }) === undefined) {
             name = largeImageConfig.viewers[0].name;
         }
         this.$('select.form-control.image-viewer-control').val(name);
         this._selectViewer(name);
         return this;
+    },
+
+    _createVueModal(imageMetadata, frameUpdate) {
+        const el = this.$('#vue-container').get(0);
+        const vm = new FrameSelector({
+            el,
+            propsData: {
+                imageMetadata: imageMetadata,
+                frameUpdate: frameUpdate
+            }
+        });
+        this.vueApp = vm;
     },
 
     _selectViewer: function (viewerName) {
@@ -79,7 +93,7 @@ var ImageViewerSelectWidget = View.extend({
         this.$('.image-viewer').toggleClass('hidden', true);
 
         var viewer = _.findWhere(largeImageConfig.viewers,
-            {name: viewerName});
+            { name: viewerName });
         var ViewerType = viewers[viewer.type];
         // use dedicated elements for each viewer for now in case they aren't
         // fully cleaned up
@@ -109,7 +123,7 @@ var ImageViewerSelectWidget = View.extend({
     setFrames: function (metadata, frameUpdate) {
         if (metadata.frames && metadata.frames.length > 1) {
             this._frameUpdate = frameUpdate;
-            this.$('.image-controls-frame').removeClass('hidden');
+            // this.$('.image-controls-frame').removeClass('hidden');
             var ctrl = this.$('#image-frame'),
                 ctrlnum = this.$('#image-frame-number');
             ctrl.attr('max', metadata.frames.length - 1);
@@ -121,6 +135,9 @@ var ImageViewerSelectWidget = View.extend({
             }
             ctrlnum.val(frame);
             frameUpdate(frame);
+
+            // Vue frame control
+            this._createVueModal(metadata, frameUpdate);
         }
     },
 
