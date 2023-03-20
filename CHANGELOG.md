@@ -10,6 +10,7 @@
 - Speed up validating annotation colors ([#1080](../../pull/1080))
 - Support more complex bands from the test source ([#1082](../../pull/1082))
 - Improve error thrown for invalid schema with multi source ([#1083](../../pull/1083))
+- Support multi-frame PIL sources ([#1088](../../pull/1088))
 
 ### Bug Fixes
 - The cache could reuse a class inappropriately ([#1070](../../pull/1070))
