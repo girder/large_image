@@ -11,7 +11,7 @@ sources/multi
 sources/nd2 ; python_version >= '3.7'
 sources/openjpeg
 sources/openslide
-sources/pil
+sources/pil[all]
 sources/test
 sources/tiff
 sources/tifffile ; python_version >= '3.7'

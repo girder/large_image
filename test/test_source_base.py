@@ -193,11 +193,11 @@ def testSourcesTilesAndMethods(source, filename):
     #  assert ts.histogram(onlyMinMax=True)['min'][0] is not None
     # Test multiple frames if they exist
     assert ts.frames >= 1
-    if len(tileMetadata.get('frames', [])) > 1:
+    open('/tmp/junk.txt', 'a').write('%r\n' % ([source, filename, ts.frames], ))
+    if ts.frames > 1:
         assert ts.frames == len(tileMetadata['frames'])
-        tsf = sourceClass(imagePath, frame=len(tileMetadata['frames']) - 1)
-        tileMetadata = tsf.getMetadata()
-        utilities.checkTilesZXY(tsf, tileMetadata)
+        utilities.checkTilesZXY(
+            ts, tileMetadata, tileParams=dict(frame=ts.frames - 1))
     # Test if we can fetch an associated image if any exist
     assert ts.getAssociatedImagesList() is not None
     if len(ts.getAssociatedImagesList()):

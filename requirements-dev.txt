@@ -11,7 +11,7 @@ girder-jobs>=3.0.3
 -e sources/nd2
 -e sources/openjpeg
 -e sources/openslide
--e sources/pil
+-e sources/pil[all]
 -e sources/test
 -e sources/tiff
 -e sources/tifffile
