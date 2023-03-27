@@ -435,16 +435,20 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     this.annotationLayer.moveToTop();
                     this.trigger('g:drawOverlayAnnotation', overlay, overlayLayer);
                     const featureEvents = geo.event.feature;
-                    overlayLayer.geoOn(
-                        [
-                            featureEvents.mouseclick,
-                            featureEvents.mouseoff,
-                            featureEvents.mouseon,
-                            featureEvents.mouseover,
-                            featureEvents.mouseout
-                        ],
-                        (evt) => this._onMouseFeature(evt, annotation.elements().get(overlay.id), overlayLayer)
-                    );
+                    _.each(overlayLayer.features(), (feature) => {
+                        if (feature.featureType !== 'quad') {
+                            feature.geoOn(
+                                [
+                                    featureEvents.mouseclick,
+                                    featureEvents.mouseoff,
+                                    featureEvents.mouseon,
+                                    featureEvents.mouseover,
+                                    featureEvents.mouseout
+                                ],
+                                (evt) => this._onMouseFeature(evt, annotation.elements().get(overlay.id), overlayLayer)
+                            );
+                        }
+                    });
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
                 }).fail((response) => {
                     console.error(`There was an error overlaying image with ID ${overlayItemId}`);
