@@ -1,58 +1,96 @@
 <script>
-// import _ from 'underscore';
+import { Chrome } from 'vue-color';
+
+const CHANNEL_COLORS = {
+  Red: '#FF0000',
+  Green: '#008000',
+  Orange: '#FFA500',
+  RoyalBlue: '#4169E1',
+  Purple: '#800080',
+  Yellow: '#FFFF00',
+  Magenta: '#FF00FF',
+  Teal: '#008080',
+  Maroon: '#800000',
+  Navy: '#000080',
+  Violet: '#EE82EE',
+};
+
+
 export default {
-    props: ['channels', 'channelMap'],
-    emits: ['updateFrame'],
+    props: ['channels', 'channelMap', 'frameIndices'],
+    emits: ['updateActiveChannels'],
+    components: {
+        'color-picker': Chrome
+    },
     data() {
         return {
             enabledChannels: this.channels,
+            colorPickerShown: undefined,
+            currentColorPickerRef: undefined,
         }
     },
     methods: {
-        updateChannelColor(event, channel) {
-            const newValue = event.target.value;
-            this.compositeChannelInfo[channel].falseColor = newValue;
-            this.notifyUpdateActiveFrames();
+        toggleColorPicker(channel) {
+            this.colorPickerShown = channel
+            if (this.colorPickerShown === undefined) {
+                document.removeEventListener('click', this.documentClick);
+                // Only update style when picker is closed
+                this.updateStyle()
+            }
+            else {
+                this.currentColorPickerRef = document.getElementById(channel+'_picker')
+                document.addEventListener('click', this.documentClick);
+            }
+        },
+        documentClick(e) {
+            const picker = this.currentColorPickerRef;
+            if (picker && picker !== e.target && !picker.contains(e.target)) {
+                this.toggleColorPicker(undefined);
+            }
+        },
+        updateChannelColor(channel, swatch) {
+            this.compositeChannelInfo[channel].falseColor = swatch.hex;
         },
         updateChannelMin(event, channel) {
             const newVal = event.target.value;
             const newMinVal = parseFloat(newVal);
             this.compositeChannelInfo[channel].min = newMinVal;
-            this.notifyUpdateActiveFrames();
+            this.updateStyle();
         },
         updateChannelMax(event, channel) {
             const newVal = event.target.valueAsNumber;
             const newMaxVal = parseFloat(newVal);
             this.compositeChannelInfo[channel].max = newMaxVal;
-            this.notifyUpdateActiveFrames();
+            this.updateStyle();
         },
         updateActiveChannels() {
             this.channels.forEach((channel) => {
                 this.compositeChannelInfo[channel].enabled = this.enabledChannels.includes(channel);
             })
-            this.notifyUpdateActiveFrames();
+            this.updateStyle();
         },
-        notifyUpdateActiveFrames() {
-            const activeFrames = Object.values(
+        updateStyle() {
+            const activeChannels = Object.values(
                 this.compositeChannelInfo
             ).filter((channel) => channel.enabled);
-            this.$emit('updateFrameSingle', activeFrames);
+            this.$emit('updateActiveChannels', activeChannels);
         },
     },
     computed: {
         compositeChannelInfo() {
-            return Object.fromEntries(this.channels.map((channel) => {
+            return Object.fromEntries(this.channels.map((channel, index) => {
                 return [channel, {
                     number: this.channelMap[channel],
-                    falseColorEnabled: false,
-                    falseColor: '',
-                    minMaxEnabled: false,
+                    enabled: true,
+                    falseColor: Object.values(CHANNEL_COLORS)[index % Object.values(CHANNEL_COLORS).length],
                     min: 0,
                     max: 0,
-                    enabled: channel === this.initialChannelName,
                 }]
             }))
         }
+    },
+    mounted() {
+        this.updateStyle()
     }
 }
 </script>
@@ -83,13 +121,18 @@ export default {
                             @change="updateActiveChannels"
                         >
                     </td>
-                    <td>
-                        <input
-                            class="single-channel-color-input"
-                            type="text"
+                    <td :id="channel+'_picker'">
+                        <span
+                            class="current-color"
+                            :style="{ 'background-color': compositeChannelInfo[channel].falseColor }"
+                            @click="() => toggleColorPicker(channel)"
+                        />
+                        <color-picker
+                            class="picker-offset"
+                            v-if="colorPickerShown === channel"
                             :value="compositeChannelInfo[channel].falseColor"
-                            @change.prevent="(event) => updateChannelColor(event, channel)"
-                        >
+                            @input="(swatch) => {updateChannelColor(channel, swatch)}"
+                        />
                     </td>
                     <td>
                         <input
@@ -119,12 +162,17 @@ export default {
 </template>
 
 <style scoped>
-.false-color-controls {
-    display: flex;
-    flex-direction: row;
+.current-color {
+    display: inline-block;
+    width: 50px;
+    height: 20px;
+    background-color: #000;
+    cursor: pointer;
 }
-.false-color-controls > * {
-    margin-left: 5px;
+.picker-offset {
+    position: absolute;
+    z-index: 100;
+    margin-left: 50px;
 }
 .table-container {
     max-height: 200px;

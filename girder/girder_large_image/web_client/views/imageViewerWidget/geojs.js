@@ -145,6 +145,11 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     frameUpdate: function (frame, style) {
+        // clear the animation queue so old requests don't overlap with new requests
+        var queue = [];
+        this.viewer.animationQueue(queue);
+        queue.splice(0, queue.length);
+
         if (this._frame === undefined) {
             // don't set up layers until the we access the first non-zero frame
             if (frame === 0 && !style) {

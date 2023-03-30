@@ -19,26 +19,17 @@ export default Vue.extend({
             ],
             currentModeId: 1,
             currentChannelNumber: 0,
-            currentChannelCompositeModeId: 1,
+            currentChannelCompositeModeId: 0,
             currentBandCompositeModeId: 1,
             indices: [],
             indexInfo: {},
-            compositeChannelInfo: [],
             compositedFrames: {},
+            activeChannels: [],
         };
     },
     watch: {
-        currentChannelCompositeModeId(newCompositeModeId) {
-            if (newCompositeModeId === 0) {
-                this.compositeChannelInfo = [];
-                this.frameUpdate(this.currentFrame);
-            } else if (newCompositeModeId === 1) {
-                const frameName = this.imageMetadata.channels[this.currentFrame];
-                this.compositeChannelInfo.push({
-                    channel: frameName,
-                    color: '#f00'
-                });
-            }
+        currentChannelCompositeModeId() {
+            this.frameUpdate();
         }
     },
     computed: {
@@ -49,6 +40,10 @@ export default Vue.extend({
         }
     },
     methods: {
+        updateActiveChannels(activeChannels) {
+            this.activeChannels = activeChannels
+            this.updateFrame()
+        },
         updateFrameByAxes(event) {
             this.indexInfo[event.index].current = event.frame;
             this.updateFrame();
@@ -65,12 +60,41 @@ export default Vue.extend({
             this.updateFrame()
         },
         updateFrame() {
+            const useStyle = this.currentModeId === 1
+                && this.currentChannelCompositeModeId === 1
+                && this.activeChannels.length > 0
+            let style = undefined
+            if(useStyle) {
+                 const frameOffset = Object.entries(this.indexInfo).map(
+                    ([indexName, indexInfo]) => {
+                    if (indexName === 'IndexC') return 0
+                    return indexInfo.current * indexInfo.stride;
+                }).reduce((partialSum, a) => partialSum + a, 0);
+                const styleArray = []
+                this.activeChannels.forEach((channel) => {
+                    const styleEntry = {
+                        frame: channel.number + frameOffset,
+                    };
+                    if (channel.falseColor) {
+                        styleEntry['palette'] = channel.falseColor;
+                    }
+                    if (channel.min) {
+                        styleEntry['min'] = channel.min;
+                    }
+                    if (channel.max) {
+                        styleEntry['max'] = channel.max;
+                    }
+                    styleArray.push(styleEntry);
+                });
+                style = {bands: styleArray}
+            }
             let nextFrame = 0;
             _.forEach(this.indices, (index) => {
                 const info = this.indexInfo[index];
                 nextFrame += info.current * info.stride;
             });
-            this.frameUpdate(nextFrame);
+            console.log(style)
+            this.frameUpdate(nextFrame, style);
         },
     },
     mounted() {
@@ -83,18 +107,6 @@ export default Vue.extend({
                 activeFrames: []
             };
         });
-        if (this.imageMetadata.channels) {
-            this.imageMetadata.channels.forEach((channel) => {
-                this.compositeChannelInfo[channel] = {
-                    enabled: false,
-                    color: null,
-                    min: null,
-                    max: null,
-                    channel: channel
-                };
-            });
-            this.compositeChannelInfo[this.imageMetadata.channels[0]].enabled = true;
-        }
     }
 });
 </script>
@@ -158,7 +170,8 @@ export default Vue.extend({
                 <composite-channels
                     :channels="imageMetadata.channels"
                     :channelMap="imageMetadata.channelmap"
-                    @updateFrame="updateFrame"
+                    :frameIndices="indexInfo"
+                    @updateActiveChannels="updateActiveChannels"
                 />
             </div>
         </div>
