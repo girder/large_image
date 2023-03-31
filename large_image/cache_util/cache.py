@@ -1,4 +1,3 @@
-import copy
 import functools
 import threading
 
@@ -113,7 +112,6 @@ class LruCacheMetaclass(type):
         # Get metaclass parameters by finding and removing them from the class
         # namespace (necessary for Python 2), or preferentially as metaclass
         # arguments (only in Python 3).
-
         cacheName = namespace.get('cacheName', None)
         cacheName = kwargs.get('cacheName', cacheName)
 
@@ -192,19 +190,24 @@ class LruCacheMetaclass(type):
                         return result
                 except KeyError:
                     pass
-            # This conditionally copies a non-styled class and add a style.
+            # This conditionally copies a non-styled class and adds a style.
             if kwargs.get('style') and hasattr(cls, '_setStyle'):
                 subkwargs = kwargs.copy()
                 subkwargs.pop('style')
                 subresult = cls(*args, **subkwargs)
-                result = copy.copy(subresult)
+                result = subresult.__class__.__new__(subresult.__class__)
+                result.__dict__ = subresult.__dict__.copy()
                 result._setStyle(kwargs['style'])
                 result._classkey = key
+                # for pickling
+                result._initValues = (args, kwargs.copy())
                 with cacheLock:
                     cache[key] = result
                     return result
             try:
                 instance = super().__call__(*args, **kwargs)
+                # for pickling
+                instance._initValues = (args, kwargs.copy())
             except Exception as exc:
                 with cacheLock:
                     try:

@@ -75,7 +75,7 @@ setup(
         ],
         'stats': [
             'packaging',
-            'scikit-image ; python_version < "3.11"',
+            'scikit-image',
         ],
     },
     packages=find_packages(),

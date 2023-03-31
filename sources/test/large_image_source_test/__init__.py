@@ -17,6 +17,7 @@
 import colorsys
 import itertools
 import math
+import re
 
 import numpy
 from PIL import Image, ImageDraw, ImageFont
@@ -62,7 +63,8 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
 
         :param ignored_path: for compatibility with FileTileSource.
         :param minLevel: minimum tile level
-        :param maxLevel: maximum tile level
+        :param maxLevel: maximum tile level.  If both sizeX and sizeY are
+            specified, this value is ignored.
         :param tileWidth: tile width in pixels
         :param tileHeight: tile height in pixels
         :param sizeX: image width in pixels at maximum level.  Computed from
@@ -76,13 +78,21 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             form '<axis>=<count>,<axis>=<count>,...'.
         :param monochrome: if True, return single channel tiles.
         :param bands: if present, a comma-separated list of band names.
-            Defaults to red,green,blue.
+            Defaults to red,green,blue.  Each band may optionally specify a
+            value range in the form "<band name>=<min val>-<max val>".  If any
+            ranges are specified, bands with no ranges will use the union of
+            the specified ranges.  The internal dtype with be uint8, uint16, or
+            float depending on the union of the specified ranges.  If no ranges
+            are specified at all, it is the same as 0-255.
         """
         if not kwargs.get('encoding'):
             kwargs = kwargs.copy()
             kwargs['encoding'] = 'PNG'
         super().__init__(**kwargs)
 
+        self._spec = (
+            minLevel, maxLevel, tileWidth, tileHeight, sizeX, sizeY, fractal,
+            frames, monochrome, bands)
         self.minLevel = minLevel
         self.maxLevel = maxLevel
         self.tileWidth = tileWidth
@@ -97,10 +107,34 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                       if not sizeY else sizeY)
         self.maxLevel = max(0, int(math.ceil(math.log2(max(
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)))))
-        self.frameSpec = frames or None
+        self.minLevel = min(self.minLevel, self.maxLevel)
         self.monochrome = bool(monochrome)
-        self.bandSpec = bands or None
-        self._bands = bands.split(',') if bands else None
+        self._bands = None
+        self._dtype = numpy.uint8
+        if bands:
+            bands = [re.match(
+                r'^(?P<key>[^=]+)(|=(?P<low>[+-]?((\d+(|\.\d*)))|(\.\d+))-(?P<high>[+-]?((\d+(|\.\d*))|(\.\d+))))$',  # noqa
+                band) for band in bands.split(',')]
+            lows = [float(band.group('low'))
+                    if band.group('low') is not None else None for band in bands]
+            highs = [float(band.group('high'))
+                     if band.group('high') is not None else None for band in bands]
+            try:
+                low = min(v for v in lows + highs if v is not None)
+                high = max(v for v in lows + highs if v is not None)
+            except ValueError:
+                low = 0
+                high = 255
+            self._bands = {
+                band.group('key'): {
+                    'low': lows[idx] if lows[idx] is not None else low,
+                    'high': highs[idx] if highs[idx] is not None else high,
+                }
+                for idx, band in enumerate(bands)}
+            if low < 0 or high < 2 or low >= 65536 or high >= 65536:
+                self._dtype = float
+            elif low >= 256 or high >= 256:
+                self._dtype = numpy.uint16
         # Used for reporting tile information
         self.levels = self.maxLevel + 1
         if frames:
@@ -270,12 +304,20 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             format = TILE_FORMAT_PIL
         else:
             image = numpy.zeros(
-                (self.tileHeight, self.tileWidth, len(self._bands)), dtype=numpy.uint8)
+                (self.tileHeight, self.tileWidth, len(self._bands)), dtype=self._dtype)
             for bandnum, band in enumerate(self._bands):
                 bandimg = self._tileImage(rgbColor, x, y, z, frame, band, bandnum)
                 if self.monochrome or band.upper() in {'grey', 'gray', 'alpha'}:
                     bandimg = bandimg.convert('L')
                 bandimg = _imageToNumpy(bandimg)[0]
+                if (self._dtype != numpy.uint8 or
+                        self._bands[band]['low'] != 0 or
+                        self._bands[band]['high'] != 255):
+                    bandimg = bandimg.astype(float)
+                    bandimg = (bandimg / 255) * (
+                        self._bands[band]['high'] - self._bands[band]['low']
+                    ) + self._bands[band]['low']
+                    bandimg = bandimg.astype(self._dtype)
                 image[:, :, bandnum] = bandimg[:, :, bandnum % bandimg.shape[2]]
             format = TILE_FORMAT_NUMPY
         return self._outputTile(image, format, x, y, z, **kwargs)
@@ -293,10 +335,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         )
 
     def getState(self):
-        return 'test %r %r %r %r %r %r %r %r %r %r %r' % (
-            super().getState(), self.minLevel, self.maxLevel, self.tileWidth,
-            self.tileHeight, self.fractal, self.sizeX, self.sizeY,
-            self.frameSpec, self.monochrome, self.bandSpec)
+        return 'test %r %r' % (super().getState(), self._spec)
 
 
 def open(*args, **kwargs):
