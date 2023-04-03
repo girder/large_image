@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.20.3
+
+### Changes
+- Update dicom source for upstream changes ([#1092](../../pull/1092))
+
 ## 1.20.2
 
 ### Improvements
