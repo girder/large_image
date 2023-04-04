@@ -29,7 +29,7 @@ export default Vue.extend({
     },
     watch: {
         currentChannelCompositeModeId() {
-            this.frameUpdate();
+            this.updateFrame();
         }
     },
     computed: {
@@ -60,10 +60,11 @@ export default Vue.extend({
             this.updateFrame()
         },
         updateFrame() {
+            let frame = undefined
+            let style = undefined
             const useStyle = this.currentModeId === 1
                 && this.currentChannelCompositeModeId === 1
                 && this.activeChannels.length > 0
-            let style = undefined
             if(useStyle) {
                  const frameOffset = Object.entries(this.indexInfo).map(
                     ([indexName, indexInfo]) => {
@@ -87,14 +88,14 @@ export default Vue.extend({
                     styleArray.push(styleEntry);
                 });
                 style = {bands: styleArray}
+            } else {
+                frame = 0;
+                _.forEach(this.indices, (index) => {
+                    const info = this.indexInfo[index];
+                    frame += info.current * info.stride;
+                });
             }
-            let nextFrame = 0;
-            _.forEach(this.indices, (index) => {
-                const info = this.indexInfo[index];
-                nextFrame += info.current * info.stride;
-            });
-            console.log(style)
-            this.frameUpdate(nextFrame, style);
+            this.frameUpdate(frame, style);
         },
     },
     mounted() {

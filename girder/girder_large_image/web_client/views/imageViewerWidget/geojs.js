@@ -145,6 +145,10 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     frameUpdate: function (frame, style) {
+        console.log('frame update', frame, style)
+        console.log(this._layer._options.originalUrl)
+        this._baseUrl = this._layer._options.originalUrl
+        const targetUrl = this.getFrameUrl(frame, style)
         // clear the animation queue so old requests don't overlap with new requests
         var queue = [];
         this.viewer.animationQueue(queue);
@@ -152,12 +156,11 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         if (this._frame === undefined) {
             // don't set up layers until the we access the first non-zero frame
-            if (frame === 0 && !style) {
+            if (frame === 0) {
                 return;
             }
             this._frame = 0;
-            this._baseurl = this._layer.url();
-            const quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
+            let quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
             if (!quadLoaded) {
                 // use two layers to get smooth transitions until we load
                 // background quads.
@@ -168,7 +171,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             }
         }
         this._nextframe = frame;
-        if (frame !== this._frame && !this._updating || (frame === this._frame && style)) {
+        if (style || (frame !== this._frame && !this._updating)) {
             this._frame = frame;
             this.trigger('g:imageFrameChanging', this, frame);
             const quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
@@ -177,7 +180,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     this.viewer.deleteLayer(this._layer2);
                     delete this._layer2;
                 }
-                this._layer.url(this.getFrameAndUrl(style).url);
+                this._layer.url(targetUrl);
                 this._layer.setFrameQuad(frame);
                 this._layer.frame = frame;
                 this.trigger('g:imageFrameChanged', this, frame);
@@ -186,9 +189,9 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
             this._updating = true;
             this.viewer.onIdle(() => {
-                this._layer2.url(this.getFrameAndUrl(style).url);
+                this._layer2.url(targetUrl);
                 this._layer2.setFrameQuad(frame);
-                this._layer2.frame = frame;
+                // this._layer2.frame = frame;
                 this.viewer.onIdle(() => {
                     this._layer.moveDown();
                     var ltemp = this._layer;
@@ -197,27 +200,22 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     this._updating = false;
                     this.trigger('g:imageFrameChanged', this, frame);
                     if (frame !== this._nextframe) {
-                        this.frameUpdate(this._nextframe);
+                        this.frameUpdate(this._nextframe, style);
                     }
                 });
             });
         }
     },
 
-    getFrameAndUrl: function (style) {
-        const frame = this._frame || 0;
-        let url = this._baseurl || this._layer.url();
-        if (frame && !style) {
-            url += (url.indexOf('?') >= 0 ? '&' : '?') + 'frame=' + frame;
-        } else if (style) {
+    getFrameUrl: function (frame, style) {
+        let url = this._baseUrl.split("?")[0]
+        if (style) {
             const encodedStyle = encodeURIComponent(JSON.stringify(style));
-            const channelString = (url.indexOf('?') >= 0 ? '&' : '?') + 'style=' + encodedStyle;
-            url += channelString;
+            url += '?style=' + encodedStyle;
+        } else if (frame) {
+            url += '?frame=' + frame;
         }
-        return {
-            frame: frame,
-            url: url
-        };
+        return url
     },
 
     destroy: function () {
