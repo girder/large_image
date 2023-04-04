@@ -80,7 +80,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this.viewer = geo.map(params.map);
             params.layer.autoshareRenderer = false;
             this._layer = this.viewer.createLayer('osm', params.layer);
-            if (this.metadata.frames && this.metadata.frames.length > 1) {
+            if (false && this.metadata.frames && this.metadata.frames.length > 1) {
                 setFrameQuad(this.metadata, this._layer, {
                     // allow more and larger textures is slower, balancing
                     // performance and appearance
@@ -145,14 +145,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     frameUpdate: function (frame, style) {
-        console.log('frame update', frame, style)
-        console.log(this._layer._options.originalUrl)
         this._baseUrl = this._layer._options.originalUrl
         const targetUrl = this.getFrameUrl(frame, style)
-        // clear the animation queue so old requests don't overlap with new requests
-        var queue = [];
-        this.viewer.animationQueue(queue);
-        queue.splice(0, queue.length);
 
         if (this._frame === undefined) {
             // don't set up layers until the we access the first non-zero frame
@@ -166,8 +160,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 // background quads.
                 this._layer2 = this.viewer.createLayer('osm', this._layer._options);
                 this._layer2.moveDown();
-                setFrameQuad((this._layer.setFrameQuad.status || {}).tileinfo, this._layer2, (this._layer.setFrameQuad.status || {}).options);
-                this._layer2.setFrameQuad(0);
+                // setFrameQuad((this._layer.setFrameQuad.status || {}).tileinfo, this._layer2, (this._layer.setFrameQuad.status || {}).options);
+                // this._layer2.setFrameQuad(0);
             }
         }
         this._nextframe = frame;
@@ -190,8 +184,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this._updating = true;
             this.viewer.onIdle(() => {
                 this._layer2.url(targetUrl);
-                this._layer2.setFrameQuad(frame);
-                // this._layer2.frame = frame;
+                // this._layer2.setFrameQuad(frame);
+                this._layer2.frame = frame;
                 this.viewer.onIdle(() => {
                     this._layer.moveDown();
                     var ltemp = this._layer;
