@@ -6,7 +6,7 @@ import _ from 'underscore';
 import Hammer from 'hammerjs';
 import d3 from 'd3';
 
-import { restRequest } from '@girder/core/rest';
+import {restRequest} from '@girder/core/rest';
 
 import ImageViewerWidget from './base';
 import setFrameQuad from './setFrameQuad.js';
@@ -31,7 +31,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     return restRequest({
                         type: 'GET',
                         url: 'item/' + this.itemId + '/tiles',
-                        data: { projection: 'EPSG:3857' }
+                        data: {projection: 'EPSG:3857'}
                     }).done((resp) => {
                         this.levels = resp.levels;
                         this.tileWidth = resp.tileWidth;
@@ -99,13 +99,13 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             params = {
                 keepLower: false,
                 attribution: null,
-                url: this._getTileUrl('{z}', '{x}', '{y}', { encoding: 'PNG', projection: 'EPSG:3857' }),
+                url: this._getTileUrl('{z}', '{x}', '{y}', {encoding: 'PNG', projection: 'EPSG:3857'}),
                 useCredentials: true,
                 maxLevel: this.levels - 1
             };
             // the metadata levels is the count including level 0, so use one
             // less than the value specified
-            this.viewer = geo.map({ node: this.el, max: this.levels - 1 });
+            this.viewer = geo.map({node: this.el, max: this.levels - 1});
             if (this.metadata.bounds.xmin !== this.metadata.bounds.xmax && this.metadata.bounds.ymin !== this.metadata.bounds.ymax) {
                 this.viewer.bounds({
                     left: this.metadata.bounds.xmin,
