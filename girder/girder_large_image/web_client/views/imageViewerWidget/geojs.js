@@ -82,7 +82,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this._layer = this.viewer.createLayer('osm', params.layer);
             if (this.metadata.frames && this.metadata.frames.length > 1) {
                 const baseUrl = this._getTileUrl('{z}', '{x}', '{y}');
-                const updated = new URLSearchParams(baseUrl.split('?')[1]).get('_');
+                const match = baseUrl.match(/[?&](_=[^&]*)/);
+                const updated = match && match[1] ? ('&' + match[1]) : '';
                 setFrameQuad(this.metadata, this._layer, {
                     // allow more and larger textures is slower, balancing
                     // performance and appearance
@@ -91,7 +92,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     baseUrl: baseUrl.split('/tiles/')[0] + '/tiles',
                     restRequest: restRequest,
                     restUrl: 'item/' + this.itemId + '/tiles',
-                    query: 'cache=true' + (updated ? '&_=' + encodeURIComponent(updated) : '')
+                    query: 'cache=true' + updated
                 });
                 this._layer.setFrameQuad(0);
             }
