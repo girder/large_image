@@ -37,11 +37,15 @@
             ],
             "no-alert": "error",
             "switch-colon-spacing": "error",
-            "object-curly-spacing": "off",
+            "object-curly-spacing": [
+                "error",
+                "never"
+            ],
             "import/exports-last": "error",
             "promise/no-native": "error",
             "promise/no-return-in-finally": "error",
-            "promise/no-return-wrap": "error"
+            "promise/no-return-wrap": "error",
+            "no-import-assign": "off"
         },
         "root": true
     },
@@ -166,19 +170,19 @@
     },
     "devDependencies": {
         "@girder/eslint-config": "^3.0.0-rc1",
-        "eslint": "^5.16.0",
-        "eslint-config-semistandard": "^13.0.0",
-        "eslint-config-standard": "^12.0.0",
+        "eslint": "^8.20.0",
+        "eslint-config-semistandard": "^17.0.0",
+        "eslint-config-standard": "^17.0.0",
         "eslint-plugin-backbone": "^2.1.1",
-        "eslint-plugin-import": "^2.17.3",
-        "eslint-plugin-node": "^9.1.0",
-        "eslint-plugin-promise": "^4.1.1",
-        "eslint-plugin-standard": "^4.0.0",
+        "eslint-plugin-import": "^2.25.3",
+        "eslint-plugin-n": "^15.2.4",
+        "eslint-plugin-promise": "^6.0.0",
         "@girder/pug-lint-config": "^3.0.0-rc1",
         "pug-lint": "^2.6.0",
-        "stylint": "^1.5.9"
+        "stylint": "^2"
     },
     "scripts": {
-        "lint": "eslint --cache . && pug-lint . && stylint"
+        "lint": "eslint --cache . && pug-lint . && stylint",
+        "format": "eslint --cache --fix ."
     }
 }

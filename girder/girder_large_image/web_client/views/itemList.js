@@ -2,17 +2,17 @@ import $ from 'jquery';
 import _ from 'underscore';
 import Backbone from 'backbone';
 
-import { wrap } from '@girder/core/utilities/PluginUtils';
-import { getApiRoot, restRequest } from '@girder/core/rest';
-import { getCurrentUser } from '@girder/core/auth';
-import { AccessType } from '@girder/core/constants';
-import { formatSize, parseQueryString, splitRoute } from '@girder/core/misc';
+import {wrap} from '@girder/core/utilities/PluginUtils';
+import {getApiRoot, restRequest} from '@girder/core/rest';
+import {getCurrentUser} from '@girder/core/auth';
+import {AccessType} from '@girder/core/constants';
+import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
 import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
-import { addToRoute } from '../routes';
+import {addToRoute} from '../routes';
 
 import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
@@ -46,7 +46,7 @@ wrap(FolderListWidget, 'checkAll', function (checkAll, checked) {
 });
 
 wrap(ItemListWidget, 'initialize', function (initialize, settings) {
-    let result = initialize.call(this, settings);
+    const result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
 
     if (!settings.folderId) {
@@ -140,7 +140,7 @@ wrap(ItemListWidget, 'render', function (render) {
         var access = item.getAccessLevel();
         var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
         if (!getCurrentUser()) {
-            extra = extraInfo[null] || {};
+            extra = extraInfo.null || {};
         }
 
         /* Set the maximum number of columns we have so that we can let css
@@ -220,7 +220,7 @@ wrap(ItemListWidget, 'render', function (render) {
     };
 
     this._setFilter = () => {
-        let val = this._generalFilter;
+        const val = this._generalFilter;
         let filter;
         const usedPhrases = {};
         const columns = (this._confList() || {}).columns || [];
@@ -234,14 +234,14 @@ wrap(ItemListWidget, 'render', function (render) {
                 if (phrase[0] === phrase.substr(phrase.length - 1) && ['"', "'"].includes(phrase[0])) {
                     phrase = phrase.substr(1, phrase.length - 2);
                 }
-                let numval = +phrase;
+                const numval = +phrase;
                 /* If numval is a non-zero number not in exponential notation.
                  * delta is the value of one for the least significant digit.
                  * This will be NaN if phrase is not a number. */
-                let delta = Math.abs(+numval.toString().replace(/\d(?=.*[1-9](0*\.|)0*$)/g, '0').replace(/[1-9]/, '1'));
+                const delta = Math.abs(+numval.toString().replace(/\d(?=.*[1-9](0*\.|)0*$)/g, '0').replace(/[1-9]/, '1'));
                 // escape for regex
                 phrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                let clause = [];
+                const clause = [];
                 columns.forEach((col) => {
                     let key;
 
@@ -251,18 +251,18 @@ wrap(ItemListWidget, 'render', function (render) {
                         key = 'meta.' + col.value;
                     }
                     if (key) {
-                        clause.push({[key]: {'$regex': phrase, '$options': 'i'}});
+                        clause.push({[key]: {$regex: phrase, $options: 'i'}});
                         if (!_.isNaN(numval)) {
-                            clause.push({[key]: {'$eq': numval}});
+                            clause.push({[key]: {$eq: numval}});
                             if (numval > 0 && delta) {
-                                clause.push({[key]: {'$gte': numval, '$lt': numval + delta}});
+                                clause.push({[key]: {$gte: numval, $lt: numval + delta}});
                             } else if (numval < 0 && delta) {
-                                clause.push({[key]: {'$lte': numval, '$gt': numval + delta}});
+                                clause.push({[key]: {$lte: numval, $gt: numval + delta}});
                             }
                         }
                     }
                 });
-                filter.push({'$or': clause});
+                filter.push({$or: clause});
             });
             if (filter.length === 0) {
                 filter = undefined;
@@ -270,7 +270,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 if (filter.length === 1) {
                     filter = filter[0];
                 } else {
-                    filter = {'$and': filter};
+                    filter = {$and: filter};
                 }
                 filter = '_filter_:' + JSON.stringify(filter);
             }
@@ -287,7 +287,7 @@ wrap(ItemListWidget, 'render', function (render) {
     };
 
     function itemListRender() {
-        let root = this.$el.closest('.g-hierarchy-widget');
+        const root = this.$el.closest('.g-hierarchy-widget');
         if (!root.find('.li-item-list-filter').length) {
             let base = root.find('.g-hierarchy-actions-header .g-folder-header-buttons').eq(0);
             let func = 'after';
@@ -395,7 +395,7 @@ wrap(ItemListWidget, 'render', function (render) {
 });
 
 wrap(ItemListWidget, 'remove', function (remove) {
-    let root = this.$el.closest('.g-hierarchy-widget');
+    const root = this.$el.closest('.g-hierarchy-widget');
     root.remove('.li-item-list-filter');
     delete this.parentView.events['change .li-item-list-filter-input'];
     delete this.parentView.events['input .li-item-list-filter-input'];

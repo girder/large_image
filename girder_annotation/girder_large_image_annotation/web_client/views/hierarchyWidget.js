@@ -1,7 +1,7 @@
 import $ from 'jquery';
 
-import { wrap } from '@girder/core/utilities/PluginUtils';
-import { restRequest } from '@girder/core/rest';
+import {wrap} from '@girder/core/utilities/PluginUtils';
+import {restRequest} from '@girder/core/rest';
 import AccessWidget from '@girder/core/views/widgets/AccessWidget';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
 

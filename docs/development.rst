@@ -33,7 +33,7 @@ Tests are run via tox environments:
 
 .. code-block:: bash
 
-    tox -e test-py39,flake8,lintclient,lintannotationclient
+    tox -e test-py39,flake8,lintclient
 
 Or, without Girder:
 

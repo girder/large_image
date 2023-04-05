@@ -1,12 +1,12 @@
 import $ from 'jquery';
 
-import { getApiRoot, restRequest } from '@girder/core/rest';
+import {getApiRoot, restRequest} from '@girder/core/rest';
 import View from '@girder/core/views/View';
 
 var ImageViewerWidget = View.extend({
     initialize: function (settings) {
         this.itemId = settings.itemId;
-        let item = (settings.model || {}).attributes || {};
+        const item = (settings.model || {}).attributes || {};
         this.updated = item.updated || item.created;
         if (this.updated) {
             this.updated = this.updated.replace(/:/g, '-').replace(/\+/g, '_');

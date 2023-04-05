@@ -1,6 +1,6 @@
 import $ from 'jquery';
 
-import { restRequest } from '@girder/core/rest';
+import {restRequest} from '@girder/core/rest';
 
 import ImageViewerWidget from './base';
 
@@ -87,7 +87,7 @@ var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
                     new ol.layer.Tile({
                         source: new ol.source.XYZ({
                             tileSize: [this.tileWidth, this.tileHeight],
-                            url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG', 'projection': 'EPSG:3857'}),
+                            url: this._getTileUrl('{z}', '{x}', '{y}', {encoding: 'PNG', projection: 'EPSG:3857'}),
                             crossOrigin: 'use-credentials',
                             maxZoom: this.levels - 1,
                             wrapX: true
