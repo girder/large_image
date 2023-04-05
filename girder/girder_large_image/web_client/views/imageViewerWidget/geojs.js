@@ -31,7 +31,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     return restRequest({
                         type: 'GET',
                         url: 'item/' + this.itemId + '/tiles',
-                        data: {projection: 'EPSG:3857'}
+                        data: { projection: 'EPSG:3857' }
                     }).done((resp) => {
                         this.levels = resp.levels;
                         this.tileWidth = resp.tileWidth;
@@ -80,16 +80,18 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this.viewer = geo.map(params.map);
             params.layer.autoshareRenderer = false;
             this._layer = this.viewer.createLayer('osm', params.layer);
-            if (false && this.metadata.frames && this.metadata.frames.length > 1) {
+            if (this.metadata.frames && this.metadata.frames.length > 1) {
+                const baseUrl = this._getTileUrl('{z}', '{x}', '{y}');
+                const updated = new URLSearchParams(baseUrl.split('?')[1]).get('_');
                 setFrameQuad(this.metadata, this._layer, {
                     // allow more and larger textures is slower, balancing
                     // performance and appearance
                     // maxTextures: 16,
                     // maxTotalTexturePixels: 256 * 1024 * 1024,
-                    baseUrl: this._getTileUrl('{z}', '{x}', '{y}').split('/tiles/')[0] + '/tiles',
+                    baseUrl: baseUrl.split('/tiles/')[0] + '/tiles',
                     restRequest: restRequest,
                     restUrl: 'item/' + this.itemId + '/tiles',
-                    query: 'cache=true'
+                    query: 'cache=true' + (updated ? '&_=' + encodeURIComponent(updated) : '')
                 });
                 this._layer.setFrameQuad(0);
             }
@@ -103,7 +105,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             };
             // the metadata levels is the count including level 0, so use one
             // less than the value specified
-            this.viewer = geo.map({node: this.el, max: this.levels - 1});
+            this.viewer = geo.map({ node: this.el, max: this.levels - 1 });
             if (this.metadata.bounds.xmin !== this.metadata.bounds.xmax && this.metadata.bounds.ymin !== this.metadata.bounds.ymax) {
                 this.viewer.bounds({
                     left: this.metadata.bounds.xmin,
@@ -145,47 +147,51 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     frameUpdate: function (frame, style) {
-        this._baseUrl = this._layer._options.originalUrl;
-        const targetUrl = this.getFrameUrl(frame, style);
-
         if (this._frame === undefined) {
             // don't set up layers until the we access the first non-zero frame
-            if (frame === 0) {
+            if (frame === 0 && style === undefined) {
                 return;
             }
             this._frame = 0;
-            let quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
-            if (!quadLoaded) {
-                // use two layers to get smooth transitions until we load
-                // background quads.
-                this._layer2 = this.viewer.createLayer('osm', this._layer._options);
-                this._layer2.moveDown();
-                // setFrameQuad((this._layer.setFrameQuad.status || {}).tileinfo, this._layer2, (this._layer.setFrameQuad.status || {}).options);
-                // this._layer2.setFrameQuad(0);
-            }
+            this._style = undefined;
+            this._baseurl = this._layer.url();
+            // use two layers to get smooth transitions until we load
+            // background quads.  Always cteate this, as styles will use
+            // this, even if pure frame do not.
+            this._layer2 = this.viewer.createLayer('osm', this._layer._options);
+            this._layer2.moveDown();
+            setFrameQuad((this._layer.setFrameQuad.status || {}).tileinfo, this._layer2, (this._layer.setFrameQuad.status || {}).options);
+            this._layer2.setFrameQuad(0);
         }
+        frame = frame || 0;
         this._nextframe = frame;
-        if (style || (frame !== this._frame && !this._updating)) {
+        this._nextstyle = style;
+        if ((frame !== this._frame || style !== this._style) && !this._updating) {
             this._frame = frame;
+            this._style = style;
             this.trigger('g:imageFrameChanging', this, frame);
             const quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
-            if (quadLoaded) {
-                if (this._layer2) {
-                    this.viewer.deleteLayer(this._layer2);
-                    delete this._layer2;
-                }
-                this._layer.url(targetUrl);
+            if (quadLoaded && this._style === undefined) {
+                this._layer.url(this.getFrameAndUrl().url);
                 this._layer.setFrameQuad(frame);
                 this._layer.frame = frame;
                 this.trigger('g:imageFrameChanged', this, frame);
                 return;
             }
-
+            if (this._layer.frame !== undefined) {
+                this._layer.setFrameQuad(undefined);
+                this._layer.frame = undefined;
+            }
             this._updating = true;
             this.viewer.onIdle(() => {
-                this._layer2.url(targetUrl);
-                // this._layer2.setFrameQuad(frame);
-                this._layer2.frame = frame;
+                this._layer2.url(this.getFrameAndUrl().url);
+                if (this._style === undefined) {
+                    this._layer2.setFrameQuad(frame);
+                    this._layer2.frame = frame;
+                } else {
+                    this._layer2.setFrameQuad(undefined);
+                    this._layer2.frame = undefined;
+                }
                 this.viewer.onIdle(() => {
                     this._layer.moveDown();
                     var ltemp = this._layer;
@@ -193,23 +199,35 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     this._layer2 = ltemp;
                     this._updating = false;
                     this.trigger('g:imageFrameChanged', this, frame);
-                    if (frame !== this._nextframe) {
-                        this.frameUpdate(this._nextframe, style);
+                    if (frame !== this._nextframe || style !== this._nextstyle) {
+                        this.frameUpdate(this._nextframe, this._nextstyle);
                     }
                 });
             });
         }
     },
 
-    getFrameUrl: function (frame, style) {
-        let url = this._baseUrl.split('?')[0];
-        if (style) {
-            const encodedStyle = encodeURIComponent(JSON.stringify(style));
-            url += '?style=' + encodedStyle;
-        } else if (frame) {
-            url += '?frame=' + frame;
+    getFrameAndUrl: function () {
+        let frame = this._frame || 0;
+        let url = this._baseurl || this._layer.url();
+        // setting the frame to the first frame used in a style seems to
+        // resolve a caching issue, which is probably a bug in the styling
+        // functions.  Until that is resolved, we do this.
+        if (this._style && this._style.bands && !this._style.bands.some((b) => b.frame === undefined) && this._style.bands.length) {
+            frame = this._style.bands[0].frame;
         }
-        return url;
+        if (frame) {
+            url += (url.indexOf('?') >= 0 ? '&' : '?') + 'frame=' + frame;
+        }
+        if (this._style !== undefined) {
+            const encodedStyle = encodeURIComponent(JSON.stringify(this._style));
+            url += (url.indexOf('?') >= 0 ? '&' : '?') + 'style=' + encodedStyle;
+        }
+        return {
+            frame: frame,
+            style: this._style,
+            url: url
+        };
     },
 
     destroy: function () {
