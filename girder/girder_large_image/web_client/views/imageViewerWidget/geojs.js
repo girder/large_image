@@ -31,7 +31,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     return restRequest({
                         type: 'GET',
                         url: 'item/' + this.itemId + '/tiles',
-                        data: { projection: 'EPSG:3857' }
+                        data: {projection: 'EPSG:3857'}
                     }).done((resp) => {
                         this.levels = resp.levels;
                         this.tileWidth = resp.tileWidth;
@@ -103,7 +103,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             };
             // the metadata levels is the count including level 0, so use one
             // less than the value specified
-            this.viewer = geo.map({ node: this.el, max: this.levels - 1 });
+            this.viewer = geo.map({node: this.el, max: this.levels - 1});
             if (this.metadata.bounds.xmin !== this.metadata.bounds.xmax && this.metadata.bounds.ymin !== this.metadata.bounds.ymax) {
                 this.viewer.bounds({
                     left: this.metadata.bounds.xmin,
@@ -145,8 +145,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     frameUpdate: function (frame, style) {
-        this._baseUrl = this._layer._options.originalUrl
-        const targetUrl = this.getFrameUrl(frame, style)
+        this._baseUrl = this._layer._options.originalUrl;
+        const targetUrl = this.getFrameUrl(frame, style);
 
         if (this._frame === undefined) {
             // don't set up layers until the we access the first non-zero frame
@@ -202,14 +202,14 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     getFrameUrl: function (frame, style) {
-        let url = this._baseUrl.split("?")[0]
+        let url = this._baseUrl.split('?')[0];
         if (style) {
             const encodedStyle = encodeURIComponent(JSON.stringify(style));
             url += '?style=' + encodedStyle;
         } else if (frame) {
             url += '?frame=' + frame;
         }
-        return url
+        return url;
     },
 
     destroy: function () {

@@ -13,7 +13,6 @@ import imageViewerSelectWidget from '../templates/imageViewerSelectWidget.pug';
 import '../stylesheets/imageViewerSelectWidget.styl';
 import FrameSelector from '../vue/components/FrameSelector.vue';
 
-
 wrap(ItemView, 'render', function (render) {
     // ItemView is a special case in which rendering is done asynchronously,
     // so we must listen for a render event.
@@ -21,7 +20,7 @@ wrap(ItemView, 'render', function (render) {
         if (this.model.get('largeImage') &&
             this.model.get('largeImage').fileId) {
             this.imageViewerSelect = new ImageViewerSelectWidget({
-                el: $('<div>', { class: 'g-item-image-viewer-select' })
+                el: $('<div>', {class: 'g-item-image-viewer-select'})
                     .insertAfter(this.$('.g-item-info')),
                 parentView: this,
                 imageModel: this.model
@@ -59,7 +58,7 @@ var ImageViewerSelectWidget = View.extend({
             viewers: largeImageConfig.viewers
         }));
         var name = largeImageConfig.settings['large_image.default_viewer'];
-        if (_.findWhere(largeImageConfig.viewers, { name: name }) === undefined) {
+        if (_.findWhere(largeImageConfig.viewers, {name: name}) === undefined) {
             name = largeImageConfig.viewers[0].name;
         }
         this.$('select.form-control.image-viewer-control').val(name);
@@ -93,7 +92,7 @@ var ImageViewerSelectWidget = View.extend({
         this.$('.image-viewer').toggleClass('hidden', true);
 
         var viewer = _.findWhere(largeImageConfig.viewers,
-            { name: viewerName });
+            {name: viewerName});
         var ViewerType = viewers[viewer.type];
         // use dedicated elements for each viewer for now in case they aren't
         // fully cleaned up
