@@ -1,8 +1,8 @@
 import $ from 'jquery';
 import _ from 'underscore';
 
-import { restRequest } from '@girder/core/rest';
-import { wrap } from '@girder/core/utilities/PluginUtils';
+import {restRequest} from '@girder/core/rest';
+import {wrap} from '@girder/core/utilities/PluginUtils';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
 import largeImageAnnotationConfig from './configView';
@@ -56,7 +56,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 data: {
                     items: needCounts.join(',')
                 },
-                headers: { 'X-HTTP-Method-Override': 'GET' },
+                headers: {'X-HTTP-Method-Override': 'GET'},
                 error: null
             }).done((resp) => {
                 Object.entries(resp).forEach(([id, count]) => {

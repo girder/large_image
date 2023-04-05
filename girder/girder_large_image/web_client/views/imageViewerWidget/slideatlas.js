@@ -1,7 +1,7 @@
 import $ from 'jquery';
 
 import Backbone from 'backbone';
-import { parseQueryString, splitRoute } from '@girder/core/misc';
+import {parseQueryString, splitRoute} from '@girder/core/misc';
 
 import ImageViewerWidget from './base';
 
@@ -95,7 +95,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         this.girderGui = new window.SAM.LayerPanel(this.viewer, this.itemId);
         $(this.el).css({position: 'relative'});
         window.SA.SAFullScreenButton($(this.el))
-            .css({'position': 'absolute', 'left': '2px', 'top': '2px'});
+            .css({position: 'absolute', left: '2px', top: '2px'});
         window.SA.GirderView = this;
 
         // Set the view from the URL if bounds are specified.

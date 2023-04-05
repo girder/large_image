@@ -2,9 +2,9 @@ import $ from 'jquery';
 import Backbone from 'backbone';
 
 import events from '@girder/core/events';
-import { parseQueryString, splitRoute } from '@girder/core/misc';
+import {parseQueryString, splitRoute} from '@girder/core/misc';
 import router from '@girder/core/router';
-import { exposePluginConfig } from '@girder/core/utilities/PluginUtils';
+import {exposePluginConfig} from '@girder/core/utilities/PluginUtils';
 
 import ConfigView from './views/configView';
 
@@ -43,7 +43,7 @@ function addToRoute(params) {
         // But backbone stores an unescaped fragment in the
         // Backbone.history.fragment, which causes a hash-variation trigger,
         // so this works around that.
-        let fragment = (routeParts.base + (paramStr ? '?' + paramStr : '')).replace(/#.*$/, '');
+        const fragment = (routeParts.base + (paramStr ? '?' + paramStr : '')).replace(/#.*$/, '');
         Backbone.history.fragment = fragment;
         Backbone.history._updateHash(Backbone.history.location, fragment);
     }

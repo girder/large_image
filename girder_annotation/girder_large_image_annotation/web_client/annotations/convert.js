@@ -18,7 +18,7 @@ function convertOne(properties) {
         return {
             type: 'Feature',
             id: annotation.id,
-            geometry: { type: geom.type, coordinates: geom.coordinates },
+            geometry: {type: geom.type, coordinates: geom.coordinates},
             properties: _.extend({element: annotation, annotationType: geom.annotationType}, properties, style(annotation))
         };
     };

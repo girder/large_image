@@ -81,7 +81,7 @@ function setFrameQuad(tileinfo, layer, options) {
         framesToIdx: {},
         loadedCount: 0
     };
-    let qiOptions = Object.assign({}, options);
+    const qiOptions = Object.assign({}, options);
     ['restRequest', 'restUrl', 'baseUrl', 'crossOrigin', 'progress', 'redrawOnFirstLoad'].forEach((k) => delete qiOptions[k]);
     options.restRequest({
         type: 'GET',
@@ -101,8 +101,8 @@ function setFrameQuad(tileinfo, layer, options) {
             if (options.baseUrl.indexOf(':') >= 0 && options.baseUrl.indexOf('/') === options.baseUrl.indexOf(':') + 1) {
                 img.crossOrigin = options.crossOrigin || 'anonymous';
             }
-            let params = Object.keys(data.src[idx]).map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(data.src[idx][k])).join('&');
-            let src = `${options.baseUrl}/tile_frames?` + params;
+            const params = Object.keys(data.src[idx]).map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(data.src[idx][k])).join('&');
+            const src = `${options.baseUrl}/tile_frames?` + params;
             status.src.push(src);
             if (idx === data.src.length - 1) {
                 img.onload = function () {

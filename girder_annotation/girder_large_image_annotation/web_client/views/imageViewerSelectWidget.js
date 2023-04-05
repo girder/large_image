@@ -1,6 +1,6 @@
 import _ from 'underscore';
 
-import { wrap } from '@girder/core/utilities/PluginUtils';
+import {wrap} from '@girder/core/utilities/PluginUtils';
 
 import ImageViewerSelectWidget from '@girder/large_image/views/imageViewerSelectWidget';
 
