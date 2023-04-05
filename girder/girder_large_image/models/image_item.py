@@ -348,7 +348,7 @@ class ImageItem(Item):
             False to report if it is in the cache.
         :param keydict: a dictionary of values to use for the cache key.
         :param pickleCache: if True, the results of the function are pickled to
-            preserver them.  If Fales, the results can be saved as a file
+            preserve them.  If False, the results can be saved as a file
             directly.
         :params **kwargs: passed to the tile source and to the imageFunc.  May
             contain contentDisposition to determine how results are returned.
@@ -494,7 +494,7 @@ class ImageItem(Item):
 
         :param item: the item with the tile source.
         :param checkAndCreate: if False, use the cache.  If True and the result
-            is already cached, just return True.  If it does not, create,
+            is already cached, just return True.  If is does not, create,
             cache, and return it.  If 'nosave', return values from the cache,
             but do not store new results in the cache.
         :param kwargs: optional arguments.  Some options are left, top,
