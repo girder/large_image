@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.20.4
+
+### Changes
+- On the large image item page, guard against overflow ([#1096](../../pull/1096)
+
 ## 1.20.3
 
 ### Changes
