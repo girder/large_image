@@ -4,6 +4,7 @@
 
 ### Improvements
 - Better cache handling with Etags ([#1097](../../pull/1097))
+- Reduce duplicate computation of slow cached values  ([#1100](../../pull/1100))
 
 ### Changes
 - On the large image item page, guard against overflow ([#1096](../../pull/1096))

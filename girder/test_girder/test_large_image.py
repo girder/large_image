@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import threading
 import time
 from unittest import mock
 
@@ -404,6 +405,32 @@ def testHistogramCaching(server, admin, user, fsAssetstore):
     resp = server.request(path='/large_image/histograms', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json == 0
+
+
+@pytest.mark.singular
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testHistogramConcurrentCaching(server, admin, user, fsAssetstore):
+    file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    item = Item().load(itemId, force=True)
+    orig = ImageItem().getAndCacheImageOrDataRun
+    ImageItem().getAndCacheImageOrDataRun = mock.Mock(wraps=ImageItem().getAndCacheImageOrDataRun)
+    lastCount = ImageItem().getAndCacheImageOrDataRun.call_count
+    t1 = threading.Thread(
+        target=ImageItem().histogram, args=(item, ), kwargs=dict(output=dict(maxWidth=4096)))
+    t2 = threading.Thread(
+        target=ImageItem().histogram, args=(item, ), kwargs=dict(output=dict(maxWidth=4096)))
+    t1.start()
+    # We want enough delay that thread 1 is running, but not so much that it
+    # completes.  If this is too short, we can end up in the documented race
+    # condition.  If it is too long, we don't exercise some of the code.
+    time.sleep(0.2)
+    t2.start()
+    t1.join()
+    t2.join()
+    assert ImageItem().getAndCacheImageOrDataRun.call_count == lastCount + 1
+    ImageItem().getAndCacheImageOrDataRun = orig
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
