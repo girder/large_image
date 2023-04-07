@@ -40,8 +40,8 @@ export default Vue.extend({
         }
     },
     methods: {
-        updateActiveChannels(activeChannels) {
-            this.activeChannels = activeChannels
+        updateStyle(style) {
+            this.style = style
             this.updateFrame()
         },
         updateFrameByAxes(event) {
@@ -60,41 +60,14 @@ export default Vue.extend({
             this.updateFrame()
         },
         updateFrame() {
-            let frame = undefined
-            let style = undefined
+            let frame = 0;
+            _.forEach(this.indices, (index) => {
+                const info = this.indexInfo[index];
+                frame += info.current * info.stride;
+            });
             const useStyle = this.currentModeId === 1
                 && this.currentChannelCompositeModeId === 1
-                && this.activeChannels.length > 0
-            if(useStyle) {
-                 const frameOffset = Object.entries(this.indexInfo).map(
-                    ([indexName, indexInfo]) => {
-                    if (indexName === 'IndexC') return 0
-                    return indexInfo.current * indexInfo.stride;
-                }).reduce((partialSum, a) => partialSum + a, 0);
-                const styleArray = []
-                this.activeChannels.forEach((channel) => {
-                    const styleEntry = {
-                        frame: channel.number + frameOffset,
-                    };
-                    if (channel.falseColor) {
-                        styleEntry['palette'] = channel.falseColor;
-                    }
-                    if (channel.min) {
-                        styleEntry['min'] = channel.min;
-                    }
-                    if (channel.max) {
-                        styleEntry['max'] = channel.max;
-                    }
-                    styleArray.push(styleEntry);
-                });
-                style = {bands: styleArray}
-            } else {
-                frame = 0;
-                _.forEach(this.indices, (index) => {
-                    const info = this.indexInfo[index];
-                    frame += info.current * info.stride;
-                });
-            }
+            let style = useStyle ? this.style : undefined
             this.frameUpdate(frame, style);
         },
     },
@@ -172,7 +145,7 @@ export default Vue.extend({
                     :channels="imageMetadata.channels"
                     :channelMap="imageMetadata.channelmap"
                     :frameIndices="indexInfo"
-                    @updateActiveChannels="updateActiveChannels"
+                    @updateStyle="updateStyle"
                 />
             </div>
         </div>

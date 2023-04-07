@@ -4,7 +4,7 @@ import { CHANNEL_COLORS, getCompositeLayerColor } from '../colors'
 
 export default {
     props: ['channels', 'channelMap', 'frameIndices'],
-    emits: ['updateActiveChannels'],
+    emits: ['updateStyle'],
     components: {
         'color-picker': Chrome
     },
@@ -60,7 +60,23 @@ export default {
             const activeChannels = Object.values(
                 this.compositeChannelInfo
             ).filter((channel) => channel.enabled);
-            this.$emit('updateActiveChannels', activeChannels);
+            const styleArray = []
+            activeChannels.forEach((channel) => {
+                const styleEntry = {
+                    frameDelta: channel.number,
+                };
+                if (channel.falseColor) {
+                    styleEntry['palette'] = channel.falseColor;
+                }
+                if (channel.min) {
+                    styleEntry['min'] = channel.min;
+                }
+                if (channel.max) {
+                    styleEntry['max'] = channel.max;
+                }
+                styleArray.push(styleEntry);
+            });
+            this.$emit('updateStyle', {bands: styleArray});
         },
     },
     mounted() {
