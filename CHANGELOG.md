@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.20.4
+
+### Improvements
+- Better cache handling with Etags ([#1097](../../pull/1097))
+
+### Changes
+- On the large image item page, guard against overflow ([#1096](../../pull/1096))
+- Specify version of simplejpeg for older python ([#1098](../../pull/1098))
+
 ## 1.20.3
 
 ### Changes
