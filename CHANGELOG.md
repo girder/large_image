@@ -2,14 +2,16 @@
 
 ## 1.20.4
 
+### Improvements
+- Better cache handling with Etags ([#1097](../../pull/1097))
+
 ### Changes
-- On the large image item page, guard against overflow ([#1096](../../pull/1096)
+- On the large image item page, guard against overflow ([#1096](../../pull/1096))
 
 ## 1.20.3
 
 ### Changes
 - Update dicom source for upstream changes ([#1092](../../pull/1092))
-- Better cache handling with Etags ([#1093](../../pull/1093))
 
 ## 1.20.2
 
