@@ -8,6 +8,7 @@
 ### Changes
 - On the large image item page, guard against overflow ([#1096](../../pull/1096))
 - Specify version of simplejpeg for older python ([#1098](../../pull/1098))
+- Better expose the Girder yaml config files from python ([#1099](../../pull/1099))
 
 ## 1.20.3
 
