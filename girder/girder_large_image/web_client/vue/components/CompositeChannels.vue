@@ -1,20 +1,6 @@
 <script>
 import { Chrome } from 'vue-color';
-
-const CHANNEL_COLORS = {
-  Red: '#FF0000',
-  Green: '#008000',
-  Orange: '#FFA500',
-  RoyalBlue: '#4169E1',
-  Purple: '#800080',
-  Yellow: '#FFFF00',
-  Magenta: '#FF00FF',
-  Teal: '#008080',
-  Maroon: '#800000',
-  Navy: '#000080',
-  Violet: '#EE82EE',
-};
-
+import { CHANNEL_COLORS, getCompositeLayerColor } from '../colors'
 
 export default {
     props: ['channels', 'channelMap', 'frameIndices'],
@@ -27,6 +13,7 @@ export default {
             enabledChannels: this.channels,
             colorPickerShown: undefined,
             currentColorPickerRef: undefined,
+            compositeChannelInfo: {},
         }
     },
     methods: {
@@ -76,20 +63,22 @@ export default {
             this.$emit('updateActiveChannels', activeChannels);
         },
     },
-    computed: {
-        compositeChannelInfo() {
-            return Object.fromEntries(this.channels.map((channel, index) => {
-                return [channel, {
-                    number: this.channelMap[channel],
-                    enabled: true,
-                    falseColor: Object.values(CHANNEL_COLORS)[index % Object.values(CHANNEL_COLORS).length],
-                    min: 0,
-                    max: 0,
-                }]
-            }))
-        }
-    },
     mounted() {
+        const usedColors = []
+        this.compositeChannelInfo = Object.fromEntries(this.channels
+        .sort((channel) => !Object.keys(CHANNEL_COLORS).includes(channel))
+        .map((channel) => {
+            const channelInfo = {
+                number: this.channelMap[channel],
+                enabled: true,
+                falseColor: getCompositeLayerColor(channel, usedColors),
+                min: 0,
+                max: 0,
+            }
+            usedColors.push(channelInfo.falseColor)
+            return [channel, channelInfo]
+        }))
+
         this.updateStyle()
     }
 }
@@ -175,7 +164,7 @@ export default {
     margin-left: 50px;
 }
 .table-container {
-    max-height: 200px;
+    max-height: 700px;
     overflow: scroll;
 }
 .table-container input {
