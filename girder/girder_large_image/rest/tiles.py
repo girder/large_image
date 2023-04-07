@@ -95,11 +95,12 @@ def _handleETag(key, item, *args, **kwargs):
     if conditions and not (conditions == ['*'] or etag in conditions):
         raise cherrypy.HTTPError(
             412, 'If-Match failed: ETag %r did not match %r' % (etag, conditions))
-    conditions = [str(x) for x in cherrypy.request.headers.elements('If-None-Match') or []]
+    conditions = [str(x).strip('"')
+                  for x in cherrypy.request.headers.elements('If-None-Match') or []]
     if conditions == ['*'] or etag in conditions:
         raise cherrypy.HTTPRedirect([], 304)
     # Explicitly set a max-age to recheck the cache after a while
-    setResponseHeader('Cache-control', f'max-age={max_age}')
+    setResponseHeader('Cache-control', f'public, max-age={max_age}')
 
 
 def _pickleParams(params):

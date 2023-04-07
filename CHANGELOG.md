@@ -9,6 +9,7 @@
 
 ### Changes
 - Update dicom source for upstream changes ([#1092](../../pull/1092))
+- Better cache handling with Etags ([#1093](../../pull/1093))
 
 ## 1.20.2
 
