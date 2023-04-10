@@ -190,17 +190,19 @@ class ImageItem(Item):
             sourceClass = girder_tilesource.AvailableGirderTileSources[sourceName]
         except TileSourceError:
             return None
+        if '_' in kwargs:
+            kwargs = kwargs.copy()
+            kwargs.pop('_', None)
         classHash = sourceClass.getLRUHash(item, **kwargs)
         tileHash = sourceClass.__name__ + ' ' + classHash + ' ' + strhash(
-            classHash) + strhash(*(x, y, z), mayRedirect=mayRedirect, **kwargs)
+            sourceClass.__name__ + ' ' + classHash) + strhash(
+            *(x, y, z), mayRedirect=mayRedirect, **kwargs)
         try:
             if tileCacheLock is None:
                 tileData = tileCache[tileHash]
             else:
-                # Checking this outside the lock is sufficient for the cache
-                # miss condition and faster
-                if tileHash not in tileCache:
-                    return None
+                # It would be nice if we could test if tileHash was in
+                # tileCache, but memcached doesn't expose that functionaility
                 with tileCacheLock:
                     tileData = tileCache[tileHash]
             tileMime = TileOutputMimeTypes.get(kwargs.get('encoding'), 'image/jpeg')
