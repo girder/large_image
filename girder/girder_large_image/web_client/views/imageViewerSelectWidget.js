@@ -66,7 +66,7 @@ var ImageViewerSelectWidget = View.extend({
         return this;
     },
 
-    _createVueModal(imageMetadata, frameUpdate) {
+    _createVue(imageMetadata, frameUpdate) {
         const el = this.$('#vue-container').get(0);
         const vm = new FrameSelector({
             el,
@@ -136,7 +136,7 @@ var ImageViewerSelectWidget = View.extend({
             frameUpdate(frame);
 
             // Vue frame control
-            this._createVueModal(metadata, frameUpdate);
+            this._createVue(metadata, frameUpdate);
         }
     },
 
