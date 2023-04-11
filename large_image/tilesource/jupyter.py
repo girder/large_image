@@ -31,29 +31,29 @@ def launch_tile_server(tile_source, port=0):
 
         def get(self):
             self.write(json.dumps(tile_source.getMetadata()))
-            self.set_header("Content-Type", "application/json")
+            self.set_header('Content-Type', 'application/json')
 
     class TileSourceTileHandler(tornado.web.RequestHandler):
         """REST endpoint to server tiles from image in slippy maps standard."""
 
         def get(self):
-            x = int(self.get_argument("x"))
-            y = int(self.get_argument("y"))
-            z = int(self.get_argument("z"))
-            encoding = self.get_argument("encoding", "PNG")
+            x = int(self.get_argument('x'))
+            y = int(self.get_argument('y'))
+            z = int(self.get_argument('z'))
+            encoding = self.get_argument('encoding', 'PNG')
             try:
                 tile_binary = tile_source.getTile(x, y, z, encoding=encoding)
             except TileSourceXYZRangeError as e:
                 self.clear()
                 self.set_status(404)
-                self.finish(f"<html><body>{e}</body></html>")
+                self.finish(f'<html><body>{e}</body></html>')
             else:
                 self.write(tile_binary)
-                self.set_header("Content-Type", "image/png")
+                self.set_header('Content-Type', 'image/png')
 
     app = tornado.web.Application([
-        (r"/metadata", TileSourceMetadataHandler),
-        (r"/tile", TileSourceTileHandler),
+        (r'/metadata', TileSourceMetadataHandler),
+        (r'/tile', TileSourceTileHandler),
     ])
     sockets = tornado.netutil.bind_sockets(port, '')
     server = tornado.httpserver.HTTPServer(app)
@@ -119,7 +119,7 @@ class IPyLeafletMixin:
             t = self.getIpyleafletTileLayer()
 
             try:
-                default_zoom = metadata["levels"] - metadata["sourceLevels"]
+                default_zoom = metadata['levels'] - metadata['sourceLevels']
             except KeyError:
                 default_zoom = 0
 
@@ -143,7 +143,7 @@ class IPyLeafletMixin:
             m = Map(
                 crs=projections.EPSG3857 if self.geospatial else proj,
                 basemap=basemaps.OpenStreetMap.Mapnik if self.geospatial else t,
-                center=self.getCenter(srs="EPSG:4326"),
+                center=self.getCenter(srs='EPSG:4326'),
                 zoom=default_zoom,
                 max_zoom=metadata['levels'] + 1,
                 min_zoom=0,

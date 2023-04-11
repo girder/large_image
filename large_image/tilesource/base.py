@@ -205,8 +205,8 @@ class TileSource(IPyLeafletMixin):
         if self.geospatial:
             bounds = self.getBounds(*args, **kwargs)
             return (
-                (bounds["ymax"] - bounds["ymin"]) / 2 + bounds["ymin"],
-                (bounds["xmax"] - bounds["xmin"]) / 2 + bounds["xmin"],
+                (bounds['ymax'] - bounds['ymin']) / 2 + bounds['ymin'],
+                (bounds['xmax'] - bounds['xmin']) / 2 + bounds['xmin'],
             )
         bounds = TileSource.getBounds(self, *args, **kwargs)
         return (bounds['sizeY'] / 2, bounds['sizeX'] / 2)
