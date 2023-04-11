@@ -88,7 +88,7 @@ class IPyLeafletMixin:
 
         if self.JUPYTER_PROXY:
             if isinstance(self.JUPYTER_PROXY, str):
-                base_url = f'{self.JUPYTER_PROXY}/{self._ports[0]}'
+                base_url = f'{self.JUPYTER_PROXY.rstrip("/")}/{self._ports[0]}'
             else:
                 base_url = f'/proxy/{self._ports[0]}'
         else:
