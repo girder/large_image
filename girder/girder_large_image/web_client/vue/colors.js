@@ -71,17 +71,3 @@ export const OTHER_COLORS = [
     '#C040FF',
     '#40C0FF'
 ];
-
-export function getCompositeLayerColor(layerName, usedColors) {
-    if (layerName in CHANNEL_COLORS) {
-        return CHANNEL_COLORS[layerName];
-    } else {
-        const unusedColors = OTHER_COLORS.filter((c) => !usedColors.includes(c));
-        if (unusedColors.length > 0) {
-            return unusedColors[0];
-        } else {
-            // All colors have been used, just return a random one
-            return OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
-        }
-    }
-}

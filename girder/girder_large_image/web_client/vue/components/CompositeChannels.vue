@@ -1,6 +1,6 @@
 <script>
 import { Chrome } from 'vue-color';
-import { CHANNEL_COLORS, getCompositeLayerColor } from '../colors'
+import { CHANNEL_COLORS, OTHER_COLORS } from '../colors'
 
 export default {
     props: ['channels', 'channelMap', 'frameIndices'],
@@ -17,6 +17,40 @@ export default {
         }
     },
     methods: {
+        initializeChannelInfo() {
+            const usedColors = []
+            this.compositeChannelInfo = {}
+            this.channels.forEach((channelName) => {
+                this.compositeChannelInfo[channelName] = {
+                    number: this.channelMap[channelName],
+                    enabled: true,
+                    min: 0,
+                    max: 0,
+                }
+            })
+            Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
+                if(this.channels.includes(channelName)){
+                    this.compositeChannelInfo[channelName].falseColor = CHANNEL_COLORS[channelName]
+                    usedColors.push(CHANNEL_COLORS[channelName])
+                }
+            })
+            this.channels.forEach((channelName) => {
+                if (!this.compositeChannelInfo[channelName].falseColor) {
+                    let chosenColor;
+                    const unusedColors = OTHER_COLORS.filter(
+                        (color) => !usedColors.includes(color)
+                    )
+                    if (unusedColors.length > 0) {
+                        chosenColor = unusedColors[0]
+                    } else {
+                        chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
+                    }
+                    this.compositeChannelInfo[channelName].falseColor = chosenColor
+                    usedColors.push(chosenColor)
+                }
+            })
+            console.log(this.compositeChannelInfo)
+        },
         toggleColorPicker(channel) {
             this.colorPickerShown = channel
             if (this.colorPickerShown === undefined) {
@@ -80,21 +114,7 @@ export default {
         },
     },
     mounted() {
-        const usedColors = []
-        this.compositeChannelInfo = Object.fromEntries(this.channels
-        .sort((channel) => !Object.keys(CHANNEL_COLORS).includes(channel))
-        .map((channel) => {
-            const channelInfo = {
-                number: this.channelMap[channel],
-                enabled: true,
-                falseColor: getCompositeLayerColor(channel, usedColors),
-                min: 0,
-                max: 0,
-            }
-            usedColors.push(channelInfo.falseColor)
-            return [channel, channelInfo]
-        }))
-
+        this.initializeChannelInfo()
         this.updateStyle()
     }
 }
