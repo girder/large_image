@@ -124,27 +124,33 @@ class IPyLeafletMixin:
             except KeyError:
                 default_zoom = 0
 
-            proj = dict(
-                name='PixelSpace',
-                custom=True,
-                # Why does this need to be 256?
-                resolutions=[256 * 2 ** (-l) for l in range(20)],
+            geospatial = self.geospatial and self.projection
 
-                # This works but has x and y reversed
-                proj4def='+proj=longlat +axis=esu',
-                bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
-                origin=[0, 0],
+            if geospatial:
+                # TODO: better handle other projections
+                crs = projections.EPSG3857
+            else:
+                crs = dict(
+                    name='PixelSpace',
+                    custom=True,
+                    # Why does this need to be 256?
+                    resolutions=[256 * 2 ** (-l) for l in range(20)],
 
-                # This almost works to fix the x, y reversal, but
-                # - bounds are weird and other issues occur
-                # proj4def='+proj=longlat +axis=seu',
-                # bounds=[[-metadata['sizeX'],-metadata['sizeY']],[metadata['sizeX'],metadata['sizeY']]],
-                # origin=[0,0],
-            )
+                    # This works but has x and y reversed
+                    proj4def='+proj=longlat +axis=esu',
+                    bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
+                    origin=[0, 0],
+
+                    # This almost works to fix the x, y reversal, but
+                    # - bounds are weird and other issues occur
+                    # proj4def='+proj=longlat +axis=seu',
+                    # bounds=[[-metadata['sizeX'],-metadata['sizeY']],[metadata['sizeX'],metadata['sizeY']]],
+                    # origin=[0,0],
+                )
 
             m = Map(
-                crs=projections.EPSG3857 if self.geospatial else proj,
-                basemap=basemaps.OpenStreetMap.Mapnik if self.geospatial else t,
+                crs=crs,
+                basemap=basemaps.OpenStreetMap.Mapnik if geospatial else t,
                 center=self.getCenter(srs='EPSG:4326'),
                 zoom=default_zoom,
                 max_zoom=metadata['levels'] + 1,
@@ -153,6 +159,6 @@ class IPyLeafletMixin:
                 dragging=True,
                 # attribution_control=False,
             )
-            if self.geospatial:
+            if geospatial:
                 m.add_layer(t)
             return display(m)
