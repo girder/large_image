@@ -14,7 +14,7 @@ export default Vue.extend({
                 { id: 1, name: 'Axis' }
             ],
             compositeModes: [
-                { id: 0, name: 'Single' },
+                { id: 0, name: 'Slider' },
                 { id: 1, name: 'Composite' }
             ],
             currentModeId: 1,
@@ -72,6 +72,17 @@ export default Vue.extend({
         },
     },
     mounted() {
+        if (
+            (!this.imageMetadata.channels || this.imageMetadata.channelmap)
+            && Object.keys(this.imageMetadata.IndexRange).includes('IndexC')
+        ) {
+            this.imageMetadata.channelmap = Object.fromEntries(
+                [...Array(this.imageMetadata.IndexRange['IndexC']).keys()].map(
+                    (i) => [`Channel ${i}`, i]
+                )
+            )
+            this.imageMetadata.channels = Object.keys(this.imageMetadata.channelmap)
+        }
         Object.keys(this.imageMetadata.IndexRange).forEach((indexName) => {
             this.indices.push(indexName);
             this.indexInfo[indexName] = {

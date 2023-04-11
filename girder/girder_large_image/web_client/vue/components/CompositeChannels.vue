@@ -49,7 +49,6 @@ export default {
                     usedColors.push(chosenColor)
                 }
             })
-            console.log(this.compositeChannelInfo)
         },
         toggleColorPicker(channel) {
             this.colorPickerShown = channel
