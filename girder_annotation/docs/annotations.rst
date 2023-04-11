@@ -387,11 +387,10 @@ Component Values
 Colors
 ~~~~~~
 
-Colors are specified using a css-like string. Specifically, values of
-the form ``#RRGGBB`` and ``#RGB`` are allowed where ``R``, ``G``, and
-``B`` are case-insensitive hexadecimal digits. Additionally, values of
-the form ``rgb(123, 123, 123)`` and ``rgba(123, 123, 123, 0.123)`` are
-allowed, where the colors are specified on a [0-255] integer scale, and
+Colors are specified using a css-like string. Specifically, values of the form ``#RRGGBB``, ``#RGB``, ``#RRGGBBAA``, and ``#RGBA`` are allowed where ``R``,
+``G``, ``B``, and ``A`` are case-insensitive hexadecimal digits. Additionally,
+values of the form ``rgb(123, 123, 123)`` and ``rgba(123, 123, 123, 0.123)``
+are allowed, where the colors are specified on a [0-255] integer scale, and
 the opacity is specified as a [0-1] floating-point number.
 
 Coordinates

@@ -13,14 +13,14 @@ function heatmapColorTable(record, values) {
     let range1 = 1;
     let min = 0;
     let max = null;
-    let color = {
+    const color = {
         0: {r: 0, g: 0, b: 0, a: 0},
         1: {r: 1, g: 1, b: 0, a: 1}
     };
     if (record.colorRange && record.rangeValues) {
         if (record.normalizeRange || !values.length) {
             for (let i = 0; i < record.colorRange.length && i < record.rangeValues.length; i += 1) {
-                let val = Math.max(0, Math.min(1, record.rangeValues[i]));
+                const val = Math.max(0, Math.min(1, record.rangeValues[i]));
                 color[val] = record.colorRange[i];
                 if (val >= 1) {
                     break;
@@ -29,7 +29,7 @@ function heatmapColorTable(record, values) {
         } else if (record.colorRange.length >= 2 && record.rangeValues.length >= 2) {
             range0 = range1 = record.rangeValues[0] || 0;
             for (let i = 1; i < record.rangeValues.length; i += 1) {
-                let val = record.rangeValues[i] || 0;
+                const val = record.rangeValues[i] || 0;
                 if (val < range0) {
                     range0 = val;
                 }
@@ -125,7 +125,8 @@ function convertGridToHeatmap(record, properties, layer) {
         position: (d, i) => ({
             x: x0 + dx * (i % record.gridWidth),
             y: y0 + dy * Math.floor(i / record.gridWidth),
-            z: z}),
+            z: z
+        }),
         intensity: (d) => d || 0,
         minIntensity: colorTable.min,
         maxIntensity: colorTable.max,

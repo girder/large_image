@@ -1,9 +1,9 @@
 import $ from 'jquery';
 import View from '@girder/core/views/View';
 
-import { AccessType } from '@girder/core/constants';
+import {AccessType} from '@girder/core/constants';
 import events from '@girder/core/events';
-import { restRequest } from '@girder/core/rest';
+import {restRequest} from '@girder/core/rest';
 import BrowserWidget from '@girder/core/views/widgets/BrowserWidget';
 import PluginConfigBreadcrumbWidget from '@girder/core/views/widgets/PluginConfigBreadcrumbWidget';
 
@@ -79,7 +79,7 @@ var ConfigView = View.extend({
             helpText: 'Browse to a location to select it.',
             submitText: 'Select Location',
             validate: function (model) {
-                let isValid = $.Deferred();
+                const isValid = $.Deferred();
                 if (!model || model.get('_modelType') !== 'folder') {
                     isValid.reject('Please select a folder.');
                 } else {
@@ -93,7 +93,7 @@ var ConfigView = View.extend({
             restRequest({
                 url: `resource/${val.id}/path`,
                 method: 'GET',
-                data: { type: val.get('_modelType') }
+                data: {type: val.get('_modelType')}
             }).done((result) => {
                 // Only add the resource path if the value wasn't altered
                 if (this.$('#g-large-image-config-folder').val() === val.id) {
@@ -192,7 +192,7 @@ var ConfigView = View.extend({
             }).done((resp) => {
                 resp.extraInfo = {};
                 resp.extraItemInfo = {};
-                let extraList = [{
+                const extraList = [{
                     access: null,
                     extraInfo: 'large_image.show_extra_public',
                     extraItemInfo: 'large_image.show_item_extra_public'

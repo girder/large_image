@@ -2,7 +2,7 @@
  * server. */
 
 import eventStream from '@girder/core/utilities/EventStream';
-import { restRequest } from '@girder/core/rest';
+import {restRequest} from '@girder/core/rest';
 
 import largeImageConfig from './views/configView';
 

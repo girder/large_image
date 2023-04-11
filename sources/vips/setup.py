@@ -23,6 +23,14 @@ def prerelease_local_scheme(version):
         return get_local_node_and_date(version)
 
 
+try:
+    from setuptools_scm import get_version
+
+    version = get_version(root='../..', local_scheme=prerelease_local_scheme)
+    limit_version = f'>={version}' if '+' not in version else ''
+except (ImportError, LookupError):
+    limit_version = ''
+
 setup(
     name='large-image-source-vips',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
@@ -45,7 +53,7 @@ setup(
         'Programming Language :: Python :: 3.11',
     ],
     install_requires=[
-        'large-image',
+        f'large-image{limit_version}',
         'numpy',
         'packaging',
         'pyvips',

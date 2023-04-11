@@ -13,6 +13,8 @@ def testCacheSourceStyle():
     ts1 = large_image.open(imagePath)
     ts2 = large_image.open(imagePath, style={'max': 128})
     ts3 = large_image.open(imagePath, style={'max': 160})
+    assert id(ts1) != id(ts2)
+    assert id(ts2) != id(ts3)
     tile1 = ts1.getTile(0, 0, 4)
     assert ts1.getTile(0, 0, 4) is not None
     assert ts2.getTile(0, 0, 4) is not None
@@ -33,6 +35,7 @@ def testCacheSourceStyleFirst():
     imagePath = datastore.fetch('sample_image.ptif')
     ts2 = large_image.open(imagePath, style={'max': 128})
     ts1 = large_image.open(imagePath)
+    assert id(ts1) != id(ts2)
     tile1 = ts1.getTile(0, 0, 4)
     assert ts1.getTile(0, 0, 4) is not None
     assert ts2.getTile(0, 0, 4) is not None

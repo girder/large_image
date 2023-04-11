@@ -36,7 +36,7 @@ def _lazyImport():
             import pydicom
             import wsidicom
         except ImportError:
-            raise TileSourceError('nd2 module not found.')
+            raise TileSourceError('dicom modules not found.')
         warnings.filterwarnings('ignore', category=UserWarning, module='wsidicom')
         warnings.filterwarnings('ignore', category=UserWarning, module='pydicom')
 
@@ -127,8 +127,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._dicom = wsidicom.WsiDicom.open(self._largeImagePath)
         except Exception:
             raise TileSourceError('File cannot be opened via dicom tile source.')
-        self.sizeX = int(self._dicom.image_size.width)
-        self.sizeY = int(self._dicom.image_size.height)
+        self.sizeX = int(self._dicom.size.width)
+        self.sizeY = int(self._dicom.size.height)
         self.tileWidth = int(self._dicom.tile_size.width)
         self.tileHeight = int(self._dicom.tile_size.height)
         self.tileWidth = min(max(self.tileWidth, self._minTileSize), self._maxTileSize)
@@ -166,8 +166,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         mm_x = mm_y = None
         try:
-            mm_x = self._dicom.base_level.pixel_spacing.width or None
-            mm_y = self._dicom.base_level.pixel_spacing.height or None
+            mm_x = self._dicom.levels[0].pixel_spacing.width or None
+            mm_y = self._dicom.levels[0].pixel_spacing.height or None
         except Exception:
             pass
         # Estimate the magnification; we don't have a direct value
@@ -220,7 +220,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         bh = self.tileHeight * step
         level = 0
         levelfactor = 1
-        basefactor = self._dicom.base_level.pixel_spacing.width
+        basefactor = self._dicom.levels[0].pixel_spacing.width
         for checklevel in range(1, len(self._dicom.levels)):
             factor = round(self._dicom.levels[checklevel].pixel_spacing.width / basefactor)
             if factor <= step:

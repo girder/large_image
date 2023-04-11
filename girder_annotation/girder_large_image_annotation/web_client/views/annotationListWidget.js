@@ -1,11 +1,11 @@
 import $ from 'jquery';
 import _ from 'underscore';
 
-import { AccessType } from '@girder/core/constants';
+import {AccessType} from '@girder/core/constants';
 import eventStream from '@girder/core/utilities/EventStream';
-import { getCurrentUser } from '@girder/core/auth';
-import { confirm } from '@girder/core/dialog';
-import { getApiRoot, restRequest } from '@girder/core/rest';
+import {getCurrentUser} from '@girder/core/auth';
+import {confirm} from '@girder/core/dialog';
+import {getApiRoot, restRequest} from '@girder/core/rest';
 import AccessWidget from '@girder/core/views/widgets/AccessWidget';
 import events from '@girder/core/events';
 import UserCollection from '@girder/core/collections/UserCollection';
@@ -39,8 +39,8 @@ const AnnotationListWidget = View.extend({
         this._drawn = new Set();
         this._viewer = null;
         this._sort = {
-            'field': 'name',
-            'direction': 1
+            field: 'name',
+            direction: 1
         };
 
         this.collection = this.collection || new AnnotationCollection([], {comparator: null});
@@ -223,12 +223,14 @@ const AnnotationListWidget = View.extend({
             parentType: 'item',
             parentView: this,
             multiFile: true,
-            otherParams: {reference: JSON.stringify({
-                identifier: 'LargeImageAnnotationUpload',
-                itemId: this.model.id,
-                fileId: this.model.get('largeImage') && this.model.get('largeImage').fileId,
-                userId: (getCurrentUser() || {}).id
-            })}
+            otherParams: {
+                reference: JSON.stringify({
+                    identifier: 'LargeImageAnnotationUpload',
+                    itemId: this.model.id,
+                    fileId: this.model.get('largeImage') && this.model.get('largeImage').fileId,
+                    userId: (getCurrentUser() || {}).id
+                })
+            }
         }).on('g:uploadFinished', () => {
             events.trigger('g:alert', {
                 icon: 'ok',
@@ -281,8 +283,8 @@ const AnnotationListWidget = View.extend({
 
     _fetchUsers() {
         this.collection.each((model) => {
-            this.users.add({'_id': model.get('creatorId')});
-            this.users.add({'_id': model.get('updatedId')});
+            this.users.add({_id: model.get('creatorId')});
+            this.users.add({_id: model.get('updatedId')});
         });
         $.when.apply($, this.users.map((model) => {
             return model.fetch();
