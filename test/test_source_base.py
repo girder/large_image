@@ -193,7 +193,6 @@ def testSourcesTilesAndMethods(source, filename):
     #  assert ts.histogram(onlyMinMax=True)['min'][0] is not None
     # Test multiple frames if they exist
     assert ts.frames >= 1
-    open('/tmp/junk.txt', 'a').write('%r\n' % ([source, filename, ts.frames], ))
     if ts.frames > 1:
         assert ts.frames == len(tileMetadata['frames'])
         utilities.checkTilesZXY(

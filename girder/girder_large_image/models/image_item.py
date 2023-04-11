@@ -17,6 +17,7 @@
 import io
 import json
 import pickle
+import threading
 
 import pymongo
 from girder_jobs.constants import JobStatus
@@ -189,17 +190,19 @@ class ImageItem(Item):
             sourceClass = girder_tilesource.AvailableGirderTileSources[sourceName]
         except TileSourceError:
             return None
+        if '_' in kwargs:
+            kwargs = kwargs.copy()
+            kwargs.pop('_', None)
         classHash = sourceClass.getLRUHash(item, **kwargs)
         tileHash = sourceClass.__name__ + ' ' + classHash + ' ' + strhash(
-            classHash) + strhash(*(x, y, z), mayRedirect=mayRedirect, **kwargs)
+            sourceClass.__name__ + ' ' + classHash) + strhash(
+            *(x, y, z), mayRedirect=mayRedirect, **kwargs)
         try:
             if tileCacheLock is None:
                 tileData = tileCache[tileHash]
             else:
-                # Checking this outside the lock is sufficient for the cache
-                # miss condition and faster
-                if tileHash not in tileCache:
-                    return None
+                # It would be nice if we could test if tileHash was in
+                # tileCache, but memcached doesn't expose that functionaility
                 with tileCacheLock:
                     tileData = tileCache[tileHash]
             tileMime = TileOutputMimeTypes.get(kwargs.get('encoding'), 'image/jpeg')
@@ -358,6 +361,28 @@ class ImageItem(Item):
             del keydict['fill']
         keydict = {k: v for k, v in keydict.items() if v is not None and not k.startswith('_')}
         key = json.dumps(keydict, sort_keys=True, separators=(',', ':'))
+        lockkey = (imageFunc, item['_id'], key)
+        if not hasattr(self, '_getAndCacheImageOrDataLock'):
+            self._getAndCacheImageOrDataLock = {
+                'keys': {},
+                'lock': threading.Lock()
+            }
+        keylock = None
+        with self._getAndCacheImageOrDataLock['lock']:
+            if lockkey in self._getAndCacheImageOrDataLock['keys']:
+                keylock = self._getAndCacheImageOrDataLock['keys'][lockkey]
+        if checkAndCreate != 'nosave' and keylock and keylock.locked():
+            # This is intended to guard against calling expensive but cached
+            # functions multiple times.  There is still a possibility of that,
+            # as if two calls are made close enough to concurrently, they could
+            # both pass this guard and then run sequentially (which is still
+            # preferable to concurrently).  Guarding against such a race
+            # condition creates a bottleneck as the database checks would then
+            # be in the guarded code section; this is considered a reasonable
+            # compromise.
+            logger.info('Waiting for %r', (lockkey, ))
+            with keylock:
+                pass
         existing = File().findOne({
             'attachedToType': 'item',
             'attachedToId': item['_id'],
@@ -377,46 +402,66 @@ class ImageItem(Item):
             return File().download(existing, contentDisposition=contentDisposition)
         if checkAndCreate == 'check':
             return False
-        tileSource = self._loadTileSource(item, **kwargs)
-        result = getattr(tileSource, imageFunc)(**kwargs)
-        if result is None:
-            imageData, imageMime = b'', 'application/octet-stream'
-        elif pickleCache:
-            imageData, imageMime = result, 'application/octet-stream'
-        else:
-            imageData, imageMime = result
-        saveFile = True
-        if not pickleCache:
-            # The logic on which files to save could be more sophisticated.
-            maxThumbnailFiles = int(Setting().get(
-                constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
-            saveFile = maxThumbnailFiles > 0
-            # Make sure we don't exceed the desired number of thumbnails
-            self.removeThumbnailFiles(
-                item, maxThumbnailFiles - 1, imageKey=keydict.get('imageKey') or 'none')
-        if (saveFile and checkAndCreate != 'nosave' and (
-                pickleCache or isinstance(imageData, bytes))):
-            dataStored = imageData if not pickleCache else pickle.dumps(imageData, protocol=4)
-            # Save the data as a file
+        return self.getAndCacheImageOrDataRun(
+            checkAndCreate, imageFunc, item, key, keydict, pickleCache, lockkey, **kwargs)
+
+    def getAndCacheImageOrDataRun(
+            self, checkAndCreate, imageFunc, item, key, keydict, pickleCache, lockkey, **kwargs):
+        """
+        Actually execute a cached function.
+        """
+        with self._getAndCacheImageOrDataLock['lock']:
+            if lockkey not in self._getAndCacheImageOrDataLock['keys']:
+                self._getAndCacheImageOrDataLock['keys'][lockkey] = threading.Lock()
+            keylock = self._getAndCacheImageOrDataLock['keys'][lockkey]
+        with keylock:
+            logger.debug('Computing %r', (lockkey, ))
             try:
-                datafile = Upload().uploadFromFile(
-                    io.BytesIO(dataStored), size=len(dataStored),
-                    name='_largeImageThumbnail', parentType='item', parent=item,
-                    user=None, mimeType=imageMime, attachParent=True)
-                if not len(dataStored) and 'received' in datafile:
-                    datafile = Upload().finalizeUpload(
-                        datafile, Assetstore().load(datafile['assetstoreId']))
-                datafile.update({
-                    'isLargeImageThumbnail' if not pickleCache else 'isLargeImageData': True,
-                    'thumbnailKey': key,
-                })
-                # Ideally, we would check that the file is still wanted before
-                # we save it.  This is probably impossible without true
-                # transactions in Mongo.
-                File().save(datafile)
-            except (GirderException, PermissionError):
-                logger.warning('Could not cache data for large image')
-        return imageData, imageMime
+                tileSource = self._loadTileSource(item, **kwargs)
+                result = getattr(tileSource, imageFunc)(**kwargs)
+                if result is None:
+                    imageData, imageMime = b'', 'application/octet-stream'
+                elif pickleCache:
+                    imageData, imageMime = result, 'application/octet-stream'
+                else:
+                    imageData, imageMime = result
+                saveFile = True
+                if not pickleCache:
+                    # The logic on which files to save could be more sophisticated.
+                    maxThumbnailFiles = int(Setting().get(
+                        constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
+                    saveFile = maxThumbnailFiles > 0
+                    # Make sure we don't exceed the desired number of thumbnails
+                    self.removeThumbnailFiles(
+                        item, maxThumbnailFiles - 1, imageKey=keydict.get('imageKey') or 'none')
+                if (saveFile and checkAndCreate != 'nosave' and (
+                        pickleCache or isinstance(imageData, bytes))):
+                    dataStored = imageData if not pickleCache else pickle.dumps(
+                        imageData, protocol=4)
+                    # Save the data as a file
+                    try:
+                        datafile = Upload().uploadFromFile(
+                            io.BytesIO(dataStored), size=len(dataStored),
+                            name='_largeImageThumbnail', parentType='item', parent=item,
+                            user=None, mimeType=imageMime, attachParent=True)
+                        if not len(dataStored) and 'received' in datafile:
+                            datafile = Upload().finalizeUpload(
+                                datafile, Assetstore().load(datafile['assetstoreId']))
+                        datafile.update({
+                            'isLargeImageThumbnail' if not pickleCache else
+                            'isLargeImageData': True,
+                            'thumbnailKey': key,
+                        })
+                        # Ideally, we would check that the file is still wanted before
+                        # we save it.  This is probably impossible without true
+                        # transactions in Mongo.
+                        File().save(datafile)
+                    except (GirderException, PermissionError):
+                        logger.warning('Could not cache data for large image')
+                return imageData, imageMime
+            finally:
+                with self._getAndCacheImageOrDataLock['lock']:
+                    self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
 
     def removeThumbnailFiles(self, item, keep=0, sort=None, imageKey=None,
                              onlyList=False, **kwargs):
