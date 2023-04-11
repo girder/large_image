@@ -15,6 +15,11 @@ import json
 
 from large_image.exceptions import TileSourceXYZRangeError
 
+try:
+    import ipyleaflet
+except ImportError:  # pragma: no cover
+    ipyleaflet = None
+
 
 def launch_tile_server(tile_source, port=0):
     import tornado.httpserver
@@ -102,46 +107,50 @@ class IPyLeafletMixin:
         )
         return layer
 
-    def _ipython_display_(self):
-        from ipyleaflet import Map, basemaps, projections
-        from IPython.display import display
+    # Only make _ipython_display_ available if ipyleaflet is installed
+    if ipyleaflet:
 
-        metadata = self.getMetadata()
+        def _ipython_display_(self):
+            from ipyleaflet import Map, basemaps, projections
+            from IPython.display import display
 
-        t = self.getIpyleafletTileLayer()
+            metadata = self.getMetadata()
 
-        try:
-            default_zoom = metadata["levels"] - metadata["sourceLevels"]
-        except KeyError:
-            default_zoom = 0
+            t = self.getIpyleafletTileLayer()
 
-        # proj = dict(
-        #     name='PixelSpace',
-        #     custom=True,
-        #     # Why does this need to be 256?
-        #     resolutions=[256 * 2 ** (-l) for l in range(20)],
-        #     # This works but has x and y reversed
-        #     proj4def='+proj=longlat +axis=esu',
-        #     bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
-        #     origin=[0, 0],
-        #     # This almost works to fix the x, y reversal, but bounds are weird and other issues occur
-        #     # proj4def='+proj=longlat +axis=seu',
-        #     # bounds=[[-metadata['sizeX'],-metadata['sizeY']],[metadata['sizeX'],metadata['sizeY']]],
-        #     # origin=[0,0],
-        # )
-        proj = projections.Simple
+            try:
+                default_zoom = metadata["levels"] - metadata["sourceLevels"]
+            except KeyError:
+                default_zoom = 0
 
-        m = Map(
-            crs=projections.EPSG3857 if self.geospatial else proj,
-            basemap=basemaps.OpenStreetMap.Mapnik if self.geospatial else t,
-            center=self.getCenter(srs="EPSG:4326"),
-            zoom=default_zoom,
-            max_zoom=metadata['levels'] + 1,
-            min_zoom=0,
-            scroll_wheel_zoom=True,
-            dragging=True,
-            # attribution_control=False,
-        )
-        if self.geospatial:
-            m.add_layer(t)
-        return display(m)
+            proj = dict(
+                name='PixelSpace',
+                custom=True,
+                # Why does this need to be 256?
+                resolutions=[256 * 2 ** (-l) for l in range(20)],
+
+                # This works but has x and y reversed
+                proj4def='+proj=longlat +axis=esu',
+                bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
+                origin=[0, 0],
+
+                # This almost works to fix the x, y reversal, but bounds are weird and other issues occur
+                # proj4def='+proj=longlat +axis=seu',
+                # bounds=[[-metadata['sizeX'],-metadata['sizeY']],[metadata['sizeX'],metadata['sizeY']]],
+                # origin=[0,0],
+            )
+
+            m = Map(
+                crs=projections.EPSG3857 if self.geospatial else proj,
+                basemap=basemaps.OpenStreetMap.Mapnik if self.geospatial else t,
+                center=self.getCenter(srs="EPSG:4326"),
+                zoom=default_zoom,
+                max_zoom=metadata['levels'] + 1,
+                min_zoom=0,
+                scroll_wheel_zoom=True,
+                dragging=True,
+                # attribution_control=False,
+            )
+            if self.geospatial:
+                m.add_layer(t)
+            return display(m)
