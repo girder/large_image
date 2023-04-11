@@ -3,39 +3,39 @@ import { Chrome } from 'vue-color';
 import { CHANNEL_COLORS, OTHER_COLORS } from '../colors'
 
 export default {
-    props: ['channels', 'channelMap', 'frameIndices'],
+    props: ['layers', 'layerMap', 'frameIndices'],
     emits: ['updateStyle'],
     components: {
         'color-picker': Chrome
     },
     data() {
         return {
-            enabledChannels: this.channels,
+            enabledLayers: this.layers,
             colorPickerShown: undefined,
             currentColorPickerRef: undefined,
-            compositeChannelInfo: {},
+            compositeLayerInfo: {},
         }
     },
     methods: {
-        initializeChannelInfo() {
+        initializeLayerInfo() {
             const usedColors = []
-            this.compositeChannelInfo = {}
-            this.channels.forEach((channelName) => {
-                this.compositeChannelInfo[channelName] = {
-                    number: this.channelMap[channelName],
+            this.compositeLayerInfo = {}
+            this.layers.forEach((layerName) => {
+                this.compositeLayerInfo[layerName] = {
+                    number: this.layerMap ?this.layerMap[layerName] :undefined,
                     enabled: true,
                     min: undefined,
                     max: undefined,
                 }
             })
             Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
-                if(this.channels.includes(channelName)){
-                    this.compositeChannelInfo[channelName].falseColor = CHANNEL_COLORS[channelName]
-                    usedColors.push(CHANNEL_COLORS[channelName])
+                if(this.layers.includes(channelName)){
+                    this.compositeLayerInfo[channelName].falseColor = color
+                    usedColors.push(color)
                 }
             })
-            this.channels.forEach((channelName) => {
-                if (!this.compositeChannelInfo[channelName].falseColor) {
+            this.layers.forEach((layerName) => {
+                if (!this.compositeLayerInfo[layerName].falseColor) {
                     let chosenColor;
                     const unusedColors = OTHER_COLORS.filter(
                         (color) => !usedColors.includes(color)
@@ -45,20 +45,20 @@ export default {
                     } else {
                         chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
                     }
-                    this.compositeChannelInfo[channelName].falseColor = chosenColor
+                    this.compositeLayerInfo[layerName].falseColor = chosenColor
                     usedColors.push(chosenColor)
                 }
             })
         },
-        toggleColorPicker(channel) {
-            this.colorPickerShown = channel
+        toggleColorPicker(layer) {
+            this.colorPickerShown = layer
             if (this.colorPickerShown === undefined) {
                 document.removeEventListener('click', this.documentClick);
                 // Only update style when picker is closed
                 this.updateStyle()
             }
             else {
-                this.currentColorPickerRef = document.getElementById(channel+'_picker')
+                this.currentColorPickerRef = document.getElementById(layer+'_picker')
                 document.addEventListener('click', this.documentClick);
             }
         },
@@ -68,44 +68,46 @@ export default {
                 this.toggleColorPicker(undefined);
             }
         },
-        updateChannelColor(channel, swatch) {
-            this.compositeChannelInfo[channel].falseColor = swatch.hex;
+        updateLayerColor(layer, swatch) {
+            this.compositeLayerInfo[layer].falseColor = swatch.hex;
         },
-        updateChannelMin(event, channel) {
+        updateLayerMin(event, layer) {
             const newVal = event.target.value;
             const newMinVal = parseFloat(newVal);
-            this.compositeChannelInfo[channel].min = newMinVal;
+            this.compositeLayerInfo[layer].min = newMinVal;
             this.updateStyle();
         },
-        updateChannelMax(event, channel) {
+        updateLayerMax(event, layer) {
             const newVal = event.target.valueAsNumber;
             const newMaxVal = parseFloat(newVal);
-            this.compositeChannelInfo[channel].max = newMaxVal;
+            this.compositeLayerInfo[layer].max = newMaxVal;
             this.updateStyle();
         },
-        updateActiveChannels() {
-            this.channels.forEach((channel) => {
-                this.compositeChannelInfo[channel].enabled = this.enabledChannels.includes(channel);
+        updateActiveLayers() {
+            this.layers.forEach((layer) => {
+                this.compositeLayerInfo[layer].enabled = this.enabledLayers.includes(layer);
             })
             this.updateStyle();
         },
         updateStyle() {
-            const activeChannels = Object.values(
-                this.compositeChannelInfo
-            ).filter((channel) => channel.enabled);
+            const activeLayers = Object.values(
+                this.compositeLayerInfo
+            ).filter((layer) => layer.enabled);
             const styleArray = []
-            activeChannels.forEach((channel) => {
-                const styleEntry = {
-                    frameDelta: channel.number,
-                };
-                if (channel.falseColor) {
-                    styleEntry['palette'] = channel.falseColor;
+            activeLayers.forEach((layer) => {
+                // TODO: what should each style entry look like for band compositing?
+                const styleEntry = {};
+                if (layer.number) {
+                    styleEntry['frameDelta'] = layer.number
                 }
-                if (channel.min) {
-                    styleEntry['min'] = channel.min;
+                if (layer.falseColor) {
+                    styleEntry['palette'] = layer.falseColor;
                 }
-                if (channel.max) {
-                    styleEntry['max'] = channel.max;
+                if (layer.min) {
+                    styleEntry['min'] = layer.min;
+                }
+                if (layer.max) {
+                    styleEntry['max'] = layer.max;
                 }
                 styleArray.push(styleEntry);
             });
@@ -113,7 +115,7 @@ export default {
         },
     },
     mounted() {
-        this.initializeChannelInfo()
+        this.initializeLayerInfo()
         this.updateStyle()
     }
 }
@@ -121,10 +123,10 @@ export default {
 
 <template>
     <div class="table-container">
-        <table id="composite-channel-table" class="table table-condensed">
+        <table id="composite-layer-table" class="table table-condensed">
             <thead>
                 <tr>
-                    <th class="channel-col">Channel</th>
+                    <th class="layer-col">Layer</th>
                     <th class="enabled-col">Enabled?</th>
                     <th class="color-col">Color</th>
                     <th class="precision-col">Min</th>
@@ -133,29 +135,29 @@ export default {
             </thead>
             <tbody>
                 <tr
-                    v-for="channel in channels.filter(c => compositeChannelInfo[c] !== undefined)"
-                    :key="channel"
+                    v-for="layer in layers.filter(c => compositeLayerInfo[c] !== undefined)"
+                    :key="layer"
                 >
-                    <td>{{ channel }}</td>
+                    <td>{{ layer }}</td>
                     <td>
                         <input
                             type="checkbox"
-                            :value="channel"
-                            v-model="enabledChannels"
-                            @change="updateActiveChannels"
+                            :value="layer"
+                            v-model="enabledLayers"
+                            @change="updateActiveLayers"
                         >
                     </td>
-                    <td :id="channel+'_picker'">
+                    <td :id="layer+'_picker'">
                         <span
                             class="current-color"
-                            :style="{ 'background-color': compositeChannelInfo[channel].falseColor }"
-                            @click="() => toggleColorPicker(channel)"
+                            :style="{ 'background-color': compositeLayerInfo[layer].falseColor }"
+                            @click="() => toggleColorPicker(layer)"
                         />
                         <color-picker
                             class="picker-offset"
-                            v-if="colorPickerShown === channel"
-                            :value="compositeChannelInfo[channel].falseColor"
-                            @input="(swatch) => {updateChannelColor(channel, swatch)}"
+                            v-if="colorPickerShown === layer"
+                            :value="compositeLayerInfo[layer].falseColor"
+                            @input="(swatch) => {updateLayerColor(layer, swatch)}"
                         />
                     </td>
                     <td>
@@ -164,8 +166,8 @@ export default {
                             step="0.01"
                             min="0"
                             max="1"
-                            :value="compositeChannelInfo[channel].min"
-                            @change.prevent="(event) => updateChannelMin(event, channel)"
+                            :value="compositeLayerInfo[layer].min"
+                            @change.prevent="(event) => updateLayerMin(event, layer)"
                         >
                     </td>
                     <td>
@@ -174,8 +176,8 @@ export default {
                             step="0.01"
                             min="0"
                             max="1"
-                            :value="compositeChannelInfo[channel].max"
-                            @change.prevent="(event) => updateChannelMax(event, channel)"
+                            :value="compositeLayerInfo[layer].max"
+                            @change.prevent="(event) => updateLayerMax(event, layer)"
                         >
                     </td>
                     <td></td>
