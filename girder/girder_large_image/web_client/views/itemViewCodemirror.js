@@ -1,10 +1,10 @@
 import $ from 'jquery';
-import { getCurrentUser } from '@girder/core/auth';
-import { AccessType } from '@girder/core/constants';
-import { confirm } from '@girder/core/dialog';
+import {getCurrentUser} from '@girder/core/auth';
+import {AccessType} from '@girder/core/constants';
+import {confirm} from '@girder/core/dialog';
 import events from '@girder/core/events';
-import { restRequest } from '@girder/core/rest';
-import { wrap } from '@girder/core/utilities/PluginUtils';
+import {restRequest} from '@girder/core/rest';
+import {wrap} from '@girder/core/utilities/PluginUtils';
 import ItemView from '@girder/core/views/body/ItemView';
 import View from '@girder/core/views/View';
 
@@ -116,7 +116,7 @@ const Formats = {
         accessLevel: AccessType.ADMIN,
         adminOnly: true,
         validator: (val) => {
-            let promise = $.Deferred();
+            const promise = $.Deferred();
             restRequest({
                 method: 'POST',
                 url: 'large_image/config/validate',
@@ -136,7 +136,7 @@ const Formats = {
             return promise;
         },
         format: (val) => {
-            let promise = $.Deferred();
+            const promise = $.Deferred();
             restRequest({
                 method: 'POST',
                 url: 'large_image/config/format',
@@ -224,7 +224,7 @@ var CodemirrorEditWidget = View.extend({
             return;
         }
         this._informat = true;
-        let content = this.code.getValue();
+        const content = this.code.getValue();
         try {
             $.when(Formats[this.mimeType].validator(content)).done((validated) => {
                 try {

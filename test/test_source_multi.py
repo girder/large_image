@@ -249,3 +249,21 @@ def testTilesWithMoreComplexBands():
         format=large_image.constants.TILE_FORMAT_NUMPY)
     assert region1.shape == (30, 50, 4)
     assert region1.dtype == numpy.uint16
+
+
+def testStyleFrameBase():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_test_source.yml')
+    source = large_image_source_multi.open(
+        imagePath, style=json.dumps({'bands': [{
+            'frame': 8, 'palette': '#0000FF'
+        }, {
+            'frame': 10, 'palette': '#FF0000'
+        }, {
+            'frame': 11, 'palette': '#FF8000'
+        }]}))
+    image = source.getTile(0, 0, 2)
+    imageB = source.getTile(0, 0, 2, frame=8)
+    assert image == imageB
+    imageC = source.getTile(0, 0, 2, frame=0)
+    assert image == imageC

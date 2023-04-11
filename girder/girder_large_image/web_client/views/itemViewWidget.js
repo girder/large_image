@@ -1,5 +1,5 @@
 import yaml from 'js-yaml';
-import { getApiRoot } from '@girder/core/rest';
+import {getApiRoot} from '@girder/core/rest';
 import View from '@girder/core/views/View';
 
 import itemViewWidgetTemplate from '../templates/itemView.pug';

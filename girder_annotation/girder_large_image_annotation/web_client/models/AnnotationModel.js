@@ -1,11 +1,11 @@
 import _ from 'underscore';
 import AccessControlledModel from '@girder/core/models/AccessControlledModel';
-import { restRequest } from '@girder/core/rest';
+import {restRequest} from '@girder/core/rest';
 import MetadataMixin from '@girder/core/models/MetadataMixin';
 
 import ElementCollection from '../collections/ElementCollection';
 import convert from '../annotations/convert';
-import { convertFeatures } from '../annotations/convertFeatures';
+import {convertFeatures} from '../annotations/convertFeatures';
 
 import style from '../annotations/style.js';
 
@@ -21,7 +21,7 @@ import style from '../annotations/style.js';
  * and updates its own attribute in response.  Users
  * should not modify the "elements" attribute directly.
  */
-let AnnotationModel = AccessControlledModel.extend({
+const AnnotationModel = AccessControlledModel.extend({
     resourceName: 'annotation',
 
     defaults: {
@@ -85,11 +85,11 @@ let AnnotationModel = AccessControlledModel.extend({
             if (z0 >= z1) {
                 throw new Error('invalid centroid data');
             }
-            let json = new Uint8Array(z0 + dv.byteLength - z1 - 1);
+            const json = new Uint8Array(z0 + dv.byteLength - z1 - 1);
             json.set(new Uint8Array(resp.slice(0, z0)), 0);
             json.set(new Uint8Array(resp.slice(z1 + 1)), z0);
-            let result = JSON.parse(decodeURIComponent(escape(String.fromCharCode.apply(null, json))));
-            let defaults = {
+            const result = JSON.parse(decodeURIComponent(escape(String.fromCharCode.apply(null, json))));
+            const defaults = {
                 default: {
                     fillColor: {r: 1, g: 120 / 255, b: 0},
                     fillOpacity: 0.8,
@@ -124,12 +124,12 @@ let AnnotationModel = AccessControlledModel.extend({
                 }
             };
             result.props = result._elementQuery.props.map((props) => {
-                let propsdict = {};
+                const propsdict = {};
                 result._elementQuery.propskeys.forEach((key, i) => {
                     propsdict[key] = props[i];
                 });
                 Object.assign(propsdict, style(propsdict));
-                let type = propsdict.type + (propsdict.closed ? '_closed' : '');
+                const type = propsdict.type + (propsdict.closed ? '_closed' : '');
                 ['fillColor', 'strokeColor', 'strokeWidth', 'fillOpacity', 'strokeOpacity'].forEach((key) => {
                     if (propsdict[key] === undefined) {
                         propsdict[key] = (defaults[type] || defaults.default)[key];
@@ -144,7 +144,7 @@ let AnnotationModel = AccessControlledModel.extend({
             if (dv.byteLength !== result._elementQuery.returned * 28) {
                 throw new Error('invalid centroid data size');
             }
-            let centroids = {
+            const centroids = {
                 id: new Array(result._elementQuery.returned),
                 x: new Float32Array(result._elementQuery.returned),
                 y: new Float32Array(result._elementQuery.returned),
@@ -282,7 +282,7 @@ let AnnotationModel = AccessControlledModel.extend({
         const data = _.extend({}, this.get('annotation'));
         let url;
         let method;
-        let isNew = this.isNew();
+        const isNew = this.isNew();
 
         if (isNew) {
             if (!this.get('itemId')) {

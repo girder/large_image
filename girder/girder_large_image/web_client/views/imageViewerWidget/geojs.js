@@ -6,7 +6,7 @@ import _ from 'underscore';
 import Hammer from 'hammerjs';
 import d3 from 'd3';
 
-import { restRequest } from '@girder/core/rest';
+import {restRequest} from '@girder/core/rest';
 
 import ImageViewerWidget from './base';
 import setFrameQuad from './setFrameQuad.js';
@@ -97,7 +97,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             params = {
                 keepLower: false,
                 attribution: null,
-                url: this._getTileUrl('{z}', '{x}', '{y}', {'encoding': 'PNG', 'projection': 'EPSG:3857'}),
+                url: this._getTileUrl('{z}', '{x}', '{y}', {encoding: 'PNG', projection: 'EPSG:3857'}),
                 useCredentials: true,
                 maxLevel: this.levels - 1
             };
@@ -152,7 +152,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             }
             this._frame = 0;
             this._baseurl = this._layer.url();
-            let quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
+            const quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
             if (!quadLoaded) {
                 // use two layers to get smooth transitions until we load
                 // background quads.
@@ -166,7 +166,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         if (frame !== this._frame && !this._updating) {
             this._frame = frame;
             this.trigger('g:imageFrameChanging', this, frame);
-            let quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
+            const quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
             if (quadLoaded) {
                 if (this._layer2) {
                     this.viewer.deleteLayer(this._layer2);

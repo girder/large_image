@@ -11,7 +11,7 @@ export default function polyline(json) {
         coordinates = [points];
         if (json.holes) {
             const holes = (json.holes || []).map((hole) => {
-                let result = hole.map((p) => _.first(p, 2));
+                const result = hole.map((p) => _.first(p, 2));
                 result.push(result[0]);
                 return result;
             });

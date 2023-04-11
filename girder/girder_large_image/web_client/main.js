@@ -1,4 +1,4 @@
-import { registerPluginNamespace } from '@girder/core/pluginUtils';
+import {registerPluginNamespace} from '@girder/core/pluginUtils';
 import SearchFieldWidget from '@girder/core/views/widgets/SearchFieldWidget';
 
 // import modules for side effects

@@ -1,5 +1,24 @@
 # Change Log
 
+## 1.20.4
+
+### Improvements
+- Better cache handling with Etags ([#1097](../../pull/1097))
+- Reduce duplicate computation of slow cached values ([#1100](../../pull/1100))
+
+### Bug Fixes
+- Tile serving can bypass loading a source if it is in memory ([#1102](../../pull/1102))
+
+### Changes
+- On the large image item page, guard against overflow ([#1096](../../pull/1096))
+- Specify version of simplejpeg for older python ([#1098](../../pull/1098))
+- Better expose the Girder yaml config files from python ([#1099](../../pull/1099))
+
+## 1.20.3
+
+### Changes
+- Update dicom source for upstream changes ([#1092](../../pull/1092))
+
 ## 1.20.2
 
 ### Improvements

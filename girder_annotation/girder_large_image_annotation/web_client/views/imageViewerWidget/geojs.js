@@ -3,8 +3,8 @@ import _ from 'underscore';
 import Backbone from 'backbone';
 
 import events from '@girder/core/events';
-import { wrap } from '@girder/core/utilities/PluginUtils';
-import { restRequest } from '@girder/core/rest';
+import {wrap} from '@girder/core/utilities/PluginUtils';
+import {restRequest} from '@girder/core/rest';
 
 import convertAnnotation from '../../annotations/geojs/convert';
 
@@ -137,7 +137,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             const s21 = matrix[1][0];
             const s22 = matrix[1][1];
 
-            let scale = Math.sqrt(Math.abs(s11 * s22 - s12 * s21)) || 1;
+            const scale = Math.sqrt(Math.abs(s11 * s22 - s12 * s21)) || 1;
             return Math.floor(Math.log2(scale));
         },
 
@@ -148,7 +148,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _countDrawnImageOverlays: function () {
             let numOverlays = 0;
             _.each(this._annotations, (value, key, obj) => {
-                let annotationOverlays = value.overlays || [];
+                const annotationOverlays = value.overlays || [];
                 numOverlays += annotationOverlays.length;
             });
             return numOverlays;
@@ -172,7 +172,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             }
             let pixelmapData = pixelmapElement.values;
             if (pixelmapElement.boundaries) {
-                let valuesWithBoundaries = new Array(pixelmapData.length * 2);
+                const valuesWithBoundaries = new Array(pixelmapData.length * 2);
                 for (let i = 0; i < pixelmapData.length; i++) {
                     valuesWithBoundaries[i * 2] = valuesWithBoundaries[i * 2 + 1] = pixelmapData[i];
                 }
@@ -188,7 +188,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         return 'rgba(0, 0, 0, 0)';
                     }
                     let color;
-                    let category = categoryMap[d];
+                    const category = categoryMap[d];
                     if (boundaries) {
                         color = (i % 2 === 0) ? category.fillColor : category.strokeColor;
                     } else {
@@ -209,7 +209,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          */
         _generateOverlayLayerParams(overlayImageMetadata, overlayImageId, overlay) {
             const geo = window.geo;
-            let params = geo.util.pixelCoordinateParams(
+            const params = geo.util.pixelCoordinateParams(
                 this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileWidth, overlayImageMetadata.tileHeight
             );
             params.layer.useCredentials = true;
@@ -336,7 +336,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             var featureList = this._annotations[annotation.id].features;
             // draw centroids except for otherwise shown values
             if (annotation._centroids && !centroidFeature) {
-                let feature = this.featureLayer.createFeature('point');
+                const feature = this.featureLayer.createFeature('point');
                 featureList.push(feature);
                 feature.data(annotation._centroids.data).position((d, i) => ({
                     x: annotation._centroids.centroids.x[i],
@@ -357,26 +357,26 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         return !annotation._shownIds || !annotation._shownIds.has(annotation._centroids.centroids.id[i]);
                     },
                     strokeColor: (d, i) => {
-                        let s = annotation._centroids.centroids.s[i];
+                        const s = annotation._centroids.centroids.s[i];
                         return annotation._centroids.props[s].strokeColor;
                     },
                     strokeOpacity: (d, i) => {
-                        let s = annotation._centroids.centroids.s[i];
+                        const s = annotation._centroids.centroids.s[i];
                         return annotation._centroids.props[s].strokeOpacity;
                     },
                     strokeWidth: (d, i) => {
-                        let s = annotation._centroids.centroids.s[i];
+                        const s = annotation._centroids.centroids.s[i];
                         return annotation._centroids.props[s].strokeWidth;
                     },
                     fill: (d, i) => {
                         return !annotation._shownIds || !annotation._shownIds.has(annotation._centroids.centroids.id[i]);
                     },
                     fillColor: (d, i) => {
-                        let s = annotation._centroids.centroids.s[i];
+                        const s = annotation._centroids.centroids.s[i];
                         return annotation._centroids.props[s].fillColor;
                     },
                     fillOpacity: (d, i) => {
-                        let s = annotation._centroids.centroids.s[i];
+                        const s = annotation._centroids.centroids.s[i];
                         return annotation._centroids.props[s].fillOpacity;
                     }
                 });
@@ -386,8 +386,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (this.viewer.zoom() !== annotation._centroidLastZoom) {
                         annotation._centroidLastZoom = this.viewer.zoom();
                         if (feature.verticesPerFeature) {
-                            let scale = 2.5 * this.viewer.unitsPerPixel(this.viewer.zoom());
-                            let vpf = feature.verticesPerFeature(),
+                            const scale = 2.5 * this.viewer.unitsPerPixel(this.viewer.zoom());
+                            const vpf = feature.verticesPerFeature(),
                                 count = feature.data().length,
                                 radius = new Float32Array(vpf * count);
                             for (var i = 0, j = 0; i < count; i += 1) {
@@ -496,11 +496,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (annotation._centroids && featureList[0]) {
                         if (featureList[0].verticesPerFeature) {
                             this.viewer.scheduleAnimationFrame(() => {
-                                let vpf = featureList[0].verticesPerFeature(),
+                                const vpf = featureList[0].verticesPerFeature(),
                                     count = featureList[0].data().length,
                                     shown = new Float32Array(vpf * count);
                                 for (let i = 0, j = 0; i < count; i += 1) {
-                                    let val = annotation._shownIds.has(annotation._centroids.centroids.id[i]) ? 0 : 1;
+                                    const val = annotation._shownIds.has(annotation._centroids.centroids.id[i]) ? 0 : 1;
                                     for (let k = 0; k < vpf; k += 1, j += 1) {
                                         shown[j] = val;
                                     }

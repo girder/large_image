@@ -164,7 +164,7 @@ $(function () {
                 girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.png');
             });
             girderTest.waitForLoad();
-        });
+        }, 30000);
         it('navigate to item and make a large image', function () {
             waitsFor(function () {
                 return $('a.g-item-list-link').length > 0;
