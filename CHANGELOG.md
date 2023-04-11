@@ -5,6 +5,7 @@
 ### Improvements
 - Better cache handling with Etags ([#1097](../../pull/1097))
 - Reduce duplicate computation of slow cached values ([#1100](../../pull/1100))
+- Reconnect to memcached if the connection fails ([#1102](../../pull/1102))
 
 ### Bug Fixes
 - Tile serving can bypass loading a source if it is in memory ([#1102](../../pull/1102))
