@@ -21,6 +21,7 @@ from ..cache_util import getTileCache, methodcache, strhash
 from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          SourcePriority, TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat, dtypeToGValue)
+from .jupyter import IPyLeafletMixin
 from .tiledict import LazyTileDict
 from .utilities import (_encodeImage, _encodeImageBinary,  # noqa: F401
                         _gdalParameters, _imageToNumpy, _imageToPIL,
@@ -29,7 +30,7 @@ from .utilities import (_encodeImage, _encodeImageBinary,  # noqa: F401
                         getPaletteColors, histogramThreshold, nearPowerOfTwo)
 
 
-class TileSource:
+class TileSource(IPyLeafletMixin):
     #: Name of the tile source
     name = None
 
@@ -123,6 +124,7 @@ class TileSource:
             composited in the order listed.  This base object may also contain
             the 'dtype' and 'axis' values.
         """
+        super().__init__(**kwargs)
         self.logger = config.getConfig('logger')
         self.cache, self.cache_lock = getTileCache()
 
@@ -132,9 +134,6 @@ class TileSource:
         self.sizeX = None
         self.sizeY = None
         self._styleLock = threading.RLock()
-
-        # launch_tile_server ports
-        self._ports = ()
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -194,78 +193,6 @@ class TileSource:
                         raise TypeError
                 except TypeError:
                     raise exceptions.TileSourceError('Style is not a valid json object.')
-
-    def __repr__(self):
-        return self.getState()
-
-    def _repr_png_(self):
-        return self.getThumbnail(encoding='PNG')[0]
-
-    def getIpyleafletTileLayer(self, **kwargs):
-        from ipyleaflet import TileLayer
-
-        from large_image.tilesource.rest import launch_tile_server
-
-        if not self._ports:
-            self._ports = launch_tile_server(self)
-
-        metadata = self.getMetadata()
-
-        layer = TileLayer(
-            # TODO: support port proxying
-            url=f"http://127.0.0.1:{self._ports[0]}/tile?z={{z}}&x={{x}}&y={{y}}&encoding=png",
-            # attribution="Tiles served with large-image",
-            min_zoom=0,
-            max_native_zoom=metadata['levels'] + 1,
-            max_zoom=20,
-            tile_size=metadata['tileWidth'],
-            **kwargs,
-        )
-        return layer
-
-    def _ipython_display_(self):
-        from ipyleaflet import Map, basemaps, projections
-        from IPython.display import display
-
-        metadata = self.getMetadata()
-
-        t = self.getIpyleafletTileLayer()
-
-        try:
-            default_zoom = metadata["levels"] - metadata["sourceLevels"]
-        except KeyError:
-            default_zoom = 0
-
-        # proj = dict(
-        #     name='PixelSpace',
-        #     custom=True,
-        #     # Why does this need to be 256?
-        #     resolutions=[256 * 2 ** (-l) for l in range(20)],
-        #     # This works but has x and y reversed
-        #     proj4def='+proj=longlat +axis=esu',
-        #     bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
-        #     origin=[0, 0],
-        #     # This almost works to fix the x, y reversal, but bounds are weird and other issues occur
-        #     # proj4def='+proj=longlat +axis=seu',
-        #     # bounds=[[-metadata['sizeX'],-metadata['sizeY']],[metadata['sizeX'],metadata['sizeY']]],
-        #     # origin=[0,0],
-        # )
-        proj = projections.Simple
-
-        m = Map(
-            crs=projections.EPSG3857 if self.geospatial else proj,
-            basemap=basemaps.OpenStreetMap.Mapnik if self.geospatial else t,
-            center=self.getCenter(srs="EPSG:4326"),
-            zoom=default_zoom,
-            max_zoom=metadata['levels'] + 1,
-            min_zoom=0,
-            scroll_wheel_zoom=True,
-            dragging=True,
-            # attribution_control=False,
-        )
-        if self.geospatial:
-            m.add_layer(t)
-        return display(m)
 
     def getBounds(self, *args, **kwargs):
         return {
