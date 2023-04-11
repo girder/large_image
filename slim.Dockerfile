@@ -76,6 +76,10 @@ RUN pip install \
     /opt/wheels/large_image-*.whl \
     /opt/wheels/large_image_converter*.whl \
     $(ls -1  /opt/wheels/large_image_source*.whl)
+RUN pip install \
+    ipyleaflet \
+    jupyter-server-proxy
+ENV LARGE_IMAGE_JUPYTER_PROXY='/proxy/'
 
 
 # Jupyter Geospatial sources
@@ -94,3 +98,7 @@ RUN pip install \
     /opt/wheels/large_image_source_tiff*.whl \
     /opt/wheels/large_image_source_pil*.whl \
     /opt/wheels/large_image_converter*.whl
+RUN pip install \
+    ipyleaflet \
+    jupyter-server-proxy
+ENV LARGE_IMAGE_JUPYTER_PROXY='/proxy/'

@@ -12,6 +12,7 @@ to manage a seperate thread for the web server.
 
 """
 import json
+import os
 
 from large_image.exceptions import TileSourceXYZRangeError
 
@@ -66,7 +67,7 @@ def launch_tile_server(tile_source, port=0):
 class IPyLeafletMixin:
 
     JUPYTER_HOST = '127.0.0.1'
-    JUPYTER_PROXY = False
+    JUPYTER_PROXY = os.environ.get('LARGE_IMAGE_JUPYTER_PROXY', False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
