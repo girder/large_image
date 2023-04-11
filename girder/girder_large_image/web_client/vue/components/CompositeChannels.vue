@@ -24,8 +24,8 @@ export default {
                 this.compositeChannelInfo[channelName] = {
                     number: this.channelMap[channelName],
                     enabled: true,
-                    min: 0,
-                    max: 0,
+                    min: undefined,
+                    max: undefined,
                 }
             })
             Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
