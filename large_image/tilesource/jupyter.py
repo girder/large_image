@@ -98,8 +98,8 @@ class IPyLeafletMixin:
         endpoint = f'tile?z={{z}}&x={{x}}&y={{y}}&encoding=png&repr={self.__repr__()}'
 
         layer = TileLayer(
-            url=f"{base_url}/{endpoint}",
-            # attribution="Tiles served with large-image",
+            url=f'{base_url}/{endpoint}',
+            # attribution='Tiles served with large-image',
             min_zoom=0,
             max_native_zoom=metadata['levels'] + 1,
             max_zoom=20,
@@ -135,7 +135,8 @@ class IPyLeafletMixin:
                 bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
                 origin=[0, 0],
 
-                # This almost works to fix the x, y reversal, but bounds are weird and other issues occur
+                # This almost works to fix the x, y reversal, but
+                # - bounds are weird and other issues occur
                 # proj4def='+proj=longlat +axis=seu',
                 # bounds=[[-metadata['sizeX'],-metadata['sizeY']],[metadata['sizeX'],metadata['sizeY']]],
                 # origin=[0,0],
