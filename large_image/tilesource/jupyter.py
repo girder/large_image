@@ -65,6 +65,53 @@ def launch_tile_server(tile_source, port=0):
 
 
 class IPyLeafletMixin:
+    """Mixin class to support interactive visualization in Jupyter.
+
+    This class implements ``_ipython_display_`` with ``ipyleaflet``
+    to display an interactive image visualizer for the tile source
+    in Jupyter-based environments.
+
+    For remote JupyterHub environments, you may need to configure
+    the class variables ``JUPYTER_HOST`` or ``JUPYTER_PROXY``.
+
+    If ``JUPYTER_PROXY`` is set, it overrides ``JUPYTER_HOST``.
+
+    Use ``JUPYTER_HOST`` to set the host name of the machine such
+    that the tile URL can be accessed at
+    ``'http://{JUPYTER_HOST}:{port}'``.
+
+    Use ``JUPYTER_PROXY`` to leverage ``jupyter-server-proxy`` to
+    proxy the tile serving port through Jupyter's authenticated web
+    interface. This is useful in Docker and cloud JupyterHub
+    environments. You can set the environment variable
+    ``LARGE_IMAGE_JUPYTER_PROXY`` to control the default value of
+    ``JUPYTER_PROXY``. If ``JUPYTER_PROXY`` is set to ``True``, the
+    default will be ``'/proxy/`` which will work for most Docker
+    Jupyter configurations. If in a cloud JupyterHub environment,
+    this will get a bit more nuanced as the
+    ``JUPYTERHUB_SERVICE_PREFIX`` may need to prefix the
+    ``'/proxy/'``.
+
+    To programatically set these values:
+
+    .. code::
+
+        from large_image.tilesource.jupyter import IPyLeafletMixin
+
+        # Only set one of these values
+
+        # Use a custom domain (avoids port proxying)
+        IPyLeafletMixin.JUPYTER_HOST = 'mydomain'
+
+        # Proxy in a standard JupyterLab environment
+        IPyLeafletMixin.JUPYTER_PROXY = True  # defaults to `/proxy/`
+
+        # Proxy in a cloud JupyterHub environment
+        IPyLeafletMixin.JUPYTER_PROXY = '/jupyter/user/username/proxy/'
+        # See if ``JUPYTERHUB_SERVICE_PREFIX`` is in the environment
+        # variables to improve this
+
+    """
 
     JUPYTER_HOST = '127.0.0.1'
     JUPYTER_PROXY = os.environ.get('LARGE_IMAGE_JUPYTER_PROXY', False)
