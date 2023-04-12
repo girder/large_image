@@ -41,7 +41,6 @@
    girder_annotation_config_options
    annotations
    development
-   jupyter
 
 
 Indices and tables

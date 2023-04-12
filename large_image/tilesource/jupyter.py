@@ -71,6 +71,9 @@ class IPyLeafletMixin:
     to display an interactive image visualizer for the tile source
     in Jupyter-based environments.
 
+    Install `ipyleaflet <https://github.com/jupyter-widgets/ipyleaflet>`_
+    to interactively visualize tile sources in Jupyter.
+
     For remote JupyterHub environments, you may need to configure
     the class variables ``JUPYTER_HOST`` or ``JUPYTER_PROXY``.
 
