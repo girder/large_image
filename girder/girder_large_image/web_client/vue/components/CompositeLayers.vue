@@ -24,6 +24,7 @@ export default {
                 this.compositeLayerInfo[layerName] = {
                     framedelta: this.layerMap ?this.layerMap[layerName] :undefined,
                     band: this.layerMap ?undefined :layerName,
+                    enabled: true,
                     min: undefined,
                     max: undefined,
                 }
