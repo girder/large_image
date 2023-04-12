@@ -156,7 +156,6 @@ export default Vue.extend({
             <composite-layers
                 :layers="currentModeId === 2 ? imageMetadata.channels : imageMetadata.bands"
                 :layerMap="currentModeId === 2 ? imageMetadata.channelmap : undefined"
-                :frameIndices="indexInfo"
                 @updateStyle="updateStyle"
             />
         </div>

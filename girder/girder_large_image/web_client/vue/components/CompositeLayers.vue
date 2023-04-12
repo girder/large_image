@@ -3,7 +3,7 @@ import { Chrome } from 'vue-color';
 import { CHANNEL_COLORS, OTHER_COLORS } from '../colors'
 
 export default {
-    props: ['layers', 'layerMap', 'frameIndices'],
+    props: ['layers', 'layerMap'],
     emits: ['updateStyle'],
     components: {
         'color-picker': Chrome
