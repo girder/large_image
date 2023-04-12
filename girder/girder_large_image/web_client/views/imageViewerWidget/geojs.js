@@ -78,8 +78,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             params.renderer = 'canvas';
         }
         if (this.metadata.geospatial && this.metadata.bounds) {
-            params.url = this._getTileUrl('{z}', '{x}', '{y}', { encoding: 'PNG', projection: 'EPSG:3857' })
-            this.viewer = geo.map({ node: this.el, max: this.levels - 1 });
+            params.url = this._getTileUrl('{z}', '{x}', '{y}', {encoding: 'PNG', projection: 'EPSG:3857'});
+            this.viewer = geo.map({node: this.el, max: this.levels - 1});
             this._bottomLayer = this.viewer.createLayer('osm');
             if (this.metadata.bounds.xmin !== this.metadata.bounds.xmax && this.metadata.bounds.ymin !== this.metadata.bounds.ymax) {
                 this.viewer.bounds({
@@ -87,14 +87,14 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     right: this.metadata.bounds.xmax,
                     top: this.metadata.bounds.ymax,
                     bottom: this.metadata.bounds.ymin
-                }, 'EPSG:3857')
+                }, 'EPSG:3857');
             }
         } else {
             params.url = this._getTileUrl('{z}', '{x}', '{y}');
-            var { map, layer } = geo.util.pixelCoordinateParams(
+            var {map, layer} = geo.util.pixelCoordinateParams(
                 this.el, this.sizeX, this.sizeY, this.tileWidth, this.tileHeight
             );
-            params = Object.assign({}, params, layer)
+            params = Object.assign({}, params, layer);
             this.viewer = geo.map(map);
         }
         this._layer = this.viewer.createLayer('osm', params);
@@ -186,7 +186,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 }
                 this.viewer.onIdle(() => {
                     this._layer.moveDown();
-                    if (this._bottomLayer) this._bottomLayer.moveDown()
+                    if (this._bottomLayer) this._bottomLayer.moveDown();
                     var ltemp = this._layer;
                     this._layer = this._layer2;
                     this._layer2 = ltemp;
