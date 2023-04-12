@@ -16,14 +16,21 @@ export default {
             compositeLayerInfo: {},
         }
     },
+    watch: {
+        layers() {
+            this.enabledLayers = this.layers
+            this.initializeLayerInfo()
+            this.updateStyle()
+        }
+    },
     methods: {
         initializeLayerInfo() {
             const usedColors = []
             this.compositeLayerInfo = {}
-            this.layers.forEach((layerName) => {
+            this.layers.forEach((layerName, i) => {
                 this.compositeLayerInfo[layerName] = {
                     framedelta: this.layerMap ?this.layerMap[layerName] :undefined,
-                    band: this.layerMap ?undefined :layerName,
+                    band: this.layerMap ? undefined : i + 1,  // expected 1-based index
                     enabled: true,
                     min: undefined,
                     max: undefined,
@@ -97,6 +104,7 @@ export default {
             const styleArray = []
             activeLayers.forEach((layer) => {
                 const styleEntry = Object.assign({}, layer);
+                delete styleEntry.enabled
                 styleArray.push(styleEntry);
             });
             this.$emit('updateStyle', {bands: styleArray});

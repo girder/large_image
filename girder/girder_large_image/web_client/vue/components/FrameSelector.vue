@@ -77,8 +77,13 @@ export default Vue.extend({
                 this.imageMetadata.bands = [ 'red', 'green', 'blue' ]
             } else {
                 this.imageMetadata.bands = Object.values(this.imageMetadata.bands).map(
-                    // interpretation values come as a string: "name=min-max"
-                    (b) => b.interpretation ?b.interpretation.split("=")[0] :b
+                    (b, i) => {
+                        if (!b.interpretation) {
+                            return `Band ${i}`
+                        } else {
+                            return b.interpretation.split("=")[0]
+                        }
+                    }
                 )
             }
         },
