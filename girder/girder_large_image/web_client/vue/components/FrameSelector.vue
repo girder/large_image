@@ -8,7 +8,7 @@ export default Vue.extend({
     data() {
         return {
             currentFrame: 0,
-            maxFrame: this.imageMetadata.frames.length - 1,
+            maxFrame: 0,
             sliderModes: [],
             currentModeId: 1,
             indices: [],
@@ -52,6 +52,16 @@ export default Vue.extend({
             this.frameUpdate(frame, style);
         },
         fillMetadata() {
+            if (!this.imageMetadata.frames) {
+                this.imageMetadata.frames = [{
+                    Frame: 0,
+                    Index: 0,
+                }]
+            }
+            if (!this.imageMetadata.IndexRange || !this.imageMetadata.IndexStride) {
+                this.imageMetadata.IndexRange = {}
+                this.imageMetadata.IndexStride = {}
+            }
             if (
                 (!this.imageMetadata.channels || !this.imageMetadata.channelmap)
                 && Object.keys(this.imageMetadata.IndexRange).includes('IndexC')
@@ -95,6 +105,7 @@ export default Vue.extend({
                 this.sliderModes.push(
                     { id: -1, name: 'Default' }
                 )
+                this.currentModeId = -1
             }
             if (this.imageMetadata.channels && this.imageMetadata.channels.length > 1) {
                 this.sliderModes.push(
@@ -108,6 +119,7 @@ export default Vue.extend({
     },
     mounted() {
         this.fillMetadata()
+        this.maxFrame = this.imageMetadata.frames.length - 1
         this.populateIndices()
         this.populateModes()
     }

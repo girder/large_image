@@ -120,24 +120,8 @@ var ImageViewerSelectWidget = View.extend({
      *      there is only one frame.
      */
     setFrames: function (metadata, frameUpdate) {
-        if (metadata.frames && metadata.frames.length > 1) {
-            this._frameUpdate = frameUpdate;
-            // this.$('.image-controls-frame').removeClass('hidden');
-            var ctrl = this.$('#image-frame'),
-                ctrlnum = this.$('#image-frame-number');
-            ctrl.attr('max', metadata.frames.length - 1);
-            ctrlnum.attr('max', metadata.frames.length - 1);
-            var frame = +ctrl.val();
-            if (frame >= metadata.frames.length) {
-                ctrl.val(0);
-                frame = 0;
-            }
-            ctrlnum.val(frame);
-            frameUpdate(frame);
-
-            // Vue frame control
-            this._createVue(metadata, frameUpdate);
-        }
+        // Vue frame control
+        this._createVue(metadata, frameUpdate);
     },
 
     /**
