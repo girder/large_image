@@ -20,11 +20,10 @@ export default {
         initializeLayerInfo() {
             const usedColors = []
             this.compositeLayerInfo = {}
-            this.layers.forEach((layerName, i) => {
+            this.layers.forEach((layerName) => {
                 this.compositeLayerInfo[layerName] = {
                     framedelta: this.layerMap ?this.layerMap[layerName] :undefined,
-                    band: this.layerMap ?undefined :i + 1,  // 1-based index expected
-                    enabled: true,
+                    band: this.layerMap ?undefined :layerName,
                     min: undefined,
                     max: undefined,
                 }
