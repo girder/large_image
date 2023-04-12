@@ -70,7 +70,6 @@ class IPyLeafletMixin:
     JUPYTER_PROXY = os.environ.get('LARGE_IMAGE_JUPYTER_PROXY', False)
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         # launch_tile_server ports
         self._ports = ()
 
