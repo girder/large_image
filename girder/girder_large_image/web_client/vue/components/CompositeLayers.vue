@@ -20,9 +20,10 @@ export default {
         initializeLayerInfo() {
             const usedColors = []
             this.compositeLayerInfo = {}
-            this.layers.forEach((layerName) => {
+            this.layers.forEach((layerName, i) => {
                 this.compositeLayerInfo[layerName] = {
-                    number: this.layerMap ?this.layerMap[layerName] :undefined,
+                    framedelta: this.layerMap ?this.layerMap[layerName] :undefined,
+                    band: this.layerMap ?undefined :i + 1,  // 1-based index expected
                     enabled: true,
                     min: undefined,
                     max: undefined,
@@ -30,12 +31,12 @@ export default {
             })
             Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
                 if(this.layers.includes(channelName)){
-                    this.compositeLayerInfo[channelName].falseColor = color
+                    this.compositeLayerInfo[channelName].palette = color
                     usedColors.push(color)
                 }
             })
             this.layers.forEach((layerName) => {
-                if (!this.compositeLayerInfo[layerName].falseColor) {
+                if (!this.compositeLayerInfo[layerName].palette) {
                     let chosenColor;
                     const unusedColors = OTHER_COLORS.filter(
                         (color) => !usedColors.includes(color)
@@ -45,7 +46,7 @@ export default {
                     } else {
                         chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
                     }
-                    this.compositeLayerInfo[layerName].falseColor = chosenColor
+                    this.compositeLayerInfo[layerName].palette = chosenColor
                     usedColors.push(chosenColor)
                 }
             })
@@ -69,7 +70,7 @@ export default {
             }
         },
         updateLayerColor(layer, swatch) {
-            this.compositeLayerInfo[layer].falseColor = swatch.hex;
+            this.compositeLayerInfo[layer].palette = swatch.hex;
         },
         updateLayerMin(event, layer) {
             const newVal = event.target.value;
@@ -95,20 +96,7 @@ export default {
             ).filter((layer) => layer.enabled);
             const styleArray = []
             activeLayers.forEach((layer) => {
-                // TODO: what should each style entry look like for band compositing?
-                const styleEntry = {};
-                if (layer.number) {
-                    styleEntry['frameDelta'] = layer.number
-                }
-                if (layer.falseColor) {
-                    styleEntry['palette'] = layer.falseColor;
-                }
-                if (layer.min) {
-                    styleEntry['min'] = layer.min;
-                }
-                if (layer.max) {
-                    styleEntry['max'] = layer.max;
-                }
+                const styleEntry = Object.assign({}, layer);
                 styleArray.push(styleEntry);
             });
             this.$emit('updateStyle', {bands: styleArray});
@@ -150,13 +138,13 @@ export default {
                     <td :id="layer+'_picker'">
                         <span
                             class="current-color"
-                            :style="{ 'background-color': compositeLayerInfo[layer].falseColor }"
+                            :style="{ 'background-color': compositeLayerInfo[layer].palette }"
                             @click="() => toggleColorPicker(layer)"
                         />
                         <color-picker
                             class="picker-offset"
                             v-if="colorPickerShown === layer"
-                            :value="compositeLayerInfo[layer].falseColor"
+                            :value="compositeLayerInfo[layer].palette"
                             @input="(swatch) => {updateLayerColor(layer, swatch)}"
                         />
                     </td>
