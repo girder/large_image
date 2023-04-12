@@ -67,61 +67,52 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
 
         var geo = window.geo; // this makes the style checker happy
 
-        var params;
-        if (!this.metadata.geospatial || !this.metadata.bounds) {
-            var w = this.sizeX, h = this.sizeY;
-            params = geo.util.pixelCoordinateParams(
-                this.el, w, h, this.tileWidth, this.tileHeight);
-            params.layer.useCredentials = true;
-            params.layer.url = this._getTileUrl('{z}', '{x}', '{y}');
-            if (this.tileWidth > 8192 || this.tileHeight > 8192) {
-                params.layer.renderer = 'canvas';
-            }
-            this.viewer = geo.map(params.map);
-            params.layer.autoshareRenderer = false;
-            this._layer = this.viewer.createLayer('osm', params.layer);
-            if (this.metadata.frames && this.metadata.frames.length > 1) {
-                const baseUrl = this._getTileUrl('{z}', '{x}', '{y}');
-                const match = baseUrl.match(/[?&](_=[^&]*)/);
-                const updated = match && match[1] ? ('&' + match[1]) : '';
-                setFrameQuad(this.metadata, this._layer, {
-                    // allow more and larger textures is slower, balancing
-                    // performance and appearance
-                    // maxTextures: 16,
-                    // maxTotalTexturePixels: 256 * 1024 * 1024,
-                    baseUrl: baseUrl.split('/tiles/')[0] + '/tiles',
-                    restRequest: restRequest,
-                    restUrl: 'item/' + this.itemId + '/tiles',
-                    query: 'cache=true' + updated
-                });
-                this._layer.setFrameQuad(0);
-            }
-        } else {
-            params = {
-                keepLower: false,
-                attribution: null,
-                url: this._getTileUrl('{z}', '{x}', '{y}', {encoding: 'PNG', projection: 'EPSG:3857'}),
-                useCredentials: true,
-                maxLevel: this.levels - 1
-            };
-            // the metadata levels is the count including level 0, so use one
-            // less than the value specified
-            this.viewer = geo.map({node: this.el, max: this.levels - 1});
+        var params = {
+            useCredentials: true,
+            autoshareRenderer: false,
+            keepLower: false,
+            attribution: null,
+            maxLevel: this.levels - 1
+        };
+        if (this.tileWidth > 8192 || this.tileHeight > 8192) {
+            params.renderer = 'canvas';
+        }
+        if (this.metadata.geospatial && this.metadata.bounds) {
+            params.url = this._getTileUrl('{z}', '{x}', '{y}', { encoding: 'PNG', projection: 'EPSG:3857' })
+            this.viewer = geo.map({ node: this.el, max: this.levels - 1 });
+            this._bottomLayer = this.viewer.createLayer('osm');
             if (this.metadata.bounds.xmin !== this.metadata.bounds.xmax && this.metadata.bounds.ymin !== this.metadata.bounds.ymax) {
                 this.viewer.bounds({
                     left: this.metadata.bounds.xmin,
                     right: this.metadata.bounds.xmax,
                     top: this.metadata.bounds.ymax,
                     bottom: this.metadata.bounds.ymin
-                }, 'EPSG:3857');
+                }, 'EPSG:3857')
             }
-            this.viewer.createLayer('osm');
-            if (this.tileWidth > 8192 || this.tileHeight > 8192) {
-                params.renderer = 'canvas';
-            }
-            params.autoshareRenderer = false;
-            this._layer = this.viewer.createLayer('osm', params);
+        } else {
+            params.url = this._getTileUrl('{z}', '{x}', '{y}');
+            var { map, layer } = geo.util.pixelCoordinateParams(
+                this.el, this.sizeX, this.sizeY, this.tileWidth, this.tileHeight
+            );
+            params = Object.assign({}, params, layer)
+            this.viewer = geo.map(map);
         }
+        this._layer = this.viewer.createLayer('osm', params);
+
+        const baseUrl = this._getTileUrl('{z}', '{x}', '{y}');
+        const match = baseUrl.match(/[?&](_=[^&]*)/);
+        const updated = match && match[1] ? ('&' + match[1]) : '';
+        setFrameQuad(this.metadata, this._layer, {
+            // allow more and larger textures is slower, balancing
+            // performance and appearance
+            // maxTextures: 16,
+            // maxTotalTexturePixels: 256 * 1024 * 1024,
+            baseUrl: baseUrl.split('/tiles/')[0] + '/tiles',
+            restRequest: restRequest,
+            restUrl: 'item/' + this.itemId + '/tiles',
+            query: 'cache=true' + updated
+        });
+        this._layer.setFrameQuad(0);
         if (this._setFrames) {
             this._setFrames(this.metadata, _.bind(this.frameUpdate, this));
         }
@@ -195,6 +186,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 }
                 this.viewer.onIdle(() => {
                     this._layer.moveDown();
+                    if (this._bottomLayer) this._bottomLayer.moveDown()
                     var ltemp = this._layer;
                     this._layer = this._layer2;
                     this._layer2 = ltemp;
