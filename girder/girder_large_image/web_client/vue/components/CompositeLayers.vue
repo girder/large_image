@@ -158,7 +158,7 @@ export default {
                             @change="updateActiveLayers"
                         >
                     </td>
-                    <td :id="layer+'_picker'" style="position: relative">
+                    <td :id="layer+'_picker'">
                         <span
                             class="current-color"
                             :style="{ 'background-color': layerInfo.palette }"
@@ -166,6 +166,7 @@ export default {
                         />
                         <color-picker
                             class="picker-offset"
+                            :disableAlpha="true"
                             v-if="colorPickerShown === layer"
                             :value="layerInfo.palette"
                             @input="(swatch) => {updateLayerColor(layer, swatch)}"

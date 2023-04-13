@@ -16,32 +16,27 @@ export default {
 </script>
 
 <template>
-    <div class="dual-controls">
-        <label for="numberControl">{{ label }}: </label>
-        <input
+    <tr class="dual-controls">
+        <td><label for="numberControl">{{ label }}: </label></td>
+        <td><input
             type="number"
             name="numberControl"
             min="0"
             :max="valueMax"
             v-model="value"
-        >
-        <input
+        ></td>
+        <td style="width:90%"><input
             type="range"
             name="sliderControl"
             min="0"
             :max="valueMax"
             v-model="value"
-        >
-    </div>
+        ></td>
+    </tr>
 </template>
 
 <style scoped>
-.dual-controls {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-}
-.dual-controls > * {
+.dual-controls > * > * {
     margin-right: 15px;
 }
 </style>

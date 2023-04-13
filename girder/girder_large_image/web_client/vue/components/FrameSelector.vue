@@ -155,19 +155,16 @@ export default Vue.extend({
             label="Frame"
             @updateValue="updateFrameSlider"
         />
-        <div class="image-frame-simple-control" v-if="currentModeId > 0">
-            <div
+        <table v-if="currentModeId > 0">
+            <dual-input
                 v-for="index in sliderIndices"
                 :key="index"
-            >
-                <dual-input
-                    :currentValue="indexInfo[index].current"
-                    :valueMax="indexInfo[index].range"
-                    :label="index.replace('Index', '')"
-                    @updateValue="(v) => updateAxisSlider({index, frame: v})"
-                />
-            </div>
-        </div>
+                :currentValue="indexInfo[index].current"
+                :valueMax="indexInfo[index].range"
+                :label="index.replace('Index', '')"
+                @updateValue="(v) => updateAxisSlider({index, frame: v})"
+            />
+        </table>
 
         <div v-if="currentModeId > 1" class="image-frame-simple-control">
             <composite-layers
