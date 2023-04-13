@@ -58,6 +58,14 @@ export default {
                 }
             })
         },
+        toggleEnableAll() {
+            if (this.enabledLayers !== this.layers) {
+                this.enabledLayers = this.layers
+            } else {
+                this.enabledLayers = []
+            }
+            this.updateActiveLayers()
+        },
         toggleColorPicker(layer) {
             this.colorPickerShown = layer
             if (this.colorPickerShown === undefined) {
@@ -120,10 +128,17 @@ export default {
 <template>
     <div class="table-container">
         <table id="composite-layer-table" class="table table-condensed">
-            <thead>
+            <thead class="table-header">
                 <tr>
                     <th class="layer-col">Layer</th>
-                    <th class="enabled-col">Enabled?</th>
+                    <th class="enabled-col">
+                        <input
+                            type="checkbox"
+                            :checked="enabledLayers === layers"
+                            @input="toggleEnableAll"
+                        >
+                        Enable
+                    </th>
                     <th class="color-col">Color</th>
                     <th class="precision-col">Min</th>
                     <th class="precision-col">Max</th>
@@ -131,7 +146,7 @@ export default {
             </thead>
             <tbody>
                 <tr
-                    v-for="layer in layers.filter(c => compositeLayerInfo[c] !== undefined)"
+                    v-for="[layer, layerInfo] in Object.entries(compositeLayerInfo).filter(([, layerInfo]) => layerInfo)"
                     :key="layer"
                 >
                     <td>{{ layer }}</td>
@@ -146,13 +161,13 @@ export default {
                     <td :id="layer+'_picker'" style="position: relative">
                         <span
                             class="current-color"
-                            :style="{ 'background-color': compositeLayerInfo[layer].palette }"
+                            :style="{ 'background-color': layerInfo.palette }"
                             @click="() => toggleColorPicker(layer)"
                         />
                         <color-picker
                             class="picker-offset"
                             v-if="colorPickerShown === layer"
-                            :value="compositeLayerInfo[layer].palette"
+                            :value="layerInfo.palette"
                             @input="(swatch) => {updateLayerColor(layer, swatch)}"
                         />
                     </td>
@@ -162,7 +177,7 @@ export default {
                             step="0.01"
                             min="0"
                             max="1"
-                            :value="compositeLayerInfo[layer].min"
+                            :value="layerInfo.min"
                             @change.prevent="(event) => updateLayerMin(event, layer)"
                         >
                     </td>
@@ -172,7 +187,7 @@ export default {
                             step="0.01"
                             min="0"
                             max="1"
-                            :value="compositeLayerInfo[layer].max"
+                            :value="layerInfo.max"
                             @change.prevent="(event) => updateLayerMax(event, layer)"
                         >
                     </td>
@@ -196,8 +211,14 @@ export default {
     z-index: 100;
     margin-left: 50px;
 }
+.table-header {
+    position: sticky;
+    top: 0px;
+    background-color: white;
+    z-index: 2;
+}
 .table-container {
-    max-height: 700px;
+    max-height: 300px;
     overflow: scroll;
 }
 .table-container input {
