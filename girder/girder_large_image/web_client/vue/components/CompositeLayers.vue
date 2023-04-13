@@ -143,7 +143,7 @@ export default {
                             @change="updateActiveLayers"
                         >
                     </td>
-                    <td :id="layer+'_picker'">
+                    <td :id="layer+'_picker'" style="position: relative">
                         <span
                             class="current-color"
                             :style="{ 'background-color': compositeLayerInfo[layer].palette }"
