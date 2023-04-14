@@ -25,7 +25,7 @@ class AlgorithmSweepXArray(AlgorithmSweep):
             {
                 'results': (
                     list(dim_sizes.keys()),
-                    np.zeros(
+                    np.empty(
                         tuple(dim_sizes.values()),
                     ),
                 )
