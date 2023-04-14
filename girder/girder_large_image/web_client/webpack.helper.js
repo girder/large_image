@@ -11,9 +11,6 @@ module.exports = function (config) {
             to: path.join(config.output.path, 'extra', 'geojs.js'),
             toType: 'file'
         }, {
-            from: path.join(path.resolve(__dirname), 'node_modules', 'slideatlas-viewer', 'dist'),
-            to: path.join(config.output.path, 'extra', 'slideatlas')
-        }, {
             from: path.join(path.resolve(__dirname), 'node_modules', 'sinon', 'pkg', 'sinon.js'),
             to: path.join(config.output.path, 'extra', 'sinon.js')
         }])

@@ -39,7 +39,10 @@ extraReqs = {
     'converter': [f'large-image-converter{limit_version}'],
     'colormaps': ['matplotlib'],
     'tiledoutput': ['pyvips'],
-    'performance': ['simplejpeg'],
+    'performance': [
+        'simplejpeg ; python_version >= "3.7"',
+        'simplejpeg<1.6.6 ; python_version < "3.7"',
+    ],
 }
 sources = {
     'bioformats': [f'large-image-source-bioformats{limit_version}'],

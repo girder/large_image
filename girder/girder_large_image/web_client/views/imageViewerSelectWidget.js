@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import _ from 'underscore';
 
-import { wrap } from '@girder/core/utilities/PluginUtils';
+import {wrap} from '@girder/core/utilities/PluginUtils';
 import eventStream from '@girder/core/utilities/EventStream';
 import ItemView from '@girder/core/views/body/ItemView';
 import View from '@girder/core/views/View';

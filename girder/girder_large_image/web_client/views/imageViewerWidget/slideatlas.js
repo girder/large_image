@@ -1,7 +1,7 @@
 import $ from 'jquery';
 
 import Backbone from 'backbone';
-import { parseQueryString, splitRoute } from '@girder/core/misc';
+import {parseQueryString, splitRoute} from '@girder/core/misc';
 
 import ImageViewerWidget from './base';
 
@@ -12,17 +12,12 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
                 return this.setTransform(1, 0, 0, 1, 0, 0);
             };
         }
-        let root = '/static/built';
-        try {
-            root = __webpack_public_path__ || root; // eslint-disable-line
-        } catch (err) { }
-        root = root.replace(/\/$/, '');
         if (!$('head #large_image-slideatlas-css').length) {
             $('head').prepend(
                 $('<link>', {
                     id: 'large_image-slideatlas-css',
                     rel: 'stylesheet',
-                    href: root + '/plugins/large_image/extra/slideatlas/sa.css'
+                    href: 'https://unpkg.com/slideatlas-viewer@%5e4.4.1/dist/sa.css'
                 })
             );
         }
@@ -30,7 +25,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
             $.ajax({ // like $.getScript, but allow caching
-                url: root + '/plugins/large_image/extra/slideatlas/sa-all.max.js',
+                url: 'https://unpkg.com/slideatlas-viewer@%5e4.4.1/dist/sa-all.max.js',
                 dataType: 'script',
                 cache: true
             }))
@@ -100,7 +95,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         this.girderGui = new window.SAM.LayerPanel(this.viewer, this.itemId);
         $(this.el).css({position: 'relative'});
         window.SA.SAFullScreenButton($(this.el))
-            .css({'position': 'absolute', 'left': '2px', 'top': '2px'});
+            .css({position: 'absolute', left: '2px', top: '2px'});
         window.SA.GirderView = this;
 
         // Set the view from the URL if bounds are specified.

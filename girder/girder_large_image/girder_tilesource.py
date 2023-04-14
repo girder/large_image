@@ -59,6 +59,8 @@ class GirderTileSource(tilesource.FileTileSource):
             self._jsonstyle)
 
     def mayHaveAdjacentFiles(self, largeImageFile):
+        if largeImageFile.get('linkUrl'):
+            return True
         if not hasattr(self, '_mayHaveAdjacentFiles'):
             largeImageFileId = self.item['largeImage']['fileId']
             # The item has adjacent files if there are any files that are not

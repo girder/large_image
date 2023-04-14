@@ -1,0 +1,17 @@
+---
+scale:
+  mm_x: 0.0005
+  mm_y: 0.0005
+  magnification: 20
+sources:
+  - sourceName: test
+    path: __none__
+    params:
+      tileWidth: 256
+      tileHeight: 256
+      sizeX: 10000
+      sizeY: 6000
+      fractal: True
+      monochrome: False
+      # multiband
+      bands: "red=400-12000,green=0-65535,blue=800-4000,alpha=0-65535"
