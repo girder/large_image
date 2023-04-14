@@ -5,6 +5,9 @@ import xarray as xr
 from algorithm_sweep import AlgorithmSweep
 
 import large_image
+from PIL import ImageFile
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class AlgorithmSweepXArray(AlgorithmSweep):
@@ -36,8 +39,8 @@ class AlgorithmSweepXArray(AlgorithmSweep):
         return ds
 
     def initialize_storage(self):
-        self.source = large_image.open(self.input_filename)
-        self.source_metadata = self.source.getMetadata()
+        source = large_image.open(self.input_filename)
+        self.source_metadata = source.getMetadata()
         self.zarr_path = Path(self.output_dir, 'results.zarr')
         ds = self.create_ds()
         ds.to_zarr(self.zarr_path, mode='w', compute=False)
@@ -53,14 +56,16 @@ class AlgorithmSweepXArray(AlgorithmSweep):
                 4,
             )
         )
-        for tile in self.source.tileIterator(
+        source = large_image.open(self.input_filename)
+        for tile in source.tileIterator(
             format=large_image.tilesource.TILE_FORMAT_NUMPY,
             tile_size=dict(width=2048, height=2048),
         ):
+            altered_data = self.algorithm(tile['tile'], *param_combo)
             output_data[
                 tile['y']: tile['y'] + tile['height'],
                 tile['x']: tile['x'] + tile['width'],
-            ] = self.algorithm(tile['tile'], *param_combo)
+            ] = altered_data
 
         output_ds = self.create_ds()
         output_ds['results'].loc[current_coords] = output_data

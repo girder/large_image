@@ -5,6 +5,9 @@ import numpy as np
 from algorithm_sweep import AlgorithmSweep
 
 import large_image
+from PIL import ImageFile
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class AlgorithmSweepHDF5(AlgorithmSweep):
