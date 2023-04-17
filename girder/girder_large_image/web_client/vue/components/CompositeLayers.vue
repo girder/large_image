@@ -219,7 +219,6 @@ export default {
     z-index: 2;
 }
 .table-container {
-    max-height: 300px;
     overflow: scroll;
 }
 .table-container input {
