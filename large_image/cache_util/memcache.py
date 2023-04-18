@@ -14,6 +14,7 @@
 #  limitations under the License.
 #############################################################################
 
+import copy
 import threading
 import time
 from typing import Tuple
@@ -47,15 +48,13 @@ class MemCache(BaseCache):
         if len(url) > 1:
             behaviors['remove_failed'] = 1
         # name mangling to override 'private variable' __data in cache
-        self._client = pylibmc.Client(
-            url, binary=True, username=username, password=password,
-            behaviors=behaviors)
+        self._clientParams = (url, dict(
+            binary=True, username=username, password=password, behaviors=behaviors))
+        self._client = pylibmc.Client(self._clientParams[0], **self._clientParams[1])
         if mustBeAvailable:
             # Try to set a value; this will throw an error if the server is
             # unreachable, so we don't bother trying to use it.
             self._client['large_image_cache_test'] = time.time()
-        self._clientParams = (url, dict(
-            binary=True, username=username, password=password, behaviors=behaviors))
 
     def __repr__(self):
         return "Memcache doesn't list its keys"
@@ -85,6 +84,7 @@ class MemCache(BaseCache):
         except pylibmc.ServerDown:
             self.logError(pylibmc.ServerDown, config.getConfig('logprint').info,
                           'Memcached ServerDown')
+            self._reconnect()
             return self.__missing__(key)
         except pylibmc.Error:
             self.logError(pylibmc.Error, config.getConfig('logprint').exception,
@@ -109,6 +109,7 @@ class MemCache(BaseCache):
         except pylibmc.ServerDown:
             self.logError(pylibmc.ServerDown, config.getConfig('logprint').info,
                           'Memcached ServerDown')
+            self._reconnect()
         except pylibmc.TooBig:
             pass
         except pylibmc.Error as exc:
@@ -130,9 +131,21 @@ class MemCache(BaseCache):
     def maxsize(self):
         return self._getStat('limit_maxbytes')
 
+    def _reconnect(self):
+        try:
+            self._lastReconnectBackoff = getattr(self, '_lastReconnectBackoff', 2)
+            if time.time() - getattr(self, '_lastReconnect', 0) > self._lastReconnectBackoff:
+                config.getConfig('logprint').info('Trying to reconnect to memcached server')
+                self._client = pylibmc.Client(self._clientParams[0], **self._clientParams[1])
+                self._lastReconnectBackoff = min(self._lastReconnectBackoff + 1, 30)
+                self._lastReconnect = time.time()
+        except Exception:
+            pass
+
     def _blockingClient(self):
-        self._clientParams[1]['behaviors']['no_block'] = False
-        return pylibmc.Client(self._clientParams[0], **self._clientParams[1])
+        params = copy.deepcopy(self._clientParams)
+        params[1]['behaviors']['no_block'] = False
+        return pylibmc.Client(params[0], **params[1])
 
     def _getStat(self, key):
         try:

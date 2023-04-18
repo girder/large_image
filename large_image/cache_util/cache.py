@@ -196,7 +196,9 @@ class LruCacheMetaclass(type):
                 subkwargs.pop('style')
                 subresult = cls(*args, **subkwargs)
                 result = subresult.__class__.__new__(subresult.__class__)
-                result.__dict__ = subresult.__dict__.copy()
+                with subresult._styleLock:
+                    result.__dict__ = subresult.__dict__.copy()
+                    result._styleLock = threading.RLock()
                 result._setStyle(kwargs['style'])
                 result._classkey = key
                 # for pickling
