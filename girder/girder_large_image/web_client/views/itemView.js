@@ -1,7 +1,7 @@
 import $ from 'jquery';
-import { AccessType } from '@girder/core/constants';
-import { restRequest } from '@girder/core/rest';
-import { wrap } from '@girder/core/utilities/PluginUtils';
+import {AccessType} from '@girder/core/constants';
+import {restRequest} from '@girder/core/rest';
+import {wrap} from '@girder/core/utilities/PluginUtils';
 import ItemView from '@girder/core/views/body/ItemView';
 
 import largeImageConfig from './configView';

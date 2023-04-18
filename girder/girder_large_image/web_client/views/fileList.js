@@ -1,11 +1,11 @@
 import $ from 'jquery';
 import _ from 'underscore';
 
-import { restRequest } from '@girder/core/rest';
+import {restRequest} from '@girder/core/rest';
 import events from '@girder/core/events';
 import FileListWidget from '@girder/core/views/widgets/FileListWidget';
-import { wrap } from '@girder/core/utilities/PluginUtils';
-import { AccessType } from '@girder/core/constants';
+import {wrap} from '@girder/core/utilities/PluginUtils';
+import {AccessType} from '@girder/core/constants';
 
 import largeImageFileAction from '../templates/largeImage_fileAction.pug';
 import '../stylesheets/fileList.styl';
@@ -26,8 +26,7 @@ wrap(FileListWidget, 'render', function (render) {
         if (!actions.length) {
             return;
         }
-        var fileAction = largeImageFileAction({
-            file: file, largeImage: largeImage});
+        var fileAction = largeImageFileAction({file: file, largeImage: largeImage});
         if (fileAction) {
             actions.prepend(fileAction);
             if (actions.has('.g-large-image-remove').length) {

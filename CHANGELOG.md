@@ -1,5 +1,51 @@
 # Change Log
 
+## 1.20.4
+
+### Improvements
+- Better cache handling with Etags ([#1097](../../pull/1097))
+- Reduce duplicate computation of slow cached values ([#1100](../../pull/1100))
+- Reconnect to memcached if the connection fails ([#1104](../../pull/1104))
+
+### Bug Fixes
+- Tile serving can bypass loading a source if it is in memory ([#1102](../../pull/1102))
+- Don't copy style lock when semi-duplicating a tile source ([#1114](../../pull/1114))
+
+### Changes
+- On the large image item page, guard against overflow ([#1096](../../pull/1096))
+- Specify version of simplejpeg for older python ([#1098](../../pull/1098))
+- Better expose the Girder yaml config files from python ([#1099](../../pull/1099))
+
+## 1.20.3
+
+### Changes
+- Update dicom source for upstream changes ([#1092](../../pull/1092))
+
+## 1.20.2
+
+### Improvements
+- Allow ICC correction to specify intent ([#1066](../../pull/1066))
+- Make tile sources pickleable ([#1071](../../pull/1071))
+- Extract scale information from more bioformats files ([#1074](../../pull/1074))
+- Speed up validating annotations with user fields ([#1078](../../pull/1078))
+- Speed up validating annotation colors ([#1080](../../pull/1080))
+- Support more complex bands from the test source ([#1082](../../pull/1082))
+- Improve error thrown for invalid schema with multi source ([#1083](../../pull/1083))
+- Support multi-frame PIL sources ([#1088](../../pull/1088))
+
+### Bug Fixes
+- The cache could reuse a class inappropriately ([#1070](../../pull/1070))
+- Increase size of annotation json that will be parsed ([#1075](../../pull/1075))
+- Quote ETag tags ([#1084](../../pull/1084))
+
+### Changes
+- Stop packaging the slideatlas viewer directly ([#1085](../../pull/1085))
+
+## 1.20.1
+
+### Bug Fixes
+- Fix packaging listing various source requirements ([#1064](../../pull/1064))
+
 ## 1.20.0
 
 ### Features
@@ -14,8 +60,10 @@
 - Render item lists faster ([#1036](../../pull/1036))
 - Reduce bioformats source memory usage ([#1038](../../pull/1038))
 - Better pick the largest image from bioformats ([#1039](../../pull/1039), [#1040](../../pull/1040))
+- Speed up some images handled with bioformats ([#1063](../../pull/1063))
 - Cache histogram thresholds ([#1042](../../pull/1042))
 - Add `_repr_png_` for Jupyter ([#1058](../../pull/1058))
+- Ignore bogus tifffile resolutions ([#1062](../../pull/1062))
 
 ## 1.19.3
 

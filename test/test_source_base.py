@@ -53,7 +53,7 @@ SourceAndFiles = {
     },
     'nd2': {
         'read': r'\.(nd2)$',
-        'python': sys.version_info >= (3, 7) and sys.version_info < (3, 11),
+        'python': sys.version_info >= (3, 7),
     },
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
@@ -77,7 +77,7 @@ SourceAndFiles = {
     'tifffile': {
         'read': r'',
         'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2|dcm)$',
-        'python': sys.version_info >= (3, 7) and sys.version_info < (3, 11),
+        'python': sys.version_info >= (3, 7),
     },
     'vips': {
         'read': r'',
@@ -194,11 +194,10 @@ def testSourcesTilesAndMethods(source, filename):
     #  assert ts.histogram(onlyMinMax=True)['min'][0] is not None
     # Test multiple frames if they exist
     assert ts.frames >= 1
-    if len(tileMetadata.get('frames', [])) > 1:
+    if ts.frames > 1:
         assert ts.frames == len(tileMetadata['frames'])
-        tsf = sourceClass(imagePath, frame=len(tileMetadata['frames']) - 1)
-        tileMetadata = tsf.getMetadata()
-        utilities.checkTilesZXY(tsf, tileMetadata)
+        utilities.checkTilesZXY(
+            ts, tileMetadata, tileParams=dict(frame=ts.frames - 1))
     # Test if we can fetch an associated image if any exist
     assert ts.getAssociatedImagesList() is not None
     if len(ts.getAssociatedImagesList()):

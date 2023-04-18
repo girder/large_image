@@ -463,3 +463,19 @@ def testInternalMetadata():
     source = large_image_source_openslide.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'openslide' in metadata
+
+
+def testICCIntents():
+    imagePath = datastore.fetch(
+        # 'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
+        # '4a70-9ae3-50e3ab45e242.svs')
+        'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-'
+        'af6f-14fefbbdf7bd.svs')
+    images = []
+    for opt in {False, True, 'perceptual', 'relative_colorimetric',
+                'absolute_colorimetric', 'saturation'}:
+        ts = large_image_source_openslide.open(imagePath, style={'icc': opt})
+        image = ts.getThumbnail()[0]
+        if image not in images:
+            images.append(image)
+    assert len(images) >= 2

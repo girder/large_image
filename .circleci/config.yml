@@ -97,11 +97,13 @@ commands:
     steps:
       - run:
           name: Install Codecov client
-          command: pip install codecov
+          command: |
+              curl -Os https://uploader.codecov.io/latest/linux/codecov
+              chmod +x codecov
       - run:
           name: Upload coverage
           command: |
-              codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml
+              ./codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml
 
 jobs:
   testdocker:
@@ -175,7 +177,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.10.9
+          version: 3.10.10
           node: v12
       - tox:
           env: test-py310
@@ -188,7 +190,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.11.1
+          version: 3.11.2
           node: v12
       - tox:
           env: test-py311
@@ -200,7 +202,7 @@ jobs:
     steps:
       - checkout
       - tox:
-          env: docs,flake8,lintclient,lintannotationclient
+          env: docs,flake8,lintclient
       - store_artifacts:
           path: build/docs
       - persist_to_workspace:

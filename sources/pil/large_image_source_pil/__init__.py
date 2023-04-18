@@ -17,15 +17,26 @@
 import json
 import math
 import os
+import threading
 
 import numpy
 import PIL.Image
 
+import large_image
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
+
+# Optionally extend PIL with some additional formats
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+    from pillow_heif import register_avif_opener
+    register_avif_opener()
+except Exception:
+    pass
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -111,12 +122,15 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # such misses most of the data.
         self._ignoreSourceNames('pil', largeImagePath)
 
-        try:
-            self._pilImage = PIL.Image.open(largeImagePath)
-        except OSError:
-            if not os.path.isfile(largeImagePath):
-                raise TileSourceFileNotFoundError(largeImagePath) from None
-            raise TileSourceError('File cannot be opened via PIL.')
+        self._pilImage = None
+        self._fromRawpy(largeImagePath)
+        if self._pilImage is None:
+            try:
+                self._pilImage = PIL.Image.open(largeImagePath)
+            except OSError:
+                if not os.path.isfile(largeImagePath):
+                    raise TileSourceFileNotFoundError(largeImagePath) from None
+                raise TileSourceError('File cannot be opened via PIL.')
         minwh = min(self._pilImage.width, self._pilImage.height)
         maxwh = max(self._pilImage.width, self._pilImage.height)
         # Throw an exception if too small or big before processing further
@@ -125,6 +139,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         maxWidth, maxHeight = getMaxSize(maxSize, self.defaultMaxSize())
         if maxwh > max(maxWidth, maxHeight):
             raise TileSourceError('PIL tile size is too large.')
+        self._checkForFrames()
         if self._pilImage.info.get('icc_profile', None):
             self._iccprofiles = [self._pilImage.info.get('icc_profile')]
         # If the rotation flag exists, loading the image may change the width
@@ -136,11 +151,13 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # maximum of 1, 2^8-1, 2^16-1, 2^24-1, or 2^32-1, and scales it to
         # [0, 255]
         pilImageMode = self._pilImage.mode.split(';')[0]
+        self._factor = None
         if pilImageMode in ('I', 'F'):
             imgdata = numpy.asarray(self._pilImage)
             maxval = 256 ** math.ceil(math.log(numpy.max(imgdata) + 1, 256)) - 1
+            self._factor = 255.0 / maxval
             self._pilImage = PIL.Image.fromarray(numpy.uint8(numpy.multiply(
-                imgdata, 255.0 / maxval)))
+                imgdata, self._factor)))
         self.sizeX = self._pilImage.width
         self.sizeY = self._pilImage.height
         # We have just one tile which is the entire image.
@@ -150,6 +167,40 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Throw an exception if too big after processing
         if self.tileWidth > maxWidth or self.tileHeight > maxHeight:
             raise TileSourceError('PIL tile size is too large.')
+
+    def _checkForFrames(self):
+        self._frames = None
+        self._frameCount = 1
+        if hasattr(self._pilImage, 'seek'):
+            baseSize, baseMode = self._pilImage.size, self._pilImage.mode
+            self._frames = [
+                idx for idx, frame in enumerate(PIL.ImageSequence.Iterator(self._pilImage))
+                if frame.size == baseSize and frame.mode == baseMode]
+            self._pilImage.seek(0)
+            self._frameImage = self._pilImage
+            self._frameCount = len(self._frames)
+            self._tileLock = threading.RLock()
+
+    def _fromRawpy(self, largeImagePath):
+        """
+        Try to use rawpy to read an image.
+        """
+        # if rawpy is present, try reading via that library first
+        try:
+            import rawpy
+
+            rgb = rawpy.imread(largeImagePath).postprocess()
+            rgb = large_image.tilesource.utilities._imageToNumpy(rgb)
+            if rgb.shape[2] == 2:
+                rgb = rgb[:, :, :1]
+            elif rgb.shape[2] > 3:
+                rgb = rgb[:, :, :3]
+            self._pilImage = PIL.Image.fromarray(
+                rgb.astype(numpy.uint8) if rgb.dtype != numpy.uint16 else rgb,
+                ('RGB' if rgb.dtype != numpy.uint16 else 'RGB;16') if rgb.shape[2] == 3 else
+                ('L' if rgb.dtype != numpy.uint16 else 'L;16'))
+        except Exception:
+            pass
 
     def defaultMaxSize(self):
         """
@@ -170,6 +221,19 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return super().getState() + ',' + str(
             self._maxSize)
 
+    def getMetadata(self):
+        """
+        Return a dictionary of metadata containing levels, sizeX, sizeY,
+        tileWidth, tileHeight, magnification, mm_x, mm_y, and frames.
+
+        :returns: metadata dictionary.
+        """
+        result = super().getMetadata()
+        if getattr(self, '_frames', None) is not None and len(self._frames) > 1:
+            result['frames'] = [{} for idx in range(len(self._frames))]
+            self._addMetadataFrameInformation(result)
+        return result
+
     def getInternalMetadata(self, **kwargs):
         """
         Return additional known metadata about the tile source.  Data returned
@@ -189,8 +253,23 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 mayRedirect=False, **kwargs):
-        self._xyzInRange(x, y, z)
-        return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
+        frame = self._getFrame(**kwargs)
+        self._xyzInRange(x, y, z, frame, self._frameCount)
+        if frame != 0:
+            with self._tileLock:
+                self._frameImage.seek(self._frames[frame])
+                try:
+                    img = self._frameImage.copy()
+                except Exception:
+                    pass
+                self._frameImage.seek(0)
+            img.load()
+            if self._factor:
+                img = PIL.Image.fromarray(numpy.uint8(numpy.multiply(
+                    numpy.asarray(img), self._factor)))
+        else:
+            img = self._pilImage
+        return self._outputTile(img, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
 
