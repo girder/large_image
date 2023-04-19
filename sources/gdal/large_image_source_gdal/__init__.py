@@ -45,7 +45,7 @@ from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
 from large_image.tilesource import FileTileSource
-from large_image.tilesource.utilities import getPaletteColors
+from large_image.tilesource.utilities import JSONDict, getPaletteColors
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -261,7 +261,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
             if not len(styleBands) or (len(styleBands) == 1 and isinstance(
                     styleBands[0].get('band', 1), int) and styleBands[0].get('band', 1) <= 0):
-                del self.style
+                del self._style
         style = self._styleBands()
         if len(style):
             hasAlpha = False
@@ -629,7 +629,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def getMetadata(self):
         with self._getDatasetLock:
-            metadata = {
+            metadata = JSONDict({
                 'geospatial': self.geospatial,
                 'levels': self.levels,
                 'sizeX': self.sizeX,
@@ -642,7 +642,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'bounds': self.getBounds(self.projection),
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
-            }
+            })
         metadata.update(self.getNativeMagnification())
         if hasattr(self, '_netcdf'):
             # To ensure all band information from all subdatasets in netcdf,
