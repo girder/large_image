@@ -45,8 +45,10 @@ export default Vue.extend({
         update() {
             let frame = 0;
             _.forEach(this.indices, (index) => {
-                const info = this.indexInfo[index];
-                frame += info.current * info.stride;
+                if (this.sliderIndices.includes(index)){
+                    const info = this.indexInfo[index];
+                    frame += info.current * info.stride;
+                }
             });
             let style = this.currentModeId > 1 ? this.style : undefined
             this.frameUpdate(frame, style);
