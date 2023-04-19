@@ -147,7 +147,9 @@ function setFrameQuad(tileinfo, layer, options) {
         return status;
     });
     layer.setFrameQuad = function (frame) {
-        if (status.framesToIdx[frame] !== undefined && status.loaded) {
+        if (frame === undefined) {
+            layer.baseQuad = undefined;
+        } else if (status.framesToIdx[frame] !== undefined && status.loaded) {
             layer.baseQuad = Object.assign({}, status.quads[status.framesToIdx[frame]]);
         }
         status.frame = frame;
