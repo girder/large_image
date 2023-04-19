@@ -70,7 +70,6 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         var params = {
             useCredentials: true,
             autoshareRenderer: false,
-            keepLower: false,
             attribution: null,
             maxLevel: this.levels - 1
         };
@@ -78,6 +77,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             params.renderer = 'canvas';
         }
         if (this.metadata.geospatial && this.metadata.bounds) {
+            params.keepLower = false;
             params.url = this._getTileUrl('{z}', '{x}', '{y}', {encoding: 'PNG', projection: 'EPSG:3857'});
             this.viewer = geo.map({node: this.el, max: this.levels - 1});
             this._bottomLayer = this.viewer.createLayer('osm');
