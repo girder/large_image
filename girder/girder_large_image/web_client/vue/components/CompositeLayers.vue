@@ -219,7 +219,11 @@ export default {
     z-index: 2;
 }
 .table-container {
-    overflow: scroll;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+.table-container td {
+    padding: 0 5px;
 }
 .table-container input {
     max-width: 70px;
