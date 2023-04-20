@@ -2502,7 +2502,7 @@ class TileSource:
             pixels or mm are used for inits.  It applies to output if
             neither output maxWidth nor maxHeight is specified.
 
-            :magnification: the magnification ratio.  Only used is maxWidth and
+            :magnification: the magnification ratio.  Only used if maxWidth and
                 maxHeight are not specified or None.
             :mm_x: the horizontal size of a pixel in millimeters.
             :mm_y: the vertical size of a pixel in millimeters.
