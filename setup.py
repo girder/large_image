@@ -40,6 +40,7 @@ extraReqs = {
     'colormaps': ['matplotlib'],
     'tiledoutput': ['pyvips'],
     'performance': [
+        'psutil>=4.2.0',
         'simplejpeg ; python_version >= "3.7"',
         'simplejpeg<1.6.6 ; python_version < "3.7"',
     ],
