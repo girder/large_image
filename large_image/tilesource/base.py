@@ -1741,7 +1741,7 @@ class TileSource:
         """
         frame = int(frame or 0)
         if (not getattr(self, '_skipStyle', None) and
-                hasattr(self, 'style') and 'bands' in self.style and
+                hasattr(self, '_style') and 'bands' in self.style and
                 len(self.style['bands']) and
                 all(entry.get('frame') is not None for entry in self.style['bands'])):
             frame = int(self.style['bands'][0]['frame'])

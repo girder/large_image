@@ -164,8 +164,8 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
 
                 self.dataset = dataset['dataset']  # use for projection information
 
-        if not hasattr(self, 'style'):
-            self.style = {
+        if not hasattr(self, '_style'):
+            self._style = {
                 'band': self._netcdf['default'] + ':1' if self._netcdf.get('default') else 1,
                 'scheme': 'linear',
                 'palette': ['#000000', '#ffffff'],

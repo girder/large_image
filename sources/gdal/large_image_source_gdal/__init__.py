@@ -218,7 +218,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'alpha': ['#ffffff00', '#ffffffff'],
         }
         style = []
-        if hasattr(self, 'style'):
+        if hasattr(self, '_style'):
             styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
             for styleBand in styleBands:
 
@@ -257,7 +257,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _setDefaultStyle(self):
         """If not style was specified, create a default style."""
-        if hasattr(self, 'style'):
+        if hasattr(self, '_style'):
             styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
             if not len(styleBands) or (len(styleBands) == 1 and isinstance(
                     styleBands[0].get('band', 1), int) and styleBands[0].get('band', 1) <= 0):
@@ -291,7 +291,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     'palette': ['#ffffff00', '#ffffffff'],
                 })
             self.logger.debug('Using style %r', style)
-            self.style = {'bands': style}
+            self._style = {'bands': style}
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
             if band.get('interpretation'):
