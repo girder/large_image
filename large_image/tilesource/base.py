@@ -186,9 +186,10 @@ class TileSource:
                 self._jsonstyle = json.dumps(style, sort_keys=True, separators=(',', ':'))
             else:
                 try:
-                    self._style = JSONDict(json.loads(style))
-                    if not isinstance(self._style, dict):
+                    style = json.loads(style)
+                    if not isinstance(style, dict):
                         raise TypeError
+                    self._style = JSONDict(style)
                 except TypeError:
                     raise exceptions.TileSourceError('Style is not a valid json object.')
 
