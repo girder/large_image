@@ -291,7 +291,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     'palette': ['#ffffff00', '#ffffffff'],
                 })
             self.logger.debug('Using style %r', style)
-            self._style = {'bands': style}
+            self._style = JSONDict({'bands': style})
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
             if band.get('interpretation'):
