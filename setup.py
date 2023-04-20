@@ -40,6 +40,7 @@ extraReqs = {
     'colormaps': ['matplotlib'],
     'tiledoutput': ['pyvips'],
     'performance': [
+        'psutil>=4.2.0',
         'simplejpeg ; python_version >= "3.7"',
         'simplejpeg<1.6.6 ; python_version < "3.7"',
     ],
@@ -95,7 +96,6 @@ setup(
         'palettable',
         # Pillow 8.3.0 and 8.3.1 won't save jpeg compressed tiffs properly.
         'Pillow',
-        'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
         'importlib-metadata<5 ; python_version < "3.8"',
     ],
