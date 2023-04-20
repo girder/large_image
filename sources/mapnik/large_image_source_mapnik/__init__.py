@@ -24,6 +24,7 @@ from osgeo import gdal, gdalconst
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError
+from large_image.tilesource.utilities import JSONDict
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -164,14 +165,14 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
 
                 self.dataset = dataset['dataset']  # use for projection information
 
-        if not hasattr(self, 'style'):
-            self.style = {
+        if not hasattr(self, '_style'):
+            self._style = JSONDict({
                 'band': self._netcdf['default'] + ':1' if self._netcdf.get('default') else 1,
                 'scheme': 'linear',
                 'palette': ['#000000', '#ffffff'],
                 'min': 'min',
                 'max': 'max'
-            }
+            })
         return True
 
     def _setDefaultStyle(self):

@@ -22,10 +22,10 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          SourcePriority, TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat, dtypeToGValue)
 from .tiledict import LazyTileDict
-from .utilities import (_encodeImage, _encodeImageBinary,  # noqa: F401
-                        _gdalParameters, _imageToNumpy, _imageToPIL,
-                        _letterboxImage, _makeSameChannelDepth, _vipsCast,
-                        _vipsParameters, dictToEtree, etreeToDict,
+from .utilities import (JSONDict, _encodeImage,  # noqa: F401
+                        _encodeImageBinary, _gdalParameters, _imageToNumpy,
+                        _imageToPIL, _letterboxImage, _makeSameChannelDepth,
+                        _vipsCast, _vipsParameters, dictToEtree, etreeToDict,
                         getPaletteColors, histogramThreshold, nearPowerOfTwo)
 
 
@@ -182,15 +182,20 @@ class TileSource:
         self._jsonstyle = style
         if style:
             if isinstance(style, dict):
-                self.style = style
+                self._style = JSONDict(style)
                 self._jsonstyle = json.dumps(style, sort_keys=True, separators=(',', ':'))
             else:
                 try:
-                    self.style = json.loads(style)
-                    if not isinstance(self.style, dict):
+                    style = json.loads(style)
+                    if not isinstance(style, dict):
                         raise TypeError
+                    self._style = JSONDict(style)
                 except TypeError:
                     raise exceptions.TileSourceError('Style is not a valid json object.')
+
+    @property
+    def style(self):
+        return self._style
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -1605,7 +1610,7 @@ class TileSource:
         sources may do so.
         """
         mag = self.getNativeMagnification()
-        return {
+        return JSONDict({
             'levels': self.levels,
             'sizeX': self.sizeX,
             'sizeY': self.sizeY,
@@ -1614,7 +1619,11 @@ class TileSource:
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
-        }
+        })
+
+    @property
+    def metadata(self):
+        return self.getMetadata()
 
     def _addMetadataFrameInformation(self, metadata, channels=None):
         """
@@ -1733,7 +1742,7 @@ class TileSource:
         """
         frame = int(frame or 0)
         if (not getattr(self, '_skipStyle', None) and
-                hasattr(self, 'style') and 'bands' in self.style and
+                hasattr(self, '_style') and 'bands' in self.style and
                 len(self.style['bands']) and
                 all(entry.get('frame') is not None for entry in self.style['bands'])):
             frame = int(self.style['bands'][0]['frame'])
