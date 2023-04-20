@@ -196,10 +196,6 @@ class TileSource:
     def style(self):
         return self._style
 
-    @style.setter
-    def style(self, value):
-        self._setStyle(value)
-
     @staticmethod
     def getLRUHash(*args, **kwargs):
         """
