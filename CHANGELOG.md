@@ -4,6 +4,7 @@
 
 ### Changes
 - Add a guard if PIL doesn't support ImageCms ([#1032](../../pull/1032))
+- Allow putting a yaml config file from a Girder API endpoint ([#1033](../../pull/1033))
 
 ### Bug Fixes
 - Allow clearing the min/max fields of the frame selector ([#1030](../../pull/1030))
