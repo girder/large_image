@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.20.5
+
+### Improvements
+- Improve access and repr of metadata and style ([#1021](../../pull/1021))
+
+### Changes
+- Remove psutil hard dependency ([#1027](../../pull/1027))
+
 ## 1.20.4
 
 ### Improvements
