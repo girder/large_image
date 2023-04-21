@@ -120,7 +120,7 @@ export default Vue.extend({
                 )
             }
             this.sliderModes.push(
-                { id: 3, name: 'Advanced Band Compositing' }
+                { id: 3, name: 'Band Compositing' }
             )
         }
     },

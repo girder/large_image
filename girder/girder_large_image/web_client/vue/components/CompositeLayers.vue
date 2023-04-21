@@ -89,13 +89,13 @@ export default {
         },
         updateLayerMin(event, layer) {
             const newVal = event.target.value;
-            const newMinVal = parseFloat(newVal);
+            const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
             this.compositeLayerInfo[layer].min = newMinVal;
             this.updateStyle();
         },
         updateLayerMax(event, layer) {
             const newVal = event.target.valueAsNumber;
-            const newMaxVal = parseFloat(newVal);
+            const newMaxVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
             this.compositeLayerInfo[layer].max = newMaxVal;
             this.updateStyle();
         },
@@ -192,7 +192,6 @@ export default {
                             @change.prevent="(event) => updateLayerMax(event, layer)"
                         >
                     </td>
-                    <td></td>
                 </tr>
             </tbody>
         </table>
