@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.20.6
+
+### Bug Fixes
+- Allow clearing the min/max fields of the frame selector ([#1030](../../pull/1030))
+
 ## 1.20.5
 
 ### Improvements
