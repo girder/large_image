@@ -1281,7 +1281,16 @@ class TileSource:
             intent = getattr(PIL.ImageCms, 'INTENT_' + str(sc.style.get('icc')).upper(),
                              PIL.ImageCms.INTENT_PERCEPTUAL)
         if not hasattr(self, '_iccsrgbprofile'):
-            self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
+            try:
+                self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
+            except ImportError:
+                self._iccsrgbprofile = None
+                self.logger.warning(
+                    'Failed to import PIL.ImageCms.  Cannot perform ICC '
+                    'color adjustments.  Does your platform support '
+                    'PIL.ImageCms?')
+        if self._iccsrgbprofile is None:
+            return sc.image
         try:
             key = (mode, intent)
             if self._iccprofilesObjects[profileIdx] is None:
