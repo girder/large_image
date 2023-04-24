@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 - Allow clearing the min/max fields of the frame selector ([#1030](../../pull/1030))
+- Fix a bug with caching tiles and styling ([#1031](../../pull/1031))
 
 ## 1.20.5
 

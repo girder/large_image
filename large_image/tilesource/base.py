@@ -178,6 +178,11 @@ class TileSource:
 
         :param style: The new style.
         """
+        for key in {'_unlocked_classkey', '_classkeyLock'}:
+            try:
+                delattr(self, key)
+            except Exception:
+                pass
         self._bandRanges = {}
         self._jsonstyle = style
         if style:
@@ -1042,10 +1047,7 @@ class TileSource:
         :param onlyMinMax: if True, only find the min and max.  If False, get
             the entire histogram.
         """
-        self._skipStyle = True
-        # Divert the tile cache while querying unstyled tiles
-        classkey = self._classkey
-        self._classkey = self._unstyledClassKey()
+        self._setSkipStyle(True)
         try:
             self._bandRanges[frame] = self.histogram(
                 dtype=dtype,
@@ -1059,8 +1061,7 @@ class TileSource:
                     k: v for k, v in self._bandRanges[frame].items() if k in {
                         'min', 'max', 'mean', 'stdev'}})
         finally:
-            del self._skipStyle
-            self._classkey = classkey
+            self._setSkipStyle(False)
 
     def _validateMinMaxValue(self, value, frame, dtype):
         """
@@ -1306,6 +1307,19 @@ class TileSource:
                 self.logger.exception('Failed to apply ICC profile')
         return sc.iccimage
 
+    def _setSkipStyle(self, setSkip=False):
+        if setSkip:
+            self._unlocked_classkey = self._classkey
+            if hasattr(self, 'cache_lock'):
+                with self.cache_lock:
+                    self._classkeyLock = self._styleLock
+            self._skipStyle = True
+            # Divert the tile cache while querying unstyled tiles
+            self._classkey = self._unstyledClassKey()
+        else:
+            del self._skipStyle
+            self._classkey = self._unlocked_classkey
+
     def _applyStyle(self, image, style, x, y, z, frame=None):  # noqa
         """
         Apply a style to a numpy image.
@@ -1349,18 +1363,14 @@ class TileSource:
             else:
                 frame = entry['frame'] if entry.get('frame') is not None else (
                     sc.mainFrame + entry['framedelta'])
-                self._skipStyle = True
-                # Divert the tile cache while querying unstyled tiles
-                classkey = self._classkey
-                self._classkey = self._unstyledClassKey()
+                self._setSkipStyle(True)
                 try:
                     image = self.getTile(x, y, z, frame=frame, numpyAllowed=True)
                     image = image[:sc.mainImage.shape[0],
                                   :sc.mainImage.shape[1],
                                   :sc.mainImage.shape[2]]
                 finally:
-                    del self._skipStyle
-                    self._classkey = classkey
+                    self._setSkipStyle(False)
             if (isinstance(entry.get('band'), int) and
                     entry['band'] >= 1 and entry['band'] <= image.shape[2]):
                 sc.bandidx = entry['band'] - 1
