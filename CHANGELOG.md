@@ -2,6 +2,9 @@
 
 ## 1.20.6
 
+### Changes
+- Add a guard if PIL doesn't support ImageCms ([#1032](../../pull/1032))
+
 ### Bug Fixes
 - Allow clearing the min/max fields of the frame selector ([#1030](../../pull/1030))
 - Fix a bug with caching tiles and styling ([#1031](../../pull/1031))
