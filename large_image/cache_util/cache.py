@@ -59,7 +59,7 @@ def strhash(*args, **kwargs):
     return '%r' % (args, )
 
 
-def methodcache(key=None):
+def methodcache(key=None):  # noqa
     """
     Decorator to wrap a function with a memoizing callable that saves results
     in self.cache.  This is largely taken from cachetools, but uses a cache
@@ -72,9 +72,17 @@ def methodcache(key=None):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
-            if hasattr(self, '_classkey'):
-                k = self._classkey + ' ' + k
             lock = getattr(self, 'cache_lock', None)
+            ck = getattr(self, '_classkey', None)
+            if lock:
+                with self.cache_lock:
+                    if hasattr(self, '_classkeyLock'):
+                        if self._classkeyLock.acquire(blocking=False):
+                            self._classkeyLock.release()
+                        else:
+                            ck = getattr(self, '_unlocked_classkey', ck)
+            if ck:
+                k = ck + ' ' + k
             try:
                 if lock:
                     with self.cache_lock:
