@@ -38,6 +38,7 @@ from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.models.user import User
 
+from ..utils import AnnotationGeoJSON
 from .annotationelement import Annotationelement
 
 # Some arrays longer than this are validated using numpy rather than jsonschema
@@ -1454,3 +1455,13 @@ class Annotation(AccessControlledModel):
         annotation['updated'] = datetime.datetime.now(datetime.timezone.utc)
 
         return super().save(annotation)
+
+    def geojson(self, annotation):
+        """
+        Yield an annotation as geojson generator.
+
+        :param annotation: The annotation to delete metadata from.
+        :yields: geojson.  General annotation properties are added to the first
+            feature under the annotation tag.
+        """
+        yield from AnnotationGeoJSON(annotation['_id'])

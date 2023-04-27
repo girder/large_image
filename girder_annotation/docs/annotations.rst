@@ -95,7 +95,7 @@ The width and height of an ellipse are the major and minor axes.
 ::
 
   {
-    "type": "rectangle",               # Exact string.  Required
+    "type": "ellipse",                 # Exact string.  Required
     <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
     "center": [10.3, -40.0, 0],        # Coordinate.  Required
     "width": 5.3,                      # Number >= 0.  Required

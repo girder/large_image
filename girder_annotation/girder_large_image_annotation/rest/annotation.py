@@ -51,6 +51,7 @@ class AnnotationResource(Resource):
         self.route('GET', ('schema',), self.getAnnotationSchema)
         self.route('GET', ('images',), self.findAnnotatedImages)
         self.route('GET', (':id',), self.getAnnotation)
+        self.route('GET', (':id', ':format'), self.getAnnotationWithFormat)
         self.route('PUT', (':id',), self.updateAnnotation)
         self.route('DELETE', (':id',), self.deleteAnnotation)
         self.route('GET', (':id', 'access'), self.getAnnotationAccess)
@@ -177,6 +178,29 @@ class AnnotationResource(Resource):
             msg = 'Annotation not found'
             raise RestException(msg, 404)
         return self._getAnnotation(annotation, params)
+
+    @autoDescribeRoute(
+        Description('Get an annotation by id in a specific format.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .param('format', 'The format of the annotation.', paramType='path',
+               enum=['geojson'])
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the annotation.', 403)
+        .notes('Use "size" or "details" as possible sort keys.'),
+    )
+    @access.public(cookie=True, scope=TokenScope.DATA_READ)
+    @loadmodel(model='annotation', plugin='large_image', getElements=False, level=AccessType.READ)
+    def getAnnotationWithFormat(self, annotation, format):
+        _handleETag('getAnnotationWithFormat', annotation, format, max_age=86400 * 30)
+        if annotation is None:
+            msg = 'Annotation not found'
+            raise RestException(msg, 404)
+
+        def generateResult():
+            yield from Annotation().geojson(annotation)
+
+        setResponseHeader('Content-Type', 'application/json')
+        return generateResult
 
     def _getAnnotation(self, annotation, params):
         """
