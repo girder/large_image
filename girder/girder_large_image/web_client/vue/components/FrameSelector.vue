@@ -13,6 +13,7 @@ export default Vue.extend({
             currentModeId: 1,
             indices: [],
             indexInfo: {},
+            style: {},
         };
     },
     watch: {
@@ -50,6 +51,7 @@ export default Vue.extend({
                     frame += info.current * info.stride;
                 }
             });
+            this.currentFrame = frame
             let style = this.currentModeId > 1 ? this.style : undefined
             this.frameUpdate(frame, style);
         },
@@ -135,6 +137,8 @@ export default Vue.extend({
 
 <template>
     <div class="image-frame-control-box">
+        <div id="frame_id" style="display: none;">{{ currentFrame }}</div>
+        <div id="frame_styling" style="display: none;">{{ style }}</div>
         <div>
             <label for="mode">Image control mode: </label>
             <select
