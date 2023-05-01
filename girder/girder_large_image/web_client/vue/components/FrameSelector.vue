@@ -137,8 +137,8 @@ export default Vue.extend({
 
 <template>
     <div class="image-frame-control-box">
-        <div id="frame_id" style="display: none;">{{ currentFrame }}</div>
-        <div id="frame_styling" style="display: none;">{{ style }}</div>
+        <div id="current_frame_id" style="display: none;">{{ currentFrame }}</div>
+        <div id="current_frame_style" style="display: none;">{{ style }}</div>
         <div>
             <label for="mode">Image control mode: </label>
             <select
