@@ -507,6 +507,55 @@ def testYAMLConfigFile(server, admin, user, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testPutYAMLConfigFile(server, admin, user, fsAssetstore):
+    # Create some resources to use in the tests
+    collection = Collection().createCollection(
+        'collection A', admin)
+    colFolderA = Folder().createFolder(
+        collection, 'folder A', parentType='collection',
+        creator=admin)
+    colFolderB = Folder().createFolder(
+        colFolderA, 'folder B', creator=admin)
+    # Wrong user
+    resp = server.request(
+        method='PUT', user=user,
+        path='/folder/%s/yaml_config/sample.yaml' % str(colFolderA['_id']),
+        body=json.dumps({'keyA': 'value0'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 403
+    # Create
+    resp = server.request(
+        method='PUT', user=admin,
+        path='/folder/%s/yaml_config/sample.yaml' % str(colFolderA['_id']),
+        body=json.dumps({'keyA': 'value1'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.yaml' % str(colFolderB['_id']))
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value1'
+    # Lower folder
+    resp = server.request(
+        method='PUT', user=admin,
+        path='/folder/%s/yaml_config/sample.yaml' % str(colFolderB['_id']),
+        body=json.dumps({'keyA': 'value2'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.yaml' % str(colFolderB['_id']))
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value2'
+    # Replace
+    resp = server.request(
+        method='PUT', user=admin,
+        path='/folder/%s/yaml_config/sample.yaml' % str(colFolderB['_id']),
+        body=json.dumps({'keyA': 'value3'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.yaml' % str(colFolderB['_id']))
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'value3'
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
     # Create some resources to use in the tests
     collection = Collection().createCollection(
