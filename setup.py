@@ -65,7 +65,9 @@ sources = {
 }
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
-extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
+extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) | set([
+    f'large-image-source-pil[all]{limit_version}',
+]))
 
 setup(
     name='large-image',

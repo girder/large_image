@@ -30,7 +30,8 @@ girder_annotation/.
 # Extras from main setup.py
 pylibmc>=1.5.1
 matplotlib
-simplejpeg
+simplejpeg ; python_version >= "3.7"
+simplejpeg<1.6.6 ; python_version < "3.7"
 
 # External dependencies
 pip>=9
