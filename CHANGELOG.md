@@ -3,7 +3,8 @@
 ## 1.20.6
 
 ### Improvements
-- Store current frame and style in the DOM for easier access  ([#1036](../../pull/1036))
+- Store current frame and style in the DOM for easier access ([#1036](../../pull/1036))
+- Convert long girder GET and PUT requests to POSTs ([#1037](../../pull/1037))
 
 ### Changes
 - Add a guard if PIL doesn't support ImageCms ([#1032](../../pull/1032))
@@ -363,7 +364,7 @@
 - Emit events when an overlay annotation layer is created ([#787](../../pull/787))
 - Minor improvements to setFrameQuad to make it more flexible ([#790](../../pull/790))
 - Support drawing polygon selection regions ([#791](../../pull/791))
-- Add some automating options to getTileFramesQuadInfo  ([#792](../../pull/792))
+- Add some automating options to getTileFramesQuadInfo ([#792](../../pull/792))
 
 ### Changes
 - Change how we do a version check ([#785](../../pull/785))
@@ -402,7 +403,7 @@
 
 ### Features
 - Added image annotation element ([#742](../../pull/742), [#750](../../pull/750))
-- Allow the discrete scheme to be used on all tile sources  ([#755](../../pull/755))
+- Allow the discrete scheme to be used on all tile sources ([#755](../../pull/755))
 
 ### Improvements
 - Expand user paths ([#746](../../pull/746))
