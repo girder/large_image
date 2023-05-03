@@ -1601,6 +1601,7 @@ class TileSource:
             :magnification: if known, the magnificaiton of the image.
             :mm_x: if known, the width of a pixel in millimeters.
             :mm_y: if known, the height of a pixel in millimeters.
+            :dtype: if known, the type of values in this image.
 
             In addition to the keys that listed above, tile sources that expose
             multiple frames will also contain
@@ -1631,7 +1632,7 @@ class TileSource:
             :channelmap: optional.  If known, a dictionary of channel names
                 with their offset into the channel list.
 
-        Note that this does nto include band information, though some tile
+        Note that this does not include band information, though some tile
         sources may do so.
         """
         mag = self.getNativeMagnification()
@@ -1644,6 +1645,7 @@ class TileSource:
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
+            'dtype': self.dtype,
         })
 
     @property
