@@ -638,6 +638,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             retile[0:min(tile.shape[0], finalHeight), 0:min(tile.shape[1], finalWidth)] = tile[
                 0:min(tile.shape[0], finalHeight), 0:min(tile.shape[1], finalWidth)]
             tile = retile
+        self._dtype = tile.dtype
         return self._outputTile(tile, format, x, y, z, pilImageAllowed, numpyAllowed, **kwargs)
 
     def getAssociatedImagesList(self):

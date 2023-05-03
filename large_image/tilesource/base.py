@@ -132,6 +132,8 @@ class TileSource:
         self.sizeX = None
         self.sizeY = None
         self._styleLock = threading.RLock()
+        self._dtype = None
+        self._predicted_dtype = None
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -201,6 +203,10 @@ class TileSource:
     @property
     def style(self):
         return self._style
+
+    @property
+    def dtype(self):
+        return self._dtype or self._predicted_dtype
 
     @staticmethod
     def getLRUHash(*args, **kwargs):

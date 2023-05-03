@@ -1059,6 +1059,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             colors = self._info.get('backgroundColor', [0])
             if colors:
                 tile = numpy.full((self.tileHeight, self.tileWidth, len(colors)), colors)
+        self._dtype = tile.dtype
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)

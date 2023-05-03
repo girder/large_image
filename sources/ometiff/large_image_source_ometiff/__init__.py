@@ -351,8 +351,10 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             format = 'JPEG'
             if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
+                self._dtype = numpy.asarray(tile).dtype
             if isinstance(tile, numpy.ndarray):
                 format = TILE_FORMAT_NUMPY
+                self._dtype = tile.dtype
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, **kwargs)
         except InvalidOperationTiffException as e:

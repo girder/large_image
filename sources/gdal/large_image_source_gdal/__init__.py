@@ -809,6 +809,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 tile = ds.ReadAsArray()
         if len(tile.shape) == 3:
             tile = numpy.rollaxis(tile, 0, 3)
+        self._dtype = tile.dtype
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

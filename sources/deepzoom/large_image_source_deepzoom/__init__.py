@@ -6,6 +6,7 @@ import os
 from xml.etree import ElementTree
 
 import PIL.Image
+import numpy
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
@@ -113,6 +114,7 @@ class DeepzoomFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             overlap if x else 0, overlap if y else 0,
             self.tileWidth + (overlap if x else 0),
             self.tileHeight + (overlap if y else 0)))
+        self._dtype = numpy.array(tile)
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

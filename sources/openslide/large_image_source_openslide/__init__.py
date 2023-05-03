@@ -19,6 +19,7 @@ import os
 
 import openslide
 import PIL
+import numpy
 import tifftools
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -302,6 +303,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if svslevel['scale'] != 1:
             tile = tile.resize((self.tileWidth, self.tileHeight),
                                getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        self._dtype = numpy.asarray(tile).dtype
         return self._outputTile(tile, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
                                 numpyAllowed, **kwargs)
 

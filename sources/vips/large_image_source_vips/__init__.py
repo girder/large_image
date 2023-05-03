@@ -212,6 +212,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             buffer=tileimg.write_to_memory(),
             dtype=GValueToDtype[tileimg.format],
             shape=[tileimg.height, tileimg.width, tileimg.bands])
+        self._dtype = tile.dtype
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

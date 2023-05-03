@@ -264,6 +264,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._openjpegHandles.put(openjpegHandle)
         if scale:
             tile = tile[::scale, ::scale]
+        self._dtype = tile.dtype
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
