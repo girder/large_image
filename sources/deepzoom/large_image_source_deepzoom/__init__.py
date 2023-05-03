@@ -5,8 +5,8 @@ import math
 import os
 from xml.etree import ElementTree
 
-import PIL.Image
 import numpy
+import PIL.Image
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority

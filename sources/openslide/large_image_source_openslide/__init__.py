@@ -17,9 +17,9 @@
 import math
 import os
 
+import numpy
 import openslide
 import PIL
-import numpy
 import tifftools
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
