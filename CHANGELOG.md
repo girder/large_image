@@ -3,9 +3,10 @@
 ## 1.20.6
 
 ### Improvements
-- Store current frame and style in the DOM for easier access ([#1036](../../pull/1036))
-- Convert long girder GET and PUT requests to POSTs ([#1037](../../pull/1037))
+- Store current frame and style in the DOM for easier access ([#1136](../../pull/1136))
+- Convert long girder GET and PUT requests to POSTs ([#1137](../../pull/1137))
 - Propagate more feature events from geojs on annotations ([#1147](../../pull/1147))
+- Add another mime type to those considered to be yaml ([#1149](../../pull/1149))
 
 ### Changes
 - Add a guard if PIL doesn't support ImageCms ([#1132](../../pull/1132))
