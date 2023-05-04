@@ -20,7 +20,7 @@ RUN apt-get update && \
       # general utilities \
       software-properties-common \
       # as specified by \
-      # https://github.com/pyenv/pyenv/wiki#suggested-build-environment
+      # https://github.com/pyenv/pyenv/wiki#suggested-build-environment \
       build-essential \
       curl \
       libbz2-dev \
@@ -40,7 +40,7 @@ RUN apt-get update && \
       zlib1g-dev \
       # for curl \
       ca-certificates \
-      # girder convenience
+      # girder convenience \
       fuse \
       libldap2-dev \
       libsasl2-dev \
@@ -58,7 +58,7 @@ RUN apt-get update && \
       libmagic-dev \
       # shrink docker image \
       rdfind \
-      # core girder
+      # core girder \
       gcc \
       libpython3-dev \
       python3-pip \
