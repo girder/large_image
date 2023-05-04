@@ -5,23 +5,24 @@
 ### Improvements
 - Store current frame and style in the DOM for easier access ([#1036](../../pull/1036))
 - Convert long girder GET and PUT requests to POSTs ([#1037](../../pull/1037))
+- Propagate more feature events from geojs on annotations ([#1147](../../pull/1147))
 
 ### Changes
-- Add a guard if PIL doesn't support ImageCms ([#1032](../../pull/1032))
-- Allow putting a yaml config file from a Girder API endpoint ([#1033](../../pull/1033))
+- Add a guard if PIL doesn't support ImageCms ([#1132](../../pull/1132))
+- Allow putting a yaml config file from a Girder API endpoint ([#1133](../../pull/1133))
 
 ### Bug Fixes
-- Allow clearing the min/max fields of the frame selector ([#1030](../../pull/1030))
-- Fix a bug with caching tiles and styling ([#1031](../../pull/1031))
-- Fix setting minimum values on bands from the frame selector ([#1038](../../pull/1038))
+- Allow clearing the min/max fields of the frame selector ([#1130](../../pull/1130))
+- Fix a bug with caching tiles and styling ([#1131](../../pull/1131))
+- Fix setting minimum values on bands from the frame selector ([#1138](../../pull/1138))
 
 ## 1.20.5
 
 ### Improvements
-- Improve access and repr of metadata and style ([#1021](../../pull/1021))
+- Improve access and repr of metadata and style ([#1121](../../pull/1121))
 
 ### Changes
-- Remove psutil hard dependency ([#1027](../../pull/1027))
+- Remove psutil hard dependency ([#1127](../../pull/1127))
 
 ## 1.20.4
 
@@ -29,7 +30,7 @@
 - Better cache handling with Etags ([#1097](../../pull/1097))
 - Reduce duplicate computation of slow cached values ([#1100](../../pull/1100))
 - Reconnect to memcached if the connection fails ([#1104](../../pull/1104))
-- Better frame selector on Girder item page ([#1186](../../pull/1186))
+- Better frame selector on Girder item page ([#1086](../../pull/1086))
 
 ### Bug Fixes
 - Tile serving can bypass loading a source if it is in memory ([#1102](../../pull/1102))

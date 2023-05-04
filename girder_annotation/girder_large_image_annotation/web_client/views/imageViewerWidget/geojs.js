@@ -437,6 +437,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     const featureEvents = geo.event.feature;
                     overlayLayer.geoOn(
                         [
+                            featureEvents.mousedown,
+                            featureEvents.mouseup,
                             featureEvents.mouseclick,
                             featureEvents.mouseoff,
                             featureEvents.mouseon,
@@ -467,6 +469,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
                         feature.geoOn(
                             [
+                                events.mousedown,
+                                events.mouseup,
                                 events.mouseclick,
                                 events.mouseoff,
                                 events.mouseon,
@@ -895,6 +899,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _setEventTypes: function () {
             var events = window.geo.event.feature;
             this._eventTypes = {
+                [events.mousedown]: 'g:mouseDownAnnotation',
+                [events.mouseup]: 'g:mouseUpAnnotation',
                 [events.mouseclick]: 'g:mouseClickAnnotation',
                 [events.mouseoff]: 'g:mouseOffAnnotation',
                 [events.mouseon]: 'g:mouseOnAnnotation',
