@@ -1,4 +1,4 @@
-/* globals beforeEach, afterEach, describe, it, expect, _ */
+/* globals describe, it, expect, _, girderTest, $, runs, waitsFor */
 
 girderTest.importPlugin('large_image');
 
@@ -49,7 +49,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('${large_image}/../../test/test_files/multi_test_source3.yml');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/multi_test_source3.yml'); // eslint-disable-line no-template-curly-in-string
             });
             girderTest.waitForLoad();
         });
@@ -95,7 +95,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.png');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.png'); // eslint-disable-line no-template-curly-in-string
             });
             girderTest.waitForLoad();
         });
@@ -161,7 +161,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.png');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.png'); // eslint-disable-line no-template-curly-in-string
             });
             girderTest.waitForLoad();
         }, 30000);
@@ -219,7 +219,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('${large_image}/../../test/test_files/.large_image_config.yaml');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/.large_image_config.yaml'); // eslint-disable-line no-template-curly-in-string
             });
             girderTest.waitForLoad();
         });

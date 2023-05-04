@@ -1,3 +1,5 @@
+/* globals girderTest, describe, it, expect, beforeEach, waitsFor, $, _, runs */
+
 girderTest.importPlugin('large_image', 'large_image_annotation');
 girderTest.startApp();
 
@@ -103,7 +105,7 @@ describe('AnnotationListWidget', function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.zstd.tiff');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/yb10kx5k.zstd.tiff'); // eslint-disable-line no-template-curly-in-string
             });
             girderTest.waitForLoad();
         });

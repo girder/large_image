@@ -79,7 +79,7 @@
         "stylus-supremacy": "^2.17.5"
     },
     "scripts": {
-        "lint": "eslint --cache . && pug-lint . && stylus-supremacy format --compare ./**/*.styl --options package.json",
-        "format": "eslint --cache --fix . && eslint --cache --fix . && stylus-supremacy format ./**/*.styl --replace --options package.json"
+        "lint": "eslint --cache . && eslint --no-eslintrc -c ./package.json --cache ../../test_annotation/web_client_specs && pug-lint . && stylus-supremacy format --compare ./**/*.styl --options package.json",
+        "format": "eslint --cache --fix . && eslint --no-eslintrc -c ./package.json --cache --fix ../../test_annotation/web_client_specs && eslint --cache --fix . && stylus-supremacy format ./**/*.styl --replace --options package.json"
     }
 }

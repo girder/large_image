@@ -1,4 +1,4 @@
-/* globals girder, girderTest, describe, it, expect, waitsFor, runs */
+/* globals girder, girderTest, describe, it, expect, waitsFor, runs, $ */
 
 girderTest.importPlugin('jobs', 'worker', 'large_image');
 
@@ -74,7 +74,7 @@ describe('Test the large image plugin', function () {
             expect(settings['large_image.show_extra_admin']).toBe('{"images": ["label", "macro"]}');
             expect(settings['large_image.show_item_extra_public']).toBe('{}');
             expect(settings['large_image.show_item_extra']).toBe('{}');
-            expect(JSON.parse(settings['large_image.show_item_extra_admin'])).toEqual({'metadata': ['tile', 'internal'], 'images': ['label', 'macro', '*']});
+            expect(JSON.parse(settings['large_image.show_item_extra_admin'])).toEqual({metadata: ['tile', 'internal'], images: ['label', 'macro', '*']});
             expect(settings['large_image.icc_correction']).toBe(false);
         });
         girderTest.waitForLoad();
