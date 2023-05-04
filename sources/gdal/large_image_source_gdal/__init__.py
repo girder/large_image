@@ -26,6 +26,11 @@ import numpy
 import PIL.Image
 from osgeo import gdal, gdal_array, gdalconst, osr
 
+try:
+    gdal.useExceptions()
+except Exception:
+    pass
+
 # isort: off
 
 # pyproj stopped supporting older pythons, so on those versions its database is
