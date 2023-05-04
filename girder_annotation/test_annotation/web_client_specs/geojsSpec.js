@@ -1,4 +1,4 @@
-/* globals beforeEach, afterEach, describe, it, expect, sinon, girder, Backbone, _ */
+/* globals beforeEach, afterEach, describe, it, expect, sinon, girder, Backbone, _, girderTest, $, runs, waitsFor */
 /* eslint-disable camelcase, no-new */
 
 girderTest.importPlugin('jobs', 'worker', 'large_image', 'large_image_annotation');
@@ -46,7 +46,7 @@ $(function () {
             });
             girderTest.waitForLoad();
             runs(function () {
-                girderTest.binaryUpload('${large_image}/../../test/test_files/small_la.tiff');
+                girderTest.binaryUpload('${large_image}/../../test/test_files/small_la.tiff'); // eslint-disable-line no-template-curly-in-string
             });
             girderTest.waitForLoad();
             runs(function () {
@@ -97,8 +97,8 @@ $(function () {
                             girderId: itemId,
                             opacity: 0.5,
                             transform: {
-                                'xoffset': 10,
-                                'yoffset': 15
+                                xoffset: 10,
+                                yoffset: 15
                             }
                         }]
                     })
@@ -187,13 +187,14 @@ $(function () {
             });
         });
 
-        it('draw overlay', function() {
-            runs(function() {
+        it('draw overlay', function () {
+            var projStringSpy;
+            runs(function () {
                 overlayAnnotation = new largeImageAnnotation.models.AnnotationModel({
                     _id: overlayAnnotationId
                 });
                 overlayAnnotation.fetch();
-            })
+            });
             girderTest.waitForLoad();
             runs(function () {
                 projStringSpy = sinon.spy(viewer, '_getOverlayTransformProjString');
@@ -207,13 +208,13 @@ $(function () {
             });
         });
 
-        it('generates pixelmap layer parameters', function() {
+        it('generates pixelmap layer parameters', function () {
             const overlayMetadata = {
                 sizeX: 500,
                 sizeY: 500,
                 tileWidth: 256,
                 tileHeight: 256,
-                levels: viewer.levels,
+                levels: viewer.levels
             };
             const overlayId = '012345678901234567890123';
             const pixelMapElement = {
@@ -227,7 +228,7 @@ $(function () {
                     {fillColor: '#000000'},
                     {fillColor: '#ffffff'}
                 ]
-            }
+            };
             const pixelmapLayerParams = viewer._generateOverlayLayerParams(overlayMetadata, overlayId, pixelMapElement);
             const expectedUrl = 'api/v1/item/' + overlayId + '/tiles/zxy/{z}/{x}/{y}?encoding=PNG';
             expect(pixelmapLayerParams.url).toBe(expectedUrl);
@@ -323,7 +324,7 @@ $(function () {
             });
         });
 
-        it('fires overlay event', function() {
+        it('fires overlay event', function () {
             const eventType = window.geo.event.feature.mouseclick;
             const mockEvent = {
                 event: eventType,
@@ -447,7 +448,7 @@ $(function () {
                     expect(elements.length).toBe(1);
                     expect(elements[0].type).toBe('point');
                     closeTo(elements[0].center, [100, 200, 0]);
-                    created = true;;
+                    created = true;
                     return null;
                 });
                 var pt = viewer.viewer.gcsToDisplay({x: 100, y: 200});
@@ -485,7 +486,7 @@ $(function () {
                     closeTo(points[0], [100, 200, 0]);
                     closeTo(points[1], [200, 200, 0]);
                     closeTo(points[2], [200, 300, 0]);
-                    created = true;;
+                    created = true;
                     return null;
                 });
 
@@ -561,7 +562,7 @@ $(function () {
                     closeTo(elements[0].center, [150, 300, 0]);
                     expect(elements[0].width).toBe(100);
                     expect(elements[0].height).toBe(200);
-                    created = true;;
+                    created = true;
                     return null;
                 });
 
@@ -606,7 +607,7 @@ $(function () {
                     closeTo(elements[0].center, [150, 300, 0]);
                     expect(elements[0].width).toBe(100);
                     expect(elements[0].height).toBe(200);
-                    created = true;;
+                    created = true;
                     return null;
                 });
 
@@ -650,7 +651,7 @@ $(function () {
                     expect(elements.length).toBe(1);
                     closeTo(elements[0].center, [200, 200, 0]);
                     expect(elements[0].radius).toBe(100);
-                    created = true;;
+                    created = true;
                     return null;
                 });
 
@@ -698,7 +699,7 @@ $(function () {
                     closeTo(elements[0].points[0], [100, 200, 0]);
                     closeTo(elements[0].points[1], [200, 200, 0]);
                     closeTo(elements[0].points[2], [200, 300, 0]);
-                    created = true;;
+                    created = true;
                     return null;
                 });
 

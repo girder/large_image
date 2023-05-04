@@ -1,4 +1,4 @@
-/* globals girder, girderTest, describe, it, expect, waitsFor, runs */
+/* globals girder, girderTest, describe, it, expect, beforeEach */
 /* eslint-disable camelcase */
 
 girderTest.importPlugin('large_image', 'large_image_annotation');
