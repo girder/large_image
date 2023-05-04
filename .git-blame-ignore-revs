@@ -9,3 +9,5 @@
 18dac36d043948cd973d0188abe18504042a49aa
 # PR 1129: Use stylus-supremacy for linting and reformating stylus files
 497ddf38b1461da47d1d542003172603e2166b5f
+# PR 1148: Lint the client tests
+23ab7f011abaa71d0a4904a9da599174c38f64c3
