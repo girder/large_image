@@ -60,7 +60,7 @@ sources = {
     'pil': [f'large-image-source-pil{limit_version}'],
     'test': [f'large-image-source-test{limit_version}'],
     'tiff': [f'large-image-source-tiff{limit_version}'],
-    'tifffile': [f'large-image-source-tifffile{limit_version}'],
+    'tifffile': [f'large-image-source-tifffile{limit_version} ; python_version >= "3.7"'],
     'vips': [f'large-image-source-vips{limit_version}'],
 }
 extraReqs.update(sources)
