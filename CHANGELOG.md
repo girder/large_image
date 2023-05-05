@@ -16,6 +16,7 @@
 - Allow clearing the min/max fields of the frame selector ([#1130](../../pull/1130))
 - Fix a bug with caching tiles and styling ([#1131](../../pull/1131))
 - Fix setting minimum values on bands from the frame selector ([#1138](../../pull/1138))
+- Fix a version reference in the source extras_require ([#1150](../../pull/1150))
 
 ## 1.20.5
 
