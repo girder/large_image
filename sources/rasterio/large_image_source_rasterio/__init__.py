@@ -180,7 +180,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             "alpha": ["#ffffff00", "#ffffffff"],
         }
         style = []
-        if hasattr(self, "style"):
+        if hasattr(self, "_style"):
             styleBands = self.style["bands"] if "bands" in self.style else [self.style]
             for styleBand in styleBands:
 
@@ -229,7 +229,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
     def _setDefaultStyle(self):
         """If not style was specified, create a default style."""
-        if hasattr(self, "style"):
+        if hasattr(self, "_style"):
             styleBands = self.style["bands"] if "bands" in self.style else [self.style]
             if not len(styleBands) or (
                 len(styleBands) == 1 and
@@ -247,15 +247,10 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                 hasAlpha = hasAlpha or interp == "alpha"
                 if "palette" in bstyle:
                     if bstyle["palette"] == "colortable":
-                        bandInfo = self.getOneBandInformation(bstyle.get("band", 0))
-
-                        def color(i):
-                            return "#" + i * "{:x02}"  # noqa E731
-
-                        bstyle["palette"] = [
-                            (color(len(entry)).format(entry))
-                            for entry in bandInfo["colortable"]
-                        ]
+                        bandInfo = self.getOneBandInformation(bstyle.get('band', 0))
+                        bstyle['palette'] = [(
+                            '#%02X%02X%02X' if len(entry) == 3 else
+                            '#%02X%02X%02X%02X') % entry for entry in bandInfo['colortable']]
                     else:
                         bstyle["palette"] = self.getHexColors(bstyle["palette"])
                 if bstyle.get("nodata") == "auto":
@@ -276,7 +271,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
             if band.get("interpretation"):
-                self._bandNames[band["interpretation"].name.lower()] = idx
+                self._bandNames[band["interpretation"]] = idx
 
     def _scanForMinMax(self, dtype, frame=0, analysisSize=1024, onlyMinMax=True):
         """Update the band range of the data type to the end of the range list.
@@ -646,9 +641,11 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                     "offset": dataset.offsets[i - 1],
                     "units": dataset.units[i - 1],
                     "categories": dataset.descriptions[i - 1],
-                    "interpretation": dataset.colorinterp[i - 1],
+                    "interpretation": dataset.colorinterp[i - 1].name.lower(),
                     # "maskband": dataset.read_masks(i),
                 }
+                if info["interpretation"] == "palette":
+                    info["colortable"] = list(dataset.colormap(i).values())
 
                 # Only keep values that aren't None or the empty string
                 infoSet[i] = {k: v for k, v in info.items() if v not in (None, "")}

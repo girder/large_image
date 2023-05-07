@@ -75,7 +75,7 @@ def testTileFromGeotiffs():
     assert tileMetadata["geospatial"] is True
     # Check that we read some band data, too
     assert len(tileMetadata["bands"]) == 3
-    assert tileMetadata["bands"][2]["interpretation"].name == "green"
+    assert tileMetadata["bands"][2]["interpretation"] == "green"
     assert tileMetadata["bands"][2]["max"] == 240  # 212.0
     assert tileMetadata["bands"][2]["min"] == 0.0
 
@@ -404,7 +404,8 @@ def testPalettizedGeotiff():
     assert tileMetadata["bounds"]["srs"] == "EPSG:5070"
     assert tileMetadata["geospatial"] is True
     assert len(tileMetadata["bands"]) == 1
-    assert tileMetadata["bands"][1]["interpretation"].name == "palette"
+    assert tileMetadata["bands"][1]["interpretation"] == "palette"
+    assert "colortable" in tileMetadata["bands"][1]
 
     # Getting the metadata with a specified projection will be different
     source = large_image_source_rasterio.open(
