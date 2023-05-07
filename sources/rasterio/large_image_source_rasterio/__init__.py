@@ -236,7 +236,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                 isinstance(styleBands[0].get("band", 1), int) and
                 styleBands[0].get("band", 1) <= 0
             ):
-                del self.style
+                del self._style
         style = self._styleBands()
         if len(style):
             hasAlpha = False
@@ -272,7 +272,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                     }
                 )
             self.logger.debug("Using style %r", style)
-            self.style = {"bands": style}
+            self._style = {"bands": style}
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
             if band.get("interpretation"):
@@ -1236,7 +1236,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             # Create a new cropped raster to write to
             profile = self.dataset.meta.copy()
             profile.update(
-                large_image.tilesource.base._rasterioParameters(
+                large_image.tilesource.utilities._rasterioParameters(
                     defaultCompression="lzw", **kwargs
                 )
             )
