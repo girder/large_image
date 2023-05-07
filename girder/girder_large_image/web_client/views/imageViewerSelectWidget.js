@@ -11,6 +11,7 @@ import * as viewers from './imageViewerWidget';
 
 import imageViewerSelectWidget from '../templates/imageViewerSelectWidget.pug';
 import '../stylesheets/imageViewerSelectWidget.styl';
+import FrameSelector from '../vue/components/FrameSelector.vue';
 
 wrap(ItemView, 'render', function (render) {
     // ItemView is a special case in which rendering is done asynchronously,
@@ -65,6 +66,18 @@ var ImageViewerSelectWidget = View.extend({
         return this;
     },
 
+    _createVue(imageMetadata, frameUpdate) {
+        const el = this.$('#vue-container').get(0);
+        const vm = new FrameSelector({
+            el,
+            propsData: {
+                imageMetadata: imageMetadata,
+                frameUpdate: frameUpdate
+            }
+        });
+        this.vueApp = vm;
+    },
+
     _selectViewer: function (viewerName) {
         if (this.currentViewer && this.currentViewer.name === viewerName) {
             return;
@@ -107,21 +120,8 @@ var ImageViewerSelectWidget = View.extend({
      *      there is only one frame.
      */
     setFrames: function (metadata, frameUpdate) {
-        if (metadata.frames && metadata.frames.length > 1) {
-            this._frameUpdate = frameUpdate;
-            this.$('.image-controls-frame').removeClass('hidden');
-            var ctrl = this.$('#image-frame'),
-                ctrlnum = this.$('#image-frame-number');
-            ctrl.attr('max', metadata.frames.length - 1);
-            ctrlnum.attr('max', metadata.frames.length - 1);
-            var frame = +ctrl.val();
-            if (frame >= metadata.frames.length) {
-                ctrl.val(0);
-                frame = 0;
-            }
-            ctrlnum.val(frame);
-            frameUpdate(frame);
-        }
+        // Vue frame control
+        this._createVue(metadata, frameUpdate);
     },
 
     /**

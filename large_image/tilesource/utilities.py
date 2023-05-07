@@ -64,6 +64,17 @@ class ImageBytes(bytes):
         return f'ImageBytes<{len(self)}> (wrapped image bytes)'
 
 
+class JSONDict(dict):
+    """Wrapper class to improve Jupyter repr of JSON-able dicts."""
+
+    def __init__(self, *args, **kwargs):
+        super(JSONDict, self).__init__(*args, **kwargs)
+        # TODO: validate JSON serializable?
+
+    def _repr_json_(self):
+        return self
+
+
 def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompression):
     """
     Encode a PIL Image to a binary representation of the image (a jpeg, png, or

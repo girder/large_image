@@ -22,12 +22,11 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          SourcePriority, TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat, dtypeToGValue)
 from .tiledict import LazyTileDict
-from .utilities import (_encodeImage, _encodeImageBinary,  # noqa: F401
-                        _gdalParameters, _imageToNumpy, _imageToPIL,
-                        _letterboxImage, _makeSameChannelDepth,
-                        _rasterioParameters, _vipsCast, _vipsParameters,
-                        dictToEtree, etreeToDict, getPaletteColors,
-                        histogramThreshold, nearPowerOfTwo)
+from .utilities import (JSONDict, _encodeImage,  # noqa: F401
+                        _encodeImageBinary, _gdalParameters, _imageToNumpy,
+                        _imageToPIL, _letterboxImage, _makeSameChannelDepth,
+                        _vipsCast, _vipsParameters, dictToEtree, etreeToDict,
+                        getPaletteColors, histogramThreshold, nearPowerOfTwo)
 
 
 class TileSource:
@@ -179,19 +178,29 @@ class TileSource:
 
         :param style: The new style.
         """
+        for key in {'_unlocked_classkey', '_classkeyLock'}:
+            try:
+                delattr(self, key)
+            except Exception:
+                pass
         self._bandRanges = {}
         self._jsonstyle = style
         if style:
             if isinstance(style, dict):
-                self.style = style
+                self._style = JSONDict(style)
                 self._jsonstyle = json.dumps(style, sort_keys=True, separators=(',', ':'))
             else:
                 try:
-                    self.style = json.loads(style)
-                    if not isinstance(self.style, dict):
+                    style = json.loads(style)
+                    if not isinstance(style, dict):
                         raise TypeError
+                    self._style = JSONDict(style)
                 except TypeError:
                     raise exceptions.TileSourceError('Style is not a valid json object.')
+
+    @property
+    def style(self):
+        return self._style
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -1038,10 +1047,7 @@ class TileSource:
         :param onlyMinMax: if True, only find the min and max.  If False, get
             the entire histogram.
         """
-        self._skipStyle = True
-        # Divert the tile cache while querying unstyled tiles
-        classkey = self._classkey
-        self._classkey = self._unstyledClassKey()
+        self._setSkipStyle(True)
         try:
             self._bandRanges[frame] = self.histogram(
                 dtype=dtype,
@@ -1055,8 +1061,7 @@ class TileSource:
                     k: v for k, v in self._bandRanges[frame].items() if k in {
                         'min', 'max', 'mean', 'stdev'}})
         finally:
-            del self._skipStyle
-            self._classkey = classkey
+            self._setSkipStyle(False)
 
     def _validateMinMaxValue(self, value, frame, dtype):
         """
@@ -1276,7 +1281,16 @@ class TileSource:
             intent = getattr(PIL.ImageCms, 'INTENT_' + str(sc.style.get('icc')).upper(),
                              PIL.ImageCms.INTENT_PERCEPTUAL)
         if not hasattr(self, '_iccsrgbprofile'):
-            self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
+            try:
+                self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
+            except ImportError:
+                self._iccsrgbprofile = None
+                self.logger.warning(
+                    'Failed to import PIL.ImageCms.  Cannot perform ICC '
+                    'color adjustments.  Does your platform support '
+                    'PIL.ImageCms?')
+        if self._iccsrgbprofile is None:
+            return sc.image
         try:
             key = (mode, intent)
             if self._iccprofilesObjects[profileIdx] is None:
@@ -1301,6 +1315,19 @@ class TileSource:
                 self._iccerror = exc
                 self.logger.exception('Failed to apply ICC profile')
         return sc.iccimage
+
+    def _setSkipStyle(self, setSkip=False):
+        if setSkip:
+            self._unlocked_classkey = self._classkey
+            if hasattr(self, 'cache_lock'):
+                with self.cache_lock:
+                    self._classkeyLock = self._styleLock
+            self._skipStyle = True
+            # Divert the tile cache while querying unstyled tiles
+            self._classkey = self._unstyledClassKey()
+        else:
+            del self._skipStyle
+            self._classkey = self._unlocked_classkey
 
     def _applyStyle(self, image, style, x, y, z, frame=None):  # noqa
         """
@@ -1345,18 +1372,14 @@ class TileSource:
             else:
                 frame = entry['frame'] if entry.get('frame') is not None else (
                     sc.mainFrame + entry['framedelta'])
-                self._skipStyle = True
-                # Divert the tile cache while querying unstyled tiles
-                classkey = self._classkey
-                self._classkey = self._unstyledClassKey()
+                self._setSkipStyle(True)
                 try:
                     image = self.getTile(x, y, z, frame=frame, numpyAllowed=True)
                     image = image[:sc.mainImage.shape[0],
                                   :sc.mainImage.shape[1],
                                   :sc.mainImage.shape[2]]
                 finally:
-                    del self._skipStyle
-                    self._classkey = classkey
+                    self._setSkipStyle(False)
             if (isinstance(entry.get('band'), int) and
                     entry['band'] >= 1 and entry['band'] <= image.shape[2]):
                 sc.bandidx = entry['band'] - 1
@@ -1606,7 +1629,7 @@ class TileSource:
         sources may do so.
         """
         mag = self.getNativeMagnification()
-        return {
+        return JSONDict({
             'levels': self.levels,
             'sizeX': self.sizeX,
             'sizeY': self.sizeY,
@@ -1615,7 +1638,11 @@ class TileSource:
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
-        }
+        })
+
+    @property
+    def metadata(self):
+        return self.getMetadata()
 
     def _addMetadataFrameInformation(self, metadata, channels=None):
         """
@@ -1734,7 +1761,7 @@ class TileSource:
         """
         frame = int(frame or 0)
         if (not getattr(self, '_skipStyle', None) and
-                hasattr(self, 'style') and 'bands' in self.style and
+                hasattr(self, '_style') and 'bands' in self.style and
                 len(self.style['bands']) and
                 all(entry.get('frame') is not None for entry in self.style['bands'])):
             frame = int(self.style['bands'][0]['frame'])
@@ -2503,7 +2530,7 @@ class TileSource:
             pixels or mm are used for inits.  It applies to output if
             neither output maxWidth nor maxHeight is specified.
 
-            :magnification: the magnification ratio.  Only used is maxWidth and
+            :magnification: the magnification ratio.  Only used if maxWidth and
                 maxHeight are not specified or None.
             :mm_x: the horizontal size of a pixel in millimeters.
             :mm_y: the vertical size of a pixel in millimeters.

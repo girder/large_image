@@ -25,6 +25,11 @@ import numpy
 import PIL.Image
 from osgeo import gdal, gdal_array, gdalconst, osr
 
+try:
+    gdal.useExceptions()
+except Exception:
+    pass
+
 # isort: off
 
 # pyproj stopped supporting older pythons, so on those versions its database is
@@ -44,7 +49,7 @@ from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
 from large_image.tilesource.geo import GeoFileTileSource
-from large_image.tilesource.utilities import getPaletteColors
+from large_image.tilesource.utilities import JSONDict, getPaletteColors
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -191,7 +196,7 @@ class GDALFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             'alpha': ['#ffffff00', '#ffffffff'],
         }
         style = []
-        if hasattr(self, 'style'):
+        if hasattr(self, '_style'):
             styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
             for styleBand in styleBands:
 
@@ -230,11 +235,11 @@ class GDALFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
     def _setDefaultStyle(self):
         """If not style was specified, create a default style."""
-        if hasattr(self, 'style'):
+        if hasattr(self, '_style'):
             styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
             if not len(styleBands) or (len(styleBands) == 1 and isinstance(
                     styleBands[0].get('band', 1), int) and styleBands[0].get('band', 1) <= 0):
-                del self.style
+                del self._style
         style = self._styleBands()
         if len(style):
             hasAlpha = False
@@ -264,7 +269,7 @@ class GDALFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                     'palette': ['#ffffff00', '#ffffffff'],
                 })
             self.logger.debug('Using style %r', style)
-            self.style = {'bands': style}
+            self._style = JSONDict({'bands': style})
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
             if band.get('interpretation'):
@@ -602,7 +607,7 @@ class GDALFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
 
     def getMetadata(self):
         with self._getDatasetLock:
-            metadata = {
+            metadata = JSONDict({
                 'geospatial': self.geospatial,
                 'levels': self.levels,
                 'sizeX': self.sizeX,
@@ -615,7 +620,7 @@ class GDALFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                 'bounds': self.getBounds(self.projection),
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
-            }
+            })
         metadata.update(self.getNativeMagnification())
         if hasattr(self, '_netcdf'):
             # To ensure all band information from all subdatasets in netcdf,

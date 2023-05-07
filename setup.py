@@ -40,6 +40,7 @@ extraReqs = {
     'colormaps': ['matplotlib'],
     'tiledoutput': ['pyvips'],
     'performance': [
+        'psutil>=4.2.0',
         'simplejpeg ; python_version >= "3.7"',
         'simplejpeg<1.6.6 ; python_version < "3.7"',
     ],
@@ -60,12 +61,14 @@ sources = {
     'rasterio': [f'large-image-source-rasterio{limit_version}'],
     'test': [f'large-image-source-test{limit_version}'],
     'tiff': [f'large-image-source-tiff{limit_version}'],
-    'tifffile': [f'large-image-source-tifffile{limit_version}'],
+    'tifffile': [f'large-image-source-tifffile{limit_version} ; python_version >= "3.7"'],
     'vips': [f'large-image-source-vips{limit_version}'],
 }
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
-extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())))
+extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) | set([
+    f'large-image-source-pil[all]{limit_version}',
+]))
 
 setup(
     name='large-image',
@@ -96,7 +99,6 @@ setup(
         'palettable',
         # Pillow 8.3.0 and 8.3.1 won't save jpeg compressed tiffs properly.
         'Pillow',
-        'psutil>=4.2.0',  # technically optional
         'numpy>=1.10.4',
         'importlib-metadata<5 ; python_version < "3.8"',
     ],

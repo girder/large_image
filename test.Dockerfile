@@ -13,14 +13,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.9.16 3.8.16 3.7.16 3.6.15 3.10.10 3.11.2"
+    PYTHON_VERSIONS="3.9.16 3.8.16 3.7.16 3.6.15 3.10.11 3.11.3"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       # general utilities \
       software-properties-common \
       # as specified by \
-      # https://github.com/pyenv/pyenv/wiki#suggested-build-environment
+      # https://github.com/pyenv/pyenv/wiki#suggested-build-environment \
       build-essential \
       curl \
       libbz2-dev \
@@ -40,7 +40,7 @@ RUN apt-get update && \
       zlib1g-dev \
       # for curl \
       ca-certificates \
-      # girder convenience
+      # girder convenience \
       fuse \
       libldap2-dev \
       libsasl2-dev \
@@ -58,7 +58,7 @@ RUN apt-get update && \
       libmagic-dev \
       # shrink docker image \
       rdfind \
-      # core girder
+      # core girder \
       gcc \
       libpython3-dev \
       python3-pip \
@@ -95,7 +95,7 @@ RUN pyenv update && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/* && \
     # This makes duplicate python library files hardlinks of each other \
-    rdfind -minsize 1048576 -makehardlinks true -makeresultsfile false /.pyenv
+    rdfind -minsize 524288 -makehardlinks true -makeresultsfile false /.pyenv
 
 RUN for ver in $PYTHON_VERSIONS; do \
     pyenv local $ver && \
@@ -105,11 +105,22 @@ RUN for ver in $PYTHON_VERSIONS; do \
     done && \
     pyenv rehash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
-    rm -rf /tmp/* /var/tmp/*
+    rm -rf /tmp/* /var/tmp/* && \
+    rdfind -minsize 524288 -makehardlinks true -makeresultsfile false /.pyenv
 
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
-    apt-get install -y nodejs && \
-    find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Use nvm to install node
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+
+# Default node version
+RUN . ~/.bashrc && \
+    nvm install 12 && \
+    nvm alias default 12 && \
+    nvm use default && \
+    rm /usr/local/bin/node || true && \
+    rm /usr/local/bin/npm || true && \
+    rm /usr/local/bin/npx || true && \
+    ln -s `which node` /usr/local/bin/. && \
+    ln -s `which npm` /usr/local/bin/. && \
+    ln -s `which npx` /usr/local/bin/.
 
 WORKDIR /app

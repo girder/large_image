@@ -81,15 +81,18 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             params.layer.autoshareRenderer = false;
             this._layer = this.viewer.createLayer('osm', params.layer);
             if (this.metadata.frames && this.metadata.frames.length > 1) {
+                const baseUrl = this._getTileUrl('{z}', '{x}', '{y}');
+                const match = baseUrl.match(/[?&](_=[^&]*)/);
+                const updated = match && match[1] ? ('&' + match[1]) : '';
                 setFrameQuad(this.metadata, this._layer, {
                     // allow more and larger textures is slower, balancing
                     // performance and appearance
                     // maxTextures: 16,
                     // maxTotalTexturePixels: 256 * 1024 * 1024,
-                    baseUrl: this._getTileUrl('{z}', '{x}', '{y}').split('/tiles/')[0] + '/tiles',
+                    baseUrl: baseUrl.split('/tiles/')[0] + '/tiles',
                     restRequest: restRequest,
                     restUrl: 'item/' + this.itemId + '/tiles',
-                    query: 'cache=true'
+                    query: 'cache=true' + updated
                 });
                 this._layer.setFrameQuad(0);
             }
@@ -144,55 +147,81 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     _postRender: function () {
     },
 
-    frameUpdate: function (frame) {
+    frameUpdate: function (frame, style) {
         if (this._frame === undefined) {
             // don't set up layers until the we access the first non-zero frame
-            if (frame === 0) {
+            if (frame === 0 && style === undefined) {
                 return;
             }
             this._frame = 0;
+            this._style = undefined;
             this._baseurl = this._layer.url();
-            const quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
-            if (!quadLoaded) {
-                // use two layers to get smooth transitions until we load
-                // background quads.
-                this._layer2 = this.viewer.createLayer('osm', this._layer._options);
+            // use two layers to get smooth transitions until we load
+            // background quads.  Always cteate this, as styles will use
+            // this, even if pure frame do not.
+            this._layer2 = this.viewer.createLayer('osm', this._layer._options);
+            if (this._layer2.zIndex() > this._layer.zIndex()) {
                 this._layer2.moveDown();
+                if (!this._layer2.options.keepLower) {
+                    this._layer.visible(true);
+                    this._layer2.visible(false);
+                }
+            }
+            if (this._layer.setFrameQuad) {
                 setFrameQuad((this._layer.setFrameQuad.status || {}).tileinfo, this._layer2, (this._layer.setFrameQuad.status || {}).options);
                 this._layer2.setFrameQuad(0);
             }
         }
+        frame = frame || 0;
         this._nextframe = frame;
-        if (frame !== this._frame && !this._updating) {
+        this._nextstyle = style;
+        if ((frame !== this._frame || style !== this._style) && !this._updating) {
             this._frame = frame;
+            this._style = style;
             this.trigger('g:imageFrameChanging', this, frame);
             const quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
-            if (quadLoaded) {
-                if (this._layer2) {
-                    this.viewer.deleteLayer(this._layer2);
-                    delete this._layer2;
-                }
+            if (quadLoaded && this._style === undefined) {
                 this._layer.url(this.getFrameAndUrl().url);
                 this._layer.setFrameQuad(frame);
                 this._layer.frame = frame;
                 this.trigger('g:imageFrameChanged', this, frame);
                 return;
             }
-
+            if (this._layer.frame !== undefined) {
+                if (this._layer.setFrameQuad) {
+                    this._layer.setFrameQuad(undefined);
+                }
+                this._layer.frame = undefined;
+            }
             this._updating = true;
             this.viewer.onIdle(() => {
                 this._layer2.url(this.getFrameAndUrl().url);
-                this._layer2.setFrameQuad(frame);
-                this._layer2.frame = frame;
+                if (this._style === undefined) {
+                    if (this._layer2.setFrameQuad) {
+                        this._layer2.setFrameQuad(frame);
+                    }
+                    this._layer2.frame = frame;
+                } else {
+                    if (this._layer2.setFrameQuad) {
+                        this._layer2.setFrameQuad(undefined);
+                    }
+                    this._layer2.frame = undefined;
+                }
                 this.viewer.onIdle(() => {
-                    this._layer.moveDown();
+                    if (this._layer.zIndex() > this._layer2.zIndex()) {
+                        this._layer.moveDown();
+                        if (!this._layer.options.keepLower) {
+                            this._layer2.visible(true);
+                            this._layer.visible(false);
+                        }
+                    }
                     var ltemp = this._layer;
                     this._layer = this._layer2;
                     this._layer2 = ltemp;
                     this._updating = false;
                     this.trigger('g:imageFrameChanged', this, frame);
-                    if (frame !== this._nextframe) {
-                        this.frameUpdate(this._nextframe);
+                    if (frame !== this._nextframe || style !== this._nextstyle) {
+                        this.frameUpdate(this._nextframe, this._nextstyle);
                     }
                 });
             });
@@ -200,13 +229,24 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     },
 
     getFrameAndUrl: function () {
-        const frame = this._frame || 0;
+        let frame = this._frame || 0;
         let url = this._baseurl || this._layer.url();
+        // setting the frame to the first frame used in a style seems to
+        // resolve a caching issue, which is probably a bug in the styling
+        // functions.  Until that is resolved, we do this.
+        if (this._style && this._style.bands && !this._style.bands.some((b) => b.frame === undefined) && this._style.bands.length) {
+            frame = this._style.bands[0].frame;
+        }
         if (frame) {
             url += (url.indexOf('?') >= 0 ? '&' : '?') + 'frame=' + frame;
         }
+        if (this._style !== undefined) {
+            const encodedStyle = encodeURIComponent(JSON.stringify(this._style));
+            url += (url.indexOf('?') >= 0 ? '&' : '?') + 'style=' + encodedStyle;
+        }
         return {
             frame: frame,
+            style: this._style,
             url: url
         };
     },

@@ -16,6 +16,7 @@ def addSystemEndpoints(apiRoot):
     :param apiRoot: Girder api root class.
     """
     apiRoot.folder.route('GET', (':id', 'yaml_config', ':name'), getYAMLConfigFile)
+    apiRoot.folder.route('PUT', (':id', 'yaml_config', ':name'), putYAMLConfigFile)
 
     origItemFind = apiRoot.item._find
     origFolderFind = apiRoot.folder._find
@@ -123,3 +124,25 @@ def getYAMLConfigFile(self, folder, name):
 
     user = self.getCurrentUser()
     return yamlConfigFile(folder, name, user)
+
+
+@access.public(scope=TokenScope.DATA_WRITE)
+@autoDescribeRoute(
+    Description('Get a config file.')
+    .notes(
+        'This replaces or creates an item in the specified folder with the '
+        'specified name containing a single file also of the specified '
+        'name.  The file is added to the default assetstore, and any existing '
+        'file may be permamently deleted.')
+    .modelParam('id', model=Folder, level=AccessType.WRITE)
+    .param('name', 'The name of the file.', paramType='path')
+    .param('config', 'The contents of yaml config file to validate.',
+           paramType='body')
+)
+@boundHandler()
+def putYAMLConfigFile(self, folder, name, config):
+    from .. import yamlConfigFileWrite
+
+    user = self.getCurrentUser()
+    config = config.read().decode('utf8')
+    return yamlConfigFileWrite(folder, name, user, config)

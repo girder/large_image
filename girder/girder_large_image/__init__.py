@@ -34,6 +34,7 @@ from girder.models.group import Group
 from girder.models.item import Item
 from girder.models.notification import Notification
 from girder.models.setting import Setting
+from girder.models.upload import Upload
 from girder.plugin import GirderPlugin, getPlugin
 from girder.settings import SettingDefault
 from girder.utility import config, search, setting_utilities
@@ -472,6 +473,29 @@ def yamlConfigFile(folder, name, user):
         else:
             folder = Folder().load(folder['parentId'], user=user, level=AccessType.READ)
     return addConfig
+
+
+def yamlConfigFileWrite(folder, name, user, yaml_config):
+    """
+    If the user has appropriate permissions, create or modify an item in the
+    specified folder with the specified name, storing the config value as a
+    file.
+
+    :param folder: a Girder folder model.
+    :param name: the name of the config file.
+    :param user: the user that the response if adjusted for.
+    :param yaml_config: a yaml config string.
+    """
+    # Check that we have valid yaml
+    yaml.safe_load(yaml_config)
+    item = Item().createItem(name, user, folder, reuseExisting=True)
+    existingFiles = list(Item().childFiles(item))
+    upload = Upload().createUpload(
+        user, name, 'item', item, size=len(yaml_config), mimeType='text/yaml',
+        save=True)
+    Upload().handleChunk(upload, yaml_config)
+    for file in existingFiles:
+        File().remove(file)
 
 
 # Validators
