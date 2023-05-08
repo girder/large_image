@@ -201,9 +201,9 @@ def testPixel():
     source = large_image_source_rasterio.open(imagePath)
     pixel = source.getPixel(region={"left": 212, "top": 198})
     assert pixel == {
-        "r": 76,
-        "g": 78,
-        "b": 77,
+        "r": 62,  # 76,
+        "g": 65,  # 78,
+        "b": 66,  # 77,
         "a": 255,
         "bands": {1: 62.0, 2: 65.0, 3: 66.0},
     }

@@ -26,7 +26,7 @@ import rasterio as rio
 from affine import Affine
 from pyproj import CRS, Geod, Transformer
 from pyproj.exceptions import CRSError
-from rasterio.enums import ColorInterp, Resampling
+from rasterio.enums import ColorInterp, MaskFlags, Resampling
 from rasterio.errors import RasterioIOError
 from rasterio.warp import calculate_default_transform, reproject
 from rasterio.windows import Window, from_bounds
@@ -642,10 +642,12 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
                     "units": dataset.units[i - 1],
                     "categories": dataset.descriptions[i - 1],
                     "interpretation": dataset.colorinterp[i - 1].name.lower(),
-                    # "maskband": dataset.read_masks(i),
                 }
                 if info["interpretation"] == "palette":
                     info["colortable"] = list(dataset.colormap(i).values())
+                # if dataset.mask_flag_enums[i - 1][0] != MaskFlags.all_valid:
+                #     # TODO: find band number - this is incorrect
+                #     info["maskband"] = dataset.mask_flag_enums[i - 1][1].value
 
                 # Only keep values that aren't None or the empty string
                 infoSet[i] = {k: v for k, v in info.items() if v not in (None, "")}
