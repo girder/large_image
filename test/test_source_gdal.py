@@ -10,7 +10,7 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
     def open(self, *args, **kwargs):
         return large_image_source_gdal.open(*args, **kwargs)
 
-    def testProj4Proj():
+    def testProj4Proj(self):
         # Test obtaining pyproj.Proj projection values
         proj4Proj = large_image_source_gdal.GDALFileTileSource._proj4Proj
 

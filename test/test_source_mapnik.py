@@ -1,7 +1,8 @@
 from unittest import TestCase
 
-import large_image
 import large_image_source_mapnik
+
+import large_image
 
 from .datastore import datastore
 from .source_geo_base import _BaseGeoTests
