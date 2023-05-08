@@ -626,7 +626,7 @@ class RasterioFileTileSource(GeoFileTileSource, metaclass=LruCacheMetaclass):
             for i in dataset.indexes:  # 1 indexed
 
                 # get the stats
-                stats = dataset.statistics(i)
+                stats = dataset.statistics(i, approx=True, clear_cache=True)
 
                 # rasterio doesn't provide support for maskband as for RCF 15
                 # instead the whole mask numpy array is rendered. We don't want to save it
