@@ -107,20 +107,24 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # init the object
         super().__init__(path, **kwargs)
 
-        # set the large_image path
-        self._largeImagePath = self._getLargeImagePath()
-
         # create a thred lock
         self._getDatasetLock = threading.RLock()
 
-        # open the file with rasterio and display potential warning/errors
-        with self._getDatasetLock:
-            try:
-                self.dataset = rio.open(self._largeImagePath)
-            except RasterioIOError:
-                raise TileSourceError("File cannot be opened via rasterio.")
-            except FileNotFoundError:
-                raise TileSourceFileNotFoundError(self._largeImagePath)
+        if isinstance(path, rio.io.DatasetReaderBase):
+            self.dataset = path
+            self._largeImagePath = self.dataset.name
+        else:
+            # set the large_image path
+            self._largeImagePath = self._getLargeImagePath()
+
+            # open the file with rasterio and display potential warning/errors
+            with self._getDatasetLock:
+                try:
+                    self.dataset = rio.open(self._largeImagePath)
+                except RasterioIOError:
+                    raise TileSourceError("File cannot be opened via rasterio.")
+                except FileNotFoundError:
+                    raise TileSourceFileNotFoundError(self._largeImagePath)
 
         # extract default parameters from the image
         self.tileSize = 256
