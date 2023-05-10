@@ -110,6 +110,9 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # create a thred lock
         self._getDatasetLock = threading.RLock()
 
+        if isinstance(path, rio.io.MemoryFile):
+            path = path.open(mode='r')
+
         if isinstance(path, rio.io.DatasetReaderBase):
             self.dataset = path
             self._largeImagePath = self.dataset.name
