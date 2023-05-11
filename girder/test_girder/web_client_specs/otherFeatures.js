@@ -1,4 +1,4 @@
-/* globals girder, girderTest, describe, it, expect, waitsFor, runs */
+/* globals girderTest, describe, it, expect, waitsFor, runs, $, _ */
 
 girderTest.importPlugin('jobs', 'worker', 'large_image');
 
@@ -47,7 +47,7 @@ describe('Test features added by the large image plugin but not directly related
         });
         girderTest.waitForLoad();
         runs(function () {
-            girderTest.binaryUpload('${large_image}/../../test/test_files/multi_test_source3.yml');
+            girderTest.binaryUpload('${large_image}/../../test/test_files/multi_test_source3.yml'); // eslint-disable-line no-template-curly-in-string
         });
         girderTest.waitForLoad();
     });
@@ -89,7 +89,7 @@ describe('Test features added by the large image plugin but not directly related
         });
         girderTest.waitForLoad();
         runs(function () {
-            girderTest.binaryUpload('${large_image}/../../test/test_files/sample.girder.cfg');
+            girderTest.binaryUpload('${large_image}/../../test/test_files/sample.girder.cfg'); // eslint-disable-line no-template-curly-in-string
         });
         girderTest.waitForLoad();
     });

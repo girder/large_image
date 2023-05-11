@@ -1,4 +1,4 @@
-/* globals girder, girderTest, describe, it, expect, waitsFor, runs */
+/* globals girder, girderTest, describe, it, expect, waitsFor, runs, beforeEach */
 
 girderTest.importPlugin('jobs', 'worker', 'large_image', 'large_image_annotation');
 
@@ -178,7 +178,7 @@ describe('Annotations', function () {
                 result: {
                     min: 0,
                     max: null,
-                    color: {'0': {r: 0, g: 0, b: 0, a: 0}, '1': {r: 1, g: 1, b: 0, a: 1}}
+                    color: {0: {r: 0, g: 0, b: 0, a: 0}, 1: {r: 1, g: 1, b: 0, a: 1}}
                 }
             }, {
                 name: 'normalize range, one value',
@@ -186,18 +186,19 @@ describe('Annotations', function () {
                 result: {
                     min: 0,
                     max: null,
-                    color: {'0': {r: 0, g: 0, b: 0, a: 0}, '1': {r: 1, g: 1, b: 0, a: 1}, '0.5': 'red'}
+                    color: {0: {r: 0, g: 0, b: 0, a: 0}, 1: {r: 1, g: 1, b: 0, a: 1}, 0.5: 'red'}
                 }
             }, {
                 name: 'normalize range, several values',
                 record: {
                     normalizeRange: true,
                     colorRange: ['blue', 'red', 'green', 'white', 'black'],
-                    rangeValues: [-1, -0.2, 0.5, 1.1, 2]},
+                    rangeValues: [-1, -0.2, 0.5, 1.1, 2]
+                },
                 result: {
                     min: 0,
                     max: null,
-                    color: {'0': 'red', '0.5': 'green', '1': 'white'}
+                    color: {0: 'red', 0.5: 'green', 1: 'white'}
                 }
             }, {
                 name: 'no normalize range',
@@ -205,7 +206,7 @@ describe('Annotations', function () {
                 result: {
                     min: 0,
                     max: null,
-                    color: {'0': {r: 0, g: 0, b: 0, a: 0}, '1': {r: 1, g: 1, b: 0, a: 1}}
+                    color: {0: {r: 0, g: 0, b: 0, a: 0}, 1: {r: 1, g: 1, b: 0, a: 1}}
                 }
             }, {
                 name: 'set range',
@@ -213,7 +214,7 @@ describe('Annotations', function () {
                 result: {
                     min: 0,
                     max: 1,
-                    color: {'0': 'red', '1': 'blue'}
+                    color: {0: 'red', 1: 'blue'}
                 }
             }, {
                 name: 'set range, more values',
@@ -221,7 +222,7 @@ describe('Annotations', function () {
                 result: {
                     min: 0,
                     max: 0.8,
-                    color: {'0': 'red', '0.25': 'blue', '1': 'green'}
+                    color: {0: 'red', 0.25: 'blue', 1: 'green'}
                 }
             }, {
                 name: 'set range, more range',
@@ -229,7 +230,7 @@ describe('Annotations', function () {
                 result: {
                     min: 0.8,
                     max: 0.8,
-                    color: {'0': {r: 0, g: 0, b: 0, a: 0}, '1': 'red'}
+                    color: {0: {r: 0, g: 0, b: 0, a: 0}, 1: 'red'}
                 }
             }];
             tests.forEach(function (test) {
