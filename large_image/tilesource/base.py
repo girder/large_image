@@ -133,7 +133,6 @@ class TileSource:
         self.sizeY = None
         self._styleLock = threading.RLock()
         self._dtype = None
-        self._predicted_dtype = None
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -206,7 +205,22 @@ class TileSource:
 
     @property
     def dtype(self):
-        return self._dtype or self._predicted_dtype
+        if not self._dtype:
+            with self._styleLock:
+                if not hasattr(self, '_skipStyle'):
+                    self._setSkipStyle(True)
+                    try:
+                        sample, format = self.getRegion(
+                            width=1, height=1,
+                            region=dict(left=0, right=0, regionWidth=1, regionHeight=1),
+                            format=TILE_FORMAT_NUMPY)
+                        self._dtype = sample.dtype
+                    finally:
+                        self._setSkipStyle(False)
+                else:
+                    raise exceptions.TileSourceError("NO!")
+
+        return self._dtype
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -1645,7 +1659,9 @@ class TileSource:
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
-            'dtype': self.dtype,
+            # Use private attribute; public property
+            # incurs calcuation cost if _dtype is still None
+            'dtype': self._dtype,
         })
 
     @property
