@@ -159,8 +159,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(
                 'Tiff image must have at least two levels.')
 
-        sampleformat = highest._tiffInfo.get("sampleformat")
-        bitspersample = highest._tiffInfo.get("bitspersample")
+        sampleformat = highest._tiffInfo.get('sampleformat')
+        bitspersample = highest._tiffInfo.get('bitspersample')
         self._dtype = numpy.dtype('%s%d' % (
             tifftools.constants.SampleFormat[sampleformat or 1].name,
             bitspersample
@@ -291,8 +291,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = max(1, int(math.ceil(math.log(max(
             dir0.imageWidth / dir0.tileWidth,
             dir0.imageHeight / dir0.tileHeight)) / math.log(2))) + 1)
-        sampleformat = dir0._tiffInfo.get("sampleformat")
-        bitspersample = dir0._tiffInfo.get("bitspersample")
+        sampleformat = dir0._tiffInfo.get('sampleformat')
+        bitspersample = dir0._tiffInfo.get('bitspersample')
         self._dtype = numpy.dtype('%s%d' % (
             tifftools.constants.SampleFormat[sampleformat or 1].name,
             bitspersample
