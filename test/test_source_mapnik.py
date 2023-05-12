@@ -192,7 +192,9 @@ def testPixel():
     source = large_image_source_mapnik.open(imagePath)
     pixel = source.getPixel(region={'left': 212, 'top': 198})
     assert pixel == {
-        'r': 62, 'g': 65, 'b': 66, 'a': 255, 'bands': {1: 62.0, 2: 65.0, 3: 66.0}}
+        'r': 62, 'g': 65, 'b': 66, 'a': 255,
+        'bands': {1: 62.0, 2: 65.0, 3: 66.0},
+        'value': [62, 65, 66, 255]}
     pixel = source.getPixel(region={'left': 2120, 'top': 198})
     assert pixel == {}
 
@@ -200,7 +202,9 @@ def testPixel():
     source = large_image_source_mapnik.open(imagePath, projection='EPSG:3857')
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
     assert pixel == {
-        'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
+        'r': 77, 'g': 82, 'b': 84, 'a': 255,
+        'bands': {1: 77.0, 2: 82.0, 3: 84.0},
+        'value': [77, 82, 84, 255]}
 
     # Check if the point is outside of the image
     pixel = source.getPixel(region={'left': 10000000, 'top': 4000000, 'units': 'projection'})
@@ -214,7 +218,9 @@ def testPixel():
         imagePath, projection='EPSG:3857', style=style)
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
     assert pixel == {
-        'r': 225, 'g': 100, 'b': 98, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
+        'r': 225, 'g': 100, 'b': 98, 'a': 255,
+        'bands': {1: 77.0, 2: 82.0, 3: 84.0},
+        'value': [225, 100, 98, 255]}
 
     # Test with palette as an array of colors
     style = json.dumps({'band': 1, 'min': 0, 'max': 100,
@@ -224,22 +230,30 @@ def testPixel():
         imagePath, projection='EPSG:3857', style=style)
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
     assert pixel == {
-        'r': 0, 'g': 255, 'b': 0, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
+        'r': 0, 'g': 255, 'b': 0, 'a': 255,
+        'bands': {1: 77.0, 2: 82.0, 3: 84.0},
+        'value': [0, 255, 0, 255]}
 
     # Test with projection units
     source = large_image_source_mapnik.open(imagePath, projection='EPSG:3857')
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'EPSG:3857'})
     assert pixel == {
-        'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
+        'r': 77, 'g': 82, 'b': 84, 'a': 255,
+        'bands': {1: 77.0, 2: 82.0, 3: 84.0},
+        'value': [77, 82, 84, 255]}
     pixel = source.getPixel(region={'left': -117.975, 'top': 33.865, 'units': 'WGS84'})
     assert pixel == {
-        'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
+        'r': 77, 'g': 82, 'b': 84, 'a': 255,
+        'bands': {1: 77.0, 2: 82.0, 3: 84.0},
+        'value': [77, 82, 84, 255]}
     # When the tile has a different projection, the pixel is the same as
     # the band values.
     source = large_image_source_mapnik.open(imagePath)
     pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'EPSG:3857'})
     assert pixel == {
-        'r': 77, 'g': 82, 'b': 84, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
+        'r': 77, 'g': 82, 'b': 84, 'a': 255,
+        'bands': {1: 77.0, 2: 82.0, 3: 84.0},
+        'value': [77, 82, 84, 255]}
 
 
 def testSourceErrors():

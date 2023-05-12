@@ -321,16 +321,16 @@ def testGetPixel():
     source = large_image_source_openslide.open(imagePath, style={'icc': False})
 
     pixel = source.getPixel(region={'left': 12125, 'top': 10640})
-    assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255}
+    assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255, 'value': [156, 98, 138, 255]}
 
     pixel = source.getPixel(region={'left': 3.0555, 'top': 2.68128, 'units': 'mm'})
-    assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255}
+    assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255, 'value': [156, 98, 138, 255]}
 
     pixel = source.getPixel(region={'top': 10640, 'right': 12126, 'bottom': 12000})
-    assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255}
+    assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255, 'value': [156, 98, 138, 255]}
 
     pixel = source.getPixel(region={'left': 12125, 'top': 10640, 'right': 13000})
-    assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255}
+    assert pixel == {'r': 156, 'g': 98, 'b': 138, 'a': 255, 'value': [156, 98, 138, 255]}
 
     pixel = source.getPixel(region={'left': 12125, 'top': 10640}, includeTileRecord=True)
     assert 'tile' in pixel
@@ -342,7 +342,7 @@ def testGetPixelWithICCCorrection():
         '4a70-9ae3-50e3ab45e242.svs')
     source = large_image_source_openslide.open(imagePath)
     pixel = source.getPixel(region={'left': 12125, 'top': 10640})
-    assert pixel == {'r': 169, 'g': 99, 'b': 151, 'a': 255}
+    assert pixel == {'r': 169, 'g': 99, 'b': 151, 'a': 255, 'value': [169, 99, 151, 255]}
     source = large_image_source_openslide.open(imagePath, style={'icc': True})
     pixel2 = source.getPixel(region={'left': 12125, 'top': 10640})
     assert pixel == pixel2

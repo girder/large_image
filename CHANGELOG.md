@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.20.7
+
+### Improvements
+- getPixel method and endpoint now returns rawer values ([#1155](../../pull/1155))
+
 ## 1.20.6
 
 ### Improvements
