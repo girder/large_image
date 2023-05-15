@@ -219,50 +219,88 @@ wrap(ItemListWidget, 'render', function (render) {
         addToRoute({filter: this._generalFilter});
     };
 
+    this._unescapePhrase = (val) => {
+        if (val !== undefined) {
+            val = val.replace('\\\'', '\'').replace('\\"', '"').replace('\\\\', '\\');
+        }
+        return val;
+    };
+
     this._setFilter = () => {
         const val = this._generalFilter;
         let filter;
         const usedPhrases = {};
         const columns = (this._confList() || {}).columns || [];
         if (val !== undefined && val !== '' && columns.length) {
+            // a value can be surrounded by single or double quotes, which will
+            // be removed.
+            const quotedValue = /((?:"((?:[^\\"]|\\\\|\\")*)"|'((?:[^\\']|\\\\|\\')*)'|([^:,\s]+)))/g;
+            const phraseRE = new RegExp(
+                new RegExp('((?:' + quotedValue.source + ':|))').source +
+                /(-?)/.source +
+                quotedValue.source +
+                new RegExp('((?:,' + quotedValue.source + ')*)').source, 'g');
             filter = [];
-            val.match(/"[^"]*"|'[^']*'|\S+/g).forEach((phrase) => {
-                if (!phrase.length || usedPhrases[phrase]) {
+            [...val.matchAll(phraseRE)].forEach((match) => {
+                const coltag = this._unescapePhrase(match[5] || match[4] || match[3]);
+                const phrase = this._unescapePhrase(match[10] || match[9] || match[8]);
+                const negation = match[6] === '-';
+                var phrases = [phrase];
+                if (match[11]) {
+                    [...match[11].matchAll(quotedValue)].forEach((submatch) => {
+                        const subphrase = this._unescapePhrase(submatch[4] || submatch[3] || submatch[2]);
+                        if (subphrase && subphrase.length && !phrases.includes(subphrase)) {
+                            phrases.push(subphrase);
+                        }
+                    });
+                }
+                const key = `${coltag}:` + phrases.join('|||');
+                if (!phrases.length || usedPhrases[key]) {
                     return;
                 }
-                usedPhrases[phrase] = true;
-                if (phrase[0] === phrase.substr(phrase.length - 1) && ['"', "'"].includes(phrase[0])) {
-                    phrase = phrase.substr(1, phrase.length - 2);
-                }
-                const numval = +phrase;
-                /* If numval is a non-zero number not in exponential notation.
-                 * delta is the value of one for the least significant digit.
-                 * This will be NaN if phrase is not a number. */
-                const delta = Math.abs(+numval.toString().replace(/\d(?=.*[1-9](0*\.|)0*$)/g, '0').replace(/[1-9]/, '1'));
-                // escape for regex
-                phrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                usedPhrases[key] = true;
                 const clause = [];
-                columns.forEach((col) => {
-                    let key;
+                phrases.forEach((phrase) => {
+                    const numval = +phrase;
+                    /* If numval is a non-zero number not in exponential
+                     * notation, delta is the value of one for the least
+                     * significant digit.  This will be NaN if phrase is not a
+                     * number. */
+                    const delta = Math.abs(+numval.toString().replace(/\d(?=.*[1-9](0*\.|)0*$)/g, '0').replace(/[1-9]/, '1'));
+                    // escape for regex
+                    phrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-                    if (col.type === 'record' && col.value !== 'controls') {
-                        key = col.value;
-                    } else if (col.type === 'metadata') {
-                        key = 'meta.' + col.value;
-                    }
-                    if (key) {
-                        clause.push({[key]: {$regex: phrase, $options: 'i'}});
-                        if (!_.isNaN(numval)) {
-                            clause.push({[key]: {$eq: numval}});
-                            if (numval > 0 && delta) {
-                                clause.push({[key]: {$gte: numval, $lt: numval + delta}});
-                            } else if (numval < 0 && delta) {
-                                clause.push({[key]: {$lte: numval, $gt: numval + delta}});
+                    columns.forEach((col) => {
+                        let key;
+
+                        if (coltag && coltag !== col.value) {
+                            // do we want to match the last .<fragment> as well?a
+                            // do we want to be case insensitive?
+                            return;
+                        }
+                        if (col.type === 'record' && col.value !== 'controls') {
+                            key = col.value;
+                        } else if (col.type === 'metadata') {
+                            key = 'meta.' + col.value;
+                        }
+                        if (key) {
+                            clause.push({[key]: {$regex: phrase, $options: 'i'}});
+                            if (!_.isNaN(numval)) {
+                                clause.push({[key]: {$eq: numval}});
+                                if (numval > 0 && delta) {
+                                    clause.push({[key]: {$gte: numval, $lt: numval + delta}});
+                                } else if (numval < 0 && delta) {
+                                    clause.push({[key]: {$lte: numval, $gt: numval + delta}});
+                                }
                             }
                         }
-                    }
+                    });
                 });
-                filter.push({$or: clause});
+                if (clause.length > 0) {
+                    filter.push(!negation ? {$or: clause} : {$nor: clause});
+                } else if (!negation) {
+                    filter.push({$or: [{_no_such_value_: '_no_such_value_'}]});
+                }
             });
             if (filter.length === 0) {
                 filter = undefined;
@@ -296,7 +334,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 func = 'before';
             }
             if (base.length) {
-                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input""></input></span>');
+                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input" title="All specified terms must be included.  Surround with quotes to include spaces.  Prefix with - to exclude that value.  By default, all columns are searched.  Use <column>:<value1>[,<value2>...] to require that a column match a specified value or any of a list of specified values.  Column and value names can be quotes to include spaces.  If <column>:-<value1>,[.<value2>] is specified, matches will exclude the list of values."></input></span>');
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(this._generalFilter);
                 }
