@@ -35,6 +35,8 @@ def addSystemEndpoints(apiRoot):
                 text = None
             except Exception as exc:
                 logger.warning('Failed to parse _filter_ from text field: %r', exc)
+        if filters:
+            logger.debug('Item find filters: %s', json.dumps(filters))
         if recurse:
             return _itemFindRecursive(
                 self, origItemFind, folderId, text, name, limit, offset, sort, filters)
