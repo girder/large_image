@@ -269,7 +269,6 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     numpy.asarray(img), self._factor)))
         else:
             img = self._pilImage
-        self._dtype = numpy.asarray(img).dtype
         return self._outputTile(img, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

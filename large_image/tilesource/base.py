@@ -1553,6 +1553,15 @@ class TileSource:
                 numpyAllowed != 'always' and tileEncoding == self.encoding and
                 not isEdge and (not applyStyle or not hasStyle)):
             return tile
+
+        if self._dtype is None:
+            if tileEncoding == TILE_FORMAT_NUMPY:
+                self._dtype = tile.dtype
+            elif tileEncoding == TILE_FORMAT_PIL:
+                self._dtype = numpy.uint8 if ';16' not in tile.mode else numpy.uint16
+            else:
+                self._dtype = _imageToNumpy(tile)[0].dtype
+
         mode = None
         if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
                 (applyStyle and hasStyle) or isEdge):

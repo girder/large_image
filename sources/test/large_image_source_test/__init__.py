@@ -302,7 +302,6 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             if self.monochrome:
                 image = image.convert('L')
             format = TILE_FORMAT_PIL
-            self._dtype = numpy.asarray(image).dtype
         else:
             image = numpy.zeros(
                 (self.tileHeight, self.tileWidth, len(self._bands)), dtype=self._dtype)
@@ -321,7 +320,6 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                     bandimg = bandimg.astype(self._dtype)
                 image[:, :, bandnum] = bandimg[:, :, bandnum % bandimg.shape[2]]
             format = TILE_FORMAT_NUMPY
-            self._dtype = image.dtype
         return self._outputTile(image, format, x, y, z, **kwargs)
 
     @staticmethod

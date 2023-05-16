@@ -246,7 +246,6 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tile = _imageToPIL(tile)
         if bw > self.tileWidth or bh > self.tileHeight:
             tile = tile.resize((self.tileWidth, self.tileHeight))
-        self._dtype = numpy.asarray(tile).dtype
         return self._outputTile(tile, format, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

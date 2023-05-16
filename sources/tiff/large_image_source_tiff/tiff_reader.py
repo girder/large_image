@@ -825,7 +825,6 @@ class TiledTiffDirectory:
         # multiple times, which sometimes throws an exception in PIL's JPEG
         # 2000 module.
         image = image.convert('RGB')
-        self._dtype = numpy.asarray(image).dtype
         return image
 
     def parse_image_description(self, meta=None):  # noqa

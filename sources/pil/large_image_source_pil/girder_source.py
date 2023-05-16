@@ -15,7 +15,6 @@
 #############################################################################
 
 import cherrypy
-import numpy
 from girder_large_image.constants import PluginSettings
 from girder_large_image.girder_tilesource import GirderTileSource
 
@@ -65,6 +64,5 @@ class PILGirderTileSource(PILFileTileSource, GirderTileSource):
             url = '%s/api/v1/file/%s/download' % (
                 cherrypy.request.base, self.item['largeImage']['fileId'])
             raise cherrypy.HTTPRedirect(url)
-        self._dtype = numpy.asarray(self._pilImage).dtype
         return self._outputTile(self._pilImage, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)

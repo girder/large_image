@@ -279,7 +279,6 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         with self._tileLock:
             # Have dask use single-threaded since we are using a lock anyway.
             tile = tileframe[y0:y1:step, x0:x1:step].compute(scheduler='single-threaded').copy()
-        self._dtype = tile.dtype
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

@@ -459,7 +459,6 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if baxis not in {'YXS', 'YX'}:
             tile = numpy.moveaxis(
                 tile, [baxis.index(a) for a in 'YXS' if a in baxis], range(len(baxis)))
-        self._dtype = tile.dtype
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

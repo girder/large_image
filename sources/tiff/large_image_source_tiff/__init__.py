@@ -605,13 +605,10 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 tile = dir.getTile(x, y)
                 format = 'JPEG'
-                self._dtype = numpy.uint8
             if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
-                self._dtype = numpy.asarray(tile).dtype
             if isinstance(tile, numpy.ndarray):
                 format = TILE_FORMAT_NUMPY
-                self._dtype = tile.dtype
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, applyStyle=allowStyle, **kwargs)
         except InvalidOperationTiffException as e:
@@ -661,7 +658,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 image = image.resize((self.tileWidth, self.tileHeight))
             else:
                 image = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
-                self._dtype = image.dtype
             return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
                                     numpyAllowed, applyStyle=False, **kwargs)
         raise TileSourceError('Internal I/O failure: %s' % exception.args[0])

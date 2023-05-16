@@ -17,7 +17,6 @@
 import functools
 
 import mapnik
-import numpy
 import PIL.Image
 from large_image_source_gdal import GDALFileTileSource, InitPrefix
 from osgeo import gdal, gdalconst
@@ -391,7 +390,6 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
         if overscan:
             pilimg = pilimg.crop((1, 1, pilimg.width - overscan, pilimg.height - overscan))
-        self._dtype = numpy.asarray(pilimg).dtype
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs)
 
 
