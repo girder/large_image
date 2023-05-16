@@ -211,8 +211,7 @@ class TileSource:
                     self._setSkipStyle(True)
                     try:
                         sample, format = self.getRegion(
-                            width=1, height=1,
-                            region=dict(left=0, right=0, regionWidth=1, regionHeight=1),
+                            region=dict(left=0, top=0, width=1, height=1),
                             format=TILE_FORMAT_NUMPY)
                         self._dtype = sample.dtype
                     finally:
