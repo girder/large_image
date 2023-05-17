@@ -4,7 +4,7 @@
 
 ### Improvements
 - getPixel method and endpoint now returns rawer values ([#1155](../../pull/1155))
-- Allow more sophisticated filtering on item lists from the Girder client ([#1157](../../pull/1157))
+- Allow more sophisticated filtering on item lists from the Girder client ([#1157](../../pull/1157), [#1159](../../pull/1159))
 
 ### Bug Fixes
 - The deepzoom tile source misreported the format of its tile output ([#1158](../../pull/1158))

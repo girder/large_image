@@ -272,10 +272,10 @@ wrap(ItemListWidget, 'render', function (render) {
 
                     columns.forEach((col) => {
                         let key;
-
-                        if (coltag && coltag !== col.value) {
-                            // do we want to match the last .<fragment> as well?a
-                            // do we want to be case insensitive?
+                        if (coltag &&
+                            coltag.localeCompare(col.title || col.value, undefined, {sensitivity: 'accent'}) &&
+                            coltag.localeCompare(col.value, undefined, {sensitivity: 'accent'})
+                        ) {
                             return;
                         }
                         if (col.type === 'record' && col.value !== 'controls') {
