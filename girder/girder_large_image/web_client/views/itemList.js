@@ -234,7 +234,7 @@ wrap(ItemListWidget, 'render', function (render) {
         if (val !== undefined && val !== '' && columns.length) {
             // a value can be surrounded by single or double quotes, which will
             // be removed.
-            const quotedValue = /((?:"((?:[^\\"]|\\\\|\\")*)"|'((?:[^\\']|\\\\|\\')*)'|([^:,\s]+)))/g;
+            const quotedValue = /((?:"((?:[^\\"]|\\\\|\\")*)(?:"|$)|'((?:[^\\']|\\\\|\\')*)(?:'|$)|([^:,\s]+)))/g;
             const phraseRE = new RegExp(
                 new RegExp('((?:' + quotedValue.source + ':|))').source +
                 /(-?)/.source +
@@ -245,12 +245,13 @@ wrap(ItemListWidget, 'render', function (render) {
                 const coltag = this._unescapePhrase(match[5] || match[4] || match[3]);
                 const phrase = this._unescapePhrase(match[10] || match[9] || match[8]);
                 const negation = match[6] === '-';
-                var phrases = [phrase];
+                var phrases = [{phrase: phrase, exact: match[8] !== undefined}];
                 if (match[11]) {
                     [...match[11].matchAll(quotedValue)].forEach((submatch) => {
                         const subphrase = this._unescapePhrase(submatch[4] || submatch[3] || submatch[2]);
-                        if (subphrase && subphrase.length && !phrases.includes(subphrase)) {
-                            phrases.push(subphrase);
+                        // remove dupes?
+                        if (subphrase && subphrase.length) {
+                            phrases.push({phrase: subphrase, exact: submatch[2] !== undefined});
                         }
                     });
                 }
@@ -260,7 +261,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 }
                 usedPhrases[key] = true;
                 const clause = [];
-                phrases.forEach((phrase) => {
+                phrases.forEach(({phrase, exact}) => {
                     const numval = +phrase;
                     /* If numval is a non-zero number not in exponential
                      * notation, delta is the value of one for the least
@@ -283,7 +284,15 @@ wrap(ItemListWidget, 'render', function (render) {
                         } else if (col.type === 'metadata') {
                             key = 'meta.' + col.value;
                         }
-                        if (key) {
+                        if (!coltag && !exact) {
+                            const r = new RegExp('^' + (phrase.substr(phrase.length - 1) === ':' ? phrase.substr(0, phrase.length - 1) : phrase), 'i');
+                            if (r.exec(col.value) || r.exec(col.title || col.value)) {
+                                clause.push({[key]: {$exists: true}});
+                            }
+                        }
+                        if (key && exact) {
+                            clause.push({[key]: {$regex: '^' + phrase + '$', $options: 'i'}});
+                        } else if (key) {
                             clause.push({[key]: {$regex: phrase, $options: 'i'}});
                             if (!_.isNaN(numval)) {
                                 clause.push({[key]: {$eq: numval}});
@@ -334,7 +343,16 @@ wrap(ItemListWidget, 'render', function (render) {
                 func = 'before';
             }
             if (base.length) {
-                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input" title="All specified terms must be included.  Surround with quotes to include spaces.  Prefix with - to exclude that value.  By default, all columns are searched.  Use <column>:<value1>[,<value2>...] to require that a column match a specified value or any of a list of specified values.  Column and value names can be quotes to include spaces.  If <column>:-<value1>,[.<value2>] is specified, matches will exclude the list of values."></input></span>');
+                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input" title="' +
+                    'All specified terms must be included.  ' +
+                    'Surround with single quotes to include spaces, double quotes for exact value match.  ' +
+                    'Prefix with - to exclude that value.  ' +
+                    'By default, all columns are searched.  ' +
+                    'Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values.  ' +
+                    'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' + '
+                    'If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.  ' +
+                    'Non-exact matches without a column specifier will also match columns that start with the specified value.  ' +
+                    '"></input></span>');
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(this._generalFilter);
                 }
