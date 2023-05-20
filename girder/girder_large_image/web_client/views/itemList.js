@@ -349,7 +349,7 @@ wrap(ItemListWidget, 'render', function (render) {
                     'Prefix with - to exclude that value.  ' +
                     'By default, all columns are searched.  ' +
                     'Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values.  ' +
-                    'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' + '
+                    'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' +
                     'If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.  ' +
                     'Non-exact matches without a column specifier will also match columns that start with the specified value.  ' +
                     '"></input></span>');
