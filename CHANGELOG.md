@@ -9,10 +9,13 @@
 ### Changes
 - Rename tiff exceptions to be better follow python standards ([#1162](../../pull/1162))
 - Require a newer version of girder ([#1163](../../pull/1163))
+- Add manual mongo index names where index names might get too long ([#1166](../../pull/1166))
+- Avoid using $unionWith for annotation searches as it isn't supported everywhere ([#1167](../../pull/1167))
 
 ### Bug Fixes
 - The deepzoom tile source misreported the format of its tile output ([#1158](../../pull/1158))
 - Guard against errors in a log message ([#1164](../../pull/1164))
+- Fix thumbnail query typo ([#1165](../../pull/1165))
 
 ## 1.20.6
 

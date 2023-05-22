@@ -16,6 +16,8 @@ try:
     from girder_large_image_annotation.models.annotation import Annotation
 
     from girder.constants import AccessType
+    from girder.models.collection import Collection
+    from girder.models.folder import Folder
     from girder.models.item import Item
     from girder.models.setting import Setting
 except ImportError:
@@ -808,3 +810,66 @@ def testMetadataSearch(server, admin, fsAssetstore):
         params={'q': 'key:key2 value', 'mode': 'li_annotation_metadata', 'types': '["item"]'})
     assert utilities.respStatus(resp) == 200
     assert len(resp.json['item']) == 0
+
+
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
+@pytest.mark.plugin('large_image_annotation')
+def testFolderEndpoints(server, admin, user):
+    collection = Collection().createCollection(
+        'collection A', user)
+    colFolderA = Folder().createFolder(
+        collection, 'folder A', parentType='collection',
+        creator=user)
+    colFolderB = Folder().createFolder(
+        colFolderA, 'folder B', creator=user)
+    colFolderC = Folder().createFolder(
+        colFolderA, 'folder C', creator=admin, public=False)
+    colFolderC = Folder().setAccessList(colFolderC, access={'users': [], 'groups': []}, save=True)
+    itemA1 = Item().createItem('sample A1', user, colFolderA)
+    itemA2 = Item().createItem('sample A1', user, colFolderA)
+    itemB1 = Item().createItem('sample B1', user, colFolderB)
+    itemB2 = Item().createItem('sample B1', user, colFolderB)
+    itemC1 = Item().createItem('sample C1', admin, colFolderC)
+    itemC2 = Item().createItem('sample C1', admin, colFolderC)
+    Annotation().createAnnotation(itemA1, user, sampleAnnotation)
+    ann = Annotation().createAnnotation(itemA1, admin, sampleAnnotation, public=False)
+    Annotation().setAccessList(ann, access={'users': [], 'groups': []}, save=True)
+    Annotation().createAnnotation(itemA2, user, sampleAnnotation)
+    Annotation().createAnnotation(itemB1, user, sampleAnnotation)
+    ann = Annotation().createAnnotation(itemB1, admin, sampleAnnotation, public=False)
+    Annotation().setAccessList(ann, access={'users': [], 'groups': []}, save=True)
+    Annotation().createAnnotation(itemB2, user, sampleAnnotation)
+    Annotation().createAnnotation(itemC1, user, sampleAnnotation)
+    ann = Annotation().createAnnotation(itemC1, admin, sampleAnnotation, public=False)
+    Annotation().setAccessList(ann, access={'users': [], 'groups': []}, save=True)
+    Annotation().createAnnotation(itemC2, user, sampleAnnotation)
+
+    resp = server.request(
+        path='/annotation/folder/' + str(colFolderA['_id']), user=admin,
+        params={'recurse': False})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 3
+
+    resp = server.request(
+        path='/annotation/folder/' + str(colFolderA['_id']), user=admin,
+        params={'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 9
+
+    resp = server.request(
+        path='/annotation/folder/' + str(colFolderA['_id']), user=user,
+        params={'recurse': False})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 2
+
+    resp = server.request(
+        path='/annotation/folder/' + str(colFolderA['_id']), user=user,
+        params={'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 6
+
+    resp = server.request(
+        path='/annotation/folder/' + str(colFolderC['_id']), user=user,
+        params={'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 2
