@@ -8,6 +8,7 @@
 
 ### Changes
 - Rename tiff exceptions to be better follow python standards ([#1162](../../pull/1162))
+- Require a newer version of girder ([#1163](../../pull/1163))
 
 ### Bug Fixes
 - The deepzoom tile source misreported the format of its tile output ([#1158](../../pull/1158))
