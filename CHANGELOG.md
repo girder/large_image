@@ -12,6 +12,7 @@
 
 ### Bug Fixes
 - The deepzoom tile source misreported the format of its tile output ([#1158](../../pull/1158))
+- Guard against errors in a log message ([#1164](../../pull/1164))
 
 ## 1.20.6
 
