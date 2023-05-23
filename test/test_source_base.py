@@ -23,7 +23,7 @@ from .datastore import datastore, registry
 # a download order.
 SourceAndFiles = {
     'bioformats': {
-        'read': r'\.(czi|jp2|svs|scn|dcm)$',
+        'read': r'\.(czi|jp2|svs|scn|dcm|qptiff)$',
         'noread': r'JK-kidney_B',
         'skip': r'TCGA-AA-A02O.*\.svs',
         # We need to modify the bioformats reader similar to tiff's
@@ -37,12 +37,12 @@ SourceAndFiles = {
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*)$',
+        'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'skipTiles': r'\.*nc$',
     },
     'mapnik': {
-        'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*)$',
+        'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         # we should only test this with a projection
         'skipTiles': r'',
@@ -58,7 +58,7 @@ SourceAndFiles = {
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
-        'read': r'\.(ptif|svs|tif.*)$',
+        'read': r'\.(ptif|svs|tif.*|qptiff)$',
         'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview)',  # noqa
         'skipTiles': r'one_layer_missing',
     },
@@ -69,7 +69,7 @@ SourceAndFiles = {
     },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
-        'read': r'\.(ptif|scn|svs|tif.*)$',
+        'read': r'\.(ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(oahu|DDX58_AXL|G10-3_pelvis_crop|'
                   r'd042-353\.crop\.small\.float|landcover_sample|US_Geo\.)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
