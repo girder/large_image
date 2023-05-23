@@ -169,6 +169,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.sizeX = highest.imageWidth
         self.sizeY = highest.imageHeight
         self._checkForInefficientDirectories()
+        self._checkForVendorSpecificTags()
 
     def _scanDirectories(self):
         lastException = None
@@ -347,6 +348,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for idx in range(self.levels - 1)]
         self._tiffDirectories.append(dir0)
         self._checkForInefficientDirectories()
+        self._checkForVendorSpecificTags()
         return True
 
     def _checkForInefficientDirectories(self, warn=True):
@@ -395,6 +397,27 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 tifftools.constants.Orientation.RightBottom.value}:
             image = image[::, ::-1, ::]
         return image
+
+    def _checkForVendorSpecificTags(self):
+        if not hasattr(self, '_frames') or len(self._frames) <= 1:
+            return
+        if self._frames[0].get('frame', {}).get('IndexC'):
+            return
+        dir = self._tiffDirectories[-1]
+        if not hasattr(dir, '_description_record'):
+            return
+        if dir._description_record.get('PerkinElmer-QPI-ImageDescription', {}).get('Biomarker'):
+            channels = []
+            for frame in range(len(self._frames)):
+                dir = self._getDirFromCache(*self._frames[frame]['dirs'][-1])
+                channels.append(dir._description_record.get(
+                    'PerkinElmer-QPI-ImageDescription', {}).get('Biomarker'))
+                if channels[-1] is None:
+                    return
+            self._frames[0]['channels'] = channels
+            for idx, frame in enumerate(self._frames):
+                frame.setdefault('frame', {})
+                frame['frame']['IndexC'] = idx
 
     def _addAssociatedImage(self, largeImagePath, directoryNum, mustBeTiled=False, topImage=None):
         """
