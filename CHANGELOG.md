@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.21.1
+
+### Improvements
+- Parse qptiff and imagej vendor information ([#1168](../../pull/1168))
+
 ## 1.21.0
 
 ### Improvements
