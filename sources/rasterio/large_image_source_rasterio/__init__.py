@@ -689,8 +689,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         # compute the coordinates if the projection exist
         else:
+            if units.startswith('proj4:'):
+                # HACK to avoid `proj4:` prefixes with `WGS84`, etc.
+                units = units.split(':', 1)[1]
             srcCrs = CRS(units)
-            dstCrs = self.dataset.crs  # use the CRS native to the file
+            dstCrs = self.projection  # instance projection -- do not use the CRS native to the file
             transformer = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
             pleft, ptop = transformer.transform(
                 right if left is None else left,
