@@ -111,13 +111,10 @@ def process_annotations(event):  # noqa: C901
     item = results['item']
     user = results['user']
 
-    startTime = time.time()
     file = File().load(
         event.info.get('file', {}).get('_id'),
         level=AccessType.READ, user=user
     )
-    if time.time() - startTime > 10:
-        logger.info('Loaded annotation file in %5.3fs', time.time() - startTime)
     startTime = time.time()
 
     if not file:

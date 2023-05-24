@@ -8,7 +8,7 @@ from xml.etree import ElementTree
 import PIL.Image
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
+from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, etreeToDict
 
@@ -113,7 +113,7 @@ class DeepzoomFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             overlap if x else 0, overlap if y else 0,
             self.tileWidth + (overlap if x else 0),
             self.tileHeight + (overlap if y else 0)))
-        return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
+        return self._outputTile(tile, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
 

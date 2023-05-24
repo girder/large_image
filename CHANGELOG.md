@@ -1,5 +1,27 @@
 # Change Log
 
+## 1.21.1
+
+### Improvements
+- Parse qptiff and imagej vendor information ([#1168](../../pull/1168))
+
+## 1.21.0
+
+### Improvements
+- getPixel method and endpoint now returns rawer values ([#1155](../../pull/1155))
+- Allow more sophisticated filtering on item lists from the Girder client ([#1157](../../pull/1157), [#1159](../../pull/1159), [#1161](../../pull/1161))
+
+### Changes
+- Rename tiff exceptions to be better follow python standards ([#1162](../../pull/1162))
+- Require a newer version of girder ([#1163](../../pull/1163))
+- Add manual mongo index names where index names might get too long ([#1166](../../pull/1166))
+- Avoid using $unionWith for annotation searches as it isn't supported everywhere ([#1167](../../pull/1167))
+
+### Bug Fixes
+- The deepzoom tile source misreported the format of its tile output ([#1158](../../pull/1158))
+- Guard against errors in a log message ([#1164](../../pull/1164))
+- Fix thumbnail query typo ([#1165](../../pull/1165))
+
 ## 1.20.6
 
 ### Improvements

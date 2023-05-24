@@ -499,7 +499,7 @@ class ImageItem(Item):
             }
             if imageKey and key == 'isLargeImageThumbnail':
                 if imageKey == 'none':
-                    query['thumbnailKey'] = {'not': {'$regex': '"imageKey":'}}
+                    query['thumbnailKey'] = {'$not': {'$regex': '"imageKey":'}}
                 else:
                     query['thumbnailKey'] = {'$regex': '"imageKey":"%s"' % imageKey}
             query.update(kwargs)

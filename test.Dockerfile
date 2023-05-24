@@ -116,11 +116,8 @@ RUN . ~/.bashrc && \
     nvm install 12 && \
     nvm alias default 12 && \
     nvm use default && \
-    rm /usr/local/bin/node || true && \
-    rm /usr/local/bin/npm || true && \
-    rm /usr/local/bin/npx || true && \
-    ln -s `which node` /usr/local/bin/. && \
-    ln -s `which npm` /usr/local/bin/. && \
-    ln -s `which npx` /usr/local/bin/.
+    ln -s $(dirname `which npm`) /usr/local/node
+
+ENV PATH="/usr/local/node:$PATH"
 
 WORKDIR /app

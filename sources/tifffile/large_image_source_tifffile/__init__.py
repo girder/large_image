@@ -1,3 +1,4 @@
+import json
 import logging
 import math
 import os
@@ -76,6 +77,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _tileSize = 512
     _minImageSize = 128
     _minTileSize = 128
+    _singleTileSize = 1024
     _maxTileSize = 2048
     _minAssociatedImageSize = 64
     _maxAssociatedImageSize = 8192
@@ -102,6 +104,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.tileWidth = self.tileHeight = self._tileSize
         s = self._tf.series[maxseries]
         self._baseSeries = s
+        if len(s.levels) == 1:
+            self.tileWidth = self.tileHeight = self._singleTileSize
         page = s.pages[0]
         if ('TileWidth' in page.tags and
                 self._minTileSize <= page.tags['TileWidth'].value <= self._maxTileSize):
@@ -243,6 +247,15 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
                     self._associatedImages[id] = entry
 
+    def _handle_imagej(self):
+        try:
+            ijm = self._tf.pages[0].tags['IJMetadata'].value
+            if (ijm['Labels'] and len(ijm['Labels']) == self._framecount and
+                    not getattr(self, '_channels', None)):
+                self._channels = ijm['Labels']
+        except Exception:
+            pass
+
     def _handle_scn(self):  # noqa
         """
         For SCN files, parse the xml and possibly adjust how associated images
@@ -359,7 +372,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         pages.extend([page for page in self._tf.pages if page not in pagesInSeries])
         for page in pages:
             for tag in getattr(page, 'tags', []):
-                if tag.dtype_name == 'ASCII' and tag.value:
+                if (tag.dtype_name == 'ASCII' or (
+                        tag.dtype_name == 'BYTE' and isinstance(tag.value, dict))) and tag.value:
                     key = basekey = tag.name
                     suffix = 0
                     while key in result:
@@ -368,6 +382,13 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         suffix += 1
                         key = '%s_%d' % (basekey, suffix)
                     result[key] = tag.value
+                    if isinstance(result[key], dict):
+                        result[key] = result[key].copy()
+                        for subkey in list(result[key]):
+                            try:
+                                json.dumps(result[key][subkey])
+                            except Exception:
+                                del result[key][subkey]
         if hasattr(self, '_xml') and 'xml' not in result:
             result.pop('ImageDescription', None)
             result['xml'] = self._xml
@@ -420,11 +441,13 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if sidx not in self._zarrcache:
                 if len(self._zarrcache) > 10:
                     self._zarrcache = {}
-                self._zarrcache[sidx] = zarr.open(series.aszarr(), mode='r')
-            za = self._zarrcache[sidx]
+                za = zarr.open(series.aszarr(), mode='r')
+                hasgbs = hasattr(za[0], 'get_basic_selection')
+                self._zarrcache[sidx] = (za, hasgbs)
+            za, hasgbs = self._zarrcache[sidx]
         xidx = series.axes.index('X')
         yidx = series.axes.index('Y')
-        if hasattr(za[0], 'get_basic_selection'):
+        if hasgbs:
             bza = za[0]
             # we could cache this
             for ll in range(len(series.levels) - 1, 0, -1):

@@ -32,9 +32,9 @@ from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePrio
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
-from .tiff_reader import (InvalidOperationTiffException, IOTiffException,
-                          IOTiffOpenException, TiffException,
-                          TiledTiffDirectory, ValidationTiffException)
+from .exceptions import (InvalidOperationTiffError, IOOpenTiffError,
+                         IOTiffError, TiffError, ValidationTiffError)
+from .tiff_reader import TiledTiffDirectory
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -105,9 +105,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         try:
             alldir = self._scanDirectories()
-        except IOTiffOpenException:
+        except IOOpenTiffError:
             raise TileSourceError('File cannot be opened via tiff source.')
-        except (ValidationTiffException, TiffException) as exc:
+        except (ValidationTiffError, TiffError) as exc:
             alldir = []
             lastException = exc
 
@@ -169,6 +169,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.sizeX = highest.imageWidth
         self.sizeY = highest.imageHeight
         self._checkForInefficientDirectories()
+        self._checkForVendorSpecificTags()
 
     def _scanDirectories(self):
         lastException = None
@@ -193,11 +194,11 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     dir._setDirectory(directoryNum)
                     dir._loadMetadata()
                 dir._validate()
-            except ValidationTiffException as exc:
+            except ValidationTiffError as exc:
                 lastException = exc
                 associatedDirs.append(directoryNum)
                 continue
-            except TiffException as exc:
+            except TiffError as exc:
                 if not lastException:
                     lastException = exc
                 break
@@ -347,6 +348,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for idx in range(self.levels - 1)]
         self._tiffDirectories.append(dir0)
         self._checkForInefficientDirectories()
+        self._checkForVendorSpecificTags()
         return True
 
     def _checkForInefficientDirectories(self, warn=True):
@@ -396,6 +398,27 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             image = image[::, ::-1, ::]
         return image
 
+    def _checkForVendorSpecificTags(self):
+        if not hasattr(self, '_frames') or len(self._frames) <= 1:
+            return
+        if self._frames[0].get('frame', {}).get('IndexC'):
+            return
+        dir = self._tiffDirectories[-1]
+        if not hasattr(dir, '_description_record'):
+            return
+        if dir._description_record.get('PerkinElmer-QPI-ImageDescription', {}).get('Biomarker'):
+            channels = []
+            for frame in range(len(self._frames)):
+                dir = self._getDirFromCache(*self._frames[frame]['dirs'][-1])
+                channels.append(dir._description_record.get(
+                    'PerkinElmer-QPI-ImageDescription', {}).get('Biomarker'))
+                if channels[-1] is None:
+                    return
+            self._frames[0]['channels'] = channels
+            for idx, frame in enumerate(self._frames):
+                frame.setdefault('frame', {})
+                frame['frame']['IndexC'] = idx
+
     def _addAssociatedImage(self, largeImagePath, directoryNum, mustBeTiled=False, topImage=None):
         """
         Check if the specified TIFF directory contains an image with a sensible
@@ -438,7 +461,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     return
                 image = self._reorient_numpy_image(image, associated._tiffInfo.get('orientation'))
                 self._associatedImages[id] = image
-        except (TiffException, AttributeError):
+        except (TiffError, AttributeError):
             # If we can't validate or read an associated image or it has no
             # useful imagedescription, fail quietly without adding an
             # associated image.
@@ -582,10 +605,10 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     if not kwargs.get('inSparseFallback'):
                         tile = self.getTileFromEmptyDirectory(x, y, z, **kwargs)
                     else:
-                        raise IOTiffException('Missing z level %d' % z)
+                        raise IOTiffError('Missing z level %d' % z)
                 except Exception:
                     if sparseFallback:
-                        raise IOTiffException('Missing z level %d' % z)
+                        raise IOTiffError('Missing z level %d' % z)
                     else:
                         raise
                 allowStyle = False
@@ -599,9 +622,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 format = TILE_FORMAT_NUMPY
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, applyStyle=allowStyle, **kwargs)
-        except InvalidOperationTiffException as e:
+        except InvalidOperationTiffError as e:
             raise TileSourceError(e.args[0])
-        except IOTiffException as e:
+        except IOTiffError as e:
             return self.getTileIOTiffError(
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
@@ -619,7 +642,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 result = TiledTiffDirectory(
                     self._largeImagePath, dirnum, mustBeTiled=None, subDirectoryNum=subdir)
-            except IOTiffException:
+            except IOTiffError:
                 result = None
             self._directoryCache[key] = result
         return result

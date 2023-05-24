@@ -2716,12 +2716,13 @@ class TileSource:
         #  img, format = self.getRegion(format=TILE_FORMAT_PIL, **regionArgs)
         # where img is the PIL image (rather than tile['tile'], but using
         # _tileIteratorInfo and the _tileIterator is slightly more efficient.
-        iterInfo = self._tileIteratorInfo(format=TILE_FORMAT_PIL, **regionArgs)
+        iterInfo = self._tileIteratorInfo(format=TILE_FORMAT_NUMPY, **regionArgs)
         if iterInfo is not None:
             tile = next(self._tileIterator(iterInfo), None)
             if includeTileRecord:
                 pixel['tile'] = tile
-            img = tile['tile']
+            pixel['value'] = [v.item() for v in tile['tile'][0][0]]
+            img = _imageToPIL(tile['tile'])
             if img.size[0] >= 1 and img.size[1] >= 1:
                 if len(img.mode) > 1:
                     pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0])))
