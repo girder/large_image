@@ -74,6 +74,9 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         """
         raise NotImplementedError
 
+    def getBounds(self, *args, **kwargs):
+        raise NotImplementedError
+
     def _getLargeImagePath(self):
         """Get GDAL-compatible image path.
 

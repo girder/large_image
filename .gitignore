@@ -71,3 +71,8 @@ docs/source/*
 !docs/source/*.py
 !docs/source/*.rst
 .pre-commit-config.yaml
+
+*.ipynb
+NOTES.md
+test_rasterio.py
+tileserver.py

@@ -316,36 +316,6 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
             return crs
 
-    def getPixelSizeInMeters(self):  # TODO (should be removed?)
-        """Get the approximate base pixel size in meters.
-
-        This is calculated as the average scale of the four edges in
-        the WGS84 ellipsoid.
-
-        :returns: the pixel size in meters or None.
-        """
-        bounds = self.getBounds(4326)
-
-        # exit with nothing if no bounds are found
-        if not bounds:
-            return None
-
-        geod = Geod(ellps="WGS84")
-
-        # extract the corner corrdinates
-        ll = bounds["ll"]["x"], bounds["ll"]["y"]
-        ul = bounds["ul"]["x"], bounds["ul"]["y"]
-        lr = bounds["lr"]["x"], bounds["lr"]["y"]
-        ur = bounds["ur"]["x"], bounds["ur"]["y"]
-
-        # compute the geods from the different corners of the image
-        az12, az21, s1 = geod.inv(*ul, *ur)
-        az12, az21, s2 = geod.inv(*ur, *lr)
-        az12, az21, s3 = geod.inv(*lr, *ll)
-        az12, az21, s4 = geod.inv(*ll, *ul)
-
-        return (s1 + s2 + s3 + s4) / (self.sourceSizeX * 2 + self.sourceSizeY * 2)
-
     def _getAffine(self):
         """Get the Affine transformation.
 
