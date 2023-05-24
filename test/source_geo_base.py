@@ -166,6 +166,8 @@ class _BaseGeoTests:
         # Test in pixel coordinates
         source = self.open(imagePath)
         pixel = source.getPixel(region={'left': 212, 'top': 198})
+        assert 'value' in pixel
+        pixel.pop('value')
         assert pixel == {
             'r': 76, 'g': 78, 'b': 77, 'a': 255, 'bands': {1: 62.0, 2: 65.0, 3: 66.0}}
         pixel = source.getPixel(region={'left': 2120, 'top': 198})
@@ -174,6 +176,7 @@ class _BaseGeoTests:
         # Test with a projection
         source = self.open(imagePath, projection='EPSG:3857')
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
+        pixel.pop('value')
         assert pixel == {
             'r': 94, 'g': 98, 'b': 99, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
@@ -183,6 +186,7 @@ class _BaseGeoTests:
         source = self.open(
             imagePath, projection='EPSG:3857', style=style)
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
+        pixel.pop('value')
         assert pixel == {
             'r': 247, 'g': 156, 'b': 60, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
@@ -192,21 +196,25 @@ class _BaseGeoTests:
         source = self.open(
             imagePath, projection='EPSG:3857', style=style)
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
+        pixel.pop('value')
         assert pixel == {
             'r': 137, 'g': 117, 'b': 0, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
         # Test with projection units
         source = self.open(imagePath, projection='EPSG:3857')
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'EPSG:3857'})
+        pixel.pop('value')
         assert pixel == {
             'r': 94, 'g': 98, 'b': 99, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
         pixel = source.getPixel(region={'left': -117.975, 'top': 33.865, 'units': 'WGS84'})
+        pixel.pop('value')
         assert pixel == {
             'r': 94, 'g': 98, 'b': 99, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
         # When the tile has a different projection, the pixel is the same as
         # the band values.
         source = self.open(imagePath)
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'EPSG:3857'})
+        pixel.pop('value')
         assert pixel == {
             'r': 94, 'g': 98, 'b': 99, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
