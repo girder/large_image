@@ -74,5 +74,3 @@ docs/source/*
 
 *.ipynb
 NOTES.md
-test_rasterio.py
-tileserver.py

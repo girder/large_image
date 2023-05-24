@@ -24,12 +24,12 @@ import numpy as np
 import PIL.Image
 import rasterio as rio
 from affine import Affine
-from pyproj import CRS, Geod, Transformer
+from pyproj import CRS, Transformer
 from pyproj.exceptions import CRSError
-from rasterio.enums import ColorInterp, MaskFlags, Resampling
+from rasterio.enums import ColorInterp, Resampling
 from rasterio.errors import RasterioIOError
 from rasterio.warp import calculate_default_transform, reproject
-from rasterio.windows import Window, from_bounds
+from rasterio.windows import from_bounds
 
 import large_image
 from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
@@ -40,7 +40,6 @@ from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
 from large_image.tilesource.geo import GDALBaseFileTileSource
-from large_image.tilesource.utilities import getPaletteColors
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -54,14 +53,14 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
-TileInputUnits["projection"] = "projection"
-TileInputUnits["proj"] = "projection"
-TileInputUnits["wgs84"] = "proj4:EPSG:4326"
-TileInputUnits["4326"] = "proj4:EPSG:4326"
+TileInputUnits['projection'] = 'projection'
+TileInputUnits['proj'] = 'projection'
+TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
+TileInputUnits['4326'] = 'proj4:EPSG:4326'
 
 # Inform the tile source cache about the potential size of this tile source
-CacheProperties["tilesource"]["itemExpectedSize"] = max(
-    CacheProperties["tilesource"]["itemExpectedSize"], 100 * 1024**2
+CacheProperties['tilesource']['itemExpectedSize'] = max(
+    CacheProperties['tilesource']['itemExpectedSize'], 100 * 1024**2
 )
 
 # Used to cache pixel size for projections
@@ -72,22 +71,22 @@ ProjUnitsAcrossLevel0_MaxSize = 100
 class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     """Provides tile access to geospatial files."""
 
-    cacheName = "tilesource"
-    name = "rasterio"
+    cacheName = 'tilesource'
+    name = 'rasterio'
     extensions = {
         None: SourcePriority.MEDIUM,
-        "geotiff": SourcePriority.PREFERRED,
-        "ntf": SourcePriority.PREFERRED,
-        "nitf": SourcePriority.PREFERRED,
-        "tif": SourcePriority.LOW,
-        "tiff": SourcePriority.LOW,
-        "vrt": SourcePriority.PREFERRED,
+        'geotiff': SourcePriority.PREFERRED,
+        'ntf': SourcePriority.PREFERRED,
+        'nitf': SourcePriority.PREFERRED,
+        'tif': SourcePriority.LOW,
+        'tiff': SourcePriority.LOW,
+        'vrt': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
-        "image/geotiff": SourcePriority.PREFERRED,
-        "image/tiff": SourcePriority.LOW,
-        "image/x-tiff": SourcePriority.LOW,
+        'image/geotiff': SourcePriority.PREFERRED,
+        'image/tiff': SourcePriority.LOW,
+        'image/x-tiff': SourcePriority.LOW,
     }
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
@@ -125,7 +124,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 try:
                     self.dataset = rio.open(self._largeImagePath)
                 except RasterioIOError:
-                    raise TileSourceError("File cannot be opened via rasterio.")
+                    raise TileSourceError('File cannot be opened via rasterio.')
                 except FileNotFoundError:
                     raise TileSourceFileNotFoundError(self._largeImagePath)
 
@@ -150,11 +149,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         # raise an error if we are missing some information about the projection
         # i.e. we don't know where to place it on a map
-        isProjected = self.projection or self.dataset.driver.lower() in {"png"}
+        isProjected = self.projection or self.dataset.driver.lower() in {'png'}
         if isProjected and not scale:
             raise TileSourceError(
-                "File does not have a projected scale, "
-                "so will not be opened via rasterio with a projection."
+                'File does not have a projected scale, '
+                'so will not be opened via rasterio with a projection.'
             )
 
         # set the levels of the tiles
@@ -186,26 +185,26 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         bandInfo = self.getBandInformation()
 
         # get the minmax value from the band
-        hasMin = all(b.get("min") is not None for b in bandInfo.values())
-        hasMax = all(b.get("max") is not None for b in bandInfo.values())
+        hasMin = all(b.get('min') is not None for b in bandInfo.values())
+        hasMax = all(b.get('max') is not None for b in bandInfo.values())
         if not frame and onlyMinMax and hasMax and hasMin:
             with self._getDatasetLock:
-                dtype = self.dataset.profile["dtype"]
+                dtype = self.dataset.profile['dtype']
             self._bandRanges[0] = {
-                "min": np.array([b["min"] for b in bandInfo.values()], dtype=dtype),
-                "max": np.array([b["max"] for b in bandInfo.values()], dtype=dtype),
+                'min': np.array([b['min'] for b in bandInfo.values()], dtype=dtype),
+                'max': np.array([b['max'] for b in bandInfo.values()], dtype=dtype),
             }
         else:
             kwargs = {}
             if self.projection:
                 bounds = self.getBounds(self.projection)
                 kwargs = {
-                    "region": {
-                        "left": bounds["xmin"],
-                        "top": bounds["ymax"],
-                        "right": bounds["xmax"],
-                        "bottom": bounds["ymin"],
-                        "units": "projection",
+                    'region': {
+                        'left': bounds['xmin'],
+                        'top': bounds['ymax'],
+                        'right': bounds['xmax'],
+                        'bottom': bounds['ymin'],
+                        'units': 'projection',
                     }
                 }
             super(RasterioFileTileSource, RasterioFileTileSource)._scanForMinMax(
@@ -222,8 +221,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # data types, this adds the range [0, 1].
         band_frame = self._bandRanges[frame]
         rangeMax = np.iinfo(dtype).max if isinstance(dtype, np.integer) else 1
-        band_frame["max"] = np.append(band_frame["max"], rangeMax)
-        band_frame["min"] = np.append(band_frame["min"], 0)
+        band_frame['max'] = np.append(band_frame['max'], rangeMax)
+        band_frame['min'] = np.append(band_frame['min'], 0)
 
     def _initWithProjection(self, unitsPerPixel=None):
         """Initialize aspects of the class when a projection is set.
@@ -235,8 +234,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         dstCrs = self.projection
         if dstCrs.is_geographic:
             raise TileSourceError(
-                "Projection must not be geographic (it needs to use linear "
-                "units, not longitude/latitude)."
+                'Projection must not be geographic (it needs to use linear '
+                'units, not longitude/latitude).'
             )
 
         if unitsPerPixel is not None:
@@ -254,7 +253,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 self.unitsAcrossLevel0 = abs(east[0] - west[0])
                 if not self.unitsAcrossLevel0:
                     raise TileSourceError(
-                        "unitsPerPixel must be specified for this projection"
+                        'unitsPerPixel must be specified for this projection'
                     )
                 if len(ProjUnitsAcrossLevel0) >= ProjUnitsAcrossLevel0_MaxSize:
                     ProjUnitsAcrossLevel0.clear()
@@ -279,12 +278,12 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        projection = kwargs.get("projection", args[1] if len(args) >= 2 else None)
-        unitsPerPixel = kwargs.get("unitsPerPixel", args[3] if len(args) >= 4 else None)
+        projection = kwargs.get('projection', args[1] if len(args) >= 2 else None)
+        unitsPerPixel = kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None)
 
         source = super(RasterioFileTileSource, RasterioFileTileSource)
         lru = source.getLRUHash(*args, **kwargs)
-        info = f",{projection},{unitsPerPixel}"
+        info = f',{projection},{unitsPerPixel}'
 
         return lru + info
 
@@ -292,7 +291,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         proj = self.projection.to_string() if self.projection else None
         unit = self._unitsPerPixel
 
-        return super().getState() + f",{proj},{unit}"
+        return super().getState() + f',{proj},{unit}'
 
     def getCrs(self):
         """Returns crs object for the given dataset
@@ -310,7 +309,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             # if no crs but the file is a NITF or has a valid affine transform then
             # consider it as 4326
             hasTransform = self.dataset.transform != Affine.identity()
-            isNitf = self.dataset.driver.lower() in {"NITF"}
+            isNitf = self.dataset.driver.lower() in {'NITF'}
             if not crs and (hasTransform or isNitf):
                 crs = CRS(4326)
 
@@ -341,12 +340,12 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         :returns: an object with the four corners and the projection that was used.
             None if we don't know the original projection.
         """
-        if crs is None and "srs" in kwargs:
-            crs = kwargs.get("srs")
+        if crs is None and 'srs' in kwargs:
+            crs = kwargs.get('srs')
 
         # read the crs as a crs if needed
         dstCrs = CRS(crs) if crs else None
-        strDstCrs = "none" if dstCrs is None else dstCrs.to_string()
+        strDstCrs = 'none' if dstCrs is None else dstCrs.to_string()
 
         # exit if it's already set
         if strDstCrs in self._bounds:
@@ -365,21 +364,21 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # longitudes and latitudes. Cannot only rely on bounds because of
         # rotated coordinate systems
         bounds = {
-            "ll": {
-                "x": af[2] + self.sourceSizeY * af[1],
-                "y": af[5] + self.sourceSizeY * af[4],
+            'll': {
+                'x': af[2] + self.sourceSizeY * af[1],
+                'y': af[5] + self.sourceSizeY * af[4],
             },
-            "ul": {
-                "x": af[2],
-                "y": af[5],
+            'ul': {
+                'x': af[2],
+                'y': af[5],
             },
-            "lr": {
-                "x": af[2] + self.sourceSizeX * af[0] + self.sourceSizeY * af[1],
-                "y": af[5] + self.sourceSizeX * af[3] + self.sourceSizeY * af[4],
+            'lr': {
+                'x': af[2] + self.sourceSizeX * af[0] + self.sourceSizeY * af[1],
+                'y': af[5] + self.sourceSizeX * af[3] + self.sourceSizeY * af[4],
             },
-            "ur": {
-                "x": af[2] + self.sourceSizeX * af[0],
-                "y": af[5] + self.sourceSizeX * af[3],
+            'ur': {
+                'x': af[2] + self.sourceSizeX * af[0],
+                'y': af[5] + self.sourceSizeX * af[3],
             },
         }
 
@@ -390,45 +389,45 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             # some projection system don't cover the poles so we need to adapt
             # the values of ybounds accordingly
             transformer = Transformer.from_crs(4326, dstCrs, always_xy=True)
-            has_poles = transformer.transform(0, 90)[1] != float("inf")
+            has_poles = transformer.transform(0, 90)[1] != float('inf')
             yBounds = 90 if has_poles else 89.999999
 
             # for each corner fix the latitude within -yBounds yBounds
             for k in bounds:
-                bounds[k]["y"] = max(min(bounds[k]["y"], yBounds), -yBounds)
+                bounds[k]['y'] = max(min(bounds[k]['y'], yBounds), -yBounds)
 
             # for each corner rotate longitude until it's within -180, 180
-            while any(v["x"] > 180 for v in bounds.values()):
+            while any(v['x'] > 180 for v in bounds.values()):
                 for k in bounds:
-                    bounds[k]["x"] -= 180
-            while any(v["x"] < -180 for v in bounds.values()):
+                    bounds[k]['x'] -= 180
+            while any(v['x'] < -180 for v in bounds.values()):
                 for k in bounds:
-                    bounds[k]["x"] += 360
+                    bounds[k]['x'] += 360
 
             # if one of the corner is > 180 set all the corner to world width
-            if any(v["x"] >= 180 for v in bounds.values()):
-                bounds["ul"]["x"] = bounds["ll"]["x"] = -180
-                bounds["ur"]["x"] = bounds["lr"]["x"] = 180
+            if any(v['x'] >= 180 for v in bounds.values()):
+                bounds['ul']['x'] = bounds['ll']['x'] = -180
+                bounds['ur']['x'] = bounds['lr']['x'] = 180
 
         # reproject the pts in the destination coordinate system if necessary
         needProjection = dstCrs and dstCrs != srcCrs
         if needProjection:
             transformer = Transformer.from_crs(srcCrs, dstCrs, always_xy=True)
             for pt in bounds.values():
-                pt["x"], pt["y"] = transformer.transform(pt["x"], pt["y"])
+                pt['x'], pt['y'] = transformer.transform(pt['x'], pt['y'])
 
         # extract min max coordinates from the corners
-        ll = bounds["ll"]["x"], bounds["ll"]["y"]
-        ul = bounds["ul"]["x"], bounds["ul"]["y"]
-        lr = bounds["lr"]["x"], bounds["lr"]["y"]
-        ur = bounds["ur"]["x"], bounds["ur"]["y"]
-        bounds["xmin"] = min(ll[0], ul[0], lr[0], ur[0])
-        bounds["xmax"] = max(ll[0], ul[0], lr[0], ur[0])
-        bounds["ymin"] = min(ll[1], ul[1], lr[1], ur[1])
-        bounds["ymax"] = max(ll[1], ul[1], lr[1], ur[1])
+        ll = bounds['ll']['x'], bounds['ll']['y']
+        ul = bounds['ul']['x'], bounds['ul']['y']
+        lr = bounds['lr']['x'], bounds['lr']['y']
+        ur = bounds['ur']['x'], bounds['ur']['y']
+        bounds['xmin'] = min(ll[0], ul[0], lr[0], ur[0])
+        bounds['xmax'] = max(ll[0], ul[0], lr[0], ur[0])
+        bounds['ymin'] = min(ll[1], ul[1], lr[1], ur[1])
+        bounds['ymax'] = max(ll[1], ul[1], lr[1], ur[1])
 
         # set the srs in the bounds
-        bounds["srs"] = dstCrs.to_string() if needProjection else srcCrs.to_string()
+        bounds['srs'] = dstCrs.to_string() if needProjection else srcCrs.to_string()
 
         # write the bounds in memeory
         self._bounds[strDstCrs] = bounds
@@ -447,7 +446,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             scale, offset, units, categories, colortable, maskband.
         """
         # exit if the value is already set
-        if getattr(self, "_bandInfo", None) and not dataset:
+        if getattr(self, '_bandInfo', None) and not dataset:
             return self._bandInfo
 
         # check if the dataset is cached
@@ -470,25 +469,25 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 # instead the whole mask numpy array is rendered. We don't want to save it
                 # in the metadata
                 info = {
-                    "min": stats.min,
-                    "max": stats.max,
-                    "mean": stats.mean,
-                    "stdev": stats.std,
-                    "nodata": dataset.nodatavals[i - 1],
-                    "scale": dataset.scales[i - 1],
-                    "offset": dataset.offsets[i - 1],
-                    "units": dataset.units[i - 1],
-                    "categories": dataset.descriptions[i - 1],
-                    "interpretation": dataset.colorinterp[i - 1].name.lower(),
+                    'min': stats.min,
+                    'max': stats.max,
+                    'mean': stats.mean,
+                    'stdev': stats.std,
+                    'nodata': dataset.nodatavals[i - 1],
+                    'scale': dataset.scales[i - 1],
+                    'offset': dataset.offsets[i - 1],
+                    'units': dataset.units[i - 1],
+                    'categories': dataset.descriptions[i - 1],
+                    'interpretation': dataset.colorinterp[i - 1].name.lower(),
                 }
-                if info["interpretation"] == "palette":
-                    info["colortable"] = list(dataset.colormap(i).values())
+                if info['interpretation'] == 'palette':
+                    info['colortable'] = list(dataset.colormap(i).values())
                 # if dataset.mask_flag_enums[i - 1][0] != MaskFlags.all_valid:
                 #     # TODO: find band number - this is incorrect
                 #     info["maskband"] = dataset.mask_flag_enums[i - 1][1].value
 
                 # Only keep values that aren't None or the empty string
-                infoSet[i] = {k: v for k, v in info.items() if v not in (None, "")}
+                infoSet[i] = {k: v for k, v in info.items() if v not in (None, '')}
 
                 # add extra informations if available
                 try:
@@ -497,7 +496,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     pass
 
         # set the value to cache if needed
-        cache is False or getattr(self, "_bandInfo", infoSet)
+        cache is False or getattr(self, '_bandInfo', infoSet)
 
         return infoSet
 
@@ -509,18 +508,18 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             has_affine = self.dataset.transform
 
             metadata = {
-                "geospatial": bool(has_projection or has_gcps or has_affine),
-                "levels": self.levels,
-                "sizeX": self.sizeX,
-                "sizeY": self.sizeY,
-                "sourceLevels": self.sourceLevels,
-                "sourceSizeX": self.sourceSizeX,
-                "sourceSizeY": self.sourceSizeY,
-                "tileWidth": self.tileWidth,
-                "tileHeight": self.tileHeight,
-                "bounds": self.getBounds(self.projection),
-                "sourceBounds": self.getBounds(),
-                "bands": self.getBandInformation(),
+                'geospatial': bool(has_projection or has_gcps or has_affine),
+                'levels': self.levels,
+                'sizeX': self.sizeX,
+                'sizeY': self.sizeY,
+                'sourceLevels': self.sourceLevels,
+                'sourceSizeX': self.sourceSizeX,
+                'sourceSizeY': self.sourceSizeY,
+                'tileWidth': self.tileWidth,
+                'tileHeight': self.tileHeight,
+                'bounds': self.getBounds(self.projection),
+                'sourceBounds': self.getBounds(),
+                'bands': self.getBandInformation(),
             }
 
         # magnification is computed elswhere
@@ -538,31 +537,31 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         """
         result = {}
         with self._getDatasetLock:
-            result["driverShortName"] = self.dataset.driver
-            result["driverLongName"] = self.dataset.driver
+            result['driverShortName'] = self.dataset.driver
+            result['driverLongName'] = self.dataset.driver
             # result['fileList'] = self.dataset.GetFileList()
-            result["RasterXSize"] = self.dataset.width
-            result["RasterYSize"] = self.dataset.height
-            result["Affine"] = self._getAffine()
-            result["Projection"] = (
+            result['RasterXSize'] = self.dataset.width
+            result['RasterYSize'] = self.dataset.height
+            result['Affine'] = self._getAffine()
+            result['Projection'] = (
                 self.dataset.crs.to_string() if self.dataset.crs else None
             )
-            result["GCPProjection"] = self.dataset.gcps[1]
+            result['GCPProjection'] = self.dataset.gcps[1]
 
             meta = self.dataset.meta
-            meta["crs"] = (
-                meta["crs"].to_string()
-                if ("crs" in meta and meta["crs"] is not None)
+            meta['crs'] = (
+                meta['crs'].to_string()
+                if ('crs' in meta and meta['crs'] is not None)
                 else None
             )
-            meta["transform"] = (
-                meta["transform"].to_gdal() if "transform" in meta else None
+            meta['transform'] = (
+                meta['transform'].to_gdal() if 'transform' in meta else None
             )
-            result["Metadata"] = meta
+            result['Metadata'] = meta
 
             # add gcp of available
             if len(self.dataset.gcps[0]) != 0:
-                result["GCPs"] = [gcp.asdict() for gcp in self.dataset.gcps[0]]
+                result['GCPs'] = [gcp.asdict() for gcp in self.dataset.gcps[0]]
 
         return result
 
@@ -589,12 +588,12 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
             # return empty image when I'm out of bounds
             if (
-                xmin >= bounds["xmax"] or
-                xmax <= bounds["xmin"] or
-                ymin >= bounds["ymax"] or
-                ymax <= bounds["ymin"]
+                xmin >= bounds['xmax'] or
+                xmax <= bounds['xmin'] or
+                ymin >= bounds['ymax'] or
+                ymax <= bounds['ymin']
             ):
-                pilimg = PIL.Image.new("RGBA", (self.tileWidth, self.tileHeight))
+                pilimg = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
                 return self._outputTile(
                     pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs
                 )
@@ -634,7 +633,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         )
 
     def _convertProjectionUnits(
-        self, left, top, right, bottom, width=None, height=None, units="base_pixels", **kwargs
+        self, left, top, right, bottom, width=None, height=None, units='base_pixels', **kwargs
     ):
         """Convert projection units.
 
@@ -657,7 +656,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             pixel or class projection units.
         """
         # build the different corner from the parameters
-        if not kwargs.get("unitsWH") or kwargs.get("unitsWH") == units:
+        if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
             if left is None and right is not None and width is not None:
                 left = right - width
             if right is None and left is not None and width is not None:
@@ -670,9 +669,9 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # raise error if we didn't build one of the coordinates
         if (left is None and right is None) or (top is None and bottom is None):
             raise TileSourceError(
-                "Cannot convert from projection unless at least one of "
-                "left and right and at least one of top and bottom is "
-                "specified."
+                'Cannot convert from projection unless at least one of '
+                'left and right and at least one of top and bottom is '
+                'specified.'
             )
 
         # compute the pixel coordinates of the corners if no projection is set
@@ -685,7 +684,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 top if bottom is None else bottom,
                 units,
             )
-            units = "base_pixels"
+            units = 'base_pixels'
 
         # compute the coordinates if the projection exist
         else:
@@ -760,23 +759,23 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 left, top, right, bottom, width, height, units, **kwargs
             )
 
-        if units == "projection" and self.projection:
+        if units == 'projection' and self.projection:
             bounds = self.getBounds(self.projection)
 
             # Fill in missing values
             if left is None:
-                left = bounds["xmin"] if right is None or width is None else right - \
+                left = bounds['xmin'] if right is None or width is None else right - \
                     width  # fmt: skip
             if right is None:
-                right = bounds["xmax"] if width is None else left + width
+                right = bounds['xmax'] if width is None else left + width
             if top is None:
-                top = bounds["ymax"] if bottom is None or height is None else bottom - \
+                top = bounds['ymax'] if bottom is None or height is None else bottom - \
                     height  # fmt: skip
             if bottom is None:
-                bottom = bounds["ymin"] if height is None else top + height
+                bottom = bounds['ymin'] if height is None else top + height
 
             # remove width and height if necessary
-            if not kwargs.get("unitsWH") or kwargs.get("unitsWH") == units:
+            if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
                 width = height = None
 
             # Convert to [-0.5, 0.5], [-0.5, 0.5] coordinate range
@@ -796,7 +795,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             # Ensure correct ordering
             left, right = min(left, right), max(left, right)
             top, bottom = min(top, bottom), max(top, bottom)
-            units = "base_pixels"
+            units = 'base_pixels'
 
         return super()._getRegionBounds(
             metadata, left, top, right, bottom, width, height, units, **kwargs
@@ -857,15 +856,15 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         noWidth = width is not None and width < 2
         noHeight = height is not None and height < 2
         if noWidth or noHeight:
-            raise ValueError("Invalid width or height.  Minimum value is 2.")
+            raise ValueError('Invalid width or height.  Minimum value is 2.')
 
         # fix image size to 256x256 if needed
         if width is None and height is None:
             width = height = 256
 
         params = dict(kwargs)
-        params["output"] = {"maxWidth": width, "maxHeight": height}
-        params["region"] = {"units": "projection"}
+        params['output'] = {'maxWidth': width, 'maxHeight': height}
+        params['region'] = {'units': 'projection'}
 
         return self.getRegion(**params)
 
@@ -913,12 +912,12 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # subdatasets and the main raster bands (if they exist), and label the
         # bands better
         pixel = super().getPixel(includeTileRecord=True, **kwargs)
-        tile = pixel.pop("tile", None)
+        tile = pixel.pop('tile', None)
 
         if tile:
 
             # Coordinates in the max level tile
-            x, y = tile["gx"], tile["gy"]
+            x, y = tile['gx'], tile['gy']
 
             if self.projection:
                 # convert to a scale of [-0.5, 0.5]
@@ -938,7 +937,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                             value = self.dataset.read(i, window=window)
                             value = value.astype(np.single)
                             value = value[0][0]  # there should be 1 single pixel
-                            pixel.setdefault("bands", {})[i] = value
+                            pixel.setdefault('bands', {})[i] = value
                         except RuntimeError:
                             pass
 
@@ -978,7 +977,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             iterInfo and
             not self._jsonstyle and
             TILE_FORMAT_IMAGE in format and
-            kwargs.get("encoding") == "TILED"
+            kwargs.get('encoding') == 'TILED'
         ):
             return super().getRegion(format, **kwargs)
 
@@ -988,7 +987,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             iterInfo['region']['right'], iterInfo['region']['bottom'], iterInfo['level'])
 
         with self._getDatasetLock, tempfile.NamedTemporaryFile(
-            suffix=".tiff", prefix="tiledGeoRegion_", delete=False
+            suffix='.tiff', prefix='tiledGeoRegion_', delete=False
         ) as output:
             window = from_bounds(
                 left=left,
@@ -1003,13 +1002,14 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
             src_transform = self.dataset.window_transform(window)
             dst_transform, _, _ = calculate_default_transform(
-                self.dataset.crs, self.projection, window.width, window.height, left, bottom, right, top,
+                self.dataset.crs, self.projection,
+                window.width, window.height, left, bottom, right, top,
             )
             # Create a new cropped raster to write to
             profile = self.dataset.meta.copy()
             profile.update(
                 large_image.tilesource.utilities._rasterioParameters(
-                    defaultCompression="lzw", **kwargs
+                    defaultCompression='lzw', **kwargs
                 )
             )
             profile.update({
@@ -1019,7 +1019,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 'transform': dst_transform,
             })
 
-            with rio.open(output.name, "w", **profile) as dst:
+            with rio.open(output.name, 'w', **profile) as dst:
                 # Reproject to the project this source was opened with
                 for i, band in enumerate(data, 1):
                     dest = np.zeros_like(band)
@@ -1034,7 +1034,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     )
                     dst.write(dest, indexes=i)
 
-            return pathlib.Path(output.name), TileOutputMimeTypes["TILED"]
+            return pathlib.Path(output.name), TileOutputMimeTypes['TILED']
 
     def validateCOG(self, strict=True, warn=True):
         """Check if this image is a valid Cloud Optimized GeoTiff.
@@ -1053,7 +1053,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         try:
             from rio_cogeo.cogeo import cog_validate
         except ImportError:
-            raise ImportError("Please insall `rio-cogeo` to check COG validity.")
+            raise ImportError('Please insall `rio-cogeo` to check COG validity.')
 
         isValid, errors, warnings = cog_validate(self._largeImagePath, strict=strict)
 

@@ -2,24 +2,12 @@ from urllib.parse import urlencode, urlparse
 
 import pyproj  # TODO: import issues
 
-import large_image
-from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
-from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileInputUnits, TileOutputMimeTypes)
-from large_image.exceptions import (TileSourceError,
-                                    TileSourceFileNotFoundError,
-                                    TileSourceInefficientError)
+from large_image.cache_util import CacheProperties, methodcache
+from large_image.constants import TileInputUnits
+from large_image.exceptions import TileSourceError
 
 from .base import FileTileSource
 from .utilities import JSONDict, getPaletteColors
-
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 
 TileInputUnits['projection'] = 'projection'
 TileInputUnits['proj'] = 'projection'
@@ -40,22 +28,23 @@ NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else In
 
 
 def make_vsi(url: str, **options):
-    if str(url).startswith("s3://"):
-        s3_path = url.replace("s3://", "")
-        vsi = f"/vsis3/{s3_path}"
+    if str(url).startswith('s3://'):
+        s3_path = url.replace('s3://', '')
+        vsi = f'/vsis3/{s3_path}'
     else:
         gdal_options = {
-            "url": str(url),
-            "use_head": "no",
-            "list_dir": "no",
+            'url': str(url),
+            'use_head': 'no',
+            'list_dir': 'no',
         }
         gdal_options.update(options)
-        vsi = f"/vsicurl?{urlencode(gdal_options)}"
+        vsi = f'/vsicurl?{urlencode(gdal_options)}'
     return vsi
 
 
 class GeoBaseFileTileSource(FileTileSource):
     """Abstract base class for geospatial tile sources."""
+
     geospatial = True
 
 
@@ -84,7 +73,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         ('http', 'https', 'ftp', 's3') for use with GDAL
         `Virtual Filesystems Interface <https://gdal.org/user/virtual_file_systems.html>`_.
         """
-        if urlparse(str(self.largeImagePath)).scheme in {"http", "https", "ftp", "s3"}:
+        if urlparse(str(self.largeImagePath)).scheme in {'http', 'https', 'ftp', 's3'}:
             return make_vsi(self.largeImagePath)
         return str(self.largeImagePath)
 
@@ -277,7 +266,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         if isinstance(band, str) and str(band).isdigit():
             band = int(band)
         elif isinstance(band, str):
-            band = next((i for i in bands if band == bands[i]["interpretation"]), None)
+            band = next((i for i in bands if band == bands[i]['interpretation']), None)
 
         # set to None if not included in the possible band values
         isBandNumber = band == -1 or band in bands
@@ -287,8 +276,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         # requested from the function call
         if exc is True and band is None:
             raise TileSourceError(
-                "Band has to be a positive integer, -1, or a band "
-                "interpretation found in the source."
+                'Band has to be a positive integer, -1, or a band '
+                'interpretation found in the source.'
             )
 
         return band

@@ -49,7 +49,7 @@ from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
 from large_image.tilesource.geo import GDALBaseFileTileSource
-from large_image.tilesource.utilities import JSONDict, getPaletteColors
+from large_image.tilesource.utilities import JSONDict
 
 try:
     from importlib.metadata import PackageNotFoundError

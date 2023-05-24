@@ -35,5 +35,5 @@ class RasterioGirderTileSource(RasterioFileTileSource, GirderTileSource):
 
         return (
             GirderTileSource.getLRUHash(*args, **kwargs) +
-            f",{projection},{unitPerPixel}"
+            f',{projection},{unitPerPixel}'
         )

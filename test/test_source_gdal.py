@@ -1,11 +1,9 @@
 import os
-
-import numpy
-import PIL.ImageChops
-import pytest
 from unittest import TestCase
 
 import large_image_source_gdal
+import numpy
+import pytest
 
 from .datastore import datastore
 from .source_geo_base import _GDALBaseSourceTest

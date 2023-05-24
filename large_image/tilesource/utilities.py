@@ -326,21 +326,21 @@ def _rasterioParameters(defaultCompression=None, eightbit=None, **kwargs):
     :returns: a dictionary of parameters.
     """
     # some default option and parameters
-    options = {"blocksize": 256, "compress": "lzw", "quality": 90}
+    options = {'blocksize': 256, 'compress': 'lzw', 'quality': 90}
 
     # the name of the predictor need to be strings so we convert here from set values to actual
     # required values (https://rasterio.readthedocs.io/en/latest/topics/image_options.html)
-    predictor = {"none": "NO", "horizontal": "STANDARD", "float": "FLOATING_POINT", "yes": "YES"}
+    predictor = {'none': 'NO', 'horizontal': 'STANDARD', 'float': 'FLOATING_POINT', 'yes': 'YES'}
 
     if eightbit is not None:
-        options["predictor"] = "yes" if eightbit else "none"
+        options['predictor'] = 'yes' if eightbit else 'none'
 
     # add the values from kwargs to the options. Remove anything that isnot set.
-    options.update({k: v for k, v in kwargs.items() if v not in (None, "")})
+    options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
 
     # add the remaining options
-    options.update(bigtiff="IF_SAFER")
-    "predictor" not in options or options.update(predictor=predictor[options["predictor"]])
+    options.update(bigtiff='IF_SAFER')
+    'predictor' not in options or options.update(predictor=predictor[options['predictor']])
 
     return options
 
