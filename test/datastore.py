@@ -89,6 +89,8 @@ registry = {
     'level-1-frames-0-20.dcm': 'sha512:cc414f0ec2f6ea0d41fa7677e5ce58d72b7541c21dd5c3a0106bf2d1814903daaeba61ae3c3cc3c46ed86210f04c7ed5cff0fc76c7305765f82642ad7ed4caa7',  # noqa
     # Composite XY frames using the multi source
     'multi-source-composite.yaml': 'sha512:61b79d43592d68509ec8a3e10b18689ac896c5753e8c1e5be349ff857ac981f8e980c4ad15bab84a3d67b08ada956d195557c64e2fd116dcdf9dc054f679573d',  # noqa
+    # Blank qptiff file with multiple channels
+    'synthetic_qptiff.qptiff': 'sha512:652e61c650bcc57beeb2f89b8fa9ac4ba44ce5c0b48c5d3c6fb40ca539b015e36fe831ea5abd95d5650ec342de6a4207a9c22d410f5e2d8bfafbf19e2a6d5d96',  # noqa
 }
 
 
