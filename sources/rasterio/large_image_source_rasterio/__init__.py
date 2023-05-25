@@ -808,43 +808,6 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         return x, y
 
-    @methodcache()
-    def getThumbnail(self, width=None, height=None, **kwargs):
-        """Get thumbnail.
-
-        Get a basic thumbnail from the current tile source.  Aspect ratio is preserved.
-        If neither width nor height is given, a default value is used.  If both are given,
-        the thumbnail will be no larger than either size.  A thumbnail has the same
-        options as a region except that it always includes the entire image if there
-        is no projection and has a default size of 256 x 256.
-
-        :param width: maximum width in pixels.
-        :param height: maximum height in pixels.
-        :param kwargs: optional arguments.  Some options are encoding, jpegQuality,
-            jpegSubsampling, and tiffCompression.
-
-        :returns: thumbData, thumbMime: the image data and the mime type.
-        """
-        # if no projection is found, call the thumbnail method for non geogrpahic images
-        if not self.projection:
-            return super().getThumbnail(width, height, **kwargs)
-
-        # image is too small if the size is None or 1 pixels or lower
-        noWidth = width is not None and width < 2
-        noHeight = height is not None and height < 2
-        if noWidth or noHeight:
-            raise ValueError('Invalid width or height.  Minimum value is 2.')
-
-        # fix image size to 256x256 if needed
-        if width is None and height is None:
-            width = height = 256
-
-        params = dict(kwargs)
-        params['output'] = {'maxWidth': width, 'maxHeight': height}
-        params['region'] = {'units': 'projection'}
-
-        return self.getRegion(**params)
-
     def toNativePixelCoordinates(self, x, y, crs=None, roundResults=True):
         """Convert a coordinate in the native projection to pixel coordinates.
 
@@ -945,7 +908,6 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # The tile iterator handles determining the output region
         iterInfo = self._tileIteratorInfo(**kwargs)
 
-        # gdal warp is not required if the original region has be istyled
         if not (
             iterInfo and
             not self._jsonstyle and

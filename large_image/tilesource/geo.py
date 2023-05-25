@@ -75,6 +75,15 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         """
         raise NotImplementedError
 
+    def _convertProjectionUnits(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def pixelToProjection(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def toNativePixelCoordinates(self, *args, **kwargs):
+        raise NotImplementedError
+
     def getBounds(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -294,94 +303,6 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
 
         return band
 
-    @staticmethod
-    def _proj4Proj(proj):
-        """
-        Return a pyproj.Proj based on either a binary or unicode string.
-
-        :param proj: a binary or unicode projection string.
-        :returns: a proj4 projection object.  None if the specified projection
-            cannot be created.
-        """
-        if isinstance(proj, bytes):
-            proj = proj.decode()
-        if not isinstance(proj, str):
-            return
-        if proj.lower().startswith('proj4:'):
-            proj = proj.split(':', 1)[1]
-        if proj.lower().startswith('epsg:'):
-            proj = NeededInitPrefix + proj.lower()
-        try:
-            if proj.startswith(InitPrefix) and int(pyproj.proj_version_str.split('.')[0]) >= 6:
-                proj = proj[len(InitPrefix):]
-        except Exception:
-            pass  # failed to parse version
-        return pyproj.Proj(proj)
-
-    def _convertProjectionUnits(self, left, top, right, bottom, width, height,
-                                units, **kwargs):
-        """
-        Given bound information and a units string that consists of a proj4
-        projection (starts with `'proj4:'`, `'epsg:'`, `'+proj='` or is an
-        enumerated value like `'wgs84'`), convert the bounds to either pixel or
-        the class projection coordinates.
-
-        :param left: the left edge (inclusive) of the region to process.
-        :param top: the top edge (inclusive) of the region to process.
-        :param right: the right edge (exclusive) of the region to process.
-        :param bottom: the bottom edge (exclusive) of the region to process.
-        :param width: the width of the region to process.  Ignored if both
-            left and right are specified.
-        :param height: the height of the region to process.  Ignores if both
-            top and bottom are specified.
-        :param units: either 'projection', a string starting with 'proj4:',
-            'epsg:', or '+proj=' or a enumerated value like 'wgs84', or one of
-            the super's values.
-        :param kwargs: optional parameters.
-        :returns: left, top, right, bottom, units.  The new bounds in the
-            either pixel or class projection units.
-        """
-        if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
-            if left is None and right is not None and width is not None:
-                left = right - width
-            if right is None and left is not None and width is not None:
-                right = left + width
-            if top is None and bottom is not None and height is not None:
-                top = bottom - height
-            if bottom is None and top is not None and height is not None:
-                bottom = top + height
-        if (left is None and right is None) or (top is None and bottom is None):
-            raise TileSourceError(
-                'Cannot convert from projection unless at least one of '
-                'left and right and at least one of top and bottom is '
-                'specified.')
-        if not self.projection:
-            pleft, ptop = self.toNativePixelCoordinates(
-                right if left is None else left,
-                bottom if top is None else top,
-                units)
-            pright, pbottom = self.toNativePixelCoordinates(
-                left if right is None else right,
-                top if bottom is None else bottom,
-                units)
-            units = 'base_pixels'
-        else:
-            inProj = self._proj4Proj(units)
-            outProj = self._proj4Proj(self.projection)
-            transformer = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True)
-            pleft, ptop = transformer.transform(
-                right if left is None else left,
-                bottom if top is None else top)
-            pright, pbottom = transformer.transform(
-                left if right is None else right,
-                top if bottom is None else bottom)
-            units = 'projection'
-        left = pleft if left is not None else None
-        top = ptop if top is not None else None
-        right = pright if right is not None else None
-        bottom = pbottom if bottom is not None else None
-        return left, top, right, bottom, units
-
     def _getRegionBounds(self, metadata, left=None, top=None, right=None,
                          bottom=None, width=None, height=None, units=None,
                          **kwargs):
@@ -450,31 +371,6 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         return super()._getRegionBounds(
             metadata, left, top, right, bottom, width, height, units, **kwargs)
 
-    def pixelToProjection(self, x, y, level=None):
-        """
-        Convert from pixels back to projection coordinates.
-
-        :param x, y: base pixel coordinates.
-        :param level: the level of the pixel.  None for maximum level.
-        :returns: x, y in projection coordinates.
-        """
-        if level is None:
-            level = self.levels - 1
-        if not self.projection:
-            x *= 2 ** (self.levels - 1 - level)
-            y *= 2 ** (self.levels - 1 - level)
-            gt = self._getGeoTransform()
-            px = gt[0] + gt[1] * x + gt[2] * y
-            py = gt[3] + gt[4] * x + gt[5] * y
-            return px, py
-        xScale = 2 ** level * self.tileWidth
-        yScale = 2 ** level * self.tileHeight
-        x = x / xScale - 0.5
-        y = 0.5 - y / yScale
-        x = x * self.unitsAcrossLevel0 + self.projectionOrigin[0]
-        y = y * self.unitsAcrossLevel0 + self.projectionOrigin[1]
-        return x, y
-
     @methodcache()
     def getThumbnail(self, width=None, height=None, **kwargs):
         """
@@ -502,30 +398,3 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             params['region'] = {'units': 'projection'}
             return self.getRegion(**params)
         return super().getThumbnail(width, height, **kwargs)
-
-    def toNativePixelCoordinates(self, x, y, proj=None, roundResults=True):
-        """
-        Convert a coordinate in the native projection (self.getProj4String) to
-        pixel coordinates.
-
-        :param x: the x coordinate it the native projection.
-        :param y: the y coordinate it the native projection.
-        :param proj: input projection.  None to use the source's projection.
-        :param roundResults: if True, round the results to the nearest pixel.
-        :return: (x, y) the pixel coordinate.
-        """
-        if proj is None:
-            proj = self.projection
-        # convert to the native projection
-        inProj = self._proj4Proj(proj)
-        outProj = self._proj4Proj(self.getProj4String())
-        px, py = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True).transform(x, y)
-        # convert to native pixel coordinates
-        gt = self._getGeoTransform()
-        d = gt[2] * gt[4] - gt[1] * gt[5]
-        x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
-        y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
-        if roundResults:
-            x = int(round(x))
-            y = int(round(y))
-        return x, y
