@@ -1336,6 +1336,8 @@ class TileSource:
         return sc.iccimage
 
     def _setSkipStyle(self, setSkip=False):
+        if not hasattr(self, '_classkey'):
+            self._classkey = self.getState()
         if setSkip:
             self._unlocked_classkey = self._classkey
             if hasattr(self, 'cache_lock'):
@@ -1667,7 +1669,7 @@ class TileSource:
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
-            'dtype': str(self.dtype),
+            'dtype': self.dtype,
         })
 
     @property
@@ -2445,7 +2447,7 @@ class TileSource:
         # Perform some slight rounding to handle numerical precision issues
         ratios = [round(ratio, 4) for ratio in ratios]
         if not len(ratios):
-            return mag['level']
+            return mag.get('level', 0)
         if exact:
             if any(int(ratio) != ratio or ratio != ratios[0]
                    for ratio in ratios):
