@@ -101,6 +101,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     self.dataset = rio.open(self._largeImagePath)
                 except RasterioIOError:
                     raise TileSourceError('File cannot be opened via rasterio.')
+                if self.dataset.driver == 'netCDF':
+                    raise TileSourceError('netCDF file will not be read via rasterio source.')
 
         # extract default parameters from the image
         self.tileSize = 256
@@ -114,8 +116,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             self.sourceSizeX = self.sizeX = self.dataset.width
             self.sourceSizeY = self.sizeY = self.dataset.height
 
-        # netCFD is blacklisted from rasterio so it won't be used.
-        # use the gdal binding if needed. This variable is always ignored
+        # netCDF is blacklisted from rasterio so it won't be used.
+        # use the mapnik source if needed. This variable is always ignored
         # is_netcdf = False
 
         # get the different scales and projections from the image
@@ -881,10 +883,6 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             scale of [0-255], including alpha, if available.  This may contain
             additional information.
         """
-        # TODO: netCFD - currently this will read the values from the
-        # default subdatatset; we may want it to read values from all
-        # subdatasets and the main raster bands (if they exist), and label the
-        # bands better
         pixel = super().getPixel(includeTileRecord=True, **kwargs)
         tile = pixel.pop('tile', None)
 
