@@ -71,6 +71,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     Provides tile access to geospatial files.
     """
 
+    cacheName = 'tilesource'
     name = 'gdal'
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):

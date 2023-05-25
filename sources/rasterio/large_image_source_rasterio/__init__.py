@@ -59,6 +59,7 @@ except PackageNotFoundError:
 class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     """Provides tile access to geospatial files."""
 
+    cacheName = 'tilesource'
     name = 'rasterio'
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):

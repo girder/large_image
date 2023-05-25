@@ -54,6 +54,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
     Provides tile access to geospatial files.
     """
 
+    cacheName = 'tilesource'
     name = 'mapnik'
     extensions = {
         None: SourcePriority.MEDIUM,

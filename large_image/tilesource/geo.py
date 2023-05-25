@@ -40,7 +40,6 @@ def make_vsi(url: str, **options):
 class GeoBaseFileTileSource(FileTileSource):
     """Abstract base class for geospatial tile sources."""
 
-    cacheName = 'tilesource'
     _geospatial_source = True
 
 
