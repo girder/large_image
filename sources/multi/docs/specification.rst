@@ -126,7 +126,7 @@ Transforms can be applied to scale the individual sources:
           y: 360
       - path: ./test_orient4.tif
         position:
-          scale: 360
+          scale: 2
           x: 180
           y: 180
 

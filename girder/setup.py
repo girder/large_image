@@ -53,7 +53,7 @@ setup(
         'Programming Language :: Python :: 3.11',
     ],
     install_requires=[
-        'girder>=3.0.4',
+        'girder>=3.1.18',
         'girder-jobs>=3.0.3',
         f'large_image{limit_version}',
         'importlib-metadata<5 ; python_version < "3.8"',

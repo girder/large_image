@@ -1,6 +1,5 @@
 # Top level dependencies
-girder>=3.0.4 ; python_version < '3.8'
-girder>=3.0.14 ; python_version >= '3.8'
+girder>=3.1.18
 girder-jobs>=3.0.3
 sources/bioformats
 sources/deepzoom
