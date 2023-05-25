@@ -1669,9 +1669,7 @@ class TileSource:
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
-            # Use private attribute; public property
-            # incurs calcuation cost if _dtype is still None
-            'dtype': self._dtype,
+            'dtype': self.dtype,
         })
 
     @property
