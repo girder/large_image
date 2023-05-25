@@ -217,9 +217,7 @@ class TileSource:
                     finally:
                         self._setSkipStyle(False)
                 else:
-                    raise exceptions.TileSourceError(
-                        'Cannot determine dtype while style is locked.'
-                    )
+                    return None
 
         return self._dtype
 
