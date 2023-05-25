@@ -4,7 +4,7 @@ Contextual information on testing files
 
 ## `rgba_geotiff.tiff` and `small_la.tiff`
 
-Please not the `a` in `rgba_geotiff.tiff` -- this is a very different file
+Please note the `a` in `rgba_geotiff.tiff` -- this is a very different file
 from `rgb_geotiff.tiff`.
 
 The uniqueness of these files comes from their spatial reference.
