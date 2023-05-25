@@ -32,14 +32,16 @@ from rasterio.warp import calculate_default_transform, reproject
 from rasterio.windows import from_bounds
 
 import large_image
-from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
+from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileInputUnits, TileOutputMimeTypes)
+                                   TILE_FORMAT_PIL, TileInputUnits,
+                                   TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
-from large_image.tilesource.geo import GDALBaseFileTileSource
+from large_image.tilesource.geo import (GDALBaseFileTileSource,
+                                        ProjUnitsAcrossLevel0,
+                                        ProjUnitsAcrossLevel0_MaxSize)
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -53,41 +55,11 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
-TileInputUnits['projection'] = 'projection'
-TileInputUnits['proj'] = 'projection'
-TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
-TileInputUnits['4326'] = 'proj4:EPSG:4326'
-
-# Inform the tile source cache about the potential size of this tile source
-CacheProperties['tilesource']['itemExpectedSize'] = max(
-    CacheProperties['tilesource']['itemExpectedSize'], 100 * 1024**2
-)
-
-# Used to cache pixel size for projections
-ProjUnitsAcrossLevel0 = {}
-ProjUnitsAcrossLevel0_MaxSize = 100
-
 
 class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     """Provides tile access to geospatial files."""
 
-    cacheName = 'tilesource'
     name = 'rasterio'
-    extensions = {
-        None: SourcePriority.MEDIUM,
-        'geotiff': SourcePriority.PREFERRED,
-        'ntf': SourcePriority.PREFERRED,
-        'nitf': SourcePriority.PREFERRED,
-        'tif': SourcePriority.LOW,
-        'tiff': SourcePriority.LOW,
-        'vrt': SourcePriority.PREFERRED,
-    }
-    mimeTypes = {
-        None: SourcePriority.FALLBACK,
-        'image/geotiff': SourcePriority.PREFERRED,
-        'image/tiff': SourcePriority.LOW,
-        'image/x-tiff': SourcePriority.LOW,
-    }
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
         """Initialize the tile class.

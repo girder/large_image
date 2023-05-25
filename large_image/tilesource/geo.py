@@ -4,15 +4,10 @@ import pyproj  # TODO: import issues
 
 from large_image.cache_util import CacheProperties, methodcache
 from large_image.constants import TileInputUnits
-from large_image.exceptions import TileSourceError
+from large_image.exceptions import SourcePriority, TileSourceError
 
 from .base import FileTileSource
 from .utilities import JSONDict, getPaletteColors
-
-TileInputUnits['projection'] = 'projection'
-TileInputUnits['proj'] = 'projection'
-TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
-TileInputUnits['4326'] = 'proj4:EPSG:4326'
 
 # Inform the tile source cache about the potential size of this tile source
 CacheProperties['tilesource']['itemExpectedSize'] = max(
@@ -45,7 +40,8 @@ def make_vsi(url: str, **options):
 class GeoBaseFileTileSource(FileTileSource):
     """Abstract base class for geospatial tile sources."""
 
-    geospatial = True
+    cacheName = 'tilesource'
+    _geospatial_source = True
 
 
 class GDALBaseFileTileSource(GeoBaseFileTileSource):
@@ -54,6 +50,23 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
     This base class assumes the underlying library is powered by GDAL
     (rasterio, mapnik, etc.)
     """
+
+    extensions = {
+        None: SourcePriority.MEDIUM,
+        'geotiff': SourcePriority.PREFERRED,
+        # National Imagery Transmission Format
+        'ntf': SourcePriority.PREFERRED,
+        'nitf': SourcePriority.PREFERRED,
+        'tif': SourcePriority.LOW,
+        'tiff': SourcePriority.LOW,
+        'vrt': SourcePriority.PREFERRED,
+    }
+    mimeTypes = {
+        None: SourcePriority.FALLBACK,
+        'image/geotiff': SourcePriority.PREFERRED,
+        'image/tiff': SourcePriority.LOW,
+        'image/x-tiff': SourcePriority.LOW,
+    }
 
     def _getDriver(self):
         """

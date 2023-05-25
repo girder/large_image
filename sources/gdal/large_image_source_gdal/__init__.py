@@ -41,14 +41,16 @@ import pyproj
 # isort: on
 
 import large_image
-from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
+from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileInputUnits, TileOutputMimeTypes)
+                                   TILE_FORMAT_PIL, TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
-from large_image.tilesource.geo import GDALBaseFileTileSource
+from large_image.tilesource.geo import (GDALBaseFileTileSource, InitPrefix,
+                                        NeededInitPrefix,
+                                        ProjUnitsAcrossLevel0,
+                                        ProjUnitsAcrossLevel0_MaxSize)
 from large_image.tilesource.utilities import JSONDict
 
 try:
@@ -63,48 +65,13 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
-TileInputUnits['projection'] = 'projection'
-TileInputUnits['proj'] = 'projection'
-TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
-TileInputUnits['4326'] = 'proj4:EPSG:4326'
-
-# Inform the tile source cache about the potential size of this tile source
-CacheProperties['tilesource']['itemExpectedSize'] = max(
-    CacheProperties['tilesource']['itemExpectedSize'],
-    100 * 1024 ** 2)
-
-# Used to cache pixel size for projections
-ProjUnitsAcrossLevel0 = {}
-ProjUnitsAcrossLevel0_MaxSize = 100
-
-InitPrefix = '+init='
-NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else InitPrefix
-
 
 class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
     """
 
-    cacheName = 'tilesource'
     name = 'gdal'
-    extensions = {
-        None: SourcePriority.MEDIUM,
-        'geotiff': SourcePriority.PREFERRED,
-        # National Imagery Transmission Format
-        'ntf': SourcePriority.PREFERRED,
-        'nitf': SourcePriority.PREFERRED,
-        'tif': SourcePriority.LOW,
-        'tiff': SourcePriority.LOW,
-        'vrt': SourcePriority.PREFERRED,
-    }
-    mimeTypes = {
-        None: SourcePriority.FALLBACK,
-        'image/geotiff': SourcePriority.PREFERRED,
-        'image/tiff': SourcePriority.LOW,
-        'image/x-tiff': SourcePriority.LOW,
-    }
-    _geospatial_source = True
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
         """

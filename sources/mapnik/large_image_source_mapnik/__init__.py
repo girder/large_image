@@ -54,7 +54,6 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
     Provides tile access to geospatial files.
     """
 
-    cacheName = 'tilesource'
     name = 'mapnik'
     extensions = {
         None: SourcePriority.MEDIUM,
@@ -65,12 +64,6 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         'tif': SourcePriority.LOWER,
         'tiff': SourcePriority.LOWER,
         'vrt': SourcePriority.HIGHER,
-    }
-    mimeTypes = {
-        None: SourcePriority.FALLBACK,
-        'image/geotiff': SourcePriority.HIGHER,
-        'image/tiff': SourcePriority.LOWER,
-        'image/x-tiff': SourcePriority.LOWER,
     }
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
