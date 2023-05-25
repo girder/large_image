@@ -1669,7 +1669,7 @@ class TileSource:
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
-            'dtype': self.dtype,
+            'dtype': str(self.dtype),
         })
 
     @property
