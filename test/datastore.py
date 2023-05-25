@@ -91,6 +91,8 @@ registry = {
     'multi-source-composite.yaml': 'sha512:61b79d43592d68509ec8a3e10b18689ac896c5753e8c1e5be349ff857ac981f8e980c4ad15bab84a3d67b08ada956d195557c64e2fd116dcdf9dc054f679573d',  # noqa
     # Blank qptiff file with multiple channels
     'synthetic_qptiff.qptiff': 'sha512:652e61c650bcc57beeb2f89b8fa9ac4ba44ce5c0b48c5d3c6fb40ca539b015e36fe831ea5abd95d5650ec342de6a4207a9c22d410f5e2d8bfafbf19e2a6d5d96',  # noqa
+    # Blank imageJ file with multiple channels
+    'synthetic_imagej.tiff': 'sha512:f4fcf9633b7fc8c819aace248352b3ef89364418d734aa8326096829d64956f11b961c24003bd5ca1f7e46462a8230b64177b37b1517a416d7c7123a0932d5dc',  # noqa
 }
 
 
