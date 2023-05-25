@@ -95,7 +95,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
             # open the file with rasterio and display potential warning/errors
             with self._getDatasetLock:
-                if not os.path.isfile(self._largeImagePath):
+                if not self._largeImagePath.startswith(
+                        '/vsi') and not os.path.isfile(self._largeImagePath):
                     raise TileSourceFileNotFoundError(self._largeImagePath) from None
                 try:
                     self.dataset = rio.open(self._largeImagePath)
