@@ -11,7 +11,7 @@ girder-jobs>=3.0.3
 -e sources/openjpeg
 -e sources/openslide
 -e sources/pil[all]
--e sources/rasterio
+-e sources/rasterio[cog]
 -e sources/test
 -e sources/tiff
 -e sources/tifffile
