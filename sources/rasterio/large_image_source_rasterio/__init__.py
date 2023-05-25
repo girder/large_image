@@ -15,6 +15,7 @@
 #############################################################################
 
 import math
+import os
 import pathlib
 import tempfile
 import threading
@@ -94,12 +95,12 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
             # open the file with rasterio and display potential warning/errors
             with self._getDatasetLock:
+                if not os.path.isfile(self._largeImagePath):
+                    raise TileSourceFileNotFoundError(self._largeImagePath) from None
                 try:
                     self.dataset = rio.open(self._largeImagePath)
                 except RasterioIOError:
                     raise TileSourceError('File cannot be opened via rasterio.')
-                except FileNotFoundError:
-                    raise TileSourceFileNotFoundError(self._largeImagePath)
 
         # extract default parameters from the image
         self.tileSize = 256
