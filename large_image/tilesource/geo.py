@@ -3,8 +3,8 @@ from urllib.parse import urlencode, urlparse
 import pyproj  # TODO: import issues
 
 from large_image.cache_util import CacheProperties, methodcache
-from large_image.constants import TileInputUnits
-from large_image.exceptions import SourcePriority, TileSourceError
+from large_image.constants import TileInputUnits, SourcePriority
+from large_image.exceptions import TileSourceError
 
 from .base import FileTileSource
 from .utilities import JSONDict, getPaletteColors
