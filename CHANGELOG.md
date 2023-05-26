@@ -1,9 +1,15 @@
 # Change Log
 
-## 1.21.1
+## 1.22.0
+
+### Features
+- Add tile source dtype attribute ([#1144](../../pull/1144))
 
 ### Improvements
 - Parse qptiff and imagej vendor information ([#1168](../../pull/1168))
+
+### Changes
+- Remove an unneeded warnings filter ([#1172](../../pull/1172))
 
 ## 1.21.0
 

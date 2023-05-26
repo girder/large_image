@@ -226,7 +226,10 @@ def _imageToNumpy(image):
         if image.mode not in ('L', 'LA', 'RGB', 'RGBA'):
             image = image.convert('RGBA')
         mode = image.mode
-        image = numpy.asarray(image)
+        if not image.width or not image.height:
+            image = numpy.zeros((image.height, image.width, len(mode)))
+        else:
+            image = numpy.asarray(image)
     else:
         if len(image.shape) == 3:
             mode = ['L', 'LA', 'RGB', 'RGBA'][(image.shape[2] - 1) if image.shape[2] <= 4 else 3]

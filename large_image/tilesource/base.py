@@ -132,6 +132,7 @@ class TileSource:
         self.sizeX = None
         self.sizeY = None
         self._styleLock = threading.RLock()
+        self._dtype = None
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -201,6 +202,24 @@ class TileSource:
     @property
     def style(self):
         return self._style
+
+    @property
+    def dtype(self):
+        if not self._dtype:
+            with self._styleLock:
+                if not hasattr(self, '_skipStyle'):
+                    self._setSkipStyle(True)
+                    try:
+                        sample, format = self.getRegion(
+                            region=dict(left=0, top=0, width=1, height=1),
+                            format=TILE_FORMAT_NUMPY)
+                        self._dtype = sample.dtype
+                    finally:
+                        self._setSkipStyle(False)
+                else:
+                    return None
+
+        return self._dtype
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -1317,6 +1336,8 @@ class TileSource:
         return sc.iccimage
 
     def _setSkipStyle(self, setSkip=False):
+        if not hasattr(self, '_classkey'):
+            self._classkey = self.getState()
         if setSkip:
             self._unlocked_classkey = self._classkey
             if hasattr(self, 'cache_lock'):
@@ -1532,6 +1553,15 @@ class TileSource:
                 numpyAllowed != 'always' and tileEncoding == self.encoding and
                 not isEdge and (not applyStyle or not hasStyle)):
             return tile
+
+        if self._dtype is None:
+            if tileEncoding == TILE_FORMAT_NUMPY:
+                self._dtype = tile.dtype
+            elif tileEncoding == TILE_FORMAT_PIL:
+                self._dtype = numpy.uint8 if ';16' not in tile.mode else numpy.uint16
+            else:
+                self._dtype = _imageToNumpy(tile)[0].dtype
+
         mode = None
         if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
                 (applyStyle and hasStyle) or isEdge):
@@ -1595,6 +1625,7 @@ class TileSource:
             :magnification: if known, the magnificaiton of the image.
             :mm_x: if known, the width of a pixel in millimeters.
             :mm_y: if known, the height of a pixel in millimeters.
+            :dtype: if known, the type of values in this image.
 
             In addition to the keys that listed above, tile sources that expose
             multiple frames will also contain
@@ -1625,7 +1656,7 @@ class TileSource:
             :channelmap: optional.  If known, a dictionary of channel names
                 with their offset into the channel list.
 
-        Note that this does nto include band information, though some tile
+        Note that this does not include band information, though some tile
         sources may do so.
         """
         mag = self.getNativeMagnification()
@@ -1638,6 +1669,7 @@ class TileSource:
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
+            'dtype': self.dtype,
         })
 
     @property
@@ -2415,7 +2447,7 @@ class TileSource:
         # Perform some slight rounding to handle numerical precision issues
         ratios = [round(ratio, 4) for ratio in ratios]
         if not len(ratios):
-            return mag['level']
+            return mag.get('level', 0)
         if exact:
             if any(int(ratio) != ratio or ratio != ratios[0]
                    for ratio in ratios):
