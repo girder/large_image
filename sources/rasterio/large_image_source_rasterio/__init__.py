@@ -904,6 +904,9 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         format = format if isinstance(format, (tuple, set, list)) else (format,)
 
         if self.projection is None:
+            if kwargs.get('encoding') == 'TILED':
+                raise NotImplementedError(
+                    'getRegion() with TILED output can only be used with a projection.')
             return super().getRegion(format, **kwargs)
 
         # The tile iterator handles determining the output region

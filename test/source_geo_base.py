@@ -442,3 +442,33 @@ class _GDALBaseSourceTest(_BaseGeoTests):
             imagePath, projection='EPSG:3857',
             style={'bands': [{'band': 1, 'max': 100, 'min': 5, 'nodata': 0}]})
         assert source.getThumbnail()[0]
+
+    def testGetTiledRegionWithProjection(self):
+        imagePath = datastore.fetch('landcover_sample_1000.tif')
+        ts = self.open(imagePath, projection='EPSG:3857')
+        # This gets the whole world
+        region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
+                                 encoding='TILED')
+        result = self.open(str(region))
+        tileMetadata = result.getMetadata()
+        assert tileMetadata['bounds']['xmax'] == pytest.approx(20037508, 1)
+        assert tileMetadata['bounds']['xmin'] == pytest.approx(-20037508, 1)
+        assert tileMetadata['bounds']['ymax'] == pytest.approx(20037508, 1)
+        assert tileMetadata['bounds']['ymin'] == pytest.approx(-20037508, 1)
+        assert tileMetadata['bounds']['srs']
+        region.unlink()
+
+        # Ask for a smaller part
+        region, _ = ts.getRegion(
+            output=dict(maxWidth=1024, maxHeight=1024),
+            region=dict(left=-8622811, right=-8192317, bottom=5294998,
+                        top=5477835, units='projection'),
+            encoding='TILED')
+        result = self.open(str(region))
+        tileMetadata = result.getMetadata()
+        assert tileMetadata['bounds']['xmax'] == pytest.approx(-8192215, 1)
+        assert tileMetadata['bounds']['xmin'] == pytest.approx(-8622708, 1)
+        assert tileMetadata['bounds']['ymax'] == pytest.approx(5477783, 1)
+        assert tileMetadata['bounds']['ymin'] == pytest.approx(5294946, 1)
+        assert tileMetadata['bounds']['srs']
+        region.unlink()
