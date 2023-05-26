@@ -552,7 +552,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             with self._getDatasetLock:
                 window = rio.windows.Window(xmin, ymin, xmax - xmin, ymax - ymin)
                 count = self.dataset.count
-                tile = self.dataset.read(window=window, out_shape=(count, h, w))
+                tile = self.dataset.read(
+                    window=window,
+                    out_shape=(count, h, w),
+                    resampling=Resampling.nearest,
+                )
 
         else:
             xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
@@ -865,7 +869,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     for i in self.dataset.indexes:
                         window = rio.windows.Window(int(x), int(y), 1, 1)
                         try:
-                            value = self.dataset.read(i, window=window)
+                            value = self.dataset.read(i,
+                            window=window, resampling=Resampling.nearest)
                             value = value.astype(np.single)
                             value = value[0][0]  # there should be 1 single pixel
                             pixel.setdefault('bands', {})[i] = value
