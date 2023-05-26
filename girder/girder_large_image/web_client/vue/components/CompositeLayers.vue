@@ -1,12 +1,15 @@
 <script>
+import { restRequest } from '@girder/core/rest';
 import { Chrome } from 'vue-color';
-import { CHANNEL_COLORS, OTHER_COLORS } from '../colors'
+import { CHANNEL_COLORS, OTHER_COLORS } from '../utils/colors'
+import HistogramEditor from './HistogramEditor.vue';
 
 export default {
-    props: ['layers', 'layerMap'],
+    props: ['itemId', 'currentFrame', 'layers', 'layerMap'],
     emits: ['updateStyle'],
     components: {
-        'color-picker': Chrome
+        'color-picker': Chrome,
+        HistogramEditor,
     },
     data() {
         return {
@@ -14,13 +17,8 @@ export default {
             colorPickerShown: undefined,
             currentColorPickerRef: undefined,
             compositeLayerInfo: {},
-        }
-    },
-    watch: {
-        layers() {
-            this.enabledLayers = this.layers
-            this.initializeLayerInfo()
-            this.updateStyle()
+            histograms: [],
+            expandedRows: [],
         }
     },
     methods: {
@@ -29,11 +27,14 @@ export default {
             this.compositeLayerInfo = {}
             this.layers.forEach((layerName, i) => {
                 this.compositeLayerInfo[layerName] = {
-                    framedelta: this.layerMap ?this.layerMap[layerName] :undefined,
+                    layerName,
+                    index: i,
+                    framedelta: this.layerMap ? this.layerMap[layerName] : undefined,
                     band: this.layerMap ? undefined : i + 1,  // expected 1-based index
                     enabled: true,
                     min: undefined,
                     max: undefined,
+                    custom: false,
                 }
             })
             Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
@@ -57,6 +58,36 @@ export default {
                     usedColors.push(chosenColor)
                 }
             })
+            if (this.layerMap) {
+                // each layer has a frame delta
+                Promise.all(this.layers.map((layer) =>
+                    restRequest({
+                        type: 'GET',
+                        url: 'item/' + this.itemId + '/tiles/histogram',
+                        data: {
+                            frame: this.currentFrame + this.compositeLayerInfo[layer].framedelta,
+                        }
+                    }).then((response) => {
+                        if (response.length < 3) {
+                            return response[0]
+                        } else {
+                            return response[1]
+                        }
+                    }))).then((responses) => {
+                        this.histograms = responses
+                    })
+            } else {
+                // layers share the same frame
+                restRequest({
+                        type: 'GET',
+                        url: 'item/' + this.itemId + '/tiles/histogram',
+                        data: {
+                            frame: this.currentFrame,
+                        }
+                    }).then((response) => {
+                        this.histograms = response
+                    });
+            }
         },
         toggleEnableAll() {
             if (this.enabledLayers !== this.layers) {
@@ -78,6 +109,20 @@ export default {
                 document.addEventListener('click', this.documentClick);
             }
         },
+        toggleExpanded(index) {
+            if (this.expandedRows.includes(index)) {
+                this.expandedRows = this.expandedRows.filter((v) => v !== index)
+            } else {
+                this.expandedRows = [...this.expandedRows, index]
+            }
+        },
+        toggleAllExpanded() {
+            if (this.expandedRows.length === this.layers.length) {
+                this.expandedRows = []
+            } else {
+                this.expandedRows = Object.values(this.compositeLayerInfo).map(({index}) => index)
+            }
+        },
         documentClick(e) {
             const picker = this.currentColorPickerRef;
             if (picker && picker !== e.target && !picker.contains(e.target)) {
@@ -87,16 +132,22 @@ export default {
         updateLayerColor(layer, swatch) {
             this.compositeLayerInfo[layer].palette = swatch.hex;
         },
-        updateLayerMin(event, layer) {
-            const newVal = event.target.valueAsNumber;
+        updateLayerMin(layer, newVal, defaultValue=false) {
             const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
+            if (defaultValue){
+                this.compositeLayerInfo[layer].defaultMin = newMinVal;
+            }
             this.compositeLayerInfo[layer].min = newMinVal;
+            this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo)  // for reactivity
             this.updateStyle();
         },
-        updateLayerMax(event, layer) {
-            const newVal = event.target.valueAsNumber;
+        updateLayerMax(layer, newVal, defaultValue=false) {
             const newMaxVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
+            if (defaultValue){
+                this.compositeLayerInfo[layer].defaultMax = newMaxVal;
+            }
             this.compositeLayerInfo[layer].max = newMaxVal;
+            this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo)  // for reactivity
             this.updateStyle();
         },
         updateActiveLayers() {
@@ -130,68 +181,73 @@ export default {
         <table id="composite-layer-table" class="table table-condensed">
             <thead class="table-header">
                 <tr>
-                    <th class="layer-col">Layer</th>
                     <th class="enabled-col">
                         <input
                             type="checkbox"
                             :checked="enabledLayers === layers"
                             @input="toggleEnableAll"
                         >
-                        Enable
                     </th>
+                    <th class="layer-col">Layer</th>
                     <th class="color-col">Color</th>
-                    <th class="precision-col">Min</th>
-                    <th class="precision-col">Max</th>
+                    <div
+                        v-if="histograms.length"
+                        class="expand-btn"
+                        @click="toggleAllExpanded"
+                    >
+                        {{ expandedRows.length === layers.length ? '&#9651;' : '&#9661;'}}
+                    </div>
                 </tr>
             </thead>
             <tbody>
                 <tr
-                    v-for="[layer, layerInfo] in Object.entries(compositeLayerInfo).filter(([, layerInfo]) => layerInfo)"
-                    :key="layer"
+                    v-for="{layerName, index, min, max, palette, defaultMin, defaultMax} in Object.values(compositeLayerInfo)"
+                    :key="layerName"
+                    :style="expandedRows.includes(index) ? {height: '100px'} : {}"
                 >
-                    <td>{{ layer }}</td>
                     <td>
                         <input
                             type="checkbox"
-                            :value="layer"
+                            :value="layerName"
                             v-model="enabledLayers"
                             @change="updateActiveLayers"
                         >
                     </td>
-                    <td :id="layer+'_picker'">
+                    <td>{{ layerName }}</td>
+                    <td :id="layerName+'_picker'">
                         <span
                             class="current-color"
-                            :style="{ 'background-color': layerInfo.palette }"
-                            @click="() => toggleColorPicker(layer)"
+                            :style="{ 'background-color': palette }"
+                            @click="() => toggleColorPicker(layerName)"
                         />
                         <color-picker
+                            v-if="colorPickerShown === layerName"
                             class="picker-offset"
                             :disableAlpha="true"
-                            v-if="colorPickerShown === layer"
-                            :value="layerInfo.palette"
-                            @input="(swatch) => {updateLayerColor(layer, swatch)}"
+                            :value="palette"
+                            @input="(swatch) => {updateLayerColor(layerName, swatch)}"
                         />
                     </td>
-                    <td>
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="65535"
-                            :value="layerInfo.min"
-                            @change.prevent="(event) => updateLayerMin(event, layer)"
-                        >
-                    </td>
-                    <td>
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="65535"
-                            :value="layerInfo.max"
-                            @change.prevent="(event) => updateLayerMax(event, layer)"
-                        >
-                    </td>
+                    <div
+                        v-if="histograms[index]"
+                        class="expand-btn"
+                        @click="() => toggleExpanded(index)"
+                    >
+                    {{ (min === undefined && max === undefined) ||
+                       (min === defaultMin && max === defaultMax)
+                        ? expandedRows.includes(index) ? '&#9651;' : '&#9661;'
+                        : expandedRows.includes(index) ? '&#9650;' : '&#9660;'
+                    }}
+                    </div>
+                    <div v-if="expandedRows.includes(index)" class="advanced-section">
+                        <histogram-editor
+                            :histogram="histograms[index]"
+                            :currentMin="min"
+                            :currentMax="max"
+                            @updateMin="(v, d) => updateLayerMin(layerName, v, d)"
+                            @updateMax="(v, d) => updateLayerMax(layerName, v, d)"
+                        />
+                    </div>
                 </tr>
             </tbody>
         </table>
@@ -201,8 +257,8 @@ export default {
 <style scoped>
 .current-color {
     display: inline-block;
-    width: 50px;
-    height: 20px;
+    width: calc(100% - 10px);
+    height: 25px;
     background-color: #000;
     cursor: pointer;
 }
@@ -226,5 +282,19 @@ export default {
 }
 .table-container input {
     max-width: 70px;
+}
+tr {
+    position: relative;
+}
+.expand-btn {
+    position: absolute;
+    right: 0;
+}
+.advanced-section {
+    position: absolute;
+    left: 0px;
+    width: 100%;
+    margin: 30px 5px 0px;
+    height: 55px;
 }
 </style>
