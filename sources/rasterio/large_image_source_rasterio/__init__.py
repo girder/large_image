@@ -597,7 +597,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     width=self.tileWidth,
                     add_alpha=add_alpha,
                 ) as vrt:
-                    tile = vrt.read()
+                    tile = vrt.read(resampling=Resampling.nearest)
 
         # necessary for multispectral images:
         # set the coordinates first and the bands at the end
@@ -943,7 +943,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 height=height,
                 width=width,
             ) as vrt:
-                data = vrt.read()
+                data = vrt.read(resampling=Resampling.nearest,)
 
             profile = self.dataset.meta.copy()
             profile.update(
