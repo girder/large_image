@@ -921,8 +921,9 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             iterInfo['region']['left'], iterInfo['region']['top'], iterInfo['level'])
         right, bottom = self.pixelToProjection(
             iterInfo['region']['right'], iterInfo['region']['bottom'], iterInfo['level'])
-        width = iterInfo['region']['width']
-        height = iterInfo['region']['height']
+        # Be sure to use set output size
+        width = iterInfo['output']['width']
+        height = iterInfo['output']['height']
 
         with self._getDatasetLock, tempfile.NamedTemporaryFile(
             suffix='.tiff', prefix='tiledGeoRegion_', delete=False
@@ -939,7 +940,6 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 transform=dst_transform,
                 height=height,
                 width=width,
-                # add_alpha=False,
             ) as vrt:
                 data = vrt.read()
 
