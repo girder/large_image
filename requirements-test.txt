@@ -11,7 +11,7 @@ sources/nd2 ; python_version >= '3.7'
 sources/openjpeg
 sources/openslide
 sources/pil[all]
-sources/rasterio[all]
+sources/rasterio[all] ; python_version >= '3.8'
 sources/test
 sources/tiff
 sources/tifffile ; python_version >= '3.7'
