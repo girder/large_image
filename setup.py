@@ -58,7 +58,7 @@ sources = {
     'openjpeg': [f'large-image-source-openjpeg{limit_version}'],
     'openslide': [f'large-image-source-openslide{limit_version}'],
     'pil': [f'large-image-source-pil{limit_version}'],
-    'rasterio': [f'large-image-source-rasterio{limit_version}'],
+    'rasterio': [f'large-image-source-rasterio{limit_version} ; python_version >= "3.8"'],
     'test': [f'large-image-source-test{limit_version}'],
     'tiff': [f'large-image-source-tiff{limit_version}'],
     'tifffile': [f'large-image-source-tifffile{limit_version} ; python_version >= "3.7"'],
@@ -68,6 +68,7 @@ extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
 extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) | set([
     f'large-image-source-pil[all]{limit_version}',
+    f'large-image-source-rasterio[all]{limit_version} ; python_version >= "3.8"',
 ]))
 
 setup(

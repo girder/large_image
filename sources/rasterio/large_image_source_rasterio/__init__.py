@@ -81,7 +81,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # init the object
         super().__init__(path, **kwargs)
 
-        # create a thred lock
+        # create a thread lock
         self._getDatasetLock = threading.RLock()
 
         if isinstance(path, rio.io.MemoryFile):
@@ -159,7 +159,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # default frame to 0 in case it is set to None from outside
         frame = frame or 0
 
-        # read band informations
+        # read band information
         bandInfo = self.getBandInformation()
 
         # get the minmax value from the band
@@ -329,7 +329,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         if strDstCrs in self._bounds:
             return self._bounds[strDstCrs]
 
-        # extract the projection informations
+        # extract the projection information
         af = self._getAffine()
         srcCrs = self.getCrs()
 
@@ -407,7 +407,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # set the srs in the bounds
         bounds['srs'] = dstCrs.to_string() if needProjection else srcCrs.to_string()
 
-        # write the bounds in memeory
+        # write the bounds in memory
         self._bounds[strDstCrs] = bounds
 
         return bounds
@@ -575,7 +575,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             dst_transform = Affine(xres, 0.0, xmin, 0.0, -yres, ymax)
 
             # Adding an alpha band when the source has one is trouble.
-            # It will result in suprisingly unmasked data.
+            # It will result in surprisingly unmasked data.
             src_alpha_band = 0
             for i, interp in enumerate(self.dataset.colorinterp):
                 if interp == ColorInterp.alpha:
