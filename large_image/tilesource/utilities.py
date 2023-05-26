@@ -342,7 +342,7 @@ def _rasterioParameters(defaultCompression=None, eightbit=None, **kwargs):
     options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
 
     # add the remaining options
-    options.update(bigtiff='IF_SAFER')
+    options.update(tiled=True, bigtiff='IF_SAFER')
     'predictor' not in options or options.update(predictor=predictor[options['predictor']])
 
     return options

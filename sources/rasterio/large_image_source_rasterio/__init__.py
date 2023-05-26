@@ -30,8 +30,6 @@ from pyproj import CRS, Transformer
 from pyproj.exceptions import CRSError
 from rasterio.enums import ColorInterp, Resampling
 from rasterio.errors import RasterioIOError
-from rasterio.warp import calculate_default_transform, reproject
-from rasterio.windows import from_bounds
 
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -923,27 +921,28 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             iterInfo['region']['left'], iterInfo['region']['top'], iterInfo['level'])
         right, bottom = self.pixelToProjection(
             iterInfo['region']['right'], iterInfo['region']['bottom'], iterInfo['level'])
+        width = iterInfo['region']['width']
+        height = iterInfo['region']['height']
 
         with self._getDatasetLock, tempfile.NamedTemporaryFile(
             suffix='.tiff', prefix='tiledGeoRegion_', delete=False
         ) as output:
-            window = from_bounds(
-                left=left,
-                bottom=bottom,
-                right=right,
-                top=top,
-                transform=self.dataset.transform,
-            )
 
-            # Read the window region
-            data = self.dataset.read(window=window)
+            xres = (right - left) / width
+            yres = (top - bottom) / height
+            dst_transform = Affine(xres, 0.0, left, 0.0, -yres, top)
 
-            src_transform = self.dataset.window_transform(window)
-            dst_transform, _, _ = calculate_default_transform(
-                self.dataset.crs, self.projection,
-                window.width, window.height, left, bottom, right, top,
-            )
-            # Create a new cropped raster to write to
+            with rio.vrt.WarpedVRT(
+                self.dataset,
+                resampling=Resampling.nearest,
+                crs=self.projection,
+                transform=dst_transform,
+                height=height,
+                width=width,
+                # add_alpha=False,
+            ) as vrt:
+                data = vrt.read()
+
             profile = self.dataset.meta.copy()
             profile.update(
                 large_image.tilesource.utilities._rasterioParameters(
@@ -952,25 +951,12 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             )
             profile.update({
                 'crs': self.projection,
-                'height': window.height,
-                'width': window.width,
+                'height': height,
+                'width': width,
                 'transform': dst_transform,
             })
-
             with rio.open(output.name, 'w', **profile) as dst:
-                # Reproject to the project this source was opened with
-                for i, band in enumerate(data, 1):
-                    dest = np.zeros_like(band)
-                    reproject(
-                        band,
-                        dest,
-                        src_transform=src_transform,
-                        src_crs=self.dataset.crs,
-                        dst_transform=dst_transform,
-                        dst_crs=self.projection,
-                        resampling=Resampling.nearest,
-                    )
-                    dst.write(dest, indexes=i)
+                dst.write(data)
 
             return pathlib.Path(output.name), TileOutputMimeTypes['TILED']
 
