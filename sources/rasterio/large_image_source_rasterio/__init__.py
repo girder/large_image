@@ -869,8 +869,9 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     for i in self.dataset.indexes:
                         window = rio.windows.Window(int(x), int(y), 1, 1)
                         try:
-                            value = self.dataset.read(i,
-                            window=window, resampling=Resampling.nearest)
+                            value = self.dataset.read(
+                                i, window=window, resampling=Resampling.nearest
+                            )
                             value = value.astype(np.single)
                             value = value[0][0]  # there should be 1 single pixel
                             pixel.setdefault('bands', {})[i] = value
