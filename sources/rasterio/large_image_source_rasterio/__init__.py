@@ -19,6 +19,7 @@ import os
 import pathlib
 import tempfile
 import threading
+import warnings
 from contextlib import suppress
 
 import numpy as np
@@ -55,6 +56,8 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+warnings.filterwarnings('ignore', category=rio.errors.NotGeoreferencedWarning, module='rasterio')
 
 
 class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
