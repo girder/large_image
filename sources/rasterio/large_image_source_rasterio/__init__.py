@@ -467,12 +467,6 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 # Only keep values that aren't None or the empty string
                 infoSet[i] = {k: v for k, v in info.items() if v not in (None, '')}
 
-                # add extra informations if available
-                try:
-                    info.update(colortable=dataset.colormap(i))
-                except ValueError:
-                    pass
-
         # set the value to cache if needed
         cache is False or getattr(self, '_bandInfo', infoSet)
 
@@ -960,6 +954,10 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             })
             with rio.open(output.name, 'w', **profile) as dst:
                 dst.write(data)
+                # Write colormaps if available
+                for i in range(data.shape[0]):
+                    if self.dataset.colorinterp[i].name.lower() == 'palette':
+                        dst.write_colormap(i + 1, self.dataset.colormap(i + 1))
 
             return pathlib.Path(output.name), TileOutputMimeTypes['TILED']
 
