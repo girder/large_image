@@ -3,10 +3,11 @@ import Vue from 'vue';
 import CompositeLayers from './CompositeLayers.vue';
 import DualInput from './DualInput.vue'
 export default Vue.extend({
-    props: ['imageMetadata', 'frameUpdate'],
+    props: ['itemId', 'imageMetadata', 'frameUpdate'],
     components: { CompositeLayers, DualInput },
     data() {
         return {
+            loaded: false,
             currentFrame: 0,
             maxFrame: 0,
             sliderModes: [],
@@ -131,12 +132,13 @@ export default Vue.extend({
         this.maxFrame = this.imageMetadata.frames.length - 1
         this.populateIndices()
         this.populateModes()
+        this.loaded = true
     }
 });
 </script>
 
 <template>
-    <div class="image-frame-control-box">
+    <div class="image-frame-control-box" v-if="loaded">
         <div id="current_image_frame" style="display: none;">{{ currentFrame }}</div>
         <div id="current_image_style" style="display: none;">{{ style }}</div>
         <div>
@@ -172,10 +174,25 @@ export default Vue.extend({
             />
         </table>
 
-        <div v-if="currentModeId > 1" class="image-frame-simple-control">
+        <!-- Use composite layers component twice so state for each one is maintained while invisible -->
+        <!-- Use styling instead of v-if to make each invisible so that the components are not unmounted -->
+        <div  class="image-frame-simple-control" style="width: 500px">
             <composite-layers
-                :layers="currentModeId === 2 ? imageMetadata.channels : imageMetadata.bands"
-                :layerMap="currentModeId === 2 ? imageMetadata.channelmap : undefined"
+                key="channels"
+                :itemId="itemId"
+                :currentFrame="currentFrame"
+                :layers="imageMetadata.channels"
+                :layerMap="imageMetadata.channelmap"
+                :style="currentModeId === 2 ? {} : {display: 'none'}"
+                @updateStyle="updateStyle"
+            />
+            <composite-layers
+                key="bands"
+                :itemId="itemId"
+                :currentFrame="currentFrame"
+                :layers="imageMetadata.bands"
+                :layerMap="undefined"
+                :style="currentModeId === 3 ? {} : {display: 'none'}"
                 @updateStyle="updateStyle"
             />
         </div>
