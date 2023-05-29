@@ -67,6 +67,11 @@ SourceAndFiles = {
         'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo|extraoverview' + (
             r'|sample.*ome' if sys.version_info < (3, 7) else r'') + r')',
     },
+    'rasterio': {
+        'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
+        'python': sys.version_info >= (3, 8),
+    },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'\.(ptif|scn|svs|tif.*|qptiff)$',
