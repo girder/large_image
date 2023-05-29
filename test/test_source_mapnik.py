@@ -98,8 +98,8 @@ class InvalidMapnikTests:
 
 class MapnikSourceTests(InvalidMapnikTests, _BaseGeoTests, TestCase):
 
-    def open(self, *args, **kwargs):
-        return large_image_source_mapnik.open(*args, **kwargs)
+    basemodule = large_image_source_mapnik
+    baseclass = large_image_source_mapnik.MapnikFileTileSource
 
     def testProj4Proj(self):
         # Test obtaining pyproj.Proj projection values
@@ -112,7 +112,7 @@ class MapnikSourceTests(InvalidMapnikTests, _BaseGeoTests, TestCase):
 
     def testTileFromNetCDF(self):
         imagePath = datastore.fetch('04091217_ruc.nc')
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         tileMetadata = source.getMetadata()
 
         assert tileMetadata['tileWidth'] == 256
@@ -124,7 +124,7 @@ class MapnikSourceTests(InvalidMapnikTests, _BaseGeoTests, TestCase):
         assert tileMetadata['geospatial']
 
         # Getting the metadata with a specified projection will be different
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857')
         tileMetadata = source.getMetadata()
 

@@ -49,7 +49,7 @@ class _BaseGeoTests:
     def testTileFromGeotiffs(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         tileMetadata = source.getMetadata()
 
         assert tileMetadata['tileWidth'] == 256
@@ -72,7 +72,7 @@ class _BaseGeoTests:
         assert tileMetadata['bands'][2]['min'] == 0.0
 
         # Getting the metadata with a specified projection will be different
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857')
         tileMetadata = source.getMetadata()
 
@@ -88,7 +88,7 @@ class _BaseGeoTests:
         assert tileMetadata['bounds']['srs'].lower() == 'epsg:3857'
         assert tileMetadata['geospatial']
 
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', style={'band': -1}, encoding='PNG')
         image = source.getTile(89, 207, 9)
         self._assertImageMatches(image, 'geotiff_9_89_207')
@@ -99,7 +99,7 @@ class _BaseGeoTests:
         style = {'band': 1, 'min': 0, 'max': 100,
                  'scheme': 'discrete',
                  'palette': 'matplotlib.Plasma_6'}
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', style=style)
         image = source.getTile(22, 51, 7, encoding='PNG')
         self._assertImageMatches(image, 'geotiff_style_7_22_51')
@@ -110,7 +110,7 @@ class _BaseGeoTests:
         style = {'band': 1, 'min': 0, 'max': 100,
                  'palette': 'matplotlib.Plasma_6',
                  'scheme': 'linear'}
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', style=style, encoding='PNG')
         image = source.getTile(22, 51, 7)
         self._assertImageMatches(image, 'geotiff_style_linear_7_22_51')
@@ -118,7 +118,7 @@ class _BaseGeoTests:
     def testTileStyleBadInput(self):
         def _assertStyleResponse(imagePath, style, message):
             with pytest.raises((TileSourceError, ValueError), match=message):
-                source = self.open(
+                source = self.basemodule.open(
                     imagePath, projection='EPSG:3857', style=style, encoding='PNG')
                 source.getTile(22, 51, 7)
 
@@ -144,7 +144,7 @@ class _BaseGeoTests:
     def testThumbnailFromGeotiffs(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         # We get a thumbnail without a projection
         image, mimeType = source.getThumbnail(encoding='PNG')
         assert isinstance(image, ImageBytes)
@@ -153,7 +153,7 @@ class _BaseGeoTests:
         assert isinstance(image, ImageBytes)
         assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
         # We get a different thumbnail with a projection
-        source = self.open(imagePath, projection='EPSG:3857')
+        source = self.basemodule.open(imagePath, projection='EPSG:3857')
         image2, mimeType = source.getThumbnail(encoding='PNG')
         assert isinstance(image2, ImageBytes)
         assert image2[:len(utilities.PNGHeader)] == utilities.PNGHeader
@@ -164,7 +164,7 @@ class _BaseGeoTests:
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
 
         # Test in pixel coordinates
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         pixel = source.getPixel(region={'left': 212, 'top': 198})
         assert 'value' in pixel
         pixel.pop('value')
@@ -174,7 +174,7 @@ class _BaseGeoTests:
         assert pixel == {}
 
         # Test with a projection
-        source = self.open(imagePath, projection='EPSG:3857')
+        source = self.basemodule.open(imagePath, projection='EPSG:3857')
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
         pixel.pop('value')
         assert pixel == {
@@ -183,7 +183,7 @@ class _BaseGeoTests:
         # Test with styles
         style = {'band': 1, 'min': 0, 'max': 100,
                  'palette': 'matplotlib.Plasma_6'}
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', style=style)
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
         pixel.pop('value')
@@ -193,7 +193,7 @@ class _BaseGeoTests:
         # Test with palette as an array of colors
         style = {'band': 1, 'min': 0, 'max': 100,
                  'palette': ['#0000ff', '#00ff00', '#ff0000']}
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', style=style)
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'projection'})
         pixel.pop('value')
@@ -201,7 +201,7 @@ class _BaseGeoTests:
             'r': 137, 'g': 117, 'b': 0, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
         # Test with projection units
-        source = self.open(imagePath, projection='EPSG:3857')
+        source = self.basemodule.open(imagePath, projection='EPSG:3857')
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'EPSG:3857'})
         pixel.pop('value')
         assert pixel == {
@@ -212,7 +212,7 @@ class _BaseGeoTests:
             'r': 94, 'g': 98, 'b': 99, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
         # When the tile has a different projection, the pixel is the same as
         # the band values.
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         pixel = source.getPixel(region={'left': -13132910, 'top': 4010586, 'units': 'EPSG:3857'})
         pixel.pop('value')
         assert pixel == {
@@ -222,13 +222,13 @@ class _BaseGeoTests:
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
         with pytest.raises(TileSourceError, match='must not be geographic'):
-            self.open(imagePath, 'EPSG:4326')
+            self.basemodule.open(imagePath, 'EPSG:4326')
         imagePath = os.path.join(testDir, 'test_files', 'zero_gi.tif')
         with pytest.raises(TileSourceError, match='cannot be opened via'):
-            self.open(imagePath)
+            self.basemodule.open(imagePath)
         imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
         with pytest.raises(TileSourceError, match='does not have a projected scale'):
-            self.open(imagePath)
+            self.basemodule.open(imagePath)
 
     def testStereographicProjection(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
@@ -236,14 +236,14 @@ class _BaseGeoTests:
         # We will fail if we ask for a stereographic projection and don't
         # specify unitsPerPixel
         with pytest.raises(TileSourceError, match='unitsPerPixel must be specified'):
-            self.open(imagePath, 'EPSG:3411')
+            self.basemodule.open(imagePath, 'EPSG:3411')
         # But will pass if unitsPerPixel is specified
-        self.open(imagePath, 'EPSG:3411', unitsPerPixel=150000)
+        self.basemodule.open(imagePath, 'EPSG:3411', unitsPerPixel=150000)
 
     def testConvertProjectionUnits(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-        tsNoProj = self.open(imagePath)
+        tsNoProj = self.basemodule.open(imagePath)
 
         result = tsNoProj._convertProjectionUnits(
             -13024380, 3895303, None, None, None, None, 'EPSG:3857')
@@ -278,7 +278,7 @@ class _BaseGeoTests:
             tsNoProj._convertProjectionUnits(
                 -117.5, None, -117, None, None, None, 'EPSG:4326')
 
-        tsProj = self.open(imagePath, projection='EPSG:3857')
+        tsProj = self.basemodule.open(imagePath, projection='EPSG:3857')
         result = tsProj._convertProjectionUnits(
             -13024380, 3895303, None, None, None, None, 'EPSG:3857')
         assert result[0] == pytest.approx(-13024380, 1)
@@ -288,7 +288,7 @@ class _BaseGeoTests:
     def testGuardAgainstBadLatLong(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'global_dem.tif')
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         bounds = source.getBounds(srs='EPSG:4326')
 
         assert bounds['xmin'] == -180
@@ -301,7 +301,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
 
     def testPalettizedGeotiff(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         tileMetadata = source.getMetadata()
         assert tileMetadata['tileWidth'] == 256
         assert tileMetadata['tileHeight'] == 256
@@ -315,7 +315,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         assert len(tileMetadata['bands']) == 1
         assert tileMetadata['bands'][1]['interpretation'] == 'palette'
         # Getting the metadata with a specified projection will be different
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', encoding='PNG')
         tileMetadata = source.getMetadata()
         assert tileMetadata['tileWidth'] == 256
@@ -337,7 +337,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
 
     def testRetileProjection(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
-        ts = self.open(imagePath, projection='EPSG:3857')
+        ts = self.basemodule.open(imagePath, projection='EPSG:3857')
         ti = ts.getSingleTile(tile_size=dict(width=1000, height=1000), tile_position=1000)
         assert ti['tile'].size == 3000000
         tile = ts.getTile(1178, 1507, 12)
@@ -346,20 +346,20 @@ class _GDALBaseSourceTest(_BaseGeoTests):
     def testInternalMetadata(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         metadata = source.getInternalMetadata()
         assert metadata['driverShortName'] == 'GTiff'
 
     def testGetRegionWithProjection(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
-        ts = self.open(imagePath, projection='EPSG:3857')
+        ts = self.basemodule.open(imagePath, projection='EPSG:3857')
         region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                                  format=constants.TILE_FORMAT_NUMPY)
         assert region.shape == (1024, 1024, 4)
 
     def testGCPProjection(self):
         imagePath = datastore.fetch('region_gcp.tiff')
-        source = self.open(imagePath)
+        source = self.basemodule.open(imagePath)
         tileMetadata = source.getMetadata()
         assert tileMetadata['tileWidth'] == 256
         assert tileMetadata['tileHeight'] == 256
@@ -368,7 +368,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         assert tileMetadata['levels'] == 4
         assert tileMetadata['geospatial']
 
-        source = self.open(imagePath, projection='EPSG:3857')
+        source = self.basemodule.open(imagePath, projection='EPSG:3857')
         tileMetadata = source.getMetadata()
         assert tileMetadata['tileWidth'] == 256
         assert tileMetadata['tileHeight'] == 256
@@ -384,7 +384,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
 
     def testFileWithoutProjection(self):
         imagePath = datastore.fetch('oahu-dense.tiff')
-        ts = self.open(imagePath, projection='EPSG:3857')
+        ts = self.basemodule.open(imagePath, projection='EPSG:3857')
         tileMetadata = ts.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(-17548722, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(-17620245, 1)
@@ -397,7 +397,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
         style = json.dumps({'band': 1, 'min': 0, 'max': 100,
                             'palette': 'viridis'})
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', style=style, encoding='PNG')
         image = source.getTile(22, 51, 7)
         image = PIL.Image.open(io.BytesIO(image))
@@ -406,7 +406,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
 
     def testHttpVfsPath(self):
         imagePath = datastore.get_url('landcover_sample_1000.tif')
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', encoding='PNG')
         tileMetadata = source.getMetadata()
         assert tileMetadata['tileWidth'] == 256
@@ -423,33 +423,33 @@ class _GDALBaseSourceTest(_BaseGeoTests):
 
     def testVfsCogValidation(self):
         imagePath = datastore.get_url('TC_NG_SFBay_US_Geo_COG.tif')
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', encoding='PNG')
         assert source.validateCOG()
         imagePath = datastore.get_url('TC_NG_SFBay_US_Geo.tif')
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857', encoding='PNG')
         with pytest.raises(TileSourceInefficientError):
             source.validateCOG()
 
     def testNoData(self):
         imagePath = datastore.get_url('TC_NG_SFBay_US_Geo_COG.tif')
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857',
             style={'bands': [{'band': 1, 'max': '100', 'min': '5', 'nodata': '0'}]})
         assert source.getThumbnail()[0]
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857',
             style={'bands': [{'band': 1, 'max': 100, 'min': 5, 'nodata': 0}]})
         assert source.getThumbnail()[0]
 
     def testGetTiledRegionWithProjection(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
-        ts = self.open(imagePath, projection='EPSG:3857')
+        ts = self.basemodule.open(imagePath, projection='EPSG:3857')
         # This gets the whole world
         region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                                  encoding='TILED')
-        result = self.open(str(region))
+        result = self.basemodule.open(str(region))
         tileMetadata = result.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(20037508, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(-20037508, 1)
@@ -464,7 +464,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
             region=dict(left=-8622811, right=-8192317, bottom=5294998,
                         top=5477835, units='projection'),
             encoding='TILED')
-        result = self.open(str(region))
+        result = self.basemodule.open(str(region))
         tileMetadata = result.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(-8192215, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(-8622708, 1)
@@ -472,3 +472,10 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         assert tileMetadata['bounds']['ymin'] == pytest.approx(5294946, 1)
         assert tileMetadata['bounds']['srs']
         region.unlink()
+
+    def testIsGeospaital(self):
+        testDir = os.path.dirname(os.path.realpath(__file__))
+        imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
+        assert self.baseclass.isGeospatial(imagePath) is True
+        imagePath = os.path.join(testDir, 'test_files', 'test_L_16.png')
+        assert self.baseclass.isGeospatial(imagePath) is False

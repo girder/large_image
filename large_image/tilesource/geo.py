@@ -87,6 +87,15 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
     def getBounds(self, *args, **kwargs):
         raise NotImplementedError
 
+    def isGeospatial(path):
+        """
+        Check if a path is likely to be a geospatial file.
+
+        :param path: The path to the file
+        :returns: True if geospatial.
+        """
+        raise NotImplementedError
+
     def _getLargeImagePath(self):
         """Get GDAL-compatible image path.
 
@@ -280,7 +289,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         :returns: a validated band, either 1 or a positive integer, or None if no
             matching band and exceptions are not enabled.
         """
-        # retreive the bands informations from the initial dataset or cache
+        # retrieve the bands information from the initial dataset or cache
         bands = self.getBandInformation()
 
         # search for the band with multiple methods

@@ -925,6 +925,29 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 self.logger.warning(warning)
         return True
 
+    @staticmethod
+    def isGeospatial(path):
+        """
+        Check if a path is likely to be a geospatial file.
+
+        :param path: The path to the file
+        :returns: True if geospatial.
+        """
+        try:
+            ds = gdal.Open(str(path), gdalconst.GA_ReadOnly)
+        except Exception:
+            return False
+        if ds:
+            if ds.GetGCPs() and ds.GetGCPProjection():
+                return True
+            if ds.GetProjection():
+                return True
+            if ds.GetGeoTransform(can_return_null=True):
+                return True
+            if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
+                return True
+        return False
+
 
 def open(*args, **kwargs):
     """

@@ -1001,6 +1001,26 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         return isValid
 
+    def isGeospatial(path):
+        """
+        Check if a path is likely to be a geospatial file.
+
+        :param path: The path to the file
+        :returns: True if geospatial.
+        """
+        if isinstance(path, rio.io.DatasetReaderBase):
+            ds = path
+        else:
+            try:
+                ds = rio.open(path)
+            except Exception:
+                return False
+        if ds.crs or (ds.transform and ds.transform != rio.Affine(1, 0, 0, 0, 1, 0)):
+            return True
+        if len(ds.gcps[0]) and ds.gcps[1]:
+            return True
+        return False
+
 
 def open(*args, **kwargs):
     """Create an instance of the module class."""

@@ -11,8 +11,8 @@ from .source_geo_base import _GDALBaseSourceTest
 
 class GDALSourceTests(_GDALBaseSourceTest, TestCase):
 
-    def open(self, *args, **kwargs):
-        return large_image_source_gdal.open(*args, **kwargs)
+    basemodule = large_image_source_gdal
+    baseclass = large_image_source_gdal.GDALFileTileSource
 
     def testProj4Proj(self):
         # Test obtaining pyproj.Proj projection values
@@ -25,10 +25,10 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
 
     def testGetTiledRegion(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
-        ts = self.open(imagePath)
+        ts = self.basemodule.open(imagePath)
         region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                                  encoding='TILED')
-        result = self.open(str(region))
+        result = self.basemodule.open(str(region))
         tileMetadata = result.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(2006547, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(1319547, 1)
@@ -39,10 +39,10 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
 
     def testGetTiledRegion16Bit(self):
         imagePath = datastore.fetch('region_gcp.tiff')
-        ts = self.open(imagePath)
+        ts = self.basemodule.open(imagePath)
         region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                                  encoding='TILED')
-        result = self.open(str(region))
+        result = self.basemodule.open(str(region))
         tileMetadata = result.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(-10753925, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(-10871650, 1)
@@ -53,10 +53,10 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
 
     def testGetTiledRegionWithStyle(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
-        ts = self.open(imagePath, style='{"bands":[]}')
+        ts = self.basemodule.open(imagePath, style='{"bands":[]}')
         region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                                  encoding='TILED')
-        result = self.open(str(region))
+        result = self.basemodule.open(str(region))
         tileMetadata = result.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(2006547, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(1319547, 1)
@@ -67,11 +67,11 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
 
     def testGetTiledRegionWithProjectionAndStyle(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
-        ts = self.open(imagePath, projection='EPSG:3857', style='{"bands":[]}')
+        ts = self.basemodule.open(imagePath, projection='EPSG:3857', style='{"bands":[]}')
         # This gets the whole world
         region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                                  encoding='TILED')
-        result = self.open(str(region))
+        result = self.basemodule.open(str(region))
         tileMetadata = result.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(20037508, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(-20037508, 1)
@@ -86,7 +86,7 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
             region=dict(left=-8622811, right=-8192317, bottom=5294998,
                         top=5477835, units='projection'),
             encoding='TILED')
-        result = self.open(str(region))
+        result = self.basemodule.open(str(region))
         tileMetadata = result.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(-8192215, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(-8622708, 1)
@@ -97,10 +97,10 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
 
     def testGetTiledRegion16BitWithStyle(self):
         imagePath = datastore.fetch('region_gcp.tiff')
-        ts = self.open(imagePath, style='{"bands":[]}')
+        ts = self.basemodule.open(imagePath, style='{"bands":[]}')
         region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                                  encoding='TILED')
-        result = self.open(str(region))
+        result = self.basemodule.open(str(region))
         tileMetadata = result.getMetadata()
         assert tileMetadata['bounds']['xmax'] == pytest.approx(-10753925, 1)
         assert tileMetadata['bounds']['xmin'] == pytest.approx(-10871650, 1)
@@ -112,12 +112,12 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
     def testAlphaProjection(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857')
         base = source.getThumbnail(encoding='PNG')[0]
         basenp = source.getThumbnail(format='numpy')[0]
         assert numpy.count_nonzero(basenp[:, :, 3] == 255) > 30000
-        source = self.open(
+        source = self.basemodule.open(
             imagePath, projection='EPSG:3857',
             style={'bands': [
                 {'band': 1, 'palette': 'R'},
@@ -125,6 +125,6 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
                 {'band': 3, 'palette': 'B'}]})
         assert source.getThumbnail(encoding='PNG')[0] == base
         assert not (source.getThumbnail(format='numpy')[0] - basenp).any()
-        source = self.open(
+        source = self.basemodule.open(
             imagePath)
         assert numpy.count_nonzero(source.getThumbnail(format='numpy')[0][:, :, 3] == 255) > 30000

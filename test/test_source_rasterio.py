@@ -18,5 +18,5 @@ if sys.version_info < (3, 8):
 
 class RasterioSourceTests(_GDALBaseSourceTest, TestCase):
 
-    def open(self, *args, **kwargs):
-        return large_image_source_rasterio.open(*args, **kwargs)
+    basemodule = large_image_source_rasterio
+    baseclass = large_image_source_rasterio.RasterioFileTileSource
