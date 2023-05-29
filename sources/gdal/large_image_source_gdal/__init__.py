@@ -26,7 +26,7 @@ import PIL.Image
 from osgeo import gdal, gdal_array, gdalconst, osr
 
 try:
-    gdal.useExceptions()
+    gdal.UseExceptions()
 except Exception:
     pass
 
