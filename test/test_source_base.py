@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import re
 import sys
@@ -209,6 +210,9 @@ def testSourcesTilesAndMethods(source, filename):
         # This should be an image and a mime type
         assert len(ts.getAssociatedImage(ts.getAssociatedImagesList()[0])) == 2
     assert ts.getAssociatedImage('nosuchimage') is None
+    # Test the serializability of common methods
+    assert json.dumps(ts.getMetadata())
+    assert json.dumps(ts.getPixel(region=dict(left=0, top=0)))
     # Test module open method
     mod = sys.modules[sourceClass.__module__]
     assert mod.open(imagePath) is not None
