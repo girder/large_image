@@ -134,6 +134,7 @@ class TileSource(IPyLeafletMixin):
         self.sizeX = None
         self.sizeY = None
         self._styleLock = threading.RLock()
+        self._dtype = None
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -180,6 +181,11 @@ class TileSource(IPyLeafletMixin):
 
         :param style: The new style.
         """
+        for key in {'_unlocked_classkey', '_classkeyLock'}:
+            try:
+                delattr(self, key)
+            except Exception:
+                pass
         self._bandRanges = {}
         self._jsonstyle = style
         if style:
@@ -215,6 +221,24 @@ class TileSource(IPyLeafletMixin):
     @property
     def style(self):
         return self._style
+
+    @property
+    def dtype(self):
+        if not self._dtype:
+            with self._styleLock:
+                if not hasattr(self, '_skipStyle'):
+                    self._setSkipStyle(True)
+                    try:
+                        sample, format = self.getRegion(
+                            region=dict(left=0, top=0, width=1, height=1),
+                            format=TILE_FORMAT_NUMPY)
+                        self._dtype = sample.dtype
+                    finally:
+                        self._setSkipStyle(False)
+                else:
+                    return None
+
+        return self._dtype
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -1061,10 +1085,7 @@ class TileSource(IPyLeafletMixin):
         :param onlyMinMax: if True, only find the min and max.  If False, get
             the entire histogram.
         """
-        self._skipStyle = True
-        # Divert the tile cache while querying unstyled tiles
-        classkey = self._classkey
-        self._classkey = self._unstyledClassKey()
+        self._setSkipStyle(True)
         try:
             self._bandRanges[frame] = self.histogram(
                 dtype=dtype,
@@ -1078,8 +1099,7 @@ class TileSource(IPyLeafletMixin):
                     k: v for k, v in self._bandRanges[frame].items() if k in {
                         'min', 'max', 'mean', 'stdev'}})
         finally:
-            del self._skipStyle
-            self._classkey = classkey
+            self._setSkipStyle(False)
 
     def _validateMinMaxValue(self, value, frame, dtype):
         """
@@ -1299,7 +1319,16 @@ class TileSource(IPyLeafletMixin):
             intent = getattr(PIL.ImageCms, 'INTENT_' + str(sc.style.get('icc')).upper(),
                              PIL.ImageCms.INTENT_PERCEPTUAL)
         if not hasattr(self, '_iccsrgbprofile'):
-            self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
+            try:
+                self._iccsrgbprofile = PIL.ImageCms.createProfile('sRGB')
+            except ImportError:
+                self._iccsrgbprofile = None
+                self.logger.warning(
+                    'Failed to import PIL.ImageCms.  Cannot perform ICC '
+                    'color adjustments.  Does your platform support '
+                    'PIL.ImageCms?')
+        if self._iccsrgbprofile is None:
+            return sc.image
         try:
             key = (mode, intent)
             if self._iccprofilesObjects[profileIdx] is None:
@@ -1324,6 +1353,21 @@ class TileSource(IPyLeafletMixin):
                 self._iccerror = exc
                 self.logger.exception('Failed to apply ICC profile')
         return sc.iccimage
+
+    def _setSkipStyle(self, setSkip=False):
+        if not hasattr(self, '_classkey'):
+            self._classkey = self.getState()
+        if setSkip:
+            self._unlocked_classkey = self._classkey
+            if hasattr(self, 'cache_lock'):
+                with self.cache_lock:
+                    self._classkeyLock = self._styleLock
+            self._skipStyle = True
+            # Divert the tile cache while querying unstyled tiles
+            self._classkey = self._unstyledClassKey()
+        else:
+            del self._skipStyle
+            self._classkey = self._unlocked_classkey
 
     def _applyStyle(self, image, style, x, y, z, frame=None):  # noqa
         """
@@ -1368,18 +1412,14 @@ class TileSource(IPyLeafletMixin):
             else:
                 frame = entry['frame'] if entry.get('frame') is not None else (
                     sc.mainFrame + entry['framedelta'])
-                self._skipStyle = True
-                # Divert the tile cache while querying unstyled tiles
-                classkey = self._classkey
-                self._classkey = self._unstyledClassKey()
+                self._setSkipStyle(True)
                 try:
                     image = self.getTile(x, y, z, frame=frame, numpyAllowed=True)
                     image = image[:sc.mainImage.shape[0],
                                   :sc.mainImage.shape[1],
                                   :sc.mainImage.shape[2]]
                 finally:
-                    del self._skipStyle
-                    self._classkey = classkey
+                    self._setSkipStyle(False)
             if (isinstance(entry.get('band'), int) and
                     entry['band'] >= 1 and entry['band'] <= image.shape[2]):
                 sc.bandidx = entry['band'] - 1
@@ -1532,6 +1572,15 @@ class TileSource(IPyLeafletMixin):
                 numpyAllowed != 'always' and tileEncoding == self.encoding and
                 not isEdge and (not applyStyle or not hasStyle)):
             return tile
+
+        if self._dtype is None:
+            if tileEncoding == TILE_FORMAT_NUMPY:
+                self._dtype = tile.dtype
+            elif tileEncoding == TILE_FORMAT_PIL:
+                self._dtype = numpy.uint8 if ';16' not in tile.mode else numpy.uint16
+            else:
+                self._dtype = _imageToNumpy(tile)[0].dtype
+
         mode = None
         if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
                 (applyStyle and hasStyle) or isEdge):
@@ -1595,6 +1644,7 @@ class TileSource(IPyLeafletMixin):
             :magnification: if known, the magnificaiton of the image.
             :mm_x: if known, the width of a pixel in millimeters.
             :mm_y: if known, the height of a pixel in millimeters.
+            :dtype: if known, the type of values in this image.
 
             In addition to the keys that listed above, tile sources that expose
             multiple frames will also contain
@@ -1625,7 +1675,7 @@ class TileSource(IPyLeafletMixin):
             :channelmap: optional.  If known, a dictionary of channel names
                 with their offset into the channel list.
 
-        Note that this does nto include band information, though some tile
+        Note that this does not include band information, though some tile
         sources may do so.
         """
         mag = self.getNativeMagnification()
@@ -1638,6 +1688,7 @@ class TileSource(IPyLeafletMixin):
             'magnification': mag['magnification'],
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
+            'dtype': self.dtype,
         })
 
     @property
@@ -2415,7 +2466,7 @@ class TileSource(IPyLeafletMixin):
         # Perform some slight rounding to handle numerical precision issues
         ratios = [round(ratio, 4) for ratio in ratios]
         if not len(ratios):
-            return mag['level']
+            return mag.get('level', 0)
         if exact:
             if any(int(ratio) != ratio or ratio != ratios[0]
                    for ratio in ratios):
@@ -2530,7 +2581,7 @@ class TileSource(IPyLeafletMixin):
             pixels or mm are used for inits.  It applies to output if
             neither output maxWidth nor maxHeight is specified.
 
-            :magnification: the magnification ratio.  Only used is maxWidth and
+            :magnification: the magnification ratio.  Only used if maxWidth and
                 maxHeight are not specified or None.
             :mm_x: the horizontal size of a pixel in millimeters.
             :mm_y: the vertical size of a pixel in millimeters.
@@ -2716,12 +2767,13 @@ class TileSource(IPyLeafletMixin):
         #  img, format = self.getRegion(format=TILE_FORMAT_PIL, **regionArgs)
         # where img is the PIL image (rather than tile['tile'], but using
         # _tileIteratorInfo and the _tileIterator is slightly more efficient.
-        iterInfo = self._tileIteratorInfo(format=TILE_FORMAT_PIL, **regionArgs)
+        iterInfo = self._tileIteratorInfo(format=TILE_FORMAT_NUMPY, **regionArgs)
         if iterInfo is not None:
             tile = next(self._tileIterator(iterInfo), None)
             if includeTileRecord:
                 pixel['tile'] = tile
-            img = tile['tile']
+            pixel['value'] = [v.item() for v in tile['tile'][0][0]]
+            img = _imageToPIL(tile['tile'])
             if img.size[0] >= 1 and img.size[1] >= 1:
                 if len(img.mode) > 1:
                     pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0])))

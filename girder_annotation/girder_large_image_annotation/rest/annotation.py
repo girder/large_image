@@ -582,20 +582,7 @@ class AnnotationResource(Resource):
 
     def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
                              sortDir=False, count=False):
-        recursivePipeline = [
-            {'$graphLookup': {
-                'from': 'folder',
-                'startWith': '$_id',
-                'connectFromField': '_id',
-                'connectToField': 'parentId',
-                'as': '__children'
-            }},
-            {'$unwind': {'path': '$__children'}},
-            {'$replaceRoot': {'newRoot': '$__children'}},
-            {'$unionWith': {
-                'coll': 'folder',
-                'pipeline': [{'$match': {'_id': ObjectId(id)}}]
-            }}] if recurse else []
+
         accessPipeline = [
             {'$match': {
                 '$or': [
@@ -612,36 +599,59 @@ class AnnotationResource(Resource):
                 ]
             }}
         ] if not user['admin'] else []
-        pipeline = [
-            {'$match': {'_id': 'none'}},
-            {'$unionWith': {
-                'coll': 'folder',
-                'pipeline': [{'$match': {'_id': ObjectId(id)}}] +
-                recursivePipeline +
-                [{'$lookup': {
-                    'from': 'item',
-                    'localField': '_id',
-                    'foreignField': 'folderId',
-                    'as': '__items'
-                }}, {'$lookup': {
-                    'from': 'annotation',
-                    'localField': '__items._id',
-                    'foreignField': 'itemId',
-                    'as': '__annotations'
-                }}, {'$unwind': '$__annotations'},
-                    {'$replaceRoot': {'newRoot': '$__annotations'}},
-                    {'$match': {'_active': {'$ne': False}}}
-                ] + accessPipeline
+        recursivePipeline = [
+            {'$match': {'_id': ObjectId(id)}},
+            {'$facet': {
+                'documents1': [{'$match': {'_id': ObjectId(id)}}],
+                'documents2': [
+                    {'$graphLookup': {
+                        'from': 'folder',
+                        'startWith': '$_id',
+                        'connectFromField': '_id',
+                        'connectToField': 'parentId',
+                        'as': '__children'
+                    }},
+                    {'$unwind': {'path': '$__children'}},
+                    {'$replaceRoot': {'newRoot': '$__children'}}
+                ]
             }},
-        ]
+            {'$project': {'__children': {'$concatArrays': [
+                '$documents1', '$documents2'
+            ]}}},
+            {'$unwind': {'path': '$__children'}},
+            {'$replaceRoot': {'newRoot': '$__children'}}
+        ] if recurse else [{'$match': {'_id': ObjectId(id)}}]
+
+        # We are only finding anntoations that we can change the permissions
+        # on.  If we wanted to expose annotations based on a permissions level,
+        # we need to add a folder access pipeline immediately after the
+        # recursivePipleine that for write and above would include the
+        # ANNOTATION_ACCSESS_FLAG
+        pipeline = recursivePipeline + [
+            {'$lookup': {
+                'from': 'item',
+                'localField': '_id',
+                'foreignField': 'folderId',
+                'as': '__items'
+            }},
+            {'$lookup': {
+                'from': 'annotation',
+                'localField': '__items._id',
+                'foreignField': 'itemId',
+                'as': '__annotations'
+            }},
+            {'$unwind': '$__annotations'},
+            {'$replaceRoot': {'newRoot': '$__annotations'}},
+            {'$match': {'_active': {'$ne': False}}}
+        ] + accessPipeline
+
         if count:
             pipeline += [{'$count': 'count'}]
         else:
             pipeline = pipeline + [{'$sort': {sort: sortDir}}] if sort else pipeline
             pipeline = pipeline + [{'$skip': offset}] if offset else pipeline
             pipeline = pipeline + [{'$limit': limit}] if limit else pipeline
-
-        return Annotation().collection.aggregate(pipeline)
+        return Folder().collection.aggregate(pipeline)
 
     @autoDescribeRoute(
         Description('Check if the user owns any annotations for the items in a folder')

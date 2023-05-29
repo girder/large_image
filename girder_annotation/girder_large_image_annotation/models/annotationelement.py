@@ -63,16 +63,22 @@ class Annotationelement(Model):
                 ('bbox.lowx', SortDir.DESCENDING),
                 ('bbox.highx', SortDir.ASCENDING),
                 ('bbox.size', SortDir.DESCENDING),
-            ], {}),
+            ], {
+                'name': 'annotationBboxIdx'
+            }),
             ([
                 ('annotationId', SortDir.ASCENDING),
                 ('bbox.size', SortDir.DESCENDING),
-            ], {}),
+            ], {
+                'name': 'annotationBboxSizeIdx'
+            }),
             ([
                 ('annotationId', SortDir.ASCENDING),
                 ('_version', SortDir.DESCENDING),
                 ('element.group', SortDir.ASCENDING),
-            ], {}),
+            ], {
+                'name': 'annotationGroupIdx'
+            }),
             ([
                 ('created', SortDir.ASCENDING),
                 ('_version', SortDir.ASCENDING),

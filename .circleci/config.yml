@@ -25,7 +25,7 @@ commands:
           # Piping through cat does less buffering of the output but can
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: PYTEST_ADDOPTS=--reruns=3 tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:
@@ -177,7 +177,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.10.10
+          version: 3.10.11
           node: v12
       - tox:
           env: test-py310
@@ -190,7 +190,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.11.2
+          version: 3.11.3
           node: v12
       - tox:
           env: test-py311

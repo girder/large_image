@@ -22,10 +22,8 @@ from collections import OrderedDict
 import numpy
 import PIL.Image
 from large_image_source_tiff import TiffFileTileSource
-from large_image_source_tiff.tiff_reader import (InvalidOperationTiffException,
-                                                 IOTiffException,
-                                                 TiffException,
-                                                 TiledTiffDirectory)
+from large_image_source_tiff.exceptions import InvalidOperationTiffError, IOTiffError, TiffError
+from large_image_source_tiff.tiff_reader import TiledTiffDirectory
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
@@ -102,7 +100,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
 
         try:
             base = TiledTiffDirectory(self._largeImagePath, 0, mustBeTiled=None)
-        except TiffException:
+        except TiffError:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('Not a recognized OME Tiff')
@@ -355,9 +353,9 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 format = TILE_FORMAT_NUMPY
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, **kwargs)
-        except InvalidOperationTiffException as e:
+        except InvalidOperationTiffError as e:
             raise TileSourceError(e.args[0])
-        except IOTiffException as e:
+        except IOTiffError as e:
             return self.getTileIOTiffError(
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,

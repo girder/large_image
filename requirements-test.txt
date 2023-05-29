@@ -1,6 +1,5 @@
 # Top level dependencies
-girder>=3.0.4 ; python_version < '3.8'
-girder>=3.0.14 ; python_version >= '3.8'
+girder>=3.1.18
 girder-jobs>=3.0.3
 sources/bioformats
 sources/deepzoom
@@ -12,6 +11,7 @@ sources/nd2 ; python_version >= '3.7'
 sources/openjpeg
 sources/openslide
 sources/pil[all]
+sources/rasterio[all] ; python_version >= '3.8'
 sources/test
 sources/tiff
 sources/tifffile ; python_version >= '3.7'
@@ -30,7 +30,8 @@ girder_annotation/.
 # Extras from main setup.py
 pylibmc>=1.5.1
 matplotlib
-simplejpeg
+simplejpeg ; python_version >= "3.7"
+simplejpeg<1.6.6 ; python_version < "3.7"
 
 # External dependencies
 pip>=9

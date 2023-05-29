@@ -31,6 +31,8 @@ from large_image import config
 from large_image.cache_util import methodcache, strhash
 from large_image.tilesource import etreeToDict
 
+from .exceptions import InvalidOperationTiffError, IOOpenTiffError, IOTiffError, ValidationTiffError
+
 try:
     from libtiff import libtiff_ctypes
 except ValueError as exc:
@@ -68,45 +70,6 @@ def patchLibtiff():
 patchLibtiff()
 
 
-class TiffException(Exception):
-    pass
-
-
-class InvalidOperationTiffException(TiffException):
-    """
-    An exception caused by the user making an invalid request of a TIFF file.
-    """
-
-    pass
-
-
-class IOTiffException(TiffException):
-    """
-    An exception caused by an internal failure, due to an invalid file or other
-    error.
-    """
-
-    pass
-
-
-class IOTiffOpenException(IOTiffException):
-    """
-    An exception caused by an internal failure where the file cannot be opened
-    by the main library.
-    """
-
-    pass
-
-
-class ValidationTiffException(TiffException):
-    """
-    An exception caused by the TIFF reader not being able to support a given
-    file.
-    """
-
-    pass
-
-
 class TiledTiffDirectory:
 
     CoreFunctions = [
@@ -131,8 +94,8 @@ class TiledTiffDirectory:
         :type subDirectoryNum: int
         :param validate: if False, don't validate that images can be read.
         :type mustBeTiled: bool
-        :raises: InvalidOperationTiffException or IOTiffException or
-            ValidationTiffException
+        :raises: InvalidOperationTiffError or IOTiffError or
+            ValidationTiffError
         """
         self.logger = config.getConfig('logger')
         # create local cache to store Jpeg tables and getTileByteCountsType
@@ -150,7 +113,7 @@ class TiledTiffDirectory:
         try:
             if validate:
                 self._validate()
-        except ValidationTiffException:
+        except ValidationTiffError:
             self._close()
             raise
 
@@ -167,11 +130,11 @@ class TiledTiffDirectory:
         :type directoryNum: int
         :param subDirectoryNum: The number of the TIFF sub-IFD to be used.
         :type subDirectoryNum: int
-        :raises: InvalidOperationTiffException or IOTiffException
+        :raises: InvalidOperationTiffError or IOTiffError
         """
         self._close()
         if not os.path.isfile(filePath):
-            raise InvalidOperationTiffException(
+            raise InvalidOperationTiffError(
                 'TIFF file does not exist: %s' % filePath)
         try:
             bytePath = filePath
@@ -179,7 +142,7 @@ class TiledTiffDirectory:
                 bytePath = filePath.encode()
             self._tiffFile = libtiff_ctypes.TIFF.open(bytePath)
         except TypeError:
-            raise IOTiffOpenException(
+            raise IOOpenTiffError(
                 'Could not open TIFF file: %s' % filePath)
         # pylibtiff changed the case of some functions between version 0.4 and
         # the version that supports libtiff 4.0.6.  To support both, ensure
@@ -195,19 +158,19 @@ class TiledTiffDirectory:
         self._directoryNum = directoryNum
         if self._tiffFile.SetDirectory(self._directoryNum) != 1:
             self._tiffFile.close()
-            raise IOTiffException(
+            raise IOTiffError(
                 'Could not set TIFF directory to %d' % directoryNum)
         self._subDirectoryNum = subDirectoryNum
         if self._subDirectoryNum:
             subifds = self._tiffFile.GetField('subifd')
             if (subifds is None or self._subDirectoryNum < 1 or
                     self._subDirectoryNum > len(subifds)):
-                raise IOTiffException(
+                raise IOTiffError(
                     'Could not set TIFF subdirectory to %d' % subDirectoryNum)
             subifd = subifds[self._subDirectoryNum - 1]
             if self._tiffFile.SetSubDirectory(subifd) != 1:
                 self._tiffFile.close()
-                raise IOTiffException(
+                raise IOTiffError(
                     'Could not set TIFF subdirectory to %d' % subDirectoryNum)
 
     def _close(self):
@@ -219,22 +182,22 @@ class TiledTiffDirectory:
         """
         Validate that this TIFF file and directory are suitable for reading.
 
-        :raises: ValidationTiffException
+        :raises: ValidationTiffError
         """
         if not self._mustBeTiled:
             if self._mustBeTiled is not None and self._tiffInfo.get('istiled'):
-                raise ValidationTiffException('Expected a non-tiled TIFF file')
+                raise ValidationTiffError('Expected a non-tiled TIFF file')
         # For any non-supported file, we probably can add a conversion task in
         # the create_image.py script, such as flatten or colourspace.  These
         # should only be done if necessary, which would require the conversion
         # job to check output and perform subsequent processing as needed.
         if (not self._tiffInfo.get('samplesperpixel') or
                 self._tiffInfo.get('samplesperpixel') < 1):
-            raise ValidationTiffException(
+            raise ValidationTiffError(
                 'Only RGB and greyscale TIFF files are supported')
 
         if self._tiffInfo.get('bitspersample') not in (8, 16, 32, 64):
-            raise ValidationTiffException(
+            raise ValidationTiffError(
                 'Only 8 and 16 bits-per-sample TIFF files are supported')
 
         if self._tiffInfo.get('sampleformat') not in {
@@ -242,20 +205,20 @@ class TiledTiffDirectory:
                 libtiff_ctypes.SAMPLEFORMAT_UINT,
                 libtiff_ctypes.SAMPLEFORMAT_INT,
                 libtiff_ctypes.SAMPLEFORMAT_IEEEFP}:
-            raise ValidationTiffException(
+            raise ValidationTiffError(
                 'Only unsigned int sampled TIFF files are supported')
 
         if (self._tiffInfo.get('planarconfig') != libtiff_ctypes.PLANARCONFIG_CONTIG and
                 self._tiffInfo.get('photometric') not in {
                     libtiff_ctypes.PHOTOMETRIC_MINISBLACK}):
-            raise ValidationTiffException(
+            raise ValidationTiffError(
                 'Only contiguous planar configuration TIFF files are supported')
 
         if self._tiffInfo.get('photometric') not in {
                 libtiff_ctypes.PHOTOMETRIC_MINISBLACK,
                 libtiff_ctypes.PHOTOMETRIC_RGB,
                 libtiff_ctypes.PHOTOMETRIC_YCBCR}:
-            raise ValidationTiffException(
+            raise ValidationTiffError(
                 'Only greyscale (black is 0), RGB, and YCbCr photometric '
                 'interpretation TIFF files are supported')
 
@@ -269,32 +232,32 @@ class TiledTiffDirectory:
                 libtiff_ctypes.ORIENTATION_RIGHTBOT,
                 libtiff_ctypes.ORIENTATION_LEFTBOT,
                 None}:
-            raise ValidationTiffException(
+            raise ValidationTiffError(
                 'Unsupported TIFF orientation')
 
         if self._mustBeTiled and (
                 not self._tiffInfo.get('istiled') or
                 not self._tiffInfo.get('tilewidth') or
                 not self._tiffInfo.get('tilelength')):
-            raise ValidationTiffException('A tiled TIFF is required.')
+            raise ValidationTiffError('A tiled TIFF is required.')
 
         if self._mustBeTiled is False and (
                 self._tiffInfo.get('istiled') or
                 not self._tiffInfo.get('rowsperstrip')):
-            raise ValidationTiffException('A non-tiled TIFF with strips is required.')
+            raise ValidationTiffError('A non-tiled TIFF with strips is required.')
 
         if (self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG and
                 self._tiffInfo.get('jpegtablesmode') !=
                 libtiff_ctypes.JPEGTABLESMODE_QUANT |
                 libtiff_ctypes.JPEGTABLESMODE_HUFF):
-            raise ValidationTiffException(
+            raise ValidationTiffError(
                 'Only TIFF files with separate Huffman and quantization '
                 'tables are supported')
 
         if self._tiffInfo.get('compression') == libtiff_ctypes.COMPRESSION_JPEG:
             try:
                 self._getJpegTables()
-            except IOTiffException:
+            except IOTiffError:
                 self._completeJpeg = True
 
     def _loadMetadata(self):
@@ -385,18 +348,18 @@ class TiledTiffDirectory:
                 libtiff_ctypes.TIFFTAG_JPEGTABLES,
                 ctypes.byref(tableSize),
                 ctypes.byref(tableBuffer)) != 1:
-            raise IOTiffException('Could not get JPEG Huffman / quantization tables')
+            raise IOTiffError('Could not get JPEG Huffman / quantization tables')
 
         tableSize = tableSize.value
         tableBuffer = ctypes.cast(tableBuffer, ctypes.POINTER(ctypes.c_char))
 
         if tableBuffer[:2] != b'\xff\xd8':
-            raise IOTiffException(
+            raise IOTiffError(
                 'Missing JPEG Start Of Image marker in tables')
         if tableBuffer[tableSize - 2:tableSize] != b'\xff\xd9':
-            raise IOTiffException('Missing JPEG End Of Image marker in tables')
+            raise IOTiffError('Missing JPEG End Of Image marker in tables')
         if tableBuffer[2:4] not in (b'\xff\xc4', b'\xff\xdb'):
-            raise IOTiffException(
+            raise IOTiffError(
                 'Missing JPEG Huffman or Quantization Table marker')
 
         # Strip the Start / End Of Image markers
@@ -415,26 +378,26 @@ class TiledTiffDirectory:
         :type tranpose: boolean
         :return: The internal tile number of the desired tile.
         :rtype int
-        :raises: InvalidOperationTiffException
+        :raises: InvalidOperationTiffError
         """
         # TIFFCheckTile and TIFFComputeTile require pixel coordinates
         if not transpose:
             pixelX = int(x * self._tileWidth)
             pixelY = int(y * self._tileHeight)
             if x < 0 or y < 0 or pixelX >= self._imageWidth or pixelY >= self._imageHeight:
-                raise InvalidOperationTiffException(
+                raise InvalidOperationTiffError(
                     'Tile x=%d, y=%d does not exist' % (x, y))
         else:
             pixelX = int(x * self._tileHeight)
             pixelY = int(y * self._tileWidth)
             if x < 0 or y < 0 or pixelX >= self._imageHeight or pixelY >= self._imageWidth:
-                raise InvalidOperationTiffException(
+                raise InvalidOperationTiffError(
                     'Tile x=%d, y=%d does not exist' % (x, y))
         # We had been using TIFFCheckTile, but with z=0 and sample=0, this is
         # just a check that x, y is within the image
         # if libtiff_ctypes.libtiff.TIFFCheckTile(
         #         self._tiffFile, pixelX, pixelY, 0, 0) == 0:
-        #     raise InvalidOperationTiffException(
+        #     raise InvalidOperationTiffError(
         #         'Tile x=%d, y=%d does not exist' % (x, y))
         if self._tiffInfo.get('istiled'):
             tileNum = libtiff_ctypes.libtiff.TIFFComputeTile(
@@ -452,7 +415,7 @@ class TiledTiffDirectory:
 
         :return: The element type in TIFFTAG_TILEBYTECOUNTS.
         :rtype: ctypes.c_uint64 or ctypes.c_uint16
-        :raises: IOTiffException
+        :raises: IOTiffError
         """
         tileByteCountsFieldInfo = libtiff_ctypes.libtiff.TIFFFieldWithTag(
             self._tiffFile, libtiff_ctypes.TIFFTAG_TILEBYTECOUNTS).contents
@@ -464,7 +427,7 @@ class TiledTiffDirectory:
                 libtiff_ctypes.TIFFDataType.TIFF_SHORT:
             return ctypes.c_uint16
         else:
-            raise IOTiffException(
+            raise IOTiffError(
                 'Invalid type for TIFFTAG_TILEBYTECOUNTS: %s' % tileByteCountsLibtiffType)
 
     def _getJpegFrameSize(self, tileNum):
@@ -475,7 +438,7 @@ class TiledTiffDirectory:
         :type tileNum: int
         :return: The size in bytes of the raw tile data for the desired tile.
         :rtype: int
-        :raises: InvalidOperationTiffException or IOTiffException
+        :raises: InvalidOperationTiffError or IOTiffError
         """
         # TODO: is it worth it to memoize this?
 
@@ -483,7 +446,7 @@ class TiledTiffDirectory:
         totalTileCount = libtiff_ctypes.libtiff.TIFFNumberOfTiles(
             self._tiffFile).value
         if tileNum >= totalTileCount:
-            raise InvalidOperationTiffException('Tile number out of range')
+            raise InvalidOperationTiffError('Tile number out of range')
 
         # pylibtiff treats the output of TIFFTAG_TILEBYTECOUNTS as a scalar
         # uint32; libtiff's documentation specifies that the output will be an
@@ -508,7 +471,7 @@ class TiledTiffDirectory:
                 self._tiffFile,
                 libtiff_ctypes.TIFFTAG_TILEBYTECOUNTS,
                 ctypes.byref(rawTileSizes)) != 1:
-            raise IOTiffException('Could not get raw tile size')
+            raise IOTiffError('Could not get raw tile size')
 
         # In practice, this will never overflow, and it's simpler to convert the
         # long to an int
@@ -524,12 +487,12 @@ class TiledTiffDirectory:
             container information.
         :return: The JPEG image frame, including a JPEG Start Of Frame marker.
         :rtype: bytes
-        :raises: InvalidOperationTiffException or IOTiffException
+        :raises: InvalidOperationTiffError or IOTiffError
         """
-        # This raises an InvalidOperationTiffException if the tile doesn't exist
+        # This raises an InvalidOperationTiffError if the tile doesn't exist
         rawTileSize = self._getJpegFrameSize(tileNum)
         if rawTileSize <= 0:
-            raise IOTiffException('No raw tile data')
+            raise IOTiffError('No raw tile data')
 
         frameBuffer = ctypes.create_string_buffer(rawTileSize)
 
@@ -537,20 +500,20 @@ class TiledTiffDirectory:
             self._tiffFile, tileNum,
             frameBuffer, rawTileSize).value
         if bytesRead == -1:
-            raise IOTiffException('Failed to read raw tile')
+            raise IOTiffError('Failed to read raw tile')
         elif bytesRead < rawTileSize:
-            raise IOTiffException('Buffer underflow when reading tile')
+            raise IOTiffError('Buffer underflow when reading tile')
         elif bytesRead > rawTileSize:
             # It's unlikely that this will ever occur, but incomplete reads will
             # be checked for by looking for the JPEG end marker
-            raise IOTiffException('Buffer overflow when reading tile')
+            raise IOTiffError('Buffer overflow when reading tile')
         if entire:
             return frameBuffer.raw[:]
 
         if frameBuffer.raw[:2] != b'\xff\xd8':
-            raise IOTiffException('Missing JPEG Start Of Image marker in frame')
+            raise IOTiffError('Missing JPEG Start Of Image marker in frame')
         if frameBuffer.raw[-2:] != b'\xff\xd9':
-            raise IOTiffException('Missing JPEG End Of Image marker in frame')
+            raise IOTiffError('Missing JPEG End Of Image marker in frame')
         if frameBuffer.raw[2:4] in (b'\xff\xc0', b'\xff\xc2'):
             frameStartPos = 2
         else:
@@ -562,7 +525,7 @@ class TiledTiffDirectory:
             if frameStartPos == -1:
                 frameStartPos = frameBuffer.raw.find(b'\xff\xc2', 2, -2)
                 if frameStartPos == -1:
-                    raise IOTiffException('Missing JPEG Start Of Frame marker')
+                    raise IOTiffError('Missing JPEG Start Of Frame marker')
         # If the photometric value is RGB and the JPEG component ids are just
         # 0, 1, 2, change the component ids to R, G, B to ensure color space
         # information is preserved.
@@ -591,7 +554,7 @@ class TiledTiffDirectory:
         :type tileNum: int
         :return: the tile as a PIL 8-bit-per-channel images.
         :rtype: PIL.Image
-        :raises: IOTiffException
+        :raises: IOTiffError
         """
         with self._tileLock:
             if self._tiffInfo.get('istiled'):
@@ -615,14 +578,14 @@ class TiledTiffDirectory:
                         ctypes.byref(imageBuffer, stripSize * stripNum),
                         stripSize).value
                     if chunkSize <= 0:
-                        raise IOTiffException(
+                        raise IOTiffError(
                             'Read an unexpected number of bytes from an encoded strip')
                     readSize += chunkSize
                 if readSize < tileSize:
                     ctypes.memset(ctypes.byref(imageBuffer, readSize), 0, tileSize - readSize)
                     readSize = tileSize
         if readSize < tileSize:
-            raise IOTiffException(
+            raise IOTiffError(
                 'Read an unexpected number of bytes from an encoded tile' if readSize >= 0 else
                 'Failed to read from an encoded tile')
         tw, th = self._tileWidth, self._tileHeight
@@ -724,7 +687,7 @@ class TiledTiffDirectory:
                                   :min(subtile.shape[1], tw - stx)]
                 tile[sty:sty + subtile.shape[0], stx:stx + subtile.shape[1]] = subtile
         if tile is None:
-            raise InvalidOperationTiffException(
+            raise InvalidOperationTiffError(
                 'Tile x=%d, y=%d does not exist' % (x, y))
         if self._tiffInfo.get('orientation') in {
                 libtiff_ctypes.ORIENTATION_BOTRIGHT,
@@ -788,13 +751,13 @@ class TiledTiffDirectory:
         :type y: int
         :return: either a buffer with a JPEG or a PIL image.
         :rtype: bytes
-        :raises: InvalidOperationTiffException or IOTiffException
+        :raises: InvalidOperationTiffError or IOTiffError
         """
         if self._tiffInfo.get('orientation') not in {
                 libtiff_ctypes.ORIENTATION_TOPLEFT,
                 None}:
             return self._getTileRotated(x, y)
-        # This raises an InvalidOperationTiffException if the tile doesn't exist
+        # This raises an InvalidOperationTiffError if the tile doesn't exist
         tileNum = self._toTileNum(x, y)
 
         if (not self._tiffInfo.get('istiled') or

@@ -67,6 +67,10 @@ TileInputUnits = {
     'millimeter': 'mm',
     'millimeters': 'mm',
     'fraction': 'fraction',
+    'projection': 'projection',
+    'proj': 'projection',
+    'wgs84': 'proj4:EPSG:4326',
+    '4326': 'proj4:EPSG:4326',
 }
 
 # numpy dtype to pyvips GValue

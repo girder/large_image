@@ -88,14 +88,14 @@ export default {
             this.compositeLayerInfo[layer].palette = swatch.hex;
         },
         updateLayerMin(event, layer) {
-            const newVal = event.target.value;
-            const newMinVal = parseFloat(newVal);
+            const newVal = event.target.valueAsNumber;
+            const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
             this.compositeLayerInfo[layer].min = newMinVal;
             this.updateStyle();
         },
         updateLayerMax(event, layer) {
             const newVal = event.target.valueAsNumber;
-            const newMaxVal = parseFloat(newVal);
+            const newMaxVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
             this.compositeLayerInfo[layer].max = newMaxVal;
             this.updateStyle();
         },
@@ -177,7 +177,7 @@ export default {
                             type="number"
                             step="0.01"
                             min="0"
-                            max="1"
+                            max="65535"
                             :value="layerInfo.min"
                             @change.prevent="(event) => updateLayerMin(event, layer)"
                         >
@@ -187,12 +187,11 @@ export default {
                             type="number"
                             step="0.01"
                             min="0"
-                            max="1"
+                            max="65535"
                             :value="layerInfo.max"
                             @change.prevent="(event) => updateLayerMax(event, layer)"
                         >
                     </td>
-                    <td></td>
                 </tr>
             </tbody>
         </table>

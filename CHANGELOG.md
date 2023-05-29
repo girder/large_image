@@ -1,12 +1,66 @@
 # Change Log
 
+## 1.22.0
+
+### Features
+- Add tile source dtype attribute ([#1144](../../pull/1144))
+
+### Improvements
+- Parse qptiff and imagej vendor information ([#1168](../../pull/1168))
+
+### Changes
+- Remove an unneeded warnings filter ([#1172](../../pull/1172))
+
+## 1.21.0
+
+### Improvements
+- getPixel method and endpoint now returns rawer values ([#1155](../../pull/1155))
+- Allow more sophisticated filtering on item lists from the Girder client ([#1157](../../pull/1157), [#1159](../../pull/1159), [#1161](../../pull/1161))
+
+### Changes
+- Rename tiff exceptions to be better follow python standards ([#1162](../../pull/1162))
+- Require a newer version of girder ([#1163](../../pull/1163))
+- Add manual mongo index names where index names might get too long ([#1166](../../pull/1166))
+- Avoid using $unionWith for annotation searches as it isn't supported everywhere ([#1167](../../pull/1167))
+
+### Bug Fixes
+- The deepzoom tile source misreported the format of its tile output ([#1158](../../pull/1158))
+- Guard against errors in a log message ([#1164](../../pull/1164))
+- Fix thumbnail query typo ([#1165](../../pull/1165))
+
+## 1.20.6
+
+### Improvements
+- Store current frame and style in the DOM for easier access ([#1136](../../pull/1136))
+- Convert long girder GET and PUT requests to POSTs ([#1137](../../pull/1137))
+- Propagate more feature events from geojs on annotations ([#1147](../../pull/1147))
+- Add another mime type to those considered to be yaml ([#1149](../../pull/1149))
+
+### Changes
+- Add a guard if PIL doesn't support ImageCms ([#1132](../../pull/1132))
+- Allow putting a yaml config file from a Girder API endpoint ([#1133](../../pull/1133))
+
+### Bug Fixes
+- Allow clearing the min/max fields of the frame selector ([#1130](../../pull/1130))
+- Fix a bug with caching tiles and styling ([#1131](../../pull/1131))
+- Fix setting minimum values on bands from the frame selector ([#1138](../../pull/1138))
+- Fix a version reference in the source extras_require ([#1150](../../pull/1150))
+
+## 1.20.5
+
+### Improvements
+- Improve access and repr of metadata and style ([#1121](../../pull/1121))
+
+### Changes
+- Remove psutil hard dependency ([#1127](../../pull/1127))
+
 ## 1.20.4
 
 ### Improvements
 - Better cache handling with Etags ([#1097](../../pull/1097))
 - Reduce duplicate computation of slow cached values ([#1100](../../pull/1100))
 - Reconnect to memcached if the connection fails ([#1104](../../pull/1104))
-- Better frame selector on Girder item page ([#1186](../../pull/1186))
+- Better frame selector on Girder item page ([#1086](../../pull/1086))
 
 ### Bug Fixes
 - Tile serving can bypass loading a source if it is in memory ([#1102](../../pull/1102))
@@ -341,7 +395,7 @@
 - Emit events when an overlay annotation layer is created ([#787](../../pull/787))
 - Minor improvements to setFrameQuad to make it more flexible ([#790](../../pull/790))
 - Support drawing polygon selection regions ([#791](../../pull/791))
-- Add some automating options to getTileFramesQuadInfo  ([#792](../../pull/792))
+- Add some automating options to getTileFramesQuadInfo ([#792](../../pull/792))
 
 ### Changes
 - Change how we do a version check ([#785](../../pull/785))
@@ -380,7 +434,7 @@
 
 ### Features
 - Added image annotation element ([#742](../../pull/742), [#750](../../pull/750))
-- Allow the discrete scheme to be used on all tile sources  ([#755](../../pull/755))
+- Allow the discrete scheme to be used on all tile sources ([#755](../../pull/755))
 
 ### Improvements
 - Expand user paths ([#746](../../pull/746))

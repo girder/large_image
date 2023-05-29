@@ -190,10 +190,12 @@ class ImageItem(Item):
             sourceClass = girder_tilesource.AvailableGirderTileSources[sourceName]
         except TileSourceError:
             return None
-        if '_' in kwargs:
+        if '_' in kwargs or 'style' in kwargs:
             kwargs = kwargs.copy()
             kwargs.pop('_', None)
         classHash = sourceClass.getLRUHash(item, **kwargs)
+        # style isn't part of the tile hash strhash parameters
+        kwargs.pop('style', None)
         tileHash = sourceClass.__name__ + ' ' + classHash + ' ' + strhash(
             sourceClass.__name__ + ' ' + classHash) + strhash(
             *(x, y, z), mayRedirect=mayRedirect, **kwargs)
@@ -497,7 +499,7 @@ class ImageItem(Item):
             }
             if imageKey and key == 'isLargeImageThumbnail':
                 if imageKey == 'none':
-                    query['thumbnailKey'] = {'not': {'$regex': '"imageKey":'}}
+                    query['thumbnailKey'] = {'$not': {'$regex': '"imageKey":'}}
                 else:
                     query['thumbnailKey'] = {'$regex': '"imageKey":"%s"' % imageKey}
             query.update(kwargs)

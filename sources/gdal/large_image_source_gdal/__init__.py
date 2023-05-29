@@ -20,11 +20,15 @@ import pathlib
 import struct
 import tempfile
 import threading
-from urllib.parse import urlencode, urlparse
 
 import numpy
 import PIL.Image
 from osgeo import gdal, gdal_array, gdalconst, osr
+
+try:
+    gdal.useExceptions()
+except Exception:
+    pass
 
 # isort: off
 
@@ -37,15 +41,17 @@ import pyproj
 # isort: on
 
 import large_image
-from large_image.cache_util import CacheProperties, LruCacheMetaclass, methodcache
+from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileInputUnits, TileOutputMimeTypes)
+                                   TILE_FORMAT_PIL, TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
-from large_image.tilesource import FileTileSource
-from large_image.tilesource.utilities import JSONDict, getPaletteColors
+from large_image.tilesource.geo import (GDALBaseFileTileSource, InitPrefix,
+                                        NeededInitPrefix,
+                                        ProjUnitsAcrossLevel0,
+                                        ProjUnitsAcrossLevel0_MaxSize)
+from large_image.tilesource.utilities import JSONDict
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -59,63 +65,14 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
-TileInputUnits['projection'] = 'projection'
-TileInputUnits['proj'] = 'projection'
-TileInputUnits['wgs84'] = 'proj4:EPSG:4326'
-TileInputUnits['4326'] = 'proj4:EPSG:4326'
 
-# Inform the tile source cache about the potential size of this tile source
-CacheProperties['tilesource']['itemExpectedSize'] = max(
-    CacheProperties['tilesource']['itemExpectedSize'],
-    100 * 1024 ** 2)
-
-# Used to cache pixel size for projections
-ProjUnitsAcrossLevel0 = {}
-ProjUnitsAcrossLevel0_MaxSize = 100
-
-InitPrefix = '+init='
-NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else InitPrefix
-
-
-def make_vsi(url: str, **options):
-    if str(url).startswith('s3://'):
-        s3_path = url.replace('s3://', '')
-        vsi = f'/vsis3/{s3_path}'
-    else:
-        gdal_options = {
-            'url': str(url),
-            'use_head': 'no',
-            'list_dir': 'no',
-        }
-        gdal_options.update(options)
-        vsi = f'/vsicurl?{urlencode(gdal_options)}'
-    return vsi
-
-
-class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
+class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     """
     Provides tile access to geospatial files.
     """
 
     cacheName = 'tilesource'
     name = 'gdal'
-    extensions = {
-        None: SourcePriority.MEDIUM,
-        'geotiff': SourcePriority.PREFERRED,
-        # National Imagery Transmission Format
-        'ntf': SourcePriority.PREFERRED,
-        'nitf': SourcePriority.PREFERRED,
-        'tif': SourcePriority.LOW,
-        'tiff': SourcePriority.LOW,
-        'vrt': SourcePriority.PREFERRED,
-    }
-    mimeTypes = {
-        None: SourcePriority.FALLBACK,
-        'image/geotiff': SourcePriority.PREFERRED,
-        'image/tiff': SourcePriority.LOW,
-        'image/x-tiff': SourcePriority.LOW,
-    }
-    _geospatial_source = True
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
         """
@@ -149,7 +106,6 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
-        self._projection = projection
         if projection and projection.lower().startswith('epsg:'):
             projection = NeededInitPrefix + projection.lower()
         if projection and not isinstance(projection, bytes):
@@ -183,119 +139,24 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
 
-    def _setStyle(self, style):
+    def _getDriver(self):
         """
-        Check and set the specified style from a json string or a dictionary.
+        Get the GDAL driver used to read this dataset.
 
-        :param style: The new style.
+        :returns: The name of the driver.
         """
-        super()._setStyle(style)
-        if hasattr(self, '_getTileLock'):
-            self._setDefaultStyle()
-
-    def _getLargeImagePath(self):
-        """Get GDAL-compatible image path.
-
-        This will cast the output to a string and can also handle URLs
-        ('http', 'https', 'ftp', 's3') for use with GDAL
-        `Virtual Filesystems Interface <https://gdal.org/user/virtual_file_systems.html>`_.
-        """
-        if urlparse(str(self.largeImagePath)).scheme in {'http', 'https', 'ftp', 's3'}:
-            return make_vsi(self.largeImagePath)
-        return str(self.largeImagePath)
+        if not hasattr(self, '_driver'):
+            with self._getDatasetLock:
+                if not self.dataset or not self.dataset.GetDriver():
+                    self._driver = None
+                else:
+                    self._driver = self.dataset.GetDriver().ShortName
+        return self._driver
 
     def _checkNetCDF(self):
         if self._getDriver() == 'netCDF':
             raise TileSourceError('netCDF file will not be read via GDAL source')
         return False
-
-    def _styleBands(self):
-        interpColorTable = {
-            'red': ['#000000', '#ff0000'],
-            'green': ['#000000', '#00ff00'],
-            'blue': ['#000000', '#0000ff'],
-            'gray': ['#000000', '#ffffff'],
-            'alpha': ['#ffffff00', '#ffffffff'],
-        }
-        style = []
-        if hasattr(self, '_style'):
-            styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
-            for styleBand in styleBands:
-
-                styleBand = styleBand.copy()
-                # Default to band 1 -- perhaps we should default to gray or
-                # green instead.
-                styleBand['band'] = self._bandNumber(styleBand.get('band', 1))
-                style.append(styleBand)
-        if not len(style):
-            for interp in ('red', 'green', 'blue', 'gray', 'palette', 'alpha'):
-                band = self._bandNumber(interp, False)
-                # If we don't have the requested band, or we only have alpha,
-                # or this is gray or palette and we already added another band,
-                # skip this interpretation.
-                if (band is None or
-                        (interp == 'alpha' and not len(style)) or
-                        (interp in ('gray', 'palette') and len(style))):
-                    continue
-                if interp == 'palette':
-                    bandInfo = self.getOneBandInformation(band)
-                    style.append({
-                        'band': band,
-                        'palette': 'colortable',
-                        'min': 0,
-                        'max': len(bandInfo['colortable']) - 1})
-                else:
-                    style.append({
-                        'band': band,
-                        'palette': interpColorTable[interp],
-                        'min': 'auto',
-                        'max': 'auto',
-                        'nodata': 'auto',
-                        'composite': 'multiply' if interp == 'alpha' else 'lighten'
-                    })
-        return style
-
-    def _setDefaultStyle(self):
-        """If not style was specified, create a default style."""
-        if hasattr(self, '_style'):
-            styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
-            if not len(styleBands) or (len(styleBands) == 1 and isinstance(
-                    styleBands[0].get('band', 1), int) and styleBands[0].get('band', 1) <= 0):
-                del self._style
-        style = self._styleBands()
-        if len(style):
-            hasAlpha = False
-            for bstyle in style:
-                hasAlpha = hasAlpha or self.getOneBandInformation(
-                    bstyle.get('band', 0)).get('interpretation') == 'alpha'
-                if 'palette' in bstyle:
-                    if bstyle['palette'] == 'colortable':
-                        bandInfo = self.getOneBandInformation(bstyle.get('band', 0))
-                        bstyle['palette'] = [(
-                            '#%02X%02X%02X' if len(entry) == 3 else
-                            '#%02X%02X%02X%02X') % entry for entry in bandInfo['colortable']]
-                    else:
-                        bstyle['palette'] = self.getHexColors(bstyle['palette'])
-                if bstyle.get('nodata') == 'auto':
-                    bandInfo = self.getOneBandInformation(bstyle.get('band', 0))
-                    bstyle['nodata'] = bandInfo.get('nodata', None)
-            if not hasAlpha and self.projection:
-                style.append({
-                    'band': (
-                        self._bandNumber('alpha', False)
-                        if self._bandNumber('alpha', False) is not None else
-                        (len(self.getBandInformation()) + 1)),
-                    'min': 0,
-                    'max': 'auto',
-                    'composite': 'multiply',
-                    'palette': ['#ffffff00', '#ffffffff'],
-                })
-            self.logger.debug('Using style %r', style)
-            self._style = JSONDict({'bands': style})
-        self._bandNames = {}
-        for idx, band in self.getBandInformation().items():
-            if band.get('interpretation'):
-                self._bandNames[band['interpretation'].lower()] = idx
 
     def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, onlyMinMax=True):
         frame = frame or 0
@@ -327,27 +188,14 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Add the maximum range of the data type to the end of the band
         # range list.  This changes autoscaling behavior.  For non-integer
         # data types, this adds the range [0, 1].
-        self._bandRanges[frame]['min'] = numpy.append(self._bandRanges[frame]['min'], 0)
+        band_frame = self._bandRanges[frame]
         try:
             # only valid for integer dtypes
-            range_max = numpy.iinfo(self._bandRanges[frame]['max'].dtype).max
+            range_max = numpy.iinfo(band_frame['max'].dtype).max
         except ValueError:
             range_max = 1
-        self._bandRanges[frame]['max'] = numpy.append(self._bandRanges[frame]['max'], range_max)
-
-    def _getDriver(self):
-        """
-        Get the GDAL driver used to read this dataset.
-
-        :returns: The name of the driver.
-        """
-        if not hasattr(self, '_driver'):
-            with self._getDatasetLock:
-                if not self.dataset or not self.dataset.GetDriver():
-                    self._driver = None
-                else:
-                    self._driver = self.dataset.GetDriver().ShortName
-        return self._driver
+        band_frame['min'] = numpy.append(band_frame['min'], 0)
+        band_frame['max'] = numpy.append(band_frame['max'], range_max)
 
     def _initWithProjection(self, unitsPerPixel=None):
         """
@@ -400,17 +248,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def getState(self):
         return super().getState() + ',%s,%s' % (
-            self._projection, self._unitsPerPixel)
-
-    @staticmethod
-    def getHexColors(palette):
-        """
-        Returns list of hex colors for a given color palette
-
-        :returns: List of colors
-        """
-        palette = getPaletteColors(palette)
-        return ['#%02X%02X%02X%02X' % tuple(int(val) for val in clr) for clr in palette]
+            self.projection, self._unitsPerPixel)
 
     def getProj4String(self):
         """
@@ -432,40 +270,6 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         proj.ImportFromWkt(wkt)
         return proj.ExportToProj4()
 
-    def getPixelSizeInMeters(self):
-        """
-        Get the approximate base pixel size in meters.  This is calculated as
-        the average scale of the four edges in the WGS84 ellipsoid.
-
-        :returns: the pixel size in meters or None.
-        """
-        bounds = self.getBounds(NeededInitPrefix + 'epsg:4326')
-        if not bounds:
-            return
-        geod = pyproj.Geod(ellps='WGS84')
-        az12, az21, s1 = geod.inv(bounds['ul']['x'], bounds['ul']['y'],
-                                  bounds['ur']['x'], bounds['ur']['y'])
-        az12, az21, s2 = geod.inv(bounds['ur']['x'], bounds['ur']['y'],
-                                  bounds['lr']['x'], bounds['lr']['y'])
-        az12, az21, s3 = geod.inv(bounds['lr']['x'], bounds['lr']['y'],
-                                  bounds['ll']['x'], bounds['ll']['y'])
-        az12, az21, s4 = geod.inv(bounds['ll']['x'], bounds['ll']['y'],
-                                  bounds['ul']['x'], bounds['ul']['y'])
-        return (s1 + s2 + s3 + s4) / (self.sourceSizeX * 2 + self.sourceSizeY * 2)
-
-    def getNativeMagnification(self):
-        """
-        Get the magnification at the base level.
-
-        :return: width of a pixel in mm, height of a pixel in mm.
-        """
-        scale = self.getPixelSizeInMeters()
-        return {
-            'magnification': None,
-            'mm_x': scale * 100 if scale else None,
-            'mm_y': scale * 100 if scale else None,
-        }
-
     def _getGeoTransform(self):
         """
         Get the GeoTransform.  If GCPs are used, get the appropriate transform
@@ -479,11 +283,151 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 gt = gdal.GCPsToGeoTransform(self.dataset.GetGCPs())
         return gt
 
+    @staticmethod
+    def _proj4Proj(proj):
+        """
+        Return a pyproj.Proj based on either a binary or unicode string.
+
+        :param proj: a binary or unicode projection string.
+        :returns: a proj4 projection object.  None if the specified projection
+            cannot be created.
+        """
+        if isinstance(proj, bytes):
+            proj = proj.decode()
+        if not isinstance(proj, str):
+            return
+        if proj.lower().startswith('proj4:'):
+            proj = proj.split(':', 1)[1]
+        if proj.lower().startswith('epsg:'):
+            proj = NeededInitPrefix + proj.lower()
+        try:
+            if proj.startswith(InitPrefix) and int(pyproj.proj_version_str.split('.')[0]) >= 6:
+                proj = proj[len(InitPrefix):]
+        except Exception:
+            pass  # failed to parse version
+        return pyproj.Proj(proj)
+
+    def toNativePixelCoordinates(self, x, y, proj=None, roundResults=True):
+        """
+        Convert a coordinate in the native projection (self.getProj4String) to
+        pixel coordinates.
+
+        :param x: the x coordinate it the native projection.
+        :param y: the y coordinate it the native projection.
+        :param proj: input projection.  None to use the source's projection.
+        :param roundResults: if True, round the results to the nearest pixel.
+        :return: (x, y) the pixel coordinate.
+        """
+        if proj is None:
+            proj = self.projection
+        # convert to the native projection
+        inProj = self._proj4Proj(proj)
+        outProj = self._proj4Proj(self.getProj4String())
+        px, py = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True).transform(x, y)
+        # convert to native pixel coordinates
+        gt = self._getGeoTransform()
+        d = gt[2] * gt[4] - gt[1] * gt[5]
+        x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
+        y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
+        if roundResults:
+            x = int(round(x))
+            y = int(round(y))
+        return x, y
+
+    def _convertProjectionUnits(self, left, top, right, bottom, width, height,
+                                units, **kwargs):
+        """
+        Given bound information and a units string that consists of a proj4
+        projection (starts with `'proj4:'`, `'epsg:'`, `'+proj='` or is an
+        enumerated value like `'wgs84'`), convert the bounds to either pixel or
+        the class projection coordinates.
+
+        :param left: the left edge (inclusive) of the region to process.
+        :param top: the top edge (inclusive) of the region to process.
+        :param right: the right edge (exclusive) of the region to process.
+        :param bottom: the bottom edge (exclusive) of the region to process.
+        :param width: the width of the region to process.  Ignored if both
+            left and right are specified.
+        :param height: the height of the region to process.  Ignores if both
+            top and bottom are specified.
+        :param units: either 'projection', a string starting with 'proj4:',
+            'epsg:', or '+proj=' or a enumerated value like 'wgs84', or one of
+            the super's values.
+        :param kwargs: optional parameters.
+        :returns: left, top, right, bottom, units.  The new bounds in the
+            either pixel or class projection units.
+        """
+        if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
+            if left is None and right is not None and width is not None:
+                left = right - width
+            if right is None and left is not None and width is not None:
+                right = left + width
+            if top is None and bottom is not None and height is not None:
+                top = bottom - height
+            if bottom is None and top is not None and height is not None:
+                bottom = top + height
+        if (left is None and right is None) or (top is None and bottom is None):
+            raise TileSourceError(
+                'Cannot convert from projection unless at least one of '
+                'left and right and at least one of top and bottom is '
+                'specified.')
+        if not self.projection:
+            pleft, ptop = self.toNativePixelCoordinates(
+                right if left is None else left,
+                bottom if top is None else top,
+                units)
+            pright, pbottom = self.toNativePixelCoordinates(
+                left if right is None else right,
+                top if bottom is None else bottom,
+                units)
+            units = 'base_pixels'
+        else:
+            inProj = self._proj4Proj(units)
+            outProj = self._proj4Proj(self.projection)
+            transformer = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True)
+            pleft, ptop = transformer.transform(
+                right if left is None else left,
+                bottom if top is None else top)
+            pright, pbottom = transformer.transform(
+                left if right is None else right,
+                top if bottom is None else bottom)
+            units = 'projection'
+        left = pleft if left is not None else None
+        top = ptop if top is not None else None
+        right = pright if right is not None else None
+        bottom = pbottom if bottom is not None else None
+        return left, top, right, bottom, units
+
+    def pixelToProjection(self, x, y, level=None):
+        """
+        Convert from pixels back to projection coordinates.
+
+        :param x, y: base pixel coordinates.
+        :param level: the level of the pixel.  None for maximum level.
+        :returns: x, y in projection coordinates.
+        """
+        if level is None:
+            level = self.levels - 1
+        if not self.projection:
+            x *= 2 ** (self.levels - 1 - level)
+            y *= 2 ** (self.levels - 1 - level)
+            gt = self._getGeoTransform()
+            px = gt[0] + gt[1] * x + gt[2] * y
+            py = gt[3] + gt[4] * x + gt[5] * y
+            return px, py
+        xScale = 2 ** level * self.tileWidth
+        yScale = 2 ** level * self.tileHeight
+        x = x / xScale - 0.5
+        y = 0.5 - y / yScale
+        x = x * self.unitsAcrossLevel0 + self.projectionOrigin[0]
+        y = y * self.unitsAcrossLevel0 + self.projectionOrigin[1]
+        return x, y
+
     def getBounds(self, srs=None):
         """
         Returns bounds of the image.
 
-        :param srs: the projection for the bounds.  None for the default.
+        :param srs: the projection for the bounds.  None for the default 4326.
         :returns: an object with the four corners and the projection that was
             used.  None if we don't know the original projection.
         """
@@ -688,37 +632,7 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     result['Metadata_' + key] = metadatalist
         return result
 
-    def getTileCorners(self, z, x, y):
-        """
-        Returns bounds of a tile for a given x,y,z index.
-
-        :param z: tile level
-        :param x: tile offset from left.
-        :param y: tile offset from right
-        :returns: (xmin, ymin, xmax, ymax) in the current projection or base
-            pixels.
-        """
-        x, y = float(x), float(y)
-        if self.projection:
-            # Scale tile into the range [-0.5, 0.5], [-0.5, 0.5]
-            xmin = -0.5 + x / 2.0 ** z
-            xmax = -0.5 + (x + 1) / 2.0 ** z
-            ymin = 0.5 - (y + 1) / 2.0 ** z
-            ymax = 0.5 - y / 2.0 ** z
-            # Convert to projection coordinates
-            xmin = self.projectionOrigin[0] + xmin * self.unitsAcrossLevel0
-            xmax = self.projectionOrigin[0] + xmax * self.unitsAcrossLevel0
-            ymin = self.projectionOrigin[1] + ymin * self.unitsAcrossLevel0
-            ymax = self.projectionOrigin[1] + ymax * self.unitsAcrossLevel0
-        else:
-            xmin = 2 ** (self.sourceLevels - 1 - z) * x * self.tileWidth
-            ymin = 2 ** (self.sourceLevels - 1 - z) * y * self.tileHeight
-            xmax = xmin + 2 ** (self.sourceLevels - 1 - z) * self.tileWidth
-            ymax = ymin + 2 ** (self.sourceLevels - 1 - z) * self.tileHeight
-            ymin, ymax = self.sourceSizeY - ymax, self.sourceSizeY - ymin
-        return xmin, ymin, xmax, ymax
-
-    def _bandNumber(self, band, exc=True):
+    def _bandNumber(self, band, exc=True):  # TODO: use super method?
         """
         Given a band number or interpretation name, return a validated band
         number.
@@ -811,242 +725,6 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tile = numpy.rollaxis(tile, 0, 3)
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
-
-    @staticmethod
-    def _proj4Proj(proj):
-        """
-        Return a pyproj.Proj based on either a binary or unicode string.
-
-        :param proj: a binary or unicode projection string.
-        :returns: a proj4 projection object.  None if the specified projection
-            cannot be created.
-        """
-        if isinstance(proj, bytes):
-            proj = proj.decode()
-        if not isinstance(proj, str):
-            return
-        if proj.lower().startswith('proj4:'):
-            proj = proj.split(':', 1)[1]
-        if proj.lower().startswith('epsg:'):
-            proj = NeededInitPrefix + proj.lower()
-        try:
-            if proj.startswith(InitPrefix) and int(pyproj.proj_version_str.split('.')[0]) >= 6:
-                proj = proj[len(InitPrefix):]
-        except Exception:
-            pass  # failed to parse version
-        return pyproj.Proj(proj)
-
-    def _convertProjectionUnits(self, left, top, right, bottom, width, height,
-                                units, **kwargs):
-        """
-        Given bound information and a units string that consists of a proj4
-        projection (starts with `'proj4:'`, `'epsg:'`, `'+proj='` or is an
-        enumerated value like `'wgs84'`), convert the bounds to either pixel or
-        the class projection coordinates.
-
-        :param left: the left edge (inclusive) of the region to process.
-        :param top: the top edge (inclusive) of the region to process.
-        :param right: the right edge (exclusive) of the region to process.
-        :param bottom: the bottom edge (exclusive) of the region to process.
-        :param width: the width of the region to process.  Ignored if both
-            left and right are specified.
-        :param height: the height of the region to process.  Ignores if both
-            top and bottom are specified.
-        :param units: either 'projection', a string starting with 'proj4:',
-            'epsg:', or '+proj=' or a enumerated value like 'wgs84', or one of
-            the super's values.
-        :param kwargs: optional parameters.
-        :returns: left, top, right, bottom, units.  The new bounds in the
-            either pixel or class projection units.
-        """
-        if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
-            if left is None and right is not None and width is not None:
-                left = right - width
-            if right is None and left is not None and width is not None:
-                right = left + width
-            if top is None and bottom is not None and height is not None:
-                top = bottom - height
-            if bottom is None and top is not None and height is not None:
-                bottom = top + height
-        if (left is None and right is None) or (top is None and bottom is None):
-            raise TileSourceError(
-                'Cannot convert from projection unless at least one of '
-                'left and right and at least one of top and bottom is '
-                'specified.')
-        if not self.projection:
-            pleft, ptop = self.toNativePixelCoordinates(
-                right if left is None else left,
-                bottom if top is None else top,
-                units)
-            pright, pbottom = self.toNativePixelCoordinates(
-                left if right is None else right,
-                top if bottom is None else bottom,
-                units)
-            units = 'base_pixels'
-        else:
-            inProj = self._proj4Proj(units)
-            outProj = self._proj4Proj(self.projection)
-            transformer = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True)
-            pleft, ptop = transformer.transform(
-                right if left is None else left,
-                bottom if top is None else top)
-            pright, pbottom = transformer.transform(
-                left if right is None else right,
-                top if bottom is None else bottom)
-            units = 'projection'
-        left = pleft if left is not None else None
-        top = ptop if top is not None else None
-        right = pright if right is not None else None
-        bottom = pbottom if bottom is not None else None
-        return left, top, right, bottom, units
-
-    def _getRegionBounds(self, metadata, left=None, top=None, right=None,
-                         bottom=None, width=None, height=None, units=None,
-                         **kwargs):
-        """
-        Given a set of arguments that can include left, right, top, bottom,
-        width, height, and units, generate actual pixel values for left, top,
-        right, and bottom.  If units is `'projection'`, use the source's
-        projection.  If units starts with `'proj4:'` or `'epsg:'` or a
-        custom units value, use that projection.  Otherwise, just use the super
-        function.
-
-        :param metadata: the metadata associated with this source.
-        :param left: the left edge (inclusive) of the region to process.
-        :param top: the top edge (inclusive) of the region to process.
-        :param right: the right edge (exclusive) of the region to process.
-        :param bottom: the bottom edge (exclusive) of the region to process.
-        :param width: the width of the region to process.  Ignored if both
-            left and right are specified.
-        :param height: the height of the region to process.  Ignores if both
-            top and bottom are specified.
-        :param units: either 'projection', a string starting with 'proj4:',
-            'epsg:' or a enumerated value like 'wgs84', or one of the super's
-            values.
-        :param kwargs: optional parameters.  See above.
-        :returns: left, top, right, bottom bounds in pixels.
-        """
-        units = TileInputUnits.get(units.lower() if units else units, units)
-        # If a proj4 projection is specified, convert the left, right, top, and
-        # bottom to the current projection or to pixel space if no projection
-        # is used.
-        if (units and (units.lower().startswith('proj4:') or
-                       units.lower().startswith('epsg:') or
-                       units.lower().startswith('+proj='))):
-            left, top, right, bottom, units = self._convertProjectionUnits(
-                left, top, right, bottom, width, height, units, **kwargs)
-
-        if units == 'projection' and self.projection:
-            bounds = self.getBounds(self.projection)
-            # Fill in missing values
-            if left is None:
-                left = bounds['xmin'] if right is None or width is None else right - width
-            if right is None:
-                right = bounds['xmax'] if width is None else left + width
-            if top is None:
-                top = bounds['ymax'] if bottom is None or width is None else bottom - width
-            if bottom is None:
-                bottom = bounds['ymin'] if width is None else top + width
-            if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
-                width = height = None
-            # Convert to [-0.5, 0.5], [-0.5, 0.5] coordinate range
-            left = (left - self.projectionOrigin[0]) / self.unitsAcrossLevel0
-            right = (right - self.projectionOrigin[0]) / self.unitsAcrossLevel0
-            top = (top - self.projectionOrigin[1]) / self.unitsAcrossLevel0
-            bottom = (bottom - self.projectionOrigin[1]) / self.unitsAcrossLevel0
-            # Convert to world=wide 'base pixels' and crop to the world
-            xScale = 2 ** (self.levels - 1) * self.tileWidth
-            yScale = 2 ** (self.levels - 1) * self.tileHeight
-            left = max(0, min(xScale, (0.5 + left) * xScale))
-            right = max(0, min(xScale, (0.5 + right) * xScale))
-            top = max(0, min(yScale, (0.5 - top) * yScale))
-            bottom = max(0, min(yScale, (0.5 - bottom) * yScale))
-            # Ensure correct ordering
-            left, right = min(left, right), max(left, right)
-            top, bottom = min(top, bottom), max(top, bottom)
-            units = 'base_pixels'
-        return super()._getRegionBounds(
-            metadata, left, top, right, bottom, width, height, units, **kwargs)
-
-    def pixelToProjection(self, x, y, level=None):
-        """
-        Convert from pixels back to projection coordinates.
-
-        :param x, y: base pixel coordinates.
-        :param level: the level of the pixel.  None for maximum level.
-        :returns: x, y in projection coordinates.
-        """
-        if level is None:
-            level = self.levels - 1
-        if not self.projection:
-            x *= 2 ** (self.levels - 1 - level)
-            y *= 2 ** (self.levels - 1 - level)
-            gt = self._getGeoTransform()
-            px = gt[0] + gt[1] * x + gt[2] * y
-            py = gt[3] + gt[4] * x + gt[5] * y
-            return px, py
-        xScale = 2 ** level * self.tileWidth
-        yScale = 2 ** level * self.tileHeight
-        x = x / xScale - 0.5
-        y = 0.5 - y / yScale
-        x = x * self.unitsAcrossLevel0 + self.projectionOrigin[0]
-        y = y * self.unitsAcrossLevel0 + self.projectionOrigin[1]
-        return x, y
-
-    @methodcache()
-    def getThumbnail(self, width=None, height=None, **kwargs):
-        """
-        Get a basic thumbnail from the current tile source.  Aspect ratio is
-        preserved.  If neither width nor height is given, a default value is
-        used.  If both are given, the thumbnail will be no larger than either
-        size.  A thumbnail has the same options as a region except that it
-        always includes the entire image if there is no projection and has a
-        default size of 256 x 256.
-
-        :param width: maximum width in pixels.
-        :param height: maximum height in pixels.
-        :param kwargs: optional arguments.  Some options are encoding,
-            jpegQuality, jpegSubsampling, and tiffCompression.
-        :returns: thumbData, thumbMime: the image data and the mime type.
-        """
-        if self.projection:
-            if ((width is not None and width < 2) or
-                    (height is not None and height < 2)):
-                raise ValueError('Invalid width or height.  Minimum value is 2.')
-            if width is None and height is None:
-                width = height = 256
-            params = dict(kwargs)
-            params['output'] = {'maxWidth': width, 'maxHeight': height}
-            params['region'] = {'units': 'projection'}
-            return self.getRegion(**params)
-        return super().getThumbnail(width, height, **kwargs)
-
-    def toNativePixelCoordinates(self, x, y, proj=None, roundResults=True):
-        """
-        Convert a coordinate in the native projection (self.getProj4String) to
-        pixel coordinates.
-
-        :param x: the x coordinate it the native projection.
-        :param y: the y coordinate it the native projection.
-        :param proj: input projection.  None to use the source's projection.
-        :param roundResults: if True, round the results to the nearest pixel.
-        :return: (x, y) the pixel coordinate.
-        """
-        if proj is None:
-            proj = self.projection
-        # convert to the native projection
-        inProj = self._proj4Proj(proj)
-        outProj = self._proj4Proj(self.getProj4String())
-        px, py = pyproj.Transformer.from_proj(inProj, outProj, always_xy=True).transform(x, y)
-        # convert to native pixel coordinates
-        gt = self._getGeoTransform()
-        d = gt[2] * gt[4] - gt[1] * gt[5]
-        x = (gt[0] * gt[5] - gt[2] * gt[3] - gt[5] * px + gt[2] * py) / d
-        y = (gt[1] * gt[3] - gt[0] * gt[4] + gt[4] * px - gt[1] * py) / d
-        if roundResults:
-            x = int(round(x))
-            y = int(round(y))
-        return x, y
 
     def getPixel(self, **kwargs):
         """
@@ -1246,6 +924,29 @@ class GDALFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for warning in warnings:
                 self.logger.warning(warning)
         return True
+
+    @staticmethod
+    def isGeospatial(path):
+        """
+        Check if a path is likely to be a geospatial file.
+
+        :param path: The path to the file
+        :returns: True if geospatial.
+        """
+        try:
+            ds = gdal.Open(str(path), gdalconst.GA_ReadOnly)
+        except Exception:
+            return False
+        if ds:
+            if ds.GetGCPs() and ds.GetGCPProjection():
+                return True
+            if ds.GetProjection():
+                return True
+            if ds.GetGeoTransform(can_return_null=True):
+                return True
+            if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
+                return True
+        return False
 
 
 def open(*args, **kwargs):

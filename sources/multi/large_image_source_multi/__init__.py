@@ -6,7 +6,6 @@ import math
 import os
 import re
 import threading
-import warnings
 from pathlib import Path
 
 import jsonschema
@@ -32,8 +31,6 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
-
-warnings.filterwarnings('ignore', category=UserWarning, module='glymur')
 
 SourceEntrySchema = {
     'type': 'object',
