@@ -1,4 +1,3 @@
-
 export const CHANNEL_COLORS = {
     BRIGHTFIELD: '#FFFFFF',
     DAPI: '#0000FF',
