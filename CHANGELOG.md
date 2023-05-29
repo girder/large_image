@@ -4,12 +4,14 @@
 
 ### Features
 - Add tile source dtype attribute ([#1144](../../pull/1144))
+- Added rasterio tile source ([#1115](../../pull/1115))
 
 ### Improvements
 - Parse qptiff and imagej vendor information ([#1168](../../pull/1168))
 
 ### Changes
 - Remove an unneeded warnings filter ([#1172](../../pull/1172))
+- Fix gdal warning suppression ([#1176](../../pull/1176))
 
 ## 1.21.0
 
