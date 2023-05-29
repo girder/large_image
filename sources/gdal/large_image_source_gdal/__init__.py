@@ -188,13 +188,14 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         # Add the maximum range of the data type to the end of the band
         # range list.  This changes autoscaling behavior.  For non-integer
         # data types, this adds the range [0, 1].
-        self._bandRanges[frame]['min'] = numpy.append(self._bandRanges[frame]['min'], 0)
+        band_frame = self._bandRanges[frame]
         try:
             # only valid for integer dtypes
-            range_max = numpy.iinfo(self._bandRanges[frame]['max'].dtype).max
+            range_max = numpy.iinfo(band_frame['max'].dtype).max
         except ValueError:
             range_max = 1
-        self._bandRanges[frame]['max'] = numpy.append(self._bandRanges[frame]['max'], range_max)
+        band_frame['min'] = numpy.append(band_frame['min'], 0)
+        band_frame['max'] = numpy.append(band_frame['max'], range_max)
 
     def _initWithProjection(self, unitsPerPixel=None):
         """

@@ -198,9 +198,13 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # range list.  This changes autoscaling behavior.  For non-integer
         # data types, this adds the range [0, 1].
         band_frame = self._bandRanges[frame]
-        rangeMax = np.iinfo(dtype).max if isinstance(dtype, np.integer) else 1
-        band_frame['max'] = np.append(band_frame['max'], rangeMax)
+        try:
+            # only valid for integer dtypes
+            range_max = np.iinfo(band_frame['max'].dtype).max
+        except ValueError:
+            range_max = 1
         band_frame['min'] = np.append(band_frame['min'], 0)
+        band_frame['max'] = np.append(band_frame['max'], range_max)
 
     def _initWithProjection(self, unitsPerPixel=None):
         """Initialize aspects of the class when a projection is set.
@@ -877,7 +881,6 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                             pixel.setdefault('bands', {})[i] = value
                         except RuntimeError:
                             pass
-
         return pixel
 
     def _encodeTiledImageFromVips(self, vimg, iterInfo, image, **kwargs):
