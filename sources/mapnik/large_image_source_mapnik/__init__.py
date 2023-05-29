@@ -57,7 +57,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'mapnik'
     extensions = {
-        None: SourcePriority.MEDIUM,
+        None: SourcePriority.LOW,
         'nc': SourcePriority.PREFERRED,  # netcdf
         # National Imagery Transmission Format
         'ntf': SourcePriority.HIGHER,
@@ -65,6 +65,12 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         'tif': SourcePriority.LOWER,
         'tiff': SourcePriority.LOWER,
         'vrt': SourcePriority.HIGHER,
+    }
+    mimeTypes = {
+        None: SourcePriority.FALLBACK,
+        'image/geotiff': SourcePriority.HIGHER,
+        'image/tiff': SourcePriority.LOWER,
+        'image/x-tiff': SourcePriority.LOWER,
     }
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
