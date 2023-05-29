@@ -8,7 +8,6 @@
 
 ### Improvements
 - Parse qptiff and imagej vendor information ([#1168](../../pull/1168))
-- Ensure metadata and getPixel results are json serializable ([#1182](../../pull/1182))
 
 ### Changes
 - Remove an unneeded warnings filter ([#1172](../../pull/1172))
