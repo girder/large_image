@@ -854,7 +854,6 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         tile = pixel.pop('tile', None)
 
         if tile:
-
             # Coordinates in the max level tile
             x, y = tile['gx'], tile['gy']
 
@@ -876,9 +875,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                             value = self.dataset.read(
                                 i, window=window, resampling=Resampling.nearest
                             )
-                            value = value.astype(np.single)
                             value = value[0][0]  # there should be 1 single pixel
-                            pixel.setdefault('bands', {})[i] = value
+                            pixel.setdefault('bands', {})[i] = value.item()
                         except RuntimeError:
                             pass
         return pixel
