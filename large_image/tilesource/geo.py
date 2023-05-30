@@ -233,7 +233,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         if not has_pyproj:
             # Estimate based on great-cirlce distance
             def great_circle(lon1, lat1, lon2, lat2):
-                from math import acos, asin, cos, radians, sin, sqrt
+                from math import acos, cos, radians, sin
                 lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
                 return None, None, 6.378e+6 * (
                     acos(sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(lon1 - lon2))
