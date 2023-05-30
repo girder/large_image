@@ -220,6 +220,12 @@ wrap(ItemListWidget, 'render', function (render) {
         addToRoute({filter: this._generalFilter});
     };
 
+    this._clearFilter = (evt) => {
+        this._generalFilter = '';
+        this._setFilter();
+        addToRoute({filter: this._generalFilter});
+    };
+
     this._unescapePhrase = (val) => {
         if (val !== undefined) {
             val = val.replace('\\\'', '\'').replace('\\"', '"').replace('\\\\', '\\');
@@ -356,12 +362,18 @@ wrap(ItemListWidget, 'render', function (render) {
                     'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' +
                     'If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.  ' +
                     'Non-exact matches without a column specifier will also match columns that start with the specified value.  ' +
-                    '"></input></span>');
+                    '"></input>' +
+                    '<span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>' +
+                    '</span>');
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(this._generalFilter);
                 }
                 this.parentView.events['change .li-item-list-filter-input'] = this._updateFilter;
                 this.parentView.events['input .li-item-list-filter-input'] = this._updateFilter;
+                this.parentView.events['click .li-item-list-filter-clear'] = (evt) => {
+                    this.parentView.$el.find('.li-item-list-filter-input').val('');
+                    this._clearFilter();
+                };
                 this.parentView.delegateEvents();
             }
         }
@@ -502,7 +514,6 @@ function itemListCellFilter(evt) {
     this._setFilter();
     addToRoute({filter: this._generalFilter});
     this._setSort();
-    this.render();
     return false;
 }
 
