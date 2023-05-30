@@ -59,7 +59,7 @@ export default {
                 }
             })
             if (this.layerMap) {
-                // each layer has a frame delta
+                // layers are channels; each layer has a frame delta
                 Promise.all(this.layers.map((layer) =>
                     restRequest({
                         type: 'GET',
@@ -77,7 +77,7 @@ export default {
                         this.histograms = responses
                     })
             } else {
-                // layers share the same frame
+                // layers are bands; they share the same frame
                 restRequest({
                         type: 'GET',
                         url: 'item/' + this.itemId + '/tiles/histogram',
@@ -132,20 +132,14 @@ export default {
         updateLayerColor(layer, swatch) {
             this.compositeLayerInfo[layer].palette = swatch.hex;
         },
-        updateLayerMin(layer, newVal, defaultValue=false) {
+        updateLayerMin(layer, newVal) {
             const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
-            if (defaultValue){
-                this.compositeLayerInfo[layer].defaultMin = newMinVal;
-            }
             this.compositeLayerInfo[layer].min = newMinVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo)  // for reactivity
             this.updateStyle();
         },
-        updateLayerMax(layer, newVal, defaultValue=false) {
+        updateLayerMax(layer, newVal) {
             const newMaxVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
-            if (defaultValue){
-                this.compositeLayerInfo[layer].defaultMax = newMaxVal;
-            }
             this.compositeLayerInfo[layer].max = newMaxVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo)  // for reactivity
             this.updateStyle();
@@ -169,6 +163,22 @@ export default {
             this.$emit('updateStyle', {bands: styleArray});
         },
     },
+    watch: {
+        histograms() {
+            this.layers.forEach((layer, index) => {
+                const { min, max } = this.histograms[index]
+                this.compositeLayerInfo[layer] = Object.assign(
+                    this.compositeLayerInfo[layer], {
+                        min,
+                        max,
+                        defaultMin: min,
+                        defaultMax: max,
+                    }
+                )
+                this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo)
+            })
+        }
+    },
     mounted() {
         this.initializeLayerInfo()
         this.updateStyle()
@@ -190,6 +200,7 @@ export default {
                     </th>
                     <th class="layer-col">Layer</th>
                     <th class="color-col">Color</th>
+                    <th class="layer-col">Range</th>
                     <div
                         v-if="histograms.length"
                         class="expand-btn"
@@ -205,7 +216,7 @@ export default {
                     :key="layerName"
                     :style="expandedRows.includes(index) ? {height: '100px'} : {}"
                 >
-                    <td>
+                    <td style="width: 10%;">
                         <input
                             type="checkbox"
                             :value="layerName"
@@ -213,9 +224,9 @@ export default {
                             @change="updateActiveLayers"
                         >
                     </td>
-                    <td>{{ layerName }}</td>
-                    <td :id="layerName+'_picker'">
-                        <span
+                    <td  style="width: 40%;">{{ layerName }}</td>
+                    <td :id="layerName+'_picker'" style="width: 25%;">
+                    <span
                             class="current-color"
                             :style="{ 'background-color': palette }"
                             @click="() => toggleColorPicker(layerName)"
@@ -228,6 +239,7 @@ export default {
                             @input="(swatch) => {updateLayerColor(layerName, swatch)}"
                         />
                     </td>
+                    <td style="width: 25%;">{{ min !== undefined && max !== undefined ? `${min} - ${max}` : '' }}</td>
                     <div
                         v-if="histograms[index]"
                         class="expand-btn"
