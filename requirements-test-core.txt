@@ -30,3 +30,8 @@ pip>=9
 tox
 twine
 virtualenv
+
+# For Jupyter
+ipyleaflet
+IPython
+tornado
