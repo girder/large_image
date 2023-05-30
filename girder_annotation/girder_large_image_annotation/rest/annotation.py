@@ -630,8 +630,17 @@ class AnnotationResource(Resource):
         pipeline = recursivePipeline + [
             {'$lookup': {
                 'from': 'item',
-                'localField': '_id',
-                'foreignField': 'folderId',
+                # We have to use a pipeline to use a projection to reduce the
+                # data volume, so instead of specifying localField and
+                # foreignField, we set the localField to a variable, then match
+                # it in a pipeline and project to exclude everything but id.
+                # 'localField': '_id',
+                # 'foreignField': 'folderId',
+                'let': {'fid': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$eq': ['$$fid', '$folderId']}}},
+                    {'$project': {'_id': 1}}
+                ],
                 'as': '__items'
             }},
             {'$lookup': {
