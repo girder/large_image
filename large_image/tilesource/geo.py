@@ -230,16 +230,26 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         bounds = self.getBounds(NeededInitPrefix + 'epsg:4326')
         if not bounds:
             return
-        # TODO: can we do this withou pyproj? ...For rasterio
-        geod = pyproj.Geod(ellps='WGS84')
-        az12, az21, s1 = geod.inv(bounds['ul']['x'], bounds['ul']['y'],
-                                  bounds['ur']['x'], bounds['ur']['y'])
-        az12, az21, s2 = geod.inv(bounds['ur']['x'], bounds['ur']['y'],
-                                  bounds['lr']['x'], bounds['lr']['y'])
-        az12, az21, s3 = geod.inv(bounds['lr']['x'], bounds['lr']['y'],
-                                  bounds['ll']['x'], bounds['ll']['y'])
-        az12, az21, s4 = geod.inv(bounds['ll']['x'], bounds['ll']['y'],
-                                  bounds['ul']['x'], bounds['ul']['y'])
+        if not has_pyproj:
+            # Estimate based on great-cirlce distance
+            def great_circle(lon1, lat1, lon2, lat2):
+                from math import acos, asin, cos, radians, sin, sqrt
+                lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+                return None, None, 6.378e+6 * (
+                    acos(sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(lon1 - lon2))
+                )
+            computer = great_circle
+        else:
+            geod = pyproj.Geod(ellps='WGS84')
+            computer = geod.inv
+        _, _, s1 = computer(bounds['ul']['x'], bounds['ul']['y'],
+                            bounds['ur']['x'], bounds['ur']['y'])
+        _, _, s2 = computer(bounds['ur']['x'], bounds['ur']['y'],
+                            bounds['lr']['x'], bounds['lr']['y'])
+        _, _, s3 = computer(bounds['lr']['x'], bounds['lr']['y'],
+                            bounds['ll']['x'], bounds['ll']['y'])
+        _, _, s4 = computer(bounds['ll']['x'], bounds['ll']['y'],
+                            bounds['ul']['x'], bounds['ul']['y'])
         return (s1 + s2 + s3 + s4) / (self.sourceSizeX * 2 + self.sourceSizeY * 2)
 
     def getNativeMagnification(self):
