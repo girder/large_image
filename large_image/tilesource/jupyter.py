@@ -1,6 +1,6 @@
 """A vanilla REST interface to a ``TileSource``.
 
-This is intended for use in Jupyter and not intended to be used as a full
+This is intended for use in JupyterLab and not intended to be used as a full
 fledged REST API. Only two endpoints are exposed with minimal options:
 
 * `/metadata`
@@ -9,6 +9,9 @@ fledged REST API. Only two endpoints are exposed with minimal options:
 We use Tornado because it is Jupyter's web server and will not require Jupyter
 users to install any additional dependencies. Also, Tornado doesn't require us
 to manage a seperate thread for the web server.
+
+Please note that this webserver will not work with Classic Notebook and will
+likely lead to crashes. This is only for use in JupyterLab.
 
 """
 import json
@@ -35,7 +38,7 @@ def launch_tile_server(tile_source, port=0):
             self.set_header('Content-Type', 'application/json')
 
     class TileSourceTileHandler(tornado.web.RequestHandler):
-        """REST endpoint to server tiles from image in slippy maps standard."""
+        """REST endpoint to serve tiles from image in slippy maps standard."""
 
         def get(self):
             x = int(self.get_argument('x'))
@@ -65,14 +68,14 @@ def launch_tile_server(tile_source, port=0):
 
 
 class IPyLeafletMixin:
-    """Mixin class to support interactive visualization in Jupyter.
+    """Mixin class to support interactive visualization in JupyterLab.
 
     This class implements ``_ipython_display_`` with ``ipyleaflet``
     to display an interactive image visualizer for the tile source
-    in Jupyter-based environments.
+    in JupyterLab.
 
     Install `ipyleaflet <https://github.com/jupyter-widgets/ipyleaflet>`_
-    to interactively visualize tile sources in Jupyter.
+    to interactively visualize tile sources in JupyterLab.
 
     For remote JupyterHub environments, you may need to configure
     the class variables ``JUPYTER_HOST`` or ``JUPYTER_PROXY``.
@@ -123,15 +126,14 @@ class IPyLeafletMixin:
         # launch_tile_server ports
         self._ports = ()
 
-    def getIpyleafletTileLayer(self, **kwargs):
+    def as_leaflet_layer(self, **kwargs):
+        # NOTE: `as_leaflet_layer` is supported by ipyleaflet.Map.add
         from ipyleaflet import TileLayer
 
         if not self._ports:
-            # TODO: destroy previous server
-            ...
-        # Always relaunch the server
-        # - otherwise, styling changes won't take affect
-        self._ports = launch_tile_server(self)
+            self._ports = launch_tile_server(self)
+        else:
+            ... # No need to do anything?
 
         metadata = self.getMetadata()
 
@@ -166,7 +168,7 @@ class IPyLeafletMixin:
 
             metadata = self.getMetadata()
 
-            t = self.getIpyleafletTileLayer()
+            t = self.as_leaflet_layer()
 
             try:
                 default_zoom = metadata['levels'] - metadata['sourceLevels']
