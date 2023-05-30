@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.22.1
+
+### Improvements
+- Reduce memory use in a mongo aggregation pipeline ([#1183](../../pull/1183))
+
 ## 1.22.0
 
 ### Features

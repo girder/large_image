@@ -1,13 +1,17 @@
 from urllib.parse import urlencode, urlparse
 
-import pyproj  # TODO: import issues
-
 from large_image.cache_util import CacheProperties, methodcache
 from large_image.constants import SourcePriority, TileInputUnits
 from large_image.exceptions import TileSourceError
 
 from .base import FileTileSource
 from .utilities import JSONDict, getPaletteColors
+
+try:
+    import pyproj
+    has_pyproj = True
+except Exception:
+    has_pyproj = False
 
 # Inform the tile source cache about the potential size of this tile source
 CacheProperties['tilesource']['itemExpectedSize'] = max(
@@ -18,8 +22,9 @@ CacheProperties['tilesource']['itemExpectedSize'] = max(
 ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
-InitPrefix = '+init='
-NeededInitPrefix = '' if int(pyproj.proj_version_str.split('.')[0]) >= 6 else InitPrefix
+InitPrefix = ''
+if has_pyproj:
+    NeededInitPrefix = '+init=' if int(pyproj.proj_version_str.split('.')[0]) < 6 else InitPrefix
 
 
 def make_vsi(url: str, **options):
@@ -225,15 +230,25 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         bounds = self.getBounds(NeededInitPrefix + 'epsg:4326')
         if not bounds:
             return
-        geod = pyproj.Geod(ellps='WGS84')
-        az12, az21, s1 = geod.inv(bounds['ul']['x'], bounds['ul']['y'],
-                                  bounds['ur']['x'], bounds['ur']['y'])
-        az12, az21, s2 = geod.inv(bounds['ur']['x'], bounds['ur']['y'],
-                                  bounds['lr']['x'], bounds['lr']['y'])
-        az12, az21, s3 = geod.inv(bounds['lr']['x'], bounds['lr']['y'],
-                                  bounds['ll']['x'], bounds['ll']['y'])
-        az12, az21, s4 = geod.inv(bounds['ll']['x'], bounds['ll']['y'],
-                                  bounds['ul']['x'], bounds['ul']['y'])
+        if has_pyproj:
+            geod = pyproj.Geod(ellps='WGS84')
+            computer = geod.inv
+        else:
+            # Estimate based on great-cirlce distance
+            def computer(lon1, lat1, lon2, lat2):
+                from math import acos, cos, radians, sin
+                lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+                return None, None, 6.378e+6 * (
+                    acos(sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(lon1 - lon2))
+                )
+        _, _, s1 = computer(bounds['ul']['x'], bounds['ul']['y'],
+                            bounds['ur']['x'], bounds['ur']['y'])
+        _, _, s2 = computer(bounds['ur']['x'], bounds['ur']['y'],
+                            bounds['lr']['x'], bounds['lr']['y'])
+        _, _, s3 = computer(bounds['lr']['x'], bounds['lr']['y'],
+                            bounds['ll']['x'], bounds['ll']['y'])
+        _, _, s4 = computer(bounds['ll']['x'], bounds['ll']['y'],
+                            bounds['ul']['x'], bounds['ul']['y'])
         return (s1 + s2 + s3 + s4) / (self.sourceSizeX * 2 + self.sourceSizeY * 2)
 
     def getNativeMagnification(self):
