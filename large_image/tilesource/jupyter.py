@@ -16,6 +16,7 @@ likely lead to crashes. This is only for use in JupyterLab.
 """
 import json
 import os
+import weakref
 
 from large_image.exceptions import TileSourceXYZRangeError
 
@@ -30,11 +31,35 @@ def launch_tile_server(tile_source, port=0):
     import tornado.netutil
     import tornado.web
 
+    class RequestManager:
+        def __init__(self, tile_source):
+            self._tile_source_ = weakref.ref(tile_source)
+            self._ports = ()
+
+        @property
+        def tile_source(self):
+            return self._tile_source_()
+
+        @tile_source.setter
+        def tile_source(self, source):
+            self._tile_source_ = weakref.ref(source)
+
+        @property
+        def ports(self):
+            return self._ports
+
+        @property
+        def port(self):
+            return self.ports[0]
+
+    manager = RequestManager(tile_source)
+    # NOTE: set `ports` manually after launching server
+
     class TileSourceMetadataHandler(tornado.web.RequestHandler):
         """REST endpoint to get image metadata."""
 
         def get(self):
-            self.write(json.dumps(tile_source.getMetadata()))
+            self.write(json.dumps(manager.tile_source.getMetadata()))
             self.set_header('Content-Type', 'application/json')
 
     class TileSourceTileHandler(tornado.web.RequestHandler):
@@ -46,7 +71,7 @@ def launch_tile_server(tile_source, port=0):
             z = int(self.get_argument('z'))
             encoding = self.get_argument('encoding', 'PNG')
             try:
-                tile_binary = tile_source.getTile(x, y, z, encoding=encoding)
+                tile_binary = manager.tile_source.getTile(x, y, z, encoding=encoding)
             except TileSourceXYZRangeError as e:
                 self.clear()
                 self.set_status(404)
@@ -63,8 +88,8 @@ def launch_tile_server(tile_source, port=0):
     server = tornado.httpserver.HTTPServer(app)
     server.add_sockets(sockets)
 
-    # Return ports
-    return tuple(s.getsockname()[1] for s in sockets)
+    manager._ports = tuple(s.getsockname()[1] for s in sockets)
+    return manager
 
 
 class IPyLeafletMixin:
@@ -123,27 +148,30 @@ class IPyLeafletMixin:
     JUPYTER_PROXY = os.environ.get('LARGE_IMAGE_JUPYTER_PROXY', False)
 
     def __init__(self, *args, **kwargs):
-        # launch_tile_server ports
-        self._ports = ()
+        self._jupyter_server_manager = None
 
     def as_leaflet_layer(self, **kwargs):
         # NOTE: `as_leaflet_layer` is supported by ipyleaflet.Map.add
         from ipyleaflet import TileLayer
 
-        if not self._ports:
-            self._ports = launch_tile_server(self)
+        if self._jupyter_server_manager is None:
+            # Must relaunch to ensure style updates work
+            self._jupyter_server_manager = launch_tile_server(self)
         else:
-            ... # No need to do anything?
+            # Must update the source on the manager incase the previous reference is bad
+            self._jupyter_server_manager.tile_source = self
+
+        port = self._jupyter_server_manager.port
 
         metadata = self.getMetadata()
 
         if self.JUPYTER_PROXY:
             if isinstance(self.JUPYTER_PROXY, str):
-                base_url = f'{self.JUPYTER_PROXY.rstrip("/")}/{self._ports[0]}'
+                base_url = f'{self.JUPYTER_PROXY.rstrip("/")}/{port}'
             else:
-                base_url = f'/proxy/{self._ports[0]}'
+                base_url = f'/proxy/{port}'
         else:
-            base_url = f'http://{self.JUPYTER_HOST}:{self._ports[0]}'
+            base_url = f'http://{self.JUPYTER_HOST}:{port}'
 
         # Use repr in URL params to prevent caching across sources/styles
         endpoint = f'tile?z={{z}}&x={{x}}&y={{y}}&encoding=png&repr={self.__repr__()}'
