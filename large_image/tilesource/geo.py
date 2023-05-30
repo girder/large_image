@@ -92,6 +92,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
     def getBounds(self, *args, **kwargs):
         raise NotImplementedError
 
+    @staticmethod
     def isGeospatial(path):
         """
         Check if a path is likely to be a geospatial file.
@@ -100,6 +101,13 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         :returns: True if geospatial.
         """
         raise NotImplementedError
+
+    @property
+    def geospatial(self):
+        """
+        This is true if the source has geospatial information.
+        """
+        return bool(self.projection)
 
     def _getLargeImagePath(self):
         """Get GDAL-compatible image path.
