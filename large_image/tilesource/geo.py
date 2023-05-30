@@ -230,18 +230,17 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         bounds = self.getBounds(NeededInitPrefix + 'epsg:4326')
         if not bounds:
             return
-        if not has_pyproj:
+        if has_pyproj:
+            geod = pyproj.Geod(ellps='WGS84')
+            computer = geod.inv
+        else:
             # Estimate based on great-cirlce distance
-            def great_circle(lon1, lat1, lon2, lat2):
+            def computer(lon1, lat1, lon2, lat2):
                 from math import acos, cos, radians, sin
                 lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
                 return None, None, 6.378e+6 * (
                     acos(sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(lon1 - lon2))
                 )
-            computer = great_circle
-        else:
-            geod = pyproj.Geod(ellps='WGS84')
-            computer = geod.inv
         _, _, s1 = computer(bounds['ul']['x'], bounds['ul']['y'],
                             bounds['ur']['x'], bounds['ur']['y'])
         _, _, s2 = computer(bounds['ur']['x'], bounds['ur']['y'],
