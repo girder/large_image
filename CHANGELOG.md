@@ -6,6 +6,7 @@
 - Reduce memory use in a mongo aggregation pipeline ([#1183](../../pull/1183))
 - Remove rasterio dep on pyproj ([#1182](../../pull/1182))
 - Filter on specific metadata from item lists ([#1184](../../pull/1184))
+- Add a button to clear the filter on item lists ([#1185](../../pull/1185))
 
 ## 1.22.0
 
