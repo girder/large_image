@@ -72,21 +72,49 @@ export default {
             return [moveX, moveY]
         },
         dragHandle(selected, newLocation) {
-            const handleName = selected.getAttribute("name")
+            const funcName = selected.getAttribute("name")
             const newValue = this.xPositionToValue(newLocation.x)
-            if (handleName === 'updateMin') {
+            if (funcName === 'updateMin') {
                 this.$refs.minExclusionBox.setAttributeNS(null, 'width', `${newLocation.x - 5}`)
             } else {
                 const exclusionBoxWidth = this.xRange[1] - newLocation.x
                 this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${newLocation.x}`)
                 this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`)
             }
-            this.$emit(handleName, newValue)
+
+            this.$emit(funcName, newValue)
+        },
+        fromDistributionPercentage(percentage) {
+            const numSamples = this.histogram.samples * percentage
+            let bucketIndex = 0
+            let sum = 0
+            this.histogram.hist.forEach((count, index) => {
+                sum += count
+                if (sum <= numSamples) {
+                    bucketIndex = index
+                }
+            })
+            return Math.round(this.histogram.bin_edges[bucketIndex]);
+
+        },
+        toDistributionPercentage(value) {
+            let numSamples = 0
+            this.histogram.hist.forEach((count, index) => {
+                if (value >= this.histogram.bin_edges[index]) {
+                    numSamples += count
+                }
+            })
+            return Math.round(numSamples / this.histogram.samples * 100)
+        },
+        updateFromInput(funcName, value) {
+            if (this.tailsMode) {
+                this.$emit(funcName, this.fromDistributionPercentage(parseFloat(value) / 100))
+            } else {
+                this.$emit(funcName, parseFloat(value))
+            }
         },
         update() {
             this.vRange = [this.histogram.min, this.histogram.max]
-            this.$emit('updateMin', this.histogram.min, true)
-            this.$emit('updateMax', this.histogram.max, true)
             this.drawHistogram(
                 this.simplifyHistogram(this.histogram.hist)
             );
@@ -131,6 +159,12 @@ export default {
                 this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`)
             }
         },
+        tailsMode() {
+            if (this.tailsMode) {
+                this.$emit('updateMin', this.fromDistributionPercentage(0.05)),
+                this.$emit('updateMax', this.fromDistributionPercentage(0.95))
+            }
+        }
     }
 }
 </script>
@@ -145,14 +179,18 @@ export default {
             Exclude distribution tails
         </div>
         <div class="range-editor">
-            <input
-                type="number"
-                :min="histogram.min"
-                :max="currentMax"
-                :value="currentMin"
-                style="width: 70px"
-                @input="(e) => $emit('updateMin', parseFloat(e.target.value))"
+            <span
+                :class="tailsMode ? 'percentage-input' : ''"
             >
+                <input
+                    type="number"
+                    :min="histogram.min"
+                    :max="tailsMode ? toDistributionPercentage(currentMax): currentMax"
+                    :value="tailsMode ? toDistributionPercentage(currentMin) : currentMin"
+                    style="width: 70px"
+                    @input="(e) => updateFromInput('updateMin', e.target.value)"
+                >
+            </span>
             <svg ref="svg" class="handles-svg">
                 <text x="5" y="43" class="small">{{ this.vRange[0] }}</text>
                 <rect ref="minExclusionBox" x="5" y="0" width="0" height="30" opacity="0.2"/>
@@ -178,14 +216,18 @@ export default {
                 />
             </svg>
             <canvas ref="canvas" class="canvas" />
-            <input
-                type="number"
-                :min="currentMin"
-                :max="histogram.max"
-                :value="currentMax"
-                style="width: 70px"
-                @input="(e) => $emit('updateMax', parseFloat(e.target.value))"
+            <span
+                :class="tailsMode ? 'percentage-input' : ''"
             >
+                <input
+                    type="number"
+                    :max="histogram.max"
+                    :min="tailsMode ? toDistributionPercentage(currentMin): currentMin"
+                    :value="tailsMode ? toDistributionPercentage(currentMax): currentMax"
+                    style="width: 70px"
+                    @input="(e) => updateFromInput('updateMax', e.target.value)"
+                >
+            </span>
         </div>
     </div>
 </template>
@@ -211,5 +253,14 @@ export default {
 }
 .draggable {
   cursor: move;
+}
+.percentage-input {
+    position: relative;
+}
+.percentage-input::after {
+    position: absolute;
+    content: '%';
+    left: 35px;
+    top: 3px;
 }
 </style>
