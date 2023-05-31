@@ -172,8 +172,8 @@ export default {
         },
         tailsMode() {
             if (this.tailsMode) {
-                this.$emit('updateMin', this.fromDistributionPercentage(0.05)),
-                this.$emit('updateMax', this.fromDistributionPercentage(0.95))
+                this.$emit('updateMin', this.fromDistributionPercentage(0.01)),
+                this.$emit('updateMax', this.fromDistributionPercentage(0.99))
             }
         }
     }
