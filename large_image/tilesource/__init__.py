@@ -26,24 +26,17 @@ def isGeospatial(path):
     :param path: The path to the file
     :returns: True if geospatial.
     """
-    try:
-        from osgeo import gdal, gdalconst
-    except ImportError:
-        # TODO: log a warning
-        return False
-    try:
-        ds = gdal.Open(str(path), gdalconst.GA_ReadOnly)
-    except Exception:
-        return False
-    if ds:
-        if ds.GetGCPs() and ds.GetGCPProjection():
-            return True
-        if ds.GetProjection():
-            return True
-        if ds.GetGeoTransform(can_return_null=True):
-            return True
-        if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
-            return True
+    if not len(AvailableTileSources):
+        loadTileSources()
+    for source in AvailableTileSources.values():
+        if hasattr(source, 'isGeospatial'):
+            result = None
+            try:
+                result = source.isGeospatial(path)
+            except Exception:
+                pass
+            if result in (True, False):
+                return result
     return False
 
 

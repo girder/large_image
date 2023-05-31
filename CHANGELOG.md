@@ -1,15 +1,25 @@
 # Change Log
 
+## 1.22.1
+
+### Improvements
+- Reduce memory use in a mongo aggregation pipeline ([#1183](../../pull/1183))
+- Remove rasterio dep on pyproj ([#1182](../../pull/1182))
+- Filter on specific metadata from item lists ([#1184](../../pull/1184))
+- Add a button to clear the filter on item lists ([#1185](../../pull/1185))
+
 ## 1.22.0
 
 ### Features
 - Add tile source dtype attribute ([#1144](../../pull/1144))
+- Added rasterio tile source ([#1115](../../pull/1115))
 
 ### Improvements
 - Parse qptiff and imagej vendor information ([#1168](../../pull/1168))
 
 ### Changes
 - Remove an unneeded warnings filter ([#1172](../../pull/1172))
+- Fix gdal warning suppression ([#1176](../../pull/1176))
 
 ## 1.21.0
 

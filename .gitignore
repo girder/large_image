@@ -41,6 +41,13 @@ coverage.xml
 # pyenv
 .python-version
 
+# IPython
+profile_default/
+ipython_config.py
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
 # dotenv
 .env
 
@@ -64,3 +71,6 @@ docs/source/*
 !docs/source/*.py
 !docs/source/*.rst
 .pre-commit-config.yaml
+
+*.ipynb
+NOTES.md
