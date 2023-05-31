@@ -184,7 +184,7 @@ export default {
             >
                 <input
                     type="number"
-                    :min="histogram.min"
+                    :min="tailsMode ? 0 : histogram.min"
                     :max="tailsMode ? toDistributionPercentage(currentMax): currentMax"
                     :value="tailsMode ? toDistributionPercentage(currentMin) : currentMin"
                     style="width: 70px"
@@ -221,11 +221,11 @@ export default {
             >
                 <input
                     type="number"
-                    :max="histogram.max"
-                    :min="tailsMode ? toDistributionPercentage(currentMin): currentMin"
-                    :value="tailsMode ? toDistributionPercentage(currentMax): currentMax"
+                    :max="tailsMode ? 100 - toDistributionPercentage(currentMin) : histogram.max"
+                    :min="tailsMode ? 0: currentMin"
+                    :value="tailsMode ? 100 - toDistributionPercentage(currentMax) : currentMax"
                     style="width: 70px"
-                    @input="(e) => updateFromInput('updateMax', e.target.value)"
+                    @input="(e) => updateFromInput('updateMax', 100 - e.target.value)"
                 >
             </span>
         </div>
