@@ -179,6 +179,7 @@ export default Vue.extend({
         <div  class="image-frame-simple-control" style="width: 500px">
             <composite-layers
                 key="channels"
+                v-if="imageMetadata.channels"
                 :itemId="itemId"
                 :currentFrame="currentFrame"
                 :layers="imageMetadata.channels"
@@ -188,6 +189,7 @@ export default Vue.extend({
             />
             <composite-layers
                 key="bands"
+                v-if="imageMetadata.bands"
                 :itemId="itemId"
                 :currentFrame="currentFrame"
                 :layers="imageMetadata.bands"
