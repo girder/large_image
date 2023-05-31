@@ -31,6 +31,13 @@ export default {
             this.$refs.canvas.setAttribute('height', clientHeight)
 
             const maxFrequency = Math.max(...hist)
+            const minFrequency = Math.min(...hist)
+            const secondMaxFrequency = Math.max(...hist.filter((v) => v !== maxFrequency))
+            const shortenMaxFrequency = (
+                secondMaxFrequency > minFrequency
+                && (maxFrequency - secondMaxFrequency) > secondMaxFrequency / 3
+            )
+
             const {width, height} = this.$refs.canvas
             const ctx = this.$refs.canvas.getContext("2d");
             const widthBetweenPoints = width / hist.length
@@ -41,7 +48,11 @@ export default {
             for (var i = 0; i < hist.length; i++) {
                 const frequency = hist[i]
                 const pointX = widthBetweenPoints * i
-                const pointY = height - (frequency / maxFrequency * height)
+
+                let pointY = height - (frequency / maxFrequency * height)
+                if(shortenMaxFrequency) {
+                    pointY = frequency === maxFrequency ? 0 : height - (frequency / secondMaxFrequency * height * 2 / 3)
+                }
                 ctx.lineTo(pointX, pointY)
             }
             ctx.stroke();
