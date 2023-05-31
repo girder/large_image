@@ -58,35 +58,43 @@ export default {
                     usedColors.push(chosenColor)
                 }
             })
+            this.fetchHistograms()
+        },
+        fetchHistograms() {
             if (this.layerMap) {
                 // layers are channels; each layer has a frame delta
-                Promise.all(this.layers.map((layer) =>
+                this.layers.forEach((layer) => {
                     restRequest({
                         type: 'GET',
                         url: 'item/' + this.itemId + '/tiles/histogram',
                         data: {
                             frame: this.currentFrame + this.compositeLayerInfo[layer].framedelta,
+                            width: 1024,
+                            height: 1024,
+                            bins: 512,
                         }
                     }).then((response) => {
                         if (response.length < 3) {
-                            return response[0]
+                            this.histograms.push(response[0])
                         } else {
-                            return response[1]
+                            this.histograms.push(response[1])
                         }
-                    }))).then((responses) => {
-                        this.histograms = responses
                     })
+                })
             } else {
                 // layers are bands; they share the same frame
                 restRequest({
-                        type: 'GET',
-                        url: 'item/' + this.itemId + '/tiles/histogram',
-                        data: {
-                            frame: this.currentFrame,
-                        }
-                    }).then((response) => {
-                        this.histograms = response
-                    });
+                    type: 'GET',
+                    url: 'item/' + this.itemId + '/tiles/histogram',
+                    data: {
+                        frame: this.currentFrame,
+                        width: 1024,
+                        height: 1024,
+                        bins: 512,
+                    }
+                }).then((response) => {
+                    this.histograms = response
+                });
             }
         },
         toggleEnableAll() {
@@ -164,18 +172,24 @@ export default {
         },
     },
     watch: {
+        currentFrame() {
+            this.histograms = []
+            this.fetchHistograms()
+        },
         histograms() {
             this.layers.forEach((layer, index) => {
-                const { min, max } = this.histograms[index]
-                this.compositeLayerInfo[layer] = Object.assign(
-                    this.compositeLayerInfo[layer], {
-                        min,
-                        max,
-                        defaultMin: min,
-                        defaultMax: max,
-                    }
-                )
-                this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo)
+                if(this.histograms.length > index) {
+                    const { min, max } = this.histograms[index]
+                    this.compositeLayerInfo[layer] = Object.assign(
+                        this.compositeLayerInfo[layer], {
+                            min,
+                            max,
+                            defaultMin: min,
+                            defaultMax: max,
+                        }
+                    )
+                    this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo)
+                }
             })
         }
     },
@@ -251,7 +265,7 @@ export default {
                         : expandedRows.includes(index) ? '&#9650;' : '&#9660;'
                     }}
                     </div>
-                    <div v-if="expandedRows.includes(index)" class="advanced-section">
+                    <div v-if="histograms[index] && expandedRows.includes(index)" class="advanced-section">
                         <histogram-editor
                             :histogram="histograms[index]"
                             :currentMin="min"
