@@ -636,7 +636,7 @@ class TilesItemResource(ItemResource):
         overlap = int(params.get('overlap', 0))
         if overlap < 0:
             raise RestException('Invalid overlap', code=400)
-        x, y = [int(xy) for xy in xandy.split('.')[0].split('_')]
+        x, y = (int(xy) for xy in xandy.split('.')[0].split('_'))
         _handleETag('getDZITile', item, level, xandy, params)
         metadata = self.imageItemModel.getMetadata(item, **params)
         level = int(level)

@@ -293,8 +293,8 @@ def metadataSearchHandler(  # noqa
     if re.match(r'^(k|ke|key|key:)$', query.strip()):
         return {k: [] for k in types}
     phrases = re.findall(r'"[^"]*"|\'[^\']*\'|\S+', query)
-    fields = set(phrase.split('key:', 1)[1] for phrase in phrases
-                 if phrase.startswith('key:') and len(phrase.split('key:', 1)[1]))
+    fields = {phrase.split('key:', 1)[1] for phrase in phrases
+              if phrase.startswith('key:') and len(phrase.split('key:', 1)[1])}
     phrases = [phrase for phrase in phrases
                if not phrase.startswith('key:') or not len(phrase.split('key:', 1)[1])]
     if not len(fields):

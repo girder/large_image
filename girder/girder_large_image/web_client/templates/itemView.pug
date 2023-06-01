@@ -62,9 +62,9 @@ if metadataList.length
 if Array.isArray(extra.images)
   for ikey in extra.images
     if ikey === '*'
-      for likey in largeImageMetadata.images
-        if imageList.indexOf(likey) < 0
-          - imageList.push(likey);
+      for li_key in largeImageMetadata.images
+        if imageList.indexOf(li_key) < 0
+          - imageList.push(li_key);
     else if largeImageMetadata.images.indexOf(ikey) >= 0 && imageList.indexOf(ikey) < 0
       - imageList.push(ikey);
 if imageList.length

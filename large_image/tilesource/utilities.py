@@ -68,7 +68,7 @@ class JSONDict(dict):
     """Wrapper class to improve Jupyter repr of JSON-able dicts."""
 
     def __init__(self, *args, **kwargs):
-        super(JSONDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # TODO: validate JSON serializable?
 
     def _repr_json_(self):

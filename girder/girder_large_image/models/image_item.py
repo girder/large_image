@@ -220,7 +220,7 @@ class ImageItem(Item):
                 tileData = tileCache[tileHash]
             else:
                 # It would be nice if we could test if tileHash was in
-                # tileCache, but memcached doesn't expose that functionaility
+                # tileCache, but memcached doesn't expose that functionality
                 with tileCacheLock:
                     tileData = tileCache[tileHash]
             tileMime = TileOutputMimeTypes.get(kwargs.get('encoding'), 'image/jpeg')
@@ -251,10 +251,10 @@ class ImageItem(Item):
                 file = File().load(item['largeImage']['fileId'], force=True)
                 localPath = File().getLocalFilePath(file)
                 open(localPath, 'rb').read(1)
-            except IOError:
+            except OSError:
                 logger.warning(
                     'Is the original data reachable and readable (it fails via %r)?', localPath)
-                raise IOError(localPath) from None
+                raise OSError(localPath) from None
             except Exception:
                 pass
             raise exc

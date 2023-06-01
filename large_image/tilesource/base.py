@@ -267,7 +267,7 @@ class TileSource:
         """
         Given a path, if it is an actual file and there is a setting
         "source_<configKey>_ignored_names", raise a TileSoruceError if the
-        path matches the ignore names setting regex in a case-insensitve
+        path matches the ignore names setting regex in a case-insensitive
         search.
 
         :param configKey: key to use to fetch value from settings.
