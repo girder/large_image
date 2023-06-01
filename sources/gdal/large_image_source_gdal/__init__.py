@@ -513,7 +513,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 cache = not dataset
                 if not dataset:
                     dataset = self.dataset
-                infoSet = {}
+                infoSet = JSONDict({})
                 for i in range(dataset.RasterCount):
                     band = dataset.GetRasterBand(i + 1)
                     info = {}
@@ -609,7 +609,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: a dictionary of data or None.
         """
-        result = {}
+        result = JSONDict({})
         with self._getDatasetLock:
             result['driverShortName'] = self.dataset.GetDriver().ShortName
             result['driverLongName'] = self.dataset.GetDriver().LongName

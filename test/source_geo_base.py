@@ -218,6 +218,9 @@ class _BaseGeoTests:
         assert pixel == {
             'r': 94, 'g': 98, 'b': 99, 'a': 255, 'bands': {1: 77.0, 2: 82.0, 3: 84.0}}
 
+        # Make sure pixel return value is JSON serializable
+        assert json.dumps(pixel)
+
     def testSourceErrors(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')

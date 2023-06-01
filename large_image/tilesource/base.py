@@ -2771,7 +2771,7 @@ class TileSource:
                     pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0])))
                 else:
                     pixel.update(dict(zip([img.mode.lower()], [img.load()[0, 0]])))
-        return pixel
+        return JSONDict(pixel)
 
     @property
     def frames(self):
