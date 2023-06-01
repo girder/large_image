@@ -59,6 +59,7 @@ class ImageItem(Item):
 
     def createImageItem(self, item, fileObj, user=None, token=None,
                         createJob=True, notify=False, **kwargs):
+        logger.info('createImageItem called on item %s (%s)', item['_id'], item['name'])
         # Using setdefault ensures that 'largeImage' is in the item
         if 'fileId' in item.setdefault('largeImage', {}):
             raise TileGeneralError('Item already has largeImage set.')
@@ -75,13 +76,25 @@ class ImageItem(Item):
 
         item['largeImage']['fileId'] = fileObj['_id']
         job = None
+        logger.debug(
+            'createImageItem checking if item %s (%s) can be used directly',
+            item['_id'], item['name'])
         sourceName = girder_tilesource.getGirderTileSourceName(item, fileObj)
         if sourceName:
+            logger.info(
+                'createImageItem using source %s for item %s (%s)',
+                sourceName, item['_id'], item['name'])
             item['largeImage']['sourceName'] = sourceName
         if not sourceName or createJob == 'always':
             if not createJob:
+                logger.info(
+                    'createImageItem will not use item %s (%s) as a largeImage',
+                    item['_id'], item['name'])
                 raise TileGeneralError(
                     'A job must be used to generate a largeImage.')
+            logger.debug(
+                'createImageItem creating a job to generate a largeImage for item %s (%s)',
+                item['_id'], item['name'])
             # No source was successful
             del item['largeImage']['fileId']
             job = self._createLargeImageJob(item, fileObj, user, token, **kwargs)
@@ -89,6 +102,9 @@ class ImageItem(Item):
             item['largeImage']['notify'] = notify
             item['largeImage']['originalId'] = fileObj['_id']
             item['largeImage']['jobId'] = job['_id']
+            logger.debug(
+                'createImageItem created a job to generate a largeImage for item %s (%s)',
+                item['_id'], item['name'])
         self.save(item)
         return job
 

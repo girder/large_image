@@ -932,8 +932,8 @@ class TileSource:
         # compatibility could be an issue.
         return False
 
-    @methodcache()
-    def histogram(self, dtype=None, onlyMinMax=False, bins=256,
+    @methodcache()  # noqa
+    def histogram(self, dtype=None, onlyMinMax=False, bins=256,  # noqa
                   density=False, format=None, *args, **kwargs):
         """
         Get a histogram for a region.
@@ -963,10 +963,16 @@ class TileSource:
             array one longer than the hist array that contains the boundaries
             between bins.
         """
+        lastlog = time.time()
         kwargs = kwargs.copy()
         histRange = kwargs.pop('range', None)
         results = None
         for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+            if time.time() - lastlog > 10:
+                self.logger.info(
+                    'Calculating histogram min/max %d/%d',
+                    tile['tile_position']['position'], tile['iterator_range']['position'])
+                lastlog = time.time()
             tile = tile['tile']
             if dtype is not None and tile.dtype != dtype:
                 if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
@@ -1018,6 +1024,11 @@ class TileSource:
             'density': bool(density),
         } for idx in range(len(results['min']))]
         for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+            if time.time() - lastlog > 10:
+                self.logger.info(
+                    'Calculating histogram %d/%d',
+                    tile['tile_position']['position'], tile['iterator_range']['position'])
+                lastlog = time.time()
             tile = tile['tile']
             if dtype is not None and tile.dtype != dtype:
                 if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
