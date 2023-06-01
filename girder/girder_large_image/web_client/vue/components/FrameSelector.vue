@@ -176,7 +176,7 @@ export default Vue.extend({
 
         <!-- Use composite layers component twice so state for each one is maintained while invisible -->
         <!-- Use styling instead of v-if to make each invisible so that the components are not unmounted -->
-        <div  class="image-frame-simple-control" style="width: 500px">
+        <div  class="image-frame-simple-control">
             <composite-layers
                 key="channels"
                 v-if="imageMetadata.channels"
