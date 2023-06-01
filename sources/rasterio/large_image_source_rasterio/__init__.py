@@ -41,6 +41,7 @@ from large_image.exceptions import (TileSourceError,
 from large_image.tilesource.geo import (GDALBaseFileTileSource,
                                         ProjUnitsAcrossLevel0,
                                         ProjUnitsAcrossLevel0_MaxSize)
+from large_image.tilesource.utilities import JSONDict
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -448,7 +449,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             dataset = dataset or self.dataset
 
             # loop in the bands to get the indicidative stats (bands are 1 indexed)
-            infoSet = {}
+            infoSet = JSONDict({})
             for i in dataset.indexes:  # 1 indexed
 
                 # get the stats
@@ -490,7 +491,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             has_gcps = len(self.dataset.gcps[0]) != 0 and self.dataset.gcps[1]
             has_affine = self.dataset.transform
 
-            metadata = {
+            metadata = JSONDict({
                 'geospatial': bool(has_projection or has_gcps or has_affine),
                 'levels': self.levels,
                 'sizeX': self.sizeX,
@@ -503,7 +504,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 'bounds': self.getBounds(self.projection),
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
-            }
+            })
 
         # magnification is computed elswhere
         metadata.update(self.getNativeMagnification())
@@ -518,7 +519,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         :returns: a dictionary of data or None.
         """
-        result = {}
+        result = JSONDict({})
         with self._getDatasetLock:
             result['driverShortName'] = self.dataset.driver
             result['driverLongName'] = self.dataset.driver
