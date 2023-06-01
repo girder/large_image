@@ -32,7 +32,7 @@ The yaml file has the following structure:
       # admin users get these settings
       admin:
         <key>: <value>
-    # The groups key specifes that specific user groups have distinct settings
+    # The groups key specifies that specific user groups have distinct settings
     groups:
       <group name>:
         <key>: <value>

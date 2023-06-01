@@ -746,7 +746,7 @@ def _is_multiframe(path):
             raise
         except Exception:
             logger.warning('Is the file reachable and readable? (%r)', path)
-            raise IOError(path) from None
+            raise OSError(path) from None
     pages = 1
     if 'n-pages' in image.get_fields():
         pages = image.get_value('n-pages')

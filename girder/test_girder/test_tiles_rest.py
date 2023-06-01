@@ -479,8 +479,9 @@ def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):
                               data={'countdown': 10, 'fileId': fileId})
     assert result is None
     # If we end the test here, girder_worker may upload a file that gets
-    # discarded, but do so in a manner that interfers with cleaning up the test
-    # temp directory.  By running other tasks, this is less likely to occur.
+    # discarded, but do so in a manner that interferes with cleaning up the
+    # test temp directory.  By running other tasks, this is less likely to
+    # occur.
 
     # Creating it again should work
     tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId)

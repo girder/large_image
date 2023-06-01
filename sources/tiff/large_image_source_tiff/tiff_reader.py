@@ -375,7 +375,7 @@ class TiledTiffDirectory:
         :param y: The row index of the desired tile.
         :type y: int
         :param transpose: If true, transpose width and height
-        :type tranpose: boolean
+        :type transpose: boolean
         :return: The internal tile number of the desired tile.
         :rtype int
         :raises: InvalidOperationTiffError
