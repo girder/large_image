@@ -8,6 +8,9 @@
 - Filter on specific metadata from item lists ([#1184](../../pull/1184))
 - Add a button to clear the filter on item lists ([#1185](../../pull/1185))
 
+### Changes
+- Log more often when importing files or making large images ([#1187](../../pull/1187))
+
 ## 1.22.0
 
 ### Features
