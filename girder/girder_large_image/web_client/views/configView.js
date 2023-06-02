@@ -247,15 +247,15 @@ var ConfigView = View.extend({
         }
         if (ConfigView._lastliconfig === folderId && !reload) {
             if (callback) {
-                callback(ConfigView._liconfig);
+                callback(ConfigView._liconfig || {});
             }
             return $.Deferred().resolve(ConfigView._liconfig);
         }
         if (ConfigView._liconfigSettingsRequest) {
             if (ConfigView._nextliconfig === folderId) {
                 if (callback) {
-                    ConfigView._liconfigSettingsRequest.done(() => {
-                        callback(ConfigView._liconfig);
+                    ConfigView._liconfigSettingsRequest.done((val) => {
+                        callback(val || {});
                     });
                 }
                 return ConfigView._liconfigSettingsRequest;
@@ -269,7 +269,7 @@ var ConfigView = View.extend({
             val = val || {};
             ConfigView._lastliconfig = folderId;
             ConfigView._liconfigSettingsRequest = null;
-            ConfigView._liconfig = val || {};
+            ConfigView._liconfig = val;
             if (callback) {
                 callback(ConfigView._liconfig);
             }
