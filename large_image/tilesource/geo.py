@@ -10,6 +10,7 @@ from .utilities import JSONDict, getPaletteColors
 try:
     import pyproj
     has_pyproj = True
+    _pyproj_under_6 = int(pyproj.proj_version_str.split('.')[0]) < 6
 except Exception:
     has_pyproj = False
 
@@ -23,7 +24,7 @@ ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
 InitPrefix = ''
-NeededInitPrefix = '+init=' if has_pyproj and int(pyproj.proj_version_str.split('.')[0]) < 6 else InitPrefix
+NeededInitPrefix = '+init=' if has_pyproj and _pyproj_under_6 else InitPrefix
 
 
 def make_vsi(url: str, **options):
