@@ -2,6 +2,9 @@
 
 ## 1.22.2
 
+### Changes
+- Alter jpeg priority with the PIL source ([#1191](../../pull/1191))
+
 ### Bug Fixes
 - Fix NeededInitPrefix namespace errors ([#1190](../../pull/1190))
 
