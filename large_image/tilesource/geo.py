@@ -23,8 +23,7 @@ ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
 InitPrefix = ''
-if has_pyproj:
-    NeededInitPrefix = '+init=' if int(pyproj.proj_version_str.split('.')[0]) < 6 else InitPrefix
+NeededInitPrefix = '+init=' if has_pyproj and int(pyproj.proj_version_str.split('.')[0]) < 6 else InitPrefix
 
 
 def make_vsi(url: str, **options):
