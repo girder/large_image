@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.22.2
+
+### Bug Fixes
+- Fix NeededInitPrefix namespace errors ([#1190](../../pull/1190))
+
 ## 1.22.1
 
 ### Improvements
