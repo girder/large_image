@@ -61,19 +61,23 @@ export default {
             this.fetchHistograms()
         },
         fetchHistograms() {
+            const histogramParams = {
+                frame: this.currentFrame,
+                width: 1024,
+                height: 1024,
+                bins: 512,
+                resample: false,
+            }
             if (this.layerMap) {
                 // layers are channels; each layer has a frame delta
                 this.layers.forEach((layer) => {
                     restRequest({
                         type: 'GET',
                         url: 'item/' + this.itemId + '/tiles/histogram',
-                        data: {
-                            frame: this.currentFrame + this.compositeLayerInfo[layer].framedelta,
-                            width: 1024,
-                            height: 1024,
-                            bins: 512,
-                            resample: false,
-                        }
+                        data: Object.assign(
+                            histogramParams,
+                            {frame: this.currentFrame + this.compositeLayerInfo[layer].framedelta}
+                        )
                     }).then((response) => {
                         if (response.length < 3) {
                             this.histograms.push(response[0])
@@ -87,13 +91,7 @@ export default {
                 restRequest({
                     type: 'GET',
                     url: 'item/' + this.itemId + '/tiles/histogram',
-                    data: {
-                        frame: this.currentFrame,
-                        width: 1024,
-                        height: 1024,
-                        bins: 512,
-                        resample: false,
-                    }
+                    data: histogramParams,
                 }).then((response) => {
                     this.histograms = response
                 });
