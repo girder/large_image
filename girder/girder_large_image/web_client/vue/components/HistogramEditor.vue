@@ -105,7 +105,7 @@ export default {
                     bucketIndex = index
                 }
             })
-            return Math.round(this.histogram.bin_edges[bucketIndex]);
+            return this.histogram.bin_edges[bucketIndex];
 
         },
         toDistributionPercentage(value) {
@@ -115,7 +115,7 @@ export default {
                     numSamples += count
                 }
             })
-            return Math.round(numSamples / this.histogram.samples * 100)
+            return numSamples / this.histogram.samples * 100
         },
         updateFromInput(funcName, value) {
             if (this.tailsMode) {
