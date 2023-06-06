@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.22.3
+
+### Changes
+- Change how extensions and fallback priorities interact ([#1192](../../pull/1192))
+
 ## 1.22.2
 
 ### Changes
