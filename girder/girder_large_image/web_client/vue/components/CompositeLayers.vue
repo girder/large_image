@@ -164,8 +164,13 @@ export default {
             ).filter((layer) => layer.enabled);
             const styleArray = []
             activeLayers.forEach((layer) => {
-                const styleEntry = Object.assign({}, layer);
-                delete styleEntry.enabled
+                const styleEntry = {
+                    min: layer.min,
+                    max: layer.max,
+                    palette: layer.palette,
+                    framedelta: layer.framedelta,
+                    band: layer.band,
+                }
                 styleArray.push(styleEntry);
             });
             this.$emit('updateStyle', {bands: styleArray});
