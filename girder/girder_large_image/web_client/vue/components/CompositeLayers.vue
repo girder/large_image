@@ -72,6 +72,7 @@ export default {
                             width: 1024,
                             height: 1024,
                             bins: 512,
+                            resample: false,
                         }
                     }).then((response) => {
                         if (response.length < 3) {
@@ -91,6 +92,7 @@ export default {
                         width: 1024,
                         height: 1024,
                         bins: 512,
+                        resample: false,
                     }
                 }).then((response) => {
                     this.histograms = response
