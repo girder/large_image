@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import sys
 
 import large_image_converter
 import large_image_converter.__main__ as main
@@ -314,3 +315,12 @@ def testConvertFromTestSourceFrameArray(tmpdir):
     assert len(metadata['frames']) == 6
     info = tifftools.read_tiff(outputPath)
     assert len(info['ifds']) == 6
+
+
+@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for the test image')
+def testConvertImageJ(tmpdir):
+    imagePath = datastore.fetch('synthetic_imagej.tiff')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath, compression='jpeg', quality=50)
+    info = tifftools.read_tiff(outputPath)
+    assert len(info['ifds']) == 44

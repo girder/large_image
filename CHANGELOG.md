@@ -7,6 +7,9 @@
 - Refactor reading the .large_image_config.yaml file on the girder client ([#1193](../../pull/1193))
 - Refactor of the which-folders-have-annotations pipeline ([#1194](../../pull/1194))
 
+### Bug Fixes
+- Fix an issue converting multiframe files that vips reads as single frame  ([#1195](../../pull/1195))
+
 ## 1.22.2
 
 ### Changes
