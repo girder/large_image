@@ -5,6 +5,7 @@
 ### Changes
 - Change how extensions and fallback priorities interact ([#1192](../../pull/1192))
 - Refactor reading the .large_image_config.yaml file on the girder client ([#1193](../../pull/1193))
+- Refactor of the which-folders-have-annotations pipeline ([#1194](../../pull/1194))
 
 ## 1.22.2
 
