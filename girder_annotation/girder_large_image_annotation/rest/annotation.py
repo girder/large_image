@@ -601,25 +601,24 @@ class AnnotationResource(Resource):
         ] if not user['admin'] else []
         recursivePipeline = [
             {'$match': {'_id': ObjectId(id)}},
-            {'$facet': {
-                'documents1': [{'$match': {'_id': ObjectId(id)}}],
-                'documents2': [
-                    {'$graphLookup': {
-                        'from': 'folder',
-                        'startWith': '$_id',
-                        'connectFromField': '_id',
-                        'connectToField': 'parentId',
-                        'as': '__children'
-                    }},
-                    {'$unwind': {'path': '$__children'}},
-                    {'$replaceRoot': {'newRoot': '$__children'}}
-                ]
+            {'$graphLookup': {
+                'from': 'folder',
+                'startWith': ObjectId(id),
+                'connectFromField': '_id',
+                'connectToField': 'parentId',
+                'as': '__children',
+            }},
+            {'$lookup': {
+                'from': 'folder',
+                'localField': '_id',
+                'foreignField': '_id',
+                'as': '__self',
             }},
             {'$project': {'__children': {'$concatArrays': [
-                '$documents1', '$documents2'
+                '$__self', '$__children'
             ]}}},
             {'$unwind': {'path': '$__children'}},
-            {'$replaceRoot': {'newRoot': '$__children'}}
+            {'$replaceRoot': {'newRoot': '$__children'}},
         ] if recurse else [{'$match': {'_id': ObjectId(id)}}]
 
         # We are only finding anntoations that we can change the permissions
