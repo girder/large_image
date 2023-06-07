@@ -4,6 +4,7 @@
 
 ### Improvements
 - Better DICOM multi-level detection ([#1196](../../pull/1196))
+- Added an internal field to report populated tile levels in some sources ([#1197](../../pull/1197))
 
 ### Changes
 - Change how extensions and fallback priorities interact ([#1192](../../pull/1192))

@@ -137,6 +137,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if (key.startswith('is_') and hasattr(self, '_handle_' + key[3:]) and
                     getattr(self._tf, key)):
                 getattr(self, '_handle_' + key[3:])()
+        self._populatedLevels = len(self._baseSeries.levels)
 
     def _biggestSeries(self):
         """
