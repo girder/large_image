@@ -4,6 +4,7 @@
 
 ### Changes
 - Change how extensions and fallback priorities interact ([#1192](../../pull/1192))
+- Refactor reading the .large_image_config.yaml file on the girder client ([#1193](../../pull/1193))
 
 ## 1.22.2
 
