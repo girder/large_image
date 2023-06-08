@@ -2,13 +2,16 @@
 
 ## 1.22.3
 
+### Improvements
+- Better DICOM multi-level detection ([#1196](../../pull/1196))
+
 ### Changes
 - Change how extensions and fallback priorities interact ([#1192](../../pull/1192))
 - Refactor reading the .large_image_config.yaml file on the girder client ([#1193](../../pull/1193))
 - Refactor of the which-folders-have-annotations pipeline ([#1194](../../pull/1194))
 
 ### Bug Fixes
-- Fix an issue converting multiframe files that vips reads as single frame  ([#1195](../../pull/1195))
+- Fix an issue converting multiframe files that vips reads as single frame ([#1195](../../pull/1195))
 
 ## 1.22.2
 

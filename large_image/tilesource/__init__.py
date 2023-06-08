@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 
 try:
@@ -77,7 +78,8 @@ def getSortedSourceList(availableSources, pathOrUri, mimeType=None, *args, **kwa
     """
     uriWithoutProtocol = str(pathOrUri).split('://', 1)[-1]
     isLargeImageUri = str(pathOrUri).startswith('large_image://')
-    extensions = [ext.lower() for ext in os.path.basename(uriWithoutProtocol).split('.')[1:]]
+    baseName = os.path.basename(uriWithoutProtocol)
+    extensions = [ext.lower() for ext in baseName.split('.')[1:]]
     properties = {
         '_geospatial_source': isGeospatial(pathOrUri),
     }
@@ -90,6 +92,10 @@ def getSortedSourceList(availableSources, pathOrUri, mimeType=None, *args, **kwa
                 mimeType in availableSources[sourceName].mimeTypes):
             fallback = False
             priority = min(priority, availableSources[sourceName].mimeTypes[mimeType])
+        for regex in getattr(availableSources[sourceName], 'nameMatches', {}):
+            if re.match(regex, baseName):
+                fallback = False
+                priority = min(priority, availableSources[sourceName].nameMatches[regex])
         for ext in extensions:
             if ext in sourceExtensions:
                 fallback = False
