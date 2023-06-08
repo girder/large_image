@@ -924,7 +924,9 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
             lidata = _data_from_large_image(inputPath, tempPath, **kwargs)
             logger.log(logging.DEBUG - 1, 'large_image information for %s: %r',
                        inputPath, lidata)
-            if not is_vips(inputPath) and lidata:
+            if lidata and (not is_vips(inputPath) or (
+                    len(lidata['metadata'].get('frames', [])) >= 2 and
+                    not _is_multiframe(inputPath))):
                 _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
             elif _is_multiframe(inputPath):
                 _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
