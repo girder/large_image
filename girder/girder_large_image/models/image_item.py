@@ -270,6 +270,8 @@ class ImageItem(Item):
         if tileSource.getICCProfiles(onlyInfo=True):
             result['iccprofiles'] = tileSource.getICCProfiles(onlyInfo=True)
         result['tilesource'] = tileSource.name
+        if hasattr(tileSource, '_populatedLevels'):
+            result['populatedLevels'] = tileSource._populatedLevels
         return result
 
     def getTile(self, item, x, y, z, mayRedirect=False, **kwargs):

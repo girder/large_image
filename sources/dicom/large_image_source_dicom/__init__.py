@@ -138,6 +138,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.tileHeight = min(max(self.tileHeight, self._minTileSize), self._maxTileSize)
         self.levels = int(max(1, math.ceil(math.log(
             max(self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+        self._populatedLevels = len(self._dicom.levels)
 
     def __del__(self):
         if getattr(self, '_dicom', None) is not None:
