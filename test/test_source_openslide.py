@@ -346,6 +346,9 @@ def testGetPixelWithICCCorrection():
     source = large_image_source_openslide.open(imagePath, style={'icc': True})
     pixel2 = source.getPixel(region={'left': 12125, 'top': 10640})
     assert pixel == pixel2
+    source = large_image_source_openslide.open(imagePath, style={})
+    pixel3 = source.getPixel(region={'left': 12125, 'top': 10640})
+    assert pixel == pixel3
 
 
 def testTilesFromPowerOf3Tiles():

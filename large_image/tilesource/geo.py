@@ -169,7 +169,14 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         return style
 
     def _setDefaultStyle(self):
-        """If not style was specified, create a default style."""
+        """If no style was specified, create a default style."""
+        self._bandNames = {}
+        for idx, band in self.getBandInformation().items():
+            if band.get('interpretation'):
+                self._bandNames[band['interpretation'].lower()] = idx
+        if isinstance(getattr(self, '_style', None), dict) and (
+                not self._style or 'icc' in self._style and len(self._style) == 1):
+            return
         if hasattr(self, '_style'):
             styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
             if not len(styleBands) or (len(styleBands) == 1 and isinstance(
@@ -205,10 +212,6 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
                 })
             self.logger.debug('Using style %r', style)
             self._style = JSONDict({'bands': style})
-        self._bandNames = {}
-        for idx, band in self.getBandInformation().items():
-            if band.get('interpretation'):
-                self._bandNames[band['interpretation'].lower()] = idx
 
     @staticmethod
     def getHexColors(palette):

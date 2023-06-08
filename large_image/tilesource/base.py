@@ -192,7 +192,7 @@ class TileSource:
                 pass
         self._bandRanges = {}
         self._jsonstyle = style
-        if style:
+        if style is not None:
             if isinstance(style, dict):
                 self._style = JSONDict(style)
                 self._jsonstyle = json.dumps(style, sort_keys=True, separators=(',', ':'))
@@ -1382,7 +1382,7 @@ class TileSource:
         sc = types.SimpleNamespace(
             image=image, originalStyle=style, x=x, y=y, z=z, frame=frame,
             mainImage=image, mainFrame=frame, dtype=None, axis=None)
-        if style is None or ('icc' in style and len(style) == 1):
+        if not style or ('icc' in style and len(style) == 1):
             sc.style = {'icc': (style or {}).get(
                 'icc', config.getConfig('icc_correction', True)), 'bands': []}
         else:
@@ -1392,7 +1392,7 @@ class TileSource:
         if hasattr(self, '_iccprofiles') and sc.style.get(
                 'icc', config.getConfig('icc_correction', True)):
             image = self._applyICCProfile(sc, frame)
-        if style is None or ('icc' in style and len(style) == 1):
+        if not style or ('icc' in style and len(style) == 1):
             sc.output = image
         else:
             sc.output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
