@@ -92,6 +92,9 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.FALLBACK,
         'application/dicom': SourcePriority.PREFERRED,
     }
+    nameMatches = {
+        r'DCM_\d+$': SourcePriority.MEDIUM,
+    }
 
     _minTileSize = 64
     _maxTileSize = 4096
@@ -155,6 +158,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if os.path.splitext(path)[-1][1:] in self.extensions:
             return True
         if re.match(r'^([1-9][0-9]*|0)(\.([1-9][0-9]*|0))+$', path) and len(path) <= 64:
+            return True
+        if re.match(r'^DCM_\d+$', path):
             return True
         return False
 

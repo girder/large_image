@@ -30,21 +30,27 @@ from .utilities import (JSONDict, _encodeImage,  # noqa: F401
 
 
 class TileSource:
-    #: Name of the tile source
+    # Name of the tile source
     name = None
 
-    #: A dictionary of known file extensions and the ``SourcePriority`` given
-    #: to each.  It must contain a None key with a priority for the tile source
-    #: when the extension does not match.
+    # A dictionary of known file extensions and the ``SourcePriority`` given
+    # to each.  It must contain a None key with a priority for the tile source
+    # when the extension does not match.
     extensions = {
         None: SourcePriority.FALLBACK
     }
 
-    #: A dictionary of common mime-types handled by the source and the
-    #: ``SourcePriority`` given to each.  This are used in place of or in
-    #: additional to extensions.
+    # A dictionary of common mime-types handled by the source and the
+    # ``SourcePriority`` given to each.  This are used in place of or in
+    # additional to extensions.
     mimeTypes = {
         None: SourcePriority.FALLBACK
+    }
+
+    # A dictionary with regex strings as the keys and the ``SourcePriority``
+    # given to names that match that expression.  This is used in addition to
+    # extensions and mimeTypes, with the highest priority match taken.
+    nameMatches = {
     }
 
     geospatial = False
