@@ -1218,6 +1218,19 @@ def testTilesHistogram(server, admin, fsAssetstore):
     assert len(resp.json) == 3
     assert len(resp.json[0]['hist']) == 256
 
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False,
+                'roundRange': False, 'bins': 512})
+    assert len(resp.json) == 3
+    assert len(resp.json[0]['hist']) == 512
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False,
+                'roundRange': True, 'bins': 512})
+    assert len(resp.json) == 3
+    assert len(resp.json[0]['hist']) == 256
+
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
