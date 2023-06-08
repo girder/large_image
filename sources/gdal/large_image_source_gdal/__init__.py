@@ -136,6 +136,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self._unitsPerPixel = unitsPerPixel
         if self.projection:
             self._initWithProjection(unitsPerPixel)
+        self._getPopulatedLevels()
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
 
@@ -157,6 +158,13 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if self._getDriver() == 'netCDF':
             raise TileSourceError('netCDF file will not be read via GDAL source')
         return False
+
+    def _getPopulatedLevels(self):
+        try:
+            with self._getDatasetLock:
+                self._populatedLevels = 1 + self.dataset.GetRasterBand(1).GetOverviewCount()
+        except Exception:
+            pass
 
     def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, onlyMinMax=True):
         frame = frame or 0

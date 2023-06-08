@@ -152,8 +152,16 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         self._unitsPerPixel = unitsPerPixel
         self.projection is None or self._initWithProjection(unitsPerPixel)
+        self._getPopulatedLevels()
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
+
+    def _getPopulatedLevels(self):
+        try:
+            with self._getDatasetLock:
+                self._populatedLevels = 1 + len(self.dataset.overviews(1))
+        except Exception:
+            pass
 
     def _scanForMinMax(self, dtype, frame=0, analysisSize=1024, onlyMinMax=True):
         """Update the band range of the data type to the end of the range list.
@@ -240,8 +248,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 # If unitsPerPixel is not specified, the horizontal distance
                 # between -180,0 and +180,0 is used.  Some projections (such as
                 # stereographic) will fail in this case; they must have a unitsPerPixel specified.
-                east, _ = warp.transform(srcCrs, dstCrs, [-180,], [0,])
-                west, _ = warp.transform(srcCrs, dstCrs, [180,], [0,])
+                east, _ = warp.transform(srcCrs, dstCrs, [-180], [0])
+                west, _ = warp.transform(srcCrs, dstCrs, [180], [0])
                 self.unitsAcrossLevel0 = abs(east[0] - west[0])
                 if not self.unitsAcrossLevel0:
                     raise TileSourceError(
