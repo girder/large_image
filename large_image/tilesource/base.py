@@ -957,6 +957,9 @@ class TileSource:
         :param range: if None, use the computed min and (max + 1).  Otherwise,
             this is the range passed to numpy.histogram.  Note this is only
             accessible via kwargs as it otherwise overloads the range function.
+            If 'round', use the computed values, but the number of bins may be
+            reduced or the bin_edges rounded to integer values for
+            integer-based source data.
         :param args: parameters to pass to the tileIterator.
         :param kwargs: parameters to pass to the tileIterator.
         :returns: if onlyMinMax is true, this is a dictionary with keys min and
@@ -964,10 +967,10 @@ class TileSource:
             all of the bands.  If onlyMinMax is False, this is a dictionary
             with a single key 'histogram' that contains a list of histograms
             per band.  Each entry is a dictionary with min, max, range, hist,
-            and bin_edges.  range is [min, (max + 1)].  hist is the counts
-            (normalized if density is True) for each bin.  bin_edges is an
-            array one longer than the hist array that contains the boundaries
-            between bins.
+            bins, and bin_edges.  range is [min, (max + 1)].  hist is the
+            counts (normalized if density is True) for each bin.  bins is the
+            number of bins used.  bin_edges is an array one longer than the
+            hist array that contains the boundaries between bins.
         """
         lastlog = time.time()
         kwargs = kwargs.copy()
@@ -1024,11 +1027,19 @@ class TileSource:
             'mean': results['mean'][idx],
             'stdev': results['stdev'][idx],
             'range': ((results['min'][idx], results['max'][idx] + 1)
-                      if histRange is None else histRange),
+                      if histRange is None or histRange == 'round' else histRange),
             'hist': None,
             'bin_edges': None,
+            'bins': bins,
             'density': bool(density),
         } for idx in range(len(results['min']))]
+        if histRange == 'round' and numpy.issubdtype(dtype or self.dtype, numpy.integer):
+            for record in results['histogram']:
+                if (record['range'][1] - record['range'][0]) < bins * 10:
+                    step = int(math.ceil((record['range'][1] - record['range'][0]) / bins))
+                    rbins = int(math.ceil((record['range'][1] - record['range'][0]) / step))
+                    record['range'] = (record['range'][0], record['range'][0] + step * rbins)
+                    record['bins'] = rbins
         for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
             if time.time() - lastlog > 10:
                 self.logger.info(
@@ -1044,7 +1055,7 @@ class TileSource:
             for idx in range(len(results['min'])):
                 entry = results['histogram'][idx]
                 hist, bin_edges = numpy.histogram(
-                    tile[:, :, idx], bins, entry['range'], density=False)
+                    tile[:, :, idx], entry['bins'], entry['range'], density=False)
                 if entry['hist'] is None:
                     entry['hist'] = hist
                     entry['bin_edges'] = bin_edges
