@@ -369,6 +369,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :param warn: if True and inefficient, emit a warning.
         """
+        self._populatedLevels = len([v for v in self._tiffDirectories if v is not None])
         missing = [v is None for v in self._tiffDirectories]
         maxMissing = max(0 if not v else missing.index(False, idx) - idx
                          for idx, v in enumerate(missing))

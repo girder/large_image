@@ -636,7 +636,7 @@ class TilesItemResource(ItemResource):
         overlap = int(params.get('overlap', 0))
         if overlap < 0:
             raise RestException('Invalid overlap', code=400)
-        x, y = [int(xy) for xy in xandy.split('.')[0].split('_')]
+        x, y = (int(xy) for xy in xandy.split('.')[0].split('_'))
         _handleETag('getDZITile', item, level, xandy, params)
         metadata = self.imageItemModel.getMetadata(item, **params)
         level = int(level)
@@ -985,6 +985,10 @@ class TilesItemResource(ItemResource):
         .param('rangeMax', 'The maximum value in the histogram.  Defaults to '
                'the maximum value in the image.',
                required=False, dataType='float')
+        .param('roundRange', 'If true and neither a minimum or maximum is '
+               'specified for the range, round the bin edges and adjust the '
+               'number of bins for integer data with smaller ranges.',
+               required=False, dataType='boolean', default=False)
         .param('density', 'If true, scale the results by the number of '
                'samples.', required=False, dataType='boolean', default=False)
         .errorResponse('ID was invalid.')
@@ -1020,12 +1024,16 @@ class TilesItemResource(ItemResource):
             ('bins', int),
             ('rangeMin', int),
             ('rangeMax', int),
+            ('roundRange', bool),
             ('density', bool),
         ])
         _handleETag('getHistogram', item, params)
         histRange = None
         if 'rangeMin' in params or 'rangeMax' in params:
             histRange = [params.pop('rangeMin', 0), params.pop('rangeMax', 256)]
+        if params.get('roundRange'):
+            if params.pop('roundRange', False) and histRange is None:
+                histRange = 'round'
         result = self.imageItemModel.histogram(item, range=histRange, **params)
         result = result['histogram']
         # Cast everything to lists and floats so json with encode properly

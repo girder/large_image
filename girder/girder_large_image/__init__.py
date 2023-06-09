@@ -26,6 +26,7 @@ from girder_jobs.models.job import Job
 import girder
 import large_image
 from girder import events, logger
+from girder.api import filter_logging
 from girder.constants import AccessType, SortDir
 from girder.exceptions import RestException, ValidationException
 from girder.models.file import File
@@ -154,6 +155,7 @@ def _updateJob(event):
 
 def checkForLargeImageFiles(event):
     file = event.info
+    logger.info('Handling file %s (%s)', file['_id'], file['name'])
     possible = False
     mimeType = file.get('mimeType')
     if mimeType in girder_tilesource.KnownMimeTypes:
@@ -291,8 +293,8 @@ def metadataSearchHandler(  # noqa
     if re.match(r'^(k|ke|key|key:)$', query.strip()):
         return {k: [] for k in types}
     phrases = re.findall(r'"[^"]*"|\'[^\']*\'|\S+', query)
-    fields = set(phrase.split('key:', 1)[1] for phrase in phrases
-                 if phrase.startswith('key:') and len(phrase.split('key:', 1)[1]))
+    fields = {phrase.split('key:', 1)[1] for phrase in phrases
+              if phrase.startswith('key:') and len(phrase.split('key:', 1)[1])}
     phrases = [phrase for phrase in phrases
                if not phrase.startswith('key:') or not len(phrase.split('key:', 1)[1])]
     if not len(fields):
@@ -656,6 +658,9 @@ class LargeImagePlugin(GirderPlugin):
         events.bind('model.item.copy.after', 'large_image', handleCopyItem)
         events.bind('model.item.save.after', 'large_image', invalidateLoadModelCache)
         events.bind('model.file.save.after', 'large_image', checkForLargeImageFiles)
+        filter_logging.addLoggingFilter(
+            r'Handling file ([0-9a-f]{24}) \(',
+            frequency=1000, duration=10)
         events.bind('model.item.remove', 'large_image.removeThumbnails', removeThumbnails)
         events.bind('server_fuse.unmount', 'large_image', large_image.cache_util.cachesClear)
         events.bind('model.file.remove', 'large_image', handleRemoveFile)

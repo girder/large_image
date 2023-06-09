@@ -3,7 +3,7 @@ import _ from 'underscore';
 import Backbone from 'backbone';
 
 import {wrap} from '@girder/core/utilities/PluginUtils';
-import {getApiRoot, restRequest} from '@girder/core/rest';
+import {getApiRoot} from '@girder/core/rest';
 import {getCurrentUser} from '@girder/core/auth';
 import {AccessType} from '@girder/core/constants';
 import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
@@ -49,13 +49,10 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     const result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
 
-    if (!settings.folderId) {
-        this._liconfig = {};
-    }
-    restRequest({
-        url: `folder/${settings.folderId}/yaml_config/.large_image_config.yaml`
-    }).done((val) => {
-        val = val || {};
+    largeImageConfig.getConfigFile(settings.folderId, true, (val) => {
+        if (!settings.folderId) {
+            this._liconfig = val;
+        }
         if (_.isEqual(val, this._liconfig) && !this._recurse) {
             return;
         }

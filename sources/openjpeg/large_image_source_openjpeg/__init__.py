@@ -128,6 +128,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self.sizeX, self.sizeY)) / self.tileWidth) / math.log(2))) + 1
             self._minlevel = self.levels - self._openjpeg.codestream.segment[2].num_res - 1
         self._getAssociatedImages()
+        self._populatedLevels = self.levels - self._minlevel
 
     def _getAssociatedImages(self):
         """

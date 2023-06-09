@@ -41,6 +41,7 @@ from large_image.exceptions import (TileSourceError,
 from large_image.tilesource.geo import (GDALBaseFileTileSource,
                                         ProjUnitsAcrossLevel0,
                                         ProjUnitsAcrossLevel0_MaxSize)
+from large_image.tilesource.utilities import JSONDict
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -151,8 +152,16 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         self._unitsPerPixel = unitsPerPixel
         self.projection is None or self._initWithProjection(unitsPerPixel)
+        self._getPopulatedLevels()
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
+
+    def _getPopulatedLevels(self):
+        try:
+            with self._getDatasetLock:
+                self._populatedLevels = 1 + len(self.dataset.overviews(1))
+        except Exception:
+            pass
 
     def _scanForMinMax(self, dtype, frame=0, analysisSize=1024, onlyMinMax=True):
         """Update the band range of the data type to the end of the range list.
@@ -239,8 +248,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 # If unitsPerPixel is not specified, the horizontal distance
                 # between -180,0 and +180,0 is used.  Some projections (such as
                 # stereographic) will fail in this case; they must have a unitsPerPixel specified.
-                east, _ = warp.transform(srcCrs, dstCrs, [-180,], [0,])
-                west, _ = warp.transform(srcCrs, dstCrs, [180,], [0,])
+                east, _ = warp.transform(srcCrs, dstCrs, [-180], [0])
+                west, _ = warp.transform(srcCrs, dstCrs, [180], [0])
                 self.unitsAcrossLevel0 = abs(east[0] - west[0])
                 if not self.unitsAcrossLevel0:
                     raise TileSourceError(
@@ -448,7 +457,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             dataset = dataset or self.dataset
 
             # loop in the bands to get the indicidative stats (bands are 1 indexed)
-            infoSet = {}
+            infoSet = JSONDict({})
             for i in dataset.indexes:  # 1 indexed
 
                 # get the stats
@@ -490,7 +499,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             has_gcps = len(self.dataset.gcps[0]) != 0 and self.dataset.gcps[1]
             has_affine = self.dataset.transform
 
-            metadata = {
+            metadata = JSONDict({
                 'geospatial': bool(has_projection or has_gcps or has_affine),
                 'levels': self.levels,
                 'sizeX': self.sizeX,
@@ -503,7 +512,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 'bounds': self.getBounds(self.projection),
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
-            }
+            })
 
         # magnification is computed elswhere
         metadata.update(self.getNativeMagnification())
@@ -518,7 +527,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         :returns: a dictionary of data or None.
         """
-        result = {}
+        result = JSONDict({})
         with self._getDatasetLock:
             result['driverShortName'] = self.dataset.driver
             result['driverLongName'] = self.dataset.driver
@@ -990,7 +999,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         try:
             from rio_cogeo.cogeo import cog_validate
         except ImportError:
-            raise ImportError('Please insall `rio-cogeo` to check COG validity.')
+            raise ImportError('Please install `rio-cogeo` to check COG validity.')
 
         isValid, errors, warnings = cog_validate(self._largeImagePath, strict=strict)
 

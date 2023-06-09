@@ -160,6 +160,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'svslevel': bestlevel,
                 'scale': scale
             })
+        self._populatedLevels = len({l['svslevel'] for l in self._svslevels})
 
     def _getTileSize(self):
         """

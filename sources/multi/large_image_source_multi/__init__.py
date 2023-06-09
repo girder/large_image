@@ -945,7 +945,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             and the frame within the source to fetch.
         :param corners: the four corners of the tile in the main image space
             coordinates.
-        :param scale: power of 2 scale of the output; this is tne number of
+        :param scale: power of 2 scale of the output; this is the number of
             pixels that are conceptually aggregated from the source for one
             output pixel.
         :returns: a numpy array of the tile.

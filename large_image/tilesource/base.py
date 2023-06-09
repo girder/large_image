@@ -30,21 +30,27 @@ from .utilities import (JSONDict, _encodeImage,  # noqa: F401
 
 
 class TileSource:
-    #: Name of the tile source
+    # Name of the tile source
     name = None
 
-    #: A dictionary of known file extensions and the ``SourcePriority`` given
-    #: to each.  It must contain a None key with a priority for the tile source
-    #: when the extension does not match.
+    # A dictionary of known file extensions and the ``SourcePriority`` given
+    # to each.  It must contain a None key with a priority for the tile source
+    # when the extension does not match.
     extensions = {
         None: SourcePriority.FALLBACK
     }
 
-    #: A dictionary of common mime-types handled by the source and the
-    #: ``SourcePriority`` given to each.  This are used in place of or in
-    #: additional to extensions.
+    # A dictionary of common mime-types handled by the source and the
+    # ``SourcePriority`` given to each.  This are used in place of or in
+    # additional to extensions.
     mimeTypes = {
         None: SourcePriority.FALLBACK
+    }
+
+    # A dictionary with regex strings as the keys and the ``SourcePriority``
+    # given to names that match that expression.  This is used in addition to
+    # extensions and mimeTypes, with the highest priority match taken.
+    nameMatches = {
     }
 
     geospatial = False
@@ -186,7 +192,7 @@ class TileSource:
                 pass
         self._bandRanges = {}
         self._jsonstyle = style
-        if style:
+        if style is not None:
             if isinstance(style, dict):
                 self._style = JSONDict(style)
                 self._jsonstyle = json.dumps(style, sort_keys=True, separators=(',', ':'))
@@ -267,7 +273,7 @@ class TileSource:
         """
         Given a path, if it is an actual file and there is a setting
         "source_<configKey>_ignored_names", raise a TileSoruceError if the
-        path matches the ignore names setting regex in a case-insensitve
+        path matches the ignore names setting regex in a case-insensitive
         search.
 
         :param configKey: key to use to fetch value from settings.
@@ -932,8 +938,8 @@ class TileSource:
         # compatibility could be an issue.
         return False
 
-    @methodcache()
-    def histogram(self, dtype=None, onlyMinMax=False, bins=256,
+    @methodcache()  # noqa
+    def histogram(self, dtype=None, onlyMinMax=False, bins=256,  # noqa
                   density=False, format=None, *args, **kwargs):
         """
         Get a histogram for a region.
@@ -951,6 +957,9 @@ class TileSource:
         :param range: if None, use the computed min and (max + 1).  Otherwise,
             this is the range passed to numpy.histogram.  Note this is only
             accessible via kwargs as it otherwise overloads the range function.
+            If 'round', use the computed values, but the number of bins may be
+            reduced or the bin_edges rounded to integer values for
+            integer-based source data.
         :param args: parameters to pass to the tileIterator.
         :param kwargs: parameters to pass to the tileIterator.
         :returns: if onlyMinMax is true, this is a dictionary with keys min and
@@ -958,15 +967,21 @@ class TileSource:
             all of the bands.  If onlyMinMax is False, this is a dictionary
             with a single key 'histogram' that contains a list of histograms
             per band.  Each entry is a dictionary with min, max, range, hist,
-            and bin_edges.  range is [min, (max + 1)].  hist is the counts
-            (normalized if density is True) for each bin.  bin_edges is an
-            array one longer than the hist array that contains the boundaries
-            between bins.
+            bins, and bin_edges.  range is [min, (max + 1)].  hist is the
+            counts (normalized if density is True) for each bin.  bins is the
+            number of bins used.  bin_edges is an array one longer than the
+            hist array that contains the boundaries between bins.
         """
+        lastlog = time.time()
         kwargs = kwargs.copy()
         histRange = kwargs.pop('range', None)
         results = None
         for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+            if time.time() - lastlog > 10:
+                self.logger.info(
+                    'Calculating histogram min/max %d/%d',
+                    tile['tile_position']['position'], tile['iterator_range']['position'])
+                lastlog = time.time()
             tile = tile['tile']
             if dtype is not None and tile.dtype != dtype:
                 if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
@@ -1012,12 +1027,25 @@ class TileSource:
             'mean': results['mean'][idx],
             'stdev': results['stdev'][idx],
             'range': ((results['min'][idx], results['max'][idx] + 1)
-                      if histRange is None else histRange),
+                      if histRange is None or histRange == 'round' else histRange),
             'hist': None,
             'bin_edges': None,
+            'bins': bins,
             'density': bool(density),
         } for idx in range(len(results['min']))]
+        if histRange == 'round' and numpy.issubdtype(dtype or self.dtype, numpy.integer):
+            for record in results['histogram']:
+                if (record['range'][1] - record['range'][0]) < bins * 10:
+                    step = int(math.ceil((record['range'][1] - record['range'][0]) / bins))
+                    rbins = int(math.ceil((record['range'][1] - record['range'][0]) / step))
+                    record['range'] = (record['range'][0], record['range'][0] + step * rbins)
+                    record['bins'] = rbins
         for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+            if time.time() - lastlog > 10:
+                self.logger.info(
+                    'Calculating histogram %d/%d',
+                    tile['tile_position']['position'], tile['iterator_range']['position'])
+                lastlog = time.time()
             tile = tile['tile']
             if dtype is not None and tile.dtype != dtype:
                 if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
@@ -1027,7 +1055,7 @@ class TileSource:
             for idx in range(len(results['min'])):
                 entry = results['histogram'][idx]
                 hist, bin_edges = numpy.histogram(
-                    tile[:, :, idx], bins, entry['range'], density=False)
+                    tile[:, :, idx], entry['bins'], entry['range'], density=False)
                 if entry['hist'] is None:
                     entry['hist'] = hist
                     entry['bin_edges'] = bin_edges
@@ -1365,7 +1393,7 @@ class TileSource:
         sc = types.SimpleNamespace(
             image=image, originalStyle=style, x=x, y=y, z=z, frame=frame,
             mainImage=image, mainFrame=frame, dtype=None, axis=None)
-        if style is None or ('icc' in style and len(style) == 1):
+        if not style or ('icc' in style and len(style) == 1):
             sc.style = {'icc': (style or {}).get(
                 'icc', config.getConfig('icc_correction', True)), 'bands': []}
         else:
@@ -1375,7 +1403,7 @@ class TileSource:
         if hasattr(self, '_iccprofiles') and sc.style.get(
                 'icc', config.getConfig('icc_correction', True)):
             image = self._applyICCProfile(sc, frame)
-        if style is None or ('icc' in style and len(style) == 1):
+        if not style or ('icc' in style and len(style) == 1):
             sc.output = image
         else:
             sc.output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
@@ -2760,7 +2788,7 @@ class TileSource:
                     pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0])))
                 else:
                     pixel.update(dict(zip([img.mode.lower()], [img.load()[0, 0]])))
-        return pixel
+        return JSONDict(pixel)
 
     @property
     def frames(self):

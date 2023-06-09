@@ -479,8 +479,9 @@ def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):
                               data={'countdown': 10, 'fileId': fileId})
     assert result is None
     # If we end the test here, girder_worker may upload a file that gets
-    # discarded, but do so in a manner that interfers with cleaning up the test
-    # temp directory.  By running other tasks, this is less likely to occur.
+    # discarded, but do so in a manner that interferes with cleaning up the
+    # test temp directory.  By running other tasks, this is less likely to
+    # occur.
 
     # Creating it again should work
     tileMetadata = _postTileViaHttp(boundServer, admin, itemId, fileId)
@@ -1214,6 +1215,19 @@ def testTilesHistogram(server, admin, fsAssetstore):
     resp = server.request(
         path='/item/%s/tiles/histogram' % itemId,
         params={'width': 2048, 'height': 2048, 'resample': False})
+    assert len(resp.json) == 3
+    assert len(resp.json[0]['hist']) == 256
+
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False,
+                'roundRange': False, 'bins': 512})
+    assert len(resp.json) == 3
+    assert len(resp.json[0]['hist']) == 512
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False,
+                'roundRange': True, 'bins': 512})
     assert len(resp.json) == 3
     assert len(resp.json[0]['hist']) == 256
 

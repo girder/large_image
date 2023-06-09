@@ -1,5 +1,29 @@
 # Change Log
 
+## 1.22.3
+
+### Improvements
+- Better DICOM multi-level detection ([#1196](../../pull/1196))
+- Added an internal field to report populated tile levels in some sources ([#1197](../../pull/1197), [#1199](../../pull/1199))
+- Allow specifying an empty style dict ([#1200](../../pull/1200))
+- Allow rounding histogram bin edges and reducing bin counts ([#1201](../../pull/1201))
+
+### Changes
+- Change how extensions and fallback priorities interact ([#1192](../../pull/1192))
+- Refactor reading the .large_image_config.yaml file on the girder client ([#1193](../../pull/1193))
+- Refactor of the which-folders-have-annotations pipeline ([#1194](../../pull/1194))
+
+### Bug Fixes
+- Fix an issue converting multiframe files that vips reads as single frame ([#1195](../../pull/1195))
+
+## 1.22.2
+
+### Changes
+- Alter jpeg priority with the PIL source ([#1191](../../pull/1191))
+
+### Bug Fixes
+- Fix NeededInitPrefix namespace errors ([#1190](../../pull/1190))
+
 ## 1.22.1
 
 ### Improvements
@@ -7,6 +31,10 @@
 - Remove rasterio dep on pyproj ([#1182](../../pull/1182))
 - Filter on specific metadata from item lists ([#1184](../../pull/1184))
 - Add a button to clear the filter on item lists ([#1185](../../pull/1185))
+- Improve JSONDict usage ([#1189](../../pull/1189))
+
+### Changes
+- Log more often when importing files or making large images ([#1187](../../pull/1187))
 
 ## 1.22.0
 
