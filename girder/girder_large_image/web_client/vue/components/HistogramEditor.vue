@@ -1,17 +1,48 @@
 <script>
+import { restRequest } from '@girder/core/rest';
+import { nextTick } from 'vue';
 import { makeDraggableSVG } from '../utils/drag';
 
 export default {
-    props: ['histogram', 'currentMin', 'currentMax'],
-    emits: ['updateMin', 'updateMax'],
+    props: [
+        'itemId',
+        'layerIndex',
+        'currentFrameHistogram',
+        'histogramParams',
+        'framedelta',
+        'currentMin',
+        'currentMax',
+        'autoRange',
+    ],
+    emits: ['updateMin', 'updateMax', 'updateAutoRange'],
     data() {
         return {
+            histogram: undefined,
             xRange: [undefined, undefined],
             vRange: [undefined, undefined],
-            tailsMode: false,
         }
     },
     methods: {
+        fetchHistogram() {
+            if (this.framedelta !== undefined) {
+                restRequest({
+                    type: 'GET',
+                    url: 'item/' + this.itemId + '/tiles/histogram',
+                    data: Object.assign(
+                        this.histogramParams,
+                        {frame: this.histogramParams.frame + this.framedelta}
+                    )
+                }).then((response) => {
+                    if (response.length < 3) {
+                        this.histogram = response[0]
+                    } else {
+                        this.histogram = response[1]
+                    }
+                })
+            } else {
+                this.histogram = this.currentFrameHistogram[this.layerIndex]
+            }
+        },
         simplifyHistogram(hist) {
             let aggregationFactor = Math.round(1000 / (this.xRange[1] - this.xRange[0]))
             if (aggregationFactor < 1) aggregationFactor = 1
@@ -83,17 +114,30 @@ export default {
             return [moveX, moveY]
         },
         dragHandle(selected, newLocation) {
-            const funcName = selected.getAttribute("name")
-            const newValue = this.xPositionToValue(newLocation.x)
-            if (funcName === 'updateMin') {
-                this.$refs.minExclusionBox.setAttributeNS(null, 'width', `${newLocation.x - 5}`)
+            let funcName = selected.getAttribute("name")
+            let newValue = this.xPositionToValue(newLocation.x)
+            if (this.autoRange !== undefined) {
+                newValue = this.toDistributionPercentage(newValue);
+                if (funcName == 'updateMax') {
+                    newValue = 100 - newValue
+                }
+                newValue = parseFloat(parseFloat(newValue).toFixed(2))
+                this.$emit('updateAutoRange', newValue)
             } else {
-                const exclusionBoxWidth = this.xRange[1] - newLocation.x
-                this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${newLocation.x}`)
-                this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`)
+                if (funcName === 'updateMin') {
+                    this.$refs.minExclusionBox.setAttributeNS(null, 'width', `${newLocation.x - 5}`)
+                } else if (funcName === 'updateMax') {
+                    this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${newLocation.x}`)
+                    this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${this.xRange[1] - newLocation.x}`)
+                }
+                this.$emit(funcName, newValue)
             }
-
-            this.$emit(funcName, newValue)
+        },
+        setHandlePosition(handle, position, exclusionBox, exclusionBoxPosition, exclusionBoxWidth) {
+            handle.setAttributeNS(null, 'x1', `${position}`)
+            handle.setAttributeNS(null, 'x2', `${position}`)
+            exclusionBox.setAttributeNS(null, 'x', `${exclusionBoxPosition}`)
+            exclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`)
         },
         fromDistributionPercentage(percentage) {
             const numSamples = this.histogram.samples * percentage
@@ -118,90 +162,104 @@ export default {
             return numSamples / this.histogram.samples * 100
         },
         updateFromInput(funcName, value) {
-            if (this.tailsMode) {
-                this.$emit(funcName, this.fromDistributionPercentage(parseFloat(value) / 100))
-            } else {
-                this.$emit(funcName, parseFloat(value))
-            }
-        },
-        update() {
-            this.vRange = [this.histogram.min, this.histogram.max]
-            this.drawHistogram(
-                this.simplifyHistogram(this.histogram.hist)
-            );
+            const roundedValue = parseFloat(parseFloat(value).toFixed(2))
+            this.$emit(funcName, roundedValue)
         },
     },
     mounted() {
-        this.xRange = [5, this.$refs.svg.clientWidth - 5]
-        this.$refs.minHandle.setAttributeNS(null, 'x1', `${this.xRange[0]}`);
-        this.$refs.minHandle.setAttributeNS(null, 'x2', `${this.xRange[0]}`);
-        this.$refs.maxHandle.setAttributeNS(null, 'x1', `${this.xRange[1]}`);
-        this.$refs.maxHandle.setAttributeNS(null, 'x2', `${this.xRange[1]}`);
-        this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${this.xRange[1]}`)
-        this.update()
-        makeDraggableSVG(
-            this.$refs.svg,
-            this.validateHandleDrag,
-            this.dragHandle,
-            this.xRange,
-        )
+        this.fetchHistogram()
     },
     watch: {
         histogram() {
-            this.update()
+            // allow rerender to occur first
+            nextTick().then(() => {
+                this.xRange = [5, this.$refs.svg.clientWidth - 5]
+                this.vRange = [this.histogram.min, this.histogram.max]
+                this.$refs.minHandle.setAttributeNS(null, 'x1', `${this.xRange[0]}`);
+                this.$refs.minHandle.setAttributeNS(null, 'x2', `${this.xRange[0]}`);
+                this.$refs.maxHandle.setAttributeNS(null, 'x1', `${this.xRange[1]}`);
+                this.$refs.maxHandle.setAttributeNS(null, 'x2', `${this.xRange[1]}`);
+                this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${this.xRange[1]}`)
+                this.drawHistogram(
+                    this.simplifyHistogram(this.histogram.hist)
+                );
+                makeDraggableSVG(
+                    this.$refs.svg,
+                    this.validateHandleDrag,
+                    this.dragHandle,
+                    this.xRange,
+                )
+            })
         },
         currentMin() {
             const currentPosition = parseFloat(this.$refs.minHandle.getAttribute('x1'))
             const newPosition = this.valueToXPosition(this.currentMin)
             if (newPosition !== currentPosition) {
-                this.$refs.minHandle.setAttributeNS(null, 'x1', `${newPosition}`)
-                this.$refs.minHandle.setAttributeNS(null, 'x2', `${newPosition}`)
-                this.$refs.minExclusionBox.setAttributeNS(null, 'width', `${newPosition - 5}`)
+                this.setHandlePosition(
+                    this.$refs.minHandle,
+                    newPosition,
+                    this.$refs.minExclusionBox,
+                    5,
+                    newPosition - 5,
+                )
             }
         },
         currentMax() {
             const currentPosition = parseFloat(this.$refs.maxHandle.getAttribute('x1'))
             const newPosition = this.valueToXPosition(this.currentMax)
-            const exclusionBoxWidth = this.xRange[1] - newPosition
             if (newPosition !== currentPosition) {
-                this.$refs.maxHandle.setAttributeNS(null, 'x1', `${newPosition}`)
-                this.$refs.maxHandle.setAttributeNS(null, 'x2', `${newPosition}`)
-                this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${newPosition}`)
-                this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`)
+                this.setHandlePosition(
+                    this.$refs.maxHandle,
+                    newPosition,
+                    this.$refs.maxExclusionBox,
+                    newPosition,
+                    this.xRange[1] - newPosition,
+                )
             }
         },
-        tailsMode() {
-            if (this.tailsMode) {
-                this.$emit('updateMin', this.fromDistributionPercentage(0.01)),
-                this.$emit('updateMax', this.fromDistributionPercentage(0.99))
+        autoRange() {
+            let newMinPosition = this.currentMin ? this.valueToXPosition(this.currentMin) : this.xRange[0]
+            let newMaxPosition = this.currentMax ? this.valueToXPosition(this.currentMax) : this.xRange[1]
+            if (this.autoRange) {
+                newMinPosition = this.valueToXPosition(
+                    this.fromDistributionPercentage(this.autoRange / 100)
+                )
+                newMaxPosition = this.valueToXPosition(
+                    this.fromDistributionPercentage((100 - this.autoRange) / 100)
+                )
             }
+            this.setHandlePosition(
+                this.$refs.minHandle,
+                newMinPosition,
+                this.$refs.minExclusionBox,
+                5,
+                newMinPosition - 5,
+            )
+            this.setHandlePosition(
+                this.$refs.maxHandle,
+                newMaxPosition,
+                this.$refs.maxExclusionBox,
+                newMaxPosition,
+                this.xRange[1] - newMaxPosition,
+            )
         }
     }
 }
 </script>
 
 <template>
-    <div>
-        <div style="height: 20px">
-            <input
-                type="checkbox"
-                v-model="tailsMode"
-            >
-            Exclude distribution tails
-        </div>
+    <div v-if="histogram">
         <div class="range-editor">
-            <span
-                :class="tailsMode ? 'percentage-input' : ''"
+            <input
+                v-if="autoRange === undefined"
+                type="number"
+                :min="histogram.min"
+                :max="currentMax"
+                :value="currentMin"
+                style="width: 80px"
+                @input="(e) => updateFromInput('updateMin', e.target.value)"
             >
-                <input
-                    type="number"
-                    :min="tailsMode ? 0 : histogram.min"
-                    :max="tailsMode ? toDistributionPercentage(currentMax): currentMax"
-                    :value="tailsMode ? toDistributionPercentage(currentMin) : currentMin"
-                    style="width: 70px"
-                    @input="(e) => updateFromInput('updateMin', e.target.value)"
-                >
-            </span>
+            <span v-else style="width: 80px"/>
             <svg ref="svg" class="handles-svg">
                 <text x="5" y="43" class="small">{{ this.vRange[0] }}</text>
                 <rect ref="minExclusionBox" x="5" y="0" width="0" height="30" opacity="0.2"/>
@@ -214,7 +272,10 @@ export default {
                     x1="5" x2="5"
                     y1="0" y2="30"
                 />
-                <text x="90%" y="43" class="small">{{ this.vRange[1] }}</text>
+                <text
+                    :x="this.xRange[1] - (`${this.vRange[1]}`.length * 6)"
+                    y="43" class="small"
+                >{{ this.vRange[1] }}</text>
                 <rect ref="maxExclusionBox" x="5" y="0" width="0" height="30" opacity="0.2"/>
                 <line
                     class="draggable"
@@ -227,16 +288,26 @@ export default {
                 />
             </svg>
             <canvas ref="canvas" class="canvas" />
+            <input
+                v-if="autoRange === undefined"
+                type="number"
+                :max="histogram.max"
+                :min="currentMin"
+                :value="currentMax"
+                style="width: 80px"
+                @input="(e) => updateFromInput('updateMax', e.target.value)"
+            >
             <span
-                :class="tailsMode ? 'percentage-input' : ''"
+                v-else
+                class="percentage-input"
             >
                 <input
                     type="number"
-                    :max="tailsMode ? 100 - toDistributionPercentage(currentMin) : histogram.max"
-                    :min="tailsMode ? 0: currentMin"
-                    :value="tailsMode ? 100 - toDistributionPercentage(currentMax) : currentMax"
-                    style="width: 70px"
-                    @input="(e) => updateFromInput('updateMax', 100 - e.target.value)"
+                    :max="50"
+                    :min="0"
+                    :value="autoRange"
+                    style="width: 80px"
+                    @input="(e) => updateFromInput('updateAutoRange', e.target.value)"
                 >
             </span>
         </div>
@@ -246,32 +317,22 @@ export default {
 <style scoped>
 .range-editor {
     position: absolute;
-    top: 20px;
     display: flex;
     height: 30px;
     width: 100%;
 }
 .canvas {
-    width: calc(100% - 150px);
+    width: calc(100% - 160px);
     max-height: 100%;
     padding: 0px 5px;
 }
 .handles-svg {
     position: absolute;
-    left: 70px;
-    width: calc(100% - 150px);
+    left: 80px;
+    width: calc(100% - 160px);
     height: calc(100% + 15px);
 }
 .draggable {
   cursor: move;
-}
-.percentage-input {
-    position: relative;
-}
-.percentage-input::after {
-    position: absolute;
-    content: '%';
-    left: 35px;
-    top: 3px;
 }
 </style>

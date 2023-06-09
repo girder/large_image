@@ -1,6 +1,7 @@
 <script>
 import { restRequest } from '@girder/core/rest';
 import { Chrome } from 'vue-color';
+import Switches from 'vue-switches';
 import { CHANNEL_COLORS, OTHER_COLORS } from '../utils/colors'
 import HistogramEditor from './HistogramEditor.vue';
 
@@ -9,6 +10,7 @@ export default {
     emits: ['updateStyle'],
     components: {
         'color-picker': Chrome,
+        Switches,
         HistogramEditor,
     },
     data() {
@@ -16,9 +18,19 @@ export default {
             enabledLayers: this.layers,
             colorPickerShown: undefined,
             currentColorPickerRef: undefined,
+            currentFrameHistogram: undefined,
             compositeLayerInfo: {},
-            histograms: [],
             expandedRows: [],
+            autoRangeForAll: undefined,
+            histogramParams: {
+                frame: this.currentFrame,
+                width: 1024,
+                height: 1024,
+                bins: 512,
+                resample: false,
+                style: {},
+                roundRange: true,
+            }
         }
     },
     methods: {
@@ -35,6 +47,7 @@ export default {
                     min: undefined,
                     max: undefined,
                     custom: false,
+                    autoRange: undefined
                 }
             })
             Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
@@ -58,44 +71,16 @@ export default {
                     usedColors.push(chosenColor)
                 }
             })
-            this.fetchHistograms()
+            this.fetchCurrentFrameHistogram()
         },
-        fetchHistograms() {
-            const histogramParams = {
-                frame: this.currentFrame,
-                width: 1024,
-                height: 1024,
-                bins: 512,
-                resample: false,
-            }
-            if (this.layerMap) {
-                // layers are channels; each layer has a frame delta
-                this.layers.forEach((layer) => {
-                    restRequest({
-                        type: 'GET',
-                        url: 'item/' + this.itemId + '/tiles/histogram',
-                        data: Object.assign(
-                            histogramParams,
-                            {frame: this.currentFrame + this.compositeLayerInfo[layer].framedelta}
-                        )
-                    }).then((response) => {
-                        if (response.length < 3) {
-                            this.histograms.push(response[0])
-                        } else {
-                            this.histograms.push(response[1])
-                        }
-                    })
-                })
-            } else {
-                // layers are bands; they share the same frame
-                restRequest({
-                    type: 'GET',
-                    url: 'item/' + this.itemId + '/tiles/histogram',
-                    data: histogramParams,
-                }).then((response) => {
-                    this.histograms = response
-                });
-            }
+        fetchCurrentFrameHistogram() {
+            restRequest({
+                type: 'GET',
+                url: 'item/' + this.itemId + '/tiles/histogram',
+                data: this.histogramParams,
+            }).then((response) => {
+                this.currentFrameHistogram = response
+            });
         },
         toggleEnableAll() {
             if (this.enabledLayers !== this.layers) {
@@ -131,6 +116,30 @@ export default {
                 this.expandedRows = Object.values(this.compositeLayerInfo).map(({index}) => index)
             }
         },
+        updateLayerAutoRange(layer, value) {
+            this.compositeLayerInfo = Object.assign(
+                {}, this.compositeLayerInfo,
+                {[layer] : Object.assign(
+                    {}, this.compositeLayerInfo[layer], { autoRange: value }
+                )}
+            )
+            this.updateStyle();
+        },
+        updateAllAutoRanges(value) {
+            this.autoRangeForAll = value
+            this.compositeLayerInfo = Object.fromEntries(
+                Object.entries(this.compositeLayerInfo).map(([layerName, layerInfo]) => {
+                    return [
+                        layerName,
+                        Object.assign({}, layerInfo, { autoRange: value })
+                    ]
+                })
+            )
+            this.updateStyle();
+        },
+        allAutoRange() {
+            return Object.values(this.compositeLayerInfo).every(({ autoRange }) => autoRange !== undefined)
+        },
         documentClick(e) {
             const picker = this.currentColorPickerRef;
             if (picker && picker !== e.target && !picker.contains(e.target)) {
@@ -165,8 +174,8 @@ export default {
             const styleArray = []
             activeLayers.forEach((layer) => {
                 const styleEntry = {
-                    min: layer.min,
-                    max: layer.max,
+                    min: layer.autoRange !== undefined ? `min:${layer.autoRange / 100}` : layer.min,
+                    max: layer.autoRange !== undefined ? `max:${layer.autoRange / 100}` : layer.max,
                     palette: layer.palette,
                     framedelta: layer.framedelta,
                     band: layer.band,
@@ -175,28 +184,6 @@ export default {
             });
             this.$emit('updateStyle', {bands: styleArray});
         },
-    },
-    watch: {
-        currentFrame() {
-            this.histograms = []
-            this.fetchHistograms()
-        },
-        histograms() {
-            this.layers.forEach((layer, index) => {
-                if(this.histograms.length > index) {
-                    const { min, max } = this.histograms[index]
-                    this.compositeLayerInfo[layer] = Object.assign(
-                        this.compositeLayerInfo[layer], {
-                            min,
-                            max,
-                            defaultMin: min,
-                            defaultMax: max,
-                        }
-                    )
-                    this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo)
-                }
-            })
-        }
     },
     mounted() {
         this.initializeLayerInfo()
@@ -210,18 +197,41 @@ export default {
         <table id="composite-layer-table" class="table table-condensed">
             <thead class="table-header">
                 <tr>
-                    <th class="enabled-col">
+                    <th>
                         <input
                             type="checkbox"
                             :checked="enabledLayers === layers"
                             @input="toggleEnableAll"
                         >
                     </th>
-                    <th class="layer-col">Layer</th>
-                    <th class="color-col">Color</th>
-                    <th class="layer-col">Range</th>
+                    <th>ALL</th>
+                    <th></th>
+                    <th style="min-width: 100px;">
+                        <div class="auto-range-col">
+                            <span style="font-size: 10px;">Auto Range</span>
+                            <switches
+                                :value="allAutoRange()"
+                                @input="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.02)"
+                                :emit-on-mount="false"
+                                theme="bulma"
+                                color="blue"
+                            />
+                            <span
+                                v-if="allAutoRange()"
+                                class="percentage-input"
+                            >
+                                <input
+                                    type="number"
+                                    :max="50"
+                                    :min="0"
+                                    :value="autoRangeForAll"
+                                    style="width: 80px"
+                                    @input="(e) => updateAllAutoRanges(e.target.value)"
+                                >
+                            </span>
+                        </div>
+                    </th>
                     <div
-                        v-if="histograms.length"
                         class="expand-btn"
                         @click="toggleAllExpanded"
                     >
@@ -231,9 +241,14 @@ export default {
             </thead>
             <tbody>
                 <tr
-                    v-for="{layerName, index, min, max, palette, defaultMin, defaultMax} in Object.values(compositeLayerInfo)"
+                    v-for="{
+                        layerName, index, palette,
+                        autoRange, min, max,
+                        defaultMin, defaultMax,
+                        framedelta
+                    } in Object.values(compositeLayerInfo)"
                     :key="layerName"
-                    :style="expandedRows.includes(index) ? {height: '100px'} : {}"
+                    :style="expandedRows.includes(index) ? {height: '75px'} : {}"
                 >
                     <td style="width: 10%;">
                         <input
@@ -258,9 +273,18 @@ export default {
                             @input="(swatch) => {updateLayerColor(layerName, swatch)}"
                         />
                     </td>
-                    <td style="width: 25%;">{{ min !== undefined && max !== undefined ? `${min} - ${max}` : '' }}</td>
+                    <td>
+                        <div class="auto-range-col">
+                            <switches
+                                :value="autoRange"
+                                @input="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.02)"
+                                :emit-on-mount="false"
+                                theme="bulma"
+                                color="blue"
+                            />
+                        </div>
+                    </td>
                     <div
-                        v-if="histograms[index]"
                         class="expand-btn"
                         @click="() => toggleExpanded(index)"
                     >
@@ -270,13 +294,19 @@ export default {
                         : expandedRows.includes(index) ? '&#9650;' : '&#9660;'
                     }}
                     </div>
-                    <div v-if="histograms[index] && expandedRows.includes(index)" class="advanced-section">
+                    <div v-if="expandedRows.includes(index)" class="advanced-section">
                         <histogram-editor
-                            :histogram="histograms[index]"
+                            :itemId="itemId"
+                            :layerIndex="index"
+                            :currentFrameHistogram="currentFrameHistogram"
+                            :histogramParams="histogramParams"
+                            :framedelta="framedelta"
+                            :autoRange="autoRange"
                             :currentMin="min"
                             :currentMax="max"
                             @updateMin="(v, d) => updateLayerMin(layerName, v, d)"
                             @updateMax="(v, d) => updateLayerMax(layerName, v, d)"
+                            @updateAutoRange="(v) => updateLayerAutoRange(layerName, v)"
                         />
                     </div>
                 </tr>
@@ -304,6 +334,16 @@ export default {
     background-color: white;
     z-index: 2;
 }
+.auto-range-col {
+    display: flex;
+    flex-direction: column;
+    align-content: space-around;
+    padding: 0;
+}
+.vue-switcher {
+    margin: 5px 0px 0px 0px;
+    width: 45px;
+}
 .table-container {
     overflow-x: auto;
     overflow-y: hidden;
@@ -312,7 +352,7 @@ export default {
     padding: 0 5px;
 }
 .table-container input {
-    max-width: 70px;
+    max-width: 80px;
 }
 tr {
     position: relative;
@@ -320,12 +360,26 @@ tr {
 .expand-btn {
     position: absolute;
     right: 0;
+    bottom: 5px;
 }
 .advanced-section {
     position: absolute;
     left: 0px;
-    width: 100%;
-    margin: 30px 5px 0px;
-    height: 55px;
+    width: calc(100% - 10px);
+    margin: 30px 0px 0px;
+    height: 40px;
+}
+</style>
+
+<style>
+.percentage-input {
+    position: relative;
+    margin-top: 5px;
+}
+.percentage-input::after {
+    position: absolute;
+    content: '%';
+    left: 45px;
+    top: 3px;
 }
 </style>
