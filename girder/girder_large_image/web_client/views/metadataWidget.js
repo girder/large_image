@@ -11,7 +11,7 @@ import {localeSort} from '@girder/core/misc';
 
 import JsonMetadatumEditWidgetTemplate from '@girder/core/templates/widgets/jsonMetadatumEditWidget.pug';
 
-import MetadatumEditWidgetTemplate from '@girder/core/templates/widgets/metadatumEditWidget.pug';
+import MetadatumViewTemplate from '@girder/core/templates/widgets/metadatumView.pug';
 
 import '@girder/core/stylesheets/widgets/metadataWidget.styl';
 
@@ -22,7 +22,9 @@ import 'bootstrap/js/dropdown';
 
 import MetadataWidget from '@girder/core/views/widgets/MetadataWidget';
 
+import '../stylesheets/metadataWidget.styl';
 import MetadataWidgetTemplate from '../templates/metadataWidget.pug';
+import MetadatumEditWidgetTemplate from '../templates/metadatumEditWidget.pug';
 import largeImageConfig from './configView';
 
 function getMetadataRecord(item, fieldName) {
@@ -37,6 +39,20 @@ function getMetadataRecord(item, fieldName) {
         meta = meta[part];
     });
     return meta;
+}
+
+function liMetadataKeyEntry(limetadata, key) {
+    if (!limetadata || !key) {
+        return;
+    }
+    let result;
+    limetadata.forEach((entry, idx) => {
+        if (entry.value === key) {
+            result = entry;
+            result.idx = idx;
+        }
+    });
+    return result;
 }
 
 var MetadatumWidget = View.extend({
@@ -59,6 +75,7 @@ var MetadatumWidget = View.extend({
         this.fieldName = settings.fieldName;
         this.apiPath = settings.apiPath;
         this.noSave = settings.noSave;
+        this.limetadata = settings.limetadata;
         this.onMetadataEdited = settings.onMetadataEdited;
         this.onMetadataAdded = settings.onMetadataAdded;
     },
@@ -107,6 +124,7 @@ var MetadatumWidget = View.extend({
             fieldName: this.fieldName,
             apiPath: this.apiPath,
             noSave: this.noSave,
+            limetadata: this.limetadata,
             onMetadataEdited: this.onMetadataEdited,
             onMetadataAdded: this.onMetadataAdded
         }, overrides || {});
@@ -128,6 +146,7 @@ var MetadatumWidget = View.extend({
             fieldName: this.fieldName,
             apiPath: this.apiPath,
             noSave: this.noSave,
+            limetadata: this.limetadata,
             onMetadataEdited: this.onMetadataEdited,
             onMetadataAdded: this.onMetadataAdded
         };
@@ -153,9 +172,9 @@ var MetadatumWidget = View.extend({
             'g-key': this.key,
             'g-value': _.bind(this.parentView.modes[this.mode].displayValue, this)()
         }).empty();
-
+        this.$el.removeClass('editing');
         this.$el.html(this.parentView.modes[this.mode].template({
-            key: this.key,
+            key: this.mode === 'key' && liMetadataKeyEntry(this.limetadata, this.key) ? liMetadataKeyEntry(this.limetadata, this.key).title || this.key : this.key,
             value: _.bind(this.parentView.modes[this.mode].displayValue, this)(),
             accessLevel: this.accessLevel,
             AccessType
@@ -199,6 +218,7 @@ var MetadatumEditWidget = View.extend({
         this.fieldName = settings.fieldName;
         this.apiPath = settings.apiPath;
         this.noSave = settings.noSave;
+        this.limetadata = settings.limetadata;
         this.onMetadataEdited = settings.onMetadataEdited;
         this.onMetadataAdded = settings.onMetadataAdded;
     },
@@ -251,7 +271,8 @@ var MetadatumEditWidget = View.extend({
         event.stopImmediatePropagation();
         const target = $(event.currentTarget);
         var curRow = target.parent(),
-            tempKey = curRow.find('.g-widget-metadata-key-input').val().trim(),
+            tempKey = curRow.find('.g-widget-metadata-key-input').val().trim() || curRow.find('.g-widget-metadata-key-input').attr('key'),
+            keyMode = curRow.find('.g-widget-metadata-key-input').attr('key'),
             tempValue = (value !== undefined) ? value : curRow.find('.g-widget-metadata-value-input').val();
 
         if (this.newDatum && tempKey === '') {
@@ -261,6 +282,37 @@ var MetadatumEditWidget = View.extend({
             });
             return false;
         }
+        const lientry = keyMode ? liMetadataKeyEntry(this.limetadata, this.key) : undefined;
+        if (keyMode && lientry) {
+            tempValue = tempValue.trim();
+        }
+        if (lientry && lientry.regex && !(new RegExp(lientry.regex).exec(tempValue))) {
+            events.trigger('g:alert', {
+                text: 'The value does not match the required format.',
+                type: 'warning'
+            });
+            return false;
+        }
+        if (lientry && (lientry.type === 'number' || lientry.type === 'integer')) {
+            if (!Number.isFinite(parseFloat(tempValue)) || (lientry.type === 'integer' && !Number.isInteger(parseFloat(tempValue)))) {
+                events.trigger('g:alert', {
+                    text: `The value must be a ${lientry.type}.`,
+                    type: 'warning'
+                });
+                return false;
+            }
+            tempValue = parseFloat(tempValue);
+            if ((lientry.minimum !== undefined && tempValue < lientry.minimum) ||
+                (lientry.exclusiveMinimum !== undefined && tempValue <= lientry.exclusiveMinimum) ||
+                (lientry.maximum !== undefined && tempValue > lientry.maximum) ||
+                (lientry.exclusiveMaximum !== undefined && tempValue >= lientry.exclusiveMaximum)) {
+                events.trigger('g:alert', {
+                    text: 'The value is outside of the allowed range.',
+                    type: 'warning'
+                });
+                return false;
+            }
+        }
 
         var saveCallback = () => {
             this.key = tempKey;
@@ -269,7 +321,9 @@ var MetadatumEditWidget = View.extend({
             this.parentView.key = this.key;
             this.parentView.value = this.value;
 
-            if (this instanceof JsonMetadatumEditWidget) {
+            if (keyMode) {
+                this.parentView.mode = 'key';
+            } else if (this instanceof JsonMetadatumEditWidget) {
                 this.parentView.mode = 'json';
             } else {
                 this.parentView.mode = 'simple';
@@ -337,6 +391,7 @@ var MetadatumEditWidget = View.extend({
     render: function () {
         this.$el.html(this.editTemplate({
             item: this.item,
+            lientry: liMetadataKeyEntry(this.limetadata, this.key),
             key: this.key,
             value: this.value,
             accessLevel: this.accessLevel,
@@ -413,6 +468,23 @@ wrap(MetadataWidget, 'render', function (render) {
     var metaDict = this.item.get(this.fieldName) || {};
     var metaKeys = Object.keys(metaDict);
     metaKeys.sort(localeSort);
+    if (this._limetadata) {
+        const origOrder = metaKeys.slice();
+        metaKeys.sort((a, b) => {
+            const aentry = liMetadataKeyEntry(this._limetadata, a);
+            const bentry = liMetadataKeyEntry(this._limetadata, b);
+            if (aentry && !bentry) {
+                return -1;
+            }
+            if (bentry && !aentry) {
+                return 1;
+            }
+            if (aentry && bentry) {
+                return aentry.idx - bentry.idx;
+            }
+            return origOrder.indexOf(a) - origOrder.indexOf(b);
+        });
+    }
 
     // Metadata header
     this.$el.html((this.MetadataWidgetTemplate || MetadataWidgetTemplate)({
@@ -426,13 +498,14 @@ wrap(MetadataWidget, 'render', function (render) {
     // Append each metadatum
     _.each(metaKeys, function (metaKey) {
         this.$el.find('.g-widget-metadata-container').append(new MetadatumWidget({
-            mode: this.getModeFromValue(metaDict[metaKey]),
+            mode: this.getModeFromValue(metaDict[metaKey], metaKey),
             key: metaKey,
             value: metaDict[metaKey],
             accessLevel: this.accessLevel,
             parentView: this,
             fieldName: this.fieldName,
             apiPath: this.apiPath,
+            limetadata: this._limetadata,
             onMetadataEdited: this.onMetadataEdited,
             onMetadataAdded: this.onMetadataAdded
         }).render().$el);
@@ -457,20 +530,41 @@ MetadataWidget.prototype.modes.json.editor = (args) => {
     }
     return new JsonMetadatumEditWidget(args);
 };
+MetadataWidget.prototype.modes.key = {
+    editor: function (args) {
+        return new MetadatumEditWidget(args);
+    },
+    displayValue: function () {
+        return this.value;
+    },
+    template: MetadatumViewTemplate
+};
 
 MetadataWidget.prototype.events['click .li-add-metadata'] = function (evt) {
     this.addMetadataByKey(evt);
 };
 
+MetadataWidget.prototype.getModeFromValue = function (value, key) {
+    if (liMetadataKeyEntry(this._limetadata, key)) {
+        return 'key';
+    }
+    return _.isString(value) ? 'simple' : 'json';
+};
+
 MetadataWidget.prototype.addMetadataByKey = function (evt) {
     const key = $(evt.target).attr('metadata-key');
     // if this key already exists, just go to editing it
-    var EditWidget = this.modes.simple.editor;
-    var value = ''; // default from config?
+    if (this.$el.find(`.g-widget-metadata-row[g-key="${key}"]`).length) {
+        this.$el.find(`.g-widget-metadata-row[g-key="${key}"] button.g-widget-metadata-edit-button`).click();
+        return false;
+    }
+    var EditWidget = this.modes.key.editor;
+    var lientry = liMetadataKeyEntry(this._limetadata, key) || {};
+    var value = lientry.default ? lientry.default : '';
 
     var widget = new MetadatumWidget({
         className: 'g-widget-metadata-row editing',
-        mode: 'simple',
+        mode: 'key',
         key: key,
         value: value,
         item: this.item,
@@ -478,6 +572,7 @@ MetadataWidget.prototype.addMetadataByKey = function (evt) {
         apiPath: this.apiPath,
         accessLevel: this.accessLevel,
         parentView: this,
+        limetadata: this._limetadata,
         onMetadataEdited: this.onMetadataEdited,
         onMetadataAdded: this.onMetadataAdded
     });
@@ -492,6 +587,7 @@ MetadataWidget.prototype.addMetadataByKey = function (evt) {
         accessLevel: this.accessLevel,
         newDatum: true,
         parentView: widget,
+        limetadata: this._limetadata,
         onMetadataEdited: this.onMetadataEdited,
         onMetadataAdded: this.onMetadataAdded
     })
