@@ -25,6 +25,20 @@ import MetadataWidget from '@girder/core/views/widgets/MetadataWidget';
 import MetadataWidgetTemplate from '../templates/metadataWidget.pug';
 import largeImageConfig from './configView';
 
+function getMetadataRecord(item, fieldName) {
+    if (item[fieldName]) {
+        return item[fieldName];
+    }
+    let meta = item.attributes;
+    fieldName.split('.').forEach((part) => {
+        if (!meta[part]) {
+            meta[part] = {};
+        }
+        meta = meta[part];
+    });
+    return meta;
+}
+
 var MetadatumWidget = View.extend({
     className: 'g-widget-metadata-row',
 
@@ -44,6 +58,7 @@ var MetadatumWidget = View.extend({
         this.parentView = settings.parentView;
         this.fieldName = settings.fieldName;
         this.apiPath = settings.apiPath;
+        this.noSave = settings.noSave;
         this.onMetadataEdited = settings.onMetadataEdited;
         this.onMetadataAdded = settings.onMetadataAdded;
     },
@@ -91,6 +106,7 @@ var MetadatumWidget = View.extend({
             parentView: this,
             fieldName: this.fieldName,
             apiPath: this.apiPath,
+            noSave: this.noSave,
             onMetadataEdited: this.onMetadataEdited,
             onMetadataAdded: this.onMetadataAdded
         }, overrides || {});
@@ -111,6 +127,7 @@ var MetadatumWidget = View.extend({
             parentView: this,
             fieldName: this.fieldName,
             apiPath: this.apiPath,
+            noSave: this.noSave,
             onMetadataEdited: this.onMetadataEdited,
             onMetadataAdded: this.onMetadataAdded
         };
@@ -141,7 +158,7 @@ var MetadatumWidget = View.extend({
             key: this.key,
             value: _.bind(this.parentView.modes[this.mode].displayValue, this)(),
             accessLevel: this.accessLevel,
-            AccessType: AccessType
+            AccessType
         }));
 
         return this;
@@ -168,6 +185,7 @@ var MetadatumEditWidget = View.extend({
                 key: this.$el.find('.g-widget-metadata-key-input').val(),
                 value: this.getCurrentValue()
             });
+            return false;
         }
     },
 
@@ -180,6 +198,7 @@ var MetadatumEditWidget = View.extend({
         this.newDatum = settings.newDatum;
         this.fieldName = settings.fieldName;
         this.apiPath = settings.apiPath;
+        this.noSave = settings.noSave;
         this.onMetadataEdited = settings.onMetadataEdited;
         this.onMetadataAdded = settings.onMetadataAdded;
     },
@@ -194,6 +213,11 @@ var MetadatumEditWidget = View.extend({
         event.stopImmediatePropagation();
         const target = $(event.currentTarget);
         var metadataList = target.parent().parent();
+        if (this.noSave) {
+            delete getMetadataRecord(this.item, this.fieldName)[this.key];
+            metadataList.remove();
+            return;
+        }
         var params = {
             text: 'Are you sure you want to delete the metadatum <b>' +
                 _.escape(this.key) + '</b>?',
@@ -202,6 +226,7 @@ var MetadatumEditWidget = View.extend({
             confirmCallback: () => {
                 this.item.removeMetadata(this.key, function () {
                     metadataList.remove();
+                    // TODO: trigger an event?
                 }, null, {
                     field: this.fieldName,
                     path: this.apiPath
@@ -226,7 +251,7 @@ var MetadatumEditWidget = View.extend({
         event.stopImmediatePropagation();
         const target = $(event.currentTarget);
         var curRow = target.parent(),
-            tempKey = curRow.find('.g-widget-metadata-key-input').val(),
+            tempKey = curRow.find('.g-widget-metadata-key-input').val().trim(),
             tempValue = (value !== undefined) ? value : curRow.find('.g-widget-metadata-value-input').val();
 
         if (this.newDatum && tempKey === '') {
@@ -234,7 +259,7 @@ var MetadatumEditWidget = View.extend({
                 text: 'A key is required for all metadata.',
                 type: 'warning'
             });
-            return;
+            return false;
         }
 
         var saveCallback = () => {
@@ -249,7 +274,7 @@ var MetadatumEditWidget = View.extend({
             } else {
                 this.parentView.mode = 'simple';
             }
-
+            // TODO: trigger an event
             this.parentView.render();
 
             this.newDatum = false;
@@ -266,6 +291,18 @@ var MetadatumEditWidget = View.extend({
             if (this.onMetadataAdded) {
                 this.onMetadataAdded(tempKey, tempValue, saveCallback, errorCallback);
             } else {
+                if (this.noSave) {
+                    if (getMetadataRecord(this.item, this.fieldName)[tempKey] !== undefined) {
+                        events.trigger('g:alert', {
+                            text: tempKey + ' is already a metadata key',
+                            type: 'warning'
+                        });
+                        return false;
+                    }
+                    getMetadataRecord(this.item, this.fieldName)[tempKey] = tempValue;
+                    // TODO: this.parentView.parentView.render();
+                    return;
+                }
                 this.item.addMetadata(tempKey, tempValue, saveCallback, errorCallback, {
                     field: this.fieldName,
                     path: this.apiPath
@@ -275,6 +312,20 @@ var MetadatumEditWidget = View.extend({
             if (this.onMetadataEdited) {
                 this.onMetadataEdited(tempKey, this.key, tempValue, saveCallback, errorCallback);
             } else {
+                if (this.noSave) {
+                    tempKey = tempKey === '' ? this.key : tempKey;
+                    if (tempKey !== this.key && getMetadataRecord(this.item, this.fieldName)[tempKey] !== undefined) {
+                        events.trigger('g:alert', {
+                            text: tempKey + ' is already a metadata key',
+                            type: 'warning'
+                        });
+                        return false;
+                    }
+                    delete getMetadataRecord(this.item, this.fieldName)[this.key];
+                    getMetadataRecord(this.item, this.fieldName)[tempKey] = tempValue;
+                    // TODO: this.parentView.parentView.render();
+                    return;
+                }
                 this.item.editMetadata(tempKey, this.key, tempValue, saveCallback, errorCallback, {
                     field: this.fieldName,
                     path: this.apiPath
@@ -290,7 +341,7 @@ var MetadatumEditWidget = View.extend({
             value: this.value,
             accessLevel: this.accessLevel,
             newDatum: this.newDatum,
-            AccessType: AccessType
+            AccessType
         }));
         this.$el.find('.g-widget-metadata-key-input').trigger('focus');
 
@@ -314,6 +365,7 @@ var JsonMetadatumEditWidget = MetadatumEditWidget.extend({
                 text: 'The field contains invalid JSON and can not be saved.',
                 type: 'warning'
             });
+            return false;
         }
     },
 
@@ -343,6 +395,7 @@ var JsonMetadatumEditWidget = MetadatumEditWidget.extend({
 
 wrap(MetadataWidget, 'initialize', function (initialize, settings) {
     const result = initialize.call(this, settings);
+    this.noSave = settings.noSave;
     if (this.item.get('_modelType') === 'item') {
         largeImageConfig.getConfigFile(this.item.get('folderId')).done((val) => {
             this._limetadata = (val || {}).itemMetadata;
@@ -385,6 +438,15 @@ wrap(MetadataWidget, 'render', function (render) {
         }).render().$el);
     }, this);
 
+    return this;
+});
+
+wrap(MetadataWidget, 'setItem', function (setItem, item) {
+    setItem.call(this, item);
+    this.item.on('g:changed', function () {
+        this.render();
+    }, this);
+    this.render();
     return this;
 });
 
