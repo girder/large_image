@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.22.4
+
+### Bug Fixes
+- Fix a scope issue when deleting metadata ([#1203](../../pull/1203))
+
 ## 1.22.3
 
 ### Improvements
