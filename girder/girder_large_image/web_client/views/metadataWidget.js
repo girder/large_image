@@ -244,7 +244,7 @@ var MetadatumEditWidget = View.extend({
             escapedHtml: true,
             yesText: 'Delete',
             confirmCallback: () => {
-                this.item.removeMetadata(this.key, function () {
+                this.item.removeMetadata(this.key, () => {
                     metadataList.remove();
                     this.parentView.parentView.trigger('li-metadata-widget-update', {});
                 }, null, {
