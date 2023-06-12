@@ -45,6 +45,9 @@ The yaml file has the following structure:
 .large_image_config.yaml
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
+Items Lists
+...........
+
 This is used to specify how items appear in item lists.  There are two settings, one for folders in the main Girder UI and one for folders in dialogs (such as when browsing in the file dialog).
 
 ::
@@ -127,6 +130,46 @@ This is used to specify how items appear in item lists.  There are two settings,
           value: size
 
 If there are no large images in a folder, none of the image columns will appear.
+
+Item Metadata
+.............
+
+By default, item metadata can contain any keys and values.  These can be given better titles and restricted in their data types.
+
+::
+
+    ---
+    # If present, offer to add these specific keys and restrict their datatypes
+    itemMetadata:
+      -
+        # value is the key name within the metadata
+        value: stain
+        # title is the displayed titles
+        title: Stain
+        # description is used as both a tooltip and as placeholder text
+        description: Staining method
+        # if required is true, the delete button does not appear
+        required: true
+        # If a regex is specified, the value must match
+        # regex: '^(Eosin|H&E|Other)$'
+        # If an enum is specified, the value is set via a dropdown select box
+        enum:
+          - Eosin
+          - H&E
+          - Other
+        # If a default is specified, when the value is created, it will show
+        # this value in the control
+        default: H&E
+      -
+        value: rating
+        # type can be "number", "integer", or "text" (default)
+        type: number
+        # minimum and maximum are inclusive
+        minimum: 0
+        maximum: 10
+        # Exclusive values can be specified instead
+        # exclusiveMinimum: 0
+        # exclusiveMaximum: 10
 
 Editing Configuration Files
 ---------------------------

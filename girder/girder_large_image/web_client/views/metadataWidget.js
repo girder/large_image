@@ -84,8 +84,8 @@ var MetadatumWidget = View.extend({
         var newMode = this.parentView.modes[to];
 
         if (_.has(newMode, 'validation') &&
-            _.has(newMode.validation, 'from') &&
-            _.has(newMode.validation.from, from)) {
+                _.has(newMode.validation, 'from') &&
+                _.has(newMode.validation.from, from)) {
             var validate = newMode.validation.from[from][0];
             var msg = newMode.validation.from[from][1];
 
@@ -106,7 +106,7 @@ var MetadatumWidget = View.extend({
         var fromEditorMode = (existingEditor instanceof JsonMetadatumEditWidget) ? 'json' : 'simple';
         var newValue = (overrides || {}).value || existingEditor.$el.attr('g-value');
         if (!this._validate(fromEditorMode, newEditorMode, newValue)) {
-            return;
+            return false;
         }
 
         var row = existingEditor.$el;
@@ -246,7 +246,7 @@ var MetadatumEditWidget = View.extend({
             confirmCallback: () => {
                 this.item.removeMetadata(this.key, function () {
                     metadataList.remove();
-                    // TODO: trigger an event?
+                    this.parentView.parentView.trigger('li-metadata-widget-update', {});
                 }, null, {
                     field: this.fieldName,
                     path: this.apiPath
@@ -328,7 +328,8 @@ var MetadatumEditWidget = View.extend({
             } else {
                 this.parentView.mode = 'simple';
             }
-            // TODO: trigger an event
+            // event to re-render metadata panel header when metadata is edited
+            this.parentView.parentView.trigger('li-metadata-widget-update', {});
             this.parentView.render();
 
             this.newDatum = false;
@@ -354,8 +355,7 @@ var MetadatumEditWidget = View.extend({
                         return false;
                     }
                     getMetadataRecord(this.item, this.fieldName)[tempKey] = tempValue;
-                    // TODO: this.parentView.parentView.render();
-                    return;
+                    this.parentView.parentView.render();
                 }
                 this.item.addMetadata(tempKey, tempValue, saveCallback, errorCallback, {
                     field: this.fieldName,
@@ -377,7 +377,7 @@ var MetadatumEditWidget = View.extend({
                     }
                     delete getMetadataRecord(this.item, this.fieldName)[this.key];
                     getMetadataRecord(this.item, this.fieldName)[tempKey] = tempValue;
-                    // TODO: this.parentView.parentView.render();
+                    this.parentView.parentView.render();
                     return;
                 }
                 this.item.editMetadata(tempKey, this.key, tempValue, saveCallback, errorCallback, {
@@ -413,7 +413,7 @@ var JsonMetadatumEditWidget = MetadatumEditWidget.extend({
 
     save: function (event) {
         try {
-            MetadatumEditWidget.prototype.save.call(
+            return MetadatumEditWidget.prototype.save.call(
                 this, event, this.editor.get());
         } catch (err) {
             events.trigger('g:alert', {
@@ -449,9 +449,12 @@ var JsonMetadatumEditWidget = MetadatumEditWidget.extend({
 });
 
 wrap(MetadataWidget, 'initialize', function (initialize, settings) {
-    const result = initialize.call(this, settings);
+    try {
+        initialize.call(this, settings);
+    } catch (err) {
+    }
     this.noSave = settings.noSave;
-    if (this.item.get('_modelType') === 'item') {
+    if (this.item && this.item.get('_modelType') === 'item') {
         largeImageConfig.getConfigFile(this.item.get('folderId')).done((val) => {
             this._limetadata = (val || {}).itemMetadata;
             if (this._limetadata) {
@@ -461,11 +464,21 @@ wrap(MetadataWidget, 'initialize', function (initialize, settings) {
     } else {
         this._limetadata = null;
     }
-    return result;
 });
 
 wrap(MetadataWidget, 'render', function (render) {
-    var metaDict = this.item.get(this.fieldName) || {};
+    let metaDict;
+    if (this.item.get(this.fieldName)) {
+        metaDict = this.item.get(this.fieldName) || {};
+    } else if (this.item[this.fieldName]) {
+        metaDict = this.item[this.fieldName] || {};
+    } else {
+        const fieldParts = this.fieldName.split('.');
+        metaDict = this.item.get(fieldParts[0]) || {};
+        fieldParts.slice(1).forEach((part) => {
+            metaDict = metaDict[part] || {};
+        });
+    }
     var metaKeys = Object.keys(metaDict);
     metaKeys.sort(localeSort);
     if (this._limetadata) {
@@ -485,15 +498,16 @@ wrap(MetadataWidget, 'render', function (render) {
             return origOrder.indexOf(a) - origOrder.indexOf(b);
         });
     }
-
-    // Metadata header
-    this.$el.html((this.MetadataWidgetTemplate || MetadataWidgetTemplate)({
+    this._sortedMetaKeys = metaKeys;
+    this._renderedMetaDict = metaDict;
+    const contents = (this.MetadataWidgetTemplate || MetadataWidgetTemplate)({
         item: this.item,
         title: this.title,
         accessLevel: this.accessLevel,
         AccessType: AccessType,
         limetadata: this._limetadata
-    }));
+    });
+    this._renderHeader(contents);
 
     // Append each metadatum
     _.each(metaKeys, function (metaKey) {
@@ -506,6 +520,7 @@ wrap(MetadataWidget, 'render', function (render) {
             fieldName: this.fieldName,
             apiPath: this.apiPath,
             limetadata: this._limetadata,
+            noSave: this.noSave,
             onMetadataEdited: this.onMetadataEdited,
             onMetadataAdded: this.onMetadataAdded
         }).render().$el);
@@ -515,6 +530,17 @@ wrap(MetadataWidget, 'render', function (render) {
 });
 
 wrap(MetadataWidget, 'setItem', function (setItem, item) {
+    if (item !== this.item) {
+        this._limetadata = null;
+        if (item && item.get('_modelType') === 'item') {
+            largeImageConfig.getConfigFile(item.get('folderId')).done((val) => {
+                this._limetadata = (val || {}).itemMetadata;
+                if (this._limetadata) {
+                    this.render();
+                }
+            });
+        }
+    }
     setItem.call(this, item);
     this.item.on('g:changed', function () {
         this.render();
@@ -549,6 +575,43 @@ MetadataWidget.prototype.getModeFromValue = function (value, key) {
         return 'key';
     }
     return _.isString(value) ? 'simple' : 'json';
+};
+
+MetadataWidget.prototype.addMetadata = function (evt, mode) {
+    var EditWidget = this.modes[mode].editor;
+    var value = (mode === 'json') ? '{}' : '';
+
+    var widget = new MetadatumWidget({
+        className: 'g-widget-metadata-row editing',
+        mode: mode,
+        key: '',
+        value: value,
+        item: this.item,
+        fieldName: this.fieldName,
+        noSave: this.noSave,
+        apiPath: this.apiPath,
+        accessLevel: this.accessLevel,
+        parentView: this,
+        onMetadataEdited: this.onMetadataEdited,
+        onMetadataAdded: this.onMetadataAdded
+    });
+    widget.$el.appendTo(this.$('.g-widget-metadata-container'));
+
+    new EditWidget({
+        item: this.item,
+        key: '',
+        value: value,
+        fieldName: this.fieldName,
+        noSave: this.noSave,
+        apiPath: this.apiPath,
+        accessLevel: this.accessLevel,
+        newDatum: true,
+        parentView: widget,
+        onMetadataEdited: this.onMetadataEdited,
+        onMetadataAdded: this.onMetadataAdded
+    })
+        .render()
+        .$el.appendTo(widget.$el);
 };
 
 MetadataWidget.prototype.addMetadataByKey = function (evt) {
@@ -586,6 +649,7 @@ MetadataWidget.prototype.addMetadataByKey = function (evt) {
         apiPath: this.apiPath,
         accessLevel: this.accessLevel,
         newDatum: true,
+        noSave: this.noSave,
         parentView: widget,
         limetadata: this._limetadata,
         onMetadataEdited: this.onMetadataEdited,
@@ -595,9 +659,14 @@ MetadataWidget.prototype.addMetadataByKey = function (evt) {
         .$el.appendTo(widget.$el);
 };
 
-export default {
+MetadataWidget.prototype._renderHeader = function (contents) {
+    this.$el.html(contents);
+};
+
+export {
     MetadataWidget,
     MetadatumWidget,
     MetadatumEditWidget,
-    JsonMetadatumEditWidget
+    JsonMetadatumEditWidget,
+    liMetadataKeyEntry
 };
