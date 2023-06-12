@@ -1,0 +1,22 @@
+if (accessLevel >= AccessType.WRITE)
+  .btn-group.pull-right
+    button.g-widget-metadata-add-button.btn.btn-sm.btn-primary.btn-default.dropdown-toggle(data-toggle="dropdown", title="Add Metadata")
+      i.icon-plus
+    ul.dropdown-menu.pull-right(role="menu")
+      if limetadata
+        for entry in limetadata
+          if entry && entry.value
+            li.li-metadata-menuitem(role="presentation")
+              a.li-add-metadata(metadata-key=entry.value)
+                = entry.title || entry.value
+      li(role="presentation")
+        a.g-add-simple-metadata(role="menuitem")
+          | Simple
+      li(role="presentation")
+        a.g-add-json-metadata
+          | JSON
+
+.g-widget-metadata-header
+  i.icon-tags
+  |  #{title}
+.g-widget-metadata-container
