@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.22.5
+
+### Improvements
+- Harden the nd2 source to allow it to read more files ([#1207](../../pull/1207))
+
 ## 1.22.4
 
 ### Bug Fixes
