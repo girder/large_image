@@ -68,7 +68,7 @@ class JSONDict(dict):
     """Wrapper class to improve Jupyter repr of JSON-able dicts."""
 
     def __init__(self, *args, **kwargs):
-        super(JSONDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # TODO: validate JSON serializable?
 
     def _repr_json_(self):
@@ -226,7 +226,10 @@ def _imageToNumpy(image):
         if image.mode not in ('L', 'LA', 'RGB', 'RGBA'):
             image = image.convert('RGBA')
         mode = image.mode
-        image = numpy.asarray(image)
+        if not image.width or not image.height:
+            image = numpy.zeros((image.height, image.width, len(mode)))
+        else:
+            image = numpy.asarray(image)
     else:
         if len(image.shape) == 3:
             mode = ['L', 'LA', 'RGB', 'RGBA'][(image.shape[2] - 1) if image.shape[2] <= 4 else 3]
@@ -305,6 +308,46 @@ def _vipsCast(image, mustBe8Bit=False, originalScale=None):
     return image
 
 
+def _rasterioParameters(defaultCompression=None, eightbit=None, **kwargs):
+    """
+    Return a dictionary of creation option for the rasterio driver
+
+    :param defaultCompression: if not specified, use this value.
+    :param eightbit: True or False to indicate that the bit depth per sample
+        s known.  None for unknown.
+
+    Optional parameters that can be specified in kwargs:
+
+    :param tileSize: the horizontal and vertical tile size.
+    :param compression: one of 'jpeg', 'deflate' (zip), 'lzw', 'packbits',
+        zstd', or 'none'.
+    :param quality: a jpeg quality passed to gdal.  0 is small, 100 is high
+        uality.  90 or above is recommended.
+    :param level: compression level for zstd, 1-22 (default is 10).
+    :param predictor: one of 'none', 'horizontal', or 'float' used for lzw and deflate.
+
+    :returns: a dictionary of parameters.
+    """
+    # some default option and parameters
+    options = {'blocksize': 256, 'compress': 'lzw', 'quality': 90}
+
+    # the name of the predictor need to be strings so we convert here from set values to actual
+    # required values (https://rasterio.readthedocs.io/en/latest/topics/image_options.html)
+    predictor = {'none': 'NO', 'horizontal': 'STANDARD', 'float': 'FLOATING_POINT', 'yes': 'YES'}
+
+    if eightbit is not None:
+        options['predictor'] = 'yes' if eightbit else 'none'
+
+    # add the values from kwargs to the options. Remove anything that isnot set.
+    options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
+
+    # add the remaining options
+    options.update(tiled=True, bigtiff='IF_SAFER')
+    'predictor' not in options or options.update(predictor=predictor[options['predictor']])
+
+    return options
+
+
 def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
     """
     Return an array of gdal translation parameters.
@@ -325,26 +368,19 @@ def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
         deflate.
     :returns: a dictionary of parameters.
     """
-    options = {
-        'tileSize': 256,
-        'compression': 'lzw',
-        'quality': 90,
-    }
-    if eightbit is not None:
-        options['predictor'] = 'yes' if eightbit else 'none'
-    predictor = {
-        'none': 'NO',
-        'horizontal': 'STANDARD',
-        'float': 'FLOATING_POINT',
-        'yes': 'YES',
-    }
-    options.update({k: v for k, v in kwargs.items() if v not in (None, '')})
-    cmdopt = ['-of', 'COG', '-co', 'BIGTIFF=IF_SAFER']
+    options = _rasterioParameters(
+        defaultCompression=defaultCompression,
+        eightbit=eightbit,
+        **kwargs)
+    # Remap for different names bewtwee rasterio/gdal
+    options['tileSize'] = options.pop('blocksize')
+    options['compression'] = options.pop('compress')
+    cmdopt = ['-of', 'COG', '-co', 'BIGTIFF=%s' % options['bigtiff']]
     cmdopt += ['-co', 'BLOCKSIZE=%d' % options['tileSize']]
     cmdopt += ['-co', 'COMPRESS=%s' % options['compression'].upper()]
     cmdopt += ['-co', 'QUALITY=%s' % options['quality']]
     if 'predictor' in options:
-        cmdopt += ['-co', 'PREDICTOR=%s' % predictor[options['predictor']]]
+        cmdopt += ['-co', 'PREDICTOR=%s' % options['predictor']]
     if 'level' in options:
         cmdopt += ['-co', 'LEVEL=%s' % options['level']]
     return cmdopt

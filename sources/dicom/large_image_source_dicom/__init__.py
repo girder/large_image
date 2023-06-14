@@ -92,6 +92,9 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.FALLBACK,
         'application/dicom': SourcePriority.PREFERRED,
     }
+    nameMatches = {
+        r'DCM_\d+$': SourcePriority.MEDIUM,
+    }
 
     _minTileSize = 64
     _maxTileSize = 4096
@@ -135,6 +138,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.tileHeight = min(max(self.tileHeight, self._minTileSize), self._maxTileSize)
         self.levels = int(max(1, math.ceil(math.log(
             max(self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+        self._populatedLevels = len(self._dicom.levels)
 
     def __del__(self):
         if getattr(self, '_dicom', None) is not None:
@@ -155,6 +159,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if os.path.splitext(path)[-1][1:] in self.extensions:
             return True
         if re.match(r'^([1-9][0-9]*|0)(\.([1-9][0-9]*|0))+$', path) and len(path) <= 64:
+            return True
+        if re.match(r'^DCM_\d+$', path):
             return True
         return False
 

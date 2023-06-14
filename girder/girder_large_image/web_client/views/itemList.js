@@ -3,7 +3,7 @@ import _ from 'underscore';
 import Backbone from 'backbone';
 
 import {wrap} from '@girder/core/utilities/PluginUtils';
-import {getApiRoot, restRequest} from '@girder/core/rest';
+import {getApiRoot} from '@girder/core/rest';
 import {getCurrentUser} from '@girder/core/auth';
 import {AccessType} from '@girder/core/constants';
 import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
@@ -49,13 +49,10 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     const result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
 
-    if (!settings.folderId) {
-        this._liconfig = {};
-    }
-    restRequest({
-        url: `folder/${settings.folderId}/yaml_config/.large_image_config.yaml`
-    }).done((val) => {
-        val = val || {};
+    largeImageConfig.getConfigFile(settings.folderId, true, (val) => {
+        if (!settings.folderId) {
+            this._liconfig = val;
+        }
         if (_.isEqual(val, this._liconfig) && !this._recurse) {
             return;
         }
@@ -87,6 +84,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         this.render();
     });
     this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
+    this.events['click .li-item-list-cell-filter'] = (evt) => itemListCellFilter.call(this, evt);
     this.delegateEvents();
     this.setFlatten = (flatten) => {
         if (!!flatten !== !!this._recurse) {
@@ -219,6 +217,12 @@ wrap(ItemListWidget, 'render', function (render) {
         addToRoute({filter: this._generalFilter});
     };
 
+    this._clearFilter = (evt) => {
+        this._generalFilter = '';
+        this._setFilter();
+        addToRoute({filter: this._generalFilter});
+    };
+
     this._unescapePhrase = (val) => {
         if (val !== undefined) {
             val = val.replace('\\\'', '\'').replace('\\"', '"').replace('\\\\', '\\');
@@ -292,6 +296,9 @@ wrap(ItemListWidget, 'render', function (render) {
                         }
                         if (key && exact) {
                             clause.push({[key]: {$regex: '^' + phrase + '$', $options: 'i'}});
+                            if (!_.isNaN(numval)) {
+                                clause.push({[key]: {$eq: numval}});
+                            }
                         } else if (key) {
                             clause.push({[key]: {$regex: phrase, $options: 'i'}});
                             if (!_.isNaN(numval)) {
@@ -352,12 +359,18 @@ wrap(ItemListWidget, 'render', function (render) {
                     'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' +
                     'If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.  ' +
                     'Non-exact matches without a column specifier will also match columns that start with the specified value.  ' +
-                    '"></input></span>');
+                    '"></input>' +
+                    '<span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>' +
+                    '</span>');
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(this._generalFilter);
                 }
                 this.parentView.events['change .li-item-list-filter-input'] = this._updateFilter;
                 this.parentView.events['input .li-item-list-filter-input'] = this._updateFilter;
+                this.parentView.events['click .li-item-list-filter-clear'] = (evt) => {
+                    this.parentView.$el.find('.li-item-list-filter-input').val('');
+                    this._clearFilter();
+                };
                 this.parentView.delegateEvents();
             }
         }
@@ -479,6 +492,26 @@ function sortColumn(evt) {
     if (!_.isEqual(this._lastSort, oldSort)) {
         addToRoute({sort: this._lastSort.map((e) => `${e.type}:${e.value}:${e.dir}`).join(',')});
     }
+}
+
+function itemListCellFilter(evt) {
+    evt.preventDefault();
+    const cell = $(evt.target).closest('.li-item-list-cell-filter');
+    let filter = this._generalFilter || '';
+    let val = cell.attr('filter-value');
+    let col = cell.attr('column-value');
+    if (/[ '\\]/.exec(col)) {
+        col = "'" + col.replace('\\', '\\\\').replace("'", "\\'") + "'";
+    }
+    val = val.replace('\\', '\\\\').replace('"', '\\"');
+    filter += ` ${col}:"${val}"`;
+    filter = filter.trim();
+    this.$el.closest('.g-hierarchy-widget').find('.li-item-list-filter-input').val(filter);
+    this._generalFilter = filter;
+    this._setFilter();
+    addToRoute({filter: this._generalFilter});
+    this._setSort();
+    return false;
 }
 
 export default ItemListWidget;

@@ -1,12 +1,59 @@
 # Change Log
 
-## 1.21.1
+## 1.22.4
+
+### Bug Fixes
+- Fix a scope issue when deleting metadata ([#1203](../../pull/1203))
+
+## 1.22.3
+
+### Improvements
+- Better DICOM multi-level detection ([#1196](../../pull/1196))
+- Added an internal field to report populated tile levels in some sources ([#1197](../../pull/1197), [#1199](../../pull/1199))
+- Allow specifying an empty style dict ([#1200](../../pull/1200))
+- Allow rounding histogram bin edges and reducing bin counts ([#1201](../../pull/1201))
+- Allow configuring which metadata can be added to items ([#1202](../../pull/1202))
+
+### Changes
+- Change how extensions and fallback priorities interact ([#1192](../../pull/1192))
+- Refactor reading the .large_image_config.yaml file on the girder client ([#1193](../../pull/1193))
+- Refactor of the which-folders-have-annotations pipeline ([#1194](../../pull/1194))
+
+### Bug Fixes
+- Fix an issue converting multiframe files that vips reads as single frame ([#1195](../../pull/1195))
+
+## 1.22.2
+
+### Changes
+- Alter jpeg priority with the PIL source ([#1191](../../pull/1191))
+
+### Bug Fixes
+- Fix NeededInitPrefix namespace errors ([#1190](../../pull/1190))
+
+## 1.22.1
+
+### Improvements
+- Reduce memory use in a mongo aggregation pipeline ([#1183](../../pull/1183))
+- Remove rasterio dep on pyproj ([#1182](../../pull/1182))
+- Filter on specific metadata from item lists ([#1184](../../pull/1184))
+- Add a button to clear the filter on item lists ([#1185](../../pull/1185))
+- Improve JSONDict usage ([#1189](../../pull/1189))
+
+### Changes
+- Log more often when importing files or making large images ([#1187](../../pull/1187))
+
+## 1.22.0
+
+### Features
+- Add tile source dtype attribute ([#1144](../../pull/1144))
+- Added rasterio tile source ([#1115](../../pull/1115))
 
 ### Improvements
 - Parse qptiff and imagej vendor information ([#1168](../../pull/1168))
 
 ### Changes
 - Remove an unneeded warnings filter ([#1172](../../pull/1172))
+- Fix gdal warning suppression ([#1176](../../pull/1176))
 
 ## 1.21.0
 

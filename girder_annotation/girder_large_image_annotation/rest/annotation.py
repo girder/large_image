@@ -601,25 +601,24 @@ class AnnotationResource(Resource):
         ] if not user['admin'] else []
         recursivePipeline = [
             {'$match': {'_id': ObjectId(id)}},
-            {'$facet': {
-                'documents1': [{'$match': {'_id': ObjectId(id)}}],
-                'documents2': [
-                    {'$graphLookup': {
-                        'from': 'folder',
-                        'startWith': '$_id',
-                        'connectFromField': '_id',
-                        'connectToField': 'parentId',
-                        'as': '__children'
-                    }},
-                    {'$unwind': {'path': '$__children'}},
-                    {'$replaceRoot': {'newRoot': '$__children'}}
-                ]
+            {'$graphLookup': {
+                'from': 'folder',
+                'startWith': ObjectId(id),
+                'connectFromField': '_id',
+                'connectToField': 'parentId',
+                'as': '__children',
+            }},
+            {'$lookup': {
+                'from': 'folder',
+                'localField': '_id',
+                'foreignField': '_id',
+                'as': '__self',
             }},
             {'$project': {'__children': {'$concatArrays': [
-                '$documents1', '$documents2'
+                '$__self', '$__children'
             ]}}},
             {'$unwind': {'path': '$__children'}},
-            {'$replaceRoot': {'newRoot': '$__children'}}
+            {'$replaceRoot': {'newRoot': '$__children'}},
         ] if recurse else [{'$match': {'_id': ObjectId(id)}}]
 
         # We are only finding anntoations that we can change the permissions
@@ -630,8 +629,17 @@ class AnnotationResource(Resource):
         pipeline = recursivePipeline + [
             {'$lookup': {
                 'from': 'item',
-                'localField': '_id',
-                'foreignField': 'folderId',
+                # We have to use a pipeline to use a projection to reduce the
+                # data volume, so instead of specifying localField and
+                # foreignField, we set the localField to a variable, then match
+                # it in a pipeline and project to exclude everything but id.
+                # 'localField': '_id',
+                # 'foreignField': 'folderId',
+                'let': {'fid': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$eq': ['$$fid', '$folderId']}}},
+                    {'$project': {'_id': 1}}
+                ],
                 'as': '__items'
             }},
             {'$lookup': {

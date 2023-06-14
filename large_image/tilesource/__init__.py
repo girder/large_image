@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 
 try:
@@ -26,24 +27,17 @@ def isGeospatial(path):
     :param path: The path to the file
     :returns: True if geospatial.
     """
-    try:
-        from osgeo import gdal, gdalconst
-    except ImportError:
-        # TODO: log a warning
-        return False
-    try:
-        ds = gdal.Open(str(path), gdalconst.GA_ReadOnly)
-    except Exception:
-        return False
-    if ds:
-        if ds.GetGCPs() and ds.GetGCPProjection():
-            return True
-        if ds.GetProjection():
-            return True
-        if ds.GetGeoTransform(can_return_null=True):
-            return True
-        if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
-            return True
+    if not len(AvailableTileSources):
+        loadTileSources()
+    for source in AvailableTileSources.values():
+        if hasattr(source, 'isGeospatial'):
+            result = None
+            try:
+                result = source.isGeospatial(path)
+            except Exception:
+                pass
+            if result in (True, False):
+                return result
     return False
 
 
@@ -70,7 +64,7 @@ def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTil
                 'Failed to loaded tile source %s' % entryPoint.name)
 
 
-def getSortedSourceList(availableSources, pathOrUri, *args, **kwargs):
+def getSortedSourceList(availableSources, pathOrUri, mimeType=None, *args, **kwargs):
     """
     Get an ordered list of sources where earlier sources are more likely to
     work for a specified path or uri.
@@ -78,12 +72,14 @@ def getSortedSourceList(availableSources, pathOrUri, *args, **kwargs):
     :param availableSources: an ordered dictionary of sources to try.
     :param pathOrUri: either a file path or a fixed source via
         large_image://<source>.
-    :returns: a list of (clash, priority, sourcename) for sources where
-        sourcename is a key in availableSources.
+    :param mimeType: the mimetype of the file, if known.
+    :returns: a list of (clash, fallback, priority, sourcename) for sources
+        where sourcename is a key in availableSources.
     """
     uriWithoutProtocol = str(pathOrUri).split('://', 1)[-1]
     isLargeImageUri = str(pathOrUri).startswith('large_image://')
-    extensions = [ext.lower() for ext in os.path.basename(uriWithoutProtocol).split('.')[1:]]
+    baseName = os.path.basename(uriWithoutProtocol)
+    extensions = [ext.lower() for ext in baseName.split('.')[1:]]
     properties = {
         '_geospatial_source': isGeospatial(pathOrUri),
     }
@@ -91,8 +87,18 @@ def getSortedSourceList(availableSources, pathOrUri, *args, **kwargs):
     for sourceName in availableSources:
         sourceExtensions = availableSources[sourceName].extensions
         priority = sourceExtensions.get(None, SourcePriority.MANUAL)
+        fallback = True
+        if (mimeType and getattr(availableSources[sourceName], 'mimeTypes', None) and
+                mimeType in availableSources[sourceName].mimeTypes):
+            fallback = False
+            priority = min(priority, availableSources[sourceName].mimeTypes[mimeType])
+        for regex in getattr(availableSources[sourceName], 'nameMatches', {}):
+            if re.match(regex, baseName):
+                fallback = False
+                priority = min(priority, availableSources[sourceName].nameMatches[regex])
         for ext in extensions:
             if ext in sourceExtensions:
+                fallback = False
                 priority = min(priority, sourceExtensions[ext])
         if isLargeImageUri and sourceName == uriWithoutProtocol:
             priority = SourcePriority.NAMED
@@ -101,11 +107,11 @@ def getSortedSourceList(availableSources, pathOrUri, *args, **kwargs):
         propertiesClash = any(
             getattr(availableSources[sourceName], k, False) != v
             for k, v in properties.items())
-        sourceList.append((propertiesClash, priority, sourceName))
+        sourceList.append((propertiesClash, fallback, priority, sourceName))
     return sourceList
 
 
-def getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs):
+def getSourceNameFromDict(availableSources, pathOrUri, mimeType=None, *args, **kwargs):
     """
     Get a tile source based on a ordered dictionary of known sources and a path
     name or URI.  Additional parameters are passed to the tile source and can
@@ -114,11 +120,12 @@ def getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs):
     :param availableSources: an ordered dictionary of sources to try.
     :param pathOrUri: either a file path or a fixed source via
         large_image://<source>.
+    :param mimeType: the mimetype of the file, if known.
     :returns: the name of a tile source that can read the input, or None if
         there is no such source.
     """
-    sourceList = getSortedSourceList(availableSources, pathOrUri, *args, **kwargs)
-    for _clash, _priority, sourceName in sorted(sourceList):
+    sourceList = getSortedSourceList(availableSources, pathOrUri, mimeType, *args, **kwargs)
+    for _clash, _fallback, _priority, sourceName in sorted(sourceList):
         if availableSources[sourceName].canRead(pathOrUri, *args, **kwargs):
             return sourceName
 
@@ -180,18 +187,23 @@ def canRead(*args, **kwargs):
     return False
 
 
-def canReadList(*args, **kwargs):
+def canReadList(pathOrUri, mimeType=None, *args, **kwargs):
     """
     Check if large_image can read a path or uri via each source.
 
+    :param pathOrUri: either a file path or a fixed source via
+        large_image://<source>.
+    :param mimeType: the mimetype of the file, if known.
     :returns: A list of tuples of (source name, canRead).
     """
     if not len(AvailableTileSources):
         loadTileSources()
-    sourceList = getSortedSourceList(AvailableTileSources, *args, **kwargs)
+    sourceList = getSortedSourceList(
+        AvailableTileSources, pathOrUri, mimeType, *args, **kwargs)
     result = []
-    for _clash, _priority, sourceName in sorted(sourceList):
-        result.append((sourceName, AvailableTileSources[sourceName].canRead(*args, **kwargs)))
+    for _clash, _fallback, _priority, sourceName in sorted(sourceList):
+        result.append((sourceName, AvailableTileSources[sourceName].canRead(
+            pathOrUri, *args, **kwargs)))
     return result
 
 

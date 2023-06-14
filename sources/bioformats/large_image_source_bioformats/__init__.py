@@ -266,6 +266,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self.getTile(0, 0, self.levels - 1)
         except Exception as exc:
             raise TileSourceError('Bioformats cannot read a tile: %r' % exc)
+        self._populatedLevels = len([
+            v for v in self._metadata['frameSeries'][0]['series'] if v is not None])
 
     def __del__(self):
         if getattr(self, '_bioimage', None) is not None:

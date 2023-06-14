@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from girder_large_image.girder_tilesource import GirderTileSource
 
 from . import DeepzoomFileTileSource

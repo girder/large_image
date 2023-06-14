@@ -159,6 +159,12 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(
                 'Tiff image must have at least two levels.')
 
+        sampleformat = highest._tiffInfo.get('sampleformat')
+        bitspersample = highest._tiffInfo.get('bitspersample')
+        self._dtype = numpy.dtype('%s%d' % (
+            tifftools.constants.SampleFormat[sampleformat or 1].name,
+            bitspersample
+        ))
         # Sort the directories so that the highest resolution is the last one;
         # if a level is missing, put a None value in its place.
         self._tiffDirectories = [directories.get(key) for key in
@@ -286,6 +292,12 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = max(1, int(math.ceil(math.log(max(
             dir0.imageWidth / dir0.tileWidth,
             dir0.imageHeight / dir0.tileHeight)) / math.log(2))) + 1)
+        sampleformat = dir0._tiffInfo.get('sampleformat')
+        bitspersample = dir0._tiffInfo.get('bitspersample')
+        self._dtype = numpy.dtype('%s%d' % (
+            tifftools.constants.SampleFormat[sampleformat or 1].name,
+            bitspersample
+        ))
         info = _cached_read_tiff(self._largeImagePath)
         frames = []
         associated = []  # for now, a list of directories
@@ -357,6 +369,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :param warn: if True and inefficient, emit a warning.
         """
+        self._populatedLevels = len([v for v in self._tiffDirectories if v is not None])
         missing = [v is None for v in self._tiffDirectories]
         maxMissing = max(0 if not v else missing.index(False, idx) - idx
                          for idx, v in enumerate(missing))

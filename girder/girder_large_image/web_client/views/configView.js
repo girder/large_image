@@ -226,6 +226,59 @@ var ConfigView = View.extend({
     },
 
     /**
+     * Get the folder config file for the current user.
+     *
+     * @param {string} folderId the folder to get the config for.
+     * @param {boolean} reload if true, refetch the config file even if it was
+     *      the last one fetched.  Since config files can be changed by the
+     *      user, this should be done based on the UI behavior.
+     * @param {function} callback a function to call after the config file is
+     *      fetched.  If the file is already fetched, this is called without
+     *      any delay.
+     * @returns a promise that resolves to the config file values.
+     */
+    getConfigFile: function (folderId, reload, callback) {
+        if (!folderId) {
+            const result = {};
+            if (callback) {
+                callback(result);
+            }
+            return $.Deferred().resolve({});
+        }
+        if (ConfigView._lastliconfig === folderId && !reload) {
+            if (callback) {
+                callback(ConfigView._liconfig || {});
+            }
+            return $.Deferred().resolve(ConfigView._liconfig);
+        }
+        if (ConfigView._liconfigSettingsRequest) {
+            if (ConfigView._nextliconfig === folderId) {
+                if (callback) {
+                    ConfigView._liconfigSettingsRequest.done((val) => {
+                        callback(val || {});
+                    });
+                }
+                return ConfigView._liconfigSettingsRequest;
+            }
+            ConfigView._liconfigSettingsRequest.cancel();
+        }
+        ConfigView._nextliconfig = folderId;
+        ConfigView._liconfigSettingsRequest = restRequest({
+            url: `folder/${folderId}/yaml_config/.large_image_config.yaml`
+        }).done((val) => {
+            val = val || {};
+            ConfigView._lastliconfig = folderId;
+            ConfigView._liconfigSettingsRequest = null;
+            ConfigView._liconfig = val;
+            if (callback) {
+                callback(ConfigView._liconfig);
+            }
+            return val;
+        });
+        return ConfigView._liconfigSettingsRequest;
+    },
+
+    /**
      * Clear the settings so that getSettings will refetch them.
      */
     clearSettings: function () {

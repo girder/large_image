@@ -57,7 +57,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'mapnik'
     extensions = {
-        None: SourcePriority.MEDIUM,
+        None: SourcePriority.LOW,
         'nc': SourcePriority.PREFERRED,  # netcdf
         # National Imagery Transmission Format
         'ntf': SourcePriority.HIGHER,

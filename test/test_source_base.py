@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import re
 import sys
@@ -37,12 +38,12 @@ SourceAndFiles = {
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
+        'read': r'\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'skipTiles': r'\.*nc$',
     },
     'mapnik': {
-        'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*|qptiff)$',
+        'read': r'\.(jpg|jpeg|jp2|ptif|nc|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         # we should only test this with a projection
         'skipTiles': r'',
@@ -63,9 +64,14 @@ SourceAndFiles = {
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
-        'read': r'\.(jpeg|png|tif.*)$',
-        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo|extraoverview' + (
+        'read': r'\.(jpg|jpeg|png|tif.*)$',
+        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview' + (
             r'|sample.*ome' if sys.version_info < (3, 7) else r'') + r')',
+    },
+    'rasterio': {
+        'read': r'\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
+        'python': sys.version_info >= (3, 8),
     },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
@@ -76,7 +82,7 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2|dcm)$',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm)$',
         'python': sys.version_info >= (3, 7),
     },
     'vips': {
@@ -107,9 +113,11 @@ def testCanRead():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
     assert large_image.canRead(imagePath) is False
+    assert large_image.canRead(imagePath, mimeType='image/png') is False
 
     imagePath = datastore.fetch('sample_image.ptif')
     assert large_image.canRead(imagePath) is True
+    assert large_image.canRead(imagePath, mimeType='image/png') is True
 
 
 @pytest.mark.parametrize('source', [k for k, v in SourceAndFiles.items() if not v.get('any')])
@@ -204,6 +212,9 @@ def testSourcesTilesAndMethods(source, filename):
         # This should be an image and a mime type
         assert len(ts.getAssociatedImage(ts.getAssociatedImagesList()[0])) == 2
     assert ts.getAssociatedImage('nosuchimage') is None
+    # Test the serializability of common methods
+    assert json.dumps(ts.getMetadata())
+    assert json.dumps(ts.getPixel(region=dict(left=0, top=0)))
     # Test module open method
     mod = sys.modules[sourceClass.__module__]
     assert mod.open(imagePath) is not None

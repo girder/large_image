@@ -157,7 +157,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this._style = undefined;
             this._baseurl = this._layer.url();
             // use two layers to get smooth transitions until we load
-            // background quads.  Always cteate this, as styles will use
+            // background quads.  Always create this, as styles will use
             // this, even if pure frame do not.
             this._layer2 = this.viewer.createLayer('osm', this._layer._options);
             if (this._layer2.zIndex() > this._layer.zIndex()) {

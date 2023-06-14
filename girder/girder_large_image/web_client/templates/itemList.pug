@@ -46,13 +46,16 @@ ul.g-item-list.li-item-list
                 - var imageName = column.value === 'thumbnail' ? column.value : `images/${column.value}`;
                 img.waiting(deferred-src=`${apiRoot}/item/${item.id}/tiles/${imageName}?width=${column.width || 160}&height=${column.height || 100}`)
             else if column.type === 'metadata'
+              -
+                let value = item.get('meta') || {}
+                column.value.split('.').forEach((part) => {
+                  value = (value || {})[part];
+                })
               span.large_image_metadata
-                -
-                  let value = item.get('meta') || {}
-                  column.value.split('.').forEach((part) => {
-                    value = (value || {})[part];
-                  })
                 = value
+              if value
+                span.li-item-list-cell-filter(title="Only show items that match this metadata value exactly", filter-value=value, column-value=column.value)
+                  i.icon-filter
   if (hasMore && !paginated)
     li.g-show-more
       a.g-show-more-items
