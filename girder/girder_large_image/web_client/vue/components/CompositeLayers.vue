@@ -204,7 +204,7 @@ export default {
                             @input="toggleEnableAll"
                         >
                     </th>
-                    <th>ALL</th>
+                    <th></th>
                     <th></th>
                     <th style="min-width: 100px;">
                         <div class="auto-range-col">
@@ -235,7 +235,7 @@ export default {
                         class="expand-btn"
                         @click="toggleAllExpanded"
                     >
-                        {{ expandedRows.length === layers.length ? '&#9651;' : '&#9661;'}}
+                        {{ expandedRows.length === layers.length ? '&#708;' : '&#709;'}}
                     </div>
                 </tr>
             </thead>
@@ -244,7 +244,6 @@ export default {
                     v-for="{
                         layerName, index, palette,
                         autoRange, min, max,
-                        defaultMin, defaultMax,
                         framedelta
                     } in Object.values(compositeLayerInfo)"
                     :key="layerName"
@@ -288,11 +287,7 @@ export default {
                         class="expand-btn"
                         @click="() => toggleExpanded(index)"
                     >
-                    {{ (min === undefined && max === undefined) ||
-                       (min === defaultMin && max === defaultMax)
-                        ? expandedRows.includes(index) ? '&#9651;' : '&#9661;'
-                        : expandedRows.includes(index) ? '&#9650;' : '&#9660;'
-                    }}
+                    {{ expandedRows.includes(index) ? '&#708;' : '&#709;'}}
                     </div>
                     <div v-if="expandedRows.includes(index)" class="advanced-section">
                         <histogram-editor
@@ -333,6 +328,7 @@ export default {
     top: 0px;
     background-color: white;
     z-index: 2;
+    border-bottom: 3px solid;
 }
 .auto-range-col {
     display: flex;
@@ -345,8 +341,8 @@ export default {
     width: 45px;
 }
 .table-container {
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: auto;
+    max-height: 300px;
 }
 .table-container td {
     padding: 0 5px;
@@ -359,8 +355,9 @@ tr {
 }
 .expand-btn {
     position: absolute;
-    right: 0;
-    bottom: 5px;
+    right: 10px;
+    top: 5px;
+    font-size: 30px;
 }
 .advanced-section {
     position: absolute;

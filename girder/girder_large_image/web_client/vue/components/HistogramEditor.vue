@@ -73,20 +73,20 @@ export default {
             const ctx = this.$refs.canvas.getContext("2d");
             const widthBetweenPoints = width / hist.length
             ctx.clearRect(0, 0, width, height);
-            ctx.lineWidth = 4;
-            ctx.beginPath()
-            ctx.moveTo(0, height)
             for (var i = 0; i < hist.length; i++) {
                 const frequency = hist[i]
-                const pointX = widthBetweenPoints * i
-
-                let pointY = height - (frequency / maxFrequency * height)
+                const x0 = widthBetweenPoints * i
+                const x1 = widthBetweenPoints * (i + 1)
+                let y0 = height - (frequency / maxFrequency * height)
                 if(shortenMaxFrequency) {
-                    pointY = frequency === maxFrequency ? 0 : height - (frequency / secondMaxFrequency * height * 2 / 3)
+                    y0 = frequency === maxFrequency ? 0 : height - (frequency / secondMaxFrequency * height * 2 / 3)
                 }
-                ctx.lineTo(pointX, pointY)
+                const y1 = height
+
+                ctx.rect(x0, y0, (x1 - x0), (y1 - y0))
             }
-            ctx.stroke();
+            ctx.fillStyle = "#444"
+            ctx.fill();
         },
         xPositionToValue(xPosition) {
             const xProportion = (xPosition - this.xRange[0]) / (this.xRange[1] - this.xRange[0])
