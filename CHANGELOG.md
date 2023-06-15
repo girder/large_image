@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.22.5
+
+### Improvements
+- Harden the nd2 source to allow it to read more files ([#1207](../../pull/1207))
+
+## 1.22.4
+
+### Bug Fixes
+- Fix a scope issue when deleting metadata ([#1203](../../pull/1203))
+
 ## 1.22.3
 
 ### Improvements
@@ -7,6 +17,7 @@
 - Added an internal field to report populated tile levels in some sources ([#1197](../../pull/1197), [#1199](../../pull/1199))
 - Allow specifying an empty style dict ([#1200](../../pull/1200))
 - Allow rounding histogram bin edges and reducing bin counts ([#1201](../../pull/1201))
+- Allow configuring which metadata can be added to items ([#1202](../../pull/1202))
 
 ### Changes
 - Change how extensions and fallback priorities interact ([#1192](../../pull/1192))
