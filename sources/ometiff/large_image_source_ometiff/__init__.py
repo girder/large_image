@@ -81,6 +81,10 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         'tiff': SourcePriority.MEDIUM,
         'ome': SourcePriority.PREFERRED,
     }
+    mimeTypes = {
+        'image/tiff': SourcePriority.MEDIUM,
+        'image/x-tiff': SourcePriority.MEDIUM,
+    }
 
     # The expect number of pixels that would need to be read to read the worst-
     # case tile.
