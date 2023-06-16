@@ -376,7 +376,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             if top is None:
                 top = bounds['ymax'] if bottom is None or width is None else bottom - width
             if bottom is None:
-                bottom = bounds['ymin'] if width is None else top + width
+                bottom = bounds['ymin'] if width is None else top + height
             if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
                 width = height = None
             # Convert to [-0.5, 0.5], [-0.5, 0.5] coordinate range

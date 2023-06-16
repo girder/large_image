@@ -812,7 +812,7 @@ def _make_li_description(
             'associated': numAssociatedImages,
             'arguments': {
                 k: v for k, v in kwargs.items()
-                if not k.startswith('_') and not '_' + k in kwargs and
+                if not k.startswith('_') and ('_' + k) not in kwargs and
                 k not in {'overwrite', }},
         },
     }
