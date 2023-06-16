@@ -999,7 +999,7 @@ def histogramThreshold(histogram, threshold, fromMax=False):
             break
         tally += hist[idx]
     if len(_recentThresholds) > 100:
-        _recentThresholds.empty()
+        _recentThresholds.clear()
     _recentThresholds[key] = result
     return result
 
