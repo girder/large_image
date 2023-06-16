@@ -67,10 +67,14 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     extensions = {
         None: SourcePriority.LOW,
         'scn': SourcePriority.PREFERRED,
+        'tif': SourcePriority.LOW,
+        'tiff': SourcePriority.LOW,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
         'image/scn': SourcePriority.PREFERRED,
+        'image/tiff': SourcePriority.LOW,
+        'image/x-tiff': SourcePriority.LOW,
     }
 
     # Fallback for non-tiled or oddly tiled sources
