@@ -368,7 +368,7 @@ def testTileOverlapWithRegionOffset():
 
 
 @pytest.mark.parametrize('options,lensrc,lenquads,frame10,src0,srclast,quads10', [
-    ({}, 1, 250, 10, {
+    ({'maxTextureSize': 16384}, 1, 250, 10, {
         'encoding': 'JPEG',
         'exact': False,
         'fill': 'corner:black',
@@ -402,7 +402,7 @@ def testTileOverlapWithRegionOffset():
         'top': 3816,
     }),
 
-    ({'maxTextures': 8}, 4, 250, 10, {
+    ({'maxTextureSize': 16384, 'maxTextures': 8}, 4, 250, 10, {
         'framesAcross': 7,
         'height': 1632,
         'width': 2176,
@@ -420,7 +420,8 @@ def testTileOverlapWithRegionOffset():
         'top': 2304,
     }),
 
-    ({'maxTextures': 8, 'maxTotalTexturePixels': 8 * 1024 ** 3}, 8, 250, 10, {
+    ({'maxTextureSize': 16384,
+      'maxTextures': 8, 'maxTotalTexturePixels': 8 * 1024 ** 3}, 8, 250, 10, {
         'framesAcross': 5,
         'height': 2336,
         'width': 3120,
@@ -429,7 +430,7 @@ def testTileOverlapWithRegionOffset():
         'top': 9344,
     }),
 
-    ({'alignment': 32}, 1, 250, 10, {
+    ({'maxTextureSize': 16384, 'alignment': 32}, 1, 250, 10, {
         'framesAcross': 14,
         'height': 864,
         'width': 1152,
@@ -438,7 +439,7 @@ def testTileOverlapWithRegionOffset():
         'top': 14688,
     }),
 
-    ({'frameBase': 100}, 1, 150, 110, {
+    ({'maxTextureSize': 16384, 'frameBase': 100}, 1, 150, 110, {
         'framesAcross': 11,
         'height': 1088,
         'width': 1456,
@@ -447,7 +448,7 @@ def testTileOverlapWithRegionOffset():
         'top': 14144,
     }),
 
-    ({'frameStride': 10}, 1, 25, 100, {
+    ({'maxTextureSize': 16384, 'frameStride': 10}, 1, 25, 100, {
         'framesAcross': 5,
         'height': 2448,
         'width': 3264,

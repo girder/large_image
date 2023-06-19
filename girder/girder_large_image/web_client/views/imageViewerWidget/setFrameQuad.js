@@ -70,7 +70,7 @@ function setFrameQuad(tileinfo, layer, options) {
     try {
         maxTextureSize = layer.renderer()._maxTextureSize || layer.renderer().constructor._maxTextureSize;
     } catch (err) { }
-    options = Object.assign({}, {maxTextureSize: Math.min(16384, maxTextureSize)}, options);
+    options = Object.assign({}, {maxTextureSize: Math.min(8192, maxTextureSize || 8192)}, options);
     const status = {
         tileinfo: tileinfo,
         options: options,
