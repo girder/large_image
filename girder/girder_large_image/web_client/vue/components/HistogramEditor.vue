@@ -105,10 +105,18 @@ export default {
             let moveY = false;
             const handleName = selected.getAttribute("name")
             const newValue = this.xPositionToValue(newLocation.x)
-            if (handleName === 'updateMin' && newValue >= this.currentMax) {
-                moveX = false;
-            } else if (handleName === 'updateMax' && newValue <= this.currentMin) {
-                moveX = false;
+             if (handleName === 'updateMin') {
+                if (!this.autoRange && newValue >= this.currentMax) {
+                    moveX = false;
+                } else if (this.autoRange && this.toDistributionPercentage(newValue) >= 50) {
+                    moveX = false;
+                }
+            } else if (handleName === 'updateMax') {
+                if (!this.autoRange && newValue <= this.currentMin) {
+                    moveX = false;
+                } else if (this.autoRange && this.toDistributionPercentage(newValue) <= 50) {
+                    moveX = false;
+                }
             }
 
             return [moveX, moveY]

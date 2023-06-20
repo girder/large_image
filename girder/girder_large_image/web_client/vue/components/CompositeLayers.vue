@@ -211,7 +211,7 @@ export default {
                             <span class="small-text">Auto Range</span>
                             <switches
                                 :value="allAutoRange()"
-                                @input="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.02)"
+                                @input="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.2)"
                                 :emit-on-mount="false"
                                 theme="bulma"
                                 color="blue"
@@ -273,7 +273,7 @@ export default {
                         <div class="auto-range-col">
                             <switches
                                 :value="autoRange"
-                                @input="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.02)"
+                                @input="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.2)"
                                 :emit-on-mount="false"
                                 theme="bulma"
                                 color="blue"
