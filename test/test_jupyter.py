@@ -5,9 +5,9 @@ import pytest
 import large_image
 
 try:
-    import ipyleaflet
-    import IPython
-    import tornado
+    import ipyleaflet  # noqa: F401
+    import IPython  # noqa: F401
+    import tornado  # noqa: F401
 except ImportError:  # pragma: no cover
     pytest.skip(reason='Requires ipyleaflet, tornado, IPython', allow_module_level=True)
 
