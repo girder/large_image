@@ -73,7 +73,7 @@ export default Vue.extend({
             ) {
                 this.imageMetadata.channelmap = Object.fromEntries(
                     [...Array(this.imageMetadata.IndexRange['IndexC']).keys()].map(
-                        (i) => [`Channel ${i}`, i]
+                        (i) => [`Channel ${i + 1}`, i]
                     )
                 )
                 this.imageMetadata.channels = Object.keys(this.imageMetadata.channelmap)
@@ -84,7 +84,7 @@ export default Vue.extend({
                 this.imageMetadata.bands = Object.values(this.imageMetadata.bands).map(
                     (b, i) => {
                         if (!b.interpretation) {
-                            return `Band ${i}`
+                            return `Band ${i + 1}`
                         } else {
                             return b.interpretation.split("=")[0]
                         }
