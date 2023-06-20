@@ -279,11 +279,11 @@ export default {
                                 color="blue"
                             />
                         </div>
+                        <i
+                            :class="expandedRows.includes(index) ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
+                            @click="() => toggleExpanded(index)"
+                        />
                     </td>
-                    <i
-                        :class="expandedRows.includes(index) ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
-                        @click="toggleAllExpanded"
-                    />
                     <div v-if="expandedRows.includes(index)" class="advanced-section">
                         <histogram-editor
                             :itemId="itemId"
