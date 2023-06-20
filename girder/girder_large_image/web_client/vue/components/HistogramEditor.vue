@@ -218,6 +218,7 @@ export default {
             }
         },
         autoRange() {
+            if (!this.histogram) return
             let newMinPosition = this.currentMin ? this.valueToXPosition(this.currentMin) : this.xRange[0]
             let newMaxPosition = this.currentMax ? this.valueToXPosition(this.currentMax) : this.xRange[1]
             if (this.autoRange) {
@@ -256,10 +257,9 @@ export default {
                 :min="histogram.min"
                 :max="currentMax"
                 :value="currentMin"
-                style="width: 80px"
                 @input="(e) => updateFromInput('updateMin', e.target.value)"
             >
-            <span v-else style="width: 80px"/>
+            <span v-else class="input-space"/>
             <svg ref="svg" class="handles-svg">
                 <text x="5" y="43" class="small">{{ this.vRange[0] }}</text>
                 <rect ref="minExclusionBox" x="5" y="0" width="0" height="30" opacity="0.2"/>
@@ -294,7 +294,6 @@ export default {
                 :max="histogram.max"
                 :min="currentMin"
                 :value="currentMax"
-                style="width: 80px"
                 @input="(e) => updateFromInput('updateMax', e.target.value)"
             >
             <span
@@ -306,7 +305,6 @@ export default {
                     :max="50"
                     :min="0"
                     :value="autoRange"
-                    style="width: 80px"
                     @input="(e) => updateFromInput('updateAutoRange', e.target.value)"
                 >
             </span>
@@ -315,6 +313,12 @@ export default {
 </template>
 
 <style scoped>
+input {
+    width: 80px
+}
+.input-space {
+    width: 80px
+}
 .range-editor {
     position: absolute;
     display: flex;

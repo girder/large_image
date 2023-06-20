@@ -206,9 +206,9 @@ export default {
                     </th>
                     <th></th>
                     <th></th>
-                    <th style="min-width: 100px;">
+                    <th>
                         <div class="auto-range-col">
-                            <span style="font-size: 10px;">Auto Range</span>
+                            <span class="small-text">Auto Range</span>
                             <switches
                                 :value="allAutoRange()"
                                 @input="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.02)"
@@ -225,18 +225,15 @@ export default {
                                     :max="50"
                                     :min="0"
                                     :value="autoRangeForAll"
-                                    style="width: 80px"
                                     @input="(e) => updateAllAutoRanges(e.target.value)"
                                 >
                             </span>
                         </div>
+                        <i
+                            :class="expandedRows.length === layers.length ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
+                            @click="toggleAllExpanded"
+                        />
                     </th>
-                    <div
-                        class="expand-btn"
-                        @click="toggleAllExpanded"
-                    >
-                        {{ expandedRows.length === layers.length ? '&#708;' : '&#709;'}}
-                    </div>
                 </tr>
             </thead>
             <tbody>
@@ -247,9 +244,9 @@ export default {
                         framedelta
                     } in Object.values(compositeLayerInfo)"
                     :key="layerName"
-                    :style="expandedRows.includes(index) ? {height: '75px'} : {}"
+                    :class="expandedRows.includes(index) ? 'tall-row' : ''"
                 >
-                    <td style="width: 10%;">
+                    <td class="enable-col">
                         <input
                             type="checkbox"
                             :value="layerName"
@@ -257,8 +254,8 @@ export default {
                             @change="updateActiveLayers"
                         >
                     </td>
-                    <td  style="width: 40%;">{{ layerName }}</td>
-                    <td :id="layerName+'_picker'" style="width: 25%;">
+                    <td class="name-col">{{ layerName }}</td>
+                    <td :id="layerName+'_picker'" class="color-col">
                     <span
                             class="current-color"
                             :style="{ 'background-color': palette }"
@@ -283,12 +280,10 @@ export default {
                             />
                         </div>
                     </td>
-                    <div
-                        class="expand-btn"
-                        @click="() => toggleExpanded(index)"
-                    >
-                    {{ expandedRows.includes(index) ? '&#708;' : '&#709;'}}
-                    </div>
+                    <i
+                        :class="expandedRows.includes(index) ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
+                        @click="toggleAllExpanded"
+                    />
                     <div v-if="expandedRows.includes(index)" class="advanced-section">
                         <histogram-editor
                             :itemId="itemId"
@@ -330,7 +325,23 @@ export default {
     z-index: 2;
     border-bottom: 3px solid;
 }
+.small-text {
+    font-size: 10px;
+}
+.tall-row {
+    height: 75px;
+}
+.enable-col {
+    width: 10%;
+}
+.name-col {
+    width: 40%;
+}
+.color-col {
+    width: 25%;
+}
 .auto-range-col {
+    min-width: 100px;
     display: flex;
     flex-direction: column;
     align-content: space-around;
@@ -357,7 +368,6 @@ tr {
     position: absolute;
     right: 10px;
     top: 5px;
-    font-size: 20px;
 }
 .advanced-section {
     position: absolute;
@@ -372,6 +382,7 @@ tr {
 .percentage-input {
     position: relative;
     margin-top: 5px;
+    width: 80px;
 }
 .percentage-input::after {
     position: absolute;

@@ -139,8 +139,8 @@ export default Vue.extend({
 
 <template>
     <div class="image-frame-control-box" v-if="loaded">
-        <div id="current_image_frame" style="display: none;">{{ currentFrame }}</div>
-        <div id="current_image_style" style="display: none;">{{ style }}</div>
+        <div id="current_image_frame" class="invisible">{{ currentFrame }}</div>
+        <div id="current_image_style" class="invisible">{{ style }}</div>
         <div>
             <label for="mode">Image control mode: </label>
             <select
@@ -184,7 +184,7 @@ export default Vue.extend({
                 :currentFrame="currentFrame"
                 :layers="imageMetadata.channels"
                 :layerMap="imageMetadata.channelmap"
-                :style="currentModeId === 2 ? {} : {display: 'none'}"
+                :class="currentModeId === 2 ? '' : 'invisible'"
                 @updateStyle="updateStyle"
             />
             <composite-layers
@@ -194,7 +194,7 @@ export default Vue.extend({
                 :currentFrame="currentFrame"
                 :layers="imageMetadata.bands"
                 :layerMap="undefined"
-                :style="currentModeId === 3 ? {} : {display: 'none'}"
+                :class="currentModeId === 3 ? '' : 'invisible'"
                 @updateStyle="updateStyle"
             />
         </div>
@@ -202,6 +202,9 @@ export default Vue.extend({
 </template>
 
 <style scoped>
+.invisible {
+    display: none;
+}
 .image-frame-control-box {
     display: flex;
     flex-direction: column;
