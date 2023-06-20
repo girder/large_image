@@ -1013,6 +1013,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         return isValid
 
+    @staticmethod
     def isGeospatial(path):
         """
         Check if a path is likely to be a geospatial file.
