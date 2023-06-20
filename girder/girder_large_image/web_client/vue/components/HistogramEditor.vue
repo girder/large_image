@@ -85,7 +85,7 @@ export default {
 
                 ctx.rect(x0, y0, (x1 - x0), (y1 - y0))
             }
-            ctx.fillStyle = "#444"
+            ctx.fillStyle = "#888"
             ctx.fill();
         },
         xPositionToValue(xPosition) {
@@ -267,7 +267,7 @@ export default {
                     class="draggable"
                     name="updateMin"
                     ref="minHandle"
-                    stroke="#f00"
+                    stroke="#000"
                     stroke-width="4"
                     x1="5" x2="5"
                     y1="0" y2="30"
@@ -281,7 +281,7 @@ export default {
                     class="draggable"
                     name="updateMax"
                     ref="maxHandle"
-                    stroke="#f00"
+                    stroke="#000"
                     stroke-width="4"
                     x1="5" x2="5"
                     y1="0" y2="30"

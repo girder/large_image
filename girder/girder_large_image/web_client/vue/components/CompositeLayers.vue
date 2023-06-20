@@ -357,7 +357,7 @@ tr {
     position: absolute;
     right: 10px;
     top: 5px;
-    font-size: 30px;
+    font-size: 20px;
 }
 .advanced-section {
     position: absolute;
