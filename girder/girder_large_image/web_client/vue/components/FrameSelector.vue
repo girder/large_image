@@ -34,7 +34,7 @@ export default Vue.extend({
     },
     methods: {
         updateStyle(style) {
-            this.style = style
+            this.style = Object.assign(this.style, style)
             this.update()
         },
         updateAxisSlider(event) {
@@ -53,7 +53,7 @@ export default Vue.extend({
                 }
             });
             this.currentFrame = frame
-            let style = this.currentModeId > 1 ? this.style : undefined
+            let style = this.currentModeId > 1 ? this.style[this.currentModeId] : undefined
             this.frameUpdate(frame, style);
         },
         fillMetadata() {
@@ -176,7 +176,7 @@ export default Vue.extend({
 
         <!-- Use composite layers component twice so state for each one is maintained while invisible -->
         <!-- Use styling instead of v-if to make each invisible so that the components are not unmounted -->
-        <div  class="image-frame-simple-control">
+        <div class="image-frame-simple-control">
             <composite-layers
                 key="channels"
                 v-if="imageMetadata.channels"
@@ -185,7 +185,7 @@ export default Vue.extend({
                 :layers="imageMetadata.channels"
                 :layerMap="imageMetadata.channelmap"
                 :class="currentModeId === 2 ? '' : 'invisible'"
-                @updateStyle="updateStyle"
+                @updateStyle="(style) => updateStyle({2: style})"
             />
             <composite-layers
                 key="bands"
@@ -195,7 +195,7 @@ export default Vue.extend({
                 :layers="imageMetadata.bands"
                 :layerMap="undefined"
                 :class="currentModeId === 3 ? '' : 'invisible'"
-                @updateStyle="updateStyle"
+                @updateStyle="(style) => updateStyle({3: style})"
             />
         </div>
     </div>
