@@ -713,6 +713,7 @@ def testHistogram():
     hist = source.histogram(bins=8, output={'maxWidth': 1024}, resample=False)
     assert len(hist['histogram']) == 3
     assert hist['histogram'][0]['range'] == (0, 256)
+    assert len(hist['histogram'][0]['bin_edges']) == 9
     assert len(list(hist['histogram'][0]['hist'])) == 8
     assert list(hist['histogram'][0]['bin_edges']) == [0, 32, 64, 96, 128, 160, 192, 224, 256]
     assert hist['histogram'][0]['samples'] == 700416
@@ -729,6 +730,15 @@ def testHistogram():
                             density=True, resample=False)
     assert hist['histogram'][0]['samples'] == 2801664
     assert 6e-5 < hist['histogram'][0]['hist'][128] < 8e-5
+
+    hist = source.histogram(bins=512, output={'maxWidth': 2048}, resample=False)
+    assert hist['histogram'][0]['range'] == (0, 256)
+    assert len(hist['histogram'][0]['bin_edges']) == 513
+
+    hist = source.histogram(bins=512, output={'maxWidth': 2048}, resample=False,
+                            range='round')
+    assert hist['histogram'][0]['range'] == (0, 256)
+    assert len(hist['histogram'][0]['bin_edges']) == 257
 
 
 def testSingleTileIteratorResample():

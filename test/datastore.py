@@ -30,6 +30,9 @@ registry = {
     # Tiff with floating point pixels
     # Source: d042-353.crop.small.float32.tif
     'd042-353.crop.small.float32.tif': 'sha512:ae05dbe6f3330c912893b203b55db27b0fdf3222a0e7f626d372c09668334494d07dc1d35533670cfac51b588d2292eeee7431317741fdb4cbb281c28a289115',  # noqa
+    # JPEG with progressive compression and restart markers
+    # Source: d042-353.crop.small.jpg
+    'd042-353.crop.small.jpg': 'sha512:1353646637c1fae266b87312698aa39eca0311222c3a1399b60efdc13bfe55e2f3db59da005da945dd7e9e816f31ccd18846dd72744faac75215074c3d87414f',  # noqa
     # Tiff with JP2k compression
     # Source: huron.image2_jpeg2k.tif
     'huron.image2_jpeg2k.tif': 'sha512:eaba877079c86f0603b2a636a44d57832cdafe6d43a449121f575f0d43f69b8a17fa619301b066ece1c11050b41d687400b27407c404d827fd2c132d99e669ae',  # noqa

@@ -11,6 +11,7 @@ import events from '@girder/core/events';
 import UserCollection from '@girder/core/collections/UserCollection';
 import UploadWidget from '@girder/core/views/widgets/UploadWidget';
 import View from '@girder/core/views/View';
+import largeImageConfig from '@girder/large_image/views/configView';
 
 import AnnotationCollection from '../collections/AnnotationCollection';
 
@@ -57,10 +58,8 @@ const AnnotationListWidget = View.extend({
             error: null
         }).done((createResp) => {
             this.createResp = createResp;
-            restRequest({
-                url: `folder/${this.model.get('folderId')}/yaml_config/.large_image_config.yaml`
-            }).done((val) => {
-                this._liconfig = val || {};
+            largeImageConfig.getConfigFile(this.model.get('folderId')).done((val) => {
+                this._liconfig = val;
                 this._confList = this._liconfig.annotationList || {
                     columns: [{
                         type: 'record',

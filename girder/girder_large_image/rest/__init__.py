@@ -138,7 +138,7 @@ def getYAMLConfigFile(self, folder, name):
         'This replaces or creates an item in the specified folder with the '
         'specified name containing a single file also of the specified '
         'name.  The file is added to the default assetstore, and any existing '
-        'file may be permamently deleted.')
+        'file may be permanently deleted.')
     .modelParam('id', model=Folder, level=AccessType.WRITE)
     .param('name', 'The name of the file.', paramType='path')
     .param('config', 'The contents of yaml config file to validate.',

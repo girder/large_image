@@ -38,12 +38,12 @@ SourceAndFiles = {
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
+        'read': r'\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'skipTiles': r'\.*nc$',
     },
     'mapnik': {
-        'read': r'\.(jpeg|jp2|ptif|nc|scn|svs|tif.*|qptiff)$',
+        'read': r'\.(jpg|jpeg|jp2|ptif|nc|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         # we should only test this with a projection
         'skipTiles': r'',
@@ -64,12 +64,12 @@ SourceAndFiles = {
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
-        'read': r'\.(jpeg|png|tif.*)$',
-        'noread': r'(G10-3|JK-kidney|d042-353|huron|one_layer_missing|US_Geo|extraoverview' + (
+        'read': r'\.(jpg|jpeg|png|tif.*)$',
+        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview' + (
             r'|sample.*ome' if sys.version_info < (3, 7) else r'') + r')',
     },
     'rasterio': {
-        'read': r'\.(jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
+        'read': r'\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'python': sys.version_info >= (3, 8),
     },
@@ -82,7 +82,7 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpeg|jp2|dcm)$',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm)$',
         'python': sys.version_info >= (3, 7),
     },
     'vips': {
@@ -113,9 +113,11 @@ def testCanRead():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
     assert large_image.canRead(imagePath) is False
+    assert large_image.canRead(imagePath, mimeType='image/png') is False
 
     imagePath = datastore.fetch('sample_image.ptif')
     assert large_image.canRead(imagePath) is True
+    assert large_image.canRead(imagePath, mimeType='image/png') is True
 
 
 @pytest.mark.parametrize('source', [k for k, v in SourceAndFiles.items() if not v.get('any')])
@@ -366,7 +368,7 @@ def testTileOverlapWithRegionOffset():
 
 
 @pytest.mark.parametrize('options,lensrc,lenquads,frame10,src0,srclast,quads10', [
-    ({}, 1, 250, 10, {
+    ({'maxTextureSize': 16384}, 1, 250, 10, {
         'encoding': 'JPEG',
         'exact': False,
         'fill': 'corner:black',
@@ -400,7 +402,7 @@ def testTileOverlapWithRegionOffset():
         'top': 3816,
     }),
 
-    ({'maxTextures': 8}, 4, 250, 10, {
+    ({'maxTextureSize': 16384, 'maxTextures': 8}, 4, 250, 10, {
         'framesAcross': 7,
         'height': 1632,
         'width': 2176,
@@ -418,7 +420,8 @@ def testTileOverlapWithRegionOffset():
         'top': 2304,
     }),
 
-    ({'maxTextures': 8, 'maxTotalTexturePixels': 8 * 1024 ** 3}, 8, 250, 10, {
+    ({'maxTextureSize': 16384,
+      'maxTextures': 8, 'maxTotalTexturePixels': 8 * 1024 ** 3}, 8, 250, 10, {
         'framesAcross': 5,
         'height': 2336,
         'width': 3120,
@@ -427,7 +430,7 @@ def testTileOverlapWithRegionOffset():
         'top': 9344,
     }),
 
-    ({'alignment': 32}, 1, 250, 10, {
+    ({'maxTextureSize': 16384, 'alignment': 32}, 1, 250, 10, {
         'framesAcross': 14,
         'height': 864,
         'width': 1152,
@@ -436,7 +439,7 @@ def testTileOverlapWithRegionOffset():
         'top': 14688,
     }),
 
-    ({'frameBase': 100}, 1, 150, 110, {
+    ({'maxTextureSize': 16384, 'frameBase': 100}, 1, 150, 110, {
         'framesAcross': 11,
         'height': 1088,
         'width': 1456,
@@ -445,7 +448,7 @@ def testTileOverlapWithRegionOffset():
         'top': 14144,
     }),
 
-    ({'frameStride': 10}, 1, 25, 100, {
+    ({'maxTextureSize': 16384, 'frameStride': 10}, 1, 25, 100, {
         'framesAcross': 5,
         'height': 2448,
         'width': 3264,

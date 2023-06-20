@@ -33,7 +33,7 @@ Style
 
 Often tiles are desired as 8-bit-per-sample images.  However, if the tile source is more than 8 bits per sample or has more than 3 channels, some data will be lost.  Similarly, if the data is returned as a numpy array, the range of values returned can vary by tile source.  The ``style`` parameter can remap samples values and determine how channels are composited.
 
-If ``style`` is not specified or None, the default style for the file is used.  Otherwise, this is a json-encoded string that contains an object with a key of ``bands`` consisting of an array of band definitions.  If only one band is needed, a json-encoded string of just the band definition can be used.
+If ``style`` is ``{}``, the default style for the file is used.  If it is not specified or None, it will be the default style for non-geospatial tile sources and a default style consisting of the visible bands for geospatial sources.  Otherwise, this is a json-encoded string that contains an object with a key of ``bands`` consisting of an array of band definitions.  If only one band is needed, a json-encoded string of just the band definition can be used.
 
 A band definition is an object which can contain the following keys:
 

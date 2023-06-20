@@ -53,7 +53,7 @@ wrap(FileListWidget, 'render', function (render) {
         restRequest({
             type: 'POST',
             url: 'item/' + this.parentItem.id + '/tiles',
-            data: {fileId: fileId, notify: true},
+            data: {fileId: fileId, notify: true, force: !!(e.originalEvent || {}).ctrlKey},
             error: function (error) {
                 if (error.status !== 0) {
                     events.trigger('g:alert', {

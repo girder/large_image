@@ -165,6 +165,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 basis *= self._nd2.sizes[k]
         self.sizeX = self._nd2.sizes['X']
         self.sizeY = self._nd2.sizes['Y']
+        self._nd2sizes = self._nd2.sizes
         self.tileWidth = self.tileHeight = self._tileSize
         if self.sizeX <= self._singleTileThreshold and self.sizeY <= self._singleTileThreshold:
             self.tileWidth = self.sizeX
@@ -174,20 +175,56 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             self._frameCount = (
                 self._nd2.metadata.contents.channelCount * self._nd2.metadata.contents.frameCount)
+            self._bandnames = {
+                chan.channel.name.lower(): idx
+                for idx, chan in enumerate(self._nd2.metadata.channels)}
+            self._channels = [chan.channel.name for chan in self._nd2.metadata.channels]
         except Exception:
+            self._frameCount = basis * self._nd2.sizes.get('C', 1)
+            self._channels = None
+        if not self._validateArrayAccess():
             self._nd2.close()
             del self._nd2
             raise TileSourceError(
                 'File cannot be parsed with the nd2 source.  Is it a legacy nd2 file?')
-        self._bandnames = {
-            chan.channel.name.lower(): idx for idx, chan in enumerate(self._nd2.metadata.channels)}
-        self._channels = [chan.channel.name for chan in self._nd2.metadata.channels]
         self._tileLock = threading.RLock()
 
     def __del__(self):
         if hasattr(self, '_nd2'):
             self._nd2.close()
             del self._nd2
+
+    def _validateArrayAccess(self):
+        check = [0] * len(self._nd2order)
+        count = 1
+        for axisidx in range(len(self._nd2order) - 1, -1, -1):
+            axis = self._nd2order[axisidx]
+            axisSize = self._nd2.sizes[axis]
+            check[axisidx] = axisSize - 1
+            try:
+                self._nd2array[tuple(check)].compute()
+                if axis not in {'X', 'Y', 'S'}:
+                    count *= axisSize
+                continue
+            except Exception:
+                if axis in {'X', 'Y', 'S'}:
+                    return False
+            minval = 0
+            maxval = axisSize - 1
+            while minval + 1 < maxval:
+                nextval = (minval + maxval) // 2
+                check[axisidx] = nextval
+                try:
+                    self._nd2array[tuple(check)].compute()
+                    minval = nextval
+                except Exception:
+                    maxval = nextval
+            check[axisidx] = minval
+            self._nd2sizes = {k: check[idx] + 1 for idx, k in enumerate(self._nd2order)}
+            self._frameCount = (minval + 1) * count
+            return True
+        self._frameCount = count
+        return True
 
     def getNativeMagnification(self):
         """
@@ -223,7 +260,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             sizes = self._nd2.sizes
             axes = self._nd2order[:self._nd2order.index('Y')][::-1]
-            sizes = self._nd2.sizes
+            sizes = self._nd2sizes
             result['frames'] = frames = []
             for idx in range(self._frameCount):
                 frame = {'Frame': idx}
@@ -255,9 +292,13 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         result['nd2_experiment'] = namedtupleToDict(self._nd2.experiment)
         result['nd2_legacy'] = self._nd2.is_legacy
         result['nd2_rgb'] = self._nd2.is_rgb
-        result['nd2_frame_metadata'] = [
-            diffObj(namedtupleToDict(self._nd2.frame_metadata(idx)), result['nd2'])
-            for idx in range(self._nd2.metadata.contents.frameCount)]
+        result['nd2_frame_metadata'] = []
+        try:
+            for idx in range(self._nd2.metadata.contents.frameCount):
+                result['nd2_frame_metadata'].append(diffObj(namedtupleToDict(
+                    self._nd2.frame_metadata(idx)), result['nd2']))
+        except Exception:
+            pass
         if (len(result['nd2_frame_metadata']) and
                 list(result['nd2_frame_metadata'][0].keys()) == ['channels']):
             result['nd2_frame_metadata'] = [
@@ -273,7 +314,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         fc = self._frameCount
         fp = frame
         for axis in self._nd2order[:self._nd2order.index('Y')]:
-            fc //= self._nd2.sizes[axis]
+            fc //= self._nd2sizes[axis]
             tileframe = tileframe[fp // fc]
             fp = fp % fc
         with self._tileLock:

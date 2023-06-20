@@ -68,7 +68,7 @@ class JSONDict(dict):
     """Wrapper class to improve Jupyter repr of JSON-able dicts."""
 
     def __init__(self, *args, **kwargs):
-        super(JSONDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # TODO: validate JSON serializable?
 
     def _repr_json_(self):
@@ -864,7 +864,7 @@ def getTileFramesQuadInfo(metadata, options=None):
         'frameGroup': 1,
         'frameGroupFactor': 4,
         'frameGroupStride': 1,
-        'maxTextureSize': 16384,
+        'maxTextureSize': 8192,
         'maxTextures': 1,
         'maxTotalTexturePixels': 1024 * 1024 * 1024,
         'alignment': 16,
@@ -999,7 +999,7 @@ def histogramThreshold(histogram, threshold, fromMax=False):
             break
         tally += hist[idx]
     if len(_recentThresholds) > 100:
-        _recentThresholds.empty()
+        _recentThresholds.clear()
     _recentThresholds[key] = result
     return result
 

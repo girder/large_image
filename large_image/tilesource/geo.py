@@ -10,6 +10,7 @@ from .utilities import JSONDict, getPaletteColors
 try:
     import pyproj
     has_pyproj = True
+    _pyproj_under_6 = int(pyproj.proj_version_str.split('.')[0]) < 6
 except Exception:
     has_pyproj = False
 
@@ -23,8 +24,7 @@ ProjUnitsAcrossLevel0 = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
 InitPrefix = ''
-if has_pyproj:
-    NeededInitPrefix = '+init=' if int(pyproj.proj_version_str.split('.')[0]) < 6 else InitPrefix
+NeededInitPrefix = '+init=' if has_pyproj and _pyproj_under_6 else InitPrefix
 
 
 def make_vsi(url: str, **options):
@@ -177,7 +177,14 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         return style
 
     def _setDefaultStyle(self):
-        """If not style was specified, create a default style."""
+        """If no style was specified, create a default style."""
+        self._bandNames = {}
+        for idx, band in self.getBandInformation().items():
+            if band.get('interpretation'):
+                self._bandNames[band['interpretation'].lower()] = idx
+        if isinstance(getattr(self, '_style', None), dict) and (
+                not self._style or 'icc' in self._style and len(self._style) == 1):
+            return
         if hasattr(self, '_style'):
             styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
             if not len(styleBands) or (len(styleBands) == 1 and isinstance(
@@ -213,10 +220,6 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
                 })
             self.logger.debug('Using style %r', style)
             self._style = JSONDict({'bands': style})
-        self._bandNames = {}
-        for idx, band in self.getBandInformation().items():
-            if band.get('interpretation'):
-                self._bandNames[band['interpretation'].lower()] = idx
 
     @staticmethod
     def getHexColors(palette):
@@ -381,7 +384,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             if top is None:
                 top = bounds['ymax'] if bottom is None or width is None else bottom - width
             if bottom is None:
-                bottom = bounds['ymin'] if width is None else top + width
+                bottom = bounds['ymin'] if width is None else top + height
             if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
                 width = height = None
             # Convert to [-0.5, 0.5], [-0.5, 0.5] coordinate range

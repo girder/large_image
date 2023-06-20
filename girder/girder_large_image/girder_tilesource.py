@@ -1,3 +1,6 @@
+import os
+import re
+
 from girder.constants import AccessType
 from girder.exceptions import FilePathException, ValidationException
 from girder.models.file import File
@@ -136,7 +139,7 @@ def loadGirderTileSources():
                 if key is not None})
 
 
-def getGirderTileSourceName(item, file=None, *args, **kwargs):
+def getGirderTileSourceName(item, file=None, *args, **kwargs):  # noqa
     """
     Get a Girder tilesource name using the known sources.  If tile sources have
     not yet been loaded, load them.
@@ -148,33 +151,46 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):
     """
     if not len(AvailableGirderTileSources):
         loadGirderTileSources()
+    availableSources = AvailableGirderTileSources
     if not file:
         file = File().load(item['largeImage']['fileId'], force=True)
+    mimeType = file['mimeType']
     try:
         localPath = File().getLocalFilePath(file)
     except (FilePathException, AttributeError):
         localPath = None
     extensions = [entry.lower().split()[0] for entry in file['exts'] if entry]
+    baseName = os.path.basename(file['name'])
     properties = {}
     if localPath:
         properties['_geospatial_source'] = tilesource.isGeospatial(localPath)
     sourceList = []
-    for sourceName in AvailableGirderTileSources:
-        if not getattr(AvailableGirderTileSources[sourceName], 'girderSource', False):
+    for sourceName in availableSources:
+        if not getattr(availableSources[sourceName], 'girderSource', False):
             continue
-        sourceExtensions = AvailableGirderTileSources[sourceName].extensions
+        sourceExtensions = availableSources[sourceName].extensions
         priority = sourceExtensions.get(None, SourcePriority.MANUAL)
+        fallback = True
+        if (mimeType and getattr(availableSources[sourceName], 'mimeTypes', None) and
+                mimeType in availableSources[sourceName].mimeTypes):
+            fallback = False
+            priority = min(priority, availableSources[sourceName].mimeTypes[mimeType])
+        for regex in getattr(availableSources[sourceName], 'nameMatches', {}):
+            if re.match(regex, baseName):
+                fallback = False
+                priority = min(priority, availableSources[sourceName].nameMatches[regex])
         for ext in extensions:
             if ext in sourceExtensions:
                 priority = min(priority, sourceExtensions[ext])
+                fallback = False
         if priority >= SourcePriority.MANUAL:
             continue
         propertiesClash = any(
-            getattr(AvailableGirderTileSources[sourceName], k, False) != v
+            getattr(availableSources[sourceName], k, False) != v
             for k, v in properties.items())
-        sourceList.append((propertiesClash, priority, sourceName))
-    for _clash, _priority, sourceName in sorted(sourceList):
-        if AvailableGirderTileSources[sourceName].canRead(item):
+        sourceList.append((propertiesClash, fallback, priority, sourceName))
+    for _clash, _fallback, _priority, sourceName in sorted(sourceList):
+        if availableSources[sourceName].canRead(item):
             return sourceName
 
 

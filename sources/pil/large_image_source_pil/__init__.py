@@ -85,13 +85,17 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'pil'
 
-    # Although PIL is always a fallback source, prefer it to other fallback
+    # Although PIL is mostly a fallback source, prefer it to other fallback
     # sources
     extensions = {
-        None: SourcePriority.FALLBACK_HIGH
+        None: SourcePriority.FALLBACK_HIGH,
+        'jpg': SourcePriority.LOW,
+        'jpeg': SourcePriority.LOW,
+        'jpe': SourcePriority.LOW,
     }
     mimeTypes = {
-        None: SourcePriority.FALLBACK_HIGH
+        None: SourcePriority.FALLBACK_HIGH,
+        'image/jpeg': SourcePriority.LOW,
     }
 
     def __init__(self, path, maxSize=None, **kwargs):
