@@ -7,10 +7,11 @@
 
 ### Changes
 - Change how extensions and fallback priorities in Girder interact ([#1208](../../pull/1208))
+- Reduce the default max texture size for frame quads ([#1212](../../pull/1212))
 
 ### Bug Fixes
 - Fix clearing the style threshold cache ([#1210](../../pull/1210))
-- 
+-
 ## 1.22.4
 
 ### Bug Fixes
