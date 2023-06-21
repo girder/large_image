@@ -193,7 +193,8 @@ class TileSource(IPyLeafletMixin):
                 delattr(self, key)
             except Exception:
                 pass
-        self._bandRanges = {}
+        if not hasattr(self, '_bandRanges'):
+            self._bandRanges = {}
         self._jsonstyle = style
         if style is not None:
             if isinstance(style, dict):

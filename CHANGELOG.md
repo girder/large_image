@@ -8,6 +8,7 @@
 ### Improvements
 - Harden the nd2 source to allow it to read more files ([#1207](../../pull/1207))
 - Add ipyleaflet representation for JupyterLab ([#1065](../../pull/1065))
+- When restyling a source, share band range calculations ([#1215](../../pull/1215))
 
 ### Changes
 - Change how extensions and fallback priorities in Girder interact ([#1208](../../pull/1208))
