@@ -787,7 +787,10 @@ class TiledTiffDirectory:
         # a form we expect.  If this isn't done, then PIL can load the image
         # multiple times, which sometimes throws an exception in PIL's JPEG
         # 2000 module.
-        image = image.convert('RGB')
+        if image.mode != 'L':
+            image = image.convert('RGB')
+        else:
+            image.load()
         return image
 
     def parse_image_description(self, meta=None):  # noqa

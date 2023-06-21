@@ -309,7 +309,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         self._channelInfo = channels
                         try:
                             self._channels = [
-                                channels.get(idx)['name'] for idx in range(len(channels))]
+                                channels.get(idx)['name'].split('|')[0]
+                                for idx in range(len(channels))]
                         except Exception:
                             pass
 

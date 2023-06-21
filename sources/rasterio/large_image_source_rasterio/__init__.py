@@ -493,30 +493,22 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         return infoSet
 
     def getMetadata(self):
+        metadata = super().getMetadata()
         with self._getDatasetLock:
             # check if the file is geospatial
             has_projection = self.dataset.crs
             has_gcps = len(self.dataset.gcps[0]) != 0 and self.dataset.gcps[1]
             has_affine = self.dataset.transform
 
-            metadata = JSONDict({
+            metadata.update({
                 'geospatial': bool(has_projection or has_gcps or has_affine),
-                'levels': self.levels,
-                'sizeX': self.sizeX,
-                'sizeY': self.sizeY,
                 'sourceLevels': self.sourceLevels,
                 'sourceSizeX': self.sourceSizeX,
                 'sourceSizeY': self.sourceSizeY,
-                'tileWidth': self.tileWidth,
-                'tileHeight': self.tileHeight,
                 'bounds': self.getBounds(self.projection),
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
             })
-
-        # magnification is computed elswhere
-        metadata.update(self.getNativeMagnification())
-
         return metadata
 
     def getInternalMetadata(self, **kwargs):

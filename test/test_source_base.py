@@ -196,6 +196,7 @@ def testSourcesTilesAndMethods(source, filename):
     assert ts.getInternalMetadata() is not None
     assert ts.getOneBandInformation(1) is not None
     assert len(ts.getBandInformation()) >= 1
+    assert len(ts.getBandInformation()) == tileMetadata['bandCount']
     assert ts.getPixel(region=dict(left=0, top=0)) is not None
     # Histograms are too slow to test in this way
     #  assert len(ts.histogram()['histogram']) >= 1
