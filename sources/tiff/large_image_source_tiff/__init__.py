@@ -165,6 +165,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tifftools.constants.SampleFormat[sampleformat or 1].name,
             bitspersample
         ))
+        self._bandCount = highest._tiffInfo.get('samplesperpixel')
         # Sort the directories so that the highest resolution is the last one;
         # if a level is missing, put a None value in its place.
         self._tiffDirectories = [directories.get(key) for key in
@@ -298,6 +299,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tifftools.constants.SampleFormat[sampleformat or 1].name,
             bitspersample
         ))
+        self._bandCount = dir0._tiffInfo.get('samplesperpixel')
         info = _cached_read_tiff(self._largeImagePath)
         frames = []
         associated = []  # for now, a list of directories

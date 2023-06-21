@@ -1,6 +1,9 @@
 # Change Log
 
-## 1.22.5
+## 1.23.0
+
+### Features
+- Add tile source bandCount attribute ([#1214](../../pull/1214))
 
 ### Improvements
 - Harden the nd2 source to allow it to read more files ([#1207](../../pull/1207))

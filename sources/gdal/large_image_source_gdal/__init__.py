@@ -580,22 +580,17 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             hasattr(self, '_netcdf'))
 
     def getMetadata(self):
+        metadata = super().getMetadata()
         with self._getDatasetLock:
-            metadata = JSONDict({
+            metadata.update({
                 'geospatial': self.geospatial,
-                'levels': self.levels,
-                'sizeX': self.sizeX,
-                'sizeY': self.sizeY,
                 'sourceLevels': self.sourceLevels,
                 'sourceSizeX': self.sourceSizeX,
                 'sourceSizeY': self.sourceSizeY,
-                'tileWidth': self.tileWidth,
-                'tileHeight': self.tileHeight,
                 'bounds': self.getBounds(self.projection),
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
             })
-        metadata.update(self.getNativeMagnification())
         if hasattr(self, '_netcdf'):
             # To ensure all band information from all subdatasets in netcdf,
             # we could do the following:
