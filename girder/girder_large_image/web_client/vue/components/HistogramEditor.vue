@@ -321,9 +321,6 @@ export default {
 </template>
 
 <style scoped>
-input {
-    width: 80px
-}
 .input-space {
     width: 80px
 }

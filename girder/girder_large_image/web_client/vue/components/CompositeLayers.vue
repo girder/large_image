@@ -1,7 +1,6 @@
 <script>
 import { restRequest } from '@girder/core/rest';
 import { Chrome } from 'vue-color';
-import Switches from 'vue-switches';
 import { CHANNEL_COLORS, OTHER_COLORS } from '../utils/colors'
 import HistogramEditor from './HistogramEditor.vue';
 
@@ -10,7 +9,6 @@ export default {
     emits: ['updateStyle'],
     components: {
         'color-picker': Chrome,
-        Switches,
         HistogramEditor,
     },
     data() {
@@ -208,14 +206,15 @@ export default {
                     <th></th>
                     <th>
                         <div class="auto-range-col">
-                            <span class="small-text">Auto Range</span>
-                            <switches
-                                :value="allAutoRange()"
-                                @input="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.2)"
-                                :emit-on-mount="false"
-                                theme="bulma"
-                                color="blue"
-                            />
+                            <div class="auto-range-label">
+                                <span class="small-text">Auto Range</span>
+                                <label class="switch">
+                                    <span
+                                        :class="allAutoRange() ? 'slider checked' : 'slider'"
+                                        @click="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.2)"
+                                    />
+                                </label>
+                            </div>
                             <span
                                 v-if="allAutoRange()"
                                 class="percentage-input"
@@ -271,13 +270,12 @@ export default {
                     </td>
                     <td>
                         <div class="auto-range-col">
-                            <switches
-                                :value="autoRange"
-                                @input="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.2)"
-                                :emit-on-mount="false"
-                                theme="bulma"
-                                color="blue"
-                            />
+                            <label class="switch">
+                                <span
+                                    :class="autoRange ? 'slider checked' : 'slider'"
+                                    @click="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.2)"
+                                />
+                            </label>
                         </div>
                         <i
                             :class="expandedRows.includes(index) ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
@@ -343,13 +341,55 @@ export default {
 .auto-range-col {
     min-width: 100px;
     display: flex;
-    flex-direction: column;
+    column-gap: 10px;
     align-content: space-around;
     padding: 0;
 }
-.vue-switcher {
-    margin: 5px 0px 0px 0px;
-    width: 45px;
+.auto-range-label {
+    display: flex;
+    flex-direction: column;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 45px;
+  height: 20px;
+  margin-top: 5px;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+  border-radius: 34px;
+}
+.slider.checked {
+  background-color: #2196F3;
+}
+.slider:focus{
+  box-shadow: 0 0 1px #2196F3;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 15px;
+  width: 15px;
+  left: 4px;
+  bottom: 2px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+  border-radius: 50%;
+}
+.slider.checked:before {
+  -webkit-transform: translateX(22px);
+  -ms-transform: translateX(22px);
+  transform: translateX(22px);
 }
 .table-container {
     overflow: auto;
@@ -379,6 +419,9 @@ tr {
 </style>
 
 <style>
+input {
+    width: 80px
+}
 .percentage-input {
     position: relative;
     margin-top: 5px;
