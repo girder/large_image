@@ -1,7 +1,7 @@
 Example Usage
 =============
 
-The large_image library can be used to read and access different file formats.  There are several common usage patterns.  These examples use ``sample.tiff`` as an example -- any readable image cane be used in this case.
+The large_image library can be used to read and access different file formats.  There are several common usage patterns.  These examples use ``sample.tiff`` as an example -- any readable image can be used in this case.
 
 Image Metadata
 --------------
