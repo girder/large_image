@@ -21,6 +21,7 @@ from ..cache_util import getTileCache, methodcache, strhash
 from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          SourcePriority, TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat, dtypeToGValue)
+from .jupyter import IPyLeafletMixin
 from .tiledict import LazyTileDict
 from .utilities import (JSONDict, _encodeImage,  # noqa: F401
                         _encodeImageBinary, _gdalParameters, _imageToNumpy,
@@ -29,7 +30,7 @@ from .utilities import (JSONDict, _encodeImage,  # noqa: F401
                         getPaletteColors, histogramThreshold, nearPowerOfTwo)
 
 
-class TileSource:
+class TileSource(IPyLeafletMixin):
     # Name of the tile source
     name = None
 
@@ -129,6 +130,7 @@ class TileSource:
             composited in the order listed.  This base object may also contain
             the 'dtype' and 'axis' values.
         """
+        super().__init__(**kwargs)
         self.logger = config.getConfig('logger')
         self.cache, self.cache_lock = getTileCache()
 
@@ -204,6 +206,23 @@ class TileSource:
                     self._style = JSONDict(style)
                 except TypeError:
                     raise exceptions.TileSourceError('Style is not a valid json object.')
+
+    def getBounds(self, *args, **kwargs):
+        return {
+            'sizeX': self.sizeX,
+            'sizeY': self.sizeY,
+        }
+
+    def getCenter(self, *args, **kwargs):
+        """Retruns (Y, X) center location."""
+        if self.geospatial:
+            bounds = self.getBounds(*args, **kwargs)
+            return (
+                (bounds['ymax'] - bounds['ymin']) / 2 + bounds['ymin'],
+                (bounds['xmax'] - bounds['xmin']) / 2 + bounds['xmin'],
+            )
+        bounds = TileSource.getBounds(self, *args, **kwargs)
+        return (bounds['sizeY'] / 2, bounds['sizeX'] / 2)
 
     @property
     def style(self):
