@@ -268,8 +268,8 @@ export default {
                             @input="(swatch) => {updateLayerColor(layerName, swatch)}"
                         />
                     </td>
-                    <td>
-                        <div class="auto-range-col">
+                    <td class="auto-range-col">
+                        <div class="auto-range-toggle">
                             <label class="switch">
                                 <span
                                     :class="autoRange ? 'slider checked' : 'slider'"
@@ -340,6 +340,9 @@ export default {
     width: 25%;
 }
 .auto-range-col {
+    position: relative;
+}
+.auto-range-toggle {
     min-width: 100px;
     display: flex;
     column-gap: 10px;
@@ -393,7 +396,7 @@ export default {
   transform: translateX(22px);
 }
 .table-container {
-    overflow: auto;
+    overflow: scroll;
     position: relative;
     max-height: 300px;
 }
