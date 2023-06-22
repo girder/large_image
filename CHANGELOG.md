@@ -4,6 +4,7 @@
 
 ### Features
 - Add tile source bandCount attribute ([#1214](../../pull/1214))
+- Histogram range editor ([#1175](../../pull/1175))
 
 ### Improvements
 - Harden the nd2 source to allow it to read more files ([#1207](../../pull/1207))
