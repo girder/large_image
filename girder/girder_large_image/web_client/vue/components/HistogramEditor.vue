@@ -170,7 +170,10 @@ export default {
             return numSamples / this.histogram.samples * 100
         },
         updateFromInput(funcName, value) {
-            const roundedValue = parseFloat(parseFloat(value).toFixed(2))
+            let roundedValue = undefined;
+            if (value) {
+                roundedValue = parseFloat(parseFloat(value).toFixed(2))
+            }
             this.$emit(funcName, roundedValue)
         },
     },
@@ -201,7 +204,10 @@ export default {
         },
         currentMin() {
             const currentPosition = parseFloat(this.$refs.minHandle.getAttribute('x1'))
-            const newPosition = this.valueToXPosition(this.currentMin)
+            let newPosition = this.xRange[0]
+            if (this.currentMin) {
+                newPosition = this.valueToXPosition(this.currentMin)
+            }
             if (newPosition !== currentPosition) {
                 this.setHandlePosition(
                     this.$refs.minHandle,
@@ -214,7 +220,10 @@ export default {
         },
         currentMax() {
             const currentPosition = parseFloat(this.$refs.maxHandle.getAttribute('x1'))
-            const newPosition = this.valueToXPosition(this.currentMax)
+            let newPosition = this.xRange[1]
+            if(this.currentMax) {
+                newPosition = this.valueToXPosition(this.currentMax)
+            }
             if (newPosition !== currentPosition) {
                 this.setHandlePosition(
                     this.$refs.maxHandle,
@@ -281,7 +290,7 @@ export default {
                     y1="0" y2="30"
                 />
                 <text
-                    :x="this.xRange[1] - (`${this.vRange[1]}`.length * 6)"
+                    :x="this.xRange[1] && this.vRange[1] ? this.xRange[1] - (`${this.vRange[1]}`.length * 6): 0"
                     y="43" class="small"
                 >{{ this.vRange[1] }}</text>
                 <rect ref="maxExclusionBox" x="5" y="0" width="0" height="30" opacity="0.2"/>
