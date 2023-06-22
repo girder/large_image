@@ -315,6 +315,7 @@ export default {
     position: absolute;
     z-index: 100;
     margin-left: 50px;
+    bottom: 10px;
 }
 .table-header {
     position: sticky;
@@ -393,6 +394,7 @@ export default {
 }
 .table-container {
     overflow: auto;
+    position: relative;
     max-height: 300px;
 }
 .table-container td {
@@ -400,9 +402,6 @@ export default {
 }
 .table-container input {
     max-width: 80px;
-}
-tr {
-    position: relative;
 }
 .expand-btn {
     position: absolute;
