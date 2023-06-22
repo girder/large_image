@@ -15,7 +15,6 @@ export default {
         return {
             enabledLayers: this.layers,
             colorPickerShown: undefined,
-            currentColorPickerRef: undefined,
             currentFrameHistogram: undefined,
             compositeLayerInfo: {},
             expandedRows: [],
@@ -92,11 +91,8 @@ export default {
             this.colorPickerShown = layer
             if (this.colorPickerShown === undefined) {
                 document.removeEventListener('click', this.documentClick);
-                // Only update style when picker is closed
-                this.updateStyle()
             }
             else {
-                this.currentColorPickerRef = document.getElementById(layer+'_picker')
                 document.addEventListener('click', this.documentClick);
             }
         },
@@ -139,13 +135,19 @@ export default {
             return Object.values(this.compositeLayerInfo).every(({ autoRange }) => autoRange !== undefined)
         },
         documentClick(e) {
-            const picker = this.currentColorPickerRef;
-            if (picker && picker !== e.target && !picker.contains(e.target)) {
+            const picker = document.getElementById('color_picker');
+            if (
+                picker
+                && picker !== e.target
+                && !picker.contains(e.target)
+                && !e.target.classList.contains('current-color')
+            ) {
                 this.toggleColorPicker(undefined);
             }
         },
         updateLayerColor(layer, swatch) {
             this.compositeLayerInfo[layer].palette = swatch.hex;
+            this.updateStyle();
         },
         updateLayerMin(layer, newVal) {
             const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
@@ -236,6 +238,15 @@ export default {
                         />
                     </th>
                 </tr>
+                <!-- color picker should display relative to sticky table head -->
+                <color-picker
+                    v-if="colorPickerShown"
+                    id="color_picker"
+                    class="picker-offset"
+                    :disableAlpha="true"
+                    :value="Object.values(compositeLayerInfo).find((({layerName}) => layerName === colorPickerShown)).palette"
+                    @input="(swatch) => {updateLayerColor(colorPickerShown, swatch)}"
+                />
             </thead>
             <tbody>
                 <tr
@@ -257,18 +268,11 @@ export default {
                         >
                     </td>
                     <td class="name-col">{{ layerName }}</td>
-                    <td :id="layerName+'_picker'" class="color-col">
-                    <span
+                    <td class="color-col">
+                        <span
                             class="current-color"
                             :style="{ 'background-color': palette }"
                             @click="() => toggleColorPicker(layerName)"
-                        />
-                        <color-picker
-                            v-if="colorPickerShown === layerName"
-                            class="picker-offset"
-                            :disableAlpha="true"
-                            :value="palette"
-                            @input="(swatch) => {updateLayerColor(layerName, swatch)}"
                         />
                     </td>
                     <td class="auto-range-col">
@@ -318,8 +322,7 @@ export default {
 .picker-offset {
     position: absolute;
     z-index: 100;
-    margin-left: 50px;
-    bottom: 10px;
+    right: 15%
 }
 .table-header {
     position: sticky;
@@ -400,7 +403,8 @@ export default {
   transform: translateX(22px);
 }
 .table-container {
-    overflow: scroll;
+    overflow-y: scroll;
+    overflow-x: auto;
     position: relative;
     max-height: 300px;
 }
@@ -409,6 +413,9 @@ export default {
 }
 .table-container input {
     max-width: 80px;
+}
+.table {
+    border-collapse: separate;
 }
 .expand-btn {
     position: absolute;
