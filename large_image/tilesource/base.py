@@ -141,6 +141,7 @@ class TileSource(IPyLeafletMixin):
         self.sizeY = None
         self._styleLock = threading.RLock()
         self._dtype = None
+        self._bandCount = None
 
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
@@ -192,7 +193,8 @@ class TileSource(IPyLeafletMixin):
                 delattr(self, key)
             except Exception:
                 pass
-        self._bandRanges = {}
+        if not hasattr(self, '_bandRanges'):
+            self._bandRanges = {}
         self._jsonstyle = style
         if style is not None:
             if isinstance(style, dict):
@@ -214,7 +216,7 @@ class TileSource(IPyLeafletMixin):
         }
 
     def getCenter(self, *args, **kwargs):
-        """Retruns (Y, X) center location."""
+        """Returns (Y, X) center location."""
         if self.geospatial:
             bounds = self.getBounds(*args, **kwargs)
             return (
@@ -239,12 +241,20 @@ class TileSource(IPyLeafletMixin):
                             region=dict(left=0, top=0, width=1, height=1),
                             format=TILE_FORMAT_NUMPY)
                         self._dtype = sample.dtype
+                        self._bandCount = sample.shape[-1] if len(sample.shape) == 3 else 1
                     finally:
                         self._setSkipStyle(False)
                 else:
                     return None
 
         return self._dtype
+
+    @property
+    def bandCount(self):
+        if not self._bandCount:
+            if not self.dtype:
+                return None
+        return self._bandCount
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
@@ -1604,10 +1614,14 @@ class TileSource(IPyLeafletMixin):
         if self._dtype is None:
             if tileEncoding == TILE_FORMAT_NUMPY:
                 self._dtype = tile.dtype
+                self._bandCount = tile.shape[-1] if len(tile.shape) == 3 else 1
             elif tileEncoding == TILE_FORMAT_PIL:
                 self._dtype = numpy.uint8 if ';16' not in tile.mode else numpy.uint16
+                self._bandCount = len(tile.mode)
             else:
-                self._dtype = _imageToNumpy(tile)[0].dtype
+                _img = _imageToNumpy(tile)[0]
+                self._dtype = _img.dtype
+                self._bandCount = _img.shape[-1] if len(_img.shape) == 3 else 1
 
         mode = None
         if (numpyAllowed == 'always' or tileEncoding == TILE_FORMAT_NUMPY or
@@ -1717,6 +1731,7 @@ class TileSource(IPyLeafletMixin):
             'mm_x': mag['mm_x'],
             'mm_y': mag['mm_y'],
             'dtype': str(self.dtype),
+            'bandCount': self.bandCount,
         })
 
     @property
