@@ -198,6 +198,7 @@ export default {
                     <th>
                         <input
                             type="checkbox"
+                            class="input-80"
                             :checked="enabledLayers === layers"
                             @input="toggleEnableAll"
                         >
@@ -221,6 +222,7 @@ export default {
                             >
                                 <input
                                     type="number"
+                                    class="input-80"
                                     :max="50"
                                     :min="0"
                                     :value="autoRangeForAll"
@@ -248,6 +250,7 @@ export default {
                     <td class="enable-col">
                         <input
                             type="checkbox"
+                            class="input-80"
                             :value="layerName"
                             v-model="enabledLayers"
                             @change="updateActiveLayers"
@@ -421,7 +424,7 @@ export default {
 </style>
 
 <style>
-input {
+.input-80 {
     width: 80px
 }
 .percentage-input {
