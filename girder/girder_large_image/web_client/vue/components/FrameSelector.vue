@@ -3,10 +3,11 @@ import Vue from 'vue';
 import CompositeLayers from './CompositeLayers.vue';
 import DualInput from './DualInput.vue'
 export default Vue.extend({
-    props: ['imageMetadata', 'frameUpdate'],
+    props: ['itemId', 'imageMetadata', 'frameUpdate'],
     components: { CompositeLayers, DualInput },
     data() {
         return {
+            loaded: false,
             currentFrame: 0,
             maxFrame: 0,
             sliderModes: [],
@@ -33,7 +34,7 @@ export default Vue.extend({
     },
     methods: {
         updateStyle(style) {
-            this.style = style
+            this.style = Object.assign(this.style, style)
             this.update()
         },
         updateAxisSlider(event) {
@@ -52,7 +53,7 @@ export default Vue.extend({
                 }
             });
             this.currentFrame = frame
-            let style = this.currentModeId > 1 ? this.style : undefined
+            let style = this.currentModeId > 1 ? this.style[this.currentModeId] : undefined
             this.frameUpdate(frame, style);
         },
         fillMetadata() {
@@ -72,7 +73,7 @@ export default Vue.extend({
             ) {
                 this.imageMetadata.channelmap = Object.fromEntries(
                     [...Array(this.imageMetadata.IndexRange['IndexC']).keys()].map(
-                        (i) => [`Channel ${i}`, i]
+                        (i) => [`Channel ${i + 1}`, i]
                     )
                 )
                 this.imageMetadata.channels = Object.keys(this.imageMetadata.channelmap)
@@ -83,7 +84,7 @@ export default Vue.extend({
                 this.imageMetadata.bands = Object.values(this.imageMetadata.bands).map(
                     (b, i) => {
                         if (!b.interpretation) {
-                            return `Band ${i}`
+                            return `Band ${i + 1}`
                         } else {
                             return b.interpretation.split("=")[0]
                         }
@@ -131,14 +132,15 @@ export default Vue.extend({
         this.maxFrame = this.imageMetadata.frames.length - 1
         this.populateIndices()
         this.populateModes()
+        this.loaded = true
     }
 });
 </script>
 
 <template>
-    <div class="image-frame-control-box">
-        <div id="current_image_frame" style="display: none;">{{ currentFrame }}</div>
-        <div id="current_image_style" style="display: none;">{{ style }}</div>
+    <div class="image-frame-control-box" v-if="loaded">
+        <div id="current_image_frame" class="invisible">{{ currentFrame }}</div>
+        <div id="current_image_style" class="invisible">{{ style }}</div>
         <div>
             <label for="mode">Image control mode: </label>
             <select
@@ -172,17 +174,37 @@ export default Vue.extend({
             />
         </table>
 
-        <div v-if="currentModeId > 1" class="image-frame-simple-control">
+        <!-- Use composite layers component twice so state for each one is maintained while invisible -->
+        <!-- Use styling instead of v-if to make each invisible so that the components are not unmounted -->
+        <div class="image-frame-simple-control">
             <composite-layers
-                :layers="currentModeId === 2 ? imageMetadata.channels : imageMetadata.bands"
-                :layerMap="currentModeId === 2 ? imageMetadata.channelmap : undefined"
-                @updateStyle="updateStyle"
+                key="channels"
+                v-if="imageMetadata.channels"
+                :itemId="itemId"
+                :currentFrame="currentFrame"
+                :layers="imageMetadata.channels"
+                :layerMap="imageMetadata.channelmap"
+                :class="currentModeId === 2 ? '' : 'invisible'"
+                @updateStyle="(style) => updateStyle({2: style})"
+            />
+            <composite-layers
+                key="bands"
+                v-if="imageMetadata.bands"
+                :itemId="itemId"
+                :currentFrame="currentFrame"
+                :layers="imageMetadata.bands"
+                :layerMap="undefined"
+                :class="currentModeId === 3 ? '' : 'invisible'"
+                @updateStyle="(style) => updateStyle({3: style})"
             />
         </div>
     </div>
 </template>
 
 <style scoped>
+.invisible {
+    display: none;
+}
 .image-frame-control-box {
     display: flex;
     flex-direction: column;

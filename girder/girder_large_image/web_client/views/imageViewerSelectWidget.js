@@ -71,6 +71,7 @@ var ImageViewerSelectWidget = View.extend({
         const vm = new FrameSelector({
             el,
             propsData: {
+                itemId: this.itemId,
                 imageMetadata: imageMetadata,
                 frameUpdate: frameUpdate
             }
