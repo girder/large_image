@@ -289,6 +289,7 @@ export default {
                         <histogram-editor
                             :itemId="itemId"
                             :layerIndex="index"
+                            :currentFrame="currentFrame"
                             :currentFrameHistogram="currentFrameHistogram"
                             :histogramParams="histogramParams"
                             :framedelta="framedelta"

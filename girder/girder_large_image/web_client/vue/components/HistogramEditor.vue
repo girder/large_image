@@ -7,6 +7,7 @@ export default {
     props: [
         'itemId',
         'layerIndex',
+        'currentFrame',
         'currentFrameHistogram',
         'histogramParams',
         'framedelta',
@@ -30,7 +31,7 @@ export default {
                     url: 'item/' + this.itemId + '/tiles/histogram',
                     data: Object.assign(
                         this.histogramParams,
-                        {frame: this.histogramParams.frame + this.framedelta}
+                        {frame: this.currentFrame + this.framedelta}
                     )
                 }).then((response) => {
                     if (response.length < 3) {
@@ -40,7 +41,9 @@ export default {
                     }
                 })
             } else {
-                this.histogram = this.currentFrameHistogram[this.layerIndex]
+                this.histogram = this.layerIndex < this.currentFrameHistogram.length
+                    ? this.currentFrameHistogram[this.layerIndex]
+                    : this.currentFrameHistogram[0]
             }
         },
         simplifyHistogram(hist) {
