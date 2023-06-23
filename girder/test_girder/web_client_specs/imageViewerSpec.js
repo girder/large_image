@@ -300,6 +300,7 @@ $(function () {
         it('Select each viewer in turn via change, then return to geojs', function () {
             viewers.push('geojs');
             _.each(viewers, function (vid, idx) {
+                girderTest.waitForLoad();
                 runs(function () {
                     var $ = jQuery;
                     $('.g-item-image-viewer-select .g-item-info-header select').val(vid).change();
