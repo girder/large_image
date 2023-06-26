@@ -25,7 +25,7 @@ export default {
                 height: 1024,
                 bins: 512,
                 resample: false,
-                style: {},
+                style: '{}',
                 roundRange: true,
             }
         }
