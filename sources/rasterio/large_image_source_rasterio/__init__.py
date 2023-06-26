@@ -488,7 +488,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 infoSet[i] = {k: v for k, v in info.items() if v not in (None, '')}
 
         # set the value to cache if needed
-        cache is False or getattr(self, '_bandInfo', infoSet)
+        if cache:
+            self._bandInfo = infoSet
 
         return infoSet
 
