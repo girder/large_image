@@ -207,6 +207,8 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                         dataset['dataset'] = gdal.Open(dataset['name'], gdalconst.GA_ReadOnly)
                     dataset['bands'] = self.getBandInformation(dataset=dataset['dataset'])
                 bandInfo = dataset['bands'][band[1]]
+        bandInfo.setdefault('min', 0)
+        bandInfo.setdefault('max', 255)
         return bandInfo
 
     def _colorizerFromStyle(self, style):

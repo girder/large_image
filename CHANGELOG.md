@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.23.1
+
+### Improvements
+- Harden reading some nc files ([#1218](../../pull/1218))
+
 ## 1.23.0
 
 ### Features
@@ -17,7 +22,7 @@
 
 ### Bug Fixes
 - Fix clearing the style threshold cache ([#1210](../../pull/1210))
--
+
 ## 1.22.4
 
 ### Bug Fixes
