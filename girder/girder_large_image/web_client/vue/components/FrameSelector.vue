@@ -170,7 +170,7 @@ export default Vue.extend({
                 :currentValue="indexInfo[index].current"
                 :valueMax="indexInfo[index].range"
                 :label="index.replace('Index', '')"
-                :sliderLabels="index.replace('Index', '') === 'C' ? imageMetadata.channels : []"
+                :sliderLabels="index === 'IndexC' ? imageMetadata.channels : []"
                 @updateValue="(v) => updateAxisSlider({index, frame: v})"
             />
         </table>
