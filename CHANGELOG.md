@@ -8,6 +8,7 @@
 
 ### Bug Fixes
 - Pass style to histogram endpoint as json ([#1220](../../pull/1220))
+- Don't show frame controls outside of the geojs viewer ([#1226](../../pull/1226))
 
 ## 1.23.0
 
