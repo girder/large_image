@@ -47,15 +47,20 @@ export default {
                     autoRange: undefined
                 }
             })
-            Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
-                if(this.layers.includes(channelName)){
-                    this.compositeLayerInfo[channelName].palette = color
-                    usedColors.push(color)
-                }
-            })
+            // Assign colors
             this.layers.forEach((layerName) => {
                 if (!this.compositeLayerInfo[layerName].palette) {
                     let chosenColor;
+
+                    // Search for case-insensitive regex match among known channel-colors
+                    Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
+                        if (layerName.toUpperCase().match(
+                            new RegExp("^" + channelName + ".*$")
+                        )) {
+                            chosenColor = color
+                        }
+                    })
+
                     const unusedColors = OTHER_COLORS.filter(
                         (color) => !usedColors.includes(color)
                     )
