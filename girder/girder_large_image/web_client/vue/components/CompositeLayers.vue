@@ -346,7 +346,8 @@ export default {
     width: 10%;
 }
 .name-col {
-    width: 40%;
+    max-width: 40%;
+    word-break: break-all;
 }
 .color-col {
     width: 25%;
