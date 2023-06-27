@@ -193,7 +193,7 @@ export default {
 </script>
 
 <template>
-    <div class="table-container">
+    <div :class="colorPickerShown ? 'table-container tall' : 'table-container'">
         <table id="composite-layer-table" class="table table-condensed">
             <thead class="table-header">
                 <tr>
@@ -407,6 +407,9 @@ export default {
     overflow-x: auto;
     position: relative;
     max-height: 300px;
+}
+.table-container.tall {
+    height: 300px;
 }
 .table-container td {
     padding: 0 5px;
