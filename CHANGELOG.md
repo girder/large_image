@@ -4,6 +4,10 @@
 
 ### Improvements
 - Harden reading some nc files ([#1218](../../pull/1218))
+- Increase the cache used for opening directories in the pylibtiff source ([#1221](../../pull/1221))
+
+### Bug Fixes
+- Pass style to histogram endpoint as json ([#1220](../../pull/1220))
 
 ## 1.23.0
 
