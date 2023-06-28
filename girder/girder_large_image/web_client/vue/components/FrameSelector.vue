@@ -15,10 +15,12 @@ export default Vue.extend({
             indices: [],
             indexInfo: {},
             style: {},
+            modesShown: {1: true},
         };
     },
     watch: {
         currentModeId() {
+            this.modesShown[this.currentModeId] = true;
             this.update();
         }
     },
@@ -30,11 +32,15 @@ export default Vue.extend({
                     return true
                 }
             )
+        },
+        currentStyle() {
+            const curStyle = this.style[this.currentModeId];
+            return curStyle ? JSON.stringify(curStyle, null, null) : '';
         }
     },
     methods: {
-        updateStyle(style) {
-            this.style = Object.assign(this.style, style)
+        updateStyle(idx, style) {
+            this.$set(this.style, idx, style);
             this.update()
         },
         updateAxisSlider(event) {
@@ -79,7 +85,20 @@ export default Vue.extend({
                 this.imageMetadata.channels = Object.keys(this.imageMetadata.channelmap)
             }
             if (!this.imageMetadata.bands) {
-                this.imageMetadata.bands = [ 'red', 'green', 'blue' ]
+                switch (this.imageMetadata.bandCount) {
+                    case 1:
+                        this.imageMetadata.bands = [ 'gray' ];
+                        break;
+                    case 2:
+                        this.imageMetadata.bands = [ 'gray', 'alpha' ];
+                        break;
+                    case 3:
+                        this.imageMetadata.bands = [ 'red', 'green', 'blue' ];
+                        break;
+                    case 4:
+                        this.imageMetadata.bands = [ 'red', 'green', 'blue', 'alpha' ];
+                        break;
+                }
             } else {
                 this.imageMetadata.bands = Object.values(this.imageMetadata.bands).map(
                     (b, i) => {
@@ -140,7 +159,7 @@ export default Vue.extend({
 <template>
     <div class="image-frame-control-box" v-if="loaded">
         <div id="current_image_frame" class="invisible">{{ currentFrame }}</div>
-        <div id="current_image_style" class="invisible">{{ style }}</div>
+        <div id="current_image_style" class="invisible">{{ currentStyle }}</div>
         <div>
             <label for="mode">Image control mode: </label>
             <select
@@ -179,23 +198,23 @@ export default Vue.extend({
         <div class="image-frame-simple-control">
             <composite-layers
                 key="channels"
-                v-if="imageMetadata.channels"
+                v-if="imageMetadata.channels && modesShown[2]"
                 :itemId="itemId"
                 :currentFrame="currentFrame"
                 :layers="imageMetadata.channels"
                 :layerMap="imageMetadata.channelmap"
                 :class="currentModeId === 2 ? '' : 'invisible'"
-                @updateStyle="(style) => updateStyle({2: style})"
+                @updateStyle="(style) => updateStyle(2, style)"
             />
             <composite-layers
                 key="bands"
-                v-if="imageMetadata.bands"
+                v-if="imageMetadata.bands && modesShown[3]"
                 :itemId="itemId"
                 :currentFrame="currentFrame"
                 :layers="imageMetadata.bands"
                 :layerMap="undefined"
                 :class="currentModeId === 3 ? '' : 'invisible'"
-                @updateStyle="(style) => updateStyle({3: style})"
+                @updateStyle="(style) => updateStyle(3, style)"
             />
         </div>
     </div>
