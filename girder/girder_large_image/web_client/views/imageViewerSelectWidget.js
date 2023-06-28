@@ -88,7 +88,7 @@ var ImageViewerSelectWidget = View.extend({
             this.currentViewer = null;
         }
         // hide general image controls; individual viewers must enable them
-        this.$('.image-controls>span').toggleClass('hidden', true);
+        this.$('.image-controls>div').toggleClass('hidden', true);
         this._frameUpdate = null;
         this.$('.image-viewer').toggleClass('hidden', true);
 
@@ -121,6 +121,7 @@ var ImageViewerSelectWidget = View.extend({
      *      there is only one frame.
      */
     setFrames: function (metadata, frameUpdate) {
+        this.$('.image-controls>div').toggleClass('hidden', false);
         // Vue frame control
         this._createVue(metadata, frameUpdate);
     },
