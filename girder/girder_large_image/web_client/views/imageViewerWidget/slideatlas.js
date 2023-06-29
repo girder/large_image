@@ -5,6 +5,8 @@ import {parseQueryString, splitRoute} from '@girder/core/misc';
 
 import ImageViewerWidget from './base';
 
+var baseSAUrl = 'https://unpkg.com/slideatlas-viewer@4.4.1/dist/';
+
 var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         if (!CanvasRenderingContext2D.prototype.resetTransform) {
@@ -17,7 +19,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
                 $('<link>', {
                     id: 'large_image-slideatlas-css',
                     rel: 'stylesheet',
-                    href: 'https://unpkg.com/slideatlas-viewer@%5e4.4.1/dist/sa.css'
+                    href: baseSAUrl + 'sa.css'
                 })
             );
         }
@@ -25,7 +27,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings),
             $.ajax({ // like $.getScript, but allow caching
-                url: 'https://unpkg.com/slideatlas-viewer@%5e4.4.1/dist/sa-all.max.js',
+                url: baseSAUrl + 'sa-all.max.js',
                 dataType: 'script',
                 cache: true
             }))
@@ -60,12 +62,6 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         // TODO: if a viewer already exists, do we render again?
         // SlideAtlas bundles its own version of jQuery, which should attach itself to "window.$" when it's sourced
         // The "this.$el" still uses the Girder version of jQuery, which will not have "saViewer" registered on it.
-        let root = '/static/built';
-        try {
-            root = __webpack_public_path__ || root; // eslint-disable-line
-        } catch (err) { }
-        root = root.replace(/\/$/, '');
-
         var tileSource = {
             height: this.sizeY,
             width: this.sizeX,
@@ -87,7 +83,7 @@ var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
         window.SA.SAViewer(window.$(this.el), {
             zoomWidget: true,
             drawWidget: true,
-            prefixUrl: root + '/plugins/large_image/extra/slideatlas/img/',
+            prefixUrl: baseSAUrl + 'img/',
             tileSource: tileSource
         });
         this.viewer = this.el.saViewer;

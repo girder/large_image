@@ -64,12 +64,12 @@ $(function () {
         });
         it('adjust frame slider', function () {
             runs(function () {
-                expect($('.image-controls-frame').length).toBe(1);
-                $('.image-controls-number').val(1).trigger('input');
+                expect($('.image-frame-control-box').length).toBe(1);
+                $('.image-frame-control-box input:visible').eq(1).val(1).trigger('input');
             });
             girderTest.waitForLoad();
             waitsFor(function () {
-                return $('.image-controls-slider').val() === '1';
+                return $('.image-frame-control-box input:visible').eq(1).val() === '1';
             }, 'control slider to update');
         });
     });

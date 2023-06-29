@@ -104,8 +104,8 @@ class MemCache(BaseCache):
                 valueRepr = valueRepr[:500] + '...'
             self.logError(
                 exc.__class__, config.getConfig('logprint').error,
-                '%s: Failed to save value %s (size %r) with key %s' % (
-                    exc.__class__.__name__, valueRepr, valueSize, hashedKey))
+                '%s: Failed to save value (size %r) with key %s' % (
+                    exc.__class__.__name__, valueSize, hashedKey))
         except pylibmc.ServerDown:
             self.logError(pylibmc.ServerDown, config.getConfig('logprint').info,
                           'Memcached ServerDown')

@@ -59,7 +59,7 @@ SourceAndFiles = {
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
-        'read': r'\.(ptif|svs|tif.*|qptiff)$',
+        'read': r'\.(ptif|svs|tif.*|qptiff|dcm)$',
         'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej)',  # noqa
         'skipTiles': r'one_layer_missing',
     },
@@ -87,7 +87,7 @@ SourceAndFiles = {
     },
     'vips': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn|dcm)$',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'  # noqa
     },
 }
