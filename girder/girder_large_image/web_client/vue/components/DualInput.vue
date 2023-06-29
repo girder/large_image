@@ -16,7 +16,7 @@ export default {
 </script>
 
 <template>
-    <tr :class="this.sliderLabels.length ? 'dual-controls tall' : 'dual-controls'">
+    <tr :class="this.sliderLabels && this.sliderLabels.length ? 'dual-controls tall' : 'dual-controls'">
         <td><label for="numberControl">{{ label }}: </label></td>
         <td><input
             type="number"
@@ -35,13 +35,13 @@ export default {
             >
             <div class="bubble-wrap">
                 <output
-                    v-if="this.sliderLabels.length > value"
+                    v-if="this.sliderLabels && this.sliderLabels.length > value"
                     :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
                     class="bubble"
                 >
                     {{ this.sliderLabels[value] }}
                 </output>
-                <span v-if="this.sliderLabels.length > value"
+                <span v-if="this.sliderLabels && this.sliderLabels.length > value"
                     :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
                     class="bubble-after"></span>
             </div>
