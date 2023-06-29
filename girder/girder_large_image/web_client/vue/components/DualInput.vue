@@ -36,11 +36,14 @@ export default {
             <div class="bubble-wrap">
                 <output
                     v-if="this.sliderLabels.length > value"
-                    :style="'left:'+value/valueMax*100+'%'"
+                    :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
                     class="bubble"
                 >
                     {{ this.sliderLabels[value] }}
                 </output>
+                <span v-if="this.sliderLabels.length > value"
+                    :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
+                    class="bubble-after"></span>
             </div>
         </td>
     </tr>
@@ -68,12 +71,12 @@ export default {
   border-radius: 4px;
   transform: translateX(-50%);
   z-index: 10;
+  white-space: nowrap;
 }
-.bubble::after {
-  content: "";
+.bubble-after {
   position: absolute;
-  width: 2px;
-  height: 2px;
+  width: 4px;
+  height: 4px;
   background: rgb(120, 120, 120);
   top: -1px;
   left: 50%;
