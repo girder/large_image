@@ -56,7 +56,7 @@ export default {
                     Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
                         if (layerName.toUpperCase().match(
                             new RegExp("^" + channelName + ".*$")
-                        )) {
+                        ) && !usedColors.includes(color)) {
                             chosenColor = color
                         }
                     })
