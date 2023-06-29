@@ -60,15 +60,17 @@ export default {
                             chosenColor = color
                         }
                     })
-
-                    const unusedColors = OTHER_COLORS.filter(
-                        (color) => !usedColors.includes(color)
-                    )
-                    if (unusedColors.length > 0) {
-                        chosenColor = unusedColors[0]
-                    } else {
-                        chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
+                    if(!chosenColor){
+                        const unusedColors = OTHER_COLORS.filter(
+                            (color) => !usedColors.includes(color)
+                        )
+                        if (unusedColors.length > 0) {
+                            chosenColor = unusedColors[0]
+                        } else {
+                            chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
+                        }
                     }
+
                     this.compositeLayerInfo[layerName].palette = chosenColor
                     usedColors.push(chosenColor)
                 }
