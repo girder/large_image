@@ -29,7 +29,8 @@ def isGeospatial(path):
     """
     if not len(AvailableTileSources):
         loadTileSources()
-    for source in AvailableTileSources.values():
+    for sourceName in sorted(AvailableTileSources):
+        source = AvailableTileSources[sourceName]
         if hasattr(source, 'isGeospatial'):
             result = None
             try:
