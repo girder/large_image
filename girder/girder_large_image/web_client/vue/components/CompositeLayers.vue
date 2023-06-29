@@ -53,10 +53,8 @@ export default {
                     let chosenColor;
 
                     // Search for case-insensitive regex match among known channel-colors
-                    Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
-                        if (layerName.toUpperCase().match(
-                            new RegExp("^" + channelName + ".*$")
-                        ) && !usedColors.includes(color)) {
+                    Object.entries(CHANNEL_COLORS).forEach(([channelPattern, color]) => {
+                        if (layerName.toUpperCase().match(channelPattern) && !usedColors.includes(color)) {
                             chosenColor = color
                         }
                     })

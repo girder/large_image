@@ -1,11 +1,11 @@
 export const CHANNEL_COLORS = {
-    BRIGHTFIELD: '#FFFFFF',
-    DAPI: '#0000FF',
-    A594: '#FF0000',
-    CY3: '#FF8000',
-    CY5: '#FF00FF',
-    YFP: '#00FF00',
-    GFP: '#00FF00'
+    '^BRIGHTFIELD.*$': '#FFFFFF',
+    '^DAPI.*$': '#0000FF',
+    '^A594(|[^\d].*)$': '#FF0000',  // eslint-disable-line
+    '^CY3(|[^\d].*)$': '#FF8000',  // eslint-disable-line
+    '^CY5(|[^\d].*)$': '#FF00FF',  // eslint-disable-line
+    '^YFP.*$': '#00FF00',
+    '^GFP.*$': '#00FF00'
 };
 
 export const OTHER_COLORS = [
