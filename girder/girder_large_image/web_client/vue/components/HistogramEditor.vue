@@ -184,6 +184,9 @@ export default {
         this.fetchHistogram()
     },
     watch: {
+        currentFrame() {
+            this.fetchHistogram()
+        },
         histogram() {
             // allow rerender to occur first
             nextTick().then(() => {

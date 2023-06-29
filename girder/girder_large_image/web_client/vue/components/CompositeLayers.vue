@@ -47,10 +47,17 @@ export default {
                     autoRange: undefined
                 }
             })
-            Object.entries(CHANNEL_COLORS).forEach(([channelName, color]) => {
-                if(this.layers.includes(channelName)){
-                    this.compositeLayerInfo[channelName].palette = color
-                    usedColors.push(color)
+            // Assign colors
+            this.layers.forEach((layerName) => {
+                if (!this.compositeLayerInfo[layerName].palette) {
+                    // Search for case-insensitive regex match among known channel-colors
+                    Object.entries(CHANNEL_COLORS).forEach(([channelPattern, color]) => {
+                        if (layerName.match(new RegExp(channelPattern, 'i')) && !usedColors.includes(color)) {
+                            this.compositeLayerInfo[layerName].palette = color
+                            usedColors.push(color)
+                        }
+                    })
+
                 }
             })
             this.layers.forEach((layerName) => {
@@ -193,7 +200,7 @@ export default {
 </script>
 
 <template>
-    <div class="table-container">
+    <div :class="colorPickerShown ? 'table-container tall' : 'table-container'">
         <table id="composite-layer-table" class="table table-condensed">
             <thead class="table-header">
                 <tr>
@@ -341,7 +348,8 @@ export default {
     width: 10%;
 }
 .name-col {
-    width: 40%;
+    max-width: 40%;
+    word-break: break-all;
 }
 .color-col {
     width: 25%;
@@ -407,6 +415,9 @@ export default {
     overflow-x: auto;
     position: relative;
     max-height: 300px;
+}
+.table-container.tall {
+    height: 300px;
 }
 .table-container td {
     padding: 0 5px;
