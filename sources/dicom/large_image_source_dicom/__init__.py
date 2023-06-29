@@ -94,6 +94,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     }
     nameMatches = {
         r'DCM_\d+$': SourcePriority.MEDIUM,
+        r'\d+(\.\d+){3,20}$': SourcePriority.MEDIUM,
     }
 
     _minTileSize = 64
