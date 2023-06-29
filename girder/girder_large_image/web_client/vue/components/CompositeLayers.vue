@@ -50,25 +50,27 @@ export default {
             // Assign colors
             this.layers.forEach((layerName) => {
                 if (!this.compositeLayerInfo[layerName].palette) {
-                    let chosenColor;
-
                     // Search for case-insensitive regex match among known channel-colors
                     Object.entries(CHANNEL_COLORS).forEach(([channelPattern, color]) => {
                         if (layerName.match(new RegExp(channelPattern, 'i')) && !usedColors.includes(color)) {
-                            chosenColor = color
+                            this.compositeLayerInfo[layerName].palette = color
+                            usedColors.push(color)
                         }
                     })
-                    if(!chosenColor){
-                        const unusedColors = OTHER_COLORS.filter(
-                            (color) => !usedColors.includes(color)
-                        )
-                        if (unusedColors.length > 0) {
-                            chosenColor = unusedColors[0]
-                        } else {
-                            chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
-                        }
-                    }
 
+                }
+            })
+            this.layers.forEach((layerName) => {
+                if (!this.compositeLayerInfo[layerName].palette) {
+                    let chosenColor;
+                    const unusedColors = OTHER_COLORS.filter(
+                        (color) => !usedColors.includes(color)
+                    )
+                    if (unusedColors.length > 0) {
+                        chosenColor = unusedColors[0]
+                    } else {
+                        chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
+                    }
                     this.compositeLayerInfo[layerName].palette = chosenColor
                     usedColors.push(chosenColor)
                 }
