@@ -55,6 +55,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
     (rasterio, mapnik, etc.)
     """
 
+    _unstyledStyle = '{}'
+
     extensions = {
         None: SourcePriority.MEDIUM,
         'geotiff': SourcePriority.PREFERRED,
