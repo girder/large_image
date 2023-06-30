@@ -11,12 +11,14 @@
 
 ### Changes
 - Clean up some old slideatlas url references ([#1223](../../pull/1223))
+- Band compositing defaults to visible bands ([#1230](../../pull/1230))
 
 ### Bug Fixes
 - Pass style to histogram endpoint as json ([#1220](../../pull/1220))
 - Don't show frame controls outside of the geojs viewer ([#1226](../../pull/1226))
 - Fix updating the hidden style field for the frame selector ([#1227](../../pull/1227))
 - Fix a bug calculating some histograms ([#1231](../../pull/1231))
+- Fix showing the frame selector when there is no axis information ([#1230](../../pull/1230))
 
 ## 1.23.0
 
