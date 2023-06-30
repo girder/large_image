@@ -60,7 +60,10 @@ setup(
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
-        'all': 'rio-cogeo',
+        'all': [
+            'rio-cogeo',
+            'pydantic<2',
+        ],
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
