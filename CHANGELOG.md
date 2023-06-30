@@ -6,6 +6,8 @@
 - Harden reading some nc files ([#1218](../../pull/1218))
 - Increase the cache used for opening directories in the pylibtiff source ([#1221](../../pull/1221))
 - Refactor style locking to increase parallelism ([#1224](../../pull/1224))
+- Better isGeospatial consistency ([#1228](../../pull/1228))
+- Better channel handling on frame selector ([#1222](../../pull/1222))
 
 ### Changes
 - Clean up some old slideatlas url references ([#1223](../../pull/1223))
@@ -13,6 +15,7 @@
 ### Bug Fixes
 - Pass style to histogram endpoint as json ([#1220](../../pull/1220))
 - Don't show frame controls outside of the geojs viewer ([#1226](../../pull/1226))
+- Fix updating the hidden style field for the frame selector ([#1227](../../pull/1227))
 
 ## 1.23.0
 
