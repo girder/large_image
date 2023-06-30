@@ -199,9 +199,10 @@ class LruCacheMetaclass(type):
                 except KeyError:
                     pass
             # This conditionally copies a non-styled class and adds a style.
-            if kwargs.get('style') and hasattr(cls, '_setStyle'):
+            if (kwargs.get('style') and hasattr(cls, '_setStyle') and
+                    kwargs.get('style') != getattr(cls, '_unstyledStyle', None)):
                 subkwargs = kwargs.copy()
-                subkwargs.pop('style')
+                subkwargs['style'] = getattr(cls, '_unstyledStyle', None)
                 subresult = cls(*args, **subkwargs)
                 result = subresult.__class__.__new__(subresult.__class__)
                 with subresult._sourceLock:

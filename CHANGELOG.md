@@ -16,6 +16,7 @@
 - Pass style to histogram endpoint as json ([#1220](../../pull/1220))
 - Don't show frame controls outside of the geojs viewer ([#1226](../../pull/1226))
 - Fix updating the hidden style field for the frame selector ([#1227](../../pull/1227))
+- Fix a bug calculating some histograms ([#1231](../../pull/1231))
 
 ## 1.23.0
 
