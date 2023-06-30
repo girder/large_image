@@ -11,7 +11,7 @@ export default Vue.extend({
             currentFrame: 0,
             maxFrame: 0,
             sliderModes: [],
-            currentModeId: 1,
+            currentModeId: 0,
             indices: [],
             indexInfo: {},
             style: {},
@@ -127,9 +127,15 @@ export default Vue.extend({
                 this.sliderModes.push(
                     { id: 0, name: 'Frame' }
                 )
-                this.sliderModes.push(
-                    { id: 1, name: 'Axis' }
-                )
+                if(
+                    Object.keys(this.imageMetadata.IndexRange).length > 0
+                    && Object.keys(this.imageMetadata.IndexStride).length > 0
+                ) {
+                    this.sliderModes.push(
+                        { id: 1, name: 'Axis' }
+                    )
+                    this.currentModeId = 1
+                }
             } else {
                 this.sliderModes.push(
                     { id: -1, name: 'Default' }
@@ -141,9 +147,11 @@ export default Vue.extend({
                     { id: 2, name: 'Channel Compositing' }
                 )
             }
-            this.sliderModes.push(
-                { id: 3, name: 'Band Compositing' }
-            )
+            if (this.imageMetadata.bandCount > 1) {
+                this.sliderModes.push(
+                    { id: 3, name: 'Band Compositing' }
+                )
+            }
         }
     },
     mounted() {

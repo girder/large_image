@@ -13,7 +13,7 @@ export default {
     },
     data() {
         return {
-            enabledLayers: this.layers,
+            enabledLayers: [],
             colorPickerShown: undefined,
             currentFrameHistogram: undefined,
             compositeLayerInfo: {},
@@ -194,6 +194,22 @@ export default {
     },
     mounted() {
         this.initializeLayerInfo()
+        if (this.layerMap) {
+            // channels all enabled by default
+            this.enabledLayers = this.layers
+        } else {
+            // only some bands enabled by default
+            ['red', 'green', 'blue', 'gray', 'grey'].forEach((bandColor) => {
+                if (this.layers.includes(bandColor)) {
+                    this.enabledLayers.push(bandColor)
+                }
+            })
+            // if no known band colors exist, enable the first three
+            if (this.enabledLayers.length === 0) {
+                this.enabledLayers = this.layers.slice(0, 3)
+            }
+        }
+        this.updateActiveLayers()
         this.updateStyle()
     }
 }
