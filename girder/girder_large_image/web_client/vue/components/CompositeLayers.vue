@@ -209,6 +209,7 @@ export default {
                 this.enabledLayers = this.layers.slice(0, 3)
             }
         }
+        this.updateActiveLayers()
         this.updateStyle()
     }
 }
