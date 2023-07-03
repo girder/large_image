@@ -55,6 +55,43 @@ function liMetadataKeyEntry(limetadata, key) {
     return result;
 }
 
+function validateMetadataValue(lientry, tempValue, nowarn) {
+    if (lientry && lientry.regex && !(new RegExp(lientry.regex).exec(tempValue))) {
+        if (!nowarn) {
+            events.trigger('g:alert', {
+                text: 'The value does not match the required format.',
+                type: 'warning'
+            });
+        }
+        return false;
+    }
+    if (lientry && ((lientry.format || lientry.type) === 'number' || (lientry.format || lientry.type) === 'integer')) {
+        if (!Number.isFinite(parseFloat(tempValue)) || ((lientry.format || lientry.type) === 'integer' && !Number.isInteger(parseFloat(tempValue)))) {
+            if (!nowarn) {
+                events.trigger('g:alert', {
+                    text: `The value must be a ${(lientry.format || lientry.type)}.`,
+                    type: 'warning'
+                });
+            }
+            return false;
+        }
+        tempValue = parseFloat(tempValue);
+        if ((lientry.minimum !== undefined && tempValue < lientry.minimum) ||
+            (lientry.exclusiveMinimum !== undefined && tempValue <= lientry.exclusiveMinimum) ||
+            (lientry.maximum !== undefined && tempValue > lientry.maximum) ||
+            (lientry.exclusiveMaximum !== undefined && tempValue >= lientry.exclusiveMaximum)) {
+            if (!nowarn) {
+                events.trigger('g:alert', {
+                    text: 'The value is outside of the allowed range.',
+                    type: 'warning'
+                });
+            }
+            return false;
+        }
+    }
+    return {value: tempValue};
+}
+
 var MetadatumWidget = View.extend({
     className: 'g-widget-metadata-row',
 
@@ -286,34 +323,11 @@ var MetadatumEditWidget = View.extend({
         if (keyMode && lientry) {
             tempValue = tempValue.trim();
         }
-        if (lientry && lientry.regex && !(new RegExp(lientry.regex).exec(tempValue))) {
-            events.trigger('g:alert', {
-                text: 'The value does not match the required format.',
-                type: 'warning'
-            });
+        const valResult = validateMetadataValue(lientry, tempValue);
+        if (!valResult) {
             return false;
         }
-        if (lientry && (lientry.type === 'number' || lientry.type === 'integer')) {
-            if (!Number.isFinite(parseFloat(tempValue)) || (lientry.type === 'integer' && !Number.isInteger(parseFloat(tempValue)))) {
-                events.trigger('g:alert', {
-                    text: `The value must be a ${lientry.type}.`,
-                    type: 'warning'
-                });
-                return false;
-            }
-            tempValue = parseFloat(tempValue);
-            if ((lientry.minimum !== undefined && tempValue < lientry.minimum) ||
-                (lientry.exclusiveMinimum !== undefined && tempValue <= lientry.exclusiveMinimum) ||
-                (lientry.maximum !== undefined && tempValue > lientry.maximum) ||
-                (lientry.exclusiveMaximum !== undefined && tempValue >= lientry.exclusiveMaximum)) {
-                events.trigger('g:alert', {
-                    text: 'The value is outside of the allowed range.',
-                    type: 'warning'
-                });
-                return false;
-            }
-        }
-
+        tempValue = valResult.value;
         var saveCallback = () => {
             this.key = tempKey;
             this.value = tempValue;
@@ -668,5 +682,6 @@ export {
     MetadatumWidget,
     MetadatumEditWidget,
     JsonMetadatumEditWidget,
-    liMetadataKeyEntry
+    liMetadataKeyEntry,
+    validateMetadataValue
 };

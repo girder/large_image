@@ -16,7 +16,7 @@ ul.g-item-list.li-item-list
       if checkboxes
         span.li-item-list-cell
           input.g-list-checkbox(type="checkbox", g-item-cid=item.cid)
-      for column in itemList.columns
+      for column, colidx in itemList.columns
         if column.type !== 'image' || hasAnyLargeImage
           -
             var divtype = column.type !== 'record' || column.value !== 'controls' ? 'a' : 'span';
@@ -51,11 +51,22 @@ ul.g-item-list.li-item-list
                 column.value.split('.').forEach((part) => {
                   value = (value || {})[part];
                 })
-              span.large_image_metadata
-                = value
-              if value
-                span.li-item-list-cell-filter(title="Only show items that match this metadata value exactly", filter-value=value, column-value=column.value)
-                  i.icon-filter
+              if column.edit && accessLevel >= AccessType.WRITE
+                - if ((value === '' || value === undefined) && column.default) { value = column.default; }
+                span.large_image_metadata.lientry_edit(column-idx=colidx)
+                  if column.enum
+                    select.input-sm.form-control.g-widget-metadata-value-input.g-widget-metadata-lientry(title=column.description)
+                      for enumval in column.enum
+                        option(value=enumval, selected=enumval === value ? 'selected' : null)
+                          = enumval
+                  else
+                    input.input-sm.form-control.g-widget-metadata-value-input.g-widget-metadata-column(placeholder=column.description || "Value", value=value, title=column.description)
+              else
+                span.large_image_metadata
+                  = value
+                  if value
+                    span.li-item-list-cell-filter(title="Only show items that match this metadata value exactly", filter-value=value, column-value=column.value)
+                    i.icon-filter
   if (hasMore && !paginated)
     li.g-show-more
       a.g-show-more-items
