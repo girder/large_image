@@ -1,11 +1,16 @@
 # Change Log
 
+## 1.23.2
+
+### Improvements
+- Allow editing metadata in item lists ([#1235](../../pull/1235))
+
 ## 1.23.1
 
 ### Improvements
 - Harden reading some nc files ([#1218](../../pull/1218))
 - Increase the cache used for opening directories in the pylibtiff source ([#1221](../../pull/1221))
-- Refactor style locking to increase parallelism ([#1224](../../pull/1224), [#1233](../../pull/1233))
+- Refactor style locking to increase parallelism ([#1224](../../pull/1224), [#1234](../../pull/1234))
 - Better isGeospatial consistency ([#1228](../../pull/1228))
 - Better channel handling on frame selector ([#1222](../../pull/1222))
 

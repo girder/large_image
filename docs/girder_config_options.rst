@@ -76,7 +76,7 @@ This is used to specify how items appear in item lists.  There are two settings,
           value: name
         -
           type: record
-          value: siz3
+          value: size
         -
           type: record
           value: controls
@@ -99,6 +99,27 @@ This is used to specify how items appear in item lists.  There are two settings,
           # the length of arrays.
           value: gloms.length
           title: Number of Gloms
+        # You can edit metadata in a item list by adding the edit: true entry
+        # and the options from the itemMetadata records that are shown below.
+        # In this case, edit to metadata that validate are saved immediately.
+        -
+          type: metadata
+          value: userstain
+          title: User Stain
+          # description is used as both a tooltip and as placeholder text
+          description: Staining method
+          # if required is true, the value can't be empty
+          required: true
+          # If a regex is specified, the value must match
+          # regex: '^(Eosin|H&E|Other)$'
+          # If an enum is specified, the value is set via a dropdown select box
+          enum:
+            - Eosin
+            - H&E
+            - Other
+          # If a default is specified, if the value is unset, it will show this
+          # value in the control
+          default: H&E
       defaultSort:
         # The default lists a sort order for sortable columns.  This must have
         # type, value, and dir for each entry, where dir is either "up" or
