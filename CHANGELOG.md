@@ -5,7 +5,7 @@
 ### Improvements
 - Harden reading some nc files ([#1218](../../pull/1218))
 - Increase the cache used for opening directories in the pylibtiff source ([#1221](../../pull/1221))
-- Refactor style locking to increase parallelism ([#1224](../../pull/1224))
+- Refactor style locking to increase parallelism ([#1224](../../pull/1224), [#1233](../../pull/1233))
 - Better isGeospatial consistency ([#1228](../../pull/1228))
 - Better channel handling on frame selector ([#1222](../../pull/1222))
 

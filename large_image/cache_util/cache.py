@@ -228,6 +228,10 @@ class LruCacheMetaclass(type):
                         pass
                 raise exc
             instance._classkey = key
+            if kwargs.get('style') != getattr(cls, '_unstyledStyle', None):
+                subkwargs = kwargs.copy()
+                subkwargs['style'] = getattr(cls, '_unstyledStyle', None)
+                instance._unstyledInstance = subresult = cls(*args, **subkwargs)
             with cacheLock:
                 cache[key] = instance
         return instance
