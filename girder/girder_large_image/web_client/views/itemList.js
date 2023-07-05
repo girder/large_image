@@ -16,6 +16,7 @@ import {addToRoute} from '../routes';
 
 import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
+import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
 
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);
@@ -85,6 +86,9 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     });
     this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
     this.events['click .li-item-list-cell-filter'] = (evt) => itemListCellFilter.call(this, evt);
+    this.events['click .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
+    this.events['change .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
+    this.events['input .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
     this.delegateEvents();
     this.setFlatten = (flatten) => {
         if (!!flatten !== !!this._recurse) {
@@ -395,7 +399,11 @@ wrap(ItemListWidget, 'render', function (render) {
             apiRoot: getApiRoot(),
             hasAnyLargeImage: this._hasAnyLargeImage,
             itemList: this._confList(),
-            sort: this._lastSort
+            sort: this._lastSort,
+            MetadatumWidget: MetadatumWidget,
+            accessLevel: this.accessLevel,
+            parentView: this,
+            AccessType: AccessType
         }));
 
         const parent = this.$el;
@@ -511,6 +519,42 @@ function itemListCellFilter(evt) {
     this._setFilter();
     addToRoute({filter: this._generalFilter});
     this._setSort();
+    return false;
+}
+
+function itemListMetadataEdit(evt) {
+    evt.preventDefault();
+    if (evt.type === 'click') {
+        return false;
+    }
+    const ctrl = $(evt.target).closest('.lientry_edit');
+    const columns = (this._confList() || {}).columns || [];
+    const column = columns[+ctrl.attr('column-idx')];
+    let tempValue = ctrl.find('.g-widget-metadata-value-input').val();
+    tempValue = tempValue.trim();
+    let valResult = validateMetadataValue(column, tempValue, self._lastValidationError || (tempValue === '' && !column.required));
+    if (tempValue === '' && !column.required) {
+        valResult = {value: tempValue};
+    }
+    if (!valResult) {
+        self._lastValidationError = true;
+        return false;
+    }
+    self._lastValidationError = false;
+    const item = this.collection.get(ctrl.closest('[g-item-cid]').attr('g-item-cid'));
+    let value = item.get('meta') || {};
+    let meta;
+    let key;
+    column.value.split('.').forEach((part) => {
+        meta = value;
+        key = part;
+        value = (value || {})[part];
+    });
+    if (value === valResult.value) {
+        return;
+    }
+    meta[key] = valResult.value;
+    item._sendMetadata(item.get('meta'));
     return false;
 }
 
