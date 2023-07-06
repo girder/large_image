@@ -35,6 +35,7 @@ export default {
         keyHandler(e) {
             let numericKey = parseFloat(e.key)
             if (e.ctrlKey && !isNaN(numericKey)) {
+                e.preventDefault()
                 if (numericKey === 0) {
                     numericKey += 10
                 }
