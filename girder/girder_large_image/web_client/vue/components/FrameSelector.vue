@@ -212,6 +212,7 @@ export default Vue.extend({
                 :currentFrame="currentFrame"
                 :layers="imageMetadata.channels"
                 :layerMap="imageMetadata.channelmap"
+                :active="currentModeId === 2"
                 :class="currentModeId === 2 ? '' : 'invisible'"
                 @updateStyle="(style) => updateStyle(2, style)"
             />
@@ -222,6 +223,7 @@ export default Vue.extend({
                 :currentFrame="currentFrame"
                 :layers="imageMetadata.bands"
                 :layerMap="undefined"
+                :active="currentModeId === 3"
                 :class="currentModeId === 3 ? '' : 'invisible'"
                 @updateStyle="(style) => updateStyle(3, style)"
             />

@@ -5,7 +5,7 @@ import { CHANNEL_COLORS, OTHER_COLORS } from '../utils/colors'
 import HistogramEditor from './HistogramEditor.vue';
 
 export default {
-    props: ['itemId', 'currentFrame', 'layers', 'layerMap'],
+    props: ['itemId', 'currentFrame', 'layers', 'layerMap', 'active'],
     emits: ['updateStyle'],
     components: {
         'color-picker': Chrome,
@@ -27,10 +27,33 @@ export default {
                 resample: false,
                 style: '{}',
                 roundRange: true,
-            }
+            },
+            showKeyboardShortcuts: false,
         }
     },
     methods: {
+        keyHandler(e) {
+            let numericKey = parseFloat(e.key)
+            if (e.ctrlKey && !isNaN(numericKey)) {
+                e.preventDefault()
+                if (numericKey === 0) {
+                    numericKey += 10
+                }
+                if (e.altKey) {
+                    numericKey += 10
+                }
+                const layerIndex = numericKey - 1
+                if (layerIndex < this.layers.length) {
+                    const targetLayer = this.layers[layerIndex]
+                    if (this.compositeLayerInfo[targetLayer].enabled) {
+                        this.enabledLayers = this.enabledLayers.filter((v) => v !== targetLayer)
+                    } else {
+                        this.enabledLayers.push(targetLayer)
+                    }
+                    this.updateActiveLayers()
+                }
+            }
+        },
         initializeLayerInfo() {
             const usedColors = []
             this.compositeLayerInfo = {}
@@ -211,126 +234,165 @@ export default {
         }
         this.updateActiveLayers()
         this.updateStyle()
+        if (this.active) {
+            document.addEventListener('keydown', this.keyHandler)
+        }
+    },
+    watch: {
+        active() {
+            if (this.active) {
+                document.addEventListener('keydown', this.keyHandler)
+            } else {
+                document.removeEventListener('keydown', this.keyHandler)
+            }
+        }
     }
 }
 </script>
 
 <template>
-    <div :class="colorPickerShown ? 'table-container tall' : 'table-container'">
-        <table id="composite-layer-table" class="table table-condensed">
-            <thead class="table-header">
-                <tr>
-                    <th>
-                        <input
-                            type="checkbox"
-                            class="input-80"
-                            :checked="enabledLayers === layers"
-                            @input="toggleEnableAll"
-                        >
-                    </th>
-                    <th></th>
-                    <th></th>
-                    <th>
-                        <div class="auto-range-col">
-                            <div class="auto-range-label">
-                                <span class="small-text">Auto Range</span>
+    <div>
+        <i
+            class="icon-keyboard"
+            @click="showKeyboardShortcuts = !showKeyboardShortcuts"
+        />
+        <div class="shortcuts" v-if="showKeyboardShortcuts">
+            <div class="h5">Keyboard Shortcuts</div>
+            <div>
+                <span class="monospace">ctrl + number</span>
+                Toggle visibility of the layer at the number position
+            </div>
+            <div>
+                <span style="font-weight: bold;">Example: </span>
+                <span class="monospace">ctrl + 1</span>
+                Toggle visibility of the first layer in the table
+            </div>
+            <div>
+                <span class="monospace">ctrl + alt + number</span>
+                Toggle visibility of the layer at the position of the number plus 10
+            </div>
+            <div>
+                <span style="font-weight: bold;">Example: </span>
+                <span class="monospace">ctrl + alt + 1</span>
+                Toggle visibility of the eleventh layer in the table
+            </div>
+        </div>
+        <div  :class="colorPickerShown ? 'table-container tall' : 'table-container'">
+            <table id="composite-layer-table" class="table table-condensed">
+                <thead class="table-header">
+                    <tr>
+                        <th>
+                            <input
+                                type="checkbox"
+                                class="input-80"
+                                :checked="enabledLayers === layers"
+                                @input="toggleEnableAll"
+                            >
+                        </th>
+                        <th></th>
+                        <th></th>
+                        <th>
+                            <div class="auto-range-col">
+                                <div class="auto-range-label">
+                                    <span class="small-text">Auto Range</span>
+                                    <label class="switch">
+                                        <span
+                                            :class="allAutoRange() ? 'slider checked' : 'slider'"
+                                            @click="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.2)"
+                                        />
+                                    </label>
+                                </div>
+                                <span
+                                    v-if="allAutoRange()"
+                                    class="percentage-input"
+                                >
+                                    <input
+                                        type="number"
+                                        class="input-80"
+                                        :max="50"
+                                        :min="0"
+                                        :value="autoRangeForAll"
+                                        @input="(e) => updateAllAutoRanges(e.target.value)"
+                                    >
+                                </span>
+                            </div>
+                            <i
+                                :class="expandedRows.length === layers.length ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
+                                @click="toggleAllExpanded"
+                            />
+                        </th>
+                    </tr>
+                    <!-- color picker should display relative to sticky table head -->
+                    <color-picker
+                        v-if="colorPickerShown"
+                        id="color_picker"
+                        class="picker-offset"
+                        :disableAlpha="true"
+                        :value="Object.values(compositeLayerInfo).find((({layerName}) => layerName === colorPickerShown)).palette"
+                        @input="(swatch) => {updateLayerColor(colorPickerShown, swatch)}"
+                    />
+                </thead>
+                <tbody>
+                    <tr
+                        v-for="{
+                            layerName, index, palette,
+                            autoRange, min, max,
+                            framedelta
+                        } in Object.values(compositeLayerInfo)"
+                        :key="layerName"
+                        :class="expandedRows.includes(index) ? 'tall-row' : ''"
+                    >
+                        <td class="enable-col">
+                            <input
+                                type="checkbox"
+                                class="input-80"
+                                :value="layerName"
+                                v-model="enabledLayers"
+                                @change="updateActiveLayers"
+                            >
+                        </td>
+                        <td class="name-col">{{ layerName }}</td>
+                        <td class="color-col">
+                            <span
+                                class="current-color"
+                                :style="{ 'background-color': palette }"
+                                @click="() => toggleColorPicker(layerName)"
+                            />
+                        </td>
+                        <td class="auto-range-col">
+                            <div class="auto-range-toggle">
                                 <label class="switch">
                                     <span
-                                        :class="allAutoRange() ? 'slider checked' : 'slider'"
-                                        @click="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.2)"
+                                        :class="autoRange ? 'slider checked' : 'slider'"
+                                        @click="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.2)"
                                     />
                                 </label>
                             </div>
-                            <span
-                                v-if="allAutoRange()"
-                                class="percentage-input"
-                            >
-                                <input
-                                    type="number"
-                                    class="input-80"
-                                    :max="50"
-                                    :min="0"
-                                    :value="autoRangeForAll"
-                                    @input="(e) => updateAllAutoRanges(e.target.value)"
-                                >
-                            </span>
+                            <i
+                                :class="expandedRows.includes(index) ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
+                                @click="() => toggleExpanded(index)"
+                            />
+                        </td>
+                        <div v-if="expandedRows.includes(index)" class="advanced-section">
+                            <histogram-editor
+                                :itemId="itemId"
+                                :layerIndex="index"
+                                :currentFrame="currentFrame"
+                                :currentFrameHistogram="currentFrameHistogram"
+                                :histogramParams="histogramParams"
+                                :framedelta="framedelta"
+                                :autoRange="autoRange"
+                                :currentMin="min"
+                                :currentMax="max"
+                                @updateMin="(v, d) => updateLayerMin(layerName, v, d)"
+                                @updateMax="(v, d) => updateLayerMax(layerName, v, d)"
+                                @updateAutoRange="(v) => updateLayerAutoRange(layerName, v)"
+                            />
                         </div>
-                        <i
-                            :class="expandedRows.length === layers.length ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
-                            @click="toggleAllExpanded"
-                        />
-                    </th>
-                </tr>
-                <!-- color picker should display relative to sticky table head -->
-                <color-picker
-                    v-if="colorPickerShown"
-                    id="color_picker"
-                    class="picker-offset"
-                    :disableAlpha="true"
-                    :value="Object.values(compositeLayerInfo).find((({layerName}) => layerName === colorPickerShown)).palette"
-                    @input="(swatch) => {updateLayerColor(colorPickerShown, swatch)}"
-                />
-            </thead>
-            <tbody>
-                <tr
-                    v-for="{
-                        layerName, index, palette,
-                        autoRange, min, max,
-                        framedelta
-                    } in Object.values(compositeLayerInfo)"
-                    :key="layerName"
-                    :class="expandedRows.includes(index) ? 'tall-row' : ''"
-                >
-                    <td class="enable-col">
-                        <input
-                            type="checkbox"
-                            class="input-80"
-                            :value="layerName"
-                            v-model="enabledLayers"
-                            @change="updateActiveLayers"
-                        >
-                    </td>
-                    <td class="name-col">{{ layerName }}</td>
-                    <td class="color-col">
-                        <span
-                            class="current-color"
-                            :style="{ 'background-color': palette }"
-                            @click="() => toggleColorPicker(layerName)"
-                        />
-                    </td>
-                    <td class="auto-range-col">
-                        <div class="auto-range-toggle">
-                            <label class="switch">
-                                <span
-                                    :class="autoRange ? 'slider checked' : 'slider'"
-                                    @click="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.2)"
-                                />
-                            </label>
-                        </div>
-                        <i
-                            :class="expandedRows.includes(index) ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
-                            @click="() => toggleExpanded(index)"
-                        />
-                    </td>
-                    <div v-if="expandedRows.includes(index)" class="advanced-section">
-                        <histogram-editor
-                            :itemId="itemId"
-                            :layerIndex="index"
-                            :currentFrame="currentFrame"
-                            :currentFrameHistogram="currentFrameHistogram"
-                            :histogramParams="histogramParams"
-                            :framedelta="framedelta"
-                            :autoRange="autoRange"
-                            :currentMin="min"
-                            :currentMax="max"
-                            @updateMin="(v, d) => updateLayerMin(layerName, v, d)"
-                            @updateMax="(v, d) => updateLayerMax(layerName, v, d)"
-                            @updateAutoRange="(v) => updateLayerAutoRange(layerName, v)"
-                        />
-                    </div>
-                </tr>
-            </tbody>
-        </table>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </template>
 
@@ -455,6 +517,17 @@ export default {
     width: calc(100% - 10px);
     margin: 30px 0px 0px;
     height: 40px;
+}
+.icon-keyboard {
+    font-size: 2rem;
+}
+.shortcuts {
+    padding-bottom: 10px;
+}
+.monospace {
+    font-family: monospace;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 1px;
 }
 </style>
 
