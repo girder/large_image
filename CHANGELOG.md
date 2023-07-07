@@ -4,6 +4,7 @@
 
 ### Improvements
 - Allow editing metadata in item lists ([#1235](../../pull/1235))
+- Frame selector hotkeys for channel or bands  ([#1233](../../pull/1233))
 
 ## 1.23.1
 
