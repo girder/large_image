@@ -5,7 +5,7 @@ import { CHANNEL_COLORS, OTHER_COLORS } from '../utils/colors'
 import HistogramEditor from './HistogramEditor.vue';
 
 export default {
-    props: ['itemId', 'currentFrame', 'layers', 'layerMap', 'active'],
+    props: ['itemId', 'currentFrame', 'currentStyle', 'layers', 'layerMap', 'active'],
     emits: ['updateStyle'],
     components: {
         'color-picker': Chrome,
@@ -99,6 +99,29 @@ export default {
                 }
             })
             this.fetchCurrentFrameHistogram()
+        },
+        initializeStateFromStyle() {
+            const styleArray = this.currentStyle.bands
+            this.layers.forEach((layerName) => {
+                const layerInfo = this.compositeLayerInfo[layerName]
+                const currentLayerStyle = styleArray.find((s) => s.framedelta === layerInfo.framedelta && s.band === layerInfo.band)
+                if (currentLayerStyle) {
+                    this.enabledLayers.push(layerName)
+                    if (
+                        currentLayerStyle.min && currentLayerStyle.max
+                        && currentLayerStyle.min.includes("min:")
+                        && currentLayerStyle.max.includes("max:")
+                    ) {
+                        currentLayerStyle.autoRange = currentLayerStyle.min.replace("min:", '')
+                        currentLayerStyle.min = undefined
+                        currentLayerStyle.max = undefined
+                    }
+                }
+                this.compositeLayerInfo[layerName] = Object.assign(
+                    {}, layerInfo, currentLayerStyle
+                )
+            })
+            this.updateActiveLayers()
         },
         fetchCurrentFrameHistogram() {
             restRequest({
@@ -217,23 +240,27 @@ export default {
     },
     mounted() {
         this.initializeLayerInfo()
-        if (this.layerMap) {
-            // channels all enabled by default
-            this.enabledLayers = this.layers
+        if (this.currentStyle) {
+            this.initializeStateFromStyle()
         } else {
-            // only some bands enabled by default
-            ['red', 'green', 'blue', 'gray', 'grey'].forEach((bandColor) => {
-                if (this.layers.includes(bandColor)) {
-                    this.enabledLayers.push(bandColor)
+            if (this.layerMap) {
+                // channels all enabled by default
+                this.enabledLayers = this.layers
+            } else {
+                // only some bands enabled by default
+                ['red', 'green', 'blue', 'gray', 'grey'].forEach((bandColor) => {
+                    if (this.layers.includes(bandColor)) {
+                        this.enabledLayers.push(bandColor)
+                    }
+                })
+                // if no known band colors exist, enable the first three
+                if (this.enabledLayers.length === 0) {
+                    this.enabledLayers = this.layers.slice(0, 3)
                 }
-            })
-            // if no known band colors exist, enable the first three
-            if (this.enabledLayers.length === 0) {
-                this.enabledLayers = this.layers.slice(0, 3)
             }
+            this.updateActiveLayers()
+            this.updateStyle()
         }
-        this.updateActiveLayers()
-        this.updateStyle()
         if (this.active) {
             document.addEventListener('keydown', this.keyHandler)
         }

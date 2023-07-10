@@ -48,6 +48,7 @@ from .models.image_item import ImageItem
 from .rest import addSystemEndpoints
 from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
+from .rest.item_meta import InternalMetadataItemResource
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -641,6 +642,7 @@ class LargeImagePlugin(GirderPlugin):
 
         girder_tilesource.loadGirderTileSources()
         TilesItemResource(info['apiRoot'])
+        InternalMetadataItemResource(info['apiRoot'])
         info['apiRoot'].large_image = LargeImageResource()
 
         Item().exposeFields(level=AccessType.READ, fields='largeImage')
