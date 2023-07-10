@@ -324,7 +324,7 @@ export default {
                                     <span class="small-text">Auto Range</span>
                                     <label class="switch">
                                         <span
-                                            :class="allAutoRange() ? 'slider checked' : 'slider'"
+                                            :class="allAutoRange() ? 'onoff-slider checked' : 'onoff-slider'"
                                             @click="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.2)"
                                         />
                                     </label>
@@ -390,7 +390,7 @@ export default {
                             <div class="auto-range-toggle">
                                 <label class="switch">
                                     <span
-                                        :class="autoRange ? 'slider checked' : 'slider'"
+                                        :class="autoRange ? 'onoff-slider checked' : 'onoff-slider'"
                                         @click="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.2)"
                                     />
                                 </label>
@@ -480,7 +480,7 @@ export default {
   height: 20px;
   margin-top: 5px;
 }
-.slider {
+.onoff-slider {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -492,13 +492,13 @@ export default {
   transition: .4s;
   border-radius: 34px;
 }
-.slider.checked {
+.onoff-slider.checked {
   background-color: #2196F3;
 }
-.slider:focus{
+.onoff-slider:focus{
   box-shadow: 0 0 1px #2196F3;
 }
-.slider:before {
+.onoff-slider:before {
   position: absolute;
   content: "";
   height: 15px;
@@ -510,7 +510,7 @@ export default {
   transition: .4s;
   border-radius: 50%;
 }
-.slider.checked:before {
+.onoff-slider.checked:before {
   -webkit-transform: translateX(22px);
   -ms-transform: translateX(22px);
   transform: translateX(22px);
