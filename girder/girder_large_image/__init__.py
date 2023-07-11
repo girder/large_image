@@ -46,9 +46,9 @@ from .girder_tilesource import getGirderTileSource  # noqa
 from .loadmodelcache import invalidateLoadModelCache
 from .models.image_item import ImageItem
 from .rest import addSystemEndpoints
+from .rest.item_meta import InternalMetadataItemResource
 from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
-from .rest.item_meta import InternalMetadataItemResource
 
 try:
     from importlib.metadata import PackageNotFoundError

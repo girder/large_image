@@ -17,37 +17,37 @@
 from girder.api import access
 from girder.api.describe import Description, describeRoute
 from girder.api.rest import loadmodel
-from girder.constants import AccessType, TokenScope
 from girder.api.v1.item import Item
+from girder.constants import AccessType, TokenScope
 
 
 class InternalMetadataItemResource(Item):
     def __init__(self, apiRoot):
         super().__init__()
         apiRoot.item.route(
-            "GET", (":itemId", "internal_metadata", ":key"), self.getMetadataKey
+            'GET', (':itemId', 'internal_metadata', ':key'), self.getMetadataKey
         )
         apiRoot.item.route(
-            "PUT", (":itemId", "internal_metadata", ":key"), self.updateMetadataKey
+            'PUT', (':itemId', 'internal_metadata', ':key'), self.updateMetadataKey
         )
         apiRoot.item.route(
-            "DELETE", (":itemId", "internal_metadata", ":key"), self.deleteMetadataKey
+            'DELETE', (':itemId', 'internal_metadata', ':key'), self.deleteMetadataKey
         )
 
     @describeRoute(
-        Description("Get the value for a single internal metadata key on this item.")
-        .param("itemId", "The ID of the item.", paramType="path")
+        Description('Get the value for a single internal metadata key on this item.')
+        .param('itemId', 'The ID of the item.', paramType='path')
         .param(
-            "key",
-            "The metadata key to retrieve.",
-            paramType="path",
-            default="meta",
+            'key',
+            'The metadata key to retrieve.',
+            paramType='path',
+            default='meta',
         )
-        .errorResponse("ID was invalid.")
-        .errorResponse("Read access was denied for the item.", 403)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
     )
     @access.user(scope=TokenScope.DATA_READ)
-    @loadmodel(model="item", map={"itemId": "item"}, level=AccessType.READ)
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getMetadataKey(self, item, key, params):
         if key not in item:
             return None
@@ -55,45 +55,45 @@ class InternalMetadataItemResource(Item):
 
     @describeRoute(
         Description(
-            "Overwrite the value for a single internal metadata key on this item."
+            'Overwrite the value for a single internal metadata key on this item.'
         )
-        .param("itemId", "The ID of the item.", paramType="path")
+        .param('itemId', 'The ID of the item.', paramType='path')
         .param(
-            "key",
+            'key',
             'The metadata key which should have a new value. \
                 The default key, "meta" is equivalent to the external metadata. \
                 Editing the "meta" key is equivalent to using PUT /item/{id}/metadata.',
-            paramType="path",
-            default="meta",
+            paramType='path',
+            default='meta',
         )
         .param(
-            "value",
-            "The new value that should be written for the chosen metadata key",
-            paramType="body",
+            'value',
+            'The new value that should be written for the chosen metadata key',
+            paramType='body',
         )
-        .errorResponse("ID was invalid.")
-        .errorResponse("Write access was denied for the item.", 403)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Write access was denied for the item.', 403)
     )
     @access.user(scope=TokenScope.DATA_WRITE)
-    @loadmodel(model="item", map={"itemId": "item"}, level=AccessType.WRITE)
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def updateMetadataKey(self, item, key, params):
         item[key] = self.getBodyJson()
         self._model.save(item)
 
     @describeRoute(
-        Description("Delete a single internal metadata key on this item.")
-        .param("itemId", "The ID of the item.", paramType="path")
+        Description('Delete a single internal metadata key on this item.')
+        .param('itemId', 'The ID of the item.', paramType='path')
         .param(
-            "key",
-            "The metadata key to delete.",
-            paramType="path",
-            default="meta",
+            'key',
+            'The metadata key to delete.',
+            paramType='path',
+            default='meta',
         )
-        .errorResponse("ID was invalid.")
-        .errorResponse("Write access was denied for the item.", 403)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Write access was denied for the item.', 403)
     )
     @access.user(scope=TokenScope.DATA_WRITE)
-    @loadmodel(model="item", map={"itemId": "item"}, level=AccessType.READ)
+    @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def deleteMetadataKey(self, item, key, params):
         if key in item:
             del item[key]
