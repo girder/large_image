@@ -59,7 +59,7 @@ const AnnotationListWidget = View.extend({
         }).done((createResp) => {
             this.createResp = createResp;
             largeImageConfig.getConfigFile(this.model.get('folderId')).done((val) => {
-                this._liconfig = val;
+                this._liconfig = val || {};
                 this._confList = this._liconfig.annotationList || {
                     columns: [{
                         type: 'record',

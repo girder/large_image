@@ -58,7 +58,7 @@ class ImageItem(Item):
         ])
 
     def createImageItem(self, item, fileObj, user=None, token=None,
-                        createJob=True, notify=False, **kwargs):
+                        createJob=True, notify=False, localJob=None, **kwargs):
         logger.info('createImageItem called on item %s (%s)', item['_id'], item['name'])
         # Using setdefault ensures that 'largeImage' is in the item
         if 'fileId' in item.setdefault('largeImage', {}):
@@ -97,7 +97,10 @@ class ImageItem(Item):
                 item['_id'], item['name'])
             # No source was successful
             del item['largeImage']['fileId']
-            job = self._createLargeImageJob(item, fileObj, user, token, **kwargs)
+            if not localJob:
+                job = self._createLargeImageJob(item, fileObj, user, token, **kwargs)
+            else:
+                job = self._createLargeImageLocalJob(item, fileObj, user, **kwargs)
             item['largeImage']['expected'] = True
             item['largeImage']['notify'] = notify
             item['largeImage']['originalId'] = fileObj['_id']
@@ -108,18 +111,20 @@ class ImageItem(Item):
         self.save(item)
         return job
 
-    def _createLargeImageJob(self, item, fileObj, user, token, **kwargs):
+    def _createLargeImageJob(
+            self, item, fileObj, user, token, toFolder=False, folderId=None, name=None, **kwargs):
         import large_image_tasks.tasks
         from girder_worker_utils.transforms.common import TemporaryDirectory
         from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
-        from girder_worker_utils.transforms.girder_io import GirderUploadToItem
+        from girder_worker_utils.transforms.girder_io import (GirderUploadToFolder,
+                                                              GirderUploadToItem)
 
         try:
             localPath = File().getLocalFilePath(fileObj)
         except (FilePathException, AttributeError):
             localPath = None
         job = large_image_tasks.tasks.create_tiff.apply_async(kwargs=dict(
-            girder_job_title='TIFF Conversion: %s' % fileObj['name'],
+            girder_job_title='Large Image Conversion: %s' % fileObj['name'],
             girder_job_other_fields={'meta': {
                 'creator': 'large_image',
                 'itemId': str(item['_id']),
@@ -129,60 +134,8 @@ class ImageItem(Item):
             inputName=fileObj['name'],
             outputDir=TemporaryDirectory(),
             girder_result_hooks=[
-                GirderUploadToItem(str(item['_id']), False),
-            ],
-            **kwargs,
-        ), countdown=int(kwargs['countdown']) if kwargs.get('countdown') else None)
-        return job.job
-
-    def convertImage(self, item, fileObj, user=None, token=None, localJob=True, **kwargs):
-        if fileObj['itemId'] != item['_id']:
-            raise TileGeneralError(
-                'The provided file must be in the provided item.')
-        if not localJob:
-            return self._convertImageViaWorker(item, fileObj, user, token, **kwargs)
-        # local job
-        job = Job().createLocalJob(
-            module='large_image_tasks.tasks',
-            function='convert_image_job',
-            kwargs={
-                'itemId': str(item['_id']),
-                'fileId': str(fileObj['_id']),
-                'userId': str(user['_id']) if user else None,
-                **kwargs,
-            },
-            title='Convert a file to a large image file.',
-            type='large_image_convert_image',
-            user=user,
-            public=True,
-            asynchronous=True,
-        )
-        Job().scheduleJob(job)
-        return job
-
-    def _convertImageViaWorker(
-            self, item, fileObj, user=None, token=None, folderId=None,
-            name=None, **kwargs):
-        import large_image_tasks.tasks
-        from girder_worker_utils.transforms.common import TemporaryDirectory
-        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
-        from girder_worker_utils.transforms.girder_io import GirderUploadToFolder
-
-        try:
-            localPath = File().getLocalFilePath(fileObj)
-        except (FilePathException, AttributeError):
-            localPath = None
-        job = large_image_tasks.tasks.create_tiff.apply_async(kwargs=dict(
-            girder_job_title='TIFF Conversion: %s' % fileObj['name'],
-            girder_job_other_fields={'meta': {
-                'creator': 'large_image',
-                'itemId': str(item['_id']),
-                'task': 'convertImage',
-            }},
-            inputFile=GirderFileIdAllowDirect(str(fileObj['_id']), fileObj['name'], localPath),
-            inputName=fileObj['name'],
-            outputDir=TemporaryDirectory(),
-            girder_result_hooks=[
+                GirderUploadToItem(str(item['_id']), False)
+                if not toFolder else
                 GirderUploadToFolder(
                     str(folderId or item['folderId']),
                     upload_kwargs=dict(filename=name),
@@ -191,6 +144,42 @@ class ImageItem(Item):
             **kwargs,
         ), countdown=int(kwargs['countdown']) if kwargs.get('countdown') else None)
         return job.job
+
+    def _createLargeImageLocalJob(
+            self, item, fileObj, user=None, toFolder=False, folderId=None, name=None, **kwargs):
+        job = Job().createLocalJob(
+            module='large_image_tasks.tasks',
+            function='convert_image_job',
+            kwargs={
+                'itemId': str(item['_id']),
+                'fileId': str(fileObj['_id']),
+                'userId': str(user['_id']) if user else None,
+                'toFolder': toFolder,
+                **kwargs,
+            },
+            title='Large Image Conversion: %s' % fileObj['name'],
+            type='large_image_tiff',
+            user=user,
+            public=True,
+            asynchronous=True,
+        )
+        # For consistency with the non-local job
+        job['meta'] = {
+            'creator': 'large_image',
+            'itemId': str(item['_id']),
+            'task': 'createImageItem',
+        }
+        job = Job().save(job)
+        Job().scheduleJob(job)
+        return job
+
+    def convertImage(self, item, fileObj, user=None, token=None, localJob=True, **kwargs):
+        if fileObj['itemId'] != item['_id']:
+            raise TileGeneralError(
+                'The provided file must be in the provided item.')
+        if not localJob:
+            return self._createLargeImageJob(item, fileObj, user, token, toFolder=True, **kwargs)
+        return self._createLargeImageLocalJob(item, fileObj, user, toFolder=True, **kwargs)
 
     @classmethod
     def _tileFromHash(cls, item, x, y, z, mayRedirect=False, **kwargs):

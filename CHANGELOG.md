@@ -4,7 +4,8 @@
 
 ### Improvements
 - Allow editing metadata in item lists ([#1235](../../pull/1235))
-- Frame selector hotkeys for channel or bands  ([#1233](../../pull/1233))
+- Frame selector hotkeys for channel or bands ([#1233](../../pull/1233))
+- More consistency in how local and remote image conversions are performed in Girder ([#1238](../../pull/1238))
 
 ## 1.23.1
 
