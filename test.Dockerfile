@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # This is mostly based on the Dockerfiles from themattrix/pyenv and
 # themattrix/tox-base.  It has some added packages, most notably liblzma-dev,
@@ -13,7 +13,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.9.17 3.8.17 3.7.17 3.6.15 3.10.12 3.11.4"
+    OLD_PYTHON_VERSIONS="3.6.15" \
+    PYTHON_VERSIONS="3.9.17 3.8.17 3.7.17 3.10.12 3.11.4"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -72,6 +73,7 @@ RUN apt-get update && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
+    rm -r /etc/ssh/ssh_host* && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/*
 
 RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
@@ -83,21 +85,37 @@ RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
     cd .. && \
     rm -rf ./ctags
 
+# Install an older openssl for Python 3.6
+RUN curl -O https://www.openssl.org/source/old/1.1.1/openssl-1.1.1t.tar.gz && \
+    tar -xf openssl-1.1.1t.tar.gz && \
+    cd openssl-1.1.1t/ && \
+    ./config shared -Wl,-rpath=/opt/openssl11/lib --prefix=/opt/openssl11 && \
+    make --silent -j `nproc` && \
+    make install --silent -j `nproc` &&\
+    cd .. && \
+    rm -r /opt/openssl11/share/doc && \
+    rm -r openssl-1.1.1*
+
 RUN pyenv update && \
     pyenv install --list && \
     echo $PYTHON_VERSIONS | xargs -P `nproc` -n 1 pyenv install && \
+    # Install older pythons that require help \
+    export CPPFLAGS=-I/opt/openssl11/include && \
+    export LDFLAGS="-L/opt/openssl11/lib -Wl,-rpath,/opt/openssl11/lib" && \
+    export CONFIGURE_OPTS="--with-openssl=/opt/openssl11" && \
+    echo $OLD_PYTHON_VERSIONS | xargs -P `nproc` -n 1 pyenv install && \
     # ensure newest pip and setuptools for all python versions \
-    echo $PYTHON_VERSIONS | xargs -n 1 bash -c 'pyenv global "${0}" && pip install -U setuptools pip' && \
+    echo $PYTHON_VERSIONS $OLD_PYTHON_VERSIONS | xargs -n 1 bash -c 'pyenv global "${0}" && pip install -U setuptools pip' && \
     pyenv global $(pyenv versions --bare) && \
     find $PYENV_ROOT/versions -type d '(' -name '__pycache__' -o -name 'test' -o -name 'tests' ')' -exec rm -rfv '{}' + >/dev/null && \
     find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
-    echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
+    echo $PYTHON_VERSIONS $OLD_PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/* && \
     # This makes duplicate python library files hardlinks of each other \
     rdfind -minsize 524288 -makehardlinks true -makeresultsfile false /.pyenv
 
-RUN for ver in $PYTHON_VERSIONS; do \
+RUN for ver in $PYTHON_VERSIONS $OLD_PYTHON_VERSIONS; do \
     pyenv local $ver && \
     python -m pip install --no-cache-dir -U pip && \
     python -m pip install --no-cache-dir tox wheel && \
@@ -108,13 +126,17 @@ RUN for ver in $PYTHON_VERSIONS; do \
     rm -rf /tmp/* /var/tmp/* && \
     rdfind -minsize 524288 -makehardlinks true -makeresultsfile false /.pyenv
 
+# Note: to actually run tox on python 3.6, you have to do
+#  pip install 'tox<4.5' 'virtualenv<20.22'
+# or switch to the pyenv local 3.6 before running
+
 # Use nvm to install node
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 
 # Default node version
 RUN . ~/.bashrc && \
-    nvm install 12 && \
-    nvm alias default 12 && \
+    nvm install 14 && \
+    nvm alias default 14 && \
     nvm use default && \
     ln -s $(dirname `which npm`) /usr/local/node
 
