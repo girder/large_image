@@ -56,12 +56,18 @@ if annotations.length
           for column in confList.columns || []
             if column.type !== 'record' || column.value !== 'controls'
               -
-                var value = (column.type === 'record' ? annotation.get(column.value) || annotation.get('annotation')[column.value] : (column.type === 'metadata' ? ((annotation.get('annotation').attributes || {})[column.value] || '') : '')) || '';
+                var value;
                 if (column.type === 'record' && column.value === 'creator') {
                   value = creator;
-                }
-                if (column.type === 'record' && column.value === 'updatedId') {
+                } else if (column.type === 'record' && column.value === 'updatedId') {
                   value = updater;
+                } else if (column.type === 'metadata') {
+                  value = annotation.get('annotation').attributes || {};
+                  column.value.split('.').forEach((part) => {
+                    value = (value || {})[part];
+                  });
+                } else {
+                  value = column.type === 'record' ? annotation.get(column.value) || annotation.get('annotation')[column.value] : '';
                 }
               td.g-annotation-entry(title=value)
                 if column.format === 'user'
