@@ -116,7 +116,7 @@ export default {
         />
         <i
             class="icon-plus"
-            @click="showPresetCreation = true"
+            @click="showPresetCreation = !showPresetCreation"
         />
         <div v-if="showPresetCreation" class="preset-creation">
             Save Current State as New Preset:
