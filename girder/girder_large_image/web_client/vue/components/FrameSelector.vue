@@ -46,9 +46,15 @@ export default Vue.extend({
         },
         setCurrentFrame(frame) {
             this.currentFrame = frame
-            this.indices.forEach((index) => {
-                this.indexInfo[index].current = this.currentFrame / this.indexInfo[index].stride
-            })
+            this.indexInfo = Object.fromEntries(
+                Object.entries(this.indexInfo)
+                .sort((a, b) => a[1].stride < b[1].stride)
+                .map(([index, info]) => {
+                    info.current = Math.floor(frame / info.stride)
+                    frame -= info.current * info.stride
+                    return [index, info]
+                })
+            )
         },
         updateStyle(idx, style) {
             this.$set(this.style, idx, style);
