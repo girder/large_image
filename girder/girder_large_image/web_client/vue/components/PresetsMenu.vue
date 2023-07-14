@@ -97,7 +97,7 @@ export default {
         Image View Presets:
         <select v-model="selectedPreset">
             <option v-if="availablePresets.length === 0" :value="undefined" selected disabled>
-                No presets available.
+                No presets available
             </option>
             <option v-else :value="undefined" selected disabled>
                 Select a preset
