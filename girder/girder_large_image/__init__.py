@@ -96,6 +96,11 @@ def _postUpload(event):
         if fileObj['name'].endswith('.geo.tiff'):
             item['largeImage']['sourceName'] = 'gdal'
         Item().save(item)
+        # If the job looks finished, update it once more to force notifications
+        if 'jobId' in item['largeImage'] and item['largeImage'].get('notify'):
+            job = Job().load(item['largeImage']['jobId'], force=True)
+            if job and job['status'] == JobStatus.SUCCESS:
+                Job().save(job)
 
 
 def _updateJob(event):

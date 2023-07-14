@@ -198,6 +198,8 @@ class TilesItemResource(ItemResource):
         .param('notify', 'If a job is required to create the large image, '
                'a nofication can be sent when it is complete.',
                dataType='boolean', default=True, required=False)
+        .param('localJob', 'If true, run as a local job; if false, run via '
+               'the remote worker', dataType='boolean', required=False)
         .param('tileSize', 'Tile size', dataType='int', default=256,
                required=False)
         .param('compression', 'Internal compression format', required=False,
@@ -215,9 +217,9 @@ class TilesItemResource(ItemResource):
         .param('cr', 'JP2K target compression ratio where 1 is lossless',
                dataType='int', required=False)
         .param('concurrent', 'Suggested number of maximum concurrent '
-               'processes to use during conversion.  Values <= 0 use the '
-               'number of logical cpus less that value.  Default is -2.',
-               dataType='int', required=False)
+               'processes to use during conversion.  Values less than or '
+               'equal to 0 use the number of logical cpus less that value.  '
+               'Default is -2.', dataType='int', required=False)
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -237,11 +239,14 @@ class TilesItemResource(ItemResource):
         token = self.getCurrentToken()
         notify = self.boolParam('notify', params, default=True)
         params.pop('notify', None)
+        localJob = self.boolParam('localJob', params, default=None)
+        params.pop('localJob', None)
         try:
             return self.imageItemModel.createImageItem(
                 item, largeImageFile, user, token,
                 createJob='always' if self.boolParam('force', params, default=False) else True,
                 notify=notify,
+                localJob=localJob,
                 **params)
         except TileGeneralError as e:
             raise RestException(e.args[0])
@@ -256,8 +261,7 @@ class TilesItemResource(ItemResource):
         .param('folderId', 'The destination folder.', required=False)
         .param('name', 'A new name for the output item.', required=False)
         .param('localJob', 'If true, run as a local job; if false, run via '
-               'the remote worker', dataType='boolean', default=True,
-               required=False)
+               'the remote worker', dataType='boolean', required=False)
         .param('tileSize', 'Tile size', dataType='int', default=256,
                required=False)
         .param('onlyFrame', 'Only convert a specific 0-based frame of a '
@@ -280,9 +284,9 @@ class TilesItemResource(ItemResource):
         .param('cr', 'JP2K target compression ratio where 1 is lossless',
                dataType='int', required=False)
         .param('concurrent', 'Suggested number of maximum concurrent '
-               'processes to use during conversion.  Values <= 0 use the '
-               'number of logical cpus less that value.  Default is -2.',
-               dataType='int', required=False)
+               'processes to use during conversion.  Values less than or '
+               'equal to 0 use the number of logical cpus less that value.  '
+               'Default is -2.', dataType='int', required=False)
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)

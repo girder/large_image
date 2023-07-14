@@ -101,12 +101,18 @@ def convert_image_job(job):
     from girder.models.user import User
 
     kwargs = job['kwargs']
+    toFolder = kwargs.pop('toFolder', True)
     item = Item().load(kwargs.pop('itemId'), force=True)
     fileObj = File().load(kwargs.pop('fileId'), force=True)
     userId = kwargs.pop('userId', None)
     user = User().load(userId, force=True) if userId else None
-    folder = Folder().load(kwargs.pop('folderId', item['folderId']),
-                           user=user, level=AccessType.WRITE)
+    if toFolder:
+        parentType = 'folder'
+        parent = Folder().load(kwargs.pop('folderId', item['folderId']),
+                               user=user, level=AccessType.WRITE)
+    else:
+        parentType = 'item'
+        parent = item
     name = kwargs.pop('name', None)
 
     job = Job().updateJob(
@@ -138,8 +144,8 @@ def convert_image_job(job):
                     fobj,
                     size=os.path.getsize(dest),
                     name=name or os.path.basename(dest),
-                    parentType='folder',
-                    parent=folder,
+                    parentType=parentType,
+                    parent=parent,
                     user=user,
                 )
                 job = Job().load(job['_id'], force=True)
