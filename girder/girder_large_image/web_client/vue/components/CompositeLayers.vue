@@ -121,7 +121,9 @@ export default {
                     {}, layerInfo, currentLayerStyle
                 )
             })
-            this.updateActiveLayers()
+            this.layers.forEach((layer) => {
+                this.compositeLayerInfo[layer].enabled = this.enabledLayers.includes(layer);
+            })
         },
         fetchCurrentFrameHistogram() {
             restRequest({
@@ -272,6 +274,9 @@ export default {
             } else {
                 document.removeEventListener('keydown', this.keyHandler)
             }
+        },
+        currentStyle() {
+            this.initializeStateFromStyle()
         }
     }
 }
