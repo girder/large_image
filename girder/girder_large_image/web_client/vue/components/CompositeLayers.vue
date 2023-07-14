@@ -124,6 +124,12 @@ export default {
             this.layers.forEach((layer) => {
                 this.compositeLayerInfo[layer].enabled = this.enabledLayers.includes(layer);
             })
+            const autoRanges = Object.entries(this.compositeLayerInfo)
+                .map(([index, info]) => info.autoRange)
+                .filter((a) => a !== undefined)
+            if (autoRanges.every((v) => v === autoRanges[0])) {
+                this.autoRangeForAll = autoRanges[0]
+            }
         },
         fetchCurrentFrameHistogram() {
             restRequest({
