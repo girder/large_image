@@ -10,6 +10,7 @@ export default {
             selectedPreset: undefined,
             showPresetCreation: false,
             newPresetName: undefined,
+            errorMessage: undefined,
         }
     },
     methods: {
@@ -30,9 +31,14 @@ export default {
                 'frame': this.currentFrame,
                 'style': this.currentStyle,
             }
-            this.availablePresets.push(newPreset)
-            this.selectedPreset = newPreset.name
-            this.savePresetsList()
+            if (this.availablePresets.find((p) => p.name === newPreset.name)) {
+                this.errorMessage = `There is already a preset named "${newPreset.name}".`
+            } else {
+                this.availablePresets.push(newPreset)
+                this.selectedPreset = newPreset.name
+                this.savePresetsList()
+            }
+            this.newPresetName = undefined
         },
         deleteSelectedPreset() {
             this.availablePresets = this.availablePresets.filter((p) => p.name !== this.selectedPreset)
@@ -60,6 +66,11 @@ export default {
         }
     },
     watch: {
+        newPresetName() {
+            if (this.newPresetName){
+                this.errorMessage = undefined;
+            }
+        },
         selectedPreset() {
             if (this.selectedPreset) {
                 const preset = this.availablePresets.find((p) => p.name === this.selectedPreset)
@@ -113,6 +124,7 @@ export default {
                 v-model="newPresetName"
                 :placeholder="generatedPresetName"
             >
+            <span class="red--text">{{ errorMessage }}</span>
             <button @click="addPreset">
                 Save Preset
             </button>
@@ -129,5 +141,8 @@ export default {
     flex-direction: column;
     align-items: end;
     padding-top: 5px;
+}
+.red--text {
+    color: red;
 }
 </style>
