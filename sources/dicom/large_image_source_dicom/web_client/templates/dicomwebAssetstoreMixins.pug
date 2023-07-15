@@ -1,0 +1,19 @@
+mixin g-dwas-parameters
+  .form-group
+    label.control-label(for="g-edit-dwas-url") DICOMweb server URL
+    input#g-edit-dwas-url.input-sm.form-control(
+        type="text",
+        placeholder="URL")
+    label.control-label(for="g-edit-dwas-qido-prefix") DICOMweb QIDO prefix (optional)
+    input#g-edit-dwas-qido-prefix.input-sm.form-control(
+        type="text",
+        placeholder="QIDO prefix")
+    label.control-label(for="g-edit-dwas-wado-prefix") DICOMweb WADO prefix (optional)
+    input#g-edit-dwas-wado-prefix.input-sm.form-control(
+        type="text",
+        placeholder="WADO prefix")
+  //- COMMENTED OUT UNTIL WE ADD AUTHENTICATION
+    label.control-label(for="g-edit-dwas-auth-type") DICOMweb authentation type (optional)
+    input#g-edit-dwas-auth-type.input-sm.form-control(
+        type="text",
+        placeholder="Authentication type")

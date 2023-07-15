@@ -7,11 +7,14 @@ from importlib.metadata import version as _importlib_version
 
 import numpy as np
 
+from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import _imageToNumpy, _imageToPIL
+
+from .dicom_tags import dicom_key_to_tag
 
 pydicom = None
 wsidicom = None
@@ -113,11 +116,14 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
+        self.logger = config.getConfig('logger')
+
         # We want to make a list of paths of files in this item, if multiple,
         # or adjacent items in the folder if the item is a single file.  We
         # filter files with names that have a preferred extension.
+        # If the path is a dict, that likely means it is a DICOMweb asset.
         path = self._getLargeImagePath()
-        if not isinstance(path, list):
+        if not isinstance(path, (dict, list)):
             path = str(path)
             if not os.path.isfile(path):
                 raise TileSourceFileNotFoundError(path) from None
@@ -132,10 +138,11 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._largeImagePath = path
         _lazyImport()
         try:
-            self._dicom = wsidicom.WsiDicom.open(self._largeImagePath)
-        except Exception:
-            msg = 'File cannot be opened via dicom tile source.'
+            self._dicom = self._open_wsi_dicom(self._largeImagePath)
+        except Exception as exc:
+            msg = f'File cannot be opened via dicom tile source ({exc}).'
             raise TileSourceError(msg)
+
         self.sizeX = int(self._dicom.size.width)
         self.sizeY = int(self._dicom.size.height)
         self.tileWidth = int(self._dicom.tile_size.width)
@@ -145,6 +152,87 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = int(max(1, math.ceil(math.log(
             max(self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
         self._populatedLevels = len(self._dicom.levels)
+
+    def _open_wsi_dicom(self, path):
+        if isinstance(path, dict):
+            # Use the DICOMweb open method
+            return self._open_wsi_dicomweb(path)
+        else:
+            # Use the regular open method
+            return wsidicom.WsiDicom.open(path)
+
+    def _open_wsi_dicomweb(self, info):
+        # These are the required keys in the info dict
+        url = info['url']
+        study_uid = info['study_uid']
+        series_uid = info['series_uid']
+
+        # These are optional keys
+        qido_prefix = info.get('qido_prefix')
+        wado_prefix = info.get('wado_prefix')
+        auth = info.get('auth')
+
+        # Create the client
+        client = wsidicom.WsiDicomWebClient(
+            url,
+            qido_prefix=qido_prefix,
+            wado_prefix=wado_prefix,
+            auth=auth,
+        )
+
+        # Identify the transfer syntax
+        transfer_syntax = self._identify_dicomweb_transfer_syntax(client,
+                                                                  study_uid,
+                                                                  series_uid)
+
+        # Open the WSI DICOMweb file
+        return wsidicom.WsiDicom.open_web(client, study_uid, series_uid,
+                                          requested_transfer_syntax=transfer_syntax)
+
+    def _identify_dicomweb_transfer_syntax(self, client, study_uid, series_uid):
+        # "client" is a wsidicom.WsiDicomWebClient
+
+        # This is how we select the JPEG type to return
+        # The available transfer syntaxes used by wsidicom may be found here:
+        # https://github.com/imi-bigpicture/wsidicom/blob/a2716cd6a443f4102e66e35bbce32b0e2ae72dab/wsidicom/web/wsidicom_web_client.py#L97-L109
+        # (we may need to update this if they add more options)
+        # FIXME: maybe this function better belongs upstream in `wsidicom`?
+        from pydicom.uid import JPEG2000, JPEG2000Lossless, JPEGBaseline8Bit, JPEGExtended12Bit
+
+        # Prefer the transfer syntaxes in this order.
+        transfer_syntax_preferred_order = [
+            JPEGBaseline8Bit,
+            JPEGExtended12Bit,
+            JPEG2000,
+            JPEG2000Lossless,
+        ]
+        available_transfer_syntax_tag = dicom_key_to_tag('AvailableTransferSyntaxUID')
+
+        # Access the dicom web client, and search for one instance for the given
+        # study and series. Check the available transfer syntaxes.
+        result, = client._client.search_for_instances(
+            study_uid, series_uid,
+            fields=[available_transfer_syntax_tag], limit=1)
+
+        if available_transfer_syntax_tag in result:
+            available_transfer_syntaxes = result[available_transfer_syntax_tag]['Value']
+            for syntax in transfer_syntax_preferred_order:
+                if syntax in available_transfer_syntaxes:
+                    return syntax
+        else:
+            # The server is not telling us which transfer syntaxes are available.
+            # Print a warning, default to JPEG2000, and hope for the best.
+            self.logger.warning(
+                'DICOMweb server is not communicating the available '
+                'transfer syntaxes. Assuming JPEG2000...',
+            )
+            return JPEG2000
+
+        msg = (
+            'Could not find an appropriate transfer syntax. '
+            f'Available transfer syntaxes are: {available_transfer_syntaxes}'
+        )
+        raise TileSourceError(msg)
 
     def __del__(self):
         # If we have an _unstyledInstance attribute, this is not the owner of
