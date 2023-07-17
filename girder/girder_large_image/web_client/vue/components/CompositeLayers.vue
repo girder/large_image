@@ -101,6 +101,7 @@ export default {
             this.fetchCurrentFrameHistogram()
         },
         initializeStateFromStyle() {
+            this.enabledLayers = []
             const styleArray = this.currentStyle.bands
             this.layers.forEach((layerName) => {
                 const layerInfo = this.compositeLayerInfo[layerName]
@@ -112,7 +113,9 @@ export default {
                         && currentLayerStyle.min.includes("min:")
                         && currentLayerStyle.max.includes("max:")
                     ) {
-                        currentLayerStyle.autoRange = currentLayerStyle.min.replace("min:", '')
+                        currentLayerStyle.autoRange = parseFloat(
+                            currentLayerStyle.min.replace("min:", '')
+                        ) * 100
                         currentLayerStyle.min = undefined
                         currentLayerStyle.max = undefined
                     }
@@ -141,7 +144,7 @@ export default {
             });
         },
         toggleEnableAll() {
-            if (this.enabledLayers !== this.layers) {
+            if (!this.layers.every((l) => this.enabledLayers.includes(l))) {
                 this.enabledLayers = this.layers
             } else {
                 this.enabledLayers = []
@@ -323,7 +326,7 @@ export default {
                             <input
                                 type="checkbox"
                                 class="input-80"
-                                :checked="enabledLayers === layers"
+                                :checked="layers.every((l) => enabledLayers.includes(l))"
                                 @input="toggleEnableAll"
                             >
                         </th>

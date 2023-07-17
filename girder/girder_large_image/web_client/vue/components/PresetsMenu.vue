@@ -85,6 +85,7 @@ export default {
                     this.$emit('setCurrentFrame', preset.frame)
                 }
                 if (preset.style && Object.keys(preset.style.bands).length) {
+                    console.log(preset.style)
                     this.$emit('updateStyle', preset.mode.id, preset.style)
                 }
             }
