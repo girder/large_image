@@ -24,21 +24,25 @@ export default {
                 }
             })
         },
-        addPreset() {
+        addPreset(e, overwrite=false) {
+            this.newPresetName = this.newPresetName.trim()
             const newPreset = {
                 'name': this.newPresetName || this.generatedPresetName,
                 'mode': this.currentMode,
                 'frame': this.currentFrame,
                 'style': this.currentStyle,
             }
-            if (this.availablePresets.find((p) => p.name === newPreset.name)) {
-                this.errorMessage = `There is already a preset named "${newPreset.name}".`
+            if (!overwrite && this.availablePresets.find((p) => p.name === newPreset.name)) {
+                this.errorMessage = `There is already a preset named "${newPreset.name}". Overwrite "${newPreset.name}"?`
             } else {
+                this.availablePresets = this.availablePresets.filter((p) => p.name !== newPreset.name)
                 this.availablePresets.push(newPreset)
                 this.selectedPreset = newPreset.name
                 this.savePresetsList()
+                this.newPresetName = undefined
+                this.errorMessage = undefined
+                this.showPresetCreation = false
             }
-            this.newPresetName = undefined
         },
         deleteSelectedPreset() {
             this.availablePresets = this.availablePresets.filter((p) => p.name !== this.selectedPreset)
@@ -125,8 +129,11 @@ export default {
                 :placeholder="generatedPresetName"
             >
             <span class="red--text">{{ errorMessage }}</span>
-            <button @click="addPreset">
+            <button @click="addPreset" v-if="errorMessage === undefined">
                 Save Preset
+            </button>
+            <button @click="(e) => addPreset(e, true)" v-else>
+                Update Preset
             </button>
         </div>
     </div>
@@ -135,6 +142,7 @@ export default {
 <style scoped>
 .presets-menu {
     float: right;
+    text-align: right;
 }
 .preset-creation {
     display: flex;
@@ -144,5 +152,6 @@ export default {
 }
 .red--text {
     color: red;
+    max-width: 250px;
 }
 </style>
