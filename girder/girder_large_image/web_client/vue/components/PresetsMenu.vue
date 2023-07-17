@@ -25,13 +25,13 @@ export default {
             })
         },
         addPreset(e, overwrite=false) {
-            this.newPresetName = this.newPresetName.trim()
             const newPreset = {
                 'name': this.newPresetName || this.generatedPresetName,
                 'mode': this.currentMode,
                 'frame': this.currentFrame,
                 'style': this.currentStyle,
             }
+            newPreset.name = newPreset.name.trim()
             if (!overwrite && this.availablePresets.find((p) => p.name === newPreset.name)) {
                 this.errorMessage = `There is already a preset named "${newPreset.name}". Overwrite "${newPreset.name}"?`
             } else {
@@ -56,6 +56,44 @@ export default {
                 data: JSON.stringify(this.availablePresets),
                 contentType: 'application/json',
             })
+        },
+        styleEqual(style1, style2) {
+            if (style1 === style2) {
+                return true
+            }
+            if (style1.bands.length !== style2.bands.length) {
+                return false
+            }
+            return style1.bands.every((b1) => {
+                b1 = Object.fromEntries(Object.entries(b1).filter(([k, v]) => v !== undefined))
+                return style2.bands.some((b2) => {
+                    b2 = Object.fromEntries(Object.entries(b2).filter(([k, v]) => v !== undefined))
+                    return (
+                        Object.entries(b1).every(([k, v]) => b2[k] === v)
+                        && Object.entries(b2).every(([k, v]) => b1[k] === v)
+                    )
+                })
+            })
+        },
+        checkPresetMatch() {
+            const targetStyle = this.currentStyle && this.currentStyle.bands ? {
+                bands: this.currentStyle.bands.map((b) => {
+                    if (b.min && b.max && b.min.includes("min:") && b.max.includes("max:")) {
+                        b.autoRange = parseFloat(
+                            b.min.replace("min:", '')
+                        ) * 100
+                        b.min = undefined
+                        b.max = undefined
+                    }
+                    return b
+                })
+            } : this.currentStyle
+            const match = this.availablePresets.find((p) => (
+                p.mode.id === this.currentMode.id
+                && p.frame === this.currentFrame
+                && this.styleEqual(targetStyle, p.style)
+            ))
+            this.selectedPreset = match ? match.name : undefined
         }
     },
     computed: {
@@ -85,10 +123,18 @@ export default {
                     this.$emit('setCurrentFrame', preset.frame)
                 }
                 if (preset.style && Object.keys(preset.style.bands).length) {
-                    console.log(preset.style)
                     this.$emit('updateStyle', preset.mode.id, preset.style)
                 }
             }
+        },
+        currentMode() {
+            this.checkPresetMatch()
+        },
+        currentFrame() {
+            this.checkPresetMatch()
+        },
+        currentStyle() {
+            this.checkPresetMatch()
         }
     },
     mounted() {
