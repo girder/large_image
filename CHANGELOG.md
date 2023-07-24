@@ -8,6 +8,9 @@
 - More consistency in how local and remote image conversions are performed in Girder ([#1238](../../pull/1238))
 - Support showing data from subkeys in annotation lists ([#1241](../../pull/1241))
 
+### Bug Fixes
+- The nd2 reader throws a different exception with JP2 files ([#1242](../../pull/1242))
+
 ## 1.23.1
 
 ### Improvements
