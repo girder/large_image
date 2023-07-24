@@ -764,7 +764,7 @@ class Annotation(AccessControlledModel):
 
         self.copyAccessPolicies(item, annotation, save=False)
         self.setUserAccess(annotation, user, AccessType.ADMIN, force=True, save=False)
-        self.setPublic(annotation, folder.get('public'), save=False)
+        self.setPublic(annotation, folder.get('public') or False, save=False)
 
         # call the super class save method to avoid messing with elements
         super().save(annotation)

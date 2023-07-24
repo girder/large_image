@@ -10,6 +10,7 @@
 
 ### Bug Fixes
 - The nd2 reader throws a different exception with JP2 files ([#1242](../../pull/1242))
+- Better guards on ACL migration ([#1243](../../pull/1243))
 
 ## 1.23.1
 
