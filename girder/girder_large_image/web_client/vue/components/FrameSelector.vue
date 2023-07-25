@@ -48,10 +48,8 @@ export default Vue.extend({
             this.currentFrame = frame
             this.indexInfo = Object.fromEntries(
                 Object.entries(this.indexInfo)
-                .sort((a, b) => a[1].stride < b[1].stride)
                 .map(([index, info]) => {
-                    info.current = Math.floor(frame / info.stride)
-                    frame -= info.current * info.stride
+                    info.current = Math.floor(frame / info.stride) % (info.range + 1)
                     return [index, info]
                 })
             )
