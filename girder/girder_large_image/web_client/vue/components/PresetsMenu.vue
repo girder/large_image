@@ -2,7 +2,7 @@
 import { restRequest } from '@girder/core/rest';
 
 export default {
-    props: ['itemId', 'currentMode', 'currentFrame', 'currentStyle'],
+    props: ['itemId', 'liConfig', 'imageMetadata', 'availableModes', 'currentMode', 'currentFrame', 'currentStyle'],
     emits: ['setCurrentMode', 'setCurrentFrame', 'updateStyle'],
     data() {
         return {
@@ -14,13 +14,28 @@ export default {
         }
     },
     methods: {
+        presetApplicable(preset) {
+            if(
+                parseInt(preset.frame) >= this.imageMetadata.frames.length
+                || !this.availableModes.includes(preset.mode.id)
+            ) {
+                return false
+            }
+
+            return true
+        },
         getPresets() {
+            if (this.liConfig.imagePresets) {
+                this.availablePresets = this.availablePresets.concat(
+                    this.liConfig.imagePresets.filter(this.presetApplicable)
+                )
+            }
             restRequest({
                 type: 'GET',
                 url: 'item/' + this.itemId + '/internal_metadata/presets',
             }).then((presets) => {
                 if (presets) {
-                    this.availablePresets = presets
+                    this.availablePresets = this.availablePresets.concat(presets)
                 }
             })
         },
