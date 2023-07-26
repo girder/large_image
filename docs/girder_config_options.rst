@@ -19,7 +19,7 @@ The yaml file has the following structure:
 
     ---
     # most settings are key-value pairs, where the value could be another
-    # directionary with keys and values, lists, or other valid data.
+    # dictionary with keys and values, lists, or other valid data.
     <key>: <value>
     # The access key is special
     access:
@@ -191,6 +191,139 @@ By default, item metadata can contain any keys and values.  These can be given b
         # Exclusive values can be specified instead
         # exclusiveMinimum: 0
         # exclusiveMaximum: 10
+
+Image View Presets
+...........
+
+This is used to specify a list of default presets for viewing images in the folder.
+Presets can be customized and saved in the GeoJS Image Viewer.
+To retrieve saved presets, use http://[serverURL]/api/v1/item/[itemID]/internal_metadata/presets.
+You can convert the response to YAML and paste it into the `imagePresets` key in your config file.
+
+Each preset can specify a name, a view mode, an image frame, and style options.
+- The name of a preset can be any string which uniquely identifies the preset.
+- There are four options for mode:
+  1. Frame control
+    id: 0
+    name: Frame
+  2. Axis control
+    id: 1
+    name: Axis
+  3. Channel Compositing
+    id: 2
+    name: Channel Compositing
+  4. Band Compositing
+    id: 3
+    name: Band Compositing
+- The frame of a preset is a 0-based index representing a single frame in a multiframe image.
+  For single-frame images, this value will always be 0.
+  For channel compositing, each channel will have a `framedelta` value which represents distance from this base frame value.
+  The result of channel compositing is multiple frames (calculated via framedelta) composited together.
+- The style of a preset is a dictionary with a schema similar to the [style schema for tile retrieval](tilesource_options.rst#style).
+  The value for a preset's style consists of a band definition, where each band may have the following:
+  1. `band`: A 1-based index of a band within the current frame
+  2. `framedelta`: An integer representing distance from the current frame, used for compositing multiple frames together
+  3. `palette`: A hexidecimal string beginning with "#" representing a color to stain this frame
+  4. `min`: The value to map to the first palette value
+  5. `max`: The value to map to the last palette value
+  6. `autoRange`: A shortcut for excluding a percentage from each end of the value distribution in the image. Express as a float.
+
+The YAML below includes some example presets.
+
+::
+
+    ---
+    # If present, each preset in this list will be added to the preset list
+    # of every image in the folder for which the preset is applicable
+    imagePresets:
+    - name: Frame control - Frame 4
+      frame: 4
+      mode:
+        id: 0
+        name: Frame
+    - name: Axis control - Frame 25
+      frame: 25
+      mode:
+        id: 1
+        name: Axis
+    - name: 3 channels
+      frame: 0
+      mode:
+        id: 2
+        name: Channel Compositing
+      style:
+        bands:
+        - framedelta: 0
+          palette: "#0000FF"
+        - framedelta: 1
+          palette: "#FF0000"
+        - framedelta: 2
+          palette: "#00FF00"
+    - name: 3 bands
+      frame: 0
+      mode:
+        id: 3
+        name: Band Compositing
+      style:
+        bands:
+        - band: 1
+          palette: "#0000FF"
+        - band: 2
+          palette: "#FF0000"
+        - band: 3
+          palette: "#00FF00"
+    - name: Channels with Min and Max
+      frame: 0
+      mode:
+        id: 2
+        name: Channel Compositing
+      style:
+        bands:
+        - min: 18000
+          max: 43000
+          framedelta: 0
+          palette: "#0000FF"
+        - min: 18000
+          max: 43000
+          framedelta: 1
+          palette: "#FF0000"
+        - min: 18000
+          max: 43000
+          framedelta: 2
+          palette: "#00FF00"
+        - min: 18000
+          max: 43000
+          framedelta: 3
+          palette: "#FFFF00"
+    - name: Auto Ranged Channels
+      frame: 0
+      mode:
+        id: 2
+        name: Channel Compositing
+      style:
+        bands:
+        - autoRange: 0.2
+          framedelta: 0
+          palette: "#0000FF"
+        - autoRange: 0.2
+          framedelta: 1
+          palette: "#FF0000"
+        - autoRange: 0.2
+          framedelta: 2
+          palette: "#00FF00"
+        - autoRange: 0.2
+          framedelta: 3
+          palette: "#FFFF00"
+        - autoRange: 0.2
+          framedelta: 4
+          palette: "#FF00FF"
+        - autoRange: 0.2
+          framedelta: 5
+          palette: "#00FFFF"
+        - autoRange: 0.2
+          framedelta: 6
+          palette: "#FF8000"
+
 
 Editing Configuration Files
 ---------------------------
