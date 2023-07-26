@@ -193,7 +193,7 @@ By default, item metadata can contain any keys and values.  These can be given b
         # exclusiveMaximum: 10
 
 Image View Presets
-...........
+..................
 
 This is used to specify a list of default presets for viewing images in the folder.
 Presets can be customized and saved in the GeoJS Image Viewer.
