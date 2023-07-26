@@ -1,10 +1,12 @@
 <script>
 import Vue from 'vue';
 import CompositeLayers from './CompositeLayers.vue';
-import DualInput from './DualInput.vue'
+import DualInput from './DualInput.vue';
+import PresetsMenu from './PresetsMenu.vue';
+
 export default Vue.extend({
     props: ['itemId', 'imageMetadata', 'frameUpdate'],
-    components: { CompositeLayers, DualInput },
+    components: { CompositeLayers, DualInput, PresetsMenu },
     data() {
         return {
             loaded: false,
@@ -39,6 +41,19 @@ export default Vue.extend({
         }
     },
     methods: {
+        setCurrentMode(mode) {
+            this.currentModeId = mode.id
+        },
+        setCurrentFrame(frame) {
+            this.currentFrame = frame
+            this.indexInfo = Object.fromEntries(
+                Object.entries(this.indexInfo)
+                .map(([index, info]) => {
+                    info.current = Math.floor(frame / info.stride) % (info.range + 1)
+                    return [index, info]
+                })
+            )
+        },
         updateStyle(idx, style) {
             this.$set(this.style, idx, style);
             this.update()
@@ -48,6 +63,7 @@ export default Vue.extend({
             this.update();
         },
         updateFrameSlider(frame) {
+            this.currentFrame = frame
             this.frameUpdate(frame, undefined);
         },
         update() {
@@ -182,6 +198,15 @@ export default Vue.extend({
                     {{ mode.name }}
                 </option>
             </select>
+            <presets-menu
+                :itemId="itemId"
+                :currentMode="sliderModes.find((m) => m.id === currentModeId)"
+                :currentFrame="currentFrame"
+                :currentStyle="style[currentModeId]"
+                @setCurrentMode="setCurrentMode"
+                @setCurrentFrame="setCurrentFrame"
+                @updateStyle="updateStyle"
+            />
         </div>
         <dual-input
             v-if="currentModeId === 0"
@@ -210,6 +235,7 @@ export default Vue.extend({
                 v-if="imageMetadata.channels && modesShown[2]"
                 :itemId="itemId"
                 :currentFrame="currentFrame"
+                :currentStyle="style[2]"
                 :layers="imageMetadata.channels"
                 :layerMap="imageMetadata.channelmap"
                 :active="currentModeId === 2"
@@ -221,6 +247,7 @@ export default Vue.extend({
                 v-if="imageMetadata.bands && modesShown[3]"
                 :itemId="itemId"
                 :currentFrame="currentFrame"
+                :currentStyle="style[3]"
                 :layers="imageMetadata.bands"
                 :layerMap="undefined"
                 :active="currentModeId === 3"

@@ -5,7 +5,7 @@ import { CHANNEL_COLORS, OTHER_COLORS } from '../utils/colors'
 import HistogramEditor from './HistogramEditor.vue';
 
 export default {
-    props: ['itemId', 'currentFrame', 'layers', 'layerMap', 'active'],
+    props: ['itemId', 'currentFrame', 'currentStyle', 'layers', 'layerMap', 'active'],
     emits: ['updateStyle'],
     components: {
         'color-picker': Chrome,
@@ -100,6 +100,40 @@ export default {
             })
             this.fetchCurrentFrameHistogram()
         },
+        initializeStateFromStyle() {
+            this.enabledLayers = []
+            const styleArray = this.currentStyle.bands
+            this.layers.forEach((layerName) => {
+                const layerInfo = this.compositeLayerInfo[layerName]
+                const currentLayerStyle = styleArray.find((s) => s.framedelta === layerInfo.framedelta && s.band === layerInfo.band)
+                if (currentLayerStyle) {
+                    this.enabledLayers.push(layerName)
+                    if (
+                        currentLayerStyle.min && currentLayerStyle.max
+                        && currentLayerStyle.min.includes("min:")
+                        && currentLayerStyle.max.includes("max:")
+                    ) {
+                        currentLayerStyle.autoRange = parseFloat(
+                            currentLayerStyle.min.replace("min:", '')
+                        ) * 100
+                        currentLayerStyle.min = undefined
+                        currentLayerStyle.max = undefined
+                    }
+                }
+                this.compositeLayerInfo[layerName] = Object.assign(
+                    {}, layerInfo, currentLayerStyle
+                )
+            })
+            this.layers.forEach((layer) => {
+                this.compositeLayerInfo[layer].enabled = this.enabledLayers.includes(layer);
+            })
+            const autoRanges = Object.entries(this.compositeLayerInfo)
+                .map(([index, info]) => info.autoRange)
+                .filter((a) => a !== undefined)
+            if (autoRanges.every((v) => v === autoRanges[0])) {
+                this.autoRangeForAll = autoRanges[0]
+            }
+        },
         fetchCurrentFrameHistogram() {
             restRequest({
                 type: 'GET',
@@ -110,7 +144,7 @@ export default {
             });
         },
         toggleEnableAll() {
-            if (this.enabledLayers !== this.layers) {
+            if (!this.layers.every((l) => this.enabledLayers.includes(l))) {
                 this.enabledLayers = this.layers
             } else {
                 this.enabledLayers = []
@@ -217,23 +251,27 @@ export default {
     },
     mounted() {
         this.initializeLayerInfo()
-        if (this.layerMap) {
-            // channels all enabled by default
-            this.enabledLayers = this.layers
+        if (this.currentStyle) {
+            this.initializeStateFromStyle()
         } else {
-            // only some bands enabled by default
-            ['red', 'green', 'blue', 'gray', 'grey'].forEach((bandColor) => {
-                if (this.layers.includes(bandColor)) {
-                    this.enabledLayers.push(bandColor)
+            if (this.layerMap) {
+                // channels all enabled by default
+                this.enabledLayers = this.layers
+            } else {
+                // only some bands enabled by default
+                ['red', 'green', 'blue', 'gray', 'grey'].forEach((bandColor) => {
+                    if (this.layers.includes(bandColor)) {
+                        this.enabledLayers.push(bandColor)
+                    }
+                })
+                // if no known band colors exist, enable the first three
+                if (this.enabledLayers.length === 0) {
+                    this.enabledLayers = this.layers.slice(0, 3)
                 }
-            })
-            // if no known band colors exist, enable the first three
-            if (this.enabledLayers.length === 0) {
-                this.enabledLayers = this.layers.slice(0, 3)
             }
+            this.updateActiveLayers()
+            this.updateStyle()
         }
-        this.updateActiveLayers()
-        this.updateStyle()
         if (this.active) {
             document.addEventListener('keydown', this.keyHandler)
         }
@@ -245,6 +283,9 @@ export default {
             } else {
                 document.removeEventListener('keydown', this.keyHandler)
             }
+        },
+        currentStyle() {
+            this.initializeStateFromStyle()
         }
     }
 }
@@ -285,7 +326,7 @@ export default {
                             <input
                                 type="checkbox"
                                 class="input-80"
-                                :checked="enabledLayers === layers"
+                                :checked="layers.every((l) => enabledLayers.includes(l))"
                                 @input="toggleEnableAll"
                             >
                         </th>
