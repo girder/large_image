@@ -47,7 +47,12 @@ var ImageViewerSelectWidget = View.extend({
         this.itemId = settings.imageModel.id;
         this.model = settings.imageModel;
         this.currentViewer = null;
-        largeImageConfig.getSettings(() => this.render());
+        largeImageConfig.getSettings(() => {
+            largeImageConfig.getConfigFile(this.model.get('folderId')).done((config) => {
+                this._liConfig = config || {};
+                this.render();
+            });
+        });
     },
 
     render: function () {
@@ -73,7 +78,8 @@ var ImageViewerSelectWidget = View.extend({
             propsData: {
                 itemId: this.itemId,
                 imageMetadata: imageMetadata,
-                frameUpdate: frameUpdate
+                frameUpdate: frameUpdate,
+                liConfig: this._liConfig
             }
         });
         this.vueApp = vm;
