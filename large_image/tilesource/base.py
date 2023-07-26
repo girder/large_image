@@ -1315,7 +1315,10 @@ class TileSource(IPyLeafletMixin):
             if hasattr(self, '_iccprofilesObjects') and self._iccprofilesObjects[pidx] is not None:
                 prof = self._iccprofilesObjects[pidx]['profile']
             elif not isinstance(prof, PIL.ImageCms.ImageCmsProfile):
-                prof = PIL.ImageCms.getOpenProfile(io.BytesIO(prof))
+                try:
+                    prof = PIL.ImageCms.getOpenProfile(io.BytesIO(prof))
+                except PIL.ImageCms.PyCMSError:
+                    continue
             if idx == pidx:
                 return prof
             results.append(prof)

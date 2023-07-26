@@ -126,7 +126,7 @@ jobs:
       - checkout
       - allservices:
           version: 3.6.15
-          node: v12
+          node: v14
       - tox:
           env: test-py36
       - coverage
@@ -139,7 +139,7 @@ jobs:
       - checkout
       - allservices:
           version: 3.7.17
-          node: v12
+          node: v14
       - tox:
           env: test-py37
       - coverage
@@ -152,7 +152,7 @@ jobs:
       - checkout
       - allservices:
           version: 3.8.17
-          node: v12
+          node: v14
       - tox:
           env: test-py38
       - coverage
@@ -165,7 +165,7 @@ jobs:
       - checkout
       - allservices:
           version: 3.9.17
-          node: v12
+          node: v14
       - tox:
           env: test-py39
       - coverage
@@ -178,7 +178,7 @@ jobs:
       - checkout
       - allservices:
           version: 3.10.12
-          node: v12
+          node: v14
       - tox:
           env: test-py310
       - coverage
@@ -191,7 +191,7 @@ jobs:
       - checkout
       - allservices:
           version: 3.11.4
-          node: v12
+          node: v14
       - tox:
           env: test-py311
       - coverage
