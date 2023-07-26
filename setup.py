@@ -96,11 +96,10 @@ setup(
         'Programming Language :: Python :: 3.11',
     ],
     install_requires=[
-        'cachetools>=3.0.0',
+        'cachetools',
         'palettable',
-        # Pillow 8.3.0 and 8.3.1 won't save jpeg compressed tiffs properly.
         'Pillow',
-        'numpy>=1.10.4',
+        'numpy',
         'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require=extraReqs,
