@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.23.3
+
+### Improvements
+- Frame selection presets ([#1237](../../pull/1237))
+
+### Bug Fixes
+- Guard against ICC profiles that won't parse ([#1245](../../pull/1245))
+
 ## 1.23.2
 
 ### Improvements
