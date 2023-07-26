@@ -201,24 +201,28 @@ To retrieve saved presets, use http://[serverURL]/api/v1/item/[itemID]/internal_
 You can convert the response to YAML and paste it into the `imagePresets` key in your config file.
 
 Each preset can specify a name, a view mode, an image frame, and style options.
+
 - The name of a preset can be any string which uniquely identifies the preset.
+
 - There are four options for mode:
-  1. Frame control
-    id: 0
-    name: Frame
-  2. Axis control
-    id: 1
-    name: Axis
-  3. Channel Compositing
-    id: 2
-    name: Channel Compositing
-  4. Band Compositing
-    id: 3
-    name: Band Compositing
+    1. Frame control
+        id: 0
+        name: Frame
+    2. Axis control
+        id: 1
+        name: Axis
+    3. Channel Compositing
+        id: 2
+        name: Channel Compositing
+    4. Band Compositing
+        id: 3
+        name: Band Compositing
+
 - The frame of a preset is a 0-based index representing a single frame in a multiframe image.
   For single-frame images, this value will always be 0.
   For channel compositing, each channel will have a `framedelta` value which represents distance from this base frame value.
   The result of channel compositing is multiple frames (calculated via framedelta) composited together.
+
 - The style of a preset is a dictionary with a schema similar to the [style schema for tile retrieval](tilesource_options.rst#style).
   The value for a preset's style consists of a band definition, where each band may have the following:
   1. `band`: A 1-based index of a band within the current frame
