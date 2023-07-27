@@ -8,7 +8,7 @@ fledged REST API. Only two endpoints are exposed with minimal options:
 
 We use Tornado because it is Jupyter's web server and will not require Jupyter
 users to install any additional dependencies. Also, Tornado doesn't require us
-to manage a seperate thread for the web server.
+to manage a separate thread for the web server.
 
 Please note that this webserver will not work with Classic Notebook and will
 likely lead to crashes. This is only for use in JupyterLab.
@@ -123,7 +123,7 @@ class IPyLeafletMixin:
     ``JUPYTERHUB_SERVICE_PREFIX`` may need to prefix the
     ``'/proxy/'``.
 
-    To programatically set these values:
+    To programmatically set these values:
 
     .. code::
 
@@ -158,7 +158,7 @@ class IPyLeafletMixin:
             # Must relaunch to ensure style updates work
             self._jupyter_server_manager = launch_tile_server(self)
         else:
-            # Must update the source on the manager incase the previous reference is bad
+            # Must update the source on the manager in case the previous reference is bad
             self._jupyter_server_manager.tile_source = self
 
         port = self._jupyter_server_manager.port
@@ -176,11 +176,14 @@ class IPyLeafletMixin:
         # Use repr in URL params to prevent caching across sources/styles
         endpoint = f'tile?z={{z}}&x={{x}}&y={{y}}&encoding=png&repr={self.__repr__()}'
 
+        if not (self.geospatial and self.projection) and 'bounds' not in kwargs:
+            kwargs = kwargs.copy()
+            kwargs['bounds'] = [[0, 0], [metadata['sizeY'], metadata['sizeX']]]
         layer = TileLayer(
             url=f'{base_url}/{endpoint}',
             # attribution='Tiles served with large-image',
             min_zoom=0,
-            max_native_zoom=metadata['levels'] + 1,
+            max_native_zoom=metadata['levels'],
             max_zoom=20,
             tile_size=metadata['tileWidth'],
             **kwargs,
@@ -213,12 +216,13 @@ class IPyLeafletMixin:
                     name='PixelSpace',
                     custom=True,
                     # Why does this need to be 256?
-                    resolutions=[256 * 2 ** (-l) for l in range(20)],
+                    resolutions=[2 ** (metadata['levels'] - 1 - l) for l in range(20)],
 
                     # This works but has x and y reversed
                     proj4def='+proj=longlat +axis=esu',
                     bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
-                    origin=[0, 0],
+                    # Why is origin X, Y but bounds Y, X?
+                    origin=[0, metadata['sizeY']],
 
                     # This almost works to fix the x, y reversal, but
                     # - bounds are weird and other issues occur
