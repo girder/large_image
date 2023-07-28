@@ -16,7 +16,11 @@ export default {
     },
     methods: {
         presetApplicable(preset) {
-            if(
+            if (this.itemPresets.find((p) => p.name === preset.name)) {
+                // preset with this name already exists on the item,
+                // prefer the item preset; don't show both
+                return false
+            } if(
                 parseInt(preset.frame) >= this.imageMetadata.frames.length
                 || !this.availableModes.includes(preset.mode.id)
             ) {
@@ -26,15 +30,15 @@ export default {
             return true
         },
         getPresets() {
-            if (this.liConfig.imageFramePresets) {
-                this.folderPresets = this.liConfig.imageFramePresets.filter(this.presetApplicable)
-            }
             restRequest({
                 type: 'GET',
                 url: 'item/' + this.itemId + '/internal_metadata/presets',
             }).then((presets) => {
                 this.itemPresets = presets
             })
+            if (this.liConfig.imageFramePresets) {
+                this.folderPresets = this.liConfig.imageFramePresets.filter(this.presetApplicable)
+            }
         },
         addPreset(e, overwrite=false) {
             const newPreset = {
