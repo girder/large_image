@@ -192,13 +192,13 @@ By default, item metadata can contain any keys and values.  These can be given b
         # exclusiveMinimum: 0
         # exclusiveMaximum: 10
 
-Image View Presets
-..................
+Image Frame Presets
+...................
 
 This is used to specify a list of default presets for viewing images in the folder.
 Presets can be customized and saved in the GeoJS Image Viewer.
 To retrieve saved presets, use http://[serverURL]/api/v1/item/[itemID]/internal_metadata/presets.
-You can convert the response to YAML and paste it into the `imagePresets` key in your config file.
+You can convert the response to YAML and paste it into the `imageFramePresets` key in your config file.
 
 Each preset can specify a name, a view mode, an image frame, and style options.
 
@@ -239,7 +239,7 @@ The YAML below includes some example presets.
     ---
     # If present, each preset in this list will be added to the preset list
     # of every image in the folder for which the preset is applicable
-    imagePresets:
+    imageFramePresets:
     - name: Frame control - Frame 4
       frame: 4
       mode:
