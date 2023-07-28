@@ -6,7 +6,8 @@ export default {
     emits: ['setCurrentMode', 'setCurrentFrame', 'updateStyle'],
     data() {
         return {
-            availablePresets: [],
+            itemPresets: [],
+            folderPresets: [],
             selectedPreset: undefined,
             showPresetCreation: false,
             newPresetName: undefined,
@@ -25,18 +26,14 @@ export default {
             return true
         },
         getPresets() {
-            if (this.liConfig.imagePresets) {
-                this.availablePresets = this.availablePresets.concat(
-                    this.liConfig.imagePresets.filter(this.presetApplicable)
-                )
+            if (this.liConfig.imageFramePresets) {
+                this.folderPresets = this.liConfig.imageFramePresets.filter(this.presetApplicable)
             }
             restRequest({
                 type: 'GET',
                 url: 'item/' + this.itemId + '/internal_metadata/presets',
             }).then((presets) => {
-                if (presets) {
-                    this.availablePresets = this.availablePresets.concat(presets)
-                }
+                this.itemPresets = presets
             })
         },
         addPreset(e, overwrite=false) {
@@ -50,8 +47,8 @@ export default {
             if (!overwrite && this.availablePresets.find((p) => p.name === newPreset.name)) {
                 this.errorMessage = `There is already a preset named "${newPreset.name}". Overwrite "${newPreset.name}"?`
             } else {
-                this.availablePresets = this.availablePresets.filter((p) => p.name !== newPreset.name)
-                this.availablePresets.push(newPreset)
+                this.itemPresets = this.itemPresets.filter((p) => p.name !== newPreset.name)
+                this.itemPresets.push(newPreset)
                 this.selectedPreset = newPreset.name
                 this.savePresetsList()
                 this.newPresetName = undefined
@@ -60,7 +57,7 @@ export default {
             }
         },
         deleteSelectedPreset() {
-            this.availablePresets = this.availablePresets.filter((p) => p.name !== this.selectedPreset)
+            this.itemPresets = this.itemPresets.filter((p) => p.name !== this.selectedPreset)
             this.selectedPreset = undefined
             this.savePresetsList()
         },
@@ -68,7 +65,7 @@ export default {
             restRequest({
                 type: 'PUT',
                 url: 'item/' + this.itemId + '/internal_metadata/presets',
-                data: JSON.stringify(this.availablePresets),
+                data: JSON.stringify(this.itemPresets),
                 contentType: 'application/json',
             })
         },
@@ -120,6 +117,9 @@ export default {
                 name = `${this.currentStyle.bands.length} bands`
             }
             return name;
+        },
+        availablePresets() {
+            return this.itemPresets.concat(this.folderPresets)
         }
     },
     watch: {
