@@ -4,6 +4,8 @@
 
 ### Improvements
 - Frame selection presets ([#1237](../../pull/1237))
+- Adjust the bounds on non geospatial leaflet maps ([#1249](../../pull/1249))
+- Allow hiding metadata on item pages ([#1250](../../pull/1250))
 
 ### Bug Fixes
 - Guard against ICC profiles that won't parse ([#1245](../../pull/1245))

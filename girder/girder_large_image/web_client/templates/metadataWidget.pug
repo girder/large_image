@@ -5,7 +5,7 @@ if (accessLevel >= AccessType.WRITE)
     ul.dropdown-menu.pull-right(role="menu")
       if limetadata
         for entry in limetadata
-          if entry && entry.value
+          if entry && entry.value && !entry.hidden
             li.li-metadata-menuitem(role="presentation")
               a.li-add-metadata(metadata-key=entry.value)
                 = entry.title || entry.value
