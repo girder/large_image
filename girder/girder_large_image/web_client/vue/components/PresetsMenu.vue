@@ -138,6 +138,16 @@ export default {
                     this.$emit('setCurrentFrame', preset.frame)
                 }
                 if (preset.style && Object.keys(preset.style.bands).length) {
+                    preset.style.bands = Object.fromEntries(
+                        Object.entries(preset.style.bands).map(([k, v]) => {
+                            if (['min', 'max', 'band', 'framedelta'].includes(k)) {
+                                v = parseInt(v)
+                            } else if (k === 'autoRange') {
+                                v = parseFloat(v)
+                            }
+                            return [k, v]
+                        })
+                    )
                     this.$emit('updateStyle', preset.mode.id, preset.style)
                 }
             }
