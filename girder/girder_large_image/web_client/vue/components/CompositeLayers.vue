@@ -102,7 +102,10 @@ export default {
         },
         initializeStateFromStyle() {
             this.enabledLayers = []
-            const styleArray = this.currentStyle.bands
+            let styleArray = this.currentStyle.bands
+            if (styleArray && !Array.isArray(styleArray)) {
+                styleArray = Object.values(styleArray)
+            }
             this.layers.forEach((layerName) => {
                 const layerInfo = this.compositeLayerInfo[layerName]
                 const currentLayerStyle = styleArray.find((s) => s.framedelta === layerInfo.framedelta && s.band === layerInfo.band)
@@ -110,11 +113,11 @@ export default {
                     this.enabledLayers.push(layerName)
                     if (
                         currentLayerStyle.min && currentLayerStyle.max
-                        && currentLayerStyle.min.includes("min:")
-                        && currentLayerStyle.max.includes("max:")
+                        && currentLayerStyle.min.toString().includes("min:")
+                        && currentLayerStyle.max.toString().includes("max:")
                     ) {
                         currentLayerStyle.autoRange = parseFloat(
-                            currentLayerStyle.min.replace("min:", '')
+                            currentLayerStyle.min.toString().replace("min:", '')
                         ) * 100
                         currentLayerStyle.min = undefined
                         currentLayerStyle.max = undefined

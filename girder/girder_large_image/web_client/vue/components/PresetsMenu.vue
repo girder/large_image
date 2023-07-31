@@ -92,9 +92,13 @@ export default {
             })
         },
         checkPresetMatch() {
-            const targetStyle = this.currentStyle && this.currentStyle.bands ? {
-                bands: this.currentStyle.bands.map((b) => {
-                    if (b.min && b.max && b.min.includes("min:") && b.max.includes("max:")) {
+            let styleArray = this.currentStyle.bands
+            if (styleArray && !Array.isArray(styleArray)) {
+                styleArray = Object.values(styleArray)
+            }
+            const targetStyle = styleArray ? {
+                bands: styleArray.map((b) => {
+                    if (b.min && b.max && b.min.toString().includes("min:") && b.max.toString().includes("max:")) {
                         b.autoRange = parseFloat(
                             b.min.replace("min:", '')
                         ) * 100
