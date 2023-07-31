@@ -191,6 +191,12 @@ By default, item metadata can contain any keys and values.  These can be given b
         # Exclusive values can be specified instead
         # exclusiveMinimum: 0
         # exclusiveMaximum: 10
+      # Your can hide specific metadata keys by adding the hidden: true flag.
+      # These keys will not be shown in the list of metadata, even if they
+      # exist.
+      -
+        value: internalProperty
+        hidden: true
 
 Editing Configuration Files
 ---------------------------
