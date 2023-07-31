@@ -92,28 +92,30 @@ export default {
             })
         },
         checkPresetMatch() {
-            let styleArray = this.currentStyle.bands
-            if (styleArray && !Array.isArray(styleArray)) {
-                styleArray = Object.values(styleArray)
+            if (this.currentStyle) {
+                let styleArray = this.currentStyle.bands
+                if (styleArray && !Array.isArray(styleArray)) {
+                    styleArray = Object.values(styleArray)
+                }
+                const targetStyle = styleArray ? {
+                    bands: styleArray.map((b) => {
+                        if (b.min && b.max && b.min.toString().includes("min:") && b.max.toString().includes("max:")) {
+                            b.autoRange = parseFloat(
+                                b.min.replace("min:", '')
+                            ) * 100
+                            b.min = undefined
+                            b.max = undefined
+                        }
+                        return b
+                    })
+                } : this.currentStyle
+                const match = this.availablePresets.find((p) => (
+                    p.mode.id === this.currentMode.id
+                    && p.frame === this.currentFrame
+                    && this.styleEqual(targetStyle, p.style)
+                ))
+                this.selectedPreset = match ? match.name : undefined
             }
-            const targetStyle = styleArray ? {
-                bands: styleArray.map((b) => {
-                    if (b.min && b.max && b.min.toString().includes("min:") && b.max.toString().includes("max:")) {
-                        b.autoRange = parseFloat(
-                            b.min.replace("min:", '')
-                        ) * 100
-                        b.min = undefined
-                        b.max = undefined
-                    }
-                    return b
-                })
-            } : this.currentStyle
-            const match = this.availablePresets.find((p) => (
-                p.mode.id === this.currentMode.id
-                && p.frame === this.currentFrame
-                && this.styleEqual(targetStyle, p.style)
-            ))
-            this.selectedPreset = match ? match.name : undefined
         }
     },
     computed: {
