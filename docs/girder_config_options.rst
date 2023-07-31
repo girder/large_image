@@ -192,8 +192,9 @@ By default, item metadata can contain any keys and values.  These can be given b
         # exclusiveMinimum: 0
         # exclusiveMaximum: 10
 
+
 Image Frame Presets
-...................
+....................
 
 This is used to specify a list of default presets for viewing images in the folder.
 Presets can be customized and saved in the GeoJS Image Viewer.
@@ -205,16 +206,16 @@ Each preset can specify a name, a view mode, an image frame, and style options.
 - The name of a preset can be any string which uniquely identifies the preset.
 
 - There are four options for mode:
-    1. Frame control
+    - Frame control
         id: 0
         name: Frame
-    2. Axis control
+    - Axis control
         id: 1
         name: Axis
-    3. Channel Compositing
+    - Channel Compositing
         id: 2
         name: Channel Compositing
-    4. Band Compositing
+    - Band Compositing
         id: 3
         name: Band Compositing
 
@@ -225,12 +226,12 @@ Each preset can specify a name, a view mode, an image frame, and style options.
 
 - The style of a preset is a dictionary with a schema similar to the [style schema for tile retrieval](tilesource_options.rst#style).
   The value for a preset's style consists of a band definition, where each band may have the following:
-  1. `band`: A 1-based index of a band within the current frame
-  2. `framedelta`: An integer representing distance from the current frame, used for compositing multiple frames together
-  3. `palette`: A hexidecimal string beginning with "#" representing a color to stain this frame
-  4. `min`: The value to map to the first palette value
-  5. `max`: The value to map to the last palette value
-  6. `autoRange`: A shortcut for excluding a percentage from each end of the value distribution in the image. Express as a float.
+    - `band`: A 1-based index of a band within the current frame
+    - `framedelta`: An integer representing distance from the current frame, used for compositing multiple frames together
+    - `palette`: A hexidecimal string beginning with "#" representing a color to stain this frame
+    - `min`: The value to map to the first palette value
+    - `max`: The value to map to the last palette value
+    - `autoRange`: A shortcut for excluding a percentage from each end of the value distribution in the image. Express as a float.
 
 The YAML below includes some example presets.
 
