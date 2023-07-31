@@ -206,16 +206,24 @@ Each preset can specify a name, a view mode, an image frame, and style options.
 - The name of a preset can be any string which uniquely identifies the preset.
 
 - There are four options for mode:
+
   - Frame control
+
     - id: 0
     - name: Frame
+
   - Axis control
+
     - id: 1
     - name: Axis
+
   - Channel Compositing
+
     - id: 2
     - name: Channel Compositing
+
   - Band Compositing
+
     - id: 3
     - name: Band Compositing
 
@@ -225,6 +233,7 @@ Each preset can specify a name, a view mode, an image frame, and style options.
   The result of channel compositing is multiple frames (calculated via framedelta) composited together.
 
 - The style of a preset is a dictionary with a schema similar to the [style schema for tile retrieval](tilesource_options.rst#style). The value for a preset's style consists of a band definition, where each band may have the following:
+
   - `band`: A 1-based index of a band within the current frame
   - `framedelta`: An integer representing distance from the current frame, used for compositing multiple frames together
   - `palette`: A hexidecimal string beginning with "#" representing a color to stain this frame
