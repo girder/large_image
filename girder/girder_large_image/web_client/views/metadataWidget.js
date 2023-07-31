@@ -525,6 +525,9 @@ wrap(MetadataWidget, 'render', function (render) {
 
     // Append each metadatum
     _.each(metaKeys, function (metaKey) {
+        if ((liMetadataKeyEntry(this._limetadata, metaKey) || {}).hidden) {
+            return;
+        }
         this.$el.find('.g-widget-metadata-container').append(new MetadatumWidget({
             mode: this.getModeFromValue(metaDict[metaKey], metaKey),
             key: metaKey,
