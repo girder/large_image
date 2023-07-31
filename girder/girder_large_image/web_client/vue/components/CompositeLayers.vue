@@ -66,7 +66,6 @@ export default {
                     enabled: true,
                     min: undefined,
                     max: undefined,
-                    custom: false,
                     autoRange: undefined
                 }
             })
@@ -121,7 +120,10 @@ export default {
                         ) * 100
                         currentLayerStyle.min = undefined
                         currentLayerStyle.max = undefined
-                    } else if (!currentLayerStyle.autoRange) {
+                    } else if (currentLayerStyle.autoRange) {
+                        currentLayerStyle.min = `min:${currentLayerStyle.autoRange / 100}`
+                        currentLayerStyle.max = `max:${currentLayerStyle.autoRange / 100}`
+                    } else {
                         currentLayerStyle.autoRange = undefined
                     }
                 }
@@ -298,7 +300,9 @@ export default {
             }
         },
         currentStyle() {
-            this.initializeStateFromStyle()
+            if(this.currentStyle.preset) {
+                this.initializeStateFromStyle()
+            }
         }
     }
 }

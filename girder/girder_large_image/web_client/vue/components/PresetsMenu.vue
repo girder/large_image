@@ -156,6 +156,7 @@ export default {
                         }
                         return v
                     })
+                    preset.style.preset = true;
                     this.$emit('updateStyle', preset.mode.id, preset.style)
                 }
             }
