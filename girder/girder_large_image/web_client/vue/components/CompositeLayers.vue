@@ -121,8 +121,8 @@ export default {
                         ) * 100
                         currentLayerStyle.min = undefined
                         currentLayerStyle.max = undefined
-                    } else {
-                        currentLayerStyle.autoRange = undefined;
+                    } else if (!currentLayerStyle.autoRange) {
+                        currentLayerStyle.autoRange = undefined
                     }
                 }
                 this.compositeLayerInfo[layerName] = Object.assign(
@@ -130,11 +130,17 @@ export default {
                 )
             })
             this.layers.forEach((layer) => {
-                this.compositeLayerInfo[layer].enabled = this.enabledLayers.includes(layer);
+                if (this.enabledLayers.includes(layer)){
+                    this.compositeLayerInfo[layer].enabled = true;
+                } else {
+                    this.compositeLayerInfo[layer].autoRange = undefined;
+                    this.compositeLayerInfo[layer].min = undefined;
+                    this.compositeLayerInfo[layer].max = undefined;
+                }
             })
             const autoRanges = Object.entries(this.compositeLayerInfo)
+                .filter(([index, info]) => info.enabled)
                 .map(([index, info]) => info.autoRange)
-                .filter((a) => a !== undefined)
             if (autoRanges.every((v) => v === autoRanges[0])) {
                 this.autoRangeForAll = autoRanges[0]
             } else {
