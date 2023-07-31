@@ -191,12 +191,6 @@ By default, item metadata can contain any keys and values.  These can be given b
         # Exclusive values can be specified instead
         # exclusiveMinimum: 0
         # exclusiveMaximum: 10
-      # Your can hide specific metadata keys by adding the hidden: true flag.
-      # These keys will not be shown in the list of metadata, even if they
-      # exist.
-      -
-        value: internalProperty
-        hidden: true
 
 
 Image Frame Presets
@@ -212,32 +206,31 @@ Each preset can specify a name, a view mode, an image frame, and style options.
 - The name of a preset can be any string which uniquely identifies the preset.
 
 - There are four options for mode:
-    - Frame control
-        id: 0
-        name: Frame
-    - Axis control
-        id: 1
-        name: Axis
-    - Channel Compositing
-        id: 2
-        name: Channel Compositing
-    - Band Compositing
-        id: 3
-        name: Band Compositing
+  - Frame control
+    - id: 0
+    - name: Frame
+  - Axis control
+    - id: 1
+    - name: Axis
+  - Channel Compositing
+    - id: 2
+    - name: Channel Compositing
+  - Band Compositing
+    - id: 3
+    - name: Band Compositing
 
 - The frame of a preset is a 0-based index representing a single frame in a multiframe image.
   For single-frame images, this value will always be 0.
   For channel compositing, each channel will have a `framedelta` value which represents distance from this base frame value.
   The result of channel compositing is multiple frames (calculated via framedelta) composited together.
 
-- The style of a preset is a dictionary with a schema similar to the [style schema for tile retrieval](tilesource_options.rst#style).
-  The value for a preset's style consists of a band definition, where each band may have the following:
-    - `band`: A 1-based index of a band within the current frame
-    - `framedelta`: An integer representing distance from the current frame, used for compositing multiple frames together
-    - `palette`: A hexidecimal string beginning with "#" representing a color to stain this frame
-    - `min`: The value to map to the first palette value
-    - `max`: The value to map to the last palette value
-    - `autoRange`: A shortcut for excluding a percentage from each end of the value distribution in the image. Express as a float.
+- The style of a preset is a dictionary with a schema similar to the [style schema for tile retrieval](tilesource_options.rst#style). The value for a preset's style consists of a band definition, where each band may have the following:
+  - `band`: A 1-based index of a band within the current frame
+  - `framedelta`: An integer representing distance from the current frame, used for compositing multiple frames together
+  - `palette`: A hexidecimal string beginning with "#" representing a color to stain this frame
+  - `min`: The value to map to the first palette value
+  - `max`: The value to map to the last palette value
+  - `autoRange`: A shortcut for excluding a percentage from each end of the value distribution in the image. Express as a float.
 
 The YAML below includes some example presets.
 
