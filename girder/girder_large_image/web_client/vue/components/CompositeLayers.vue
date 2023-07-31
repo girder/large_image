@@ -121,6 +121,8 @@ export default {
                         ) * 100
                         currentLayerStyle.min = undefined
                         currentLayerStyle.max = undefined
+                    } else {
+                        currentLayerStyle.autoRange = undefined;
                     }
                 }
                 this.compositeLayerInfo[layerName] = Object.assign(
@@ -135,6 +137,8 @@ export default {
                 .filter((a) => a !== undefined)
             if (autoRanges.every((v) => v === autoRanges[0])) {
                 this.autoRangeForAll = autoRanges[0]
+            } else {
+                this.autoRangeForAll = undefined
             }
         },
         fetchCurrentFrameHistogram() {
