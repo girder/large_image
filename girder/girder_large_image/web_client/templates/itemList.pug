@@ -64,8 +64,8 @@ ul.g-item-list.li-item-list
               else
                 span.large_image_metadata
                   = value
-                  if value
-                    span.li-item-list-cell-filter(title="Only show items that match this metadata value exactly", filter-value=value, column-value=column.value)
+                if value
+                  span.li-item-list-cell-filter(title="Only show items that match this metadata value exactly", filter-value=value, column-value=column.value)
                     i.icon-filter
   if (hasMore && !paginated)
     li.g-show-more
