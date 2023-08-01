@@ -9,6 +9,7 @@
 
 ### Bug Fixes
 - Guard against ICC profiles that won't parse ([#1245](../../pull/1245))
+- Fix filter button on item lists ([#1251](../../pull/1251))
 
 ## 1.23.2
 
