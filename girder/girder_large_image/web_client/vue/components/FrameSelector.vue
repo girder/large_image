@@ -75,7 +75,8 @@ export default Vue.extend({
                 }
             });
             this.currentFrame = frame
-            let style = this.currentModeId > 1 ? this.style[this.currentModeId] : undefined
+            let style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined
+            if(style && style.preset) delete style.preset
             this.frameUpdate(frame, style);
         },
         fillMetadata() {

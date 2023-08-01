@@ -34,11 +34,13 @@ export default {
                 type: 'GET',
                 url: 'item/' + this.itemId + '/internal_metadata/presets',
             }).then((presets) => {
-                this.itemPresets = presets
+                if (presets) {
+                    this.itemPresets = presets
+                }
+                if (this.liConfig.imageFramePresets) {
+                    this.folderPresets = this.liConfig.imageFramePresets.filter(this.presetApplicable)
+                }
             })
-            if (this.liConfig.imageFramePresets) {
-                this.folderPresets = this.liConfig.imageFramePresets.filter(this.presetApplicable)
-            }
         },
         addPreset(e, overwrite=false) {
             const newPreset = {
@@ -147,17 +149,21 @@ export default {
                 if (preset.frame !== undefined) {
                     this.$emit('setCurrentFrame', preset.frame)
                 }
-                if (preset.style && Object.keys(preset.style.bands).length) {
-                    preset.style.bands = Object.entries(preset.style.bands).map(([k, v]) => {
-                        if (['min', 'max', 'band', 'framedelta'].includes(k)) {
-                            v = parseInt(v)
-                        } else if (k === 'autoRange') {
-                            v = parseFloat(v)
+                if (preset.style && preset.style.bands.length) {
+                    const styleArray = []
+                    preset.style.bands.forEach((layer) => {
+                        const styleEntry = {
+                            min: layer.autoRange !== undefined ? `min:${layer.autoRange / 100}` : parseInt(layer.min),
+                            max: layer.autoRange !== undefined ? `max:${layer.autoRange / 100}` : parseInt(layer.max),
+                            palette: layer.palette,
+                            framedelta: layer.framedelta,
+                            band: layer.band,
                         }
-                        return v
-                    })
-                    preset.style.preset = true;
-                    this.$emit('updateStyle', preset.mode.id, preset.style)
+                        if (!styleEntry.min) delete styleEntry.min
+                        if (!styleEntry.max) delete styleEntry.max
+                        styleArray.push(styleEntry);
+                    });
+                    this.$emit('updateStyle', preset.mode.id, {bands: styleArray, preset: true})
                 }
             }
         },

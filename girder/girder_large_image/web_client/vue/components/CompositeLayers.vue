@@ -135,6 +135,7 @@ export default {
                 if (this.enabledLayers.includes(layer)){
                     this.compositeLayerInfo[layer].enabled = true;
                 } else {
+                    this.compositeLayerInfo[layer].enabled = false;
                     this.compositeLayerInfo[layer].autoRange = undefined;
                     this.compositeLayerInfo[layer].min = undefined;
                     this.compositeLayerInfo[layer].max = undefined;
