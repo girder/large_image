@@ -3,9 +3,9 @@ import _ from 'underscore';
 import Backbone from 'backbone';
 
 import {wrap} from '@girder/core/utilities/PluginUtils';
-import {getApiRoot} from '@girder/core/rest';
 import {getCurrentUser} from '@girder/core/auth';
 import {AccessType} from '@girder/core/constants';
+import {getApiRoot, restRequest} from '@girder/core/rest';
 import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
 import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
@@ -344,6 +344,63 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     };
 
+    /**
+     * Check if we are currently fetching facet information.  If
+     */
+    this._getFacets = () => {
+        const columns = (this._confList() || {}).columns || [];
+        const keys = [];
+
+        columns.forEach((col) => {
+            if (col.type === 'record' && col.value !== 'controls' && col.value !== 'name') {
+                keys.push(col.value);
+            } else if (col.type === 'metadata') {
+                keys.push('meta.' + col.value);
+            }
+        });
+        const state = {
+            folderId: this.parentView.parentModel.id,
+            text: this._recurse ? '_recurse_:' : '',
+            textsub: this._filter,
+            metalist: JSON.stringify(keys)
+        };
+        if (this._lastFacet && _.isEqual(state, this._lastFacet.state)) {
+            this._lastFacet.next = null;
+            this._lastFacet.result.usesub = true;
+            return this._lastFacet.result;
+        }
+        if (this._lastFacet && this._lastFacet.request) {
+            this._lastFacet.next = state;
+            if (this._lastFacet.state && state.folderId === this._lastFacet.folderId && _.isEqual(state.metalist, this._lastFacter.state.metalist) && state.text === this._lastFacter.state.text) {
+                this._lastFacet.result.usesub = false;
+                return this._lastFacet.result;
+            }
+            return;
+        }
+        this._lastFacet = {};
+        this._queryFacet(state);
+    };
+
+    this._queryFacet = (state) => {
+        this._lastFacet.request = restRequest({
+            url: 'item/facet',
+            data: state,
+            error: null
+        }).done((result) => {
+            this._lastFacet.state = state;
+            console.log(result);
+            this._lastFacet.result = result;
+            this._lastFacet.request = null;
+            // rerender header
+            if (this._lastFacet.next) {
+                if (!_.isEqual(this._lastFacet.next, this._lastFacet.state)) {
+                    this._queryFacet(this._lastFacet.next);
+                }
+                this._lastFacet.next = null;
+            }
+        });
+    };
+
     function itemListRender() {
         const root = this.$el.closest('.g-hierarchy-widget');
         if (!root.find('.li-item-list-filter').length) {
@@ -384,6 +441,7 @@ wrap(ItemListWidget, 'render', function (render) {
             this._setSort();
             return;
         }
+        this._getFacets();
         this.$el.html(ItemListTemplate({
             items: this.collection.toArray(),
             isParentPublic: this.public,
