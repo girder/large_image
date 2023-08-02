@@ -5,7 +5,7 @@ import DualInput from './DualInput.vue';
 import PresetsMenu from './PresetsMenu.vue';
 
 export default Vue.extend({
-    props: ['itemId', 'imageMetadata', 'frameUpdate'],
+    props: ['itemId', 'imageMetadata', 'frameUpdate', 'liConfig'],
     components: { CompositeLayers, DualInput, PresetsMenu },
     data() {
         return {
@@ -75,7 +75,8 @@ export default Vue.extend({
                 }
             });
             this.currentFrame = frame
-            let style = this.currentModeId > 1 ? this.style[this.currentModeId] : undefined
+            let style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined
+            if(style && style.preset) delete style.preset
             this.frameUpdate(frame, style);
         },
         fillMetadata() {
@@ -200,6 +201,9 @@ export default Vue.extend({
             </select>
             <presets-menu
                 :itemId="itemId"
+                :liConfig="liConfig"
+                :imageMetadata="imageMetadata"
+                :availableModes="sliderModes.map((m) => m.id)"
                 :currentMode="sliderModes.find((m) => m.id === currentModeId)"
                 :currentFrame="currentFrame"
                 :currentStyle="style[currentModeId]"

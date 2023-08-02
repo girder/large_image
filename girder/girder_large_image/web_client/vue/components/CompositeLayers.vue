@@ -66,7 +66,6 @@ export default {
                     enabled: true,
                     min: undefined,
                     max: undefined,
-                    custom: false,
                     autoRange: undefined
                 }
             })
@@ -102,36 +101,45 @@ export default {
         },
         initializeStateFromStyle() {
             this.enabledLayers = []
-            const styleArray = this.currentStyle.bands
-            this.layers.forEach((layerName) => {
-                const layerInfo = this.compositeLayerInfo[layerName]
-                const currentLayerStyle = styleArray.find((s) => s.framedelta === layerInfo.framedelta && s.band === layerInfo.band)
+            this.layers.forEach((layer) => {
+                const layerInfo = this.compositeLayerInfo[layer]
+                const currentLayerStyle = this.currentStyle.bands.find(
+                    (s) => s.framedelta === layerInfo.framedelta
+                        && s.band === layerInfo.band
+                )
                 if (currentLayerStyle) {
-                    this.enabledLayers.push(layerName)
+                    this.enabledLayers.push(layer)
+                    this.compositeLayerInfo[layer].enabled = true;
+                    this.compositeLayerInfo[layer].palette = currentLayerStyle.palette;
                     if (
                         currentLayerStyle.min && currentLayerStyle.max
-                        && currentLayerStyle.min.includes("min:")
-                        && currentLayerStyle.max.includes("max:")
+                        && currentLayerStyle.min.toString().includes("min:")
+                        && currentLayerStyle.max.toString().includes("max:")
                     ) {
-                        currentLayerStyle.autoRange = parseFloat(
-                            currentLayerStyle.min.replace("min:", '')
+                        this.compositeLayerInfo[layer].autoRange = parseFloat(
+                            currentLayerStyle.min.toString().replace("min:", '')
                         ) * 100
-                        currentLayerStyle.min = undefined
-                        currentLayerStyle.max = undefined
+                        this.compositeLayerInfo[layer].min = undefined
+                        this.compositeLayerInfo[layer].max = undefined
+                    } else {
+                        this.compositeLayerInfo[layer].autoRange = undefined
                     }
                 }
-                this.compositeLayerInfo[layerName] = Object.assign(
-                    {}, layerInfo, currentLayerStyle
-                )
+                else {
+                    this.compositeLayerInfo[layer].enabled = false;
+                    this.compositeLayerInfo[layer].autoRange = undefined;
+                    this.compositeLayerInfo[layer].min = undefined;
+                    this.compositeLayerInfo[layer].max = undefined;
+                }
             })
-            this.layers.forEach((layer) => {
-                this.compositeLayerInfo[layer].enabled = this.enabledLayers.includes(layer);
-            })
+
             const autoRanges = Object.entries(this.compositeLayerInfo)
+                .filter(([index, info]) => info.enabled)
                 .map(([index, info]) => info.autoRange)
-                .filter((a) => a !== undefined)
             if (autoRanges.every((v) => v === autoRanges[0])) {
                 this.autoRangeForAll = autoRanges[0]
+            } else {
+                this.autoRangeForAll = undefined
             }
         },
         fetchCurrentFrameHistogram() {
@@ -285,7 +293,9 @@ export default {
             }
         },
         currentStyle() {
-            this.initializeStateFromStyle()
+            if(this.currentStyle.preset) {
+                this.initializeStateFromStyle()
+            }
         }
     }
 }
