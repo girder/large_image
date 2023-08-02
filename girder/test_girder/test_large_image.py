@@ -383,7 +383,7 @@ def testGetLargeImagePath(server, admin, fsAssetstore):
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testHistogramCaching(server, admin, user, fsAssetstore):
-    file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
+    file = utilities.uploadExternalFile('landcover_sample_1000.tif', admin, fsAssetstore)
     itemId = str(file['itemId'])
     resp = server.request(path='/item/%s/tiles/histogram' % itemId,
                           user=admin, isJson=False)

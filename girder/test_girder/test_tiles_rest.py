@@ -171,14 +171,19 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None, c
         # Wait for the job to be complete
         starttime = time.time()
         while time.time() - starttime < 30:
-            req = requests.get(
-                'http://127.0.0.1:%d/api/v1/worker/status' % server.boundPort, headers=headers)
-            resp = req.json()
-            if resp.get('active') and not len(next(iter(resp['active'].items()))[1]):
-                resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
-                if (utilities.respStatus(resp) == 400 and
-                        'No large image file' in resp.json['message']):
-                    break
+            # We had been doing:
+            #   req = requests.get(
+            #       'http://127.0.0.1:%d/api/v1/worker/status' % server.boundPort, headers=headers)
+            #   resp = req.json()
+            #   if resp.get('active') and not len(next(iter(resp['active'].items()))[1]):
+            #       resp = ...
+            #   time.sleep(0.1)
+            # but getting worker status is slow because it waits for unknown
+            # workers to respond.
+            resp = server.request(path='/item/%s/tiles' % itemId, user=admin)
+            if (utilities.respStatus(resp) == 400 and
+                    'No large image file' in resp.json['message']):
+                break
             time.sleep(0.1)
     else:
         # If we ask to create the item again right away, we should be told that
