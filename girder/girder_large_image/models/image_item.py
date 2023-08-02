@@ -584,7 +584,7 @@ class ImageItem(Item):
             method.
         :returns: histogram object.
         """
-        if kwargs.get('range') is not None:
+        if kwargs.get('range') is not None and kwargs.get('range') != 'round':
             tileSource = self._loadTileSource(item, **kwargs)
             result = tileSource.histogram(**kwargs)
         else:

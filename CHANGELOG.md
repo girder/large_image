@@ -6,9 +6,12 @@
 - Frame selection presets ([#1237](../../pull/1237))
 - Adjust the bounds on non geospatial leaflet maps ([#1249](../../pull/1249))
 - Allow hiding metadata on item pages ([#1250](../../pull/1250))
+- Allow caching rounded histograms ([#1252](../../pull/1252))
+- Add an endpoint to make it easier to replace thumbnails ([#1253](../../pull/1253))
 
 ### Bug Fixes
 - Guard against ICC profiles that won't parse ([#1245](../../pull/1245))
+- Fix filter button on item lists ([#1251](../../pull/1251))
 
 ## 1.23.2
 
