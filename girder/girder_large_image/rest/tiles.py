@@ -15,6 +15,7 @@
 #############################################################################
 
 import hashlib
+import io
 import math
 import os
 import pathlib
@@ -33,6 +34,7 @@ from girder.constants import AccessType, TokenScope
 from girder.exceptions import RestException
 from girder.models.file import File
 from girder.models.item import Item
+from girder.models.upload import Upload
 from girder.utility.progress import setResponseTimeLimit
 from large_image.cache_util import strhash
 from large_image.constants import TileInputUnits, TileOutputMimeTypes
@@ -150,6 +152,7 @@ class TilesItemResource(ItemResource):
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnail'), self.getTilesThumbnail)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'thumbnails'), self.listTilesThumbnails)
         apiRoot.item.route('DELETE', (':itemId', 'tiles', 'thumbnails'), self.deleteTilesThumbnails)
+        apiRoot.item.route('POST', (':itemId', 'tiles', 'thumbnails'), self.addTilesThumbnails)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'region'), self.getTilesRegion)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames'), self.tileFrames)
         apiRoot.item.route('GET', (':itemId', 'tiles', 'tile_frames', 'quad_info'),
@@ -1429,11 +1432,74 @@ class TilesItemResource(ItemResource):
     @autoDescribeRoute(
         Description('Delete thumbnail and data files associated with a large_image item.')
         .modelParam('itemId', model=Item, level=AccessType.READ)
-        .param('keep', 'Number of thumbnails to keep.', dataType='integer',
-               required=False, default=10000)
+        .param('keep', 'Number of thumbnails to keep.  Ignored if a key is '
+               'specified.', dataType='integer', required=False,
+               default=10000)
+        .param('key', 'A specific key to delete', required=False)
+        .param('thumbnail', 'If a key is specified, true if the key is a '
+               'thumbnail; false if the key is a data record',
+               dataType='boolean', required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
-    def deleteTilesThumbnails(self, item, keep):
-        return self.imageItemModel.removeThumbnailFiles(item, keep=keep or 0)
+    def deleteTilesThumbnails(self, item, keep, key=None, thumbnail=True):
+        if not key:
+            return self.imageItemModel.removeThumbnailFiles(item, keep=keep or 0)
+        thumbnail = str(thumbnail).lower() != 'false'
+        query = {
+            'attachedToType': 'item',
+            'attachedToId': item['_id'],
+            'isLargeImageThumbnail' if thumbnail is not False else 'isLargeImageData': True,
+            'thumbnailKey': key,
+        }
+        file = File().findOne(query)
+        if file:
+            File().remove(file)
+        return [file]
+
+    @autoDescribeRoute(
+        Description('Associate or replace a thumbnail or data file with a large_image items.')
+        .responseClass('File')
+        .modelParam('itemId', model=Item, level=AccessType.WRITE)
+        .param('key', 'A specific key to delete', required=True)
+        .param('thumbnail', 'If a key is specified, true if the key is a '
+               'thumbnail; false if the key is a data record',
+               dataType='boolean', required=False)
+        .param('mimeType', 'The MIME type of the file.', required=False)
+        .param('data', 'An image or data block to associated with the large_image item.',
+               paramType='body', dataType='binary')
+        .consumes('application/octet-stream')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403)
+    )
+    @access.user(scope=TokenScope.DATA_WRITE)
+    def addTilesThumbnails(self, item, key, mimeType, thumbnail=False, data=None):
+        user = self.getCurrentUser()
+        thumbnail = str(thumbnail).lower() != 'false'
+        query = {
+            'attachedToType': 'item',
+            'attachedToId': item['_id'],
+            'isLargeImageThumbnail' if thumbnail is not False else 'isLargeImageData': True,
+            'thumbnailKey': key,
+        }
+        file = File().findOne(query)
+        if file:
+            File().remove(file)
+        data = cherrypy.request.body.read()
+        try:
+            import magic
+            mimeType = magic.from_buffer(data, mime=True) or mimeType
+        except Exception:
+            pass
+        mimeType = mimeType or 'application/octet-stream'
+        datafile = Upload().uploadFromFile(
+            io.BytesIO(data), size=len(data),
+            name='_largeImageThumbnail', parentType='item', parent=item,
+            user=user, mimeType=mimeType, attachParent=True)
+        datafile.update({
+            'isLargeImageThumbnail' if thumbnail is not False else 'isLargeImageData': True,
+            'thumbnailKey': key,
+        })
+        datafile = File().save(datafile)
+        return datafile

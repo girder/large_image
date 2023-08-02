@@ -1499,3 +1499,30 @@ def testThumbnailMaintenance(server, admin, fsAssetstore):
     resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
     assert utilities.respStatus(resp) == 200
     assert len(resp.json) == 0
+
+    # Get a thumbnail
+    resp = server.request(path='/item/%s/tiles/thumbnail' % itemId,
+                          user=admin, isJson=False)
+    assert utilities.respStatus(resp) == 200
+    thumb = utilities.getBody(resp, text=False)
+    resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 200
+    # Ask to delete it specifically
+    key = resp.json[0]['thumbnailKey']
+    resp = server.request(
+        path='/item/%s/tiles/thumbnails' % itemId, method='DELETE', user=admin,
+        params={'key': key})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 1
+    # It should be gone
+    resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 0
+    # Add it back
+    resp = server.request(
+        path='/item/%s/tiles/thumbnails' % itemId, method='POST', user=admin,
+        params={'key': key}, body=thumb, type='application/octet-stream')
+
+    resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 1
