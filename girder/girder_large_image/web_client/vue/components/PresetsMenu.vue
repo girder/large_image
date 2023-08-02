@@ -81,46 +81,41 @@ export default {
                 contentType: 'application/json',
             })
         },
+        styleFromAutoRange(band) {
+            band = Object.assign({}, band)  // new reference
+            if (band.autoRange) {
+                band.min = `min:${band.autoRange / 100}`
+                band.max = `max:${band.autoRange / 100}`
+                delete band.autoRange
+            }
+            return band
+        },
         styleEqual(style1, style2) {
             if (style1 === style2) {
                 return true
             }
-            if (style1.bands.length !== style2.bands.length) {
+            if (style1.length !== style2.length) {
                 return false
             }
-            return style1.bands.every((b1) => {
-                b1 = Object.fromEntries(Object.entries(b1).filter(([k, v]) => v !== undefined))
-                return style2.bands.some((b2) => {
-                    b2 = Object.fromEntries(Object.entries(b2).filter(([k, v]) => v !== undefined))
+            return style1.every((b1) => {
+                b1 = this.styleFromAutoRange(b1)
+                let b2 = style2.find((b) => b.framedelta === b1.framedelta && b.band === b1.band)
+                if (b2) {
+                    b2 = this.styleFromAutoRange(b2)
                     return (
-                        Object.entries(b1).every(([k, v]) => b2[k] === v)
-                        && Object.entries(b2).every(([k, v]) => b1[k] === v)
+                        b1.min === b2.min
+                        && b1.max === b2.max
+                        && b1.palette === b2.palette
                     )
-                })
+                } else return false
             })
         },
         checkPresetMatch() {
             if (this.currentStyle) {
-                let styleArray = this.currentStyle.bands
-                if (styleArray && !Array.isArray(styleArray)) {
-                    styleArray = Object.values(styleArray)
-                }
-                const targetStyle = styleArray ? {
-                    bands: styleArray.map((b) => {
-                        if (b.min && b.max && b.min.toString().includes("min:") && b.max.toString().includes("max:")) {
-                            b.autoRange = parseFloat(
-                                b.min.replace("min:", '')
-                            ) * 100
-                            b.min = undefined
-                            b.max = undefined
-                        }
-                        return b
-                    })
-                } : this.currentStyle
                 const match = this.availablePresets.find((p) => (
                     p.mode.id === this.currentMode.id
                     && p.frame === this.currentFrame
-                    && this.styleEqual(targetStyle, p.style)
+                    && this.styleEqual(this.currentStyle.bands, p.style.bands)
                 ))
                 this.selectedPreset = match ? match.name : undefined
             }

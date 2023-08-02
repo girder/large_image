@@ -101,46 +101,38 @@ export default {
         },
         initializeStateFromStyle() {
             this.enabledLayers = []
-            let styleArray = this.currentStyle.bands
-            if (styleArray && !Array.isArray(styleArray)) {
-                styleArray = Object.values(styleArray)
-            }
-            this.layers.forEach((layerName) => {
-                const layerInfo = this.compositeLayerInfo[layerName]
-                const currentLayerStyle = styleArray.find((s) => s.framedelta === layerInfo.framedelta && s.band === layerInfo.band)
+            this.layers.forEach((layer) => {
+                const layerInfo = this.compositeLayerInfo[layer]
+                const currentLayerStyle = this.currentStyle.bands.find(
+                    (s) => s.framedelta === layerInfo.framedelta
+                        && s.band === layerInfo.band
+                )
                 if (currentLayerStyle) {
-                    this.enabledLayers.push(layerName)
+                    this.enabledLayers.push(layer)
+                    this.compositeLayerInfo[layer].enabled = true;
+                    this.compositeLayerInfo[layer].palette = currentLayerStyle.palette;
                     if (
                         currentLayerStyle.min && currentLayerStyle.max
                         && currentLayerStyle.min.toString().includes("min:")
                         && currentLayerStyle.max.toString().includes("max:")
                     ) {
-                        currentLayerStyle.autoRange = parseFloat(
+                        this.compositeLayerInfo[layer].autoRange = parseFloat(
                             currentLayerStyle.min.toString().replace("min:", '')
                         ) * 100
-                        currentLayerStyle.min = undefined
-                        currentLayerStyle.max = undefined
-                    } else if (currentLayerStyle.autoRange) {
-                        currentLayerStyle.min = `min:${currentLayerStyle.autoRange / 100}`
-                        currentLayerStyle.max = `max:${currentLayerStyle.autoRange / 100}`
+                        this.compositeLayerInfo[layer].min = undefined
+                        this.compositeLayerInfo[layer].max = undefined
                     } else {
-                        currentLayerStyle.autoRange = undefined
+                        this.compositeLayerInfo[layer].autoRange = undefined
                     }
                 }
-                this.compositeLayerInfo[layerName] = Object.assign(
-                    {}, layerInfo, currentLayerStyle
-                )
-            })
-            this.layers.forEach((layer) => {
-                if (this.enabledLayers.includes(layer)){
-                    this.compositeLayerInfo[layer].enabled = true;
-                } else {
+                else {
                     this.compositeLayerInfo[layer].enabled = false;
                     this.compositeLayerInfo[layer].autoRange = undefined;
                     this.compositeLayerInfo[layer].min = undefined;
                     this.compositeLayerInfo[layer].max = undefined;
                 }
             })
+
             const autoRanges = Object.entries(this.compositeLayerInfo)
                 .filter(([index, info]) => info.enabled)
                 .map(([index, info]) => info.autoRange)
