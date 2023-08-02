@@ -8,6 +8,7 @@
 - Allow hiding metadata on item pages ([#1250](../../pull/1250))
 - Allow caching rounded histograms ([#1252](../../pull/1252))
 - Add an endpoint to make it easier to replace thumbnails ([#1253](../../pull/1253))
+- Presets from Large Image Configuration file ([#1248](../../pull/1248))
 
 ### Bug Fixes
 - Guard against ICC profiles that won't parse ([#1245](../../pull/1245))
