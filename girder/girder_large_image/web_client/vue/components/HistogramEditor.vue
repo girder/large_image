@@ -103,6 +103,54 @@ export default {
                 (this.xRange[1] - this.xRange[0]) * xProportion + this.xRange[0]
             )
         },
+        initializePositions() {
+            if (!this.histogram) return
+
+            const currentMinPosition = parseFloat(this.$refs.minHandle.getAttribute('x1'))
+            const currentMaxPosition = parseFloat(this.$refs.maxHandle.getAttribute('x1'))
+            let newMinPosition = this.xRange[0]
+            let newMaxPosition = this.xRange[1]
+
+            if (this.currentMin) {
+                newMinPosition = this.valueToXPosition(this.currentMin)
+            }
+            if(this.currentMax) {
+                newMaxPosition = this.valueToXPosition(this.currentMax)
+            }
+            if (this.autoRange) {
+                newMinPosition = this.valueToXPosition(
+                    this.fromDistributionPercentage(this.autoRange / 100)
+                )
+                newMaxPosition = this.valueToXPosition(
+                    this.fromDistributionPercentage((100 - this.autoRange) / 100)
+                )
+            }
+
+            // clamp to available space
+            if (newMinPosition < this.xRange[0]) newMinPosition = this.xRange[0]
+            if (newMinPosition > this.xRange[1]) newMinPosition = this.xRange[1]
+            if (newMaxPosition < this.xRange[0]) newMaxPosition = this.xRange[0]
+            if (newMaxPosition > this.xRange[1]) newMaxPosition = this.xRange[1]
+
+            if (newMinPosition !== currentMinPosition) {
+                this.setHandlePosition(
+                    this.$refs.minHandle,
+                    newMinPosition,
+                    this.$refs.minExclusionBox,
+                    5,
+                    newMinPosition - 5,
+                )
+            }
+            if (newMaxPosition !== currentMaxPosition) {
+                this.setHandlePosition(
+                    this.$refs.maxHandle,
+                    newMaxPosition,
+                    this.$refs.maxExclusionBox,
+                    newMaxPosition,
+                    this.xRange[1] - newMaxPosition,
+                )
+            }
+        },
         validateHandleDrag(selected, newLocation) {
             let moveX = true;
             let moveY = false;
@@ -194,11 +242,6 @@ export default {
             nextTick().then(() => {
                 this.xRange = [5, this.$refs.svg.clientWidth - 5]
                 this.vRange = [this.histogram.min, this.histogram.max]
-                this.$refs.minHandle.setAttributeNS(null, 'x1', `${this.xRange[0]}`);
-                this.$refs.minHandle.setAttributeNS(null, 'x2', `${this.xRange[0]}`);
-                this.$refs.maxHandle.setAttributeNS(null, 'x1', `${this.xRange[1]}`);
-                this.$refs.maxHandle.setAttributeNS(null, 'x2', `${this.xRange[1]}`);
-                this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${this.xRange[1]}`)
                 this.drawHistogram(
                     this.simplifyHistogram(this.histogram.hist)
                 );
@@ -208,66 +251,17 @@ export default {
                     this.dragHandle,
                     this.xRange,
                 )
+                this.initializePositions()
             })
         },
         currentMin() {
-            const currentPosition = parseFloat(this.$refs.minHandle.getAttribute('x1'))
-            let newPosition = this.xRange[0]
-            if (this.currentMin) {
-                newPosition = this.valueToXPosition(this.currentMin)
-            }
-            if (newPosition !== currentPosition) {
-                this.setHandlePosition(
-                    this.$refs.minHandle,
-                    newPosition,
-                    this.$refs.minExclusionBox,
-                    5,
-                    newPosition - 5,
-                )
-            }
+            this.initializePositions()
         },
         currentMax() {
-            const currentPosition = parseFloat(this.$refs.maxHandle.getAttribute('x1'))
-            let newPosition = this.xRange[1]
-            if(this.currentMax) {
-                newPosition = this.valueToXPosition(this.currentMax)
-            }
-            if (newPosition !== currentPosition) {
-                this.setHandlePosition(
-                    this.$refs.maxHandle,
-                    newPosition,
-                    this.$refs.maxExclusionBox,
-                    newPosition,
-                    this.xRange[1] - newPosition,
-                )
-            }
+            this.initializePositions()
         },
         autoRange() {
-            if (!this.histogram) return
-            let newMinPosition = this.currentMin ? this.valueToXPosition(this.currentMin) : this.xRange[0]
-            let newMaxPosition = this.currentMax ? this.valueToXPosition(this.currentMax) : this.xRange[1]
-            if (this.autoRange) {
-                newMinPosition = this.valueToXPosition(
-                    this.fromDistributionPercentage(this.autoRange / 100)
-                )
-                newMaxPosition = this.valueToXPosition(
-                    this.fromDistributionPercentage((100 - this.autoRange) / 100)
-                )
-            }
-            this.setHandlePosition(
-                this.$refs.minHandle,
-                newMinPosition,
-                this.$refs.minExclusionBox,
-                5,
-                newMinPosition - 5,
-            )
-            this.setHandlePosition(
-                this.$refs.maxHandle,
-                newMaxPosition,
-                this.$refs.maxExclusionBox,
-                newMaxPosition,
-                this.xRange[1] - newMaxPosition,
-            )
+            this.initializePositions()
         }
     }
 }
