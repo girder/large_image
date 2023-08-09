@@ -111,6 +111,8 @@ export default {
                     this.enabledLayers.push(layer)
                     this.compositeLayerInfo[layer].enabled = true;
                     this.compositeLayerInfo[layer].palette = currentLayerStyle.palette;
+                    this.compositeLayerInfo[layer].min = currentLayerStyle.min;
+                    this.compositeLayerInfo[layer].max = currentLayerStyle.max;
                     if (
                         currentLayerStyle.min && currentLayerStyle.max
                         && currentLayerStyle.min.toString().includes("min:")
