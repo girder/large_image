@@ -1,6 +1,6 @@
 <script>
 import {restRequest} from '@girder/core/rest';
-import {nextTick} from 'vue';
+import {nextTick} from 'vue'; // eslint-disable-line
 
 import {makeDraggableSVG} from '../utils/drag';
 
