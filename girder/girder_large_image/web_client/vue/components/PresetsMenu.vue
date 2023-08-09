@@ -90,6 +90,24 @@ export default {
             }
             return band
         },
+        styleFromPreset(preset) {
+            if (preset.style && preset.style.bands.length) {
+                    const styleArray = []
+                    preset.style.bands.forEach((layer) => {
+                        const styleEntry = {
+                            min: layer.autoRange !== undefined ? `min:${layer.autoRange / 100}` : parseInt(layer.min),
+                            max: layer.autoRange !== undefined ? `max:${layer.autoRange / 100}` : parseInt(layer.max),
+                            palette: layer.palette,
+                            framedelta: layer.framedelta,
+                            band: layer.band,
+                        }
+                        if (!styleEntry.min) delete styleEntry.min
+                        if (!styleEntry.max) delete styleEntry.max
+                        styleArray.push(styleEntry);
+                    });
+                    return styleArray
+                }
+        },
         styleEqual(style1, style2) {
             if (style1 === style2) {
                 return true
@@ -115,7 +133,7 @@ export default {
                 const match = this.availablePresets.find((p) => (
                     p.mode.id === this.currentMode.id
                     && p.frame === this.currentFrame
-                    && this.styleEqual(this.currentStyle.bands, p.style.bands)
+                    && this.styleEqual(this.currentStyle.bands, this.styleFromPreset(p))
                 ))
                 this.selectedPreset = match ? match.name : undefined
             }
@@ -151,19 +169,7 @@ export default {
                     this.$emit('setCurrentFrame', preset.frame)
                 }
                 if (preset.style && preset.style.bands.length) {
-                    const styleArray = []
-                    preset.style.bands.forEach((layer) => {
-                        const styleEntry = {
-                            min: layer.autoRange !== undefined ? `min:${layer.autoRange / 100}` : parseInt(layer.min),
-                            max: layer.autoRange !== undefined ? `max:${layer.autoRange / 100}` : parseInt(layer.max),
-                            palette: layer.palette,
-                            framedelta: layer.framedelta,
-                            band: layer.band,
-                        }
-                        if (!styleEntry.min) delete styleEntry.min
-                        if (!styleEntry.max) delete styleEntry.max
-                        styleArray.push(styleEntry);
-                    });
+                    const styleArray = this.styleFromPreset(preset)
                     this.$emit('updateStyle', preset.mode.id, {bands: styleArray, preset: true})
                 }
             }
