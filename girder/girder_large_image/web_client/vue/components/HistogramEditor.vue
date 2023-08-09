@@ -148,7 +148,9 @@ export default {
             handle.setAttributeNS(null, 'x1', `${position}`)
             handle.setAttributeNS(null, 'x2', `${position}`)
             exclusionBox.setAttributeNS(null, 'x', `${exclusionBoxPosition}`)
-            exclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`)
+            if (exclusionBoxWidth >= 0) {
+                exclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`)
+            }
         },
         fromDistributionPercentage(percentage) {
             const numSamples = this.histogram.samples * percentage
