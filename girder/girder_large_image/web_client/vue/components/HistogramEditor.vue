@@ -1,6 +1,6 @@
 <script>
 import {restRequest} from '@girder/core/rest';
-import {nextTick} from 'vue'; // eslint-disable-line
+import Vue from 'vue';
 
 import {makeDraggableSVG} from '../utils/drag';
 
@@ -30,7 +30,7 @@ export default {
         },
         histogram() {
             // allow rerender to occur first
-            nextTick().then(() => {
+            Vue.nextTick().then(() => {
                 this.xRange = [5, this.$refs.svg.clientWidth - 5];
                 this.vRange = [this.histogram.min, this.histogram.max];
                 this.drawHistogram(
