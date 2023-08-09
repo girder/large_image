@@ -6,7 +6,7 @@ from large_image.cache_util import cachesClear
 from .datastore import datastore
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 def testCacheSourceStyle():
     cachesClear()
     imagePath = datastore.fetch('sample_image.ptif')
@@ -29,7 +29,7 @@ def testCacheSourceStyle():
     assert ts1.getTile(0, 0, 4) == tile1
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 def testCacheSourceStyleFirst():
     cachesClear()
     imagePath = datastore.fetch('sample_image.ptif')

@@ -63,7 +63,7 @@ def loadCaches(entryPointName='large_image.cache', sourceDict=_availableCaches):
             config.getConfig('logprint').debug(f'Loaded cache {entryPoint.name}')
         except Exception:
             config.getConfig('logprint').exception(
-                f'Failed to load cache {entryPoint.name}'
+                f'Failed to load cache {entryPoint.name}',
             )
     # Load memcached last for now
     if MemCache is not None:
@@ -106,7 +106,8 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None, cacheName=None):
 def getFirstAvailableCache():
     cacheBackend = config.getConfig('cache_backend', None)
     if cacheBackend is not None:
-        raise ValueError('cache_backend already set')
+        msg = 'cache_backend already set'
+        raise ValueError(msg)
     loadCaches()
     cache, cacheLock = None, None
     for cacheBackend in _availableCaches:
@@ -117,7 +118,7 @@ def getFirstAvailableCache():
             continue
     if cache is not None:
         config.getConfig('logprint').info(
-            f'Automatically setting `{cacheBackend}` as cache_backend from availableCaches'
+            f'Automatically setting `{cacheBackend}` as cache_backend from availableCaches',
         )
         config.setConfig('cache_backend', cacheBackend)
     return cache, cacheLock

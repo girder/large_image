@@ -174,7 +174,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
                         'min': 'auto',
                         'max': 'auto',
                         'nodata': 'auto',
-                        'composite': 'multiply' if interp == 'alpha' else 'lighten'
+                        'composite': 'multiply' if interp == 'alpha' else 'lighten',
                     })
         return style
 
@@ -333,10 +333,9 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         # raise an error if the band is not inside the dataset only if
         # requested from the function call
         if exc is True and band is None:
-            raise TileSourceError(
-                'Band has to be a positive integer, -1, or a band '
-                'interpretation found in the source.'
-            )
+            msg = ('Band has to be a positive integer, -1, or a band '
+                   'interpretation found in the source.')
+            raise TileSourceError(msg)
 
         return band
 
@@ -427,7 +426,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         if self.projection:
             if ((width is not None and width < 2) or
                     (height is not None and height < 2)):
-                raise ValueError('Invalid width or height.  Minimum value is 2.')
+                msg = 'Invalid width or height.  Minimum value is 2.'
+                raise ValueError(msg)
             if width is None and height is None:
                 width = height = 256
             params = dict(kwargs)

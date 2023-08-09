@@ -19,7 +19,7 @@ import math
 import os
 import threading
 
-import numpy
+import numpy as np
 import PIL.Image
 
 import large_image
@@ -115,9 +115,9 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 maxSize = json.loads(maxSize)
             except Exception:
-                raise TileSourceError(
-                    'maxSize must be None, an integer, a dictionary, or a '
-                    'JSON string that converts to one of those.')
+                msg = ('maxSize must be None, an integer, a dictionary, or a '
+                       'JSON string that converts to one of those.')
+                raise TileSourceError(msg)
         self.maxSize = maxSize
 
         largeImagePath = self._getLargeImagePath()
@@ -134,15 +134,18 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except OSError:
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
-                raise TileSourceError('File cannot be opened via PIL.')
+                msg = 'File cannot be opened via PIL.'
+                raise TileSourceError(msg)
         minwh = min(self._pilImage.width, self._pilImage.height)
         maxwh = max(self._pilImage.width, self._pilImage.height)
         # Throw an exception if too small or big before processing further
         if minwh <= 0:
-            raise TileSourceError('PIL tile size is invalid.')
+            msg = 'PIL tile size is invalid.'
+            raise TileSourceError(msg)
         maxWidth, maxHeight = getMaxSize(maxSize, self.defaultMaxSize())
         if maxwh > max(maxWidth, maxHeight):
-            raise TileSourceError('PIL tile size is too large.')
+            msg = 'PIL tile size is too large.'
+            raise TileSourceError(msg)
         self._checkForFrames()
         if self._pilImage.info.get('icc_profile', None):
             self._iccprofiles = [self._pilImage.info.get('icc_profile')]
@@ -157,10 +160,10 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         pilImageMode = self._pilImage.mode.split(';')[0]
         self._factor = None
         if pilImageMode in ('I', 'F'):
-            imgdata = numpy.asarray(self._pilImage)
-            maxval = 256 ** math.ceil(math.log(numpy.max(imgdata) + 1, 256)) - 1
+            imgdata = np.asarray(self._pilImage)
+            maxval = 256 ** math.ceil(math.log(np.max(imgdata) + 1, 256)) - 1
             self._factor = 255.0 / maxval
-            self._pilImage = PIL.Image.fromarray(numpy.uint8(numpy.multiply(
+            self._pilImage = PIL.Image.fromarray(np.uint8(np.multiply(
                 imgdata, self._factor)))
         self.sizeX = self._pilImage.width
         self.sizeY = self._pilImage.height
@@ -170,7 +173,8 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = 1
         # Throw an exception if too big after processing
         if self.tileWidth > maxWidth or self.tileHeight > maxHeight:
-            raise TileSourceError('PIL tile size is too large.')
+            msg = 'PIL tile size is too large.'
+            raise TileSourceError(msg)
 
     def _checkForFrames(self):
         self._frames = None
@@ -200,9 +204,9 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             elif rgb.shape[2] > 3:
                 rgb = rgb[:, :, :3]
             self._pilImage = PIL.Image.fromarray(
-                rgb.astype(numpy.uint8) if rgb.dtype != numpy.uint16 else rgb,
-                ('RGB' if rgb.dtype != numpy.uint16 else 'RGB;16') if rgb.shape[2] == 3 else
-                ('L' if rgb.dtype != numpy.uint16 else 'L;16'))
+                rgb.astype(np.uint8) if rgb.dtype != np.uint16 else rgb,
+                ('RGB' if rgb.dtype != np.uint16 else 'RGB;16') if rgb.shape[2] == 3 else
+                ('L' if rgb.dtype != np.uint16 else 'L;16'))
         except Exception:
             pass
 
@@ -269,8 +273,8 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._frameImage.seek(0)
             img.load()
             if self._factor:
-                img = PIL.Image.fromarray(numpy.uint8(numpy.multiply(
-                    numpy.asarray(img), self._factor)))
+                img = PIL.Image.fromarray(np.uint8(np.multiply(
+                    np.asarray(img), self._factor)))
         else:
             img = self._pilImage
         return self._outputTile(img, TILE_FORMAT_PIL, x, y, z,

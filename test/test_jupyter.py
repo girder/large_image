@@ -16,7 +16,8 @@ def testJupyterIpyleafletGeospatial():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
     source = large_image.open(imagePath, projection='EPSG:3857')
-    assert source.geospatial and source.projection
+    assert source.geospatial
+    assert source.projection
     source._ipython_display_()  # smoke test
     # Run twice to make sure launched only once
     port = source._jupyter_server_manager.port

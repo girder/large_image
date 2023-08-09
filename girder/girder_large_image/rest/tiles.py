@@ -222,7 +222,7 @@ class TilesItemResource(ItemResource):
         .param('concurrent', 'Suggested number of maximum concurrent '
                'processes to use during conversion.  Values less than or '
                'equal to 0 use the number of logical cpus less that value.  '
-               'Default is -2.', dataType='int', required=False)
+               'Default is -2.', dataType='int', required=False),
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -236,7 +236,8 @@ class TilesItemResource(ItemResource):
             if len(files) == 1:
                 largeImageFileId = str(files[0]['_id'])
         if not largeImageFileId:
-            raise RestException('Missing "fileId" parameter.')
+            msg = 'Missing "fileId" parameter.'
+            raise RestException(msg)
         largeImageFile = File().load(largeImageFileId, force=True, exc=True)
         user = self.getCurrentUser()
         token = self.getCurrentToken()
@@ -289,7 +290,7 @@ class TilesItemResource(ItemResource):
         .param('concurrent', 'Suggested number of maximum concurrent '
                'processes to use during conversion.  Values less than or '
                'equal to 0 use the number of logical cpus less that value.  '
-               'Default is -2.', dataType='int', required=False)
+               'Default is -2.', dataType='int', required=False),
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -303,7 +304,8 @@ class TilesItemResource(ItemResource):
             if len(files) == 1:
                 largeImageFileId = str(files[0]['_id'])
         if not largeImageFileId:
-            raise RestException('Missing "fileId" parameter.')
+            msg = 'Missing "fileId" parameter.'
+            raise RestException(msg)
         largeImageFile = File().load(largeImageFileId, force=True, exc=True)
         user = self.getCurrentUser()
         token = self.getCurrentToken()
@@ -427,7 +429,7 @@ class TilesItemResource(ItemResource):
         Description('Get large image metadata.')
         .param('itemId', 'The ID of the item.', paramType='path')
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -438,7 +440,7 @@ class TilesItemResource(ItemResource):
         Description('Get large image internal metadata.')
         .param('itemId', 'The ID of the item.', paramType='path')
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -449,7 +451,7 @@ class TilesItemResource(ItemResource):
             raise RestException(e.args[0], code=400)
 
     @describeRoute(
-        Description('Get test large image metadata.')
+        Description('Get test large image metadata.'),
     )
     @access.public(scope=TokenScope.DATA_READ)
     def getTestTilesInfo(self, params):
@@ -465,20 +467,23 @@ class TilesItemResource(ItemResource):
         .param('tilesize', 'Tile size (default 256), must be a power of 2',
                required=False, dataType='int')
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getDZIInfo(self, item, params):
         if 'encoding' in params and params['encoding'] not in ('JPEG', 'PNG'):
-            raise RestException('Only JPEG and PNG encodings are supported', code=400)
+            msg = 'Only JPEG and PNG encodings are supported'
+            raise RestException(msg, code=400)
         info = self._getTilesInfo(item, params)
         tilesize = int(params.get('tilesize', 256))
         if tilesize & (tilesize - 1):
-            raise RestException('Invalid tilesize', code=400)
+            msg = 'Invalid tilesize'
+            raise RestException(msg, code=400)
         overlap = int(params.get('overlap', 0))
         if overlap < 0:
-            raise RestException('Invalid overlap', code=400)
+            msg = 'Invalid overlap'
+            raise RestException(msg, code=400)
         result = ''.join([
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<Image',
@@ -512,9 +517,11 @@ class TilesItemResource(ItemResource):
         try:
             x, y, z = int(x), int(y), int(z)
         except ValueError:
-            raise RestException('x, y, and z must be integers', code=400)
+            msg = 'x, y, and z must be integers'
+            raise RestException(msg, code=400)
         if x < 0 or y < 0 or z < 0:
-            raise RestException('x, y, and z must be positive integers',
+            msg = 'x, y, and z must be positive integers'
+            raise RestException(msg,
                                 code=400)
         result = self.imageItemModel._tileFromHash(
             item, x, y, z, mayRedirect=mayRedirect, **imageArgs)
@@ -548,7 +555,7 @@ class TilesItemResource(ItemResource):
                enum=['false', 'exact', 'encoding', 'any'], default='false')
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     # Without caching, this checks for permissions every time.  By using the
     # LoadModelCache, three database lookups are avoided, which saves around
@@ -590,7 +597,7 @@ class TilesItemResource(ItemResource):
                enum=['false', 'exact', 'encoding', 'any'], default='false')
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     # See getTile for caching rationale
     def getTileWithFrame(self, itemId, frame, z, x, y, params):
@@ -613,7 +620,7 @@ class TilesItemResource(ItemResource):
                paramType='path')
         .param('y', 'The Y coordinate of the tile (0 is the top).',
                paramType='path')
-        .produces(ImageMimeTypes)
+        .produces(ImageMimeTypes),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     def getTestTile(self, z, x, y, params):
@@ -631,7 +638,7 @@ class TilesItemResource(ItemResource):
                paramType='path')
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -639,10 +646,12 @@ class TilesItemResource(ItemResource):
         _adjustParams(params)
         tilesize = int(params.get('tilesize', 256))
         if tilesize & (tilesize - 1):
-            raise RestException('Invalid tilesize', code=400)
+            msg = 'Invalid tilesize'
+            raise RestException(msg, code=400)
         overlap = int(params.get('overlap', 0))
         if overlap < 0:
-            raise RestException('Invalid overlap', code=400)
+            msg = 'Invalid overlap'
+            raise RestException(msg, code=400)
         x, y = (int(xy) for xy in xandy.split('.')[0].split('_'))
         _handleETag('getDZITile', item, level, xandy, params)
         metadata = self.imageItemModel.getMetadata(item, **params)
@@ -650,7 +659,8 @@ class TilesItemResource(ItemResource):
         maxlevel = int(math.ceil(math.log(max(
             metadata['sizeX'], metadata['sizeY'])) / math.log(2)))
         if level < 1 or level > maxlevel:
-            raise RestException('level must be between 1 and the image scale',
+            msg = 'level must be between 1 and the image scale'
+            raise RestException(msg,
                                 code=400)
         lfactor = 2 ** (maxlevel - level)
         region = {
@@ -667,9 +677,11 @@ class TilesItemResource(ItemResource):
             height += int(region['top'] / lfactor)
             region['top'] = 0
         if region['left'] >= metadata['sizeX']:
-            raise RestException('x is outside layer', code=400)
+            msg = 'x is outside layer'
+            raise RestException(msg, code=400)
         if region['top'] >= metadata['sizeY']:
-            raise RestException('y is outside layer', code=400)
+            msg = 'y is outside layer'
+            raise RestException(msg, code=400)
         if region['left'] < metadata['sizeX'] and region['right'] > metadata['sizeX']:
             region['right'] = metadata['sizeX']
             width = int(math.ceil(float(region['right'] - region['left']) / lfactor))
@@ -687,14 +699,14 @@ class TilesItemResource(ItemResource):
 
     @describeRoute(
         Description('Remove a large image from this item.')
-        .param('itemId', 'The ID of the item.', paramType='path')
+        .param('itemId', 'The ID of the item.', paramType='path'),
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
     def deleteTiles(self, item, params):
         deleted = self.imageItemModel.delete(item)
         return {
-            'deleted': deleted
+            'deleted': deleted,
         }
 
     @describeRoute(
@@ -732,7 +744,7 @@ class TilesItemResource(ItemResource):
                'the Content-Disposition response header.', required=False)
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -749,7 +761,7 @@ class TilesItemResource(ItemResource):
             ('encoding', str),
             ('style', str),
             ('contentDisposition', str),
-            ('contentDispositionFileName', str)
+            ('contentDispositionFileName', str),
         ])
         _handleETag('getTilesThumbnail', item, params)
         pickle = _pickleParams(params)
@@ -859,7 +871,7 @@ class TilesItemResource(ItemResource):
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
-        .errorResponse('Insufficient memory.')
+        .errorResponse('Insufficient memory.'),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -889,7 +901,7 @@ class TilesItemResource(ItemResource):
             ('style', str),
             ('resample', 'boolOrInt'),
             ('contentDisposition', str),
-            ('contentDispositionFileName', str)
+            ('contentDispositionFileName', str),
         ])
         _handleETag('getTilesRegion', item, params)
         pickle = _pickleParams(params)
@@ -940,7 +952,7 @@ class TilesItemResource(ItemResource):
                'This is ignored on non-multiframe images.', required=False,
                dataType='int')
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -999,7 +1011,7 @@ class TilesItemResource(ItemResource):
         .param('density', 'If true, scale the results by the number of '
                'samples.', required=False, dataType='boolean', default=False)
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -1060,7 +1072,7 @@ class TilesItemResource(ItemResource):
                'This is ignored on non-multiframe images.', required=False,
                dataType='int')
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -1077,7 +1089,7 @@ class TilesItemResource(ItemResource):
         Description('Get a list of additional images associated with a large image.')
         .param('itemId', 'The ID of the item.', paramType='path')
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -1106,7 +1118,7 @@ class TilesItemResource(ItemResource):
                'the Content-Disposition response header.', required=False)
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     def getAssociatedImage(self, itemId, image, params):
@@ -1123,7 +1135,7 @@ class TilesItemResource(ItemResource):
             ('encoding', str),
             ('style', str),
             ('contentDisposition', str),
-            ('contentDispositionFileName', str)
+            ('contentDispositionFileName', str),
         ])
         _handleETag('getAssociatedImage', item, image, params)
         try:
@@ -1145,7 +1157,7 @@ class TilesItemResource(ItemResource):
         .modelParam('itemId', model=Item, level=AccessType.READ)
         .param('image', 'The key of the associated image.', paramType='path')
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(scope=TokenScope.DATA_READ)
     def getAssociatedImageMetadata(self, item, image, params):
@@ -1191,7 +1203,7 @@ class TilesItemResource(ItemResource):
         ('style', str),
         ('resample', 'boolOrInt'),
         ('contentDisposition', str),
-        ('contentDispositionFileName', str)
+        ('contentDispositionFileName', str),
     ]
 
     @describeRoute(
@@ -1279,7 +1291,7 @@ class TilesItemResource(ItemResource):
         .produces(ImageMimeTypes)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403)
-        .errorResponse('Insufficient memory.')
+        .errorResponse('Insufficient memory.'),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -1377,7 +1389,7 @@ class TilesItemResource(ItemResource):
                required=False,
                enum=['none', 'report', 'schedule'])
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -1423,7 +1435,7 @@ class TilesItemResource(ItemResource):
         Description('List all thumbnail and data files associated with a large_image item.')
         .modelParam('itemId', model=Item, level=AccessType.READ)
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.admin(scope=TokenScope.DATA_READ)
     def listTilesThumbnails(self, item):
@@ -1440,7 +1452,7 @@ class TilesItemResource(ItemResource):
                'thumbnail; false if the key is a data record',
                dataType='boolean', required=False)
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteTilesThumbnails(self, item, keep, key=None, thumbnail=True):
@@ -1471,7 +1483,7 @@ class TilesItemResource(ItemResource):
                paramType='body', dataType='binary')
         .consumes('application/octet-stream')
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     def addTilesThumbnails(self, item, key, mimeType, thumbnail=False, data=None):

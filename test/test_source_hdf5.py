@@ -2,7 +2,7 @@ import pathlib
 import random
 import tempfile
 
-import numpy
+import numpy as np
 import pytest
 
 import large_image
@@ -29,28 +29,28 @@ include_axes = {
 
 possible_data_ranges = [
     [0, 1, 2, float],
-    [0, 1, 2, numpy.float16],
-    [0, 1, 2, numpy.float32],
-    [0, 1, 2, numpy.float64],
-    [0, 2**8, -1, numpy.uint8],
+    [0, 1, 2, np.float16],
+    [0, 1, 2, np.float32],
+    [0, 1, 2, np.float64],
+    [0, 2**8, -1, np.uint8],
     [0, 2**8, -1, float],
     [0, 2**8, -1, int],
-    [0, 2**16, -2, numpy.uint16],
+    [0, 2**16, -2, np.uint16],
     [0, 2**16, -2, float],
     [0, 2**32, -4, int],
-    [-2**7, 2**7, -1, numpy.int8],
+    [-2**7, 2**7, -1, np.int8],
     [-2**7, 2**7, -1, float],
     [-2**7, 2**7, -1, int],
-    [-2**15, 2**15, -2, numpy.int16],
+    [-2**15, 2**15, -2, np.int16],
     [-2**15, 2**15, -2, float],
     [-2**15, 2**15, -2, int],
-    [-2**31, 2**31, -4, numpy.int32],
+    [-2**31, 2**31, -4, np.int32],
     [-2**31, 2**31, -4, float],
     [-2**31, 2**31, -4, int],
     [-1, 1, 2, float],
-    [-1, 1, 2, numpy.float16],
-    [-1, 1, 2, numpy.float32],
-    [-1, 1, 2, numpy.float64],
+    [-1, 1, 2, np.float16],
+    [-1, 1, 2, np.float32],
+    [-1, 1, 2, np.float64],
 ]
 
 max_tile_size = 100
@@ -83,13 +83,13 @@ def random_tile(data_range):
         random.randint(1, max_tile_size),
         random.randint(1, max_tile_size),
         random.randint(*possible_axes['s']),
-        include_axes
+        include_axes,
     )
-    tile = numpy.random.rand(*tile_shape)
+    tile = np.random.rand(*tile_shape)
     tile *= (data_range[1] - data_range[0])
     tile += data_range[0]
     tile = tile.astype(data_range[3])  # apply dtype
-    mask = numpy.random.randint(2, size=tile_shape[:-1])
+    mask = np.random.randint(2, size=tile_shape[:-1])
     return (tile, mask)
 
 
@@ -102,16 +102,16 @@ def frame_with_zeros(data, desired_size, start_location=None):
         frame_with_zeros(
             data[x - start_location[0]],
             desired_size[1:],
-            start_location=start_location[1:]
+            start_location=start_location[1:],
         )
         if (  # frame with zeros if x>=start and x<start+length
             x >= start_location[0] and
             x < data.shape[0] + start_location[0]
         )  # fill with zeros otherwise
-        else numpy.zeros(desired_size[1:])
+        else np.zeros(desired_size[1:])
         for x in range(desired_size[0])
     ]
-    return numpy.array(framed)
+    return np.array(framed)
 
 
 @pytest.mark.parametrize('data_range', possible_data_ranges)
@@ -119,16 +119,16 @@ def testImageGeneration(data_range):
     source = large_image.new()
     tile_grid = [
         int(random.randint(*possible_axes['x'])),
-        int(random.randint(*possible_axes['y']))
+        int(random.randint(*possible_axes['y'])),
     ]
     if data_range is None:
         data_range = random.choice(possible_data_ranges)
 
     # create comparison matrix at max size and fill with zeros
     expected_shape = get_dims(
-        tile_grid[1] * max_tile_size, tile_grid[0] * max_tile_size, 4, True
+        tile_grid[1] * max_tile_size, tile_grid[0] * max_tile_size, 4, True,
     )
-    expected = numpy.ndarray(expected_shape)
+    expected = np.ndarray(expected_shape)
     expected.fill(0)
     max_x, max_y = 0, 0
 
@@ -140,7 +140,7 @@ def testImageGeneration(data_range):
         for y in range(tile_grid[1]):
             start_location = [
                 int(x * max_tile_size * tile_overlap_ratio),
-                int(y * max_tile_size * tile_overlap_ratio)
+                int(y * max_tile_size * tile_overlap_ratio),
             ]
             tile, mask = random_tile(data_range)
             tile_shape = tile.shape
@@ -148,18 +148,18 @@ def testImageGeneration(data_range):
             max_x = max(max_x, start_location[1] + tile_shape[0])
             max_y = max(max_y, start_location[0] + tile_shape[1])
 
-            framed_tile = numpy.array(frame_with_zeros(
+            framed_tile = np.array(frame_with_zeros(
                 tile,
                 expected.shape,
-                start_location=start_location[::-1]
+                start_location=start_location[::-1],
             ))
-            framed_mask = numpy.array(frame_with_zeros(
+            framed_mask = np.array(frame_with_zeros(
                 mask.repeat(tile_shape[-1], -1).reshape(tile_shape),
                 expected.shape,
-                start_location=start_location[::-1]
+                start_location=start_location[::-1],
             ))
 
-            numpy.putmask(expected, framed_mask, framed_tile)
+            np.putmask(expected, framed_mask, framed_tile)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         # TODO: make destination use mdf5 extension
@@ -171,7 +171,7 @@ def testImageGeneration(data_range):
     expected = expected[:max_x, :max_y]
 
     # round to specified precision
-    precision_vector = numpy.vectorize(signif)
+    precision_vector = np.vectorize(signif)
     expected = precision_vector(expected, data_range[0], data_range[1], data_range[2])
     result = precision_vector(result, data_range[0], data_range[1], data_range[2])
 
@@ -185,7 +185,7 @@ def testImageGeneration(data_range):
     # print(expected[numpy.nonzero(difference)])
     # print(result[numpy.nonzero(difference)])
 
-    assert numpy.array_equal(result, expected)
+    assert np.array_equal(result, expected)
     # resultFromFile, _ = large_image.open(destination).getRegion(format='numpy')
     # print(resultFromFile.shape, result.shape)
     # assert numpy.array_equal(result, resultFromFile)

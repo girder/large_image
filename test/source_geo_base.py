@@ -3,7 +3,7 @@ import io
 import json
 import os
 
-import numpy
+import numpy as np
 import PIL.Image
 import PIL.ImageChops
 import pytest
@@ -135,7 +135,7 @@ class _BaseGeoTests:
 
         _assertStyleResponse(imagePath, {
             'band': 1,
-            'palette': 'nonexistent.palette'
+            'palette': 'nonexistent.palette',
         }, 'cannot be used as a color palette')
 
         _assertStyleResponse(imagePath, ['style'],
@@ -334,7 +334,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         assert tileMetadata['geospatial']
         image = source.getTile(37, 46, 7)
         image = PIL.Image.open(io.BytesIO(image))
-        image = numpy.asarray(image)
+        image = np.asarray(image)
         assert list(image[0, 0, :]) == [0, 0, 0, 0]
         assert list(image[255, 0, :]) == [221, 201, 201, 255]
 
@@ -404,7 +404,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
             imagePath, projection='EPSG:3857', style=style, encoding='PNG')
         image = source.getTile(22, 51, 7)
         image = PIL.Image.open(io.BytesIO(image))
-        image = numpy.asarray(image)
+        image = np.asarray(image)
         assert list(image[0, 0, :]) == [68, 1, 84, 0]
 
     def testHttpVfsPath(self):

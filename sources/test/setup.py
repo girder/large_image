@@ -62,10 +62,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'test = large_image_source_test:TestTileSource'
+            'test = large_image_source_test:TestTileSource',
         ],
         'girder_large_image.source': [
-            'test = large_image_source_test:TestTileSource'
-        ]
+            'test = large_image_source_test:TestTileSource',
+        ],
     },
 )

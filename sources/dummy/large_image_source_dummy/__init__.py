@@ -33,7 +33,7 @@ except PackageNotFoundError:
 class DummyTileSource(TileSource):
     name = 'dummy'
     extensions = {
-        None: SourcePriority.MANUAL
+        None: SourcePriority.MANUAL,
     }
 
     def __init__(self, *args, **kwargs):

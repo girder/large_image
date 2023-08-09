@@ -19,7 +19,7 @@ By default, instead of storing test environments in a ``.tox`` directory, they a
 nodejs and npm for Girder Tests or Development
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``nodejs`` version 12.x and a corresponding version of ``npm`` are required to build and test Girder client code.  See `nodejs <https://nodejs.org/en/download/>`_ for how to download and install it.  Remember to get version 12 or earlier.
+``nodejs`` version 14.x and a corresponding version of ``npm`` are required to build and test Girder client code.  See `nodejs <https://nodejs.org/en/download/>`_ for how to download and install it.  Remember to get version 12 or 14.
 
 Mongo for Girder Tests or Development
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,13 +33,13 @@ Tests are run via tox environments:
 
 .. code-block:: bash
 
-    tox -e test-py39,flake8,lintclient
+    tox -e test-py39,lint,lintclient
 
 Or, without Girder:
 
 .. code-block:: bash
 
-    tox -e core-py39,flake8
+    tox -e core-py39,lint
 
 You can build the docs.  They are created in the ``docs/build`` directory:
 

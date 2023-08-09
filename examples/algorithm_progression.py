@@ -64,8 +64,8 @@ def apply_algorithm(algorithm, input_filename, output_dir, params, param_space, 
     filepath = Path(output_dir, filename)
 
     desc = dict(
-        **{'path': filename},
-        **{VARIABLE_LAYERS[i]: v for i, v in enumerate(iteration_id)}
+        path=filename,
+        **{VARIABLE_LAYERS[i]: v for i, v in enumerate(iteration_id)},
     )
 
     source = large_image.open(input_filename)
@@ -145,7 +145,7 @@ if __name__ == '__main__':
         input_params = {}
     input_params = {
         key: np.linspace(
-            float(value[0]), float(value[1]), int(value[2]), endpoint=len(value) > 3
+            float(value[0]), float(value[1]), int(value[2]), endpoint=len(value) > 3,
         )
         for key, value in input_params.items()
         if len(value) >= 3
@@ -153,7 +153,8 @@ if __name__ == '__main__':
     param_order = list(input_params.keys())
 
     if not Path(input_filename).exists():
-        raise ValueError(f'Cannot locate file {input_filename}.')
+        msg = f'Cannot locate file {input_filename}.'
+        raise ValueError(msg)
 
     algorithm = algorithms.ALGORITHM_CODES[algorithm_code]
     sig = inspect.signature(algorithm)

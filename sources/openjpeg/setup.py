@@ -56,7 +56,7 @@ setup(
         f'large-image{limit_version}',
         'glymur>=0.8.18 ; python_version >= "3.7"',
         'glymur>=0.8.18,<0.9.4 ; python_version < "3.7"',
-        'importlib-metadata<5 ; python_version < "3.8"'
+        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
@@ -67,10 +67,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'openjpeg = large_image_source_openjpeg:OpenjpegFileTileSource'
+            'openjpeg = large_image_source_openjpeg:OpenjpegFileTileSource',
         ],
         'girder_large_image.source': [
-            'openjpeg = large_image_source_openjpeg.girder_source:OpenjpegGirderTileSource'
-        ]
+            'openjpeg = large_image_source_openjpeg.girder_source:OpenjpegGirderTileSource',
+        ],
     },
 )

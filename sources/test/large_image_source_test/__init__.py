@@ -19,7 +19,7 @@ import itertools
 import math
 import re
 
-import numpy
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from large_image.cache_util import LruCacheMetaclass, methodcache, strhash
@@ -42,7 +42,7 @@ except PackageNotFoundError:
 
 
 _counters = {
-    'tiles': 0
+    'tiles': 0,
 }
 
 
@@ -50,7 +50,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'test'
     extensions = {
-        None: SourcePriority.MANUAL
+        None: SourcePriority.MANUAL,
     }
 
     def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,
@@ -110,7 +110,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         self.minLevel = min(self.minLevel, self.maxLevel)
         self.monochrome = bool(monochrome)
         self._bands = None
-        self._dtype = numpy.uint8
+        self._dtype = np.uint8
         if bands:
             bands = [re.match(
                 r'^(?P<key>[^=]+)(|=(?P<low>[+-]?((\d+(|\.\d*)))|(\.\d+))-(?P<high>[+-]?((\d+(|\.\d*))|(\.\d+))))$',  # noqa
@@ -134,7 +134,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             if low < 0 or high < 2 or low >= 65536 or high >= 65536:
                 self._dtype = float
             elif low >= 256 or high >= 256:
-                self._dtype = numpy.uint16
+                self._dtype = np.uint16
         # Used for reporting tile information
         self.levels = self.maxLevel + 1
         if frames:
@@ -226,7 +226,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         image = Image.new(
             mode='RGB',
             size=(self.tileWidth, self.tileHeight),
-            color=(rgbColor if not self.fractal else (255, 255, 255))
+            color=(rgbColor if not self.fractal else (255, 255, 255)),
         )
         if self.fractal:
             self.fractalTile(image, x, y, 2 ** z, rgbColor)
@@ -236,17 +236,17 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                 'r', 'red', 'g', 'green', 'b', 'blue', 'grey', 'gray', 'alpha'}:
             bandtext += band
             image = _imageToNumpy(image)[0].astype(float)
-            vstripe = numpy.array([
+            vstripe = np.array([
                 int(x / (self.tileWidth / bandnum / 2)) % 2
                 for x in range(self.tileWidth)])
-            hstripe = numpy.array([
+            hstripe = np.array([
                 int(y / (self.tileHeight / (bandnum % self.tileWidth) / 2)) % 2
                 if bandnum > self.tileWidth else 1 for y in range(self.tileHeight)])
             simage = image.copy()
             simage[hstripe == 0, :, :] /= 2
             simage[:, vstripe == 0, :] /= 2
-            image = numpy.where(image != 255, simage, image)
-            image = image.astype(numpy.uint8)
+            image = np.where(image != 255, simage, image)
+            image = image.astype(np.uint8)
             image = _imageToPIL(image)
 
         imageDraw = ImageDraw.Draw(image)
@@ -263,7 +263,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             # the font size should fill the whole tile
             imageDrawFont = ImageFont.truetype(
                 font='/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
-                size=int(fontsize * min(self.tileWidth, self.tileHeight))
+                size=int(fontsize * min(self.tileWidth, self.tileHeight)),
             )
         except OSError:
             imageDrawFont = ImageFont.load_default()
@@ -271,7 +271,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             xy=(10, 10),
             text=text,
             fill=(0, 0, 0) if band != 'alpha' else (255, 255, 255),
-            font=imageDrawFont
+            font=imageDrawFont,
         )
         return image
 
@@ -281,7 +281,8 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
 
         if not (self.minLevel <= z <= self.maxLevel):
-            raise TileSourceError('z layer does not exist')
+            msg = 'z layer does not exist'
+            raise TileSourceError(msg)
         _counters['tiles'] += 1
 
         xFraction = (x + 0.5) * self.tileWidth * 2 ** (self.levels - 1 - z) / self.sizeX
@@ -303,14 +304,14 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                 image = image.convert('L')
             format = TILE_FORMAT_PIL
         else:
-            image = numpy.zeros(
+            image = np.zeros(
                 (self.tileHeight, self.tileWidth, len(self._bands)), dtype=self._dtype)
             for bandnum, band in enumerate(self._bands):
                 bandimg = self._tileImage(rgbColor, x, y, z, frame, band, bandnum)
                 if self.monochrome or band.upper() in {'grey', 'gray', 'alpha'}:
                     bandimg = bandimg.convert('L')
                 bandimg = _imageToNumpy(bandimg)[0]
-                if (self._dtype != numpy.uint8 or
+                if (self._dtype != np.uint8 or
                         self._bands[band]['low'] != 0 or
                         self._bands[band]['high'] != 255):
                     bandimg = bandimg.astype(float)

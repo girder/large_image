@@ -141,7 +141,7 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
     from tempfile import TemporaryDirectory
 
     import large_image_source_tiff
-    import numpy
+    import numpy as np
     import packaging
     import skimage.metrics
 
@@ -167,7 +167,7 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
                 tileAlt = next(tiAlt)
                 do = tileOrig['tile']
                 da = tileAlt['tile']
-                if do.dtype != da.dtype and da.dtype == numpy.uint8:
+                if do.dtype != da.dtype and da.dtype == np.uint8:
                     da = da.astype(int) * 257
                 do = do.astype(int)
                 da = da.astype(int)
@@ -176,11 +176,11 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
                     do = do[:, :, :da.shape[2]]
                 if da.shape[2] > do.shape[2]:
                     da = da[:, :, :do.shape[2]]
-                diff = numpy.absolute(do - da)
+                diff = np.absolute(do - da)
                 maxdiff = max(maxdiff, diff.max())
                 sum += diff.sum()
                 count += diff.size
-                last_mse = numpy.mean(diff ** 2)
+                last_mse = np.mean(diff ** 2)
                 mse += last_mse * diff.size
                 last_ssim = 0
                 try:
@@ -192,7 +192,7 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
                         kwargs['multichannel'] = len(do.shape) > 2
                     last_ssim = skimage.metrics.structural_similarity(
                         do.astype(float), da.astype(float),
-                        data_range=255 if tileOrig['tile'].dtype == numpy.uint8 else 65535,
+                        data_range=255 if tileOrig['tile'].dtype == np.uint8 else 65535,
                         gaussian_weights=True, sigma=1.5, use_sample_covariance=False,
                         **kwargs)
                     ssim += last_ssim * diff.size
@@ -202,12 +202,12 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
                 if time.time() - lastlog >= 10 and ssim_count:
                     logger.debug(
                         'Calculating error (%d/%d): rmse %4.2f ssim %6.4f  '
-                        'last rmse %4.2f ssim %6.4f' % (
-                            tileOrig['tile_position']['position'] + 1 +
-                            tileOrig['iterator_range']['position'] * frame,
-                            tileOrig['iterator_range']['position'] * numFrames,
-                            (mse / count) ** 0.5, ssim / ssim_count,
-                            last_mse ** 0.5, last_ssim))
+                        'last rmse %4.2f ssim %6.4f',
+                        tileOrig['tile_position']['position'] + 1 +
+                        tileOrig['iterator_range']['position'] * frame,
+                        tileOrig['iterator_range']['position'] * numFrames,
+                        (mse / count) ** 0.5, ssim / ssim_count,
+                        last_mse ** 0.5, last_ssim)
                     lastlog = time.time()
         results['maximum_error'] = maxdiff
         results['average_error'] = sum / count
@@ -216,8 +216,8 @@ def compute_error_metrics(original, altered, results, converterOpts=None):
             maxval ** 2 / (mse / count)) if mse else None
         if ssim_count:
             results['ssim'] = ssim / ssim_count
-            logger.debug('Calculated error: rmse %4.2f psnr %3.1f ssim %6.4f' % (
-                results['rmse'], results['psnr'] or 0, results['ssim']))
+            logger.debug('Calculated error: rmse %4.2f psnr %3.1f ssim %6.4f',
+                         results['rmse'], results['psnr'] or 0, results['ssim'])
 
 
 def main(args=sys.argv[1:]):
@@ -234,7 +234,7 @@ def main(args=sys.argv[1:]):
         li_logger.setLevel(max(1, logging.CRITICAL - (opts.verbose - opts.silent) * 10))
     except ImportError:
         pass
-    logger.debug('Command line options: %r' % opts)
+    logger.debug('Command line options: %r', opts)
     if not os.path.isfile(opts.source) and not opts.source.startswith('large_image://test'):
         logger.error('Source is not a file (%s)', opts.source)
         return 1

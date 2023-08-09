@@ -64,20 +64,20 @@ class Annotationelement(Model):
                 ('bbox.highx', SortDir.ASCENDING),
                 ('bbox.size', SortDir.DESCENDING),
             ], {
-                'name': 'annotationBboxIdx'
+                'name': 'annotationBboxIdx',
             }),
             ([
                 ('annotationId', SortDir.ASCENDING),
                 ('bbox.size', SortDir.DESCENDING),
             ], {
-                'name': 'annotationBboxSizeIdx'
+                'name': 'annotationBboxSizeIdx',
             }),
             ([
                 ('annotationId', SortDir.ASCENDING),
                 ('_version', SortDir.DESCENDING),
                 ('element.group', SortDir.ASCENDING),
             ], {
-                'name': 'annotationGroupIdx'
+                'name': 'annotationGroupIdx',
             }),
             ([
                 ('created', SortDir.ASCENDING),
@@ -109,7 +109,7 @@ class Annotationelement(Model):
                 startingId = self.collection.find_one({}, sort=[('_version', SortDir.DESCENDING)])
                 startingId = startingId['_version'] + 1 if startingId else 0
                 self.versionId = self.collection.insert_one(
-                    {'annotationId': 'version_sequence', '_version': startingId}
+                    {'annotationId': 'version_sequence', '_version': startingId},
                 ).inserted_id
             else:
                 self.versionId = versionObject['_id']
@@ -154,9 +154,8 @@ class Annotationelement(Model):
             are returned.
         """
         annotation['_elementQuery'] = {}
-        annotation['annotation']['elements'] = [
-            element for element in self.yieldElements(
-                annotation, region, annotation['_elementQuery'])]
+        annotation['annotation']['elements'] = list(self.yieldElements(
+            annotation, region, annotation['_elementQuery']))
 
     def yieldElements(self, annotation, region=None, info=None):  # noqa
         """
@@ -207,7 +206,7 @@ class Annotationelement(Model):
         region = region or {}
         query = {
             'annotationId': annotation.get('_annotationId', annotation['_id']),
-            '_version': annotation['_version']
+            '_version': annotation['_version'],
         }
         for key in region:
             if key in self.bboxKeys and self.bboxKeys[key][1]:
@@ -283,7 +282,7 @@ class Annotationelement(Model):
                     (bbox['lowx'] + bbox['highx']) / 2,
                     (bbox['lowy'] + bbox['highy']) / 2,
                     bbox['size'] if entry.get('type') != 'point' else 0,
-                    props[prop]
+                    props[prop],
                 ]
                 details += 1
             else:
@@ -341,7 +340,8 @@ class Annotationelement(Model):
         :type query: dict
         """
         if not query:
-            raise Exception('query must be specified')
+            msg = 'query must be specified'
+            raise Exception(msg)
 
         attachedQuery = query.copy()
         attachedQuery['datafile'] = {'$exists': True}
@@ -390,10 +390,9 @@ class Annotationelement(Model):
          during loading the image metadata will result in the tuple (0, 0, 0, 0).
         """
         if overlayElement.get('type') not in ['image', 'pixelmap']:
-            raise ValueError(
-                'Function _overlayBounds only accepts annotation elements of type "image", '
-                '"pixelmap."'
-            )
+            msg = ('Function _overlayBounds only accepts annotation elements '
+                   'of type "image", "pixelmap."')
+            raise ValueError(msg)
 
         import numpy as np
         lowx = highx = lowy = highy = 0
@@ -573,7 +572,7 @@ class Annotationelement(Model):
             '_version': annotation['_version'],
             'created': now,
             'bbox': self._boundingBox(element),
-            'element': element
+            'element': element,
         } for element in elements[chunk:chunk + chunkSize]]
         prepTime = time.time() - chunkStartTime
         if (len(entries) <= MAX_ELEMENT_CHECK and any(
@@ -614,7 +613,7 @@ class Annotationelement(Model):
     def getElementGroupSet(self, annotation):
         query = {
             'annotationId': annotation.get('_annotationId', annotation['_id']),
-            '_version': annotation['_version']
+            '_version': annotation['_version'],
         }
         groups = sorted([
             group for group in self.collection.distinct('element.group', filter=query)

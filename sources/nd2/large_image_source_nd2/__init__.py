@@ -18,7 +18,7 @@ import math
 import os
 import threading
 
-import numpy
+import numpy as np
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
@@ -51,7 +51,8 @@ def _lazyImport():
         try:
             import nd2
         except ImportError:
-            raise TileSourceError('nd2 module not found.')
+            msg = 'nd2 module not found.'
+            raise TileSourceError(msg)
 
 
 def namedtupleToDict(obj):
@@ -138,13 +139,15 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via the nd2 source.')
+            msg = 'File cannot be opened via the nd2 source.'
+            raise TileSourceError(msg)
         # We use dask to allow lazy reading of large images
         try:
             self._nd2array = self._nd2.to_dask(copy=False, wrapper=False)
         except (TypeError, ValueError) as exc:
             self.logger.debug('Failed to read nd2 file: %s', exc)
-            raise TileSourceError('File cannot be opened via the nd2 source.')
+            msg = 'File cannot be opened via the nd2 source.'
+            raise TileSourceError(msg)
         arrayOrder = list(self._nd2.sizes)
         # Reorder this so that it is XY (P), T, Z, C, Y, X, S (or at least end
         # in Y, X[, S]).
@@ -152,7 +155,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ['C'] if 'C' in arrayOrder else []) + ['Y', 'X'] + (
             ['S'] if 'S' in arrayOrder else [])
         if newOrder != arrayOrder:
-            self._nd2array = numpy.moveaxis(
+            self._nd2array = np.moveaxis(
                 self._nd2array,
                 list(range(len(arrayOrder))),
                 [newOrder.index(k) for k in arrayOrder])
@@ -185,8 +188,8 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not self._validateArrayAccess():
             self._nd2.close()
             del self._nd2
-            raise TileSourceError(
-                'File cannot be parsed with the nd2 source.  Is it a legacy nd2 file?')
+            msg = 'File cannot be parsed with the nd2 source.  Is it a legacy nd2 file?'
+            raise TileSourceError(msg)
         self._tileLock = threading.RLock()
 
     def __del__(self):

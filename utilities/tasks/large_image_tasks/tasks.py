@@ -67,12 +67,13 @@ def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90,
     large_image_converter.convert(
         inputPath, outputPath, quality=quality, tileSize=tileSize, **kwargs)
     if not os.path.exists(outputPath):
-        raise Exception('Conversion command failed to produce output')
+        msg = 'Conversion command failed to produce output'
+        raise Exception(msg)
     if renameOutput != outputName:
         renamePath = os.path.join(outputDir, renameOutput)
         shutil.move(outputPath, renamePath)
         outputPath = renamePath
-    logger.info('Created a file of size %d' % os.path.getsize(outputPath))
+    logger.info('Created a file of size %d', os.path.getsize(outputPath))
     return outputPath
 
 

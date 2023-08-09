@@ -21,7 +21,7 @@ import struct
 import tempfile
 import threading
 
-import numpy
+import numpy as np
 import PIL.Image
 from osgeo import gdal, gdal_array, gdalconst, osr
 
@@ -101,7 +101,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         except RuntimeError:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via GDAL')
+            msg = 'File cannot be opened via GDAL'
+            raise TileSourceError(msg)
         self._getDatasetLock = threading.RLock()
         self.tileSize = 256
         self.tileWidth = self.tileSize
@@ -127,9 +128,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if (self.projection or self._getDriver() in {
             'PNG',
         }) and not scale and not is_netcdf:
-            raise TileSourceError(
-                'File does not have a projected scale, so will not be '
-                'opened via GDAL with a projection.')
+            msg = ('File does not have a projected scale, so will not be '
+                   'opened via GDAL with a projection.')
+            raise TileSourceError(msg)
         self.sourceLevels = self.levels = int(max(0, math.ceil(max(
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1)
@@ -156,7 +157,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
 
     def _checkNetCDF(self):
         if self._getDriver() == 'netCDF':
-            raise TileSourceError('netCDF file will not be read via GDAL source')
+            msg = 'netCDF file will not be read via GDAL source'
+            raise TileSourceError(msg)
         return False
 
     def _getPopulatedLevels(self):
@@ -176,8 +178,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 dtype = gdal_array.GDALTypeCodeToNumericTypeCode(
                     self.dataset.GetRasterBand(1).DataType)
             self._bandRanges[0] = {
-                'min': numpy.array([band['min'] for band in bandInfo.values()], dtype=dtype),
-                'max': numpy.array([band['max'] for band in bandInfo.values()], dtype=dtype),
+                'min': np.array([band['min'] for band in bandInfo.values()], dtype=dtype),
+                'max': np.array([band['max'] for band in bandInfo.values()], dtype=dtype),
             }
         else:
             kwargs = {}
@@ -188,7 +190,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     'top': bounds['ymax'],
                     'right': bounds['xmax'],
                     'bottom': bounds['ymin'],
-                    'units': 'projection'
+                    'units': 'projection',
                 }}
             super(GDALFileTileSource, GDALFileTileSource)._scanForMinMax(
                 self, dtype=dtype, frame=frame, analysisSize=analysisSize,
@@ -199,11 +201,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         band_frame = self._bandRanges[frame]
         try:
             # only valid for integer dtypes
-            range_max = numpy.iinfo(band_frame['max'].dtype).max
+            range_max = np.iinfo(band_frame['max'].dtype).max
         except ValueError:
             range_max = 1
-        band_frame['min'] = numpy.append(band_frame['min'], 0)
-        band_frame['max'] = numpy.append(band_frame['max'], range_max)
+        band_frame['min'] = np.append(band_frame['min'], 0)
+        band_frame['max'] = np.append(band_frame['max'], range_max)
 
     def _initWithProjection(self, unitsPerPixel=None):
         """
@@ -213,9 +215,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         # Since we already converted to bytes decoding is safe here
         outProj = self._proj4Proj(self.projection)
         if outProj.crs.is_geographic:
-            raise TileSourceError(
-                'Projection must not be geographic (it needs to use linear '
-                'units, not longitude/latitude).')
+            msg = ('Projection must not be geographic (it needs to use linear '
+                   'units, not longitude/latitude).')
+            raise TileSourceError(msg)
         if unitsPerPixel:
             self.unitsAcrossLevel0 = float(unitsPerPixel) * self.tileSize
         else:
@@ -229,8 +231,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     [-180, 180], [0, 0])
                 self.unitsAcrossLevel0 = abs(equator[0][1] - equator[0][0])
                 if not self.unitsAcrossLevel0:
-                    raise TileSourceError(
-                        'unitsPerPixel must be specified for this projection')
+                    msg = 'unitsPerPixel must be specified for this projection'
+                    raise TileSourceError(msg)
                 if len(ProjUnitsAcrossLevel0) >= ProjUnitsAcrossLevel0_MaxSize:
                     ProjUnitsAcrossLevel0.clear()
                 ProjUnitsAcrossLevel0[self.projection] = self.unitsAcrossLevel0
@@ -375,10 +377,10 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             if bottom is None and top is not None and height is not None:
                 bottom = top + height
         if (left is None and right is None) or (top is None and bottom is None):
-            raise TileSourceError(
-                'Cannot convert from projection unless at least one of '
-                'left and right and at least one of top and bottom is '
-                'specified.')
+            msg = ('Cannot convert from projection unless at least one of '
+                   'left and right and at least one of top and bottom is '
+                   'specified.')
+            raise TileSourceError(msg)
         if not self.projection:
             pleft, ptop = self.toNativePixelCoordinates(
                 right if left is None else left,
@@ -448,7 +450,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             bounds = {
                 'll': {
                     'x': gt[0] + self.sourceSizeY * gt[2],
-                    'y': gt[3] + self.sourceSizeY * gt[5]
+                    'y': gt[3] + self.sourceSizeY * gt[5],
                 },
                 'ul': {
                     'x': gt[0],
@@ -456,11 +458,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 },
                 'lr': {
                     'x': gt[0] + self.sourceSizeX * gt[1] + self.sourceSizeY * gt[2],
-                    'y': gt[3] + self.sourceSizeX * gt[4] + self.sourceSizeY * gt[5]
+                    'y': gt[3] + self.sourceSizeX * gt[4] + self.sourceSizeY * gt[5],
                 },
                 'ur': {
                     'x': gt[0] + self.sourceSizeX * gt[1],
-                    'y': gt[3] + self.sourceSizeX * gt[4]
+                    'y': gt[3] + self.sourceSizeX * gt[4],
                 },
                 'srs': nativeSrs,
             }
@@ -671,9 +673,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             band = int(band)
         if band != -1 and band not in bands:
             if exc:
-                raise TileSourceError(
-                    'Band has to be a positive integer, -1, or a band '
-                    'interpretation found in the source.')
+                msg = ('Band has to be a positive integer, -1, or a band '
+                       'interpretation found in the source.')
+                raise TileSourceError(msg)
             return None
         return int(band)
 
@@ -725,7 +727,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     xRes=res, yRes=res, outputBounds=[xmin, ymin, xmax, ymax])
                 tile = ds.ReadAsArray()
         if len(tile.shape) == 3:
-            tile = numpy.rollaxis(tile, 0, 3)
+            tile = np.rollaxis(tile, 0, 3)
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
@@ -879,7 +881,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         fd, outputPath = tempfile.mkstemp('.tiff', 'tiledGeoRegion_')
         os.close(fd)
         try:
-            self.logger.info('Using gdal warp %r' % gdalParams)
+            self.logger.info('Using gdal warp %r', gdalParams)
             ds = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
             gdal.Warp(outputPath, ds, options=gdalParams)
         except Exception as exc:
@@ -917,7 +919,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         warnings, errors, details = validate(
             self._largeImagePath,
             check_tiled=check_tiled,
-            full_check=full_check
+            full_check=full_check,
         )
         if errors:
             raise TileSourceInefficientError(errors)

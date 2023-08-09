@@ -16,11 +16,11 @@ except ImportError:
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
 @pytest.mark.plugin('large_image_annotation')
-@pytest.mark.parametrize('spec', (
+@pytest.mark.parametrize('spec', [
     'annotationListSpec.js',
     'geojsAnnotationSpec.js',
     'geojsSpec.js',
-))
+])
 def testWebClientWithAnnotation(boundServer, fsAssetstore, db, spec):
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
     runWebClientTest(boundServer, spec, 15000)

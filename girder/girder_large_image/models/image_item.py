@@ -62,14 +62,15 @@ class ImageItem(Item):
         logger.info('createImageItem called on item %s (%s)', item['_id'], item['name'])
         # Using setdefault ensures that 'largeImage' is in the item
         if 'fileId' in item.setdefault('largeImage', {}):
-            raise TileGeneralError('Item already has largeImage set.')
+            msg = 'Item already has largeImage set.'
+            raise TileGeneralError(msg)
         if fileObj['itemId'] != item['_id']:
-            raise TileGeneralError(
-                'The provided file must be in the provided item.')
+            msg = 'The provided file must be in the provided item.'
+            raise TileGeneralError(msg)
         if (item['largeImage'].get('expected') is True and
                 'jobId' in item['largeImage']):
-            raise TileGeneralError(
-                'Item is scheduled to generate a largeImage.')
+            msg = 'Item is scheduled to generate a largeImage.'
+            raise TileGeneralError(msg)
 
         item['largeImage'].pop('expected', None)
         item['largeImage'].pop('sourceName', None)
@@ -90,8 +91,8 @@ class ImageItem(Item):
                 logger.info(
                     'createImageItem will not use item %s (%s) as a largeImage',
                     item['_id'], item['name'])
-                raise TileGeneralError(
-                    'A job must be used to generate a largeImage.')
+                msg = 'A job must be used to generate a largeImage.'
+                raise TileGeneralError(msg)
             logger.debug(
                 'createImageItem creating a job to generate a largeImage for item %s (%s)',
                 item['_id'], item['name'])
@@ -175,8 +176,8 @@ class ImageItem(Item):
 
     def convertImage(self, item, fileObj, user=None, token=None, localJob=True, **kwargs):
         if fileObj['itemId'] != item['_id']:
-            raise TileGeneralError(
-                'The provided file must be in the provided item.')
+            msg = 'The provided file must be in the provided item.'
+            raise TileGeneralError(msg)
         if not localJob:
             return self._createLargeImageJob(item, fileObj, user, token, toFolder=True, **kwargs)
         return self._createLargeImageLocalJob(item, fileObj, user, toFolder=True, **kwargs)
@@ -220,10 +221,11 @@ class ImageItem(Item):
     @classmethod
     def _loadTileSource(cls, item, **kwargs):
         if 'largeImage' not in item:
-            raise TileSourceError('No large image file in this item.')
+            msg = 'No large image file in this item.'
+            raise TileSourceError(msg)
         if item['largeImage'].get('expected'):
-            raise TileSourceError('The large image file for this item is '
-                                  'still pending creation.')
+            msg = 'The large image file for this item is still pending creation.'
+            raise TileSourceError(msg)
 
         sourceName = item['largeImage']['sourceName']
         try:
@@ -374,7 +376,7 @@ class ImageItem(Item):
         if not hasattr(self, '_getAndCacheImageOrDataLock'):
             self._getAndCacheImageOrDataLock = {
                 'keys': {},
-                'lock': threading.Lock()
+                'lock': threading.Lock(),
             }
         keylock = None
         with self._getAndCacheImageOrDataLock['lock']:

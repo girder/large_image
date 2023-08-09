@@ -64,10 +64,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'deepzoom = large_image_source_deepzoom:DeepzoomFileTileSource'
+            'deepzoom = large_image_source_deepzoom:DeepzoomFileTileSource',
         ],
         'girder_large_image.source': [
-            'deepzoom = large_image_source_deepzoom.girder_source:DeepzoomGirderTileSource'
-        ]
+            'deepzoom = large_image_source_deepzoom.girder_source:DeepzoomGirderTileSource',
+        ],
     },
 )

@@ -81,16 +81,16 @@ def _itemFindRecursive(self, origItemFind, folderId, text, name, limit, offset, 
                 'connectToField': 'parentId',
                 'depthField': '_depth',
                 'as': '_folder',
-                'startWith': '$_id'
+                'startWith': '$_id',
             }},
-            {'$group': {'_id': '$_folder._id'}}
+            {'$group': {'_id': '$_folder._id'}},
         ]
         children = [ObjectId(folderId)] + next(Folder().collection.aggregate(pipeline))['_id']
         if len(children) > 1:
             filters = (filters.copy() if filters else {})
             if text:
                 filters['$text'] = {
-                    '$search': text
+                    '$search': text,
                 }
             if name:
                 filters['name'] = name
@@ -121,7 +121,7 @@ def _itemFindRecursive(self, origItemFind, folderId, text, name, limit, offset, 
         'for admins).')
     .modelParam('id', model=Folder, level=AccessType.READ)
     .param('name', 'The name of the file.', paramType='path')
-    .errorResponse()
+    .errorResponse(),
 )
 @boundHandler()
 def getYAMLConfigFile(self, folder, name):
@@ -142,7 +142,7 @@ def getYAMLConfigFile(self, folder, name):
     .modelParam('id', model=Folder, level=AccessType.WRITE)
     .param('name', 'The name of the file.', paramType='path')
     .param('config', 'The contents of yaml config file to validate.',
-           paramType='body')
+           paramType='body'),
 )
 @boundHandler()
 def putYAMLConfigFile(self, folder, name, config):

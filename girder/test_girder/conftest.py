@@ -6,7 +6,7 @@ import pytest
 pytestmark = pytest.mark.girder
 
 
-@pytest.fixture
+@pytest.fixture()
 def unavailableWorker(db):
     """
     Make sure that Girder Worker can't be reached and times out quickly.
@@ -41,7 +41,7 @@ def girderWorkerProcess():
     proc.wait()
 
 
-@pytest.fixture
+@pytest.fixture()
 def girderWorker(db, girderWorkerProcess):
     """
     Run an instance of Girder worker, connected to rabbitmq.  The rabbitmq
@@ -67,7 +67,7 @@ def unbindGirderEventsByHandlerName(handlerName):
         events.unbind(eventName, handlerName)
 
 
-@pytest.fixture
+@pytest.fixture()
 def unbindLargeImage(db):
     yield True
     unbindGirderEventsByHandlerName('large_image')

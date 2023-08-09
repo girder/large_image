@@ -68,10 +68,10 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'large_image.source': [
-            'tifffile = large_image_source_tifffile:TifffileFileTileSource'
+            'tifffile = large_image_source_tifffile:TifffileFileTileSource',
         ],
         'girder_large_image.source': [
-            'tifffile = large_image_source_tifffile.girder_source:TifffileGirderTileSource'
-        ]
+            'tifffile = large_image_source_tifffile.girder_source:TifffileGirderTileSource',
+        ],
     },
 )

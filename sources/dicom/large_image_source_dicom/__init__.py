@@ -5,7 +5,7 @@ import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
-import numpy
+import numpy as np
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
@@ -36,7 +36,8 @@ def _lazyImport():
             import pydicom
             import wsidicom
         except ImportError:
-            raise TileSourceError('dicom modules not found.')
+            msg = 'dicom modules not found.'
+            raise TileSourceError(msg)
         warnings.filterwarnings('ignore', category=UserWarning, module='wsidicom')
         warnings.filterwarnings('ignore', category=UserWarning, module='pydicom')
 
@@ -130,7 +131,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             self._dicom = wsidicom.WsiDicom.open(self._largeImagePath)
         except Exception:
-            raise TileSourceError('File cannot be opened via dicom tile source.')
+            msg = 'File cannot be opened via dicom tile source.'
+            raise TileSourceError(msg)
         self.sizeX = int(self._dicom.size.width)
         self.sizeY = int(self._dicom.size.height)
         self.tileWidth = int(self._dicom.tile_size.width)
@@ -246,7 +248,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         format = TILE_FORMAT_PIL
         if tile.width < bw or tile.height < bh:
             tile = _imageToNumpy(tile)[0]
-            tile = numpy.pad(
+            tile = np.pad(
                 tile,
                 ((0, bh - tile.shape[0]), (0, bw - tile.shape[1]), (0, 0)),
                 'constant', constant_values=0)

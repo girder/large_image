@@ -9,7 +9,7 @@ import threading
 import time
 import types
 
-import numpy
+import numpy as np
 import PIL
 import PIL.Image
 import PIL.ImageCms
@@ -38,14 +38,14 @@ class TileSource(IPyLeafletMixin):
     # to each.  It must contain a None key with a priority for the tile source
     # when the extension does not match.
     extensions = {
-        None: SourcePriority.FALLBACK
+        None: SourcePriority.FALLBACK,
     }
 
     # A dictionary of common mime-types handled by the source and the
     # ``SourcePriority`` given to each.  This are used in place of or in
     # additional to extensions.
     mimeTypes = {
-        None: SourcePriority.FALLBACK
+        None: SourcePriority.FALLBACK,
     }
 
     # A dictionary with regex strings as the keys and the ``SourcePriority``
@@ -173,7 +173,8 @@ class TileSource(IPyLeafletMixin):
         import pickle
 
         if not hasattr(self, '_initValues') or hasattr(self, '_unpickleable'):
-            raise pickle.PicklingError('Source cannot be pickled')
+            msg = 'Source cannot be pickled'
+            raise pickle.PicklingError(msg)
         return functools.partial(type(self), **self._initValues[1]), self._initValues[0]
 
     def __repr__(self):
@@ -207,7 +208,8 @@ class TileSource(IPyLeafletMixin):
                         raise TypeError
                     self._style = JSONDict(style)
                 except TypeError:
-                    raise exceptions.TileSourceError('Style is not a valid json object.')
+                    msg = 'Style is not a valid json object.'
+                    raise exceptions.TileSourceError(msg)
 
     def getBounds(self, *args, **kwargs):
         return {
@@ -363,7 +365,8 @@ class TileSource(IPyLeafletMixin):
             scaleY = metadata['sizeY']
         elif units == 'mag_pixels':
             if not (desiredMagnification or {}).get('scale'):
-                raise ValueError('No magnification to use for units')
+                msg = 'No magnification to use for units'
+                raise ValueError(msg)
             scaleX = scaleY = desiredMagnification['scale']
         elif units == 'mm':
             if (not (desiredMagnification or {}).get('scale') or
@@ -374,7 +377,8 @@ class TileSource(IPyLeafletMixin):
             if (not (desiredMagnification or {}).get('scale') or
                     not (desiredMagnification or {}).get('mm_x') or
                     not (desiredMagnification or {}).get('mm_y')):
-                raise ValueError('No mm_x or mm_y to use for units')
+                msg = 'No mm_x or mm_y to use for units'
+                raise ValueError(msg)
             scaleX = (desiredMagnification['scale'] /
                       desiredMagnification['mm_x'])
             scaleY = (desiredMagnification['scale'] /
@@ -592,8 +596,8 @@ class TileSource(IPyLeafletMixin):
                 (not isinstance(maxWidth, int) or maxWidth < 0)) or
                 (maxHeight is not None and
                  (not isinstance(maxHeight, int) or maxHeight < 0))):
-            raise ValueError(
-                'Invalid output width or height.  Minimum value is 0.')
+            msg = 'Invalid output width or height.  Minimum value is 0.'
+            raise ValueError(msg)
 
         magLevel = None
         mag = None
@@ -664,7 +668,7 @@ class TileSource(IPyLeafletMixin):
             'offset_x': 0,
             'offset_y': 0,
             'range_x': 0,
-            'range_y': 0
+            'range_y': 0,
         }
         if not tile_overlap['edges']:
             # offset by half the overlap
@@ -681,7 +685,8 @@ class TileSource(IPyLeafletMixin):
         tile_size['width'] -= tile_overlap['x']
         tile_size['height'] -= tile_overlap['y']
         if tile_size['width'] <= 0 or tile_size['height'] <= 0:
-            raise ValueError('Invalid tile_size or tile_overlap.')
+            msg = 'Invalid tile_size or tile_overlap.'
+            raise ValueError(msg)
 
         resample = (
             False if round(requestedScale, 2) == 1.0 or
@@ -917,9 +922,9 @@ class TileSource(IPyLeafletMixin):
                         'region_x_max': iterInfo['xmax'] - iterInfo['xmin'],
                         'region_y_max': iterInfo['ymax'] - iterInfo['ymin'],
                         'position': ((iterInfo['xmax'] - iterInfo['xmin']) *
-                                     (iterInfo['ymax'] - iterInfo['ymin']))
+                                     (iterInfo['ymax'] - iterInfo['ymin'])),
                     },
-                    'tile_overlap': overlap
+                    'tile_overlap': overlap,
                 })
                 tile['gx'] = tile['x'] * scale
                 tile['gy'] = tile['y'] * scale
@@ -1009,18 +1014,18 @@ class TileSource(IPyLeafletMixin):
                 lastlog = time.time()
             tile = tile['tile']
             if dtype is not None and tile.dtype != dtype:
-                if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
-                    tile = numpy.array(tile, dtype=numpy.uint16) * 257
+                if tile.dtype == np.uint8 and dtype == np.uint16:
+                    tile = np.array(tile, dtype=np.uint16) * 257
                 else:
                     continue
-            tilemin = numpy.array([
-                numpy.amin(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
-            tilemax = numpy.array([
-                numpy.amax(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
-            tilesum = numpy.array([
-                numpy.sum(tile[:, :, idx]) for idx in range(tile.shape[2])], float)
-            tilesum2 = numpy.array([
-                numpy.sum(numpy.array(tile[:, :, idx], float) ** 2)
+            tilemin = np.array([
+                np.amin(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
+            tilemax = np.array([
+                np.amax(tile[:, :, idx]) for idx in range(tile.shape[2])], tile.dtype)
+            tilesum = np.array([
+                np.sum(tile[:, :, idx]) for idx in range(tile.shape[2])], float)
+            tilesum2 = np.array([
+                np.sum(np.array(tile[:, :, idx], float) ** 2)
                 for idx in range(tile.shape[2])], float)
             tilecount = tile.shape[0] * tile.shape[1]
             if results is None:
@@ -1029,16 +1034,16 @@ class TileSource(IPyLeafletMixin):
                     'max': tilemax,
                     'sum': tilesum,
                     'sum2': tilesum2,
-                    'count': tilecount
+                    'count': tilecount,
                 }
             else:
-                results['min'] = numpy.minimum(results['min'], tilemin[:len(results['min'])])
-                results['max'] = numpy.maximum(results['max'], tilemax[:len(results['min'])])
+                results['min'] = np.minimum(results['min'], tilemin[:len(results['min'])])
+                results['max'] = np.maximum(results['max'], tilemax[:len(results['min'])])
                 results['sum'] += tilesum[:len(results['min'])]
                 results['sum2'] += tilesum2[:len(results['min'])]
                 results['count'] += tilecount
         results['mean'] = results['sum'] / results['count']
-        results['stdev'] = numpy.maximum(
+        results['stdev'] = np.maximum(
             results['sum2'] / results['count'] - results['mean'] ** 2,
             [0] * results['sum2'].shape[0]) ** 0.5
         results.pop('sum', None)
@@ -1058,7 +1063,7 @@ class TileSource(IPyLeafletMixin):
             'bins': bins,
             'density': bool(density),
         } for idx in range(len(results['min']))]
-        if histRange == 'round' and numpy.issubdtype(dtype or self.dtype, numpy.integer):
+        if histRange == 'round' and np.issubdtype(dtype or self.dtype, np.integer):
             for record in results['histogram']:
                 if (record['range'][1] - record['range'][0]) < bins * 10:
                     step = int(math.ceil((record['range'][1] - record['range'][0]) / bins))
@@ -1073,13 +1078,13 @@ class TileSource(IPyLeafletMixin):
                 lastlog = time.time()
             tile = tile['tile']
             if dtype is not None and tile.dtype != dtype:
-                if tile.dtype == numpy.uint8 and dtype == numpy.uint16:
-                    tile = numpy.array(tile, dtype=numpy.uint16) * 257
+                if tile.dtype == np.uint8 and dtype == np.uint16:
+                    tile = np.array(tile, dtype=np.uint16) * 257
                 else:
                     continue
             for idx in range(len(results['min'])):
                 entry = results['histogram'][idx]
-                hist, bin_edges = numpy.histogram(
+                hist, bin_edges = np.histogram(
                     tile[:, :, idx], entry['bins'], entry['range'], density=False)
                 if entry['hist'] is None:
                     entry['hist'] = hist
@@ -1089,7 +1094,7 @@ class TileSource(IPyLeafletMixin):
         for idx in range(len(results['min'])):
             entry = results['histogram'][idx]
             if entry['hist'] is not None:
-                entry['samples'] = numpy.sum(entry['hist'])
+                entry['samples'] = np.sum(entry['hist'])
                 if density:
                     entry['hist'] = entry['hist'].astype(float) / entry['samples']
         return results
@@ -1127,7 +1132,7 @@ class TileSource(IPyLeafletMixin):
             resample=False,
             frame=frame, **kwargs)
         if self._bandRanges[frame]:
-            self.logger.info('Style range is %r' % {
+            self.logger.info('Style range is %r', {
                 k: v for k, v in self._bandRanges[frame].items() if k in {
                     'min', 'max', 'mean', 'stdev'}})
 
@@ -1184,7 +1189,7 @@ class TileSource(IPyLeafletMixin):
         if value == 'full':
             value = 0
             if minmax != 'min':
-                if dtype == numpy.uint16:
+                if dtype == np.uint16:
                     value = 65535
                 elif dtype.kind == 'f':
                     value = 1
@@ -1192,10 +1197,10 @@ class TileSource(IPyLeafletMixin):
                     value = 255
         if value == 'auto':
             if (self._bandRanges.get(frame) and
-                    numpy.all(self._bandRanges[frame]['min'] >= 0) and
-                    numpy.all(self._bandRanges[frame]['min'] <= 254) and
-                    numpy.all(self._bandRanges[frame]['max'] >= 2) and
-                    numpy.all(self._bandRanges[frame]['max'] <= 255)):
+                    np.all(self._bandRanges[frame]['min'] >= 0) and
+                    np.all(self._bandRanges[frame]['min'] <= 254) and
+                    np.all(self._bandRanges[frame]['max'] >= 2) and
+                    np.all(self._bandRanges[frame]['max'] <= 255)):
                 value = 0 if minmax == 'min' else 255
             else:
                 value = minmax
@@ -1215,7 +1220,7 @@ class TileSource(IPyLeafletMixin):
                         self._bandRanges[frame]['histogram'][bandidx], threshold, True)
                 else:
                     value = self._bandRanges[frame]['max'][bandidx]
-            elif dtype == numpy.uint16:
+            elif dtype == np.uint16:
                 value = 65535
             elif dtype.kind == 'f':
                 value = 1
@@ -1279,7 +1284,7 @@ class TileSource(IPyLeafletMixin):
             self._styleFunctionWarnings = getattr(self, '_styleFunctionWarnings', {})
             if function['name'] not in self._styleFunctionWarnings:
                 self._styleFunctionWarnings[function['name']] = exc
-                self.logger.exception('Failed to import style function %s' % function['name'])
+                self.logger.exception('Failed to import style function %s', function['name'])
             return image
         kwargs = function.get('parameters', {}).copy()
         if function.get('context'):
@@ -1290,7 +1295,7 @@ class TileSource(IPyLeafletMixin):
             self._styleFunctionWarnings = getattr(self, '_styleFunctionWarnings', {})
             if function['name'] not in self._styleFunctionWarnings:
                 self._styleFunctionWarnings[function['name']] = exc
-                self.logger.exception('Failed to execute style function %s' % function['name'])
+                self.logger.exception('Failed to execute style function %s', function['name'])
             return image
 
     def getICCProfiles(self, idx=None, onlyInfo=False):
@@ -1366,7 +1371,7 @@ class TileSource(IPyLeafletMixin):
             key = (mode, intent)
             if self._iccprofilesObjects[profileIdx] is None:
                 self._iccprofilesObjects[profileIdx] = {
-                    'profile': self.getICCProfiles(profileIdx)
+                    'profile': self.getICCProfiles(profileIdx),
                 }
                 if key not in self._iccprofilesObjects[profileIdx]:
                     self._iccprofilesObjects[profileIdx][key] = \
@@ -1415,7 +1420,7 @@ class TileSource(IPyLeafletMixin):
         if not style or ('icc' in style and len(style) == 1):
             sc.output = image
         else:
-            sc.output = numpy.zeros((image.shape[0], image.shape[1], 4), float)
+            sc.output = np.zeros((image.shape[0], image.shape[1], 4), float)
         image = self._applyStyleFunction(image, sc, 'pre')
         for eidx, entry in enumerate(sc.style['bands']):
             sc.styleIndex = eidx
@@ -1451,7 +1456,7 @@ class TileSource(IPyLeafletMixin):
             elif entry.get('band') == 'alpha':
                 sc.bandidx = image.shape[2] - 1 if image.shape[2] in (2, 4) else None
                 sc.band = (image[:, :, -1] if image.shape[2] in (2, 4) else
-                           numpy.full(image.shape[:2], 255, numpy.uint8))
+                           np.full(image.shape[:2], 255, np.uint8))
                 sc.composite = entry.get('composite', 'multiply')
             if sc.band is None:
                 sc.band = image[:, :, sc.bandidx]
@@ -1460,7 +1465,7 @@ class TileSource(IPyLeafletMixin):
                 'palette', ['#000', '#FFF']
                 if entry.get('band') != 'alpha' else ['#FFF0', '#FFFF']))
             sc.discrete = entry.get('scheme') == 'discrete'
-            sc.palettebase = numpy.linspace(0, 1, len(sc.palette), endpoint=True)
+            sc.palettebase = np.linspace(0, 1, len(sc.palette), endpoint=True)
             sc.nodata = entry.get('nodata')
             sc.min = self._getMinMax(
                 'min', entry.get('min', 'auto'), image.dtype, sc.bandidx, frame)
@@ -1471,7 +1476,7 @@ class TileSource(IPyLeafletMixin):
             if sc.nodata is not None:
                 sc.mask = sc.band != float(sc.nodata)
             else:
-                sc.mask = numpy.full(image.shape[:2], True)
+                sc.mask = np.full(image.shape[:2], True)
             sc.band = (sc.band - sc.min) / delta
             if not sc.clamp:
                 sc.mask = sc.mask & (sc.band >= 0) & (sc.band <= 1)
@@ -1487,40 +1492,40 @@ class TileSource(IPyLeafletMixin):
             # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html for
             # some details.
             for channel in range(4):
-                if numpy.all(sc.palette[:, channel] == sc.palette[0, channel]):
+                if np.all(sc.palette[:, channel] == sc.palette[0, channel]):
                     if ((sc.palette[0, channel] == 0 and sc.composite != 'multiply') or
                             (sc.palette[0, channel] == 255 and sc.composite == 'multiply')):
                         continue
-                    clrs = numpy.full(sc.band.shape, sc.palette[0, channel], dtype=sc.band.dtype)
+                    clrs = np.full(sc.band.shape, sc.palette[0, channel], dtype=sc.band.dtype)
                 else:
                     # Don't recompute if the sc.palette is repeated two channels
                     # in a row.
-                    if not channel or numpy.any(
+                    if not channel or np.any(
                             sc.palette[:, channel] != sc.palette[:, channel - 1]):
                         if not sc.discrete:
-                            clrs = numpy.interp(sc.band, sc.palettebase, sc.palette[:, channel])
+                            clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
                         else:
                             clrs = sc.palette[
-                                numpy.floor(sc.band * len(sc.palette)).astype(int).clip(
+                                np.floor(sc.band * len(sc.palette)).astype(int).clip(
                                     0, len(sc.palette) - 1), channel]
                 if sc.composite == 'multiply':
                     if eidx:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = numpy.multiply(
+                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.multiply(
                             sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            numpy.where(sc.mask, clrs / 255, 1))
+                            np.where(sc.mask, clrs / 255, 1))
                 else:
                     if not eidx:
                         sc.output[:sc.mask.shape[0],
                                   :sc.mask.shape[1],
-                                  channel] = numpy.where(sc.mask, clrs, 0)
+                                  channel] = np.where(sc.mask, clrs, 0)
                     else:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = numpy.maximum(
+                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.maximum(
                             sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            numpy.where(sc.mask, clrs, 0))
+                            np.where(sc.mask, clrs, 0))
             sc.output = self._applyStyleFunction(sc.output, sc, 'postband')
         sc.output = self._applyStyleFunction(sc.output, sc, 'main')
         if sc.dtype == 'uint16':
-            sc.output = (sc.output * 65535 / 255).astype(numpy.uint16)
+            sc.output = (sc.output * 65535 / 255).astype(np.uint16)
         elif sc.dtype == 'float':
             sc.output /= 255
         if sc.axis is not None and 0 <= int(sc.axis) < sc.output.shape[2]:
@@ -1545,7 +1550,7 @@ class TileSource(IPyLeafletMixin):
         if applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')):
             tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
-            extend = numpy.zeros(
+            extend = np.zeros(
                 (self.tileHeight, self.tileWidth, tile.shape[2]),
                 dtype=tile.dtype)
             extend[:min(self.tileHeight, tile.shape[0]),
@@ -1591,7 +1596,7 @@ class TileSource(IPyLeafletMixin):
                 self._dtype = tile.dtype
                 self._bandCount = tile.shape[-1] if len(tile.shape) == 3 else 1
             elif tileEncoding == TILE_FORMAT_PIL:
-                self._dtype = numpy.uint8 if ';16' not in tile.mode else numpy.uint16
+                self._dtype = np.uint8 if ';16' not in tile.mode else np.uint16
                 self._bandCount = len(tile.mode)
             else:
                 _img = _imageToNumpy(tile)[0]
@@ -1616,7 +1621,7 @@ class TileSource(IPyLeafletMixin):
                 tile = tile.copy()
                 tile[:, contentWidth:] = color
                 tile[contentHeight:] = color
-        if isinstance(tile, numpy.ndarray) and numpyAllowed:
+        if isinstance(tile, np.ndarray) and numpyAllowed:
             return tile
         tile = _imageToPIL(tile)
         if pilImageAllowed:
@@ -1842,17 +1847,21 @@ class TileSource(IPyLeafletMixin):
         ``TileSourceXYZRangeError`` exception if not.
         """
         if z < 0 or z >= self.levels:
-            raise exceptions.TileSourceXYZRangeError('z layer does not exist')
+            msg = 'z layer does not exist'
+            raise exceptions.TileSourceXYZRangeError(msg)
         scale = 2 ** (self.levels - 1 - z)
         offsetx = x * self.tileWidth * scale
         if not (0 <= offsetx < self.sizeX):
-            raise exceptions.TileSourceXYZRangeError('x is outside layer')
+            msg = 'x is outside layer'
+            raise exceptions.TileSourceXYZRangeError(msg)
         offsety = y * self.tileHeight * scale
         if not (0 <= offsety < self.sizeY):
-            raise exceptions.TileSourceXYZRangeError('y is outside layer')
+            msg = 'y is outside layer'
+            raise exceptions.TileSourceXYZRangeError(msg)
         if frame is not None and numFrames is not None:
             if frame < 0 or frame >= numFrames:
-                raise exceptions.TileSourceXYZRangeError('Frame does not exist')
+                msg = 'Frame does not exist'
+                raise exceptions.TileSourceXYZRangeError(msg)
 
     def _xyzToCorners(self, x, y, z):
         """
@@ -1897,7 +1906,7 @@ class TileSource(IPyLeafletMixin):
         :returns: either a numpy array, a PIL image, or a memory object with an
             image file.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def getTileMimeType(self):
         """
@@ -1924,7 +1933,8 @@ class TileSource(IPyLeafletMixin):
         """
         if ((width is not None and (not isinstance(width, int) or width < 2)) or
                 (height is not None and (not isinstance(height, int) or height < 2))):
-            raise ValueError('Invalid width or height.  Minimum value is 2.')
+            msg = 'Invalid width or height.  Minimum value is 2.'
+            raise ValueError(msg)
         if width is None and height is None:
             width = height = 256
         params = dict(kwargs)
@@ -2097,7 +2107,7 @@ class TileSource(IPyLeafletMixin):
                 getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
                 if outWidth > regionWidth else
                 getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
-            if dtype == numpy.uint16 and TILE_FORMAT_NUMPY in format:
+            if dtype == np.uint16 and TILE_FORMAT_NUMPY in format:
                 image = _imageToNumpy(image)[0].astype(dtype) * 257
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
@@ -2126,7 +2136,7 @@ class TileSource(IPyLeafletMixin):
             return self._addRegionTileToTiled(image, subimage, x, y, width, height, tile, **kwargs)
         if image is None:
             try:
-                image = numpy.zeros(
+                image = np.zeros(
                     (height, width, subimage.shape[2]),
                     dtype=subimage.dtype)
             except MemoryError:
@@ -2178,7 +2188,7 @@ class TileSource(IPyLeafletMixin):
         if subimage.dtype.char not in dtypeToGValue:
             subimage = subimage.astype('d')
         vimgMem = pyvips.Image.new_from_memory(
-            numpy.ascontiguousarray(subimage).data,
+            np.ascontiguousarray(subimage).data,
             subimage.shape[1], subimage.shape[0], subimage.shape[2],
             dtypeToGValue[subimage.dtype.char])
         vimg = pyvips.Image.new_temp_file('%s.v')
@@ -2421,7 +2431,7 @@ class TileSource(IPyLeafletMixin):
         return {
             'magnification': None,
             'mm_x': None,
-            'mm_y': None
+            'mm_y': None,
         }
 
     def getMagnificationForLevel(self, level=None):

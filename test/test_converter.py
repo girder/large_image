@@ -40,40 +40,40 @@ def testIsVips():
     assert large_image_converter.is_vips(imagePath) is False
 
 
-@pytest.mark.parametrize('convert_args,taglist', [
+@pytest.mark.parametrize(('convert_args', 'taglist'), [
     ({}, {
         tifftools.Tag.Compression.value: tifftools.constants.Compression.LZW.value,
-        tifftools.Tag.TileWidth.value: 256
+        tifftools.Tag.TileWidth.value: 256,
     }),
     ({'compression': 'jpeg'}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.JPEG.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.JPEG.value,
     }),
     ({'compression': 'deflate'}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.AdobeDeflate.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.AdobeDeflate.value,
     }),
     ({'compression': 'lzw'}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.LZW.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.LZW.value,
     }),
     ({'compression': 'packbits'}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.Packbits.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.Packbits.value,
     }),
     ({'compression': 'zstd'}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.ZSTD.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.ZSTD.value,
     }),
     ({'compression': 'jpeg', 'quality': 50}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.JPEG.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.JPEG.value,
     }),
     ({'compression': 'deflate', 'level': 2}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.AdobeDeflate.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.AdobeDeflate.value,
     }),
     ({'compression': 'lzw', 'predictor': 'yes'}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.LZW.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.LZW.value,
     }),
     ({'compression': 'webp', 'quality': 0}, {
-        tifftools.Tag.Compression.value: tifftools.constants.Compression.WEBP.value
+        tifftools.Tag.Compression.value: tifftools.constants.Compression.WEBP.value,
     }),
     ({'tileSize': 512}, {
-        tifftools.Tag.TileWidth.value: 512
+        tifftools.Tag.TileWidth.value: 512,
     }),
 ])
 def testConvert(tmpdir, convert_args, taglist):

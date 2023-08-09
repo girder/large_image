@@ -10,6 +10,9 @@
 - Add an endpoint to make it easier to replace thumbnails ([#1253](../../pull/1253))
 - Presets from Large Image Configuration file ([#1248](../../pull/1248))
 
+### Changes
+- Minor code changes based on suggestions from ruff linting ([#1257](../../pull/1257))
+
 ### Bug Fixes
 - Guard against ICC profiles that won't parse ([#1245](../../pull/1245))
 - Fix filter button on item lists ([#1251](../../pull/1251))

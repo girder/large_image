@@ -62,7 +62,7 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'dummy = large_image_source_dummy:DummyTileSource'
-        ]
+            'dummy = large_image_source_dummy:DummyTileSource',
+        ],
     },
 )

@@ -63,10 +63,10 @@ setup(
     python_requires='>=3.8',
     entry_points={
         'large_image.source': [
-            'dicom = large_image_source_dicom:DICOMFileTileSource'
+            'dicom = large_image_source_dicom:DICOMFileTileSource',
         ],
         'girder_large_image.source': [
-            'dicom = large_image_source_dicom.girder_source:DICOMGirderTileSource'
-        ]
+            'dicom = large_image_source_dicom.girder_source:DICOMGirderTileSource',
+        ],
     },
 )

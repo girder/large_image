@@ -3,7 +3,7 @@
 
 import argparse
 
-import numpy
+import numpy as np
 
 import large_image
 
@@ -36,13 +36,13 @@ def average_color(imagePath, magnification=None):
             resample=True):
         # The tile image data is in tile['tile'] and is a numpy
         # multi-dimensional array
-        mean = numpy.mean(tile['tile'], axis=(0, 1))
+        mean = np.mean(tile['tile'], axis=(0, 1))
         tileMeans.append(mean)
         tileWeights.append(tile['width'] * tile['height'])
         print('x: %d  y: %d  w: %d  h: %d  mag: %g  color: %g %g %g' % (
             tile['x'], tile['y'], tile['width'], tile['height'],
             tile['magnification'], mean[0], mean[1], mean[2]))
-    mean = numpy.average(tileMeans, axis=0, weights=tileWeights)
+    mean = np.average(tileMeans, axis=0, weights=tileWeights)
     print('Average color: %g %g %g' % (mean[0], mean[1], mean[2]))
     return mean
 

@@ -22,7 +22,8 @@ def adjust_params(geospatial, params, **kwargs):
     :returns: suffix: the recommended suffix for the new file.
     """
     if geospatial:
-        raise Exception('Aperio format cannot be used with geospatial sources.')
+        msg = 'Aperio format cannot be used with geospatial sources.'
+        raise Exception(msg)
     if params.get('subifds') is None:
         params['subifds'] = False
     return '.svs'
@@ -189,7 +190,7 @@ def create_thumbnail_and_label(tempPath, info, ifdCount, needsLabel, labelPositi
             }
             ifd['tags'][tifftools.Tag.NewSubfileType.value] = {
                 'data': [
-                    tifftools.constants.NewSubfileType.ReducedImage.value
+                    tifftools.constants.NewSubfileType.ReducedImage.value,
                 ],
                 'datatype': tifftools.Datatype.LONG,
             }
@@ -253,7 +254,7 @@ def modify_tiff_before_write(info, ifdIndices, tempPath, lidata, **kwargs):
             'data': [
                 tifftools.constants.NewSubfileType.ReducedImage.value if assocKey == 'label' else
                 (tifftools.constants.NewSubfileType.ReducedImage.value |
-                 tifftools.constants.NewSubfileType.Macro.value)
+                 tifftools.constants.NewSubfileType.Macro.value),
             ],
             'datatype': tifftools.Datatype.LONG,
         }

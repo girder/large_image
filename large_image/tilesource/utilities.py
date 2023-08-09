@@ -5,7 +5,7 @@ import xml.etree.ElementTree
 from collections import defaultdict
 from operator import attrgetter
 
-import numpy
+import numpy as np
 import PIL
 import PIL.Image
 import PIL.ImageColor
@@ -129,7 +129,7 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
             image.convert('1').save(output, encoding, **params)
     return ImageBytes(
         output.getvalue(),
-        mimetype=f'image/{encoding.lower().replace("tiled", "tiff")}'
+        mimetype=f'image/{encoding.lower().replace("tiled", "tiff")}',
     )
 
 
@@ -181,7 +181,7 @@ def _imageToPIL(image, setMode=None):
     :param setMode: if specified, the output image is converted to this mode.
     :returns: a PIL image.
     """
-    if isinstance(image, numpy.ndarray):
+    if isinstance(image, np.ndarray):
         mode = 'L'
         if len(image.shape) == 3:
             # Fallback for hyperspectral data to just use the first three bands
@@ -189,11 +189,11 @@ def _imageToPIL(image, setMode=None):
                 image = image[:, :, :3]
             mode = ['L', 'LA', 'RGB', 'RGBA'][image.shape[2] - 1]
         if len(image.shape) == 3 and image.shape[2] == 1:
-            image = numpy.resize(image, image.shape[:2])
-        if image.dtype == numpy.uint32:
-            image = numpy.floor_divide(image, 2 ** 24).astype(numpy.uint8)
-        elif image.dtype == numpy.uint16:
-            image = numpy.floor_divide(image, 256).astype(numpy.uint8)
+            image = np.resize(image, image.shape[:2])
+        if image.dtype == np.uint32:
+            image = np.floor_divide(image, 2 ** 24).astype(np.uint8)
+        elif image.dtype == np.uint16:
+            image = np.floor_divide(image, 256).astype(np.uint8)
         # TODO: The scaling of float data needs to be identical across all
         # tiles of an image.  This means that we need a reference to the parent
         # tile source or some other way of regulating it.
@@ -202,8 +202,8 @@ def _imageToPIL(image, setMode=None):
         #         maxl2 = math.ceil(math.log(numpy.max(image) + 1) / math.log(2))
         #         image = image / ((2 ** maxl2) - 1)
         #     image = (image * 255).astype(numpy.uint8)
-        elif image.dtype != numpy.uint8:
-            image = image.astype(numpy.uint8)
+        elif image.dtype != np.uint8:
+            image = image.astype(np.uint8)
         image = PIL.Image.fromarray(image, mode)
     elif not isinstance(image, PIL.Image.Image):
         image = PIL.Image.open(io.BytesIO(image))
@@ -220,23 +220,23 @@ def _imageToNumpy(image):
     :param image: input image.
     :returns: a numpy array and a target PIL image mode.
     """
-    if not isinstance(image, numpy.ndarray):
+    if not isinstance(image, np.ndarray):
         if not isinstance(image, PIL.Image.Image):
             image = PIL.Image.open(io.BytesIO(image))
         if image.mode not in ('L', 'LA', 'RGB', 'RGBA'):
             image = image.convert('RGBA')
         mode = image.mode
         if not image.width or not image.height:
-            image = numpy.zeros((image.height, image.width, len(mode)))
+            image = np.zeros((image.height, image.width, len(mode)))
         else:
-            image = numpy.asarray(image)
+            image = np.asarray(image)
     else:
         if len(image.shape) == 3:
             mode = ['L', 'LA', 'RGB', 'RGBA'][(image.shape[2] - 1) if image.shape[2] <= 4 else 3]
         else:
             mode = 'L'
     if len(image.shape) == 2:
-        image = numpy.resize(image, (image.shape[0], image.shape[1], 1))
+        image = np.resize(image, (image.shape[0], image.shape[1], 1))
     return image, mode
 
 
@@ -553,18 +553,18 @@ def _arrayToPalette(palette):
     arr = []
     for clr in palette:
         if isinstance(clr, (tuple, list)):
-            arr.append(numpy.array((list(clr) + [1, 1, 1])[:4]) * 255)
+            arr.append(np.array((list(clr) + [1, 1, 1])[:4]) * 255)
         else:
             try:
                 arr.append(PIL.ImageColor.getcolor(str(colormap.get(clr, clr)), 'RGBA'))
             except ValueError:
                 try:
-                    import matplotlib
+                    import matplotlib as mpl
 
-                    arr.append(PIL.ImageColor.getcolor(matplotlib.colors.to_hex(clr), 'RGBA'))
+                    arr.append(PIL.ImageColor.getcolor(mpl.colors.to_hex(clr), 'RGBA'))
                 except (ImportError, ValueError):
                     raise ValueError('cannot be used as a color palette: %r.' % palette)
-    return numpy.array(arr)
+    return np.array(arr)
 
 
 def getPaletteColors(value):
@@ -600,14 +600,14 @@ def getPaletteColors(value):
             pass
     if palette is None:
         try:
-            import matplotlib
+            import matplotlib as mpl
 
-            if value in matplotlib.colors.get_named_colors_mapping():
-                palette = ['#0000', matplotlib.colors.to_hex(value)]
+            if value in mpl.colors.get_named_colors_mapping():
+                palette = ['#0000', mpl.colors.to_hex(value)]
             else:
-                cmap = matplotlib.colormaps.get_cmap(value) if hasattr(getattr(
-                    matplotlib, 'colormaps', None), 'get_cmap') else matplotlib.cm.get_cmap(value)
-                palette = [matplotlib.colors.to_hex(cmap(i)) for i in range(cmap.N)]
+                cmap = mpl.colormaps.get_cmap(value) if hasattr(getattr(
+                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(value)
+                palette = [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
         except (ImportError, ValueError, AttributeError):
             pass
     if palette is None:
@@ -668,13 +668,13 @@ def getAvailableNamedPalettes(includeColors=True, reduced=False):
         palettes |= set(colormap.keys())
     _recursePalettablePalettes(palettable, palettes)
     try:
-        import matplotlib
+        import matplotlib as mpl
 
         if includeColors:
-            palettes |= set(matplotlib.colors.get_named_colors_mapping())
+            palettes |= set(mpl.colors.get_named_colors_mapping())
         # matplotlib has made the colormap list more public in recent versions
-        mplcm = (matplotlib.colormaps if hasattr(matplotlib, 'colormaps')
-                 else matplotlib.cm._cmap_registry)
+        mplcm = (mpl.colormaps if hasattr(mpl, 'colormaps')
+                 else mpl.cm._cmap_registry)
         for key in mplcm:
             if isValidPalette(key):
                 palettes.add(key)
@@ -711,12 +711,12 @@ def _makeSameChannelDepth(arr1, arr2):
     # Make sure we have 3 dimensional arrays
     for key, arr in arrays.items():
         if len(arr.shape) == 2:
-            arrays[key] = numpy.resize(arr, (arr.shape[0], arr.shape[1], 1))
+            arrays[key] = np.resize(arr, (arr.shape[0], arr.shape[1], 1))
     # If any array is RGB, make sure all arrays are RGB.
     for key, arr in arrays.items():
         other = arrays['arr1' if key == 'arr2' else 'arr2']
         if arr.shape[2] < 3 and other.shape[2] >= 3:
-            newarr = numpy.ones((arr.shape[0], arr.shape[1], arr.shape[2] + 2))
+            newarr = np.ones((arr.shape[0], arr.shape[1], arr.shape[2] + 2))
             newarr[:, :, 0:1] = arr[:, :, 0:1]
             newarr[:, :, 1:2] = arr[:, :, 0:1]
             newarr[:, :, 2:3] = arr[:, :, 0:1]
@@ -728,7 +728,7 @@ def _makeSameChannelDepth(arr1, arr2):
     for key, arr in arrays.items():
         other = arrays['arr1' if key == 'arr2' else 'arr2']
         if arr.shape[2] < other.shape[2]:
-            newarr = numpy.ones((arr.shape[0], arr.shape[1], other.shape[2]))
+            newarr = np.ones((arr.shape[0], arr.shape[1], other.shape[2]))
             newarr[:, :, :arr.shape[2]] = arr
             arrays[key] = newarr
     return arrays['arr1'], arrays['arr2']
@@ -918,7 +918,7 @@ def getTileFramesQuadInfo(metadata, options=None):
         'quads': [],
         'quadsToIdx': [],
         'frames': frames,
-        'framesToIdx': {}
+        'framesToIdx': {},
     }
     if metadata.get('tileWidth') and metadata.get('tileHeight'):
         # report that tiles below this level are not needed

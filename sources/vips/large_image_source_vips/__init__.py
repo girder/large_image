@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 
 import cachetools
-import numpy
+import numpy as np
 import pyvips
 
 from large_image import config
@@ -70,7 +70,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except pyvips.error.Error:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via pyvips')
+            msg = 'File cannot be opened via pyvips'
+            raise TileSourceError(msg)
         self.sizeX = self._image.width
         self.sizeY = self._image.height
         self.tileWidth = self.tileHeight = self._tileSize
@@ -206,7 +207,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         tileimg = img.crop(x0, y0, x1 - x0, y1 - y0)
         tileimg = tileimg.reduce(step, step, kernel=pyvips.enums.Kernel.NEAREST)
-        tile = numpy.ndarray(
+        tile = np.ndarray(
             buffer=tileimg.write_to_memory(),
             dtype=GValueToDtype[tileimg.format],
             shape=[tileimg.height, tileimg.width, tileimg.bands])
@@ -218,7 +219,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         Raise an exception if this is not an editable image.
         """
         if not self._editable:
-            raise TileSourceError('Not an editable image')
+            msg = 'Not an editable image'
+            raise TileSourceError(msg)
 
     def _updateBandRanges(self, tile):
         """
@@ -226,8 +228,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :param tile: a numpy array.
         """
-        amin = numpy.amin(tile, axis=(0, 1))
-        amax = numpy.amax(tile, axis=(0, 1))
+        amin = np.amin(tile, axis=(0, 1))
+        amax = np.amax(tile, axis=(0, 1))
         if self._bandRanges is None:
             self._bandRanges = {
                 'min': amin,
@@ -236,14 +238,14 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             delta = len(self._bandRanges['min']) - len(amin)
             if delta > 0:
-                amin = numpy.array(list(amin) + [0] * delta)
-                amax = numpy.array(list(amax) + [0] * delta)
+                amin = np.array(list(amin) + [0] * delta)
+                amax = np.array(list(amax) + [0] * delta)
             elif delta < 0:
-                self._bandRanges['min'] = numpy.array(list(self._bandRanges['min']) + [0] * -delta)
-                self._bandRanges['max'] = numpy.array(list(self._bandRanges['max']) + [0] * -delta)
+                self._bandRanges['min'] = np.array(list(self._bandRanges['min']) + [0] * -delta)
+                self._bandRanges['max'] = np.array(list(self._bandRanges['max']) + [0] * -delta)
             self._bandRanges = {
-                'min': numpy.minimum(self._bandRanges['min'], amin),
-                'max': numpy.maximum(self._bandRanges['max'], amax),
+                'min': np.minimum(self._bandRanges['min'], amin),
+                'max': np.maximum(self._bandRanges['max'], amax),
             }
 
     def _addVipsImage(self, vimg, x=0, y=0):
@@ -329,29 +331,30 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if interpretation == 'pixelmap':
             with self._addLock:
                 self._interpretation = 'pixelmap'
-            tile = numpy.dstack((
+            tile = np.dstack((
                 (tile % 256).astype(int),
                 (tile / 256).astype(int) % 256,
                 (tile / 65536).astype(int) % 256)).astype('B')
             interpretation = pyvips.enums.Interpretation.RGB
         if interpretation != pyvips.Interpretation.MULTIBAND and tile.shape[2] in {1, 3}:
-            newarr = numpy.zeros(
+            newarr = np.zeros(
                 (tile.shape[0], tile.shape[1], tile.shape[2] + 1), dtype=tile.dtype)
             newarr[:, :, :tile.shape[2]] = tile
-            newarr[:, :, -1] = min(numpy.iinfo(
+            newarr[:, :, -1] = min(np.iinfo(
                 tile.dtype).max, 255) if tile.dtype.kind in 'iu' else 255
             tile = newarr
         if mask is not None:
             if len(mask.shape) == 3:
-                mask = numpy.logical_or.reduce(mask, axis=2)
+                mask = np.logical_or.reduce(mask, axis=2)
             if tile.shape[2] in {2, 4}:
                 tile[:, :, -1] *= mask.astype(bool)
             else:
-                raise TileSourceError('Cannot apply a mask if the source is not 1 or 3 channels.')
+                msg = 'Cannot apply a mask if the source is not 1 or 3 channels.'
+                raise TileSourceError(msg)
         if tile.dtype.char not in dtypeToGValue:
             tile = tile.astype(float)
         vimg = pyvips.Image.new_from_memory(
-            numpy.ascontiguousarray(tile).data,
+            np.ascontiguousarray(tile).data,
             tile.shape[1], tile.shape[0], tile.shape[2],
             dtypeToGValue[tile.dtype.char])
         interpretation = interpretation if any(
@@ -504,7 +507,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         w = int(w)
         h = int(h)
         if x < 0 or y < 0 or w <= 0 or h <= 0:
-            raise TileSourceError('Crop must have non-negative x, y and positive w, h')
+            msg = 'Crop must have non-negative x, y and positive w, h'
+            raise TileSourceError(msg)
         self._crop = (x, y, w, h)
 
     @property
@@ -516,7 +520,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkEditable()
         value = int(value) if value is not None else None
         if value is not None and value <= 0:
-            raise TileSourceError('minWidth must be positive or None')
+            msg = 'minWidth must be positive or None'
+            raise TileSourceError(msg)
         if value != getattr(self, '_minWidth', None):
             self._minWidth = value
             self._invalidateImage()
@@ -530,7 +535,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkEditable()
         value = int(value) if value is not None else None
         if value is not None and value <= 0:
-            raise TileSourceError('minHeight must be positive or None')
+            msg = 'minHeight must be positive or None'
+            raise TileSourceError(msg)
         if value != getattr(self, '_minHeight', None):
             self._minHeight = value
             self._invalidateImage()
@@ -549,7 +555,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkEditable()
         value = float(value) if value is not None else None
         if value is not None and value <= 0:
-            raise TileSourceError('mm_x must be positive or None')
+            msg = 'mm_x must be positive or None'
+            raise TileSourceError(msg)
         if value != getattr(self, '_minHeight', None):
             self._mm_x = value
             self._invalidateImage()
@@ -568,7 +575,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkEditable()
         value = float(value) if value is not None else None
         if value is not None and value <= 0:
-            raise TileSourceError('mm_y must be positive or None')
+            msg = 'mm_y must be positive or None'
+            raise TileSourceError(msg)
         if value != getattr(self, '_minHeight', None):
             self._mm_y = value
             self._invalidateImage()

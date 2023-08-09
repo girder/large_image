@@ -4,7 +4,7 @@ import os
 import struct
 
 import large_image_source_tiff
-import numpy
+import numpy as np
 import pytest
 import tifftools
 
@@ -361,7 +361,7 @@ def testThumbnails():
             source.getThumbnail(**entry[0])
 
 
-@pytest.mark.parametrize('badParams,errMessage', [
+@pytest.mark.parametrize(('badParams', 'errMessage'), [
     ({'encoding': 'invalid', 'width': 10}, 'Invalid encoding'),
     ({'output': {'maxWidth': 'invalid'}}, 'ValueError'),
     ({'output': {'maxWidth': -5}}, 'Invalid output width or height'),
@@ -381,9 +381,9 @@ def testThumbnails():
 def testRegionBadParameters(badParams, errMessage):
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image_source_tiff.open(imagePath)
+    params = {'output': {'maxWidth': 400}}
+    nestedUpdate(params, badParams)
     with pytest.raises(Exception):
-        params = {'output': {'maxWidth': 400}}
-        nestedUpdate(params, badParams)
         source.getRegion(**params)
 
 
@@ -602,7 +602,7 @@ def testOrientations():
             image[11][11][0], image[11][-11][0],
             image[image.shape[0] // 2][11][0], image[image.shape[0] // 2][-11][0],
             image[11][image.shape[1] // 2][0], image[-11][image.shape[1] // 2][0],
-            image[-11][11][0], image[-11][-11][0]
+            image[-11][11][0], image[-11][-11][0],
         ) == testResults[orient]['pixels']
 
 
@@ -633,11 +633,11 @@ def testStyleSwapChannels():
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
     imageB = imageB[:, :, :3]
-    assert numpy.any(image != imageB)
-    assert numpy.all(image[:, :, 0] == imageB[:, :, 0])
-    assert numpy.any(image[:, :, 1] != imageB[:, :, 1])
-    assert numpy.all(image[:, :, 1] == imageB[:, :, 2])
-    assert numpy.all(image[:, :, 2] == imageB[:, :, 1])
+    assert np.any(image != imageB)
+    assert np.all(image[:, :, 0] == imageB[:, :, 0])
+    assert np.any(image[:, :, 1] != imageB[:, :, 1])
+    assert np.all(image[:, :, 1] == imageB[:, :, 2])
+    assert np.all(image[:, :, 2] == imageB[:, :, 1])
 
 
 def testStyleClamp():
@@ -650,8 +650,8 @@ def testStyleClamp():
         imagePath, style=json.dumps({'min': 100, 'max': 200, 'clamp': False}))
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
-    assert numpy.all(image[:, :, 3] == 255)
-    assert numpy.any(imageB[:, :, 3] != 255)
+    assert np.all(image[:, :, 3] == 255)
+    assert np.any(imageB[:, :, 3] != 255)
     assert image[0][0][3] == 255
     assert imageB[0][0][3] == 0
 
@@ -666,14 +666,14 @@ def testStyleMinMaxThreshold():
         imagePath, style=json.dumps({'min': 'min:0.02', 'max': 'max:0.02'}))
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
-    assert numpy.any(image != imageB)
+    assert np.any(image != imageB)
     assert image[0][0][0] == 252
     assert imageB[0][0][0] == 246
     sourceC = large_image_source_tiff.open(
         imagePath, style=json.dumps({'min': 'full', 'max': 'full'}))
     imageC, _ = sourceC.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
-    assert numpy.any(image != imageC)
+    assert np.any(image != imageC)
     assert imageC[0][0][0] == 253
 
 
@@ -697,14 +697,14 @@ def testStyleNoData():
     imageB = image
     # Pillow 9.0.0 changed how they decode JPEGs, so find a nodata value that
     # will cause a difference
-    while numpy.all(imageB == image):
+    while np.all(imageB == image):
         nodata += 1
         sourceB = large_image_source_tiff.open(
             imagePath, style=json.dumps({'nodata': nodata}))
         imageB, _ = sourceB.getRegion(
             output={'maxWidth': 256, 'maxHeight': 256}, format=constants.TILE_FORMAT_NUMPY)
-    assert numpy.all(image[:, :, 3] == 255)
-    assert numpy.any(imageB[:, :, 3] != 255)
+    assert np.all(image[:, :, 3] == 255)
+    assert np.any(imageB[:, :, 3] != 255)
 
 
 def testHistogram():

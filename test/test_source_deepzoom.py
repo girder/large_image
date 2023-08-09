@@ -8,7 +8,7 @@ from . import utilities
 from .datastore import datastore
 
 
-@pytest.fixture
+@pytest.fixture()
 def vipsToDzi(tmpdir):
     def convert(imagePath, options=None):
         if options is None:
@@ -18,7 +18,7 @@ def vipsToDzi(tmpdir):
         image.dzsave(outputPath, **options)
         outputPath += '.dzi'
         return outputPath
-    yield convert
+    return convert
 
 
 @pytest.mark.parametrize('dzoptions', [

@@ -71,10 +71,10 @@ setup(
     python_requires='>=3.8',
     entry_points={
         'large_image.source': [
-            'rasterio = large_image_source_rasterio:RasterioFileTileSource'
+            'rasterio = large_image_source_rasterio:RasterioFileTileSource',
         ],
         'girder_large_image.source': [
-            'rasterio = large_image_source_rasterio.girder_source:RasterioGirderTileSource'
+            'rasterio = large_image_source_rasterio.girder_source:RasterioGirderTileSource',
         ],
     },
 )

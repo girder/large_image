@@ -19,7 +19,7 @@ import math
 import os
 from collections import OrderedDict
 
-import numpy
+import numpy as np
 import PIL.Image
 from large_image_source_tiff import TiffFileTileSource
 from large_image_source_tiff.exceptions import InvalidOperationTiffError, IOTiffError, TiffError
@@ -107,10 +107,12 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         except TiffError:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('Not a recognized OME Tiff')
+            msg = 'Not a recognized OME Tiff'
+            raise TileSourceError(msg)
         info = getattr(base, '_description_record', None)
         if not info or not info.get('OME'):
-            raise TileSourceError('Not an OME Tiff')
+            msg = 'Not an OME Tiff'
+            raise TileSourceError(msg)
         self._omeinfo = info['OME']
         self._checkForOMEZLoop(self._largeImagePath)
         self._parseOMEInfo()
@@ -137,8 +139,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             _maxChunk = min(base.imageWidth, base.tileWidth * self._skippedLevels ** 2) * \
                 min(base.imageHeight, base.tileHeight * self._skippedLevels ** 2)
             if _maxChunk > self._maxUntiledChunk:
-                raise TileSourceError(
-                    'Untiled image is too large to access with the OME Tiff source')
+                msg = 'Untiled image is too large to access with the OME Tiff source'
+                raise TileSourceError(msg)
         self.tileWidth = base.tileWidth
         self.tileHeight = base.tileHeight
         self.levels = len(self._tiffDirectories)
@@ -240,15 +242,17 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 self._omebase['TiffData'] = [self._omebase['TiffData']]
             if len({entry.get('UUID', {}).get('FileName', '')
                     for entry in self._omebase['TiffData']}) > 1:
-                raise TileSourceError('OME Tiff references multiple files')
+                msg = 'OME Tiff references multiple files'
+                raise TileSourceError(msg)
             if (len(self._omebase['TiffData']) != int(self._omebase['SizeC']) *
                     int(self._omebase['SizeT']) * int(self._omebase['SizeZ']) or
                     len(self._omebase['TiffData']) != len(
                         self._omebase.get('Plane', self._omebase['TiffData']))):
-                raise TileSourceError(
-                    'OME Tiff contains frames that contain multiple planes')
+                msg = 'OME Tiff contains frames that contain multiple planes'
+                raise TileSourceError(msg)
         except (KeyError, ValueError, IndexError, TypeError):
-            raise TileSourceError('OME Tiff does not contain an expected record')
+            msg = 'OME Tiff does not contain an expected record'
+            raise TileSourceError(msg)
 
     def getMetadata(self):
         """
@@ -329,7 +333,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 **kwargs)
         frame = self._getFrame(**kwargs)
         if frame < 0 or frame >= len(self._omebase['TiffData']):
-            raise TileSourceError('Frame does not exist')
+            msg = 'Frame does not exist'
+            raise TileSourceError(msg)
         subdir = None
         if self._omeLevels[z] is not None:
             dirnum = int(self._omeLevels[z]['TiffData'][frame].get('IFD', frame))
@@ -353,7 +358,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             format = 'JPEG'
             if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
-            if isinstance(tile, numpy.ndarray):
+            if isinstance(tile, np.ndarray):
                 format = TILE_FORMAT_NUMPY
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, **kwargs)
