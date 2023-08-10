@@ -8,7 +8,7 @@
 - Allow hiding metadata on item pages ([#1250](../../pull/1250))
 - Allow caching rounded histograms ([#1252](../../pull/1252))
 - Add an endpoint to make it easier to replace thumbnails ([#1253](../../pull/1253))
-- Presets from Large Image Configuration file ([#1248](../../pull/1248))
+- Presets from Large Image Configuration file ([#1248](../../pull/1248), [#1256](../../pull/1256))
 
 ### Changes
 - Minor code changes based on suggestions from ruff linting ([#1257](../../pull/1257))
