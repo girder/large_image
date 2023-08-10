@@ -199,7 +199,7 @@ Image Frame Presets
 This is used to specify a list of default presets for viewing images in the folder.
 Presets can be customized and saved in the GeoJS Image Viewer.
 To retrieve saved presets, use http://[serverURL]/api/v1/item/[itemID]/internal_metadata/presets.
-You can convert the response to YAML and paste it into the `imageFramePresets` key in your config file.
+You can convert the response to YAML and paste it into the ``imageFramePresets`` key in your config file.
 
 Each preset can specify a name, a view mode, an image frame, and style options.
 
@@ -229,17 +229,17 @@ Each preset can specify a name, a view mode, an image frame, and style options.
 
 - The frame of a preset is a 0-based index representing a single frame in a multiframe image.
   For single-frame images, this value will always be 0.
-  For channel compositing, each channel will have a `framedelta` value which represents distance from this base frame value.
+  For channel compositing, each channel will have a ``framedelta`` value which represents distance from this base frame value.
   The result of channel compositing is multiple frames (calculated via framedelta) composited together.
 
 - The style of a preset is a dictionary with a schema similar to the [style schema for tile retrieval](tilesource_options.rst#style). The value for a preset's style consists of a band definition, where each band may have the following:
 
-  - `band`: A 1-based index of a band within the current frame
-  - `framedelta`: An integer representing distance from the current frame, used for compositing multiple frames together
-  - `palette`: A hexidecimal string beginning with "#" representing a color to stain this frame
-  - `min`: The value to map to the first palette value
-  - `max`: The value to map to the last palette value
-  - `autoRange`: A shortcut for excluding a percentage from each end of the value distribution in the image. Express as a float.
+  - ``band``: A 1-based index of a band within the current frame
+  - ``framedelta``: An integer representing distance from the current frame, used for compositing multiple frames together
+  - ``palette``: A hexadecimal string beginning with "#" representing a color to stain this frame
+  - ``min``: The value to map to the first palette value
+  - ``max``: The value to map to the last palette value
+  - ``autoRange``: A shortcut for excluding a percentage from each end of the value distribution in the image. Express as a float.
 
 The YAML below includes some example presets.
 
