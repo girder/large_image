@@ -153,7 +153,7 @@ def _updateJob(event):
                 'job_id': job['_id'],
                 'item_id': item['_id'],
                 'success': status == JobStatus.SUCCESS,
-                'status': status
+                'status': status,
             },
             user={'_id': job.get('userId')},
             expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=30))
@@ -294,7 +294,8 @@ def metadataSearchHandler(  # noqa
     if any(typ not in models for typ in types):
         raise RestException('The metadata search is only able to search in %r.' % models)
     if not isinstance(query, str):
-        raise RestException('The search query must be a string.')
+        msg = 'The search query must be a string.'
+        raise RestException(msg)
     # If we have the beginning of the field specifier, don't do a search
     if re.match(r'^(k|ke|key|key:)$', query.strip()):
         return {k: [] for k in types}
@@ -307,7 +308,7 @@ def metadataSearchHandler(  # noqa
         pipeline = [
             {'$project': {'arrayofkeyvalue': {'$objectToArray': '$$ROOT.%s' % metakey}}},
             {'$unwind': '$arrayofkeyvalue'},
-            {'$group': {'_id': None, 'allkeys': {'$addToSet': '$arrayofkeyvalue.k'}}}
+            {'$group': {'_id': None, 'allkeys': {'$addToSet': '$arrayofkeyvalue.k'}}},
         ]
         for model in (searchModels or types):
             modelInst = ModelImporter.model(*model if isinstance(model, tuple) else [model])
@@ -588,7 +589,7 @@ def validateNonnegativeInteger(doc):
 
 
 @setting_utilities.validator({
-    constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER
+    constants.PluginSettings.LARGE_IMAGE_DEFAULT_VIEWER,
 })
 def validateDefaultViewer(doc):
     doc['value'] = str(doc['value']).strip()

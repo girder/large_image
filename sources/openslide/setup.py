@@ -67,10 +67,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'openslide = large_image_source_openslide:OpenslideFileTileSource'
+            'openslide = large_image_source_openslide:OpenslideFileTileSource',
         ],
         'girder_large_image.source': [
-            'openslide = large_image_source_openslide.girder_source:OpenslideGirderTileSource'
-        ]
+            'openslide = large_image_source_openslide.girder_source:OpenslideGirderTileSource',
+        ],
     },
 )

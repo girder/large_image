@@ -67,10 +67,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'mapnik = large_image_source_mapnik:MapnikFileTileSource'
+            'mapnik = large_image_source_mapnik:MapnikFileTileSource',
         ],
         'girder_large_image.source': [
-            'mapnik = large_image_source_mapnik.girder_source:MapnikGirderTileSource'
-        ]
+            'mapnik = large_image_source_mapnik.girder_source:MapnikGirderTileSource',
+        ],
     },
 )

@@ -138,7 +138,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 return False
             self._netcdf = {
                 'datasets': datasets,
-                'metadata': self.dataset.GetMetadata_Dict()
+                'metadata': self.dataset.GetMetadata_Dict(),
             }
         if not len(datasets):
             try:
@@ -171,7 +171,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 'scheme': 'linear',
                 'palette': ['#000000', '#ffffff'],
                 'min': 'min',
-                'max': 'max'
+                'max': 'max',
             })
         return True
 
@@ -192,8 +192,8 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         try:
             step = (float(stop) - float(start)) / (float(count) - 1)
         except ValueError:
-            raise TileSourceError(
-                'Minimum and maximum values should be numbers, "auto", "min", or "max".')
+            msg = 'Minimum and maximum values should be numbers, "auto", "min", or "max".'
+            raise TileSourceError(msg)
         return [float(start + i * step) for i in range(count)]
 
     def getOneBandInformation(self, band):
@@ -223,7 +223,8 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             mapnik_scheme = getattr(mapnik, f'COLORIZER_{scheme.upper()}')
         except AttributeError:
             mapnik_scheme = mapnik.COLORIZER_DISCRETE
-            raise TileSourceError('Scheme has to be either "discrete" or "linear".')
+            msg = 'Scheme has to be either "discrete" or "linear".'
+            raise TileSourceError(msg)
         colorizer = mapnik.RasterColorizer(mapnik_scheme, mapnik.Color(0, 0, 0, 0))
         bandInfo = self.getOneBandInformation(style['band'])
         minimum = style.get('min', 0)
@@ -246,7 +247,8 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         else:
             colors = self.getHexColors(style.get('palette', ['#000000', '#ffffff']))
             if len(colors) < 2:
-                raise TileSourceError('A palette must have at least 2 colors.')
+                msg = 'A palette must have at least 2 colors.'
+                raise TileSourceError(msg)
             values = self.interpolateMinMax(minimum, maximum, len(colors))
             for value, color in sorted(zip(values, colors)):
                 colorizer.add_stop(value, mapnik.Color(color))

@@ -113,7 +113,7 @@ def process_annotations(event):  # noqa: C901
 
     file = File().load(
         event.info.get('file', {}).get('_id'),
-        level=AccessType.READ, user=user
+        level=AccessType.READ, user=user,
     )
     startTime = time.time()
 
@@ -122,7 +122,8 @@ def process_annotations(event):  # noqa: C901
         return
     try:
         if file['size'] > 1 * 1024 ** 3:
-            raise Exception('File is larger than will be read into memory.')
+            msg = 'File is larger than will be read into memory.'
+            raise Exception(msg)
         data = []
         with File().open(file) as fptr:
             while True:

@@ -11,3 +11,5 @@
 497ddf38b1461da47d1d542003172603e2166b5f
 # PR 1148: Lint the client tests
 23ab7f011abaa71d0a4904a9da599174c38f64c3
+# PR 1257: Use ruff for linting
+dcda95e659a4eaa73cae85ab02f1b89059e63c32

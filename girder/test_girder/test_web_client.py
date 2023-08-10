@@ -11,12 +11,12 @@ except ImportError:
     pass
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
-@pytest.mark.parametrize('spec', (
+@pytest.mark.parametrize('spec', [
     'imageViewerSpec.js',
-))
+])
 def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
     runWebClientTest(boundServer, spec, 15000)
@@ -24,21 +24,21 @@ def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
-@pytest.mark.parametrize('spec', (
+@pytest.mark.parametrize('spec', [
     'largeImageSpec.js',
     'otherFeatures.js',
-))
+])
 def testWebClientNoWorker(boundServer, fsAssetstore, db, spec):
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', spec)
     runWebClientTest(boundServer, spec, 15000)
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
-@pytest.mark.parametrize('spec', (
+@pytest.mark.parametrize('spec', [
     'imageViewerSpec.js',
-))
+])
 def testWebClientNoStream(boundServer, fsAssetstore, db, spec, girderWorker):
     from girder.models.setting import Setting
     from girder.settings import SettingKey

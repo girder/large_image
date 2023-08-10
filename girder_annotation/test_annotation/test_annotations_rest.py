@@ -166,8 +166,8 @@ class TestLargeImageAnnotationRest:
             method='POST',
             user=admin,
             params={
-                'itemId': itemDest.get('_id')
-            }
+                'itemId': itemDest.get('_id'),
+            },
         )
         assert utilities.respStatus(resp) == 200
         itemDest = Item().load(itemDest.get('_id'), level=AccessType.READ)
@@ -179,8 +179,8 @@ class TestLargeImageAnnotationRest:
             user=admin,
             params={
                 'itemId': itemDest.get('_id'),
-                'name': 'sample'
-            }
+                'name': 'sample',
+            },
         )
         assert utilities.respStatus(resp) == 200
         assert resp.json is not None
@@ -195,7 +195,7 @@ class TestLargeImageAnnotationRest:
         # Get all annotations for that item as the user
         resp = server.request(
             path='/annotation/item/{}'.format(itemSrc['_id']),
-            user=user
+            user=user,
         )
         assert utilities.respStatus(resp) == 200
         assert len(resp.json) == 1
@@ -204,7 +204,7 @@ class TestLargeImageAnnotationRest:
         # Get all annotations for that item as the admin
         resp = server.request(
             path='/annotation/item/{}'.format(itemSrc['_id']),
-            user=admin
+            user=admin,
         )
         assert utilities.respStatus(resp) == 200
         annotList = resp.json
@@ -222,7 +222,7 @@ class TestLargeImageAnnotationRest:
             method='POST',
             user=admin,
             type='application/json',
-            body=json.dumps(annotList)
+            body=json.dumps(annotList),
         )
         assert utilities.respStatus(resp) == 200
         assert resp.json == 2
@@ -234,8 +234,8 @@ class TestLargeImageAnnotationRest:
             user=admin,
             params={
                 'itemId': itemDest.get('_id'),
-                'name': 'sample'
-            }
+                'name': 'sample',
+            },
         )
         assert utilities.respStatus(resp) == 200
         assert resp.json is not None
@@ -246,7 +246,7 @@ class TestLargeImageAnnotationRest:
             method='POST',
             user=admin,
             type='application/json',
-            body=json.dumps(['not an object'])
+            body=json.dumps(['not an object']),
         )
         assert utilities.respStatus(resp) == 400
         resp = server.request(
@@ -254,7 +254,7 @@ class TestLargeImageAnnotationRest:
             method='POST',
             user=admin,
             type='application/json',
-            body=json.dumps([{'key': 'not an annotation'}])
+            body=json.dumps([{'key': 'not an annotation'}]),
         )
         assert utilities.respStatus(resp) == 400
 
@@ -262,14 +262,14 @@ class TestLargeImageAnnotationRest:
         resp = server.request(
             path='/annotation/item/{}'.format(itemDest['_id']),
             method='DELETE',
-            user=None
+            user=None,
         )
         assert utilities.respStatus(resp) == 401
 
         resp = server.request(
             path='/annotation/item/{}'.format(itemDest['_id']),
             method='DELETE',
-            user=admin
+            user=admin,
         )
         assert utilities.respStatus(resp) == 200
         assert resp.json == 2
@@ -308,7 +308,7 @@ class TestLargeImageAnnotationRest:
 
         # test default search
         resp = server.request('/annotation/images', user=admin, params={
-            'limit': 100
+            'limit': 100,
         })
         assert utilities.respStatus(resp) == 200
         ids = [image['_id'] for image in resp.json]
@@ -317,7 +317,7 @@ class TestLargeImageAnnotationRest:
         # test filtering by user
         resp = server.request('/annotation/images', user=admin, params={
             'limit': 100,
-            'creatorId': user['_id']
+            'creatorId': user['_id'],
         })
         assert utilities.respStatus(resp) == 200
         ids = [image['_id'] for image in resp.json]
@@ -325,7 +325,7 @@ class TestLargeImageAnnotationRest:
 
         # test getting annotations without admin access
         resp = server.request('/annotation/images', user=user, params={
-            'limit': 100
+            'limit': 100,
         })
         assert utilities.respStatus(resp) == 200
         ids = [image['_id'] for image in resp.json]
@@ -334,7 +334,7 @@ class TestLargeImageAnnotationRest:
         # test sort direction
         resp = server.request('/annotation/images', user=admin, params={
             'limit': 100,
-            'sortdir': 1
+            'sortdir': 1,
         })
         assert utilities.respStatus(resp) == 200
         ids = [image['_id'] for image in resp.json]
@@ -342,14 +342,14 @@ class TestLargeImageAnnotationRest:
 
         # test pagination
         resp = server.request('/annotation/images', user=admin, params={
-            'limit': 1
+            'limit': 1,
         })
         assert utilities.respStatus(resp) == 200
         assert resp.json[0]['_id'] == item4
 
         resp = server.request('/annotation/images', user=admin, params={
             'limit': 1,
-            'offset': 3
+            'offset': 3,
         })
         assert utilities.respStatus(resp) == 200
         assert resp.json[0]['_id'] == item1
@@ -357,7 +357,7 @@ class TestLargeImageAnnotationRest:
         # test filtering by image name
         resp = server.request('/annotation/images', user=admin, params={
             'limit': 100,
-            'imageName': 'image3-aBcd.ptif'
+            'imageName': 'image3-aBcd.ptif',
         })
         assert utilities.respStatus(resp) == 200
         ids = [image['_id'] for image in resp.json]
@@ -366,7 +366,7 @@ class TestLargeImageAnnotationRest:
         # test filtering by image name substring
         resp = server.request('/annotation/images', user=admin, params={
             'limit': 100,
-            'imageName': 'aBc'
+            'imageName': 'aBc',
         })
         assert utilities.respStatus(resp) == 200
         ids = [image['_id'] for image in resp.json]
@@ -375,7 +375,7 @@ class TestLargeImageAnnotationRest:
         # test filtering by image name with unicode
         resp = server.request('/annotation/images', user=admin, params={
             'limit': 100,
-            'imageName': 'Картина'
+            'imageName': 'Картина',
         })
         assert utilities.respStatus(resp) == 200
         ids = [image['_id'] for image in resp.json]
@@ -460,19 +460,19 @@ class TestLargeImageAnnotationRest:
             user=admin,
             params={
                 'access': json.dumps(access),
-                'public': False
-            }
+                'public': False,
+            },
         )
         assert utilities.respStatus(resp) == 200
         resp = server.request(
             '/annotation/%s' % annot['_id'],
-            user=user
+            user=user,
         )
         assert utilities.respStatus(resp) == 403
         # The admin should still be able to get the annotation with elements
         resp = server.request(
             '/annotation/%s' % annot['_id'],
-            user=admin
+            user=admin,
         )
         assert utilities.respStatus(resp) == 200
         assert len(resp.json['annotation']['elements']) == 1
@@ -482,15 +482,15 @@ class TestLargeImageAnnotationRest:
             'login': user['login'],
             'flags': [],
             'id': str(user['_id']),
-            'level': AccessType.ADMIN
+            'level': AccessType.ADMIN,
         })
         resp = server.request(
             '/annotation/%s/access' % annot['_id'],
             method='PUT',
             user=admin,
             params={
-                'access': json.dumps(access)
-            }
+                'access': json.dumps(access),
+            },
         )
         assert utilities.respStatus(resp) == 200
 
@@ -498,7 +498,7 @@ class TestLargeImageAnnotationRest:
         resp = server.request('/annotation/%s/access' % annot['_id'], user=user)
         assert utilities.respStatus(resp) == 200
 
-    @pytest.mark.singular
+    @pytest.mark.singular()
     def testAnnotationHistoryEndpoints(self, server, user, admin):
         privateFolder = utilities.namedFolder(admin, 'Private')
         Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
@@ -551,13 +551,13 @@ class TestLargeImageAnnotationRest:
         resp = server.request(
             '/annotation/%s/history/revert' % (annot['_id']),
             method='PUT', user=admin, params={
-                'version': versions[0]['_version'] + 1
+                'version': versions[0]['_version'] + 1,
             })
         assert utilities.respStatus(resp) == 400
         resp = server.request(
             '/annotation/%s/history/revert' % (annot['_id']),
             method='PUT', user=admin, params={
-                'version': versions[1]['_version']
+                'version': versions[1]['_version'],
             })
         assert utilities.respStatus(resp) == 200
         loaded = Annotation().load(annot['_id'], user=admin)
@@ -641,9 +641,9 @@ class TestLargeImageAnnotationElementGroups:
                     'type': 'rectangle',
                     'center': [40.0, 15.0, 0],
                     'width': 5.0,
-                    'height': 5.0
-                }]
-            }
+                    'height': 5.0,
+                }],
+            },
         )
 
         self.notMigrated = annotationModel.createAnnotation(
@@ -655,19 +655,19 @@ class TestLargeImageAnnotationElementGroups:
                     'center': [20.0, 25.0, 0],
                     'width': 14.0,
                     'height': 15.0,
-                    'group': 'b'
+                    'group': 'b',
                 }, {
                     'type': 'rectangle',
                     'center': [40.0, 15.0, 0],
                     'width': 5.0,
                     'height': 5.0,
-                    'group': 'a'
-                }]
-            }
+                    'group': 'a',
+                }],
+            },
         )
         annotationModel.collection.update_one(
             {'_id': self.notMigrated['_id']},
-            {'$unset': {'groups': ''}}
+            {'$unset': {'groups': ''}},
         )
 
         self.hasGroups = annotationModel.createAnnotation(
@@ -679,20 +679,20 @@ class TestLargeImageAnnotationElementGroups:
                     'center': [20.0, 25.0, 0],
                     'width': 14.0,
                     'height': 15.0,
-                    'group': 'a'
+                    'group': 'a',
                 }, {
                     'type': 'rectangle',
                     'center': [40.0, 15.0, 0],
                     'width': 5.0,
                     'height': 5.0,
-                    'group': 'c'
+                    'group': 'c',
                 }, {
                     'type': 'rectangle',
                     'center': [50.0, 10.0, 0],
                     'width': 5.0,
-                    'height': 5.0
-                }]
-            }
+                    'height': 5.0,
+                }],
+            },
         )
         annotationModel._migrateDatabase()
 
@@ -709,7 +709,8 @@ class TestLargeImageAnnotationElementGroups:
             elif annot['_id'] == str(self.hasGroups['_id']):
                 assert annot['groups'] == ['a', 'c', None]
             else:
-                raise Exception('Unexpected annot id')
+                msg = 'Unexpected annot id'
+                raise Exception(msg)
 
     def testLoadAnnotation(self, server, admin):
         self.makeAnnot(admin)
@@ -726,8 +727,8 @@ class TestLargeImageAnnotationElementGroups:
                 'center': [20.0, 25.0, 0],
                 'width': 14.0,
                 'height': 15.0,
-                'group': 'a'
-            }]
+                'group': 'a',
+            }],
         }
         resp = server.request(
             '/annotation',
@@ -735,7 +736,7 @@ class TestLargeImageAnnotationElementGroups:
             method='POST',
             params={'itemId': str(self.item['_id'])},
             type='application/json',
-            body=json.dumps(annot)
+            body=json.dumps(annot),
         )
         assert utilities.respStatus(resp) == 200
 
@@ -752,15 +753,15 @@ class TestLargeImageAnnotationElementGroups:
                 'center': [20.0, 25.0, 0],
                 'width': 14.0,
                 'height': 15.0,
-                'group': 'd'
-            }]
+                'group': 'd',
+            }],
         }
         resp = server.request(
             '/annotation/%s' % str(self.hasGroups['_id']),
             user=admin,
             method='PUT',
             type='application/json',
-            body=json.dumps(annot)
+            body=json.dumps(annot),
         )
         assert utilities.respStatus(resp) == 200
 

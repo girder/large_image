@@ -97,10 +97,12 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._openjpeg = glymur.Jp2k(self._largeImagePath)
             if not self._openjpeg.shape:
                 if not os.path.isfile(self._largeImagePath):
-                    raise FileNotFoundError()
-                raise TileSourceError('File cannot be opened via Glymur and OpenJPEG (no shape).')
+                    raise FileNotFoundError
+                msg = 'File cannot be opened via Glymur and OpenJPEG (no shape).'
+                raise TileSourceError(msg)
         except (glymur.jp2box.InvalidJp2kError, struct.error):
-            raise TileSourceError('File cannot be opened via Glymur and OpenJPEG.')
+            msg = 'File cannot be opened via Glymur and OpenJPEG.'
+            raise TileSourceError(msg)
         except FileNotFoundError:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
@@ -214,7 +216,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :return: the list of image keys.
         """
-        return list(sorted(self._associatedImages.keys()))
+        return sorted(self._associatedImages.keys())
 
     def _readbox(self, box):
         if box.length > 16 * 1024 * 1024:

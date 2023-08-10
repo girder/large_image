@@ -22,7 +22,7 @@ import math
 import os
 
 import cachetools
-import numpy
+import numpy as np
 import PIL.Image
 import tifftools
 
@@ -106,7 +106,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             alldir = self._scanDirectories()
         except IOOpenTiffError:
-            raise TileSourceError('File cannot be opened via tiff source.')
+            msg = 'File cannot be opened via tiff source.'
+            raise TileSourceError(msg)
         except (ValidationTiffError, TiffError) as exc:
             alldir = []
             lastException = exc
@@ -156,14 +157,14 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     continue
             directories[level] = td
         if not len(directories) or (len(directories) < 2 and max(directories.keys()) + 1 > 4):
-            raise TileSourceError(
-                'Tiff image must have at least two levels.')
+            msg = 'Tiff image must have at least two levels.'
+            raise TileSourceError(msg)
 
         sampleformat = highest._tiffInfo.get('sampleformat')
         bitspersample = highest._tiffInfo.get('bitspersample')
-        self._dtype = numpy.dtype('%s%d' % (
+        self._dtype = np.dtype('%s%d' % (
             tifftools.constants.SampleFormat[sampleformat or 1].name,
-            bitspersample
+            bitspersample,
         ))
         self._bandCount = highest._tiffInfo.get('samplesperpixel')
         # Sort the directories so that the highest resolution is the last one;
@@ -257,7 +258,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     (tag not in ifd['tags'] and tag in baseifd['tags']) or
                     (tag in ifd['tags'] and
                      ifd['tags'][tag]['data'] != baseifd['tags'][tag]['data'])):
-                raise TileSourceError('IFD does not match first IFD.')
+                msg = 'IFD does not match first IFD.'
+                raise TileSourceError(msg)
         sizes = [(self.sizeX, self.sizeY)]
         for level in range(self.levels - 1, -1, -1):
             if (sizeX, sizeY) in sizes:
@@ -274,7 +276,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     if (w2, h2) not in altsizes:
                         altsizes.append((w2, h2))
             sizes = altsizes
-        raise TileSourceError('IFD size is not a power of two smaller than first IFD.')
+        msg = 'IFD size is not a power of two smaller than first IFD.'
+        raise TileSourceError(msg)
 
     def _initWithTiffTools(self):  # noqa
         """
@@ -295,9 +298,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             dir0.imageHeight / dir0.tileHeight)) / math.log(2))) + 1)
         sampleformat = dir0._tiffInfo.get('sampleformat')
         bitspersample = dir0._tiffInfo.get('bitspersample')
-        self._dtype = numpy.dtype('%s%d' % (
+        self._dtype = np.dtype('%s%d' % (
             tifftools.constants.SampleFormat[sampleformat or 1].name,
-            bitspersample
+            bitspersample,
         ))
         self._bandCount = dir0._tiffInfo.get('samplesperpixel')
         info = _cached_read_tiff(self._largeImagePath)
@@ -337,18 +340,20 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     idx for idx, frame in enumerate(frames) if frame['dirs'][level] is None
                 )]['dirs'][level] = (idx, 0)
             else:
-                raise TileSourceError('Tile layers are in a surprising order')
+                msg = 'Tile layers are in a surprising order'
+                raise TileSourceError(msg)
             # if there are sub ifds, add them
             if tifftools.Tag.SubIfd.value in ifd['tags']:
                 for subidx, subifds in enumerate(ifd['tags'][tifftools.Tag.SubIfd.value]['ifds']):
                     if len(subifds) != 1:
-                        raise TileSourceError(
-                            'When stored in subifds, each subifd should be a single ifd.')
+                        msg = 'When stored in subifds, each subifd should be a single ifd.'
+                        raise TileSourceError(msg)
                     level = self._levelFromIfd(subifds[0], info['ifds'][0])
                     if level < self.levels - 1 and frames[-1]['dirs'][level] is None:
                         frames[-1]['dirs'][level] = (idx, subidx + 1)
                     else:
-                        raise TileSourceError('Tile layers are in a surprising order')
+                        msg = 'Tile layers are in a surprising order'
+                        raise TileSourceError(msg)
         self._associatedImages = {}
         for dirNum in associated:
             self._addAssociatedImage(self._largeImagePath, dirNum)
@@ -392,7 +397,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: an image with top-left orientation.
         """
         if len(image.shape) == 2:
-            image = numpy.resize(image, (image.shape[0], image.shape[1], 1))
+            image = np.resize(image, (image.shape[0], image.shape[1], 1))
         if orientation in {
                 tifftools.constants.Orientation.LeftTop.value,
                 tifftools.constants.Orientation.RightTop.value,
@@ -551,7 +556,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         if 'DataObject' in attr['Array']:
                             subvalues = self._xmlToMetadata(attr['Array'])
                             for key, subvalue in subvalues.items():
-                                if key not in {'PIM_DP_IMAGE_DATA', }:
+                                if key not in {'PIM_DP_IMAGE_DATA'}:
                                     values[attr['Name'] + '|' + key] = subvalue
         except Exception:
             return xml
@@ -633,7 +638,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 format = 'JPEG'
             if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
-            if isinstance(tile, numpy.ndarray):
+            if isinstance(tile, np.ndarray):
                 format = TILE_FORMAT_NUMPY
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                     numpyAllowed, applyStyle=allowStyle, **kwargs)

@@ -89,9 +89,11 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except openslide.lowlevel.OpenSlideUnsupportedFormatError:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via OpenSlide.')
+            msg = 'File cannot be opened via OpenSlide.'
+            raise TileSourceError(msg)
         except openslide.lowlevel.OpenSlideError:
-            raise TileSourceError('File will not be opened via OpenSlide.')
+            msg = 'File will not be opened via OpenSlide.'
+            raise TileSourceError(msg)
         if libtiff_ctypes:
             try:
                 self._tiffinfo = tifftools.read_tiff(self._largeImagePath)
@@ -103,7 +105,8 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         svsAvailableLevels = self._getAvailableLevels(self._largeImagePath)
         if not len(svsAvailableLevels):
-            raise TileSourceError('OpenSlide image size is invalid.')
+            msg = 'OpenSlide image size is invalid.'
+            raise TileSourceError(msg)
         self.sizeX = svsAvailableLevels[0]['width']
         self.sizeY = svsAvailableLevels[0]['height']
         if (self.sizeX != self._openslide.dimensions[0] or
@@ -121,8 +124,8 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1
         if self.levels < 1:
-            raise TileSourceError(
-                'OpenSlide image must have at least one level.')
+            msg = 'OpenSlide image must have at least one level.'
+            raise TileSourceError(msg)
         self._svslevels = []
         # Precompute which SVS level should be used for our tile levels.  SVS
         # level 0 is the maximum resolution.  The SVS levels are in descending
@@ -158,7 +161,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceError(msg)
             self._svslevels.append({
                 'svslevel': bestlevel,
-                'scale': scale
+                'scale': scale,
             })
         self._populatedLevels = len({l['svslevel'] for l in self._svslevels})
 

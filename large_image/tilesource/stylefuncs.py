@@ -1,6 +1,6 @@
 # This module contains functions for use in styles
 
-import numpy
+import numpy as np
 
 
 def maskPixelValues(image, context, values=None, negative=None, positive=None):
@@ -23,7 +23,7 @@ def maskPixelValues(image, context, values=None, negative=None, positive=None):
     :returns: an RGBA numpy image which is exactly black or transparent white.
     """
     src = context.image
-    mask = numpy.full(src.shape[:2], False)
+    mask = np.full(src.shape[:2], False)
     for val in values:
         if not isinstance(val, (list, tuple)):
             if src.shape[-1] == 1:
@@ -31,9 +31,9 @@ def maskPixelValues(image, context, values=None, negative=None, positive=None):
             else:
                 val = [val % 256, val // 256 % 256, val // 65536 % 256]
         val = (list(val) + [255] * src.shape[2])[:src.shape[2]]
-        match = numpy.array(val)
+        match = np.array(val)
         mask = mask | (src == match).all(axis=-1)
     image[mask != True] = negative or [0, 0, 0, 255]  # noqa E712
     image[mask] = positive or [255, 255, 255, 0]
-    image = image.astype(numpy.uint8)
+    image = image.astype(np.uint8)
     return image

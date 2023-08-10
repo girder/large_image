@@ -2,7 +2,7 @@ import json
 from xml.etree import ElementTree
 
 import large_image_source_ometiff
-import numpy
+import numpy as np
 
 from large_image.constants import TILE_FORMAT_NUMPY
 from large_image.tilesource import dictToEtree, etreeToDict
@@ -71,11 +71,11 @@ def testOMETiffAre16Bit():
     imagePath = datastore.fetch('DDX58_AXL_EGFR_well2_XY01.ome.tif')
     source = large_image_source_ometiff.open(imagePath)
     tile = next(source.tileIterator(format=TILE_FORMAT_NUMPY))['tile']
-    assert tile.dtype == numpy.uint16
+    assert tile.dtype == np.uint16
     assert tile[15][15][0] == 17852
 
     region, _ = source.getRegion(format=TILE_FORMAT_NUMPY)
-    assert region.dtype == numpy.uint16
+    assert region.dtype == np.uint16
     assert region[300][300][0] == 17816
 
 
@@ -89,8 +89,8 @@ def testStyleAutoMinMax():
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
     imageB = imageB[:, :, :1]
-    assert numpy.any(image != imageB)
-    imageB = imageB.astype(numpy.uint16) * 257
+    assert np.any(image != imageB)
+    imageB = imageB.astype(np.uint16) * 257
     assert image.shape == imageB.shape
     assert image[128][128][0] < imageB[128][128][0]
     assert image[0][128][0] < imageB[0][128][0]
@@ -116,7 +116,7 @@ def testStyleFrame():
         }]}))
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
-    assert numpy.all(image == imageB)
+    assert np.all(image == imageB)
     assert image.shape == imageB.shape
     sourceC = large_image_source_ometiff.open(
         imagePath, style=json.dumps({'bands': [{
@@ -127,7 +127,7 @@ def testStyleFrame():
         }]}))
     imageC, _ = sourceC.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
-    assert numpy.any(image != imageC)
+    assert np.any(image != imageC)
     assert image.shape == imageC.shape
 
 
@@ -150,7 +150,7 @@ def testStyleFrameDelta():
         }]}))
     imageB, _ = sourceB.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=1)
-    assert numpy.any(image != imageB)
+    assert np.any(image != imageB)
     assert image.shape == imageB.shape
     sourceC = large_image_source_ometiff.open(
         imagePath, style=json.dumps({'bands': [{
@@ -161,7 +161,7 @@ def testStyleFrameDelta():
         }]}))
     imageC, _ = sourceC.getRegion(
         output={'maxWidth': 256, 'maxHeight': 256}, format=TILE_FORMAT_NUMPY, frame=2)
-    assert numpy.all(imageB == imageC)
+    assert np.all(imageB == imageC)
     assert imageB.shape == imageC.shape
 
 
@@ -182,7 +182,7 @@ def testXMLParsing():
             'IndexStride': {'IndexC': 1},
             'channelmap': {'Blue': 2, 'Green': 1, 'Red': 0},
             'channels': ['Red', 'Green', 'Blue'],
-        }
+        },
     }]
     # Create a source so we can use internal functions for testing
     imagePath = datastore.fetch('sample.ome.tif')

@@ -4,7 +4,7 @@ import math
 import os
 import threading
 
-import numpy
+import numpy as np
 import zarr
 
 import large_image
@@ -39,10 +39,12 @@ def _lazyImport():
         try:
             import tifffile
         except ImportError:
-            raise TileSourceError('tifffile module not found.')
+            msg = 'tifffile module not found.'
+            raise TileSourceError(msg)
         if not hasattr(tifffile.TiffTag, 'dtype_name') or not hasattr(tifffile.TiffPage, 'aszarr'):
             tifffile = None
-            raise TileSourceError('tifffile module is too old.')
+            msg = 'tifffile module is too old.'
+            raise TileSourceError(msg)
         logging.getLogger('tifffile.tifffile').setLevel(logging.ERROR)
 
 
@@ -103,7 +105,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
-            raise TileSourceError('File cannot be opened via tifffile.')
+            msg = 'File cannot be opened via tifffile.'
+            raise TileSourceError(msg)
         maxseries, maxsamples = self._biggestSeries()
         self.tileWidth = self.tileHeight = self._tileSize
         s = self._tf.series[maxseries]
@@ -156,7 +159,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         ex = 'no maximum series'
         try:
             for idx, s in enumerate(self._tf.series):
-                samples = numpy.prod(s.shape)
+                samples = np.prod(s.shape)
                 if samples > maxsamples and 'X' in s.axes and 'Y' in s.axes:
                     maxseries = idx
                     maxsamples = samples
@@ -205,7 +208,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'sizeX': s.shape[s.axes.index('X')], 'sizeY': s.shape[s.axes.index('Y')]})
             self.sizeX = max(self.sizeX, s.shape[s.axes.index('X')])
             self.sizeY = max(self.sizeY, s.shape[s.axes.index('Y')])
-        self._framecount = len(self._series) * numpy.prod(tuple(
+        self._framecount = len(self._series) * np.prod(tuple(
             1 if base.axes[sidx] in 'YXS' else v for sidx, v in enumerate(base.shape)))
         self._basis = {}
         basis = 1
@@ -428,7 +431,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             axes = source.axes
             if axes not in {'YXS', 'YX'}:
                 # rotate axes to YXS or YX
-                image = numpy.moveaxis(image, [
+                image = np.moveaxis(image, [
                     source.axes.index(a) for a in 'YXS' if a in source.axes
                 ], range(len(source.axes)))
             return large_image.tilesource.base._imageToPIL(image)
@@ -486,7 +489,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         tile = bza[tuple(sel)]
         # rotate
         if baxis not in {'YXS', 'YX'}:
-            tile = numpy.moveaxis(
+            tile = np.moveaxis(
                 tile, [baxis.index(a) for a in 'YXS' if a in baxis], range(len(baxis)))
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)

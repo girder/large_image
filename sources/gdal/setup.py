@@ -68,10 +68,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'gdal = large_image_source_gdal:GDALFileTileSource'
+            'gdal = large_image_source_gdal:GDALFileTileSource',
         ],
         'girder_large_image.source': [
-            'gdal = large_image_source_gdal.girder_source:GDALGirderTileSource'
-        ]
+            'gdal = large_image_source_gdal.girder_source:GDALGirderTileSource',
+        ],
     },
 )

@@ -159,7 +159,7 @@ def _postTileViaHttp(server, admin, itemId, fileId, jobAction=None, data=None, c
     """
     headers = {
         'Accept': 'application/json',
-        'Girder-Token': str(Token().createToken(admin)['_id'])
+        'Girder-Token': str(Token().createToken(admin)['_id']),
     }
     req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles' % (
         server.boundPort, itemId), headers=headers,
@@ -367,7 +367,7 @@ def testTilesFromTest(server, admin, fsAssetstore):
     params = {'encoding': 'JPEG'}
     meta = _createTestTiles(server, admin, params, {
         'tileWidth': 256, 'tileHeight': 256,
-        'sizeX': 256 * 2 ** 9, 'sizeY': 256 * 2 ** 9, 'levels': 10
+        'sizeX': 256 * 2 ** 9, 'sizeY': 256 * 2 ** 9, 'levels': 10,
     })
     _testTilesZXY(server, admin, 'test', meta, params)
     # Test most of our parameters in a single special case
@@ -378,11 +378,11 @@ def testTilesFromTest(server, admin, fsAssetstore):
         'tileHeight': 120,
         'sizeX': 5000,
         'sizeY': 3000,
-        'encoding': 'JPEG'
+        'encoding': 'JPEG',
     }
     meta = _createTestTiles(server, admin, params, {
         'tileWidth': 160, 'tileHeight': 120,
-        'sizeX': 5000, 'sizeY': 3000, 'levels': 6
+        'sizeX': 5000, 'sizeY': 3000, 'levels': 6,
     })
     meta['minLevel'] = 2
     _testTilesZXY(server, admin, 'test', meta, params)
@@ -390,7 +390,7 @@ def testTilesFromTest(server, admin, fsAssetstore):
     params = {'fractal': 'true'}
     meta = _createTestTiles(server, admin, params, {
         'tileWidth': 256, 'tileHeight': 256,
-        'sizeX': 256 * 2 ** 9, 'sizeY': 256 * 2 ** 9, 'levels': 10
+        'sizeX': 256 * 2 ** 9, 'sizeY': 256 * 2 ** 9, 'levels': 10,
     })
     _testTilesZXY(server, admin, 'test', meta, params, utilities.PNGHeader)
     # Test that the fractal isn't the same as the non-fractal
@@ -416,7 +416,7 @@ def testTilesFromTest(server, admin, fsAssetstore):
         _createTestTiles(server, admin, {key: badParams[key]}, error=err)
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):
@@ -467,7 +467,7 @@ def testTilesFromPNG(boundServer, admin, fsAssetstore, girderWorker):
     assert 'No large image file' in resp.json['message']
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):
@@ -493,7 +493,7 @@ def testTilesDeleteJob(boundServer, admin, fsAssetstore, girderWorker):
     assert tileMetadata['levels'] == 7
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):
@@ -513,7 +513,7 @@ def testTilesFromGreyscale(boundServer, admin, fsAssetstore, girderWorker):
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromUnicodeName(boundServer, admin, fsAssetstore, girderWorker):
@@ -565,7 +565,7 @@ def testTilesWithUnicodeName(server, admin, fsAssetstore):
     assert tileMetadata['sizeY'] == 12288
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromBadFiles(boundServer, admin, fsAssetstore, girderWorker):
@@ -975,14 +975,14 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
     assert 'Width="%d"' % tileMetadata['sizeX'] in xml
     assert 'Overlap="0"' in xml
     resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
-        'overlap': 4
+        'overlap': 4,
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     xml = utilities.getBody(resp)
     assert 'Width="%d"' % tileMetadata['sizeX'] in xml
     assert 'Overlap="4"' in xml
     resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
-        'encoding': 'PNG'
+        'encoding': 'PNG',
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
@@ -992,37 +992,37 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
     assert height == 48
     resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
         'encoding': 'PNG',
-        'overlap': 4
+        'overlap': 4,
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     assert utilities.getBody(resp, text=False) == image
     # Test bad queries
     resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
-        'encoding': 'TIFF'
+        'encoding': 'TIFF',
     }, user=admin)
     assert utilities.respStatus(resp) == 400
     resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
-        'tilesize': 128
+        'tilesize': 128,
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
-        'tilesize': 129
+        'tilesize': 129,
     }, user=admin)
     assert utilities.respStatus(resp) == 400
     resp = server.request(path='/item/%s/tiles/dzi.dzi' % itemId, params={
-        'overlap': -1
+        'overlap': -1,
     }, user=admin)
     assert utilities.respStatus(resp) == 400
     resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
-        'tilesize': 128
+        'tilesize': 128,
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
-        'tilesize': 129
+        'tilesize': 129,
     }, user=admin)
     assert utilities.respStatus(resp) == 400
     resp = server.request(path='/item/%s/tiles/dzi_files/8/0_0.png' % itemId, params={
-        'overlap': -1
+        'overlap': -1,
     }, user=admin)
     assert utilities.respStatus(resp) == 400
     resp = server.request(path='/item/%s/tiles/dzi_files/0/0_0.png' % itemId, user=admin)
@@ -1036,7 +1036,7 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
     # Test tile sizes
     resp = server.request(path='/item/%s/tiles/dzi_files/12/0_0.png' % itemId, params={
         'encoding': 'PNG',
-        'overlap': 4
+        'overlap': 4,
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
@@ -1045,7 +1045,7 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
     assert height == 260
     resp = server.request(path='/item/%s/tiles/dzi_files/12/0_1.png' % itemId, params={
         'encoding': 'PNG',
-        'overlap': 4
+        'overlap': 4,
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
@@ -1054,7 +1054,7 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
     assert height == 264
     resp = server.request(path='/item/%s/tiles/dzi_files/12/2_1.png' % itemId, params={
         'encoding': 'PNG',
-        'overlap': 4
+        'overlap': 4,
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
@@ -1063,7 +1063,7 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
     assert height == 264
     resp = server.request(path='/item/%s/tiles/dzi_files/12/14_2.png' % itemId, params={
         'encoding': 'PNG',
-        'overlap': 4
+        'overlap': 4,
     }, user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
@@ -1072,7 +1072,7 @@ def testTilesDZIEndpoints(server, admin, fsAssetstore):
     assert height == 260
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesAfterCopyItem(boundServer, admin, fsAssetstore, girderWorker):
@@ -1287,7 +1287,7 @@ def testTilesBandInformationWithFrames(server, admin, fsAssetstore):
     assert resp != resp2
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker):
@@ -1307,7 +1307,7 @@ def testTilesFromMultipleDotName(boundServer, admin, fsAssetstore, girderWorker)
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):
@@ -1325,7 +1325,7 @@ def testTilesForcedConversion(boundServer, admin, fsAssetstore, girderWorker):
     assert item['largeImage']['fileId'] != fileId
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesFromWithOptions(boundServer, admin, fsAssetstore, girderWorker):
@@ -1348,7 +1348,7 @@ def testTilesConvertLocal(boundServer, admin, fsAssetstore):
 
     headers = {
         'Accept': 'application/json',
-        'Girder-Token': str(Token().createToken(admin)['_id'])
+        'Girder-Token': str(Token().createToken(admin)['_id']),
     }
     req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles/convert' % (
         boundServer.boundPort, itemId), headers=headers)
@@ -1371,7 +1371,7 @@ def testTilesConvertLocal(boundServer, admin, fsAssetstore):
     _testTilesZXY(boundServer, admin, itemId, tileMetadata)
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testTilesConvertRemote(boundServer, admin, fsAssetstore, girderWorker):
@@ -1380,7 +1380,7 @@ def testTilesConvertRemote(boundServer, admin, fsAssetstore, girderWorker):
 
     headers = {
         'Accept': 'application/json',
-        'Girder-Token': str(Token().createToken(admin)['_id'])
+        'Girder-Token': str(Token().createToken(admin)['_id']),
     }
     req = requests.post('http://127.0.0.1:%d/api/v1/item/%s/tiles/convert' % (
         boundServer.boundPort, itemId), headers=headers,

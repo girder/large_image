@@ -23,7 +23,7 @@ import time
 
 import cherrypy
 import jsonschema
-import numpy
+import numpy as np
 from bson import ObjectId
 from girder_large_image import constants
 from girder_large_image.models.image_item import ImageItem
@@ -61,25 +61,25 @@ class AnnotationSchema:
         'type': 'array',
         # TODO: validate that z==0 for now
         'items': {
-            'type': 'number'
+            'type': 'number',
         },
         'minItems': 3,
         'maxItems': 3,
         'name': 'Coordinate',
         # TODO: define origin for 3D images
         'description': 'An X, Y, Z coordinate tuple, in base layer pixel '
-                       'coordinates, where the origin is the upper-left.'
+                       'coordinates, where the origin is the upper-left.',
     }
     coordValueSchema = {
         'type': 'array',
         'items': {
-            'type': 'number'
+            'type': 'number',
         },
         'minItems': 4,
         'maxItems': 4,
         'name': 'CoordinateWithValue',
         'description': 'An X, Y, Z, value coordinate tuple, in base layer '
-                       'pixel coordinates, where the origin is the upper-left.'
+                       'pixel coordinates, where the origin is the upper-left.',
     }
 
     colorSchema = {
@@ -113,7 +113,7 @@ class AnnotationSchema:
 
     userSchema = {
         'type': 'object',
-        'additionalProperties': True
+        'additionalProperties': True,
     }
 
     labelSchema = {
@@ -123,7 +123,7 @@ class AnnotationSchema:
             'visibility': {
                 'type': 'string',
                 # TODO: change to True, False, None?
-                'enum': ['hidden', 'always', 'onhover']
+                'enum': ['hidden', 'always', 'onhover'],
             },
             'fontSize': {
                 'type': 'number',
@@ -132,7 +132,7 @@ class AnnotationSchema:
             'color': colorSchema,
         },
         'required': ['value'],
-        'additionalProperties': False
+        'additionalProperties': False,
     }
 
     groupSchema = {'type': 'string'}
@@ -148,17 +148,17 @@ class AnnotationSchema:
             # schema free field for users to extend annotations
             'user': userSchema,
             'label': labelSchema,
-            'group': groupSchema
+            'group': groupSchema,
         },
         'required': ['type'],
-        'additionalProperties': True
+        'additionalProperties': True,
     }
     baseShapeSchema = extendSchema(baseElementSchema, {
         'properties': {
             'lineColor': colorSchema,
             'lineWidth': {
                 'type': 'number',
-                'minimum': 0
+                'minimum': 0,
             },
         },
     })
@@ -167,20 +167,20 @@ class AnnotationSchema:
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['point']
+                'enum': ['point'],
             },
             'center': coordSchema,
-            'fillColor': colorSchema
+            'fillColor': colorSchema,
         },
         'required': ['type', 'center'],
-        'additionalProperties': False
+        'additionalProperties': False,
     })
 
     arrowShapeSchema = extendSchema(baseShapeSchema, {
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['arrow']
+                'enum': ['arrow'],
             },
             'points': {
                 'type': 'array',
@@ -188,35 +188,35 @@ class AnnotationSchema:
                 'minItems': 2,
                 'maxItems': 2,
             },
-            'fillColor': colorSchema
+            'fillColor': colorSchema,
         },
         'description': 'The first point is the head of the arrow',
         'required': ['type', 'points'],
-        'additionalProperties': False
+        'additionalProperties': False,
     })
 
     circleShapeSchema = extendSchema(baseShapeSchema, {
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['circle']
+                'enum': ['circle'],
             },
             'center': coordSchema,
             'radius': {
                 'type': 'number',
-                'minimum': 0
+                'minimum': 0,
             },
-            'fillColor': colorSchema
+            'fillColor': colorSchema,
         },
         'required': ['type', 'center', 'radius'],
-        'additionalProperties': False
+        'additionalProperties': False,
     })
 
     polylineShapeSchema = extendSchema(baseShapeSchema, {
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['polyline']
+                'enum': ['polyline'],
             },
             'points': {
                 'type': 'array',
@@ -227,7 +227,7 @@ class AnnotationSchema:
             'closed': {
                 'type': 'boolean',
                 'description': 'polyline is open if closed flag is '
-                               'not specified'
+                               'not specified',
             },
             'holes': {
                 'type': 'array',
@@ -244,7 +244,7 @@ class AnnotationSchema:
             },
         },
         'required': ['type', 'points'],
-        'additionalProperties': False
+        'additionalProperties': False,
     })
 
     baseRectangleShapeSchema = extendSchema(baseShapeSchema, {
@@ -253,18 +253,18 @@ class AnnotationSchema:
             'center': coordSchema,
             'width': {
                 'type': 'number',
-                'minimum': 0
+                'minimum': 0,
             },
             'height': {
                 'type': 'number',
-                'minimum': 0
+                'minimum': 0,
             },
             'rotation': {
                 'type': 'number',
                 'description': 'radians counterclockwise around normal',
             },
             'normal': coordSchema,
-            'fillColor': colorSchema
+            'fillColor': colorSchema,
         },
         'decription': 'normal is the positive z-axis unless otherwise '
                       'specified',
@@ -275,24 +275,24 @@ class AnnotationSchema:
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['rectangle']
+                'enum': ['rectangle'],
             },
         },
-        'additionalProperties': False
+        'additionalProperties': False,
     })
     rectangleGridShapeSchema = extendSchema(baseRectangleShapeSchema, {
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['rectanglegrid']
+                'enum': ['rectanglegrid'],
             },
             'widthSubdivisions': {
                 'type': 'integer',
-                'minimum': 1
+                'minimum': 1,
             },
             'heightSubdivisions': {
                 'type': 'integer',
-                'minimum': 1
+                'minimum': 1,
             },
         },
         'required': ['type', 'widthSubdivisions', 'heightSubdivisions'],
@@ -302,18 +302,18 @@ class AnnotationSchema:
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['ellipse']
+                'enum': ['ellipse'],
             },
         },
         'required': ['type'],
-        'additionalProperties': False
+        'additionalProperties': False,
     })
 
     heatmapSchema = extendSchema(baseElementSchema, {
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['heatmap']
+                'enum': ['heatmap'],
             },
             'points': {
                 'type': 'array',
@@ -337,8 +337,8 @@ class AnnotationSchema:
                 'type': 'boolean',
                 'description':
                     'If true, scale the size of points with the '
-                    'zoom level of the map.'
-            }
+                    'zoom level of the map.',
+            },
         },
         'required': ['type', 'points'],
         'additionalProperties': False,
@@ -351,7 +351,7 @@ class AnnotationSchema:
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['griddata']
+                'enum': ['griddata'],
             },
             'origin': coordSchema,
             'dx': {
@@ -376,7 +376,7 @@ class AnnotationSchema:
             },
             'interpretation': {
                 'type': 'string',
-                'enum': ['heatmap', 'contour', 'choropleth']
+                'enum': ['heatmap', 'contour', 'choropleth'],
             },
             'radius': {
                 'type': 'number',
@@ -412,32 +412,32 @@ class AnnotationSchema:
         'items': {
             'type': 'array',
             'minItems': 2,
-            'maxItems': 2
+            'maxItems': 2,
         },
         'minItems': 2,
         'maxItems': 2,
         'description': 'A 2D matrix representing the transform of an '
-                       'image overlay.'
+                       'image overlay.',
     }
 
     overlaySchema = extendSchema(baseElementSchema, {
         'properties': {
             'type': {
                 'type': 'string',
-                'enum': ['image']
+                'enum': ['image'],
             },
             'girderId': {
                 'type': 'string',
                 'pattern': '^[0-9a-f]{24}$',
                 'description': 'Girder item ID containing the image to '
-                               'overlay.'
+                               'overlay.',
             },
             'opacity': {
                 'type': 'number',
                 'minimum': 0,
                 'maximum': 1,
                 'description': 'Default opacity for this image overlay. Must '
-                               'be between 0 and 1. Defaults to 1.'
+                               'be between 0 and 1. Defaults to 1.',
             },
             'hasAlpha': {
                 'type': 'boolean',
@@ -452,14 +452,14 @@ class AnnotationSchema:
                                'an X offset and a Y offset.',
                 'properties': {
                     'xoffset': {
-                        'type': 'number'
+                        'type': 'number',
                     },
                     'yoffset': {
-                        'type': 'number'
+                        'type': 'number',
                     },
-                    'matrix': transformArray
+                    'matrix': transformArray,
                 },
-            }
+            },
         },
         'required': ['girderId', 'type'],
         'additionalProperties': False,
@@ -475,13 +475,13 @@ class AnnotationSchema:
                 'type': 'string',
                 'description': 'A string representing the semantic '
                                'meaning of regions of the map with '
-                               'the corresponding color.'
+                               'the corresponding color.',
             },
             'description': {
                 'type': 'string',
                 'description': 'A more detailed explanation of the '
-                               'meaining of this category.'
-            }
+                               'meaining of this category.',
+            },
         },
         'required': ['fillColor'],
         'additionalProperties': False,
@@ -500,7 +500,7 @@ class AnnotationSchema:
                                'correspond to pixel values in the '
                                'pixel map image and the values are '
                                'used to look up the appropriate '
-                               'color in the categories property.'
+                               'color in the categories property.',
             },
             'categories': {
                 'type': 'array',
@@ -508,7 +508,7 @@ class AnnotationSchema:
                 'description': 'An array used to map between the '
                                'values array and color values. '
                                'Can also contain semantic '
-                               'information for color values.'
+                               'information for color values.',
             },
             'boundaries': {
                 'type': 'boolean',
@@ -518,7 +518,7 @@ class AnnotationSchema:
                                'of each superpixel. If true, the '
                                'length of the values array should be '
                                'half of the maximum value in the '
-                               'pixelmap.'
+                               'pixelmap.',
 
             },
         },
@@ -545,7 +545,7 @@ class AnnotationSchema:
             rectangleGridShapeSchema,
             overlaySchema,
             pixelmapSchema,
-        ]
+        ],
     }
 
     annotationSchema = {
@@ -563,7 +563,7 @@ class AnnotationSchema:
                 'additionalProperties': True,
                 'title': 'Image Attributes',
                 'description': 'Subjective things that apply to the entire '
-                               'image.'
+                               'image.',
             },
             'elements': {
                 'type': 'array',
@@ -572,10 +572,10 @@ class AnnotationSchema:
                 # they are not set, we assign them from Mongo.
                 'title': 'Image Markup',
                 'description': 'Subjective things that apply to a '
-                               'spatial region.'
-            }
+                               'spatial region.',
+            },
         },
-        'additionalProperties': False
+        'additionalProperties': False,
     }
 
 
@@ -611,7 +611,7 @@ class Annotation(AccessControlledModel):
         'updatedId',
         'public',
         'publicFlags',
-        'groups'
+        'groups',
         # 'skill',
         # 'startTime'
         # 'stopTime'
@@ -960,7 +960,7 @@ class Annotation(AccessControlledModel):
 
         logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
         events.trigger('large_image.annotations.save_history', {
-            'annotation': annotation
+            'annotation': annotation,
         }, asynchronous=True)
         return result
 
@@ -1082,7 +1082,7 @@ class Annotation(AccessControlledModel):
                     try:
                         # Check if the entire array converts in an obvious
                         # manner
-                        numpy.array(element[key], dtype=float)
+                        np.array(element[key], dtype=float)
                         keys[key] = element[key]
                         element[key] = element[key][:VALIDATE_ARRAY_LENGTH]
                     except Exception:
@@ -1091,7 +1091,7 @@ class Annotation(AccessControlledModel):
                     key = 'holes'
                     try:
                         for h in element['holes']:
-                            numpy.array(h, dtype=float)
+                            np.array(h, dtype=float)
                         keys[key] = element[key]
                         element[key] = []
                     except Exception:
@@ -1118,7 +1118,8 @@ class Annotation(AccessControlledModel):
         elementIds = [entry['id'] for entry in
                       doc['annotation'].get('elements', []) if 'id' in entry]
         if len(set(elementIds)) != len(elementIds):
-            raise ValidationException('Annotation Element IDs are not unique')
+            msg = 'Annotation Element IDs are not unique'
+            raise ValidationException(msg)
         return doc
 
     def versionList(self, annotationId, user=None, limit=0, offset=0,
@@ -1168,7 +1169,7 @@ class Annotation(AccessControlledModel):
             annotationId = ObjectId(annotationId)
         entry = self.findOne({
             '$or': [{'_id': annotationId}, {'_annotationId': annotationId}],
-            '_version': int(version)
+            '_version': int(version),
         }, fields=['_id'])
         if not entry:
             return None
@@ -1266,12 +1267,12 @@ class Annotation(AccessControlledModel):
         if 'groups' not in annotation:
             annotation['groups'] = Annotationelement().getElementGroupSet(annotation)
             query = {
-                '_id': ObjectId(annotation['_id'])
+                '_id': ObjectId(annotation['_id']),
             }
             update = {
                 '$set': {
-                    'groups': annotation['groups']
-                }
+                    'groups': annotation['groups'],
+                },
             }
             self.collection.update_one(query, update)
         return annotation
@@ -1306,10 +1307,12 @@ class Annotation(AccessControlledModel):
             of any annotation, regardless of age.
         """
         if (remove and minAgeInDays < 7) or minAgeInDays < 0:
-            raise ValidationException('minAgeInDays must be >= 7')
+            msg = 'minAgeInDays must be >= 7'
+            raise ValidationException(msg)
         age = datetime.datetime.utcnow() + datetime.timedelta(-minAgeInDays)
         if keepInactiveVersions < 0:
-            raise ValidationException('keepInactiveVersions mist be non-negative')
+            msg = 'keepInactiveVersions mist be non-negative'
+            raise ValidationException(msg)
         report = {'fromDeletedItems': 0, 'oldVersions': 0, 'active': 0, 'recentVersions': 0}
         if remove:
             report['removedVersions'] = 0

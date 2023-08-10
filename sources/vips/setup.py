@@ -68,10 +68,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'vips = large_image_source_vips:VipsFileTileSource'
+            'vips = large_image_source_vips:VipsFileTileSource',
         ],
         'girder_large_image.source': [
-            'vips = large_image_source_vips.girder_source:VipsGirderTileSource'
-        ]
+            'vips = large_image_source_vips.girder_source:VipsGirderTileSource',
+        ],
     },
 )

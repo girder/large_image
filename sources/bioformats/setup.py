@@ -66,10 +66,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'bioformats = large_image_source_bioformats:BioformatsFileTileSource'
+            'bioformats = large_image_source_bioformats:BioformatsFileTileSource',
         ],
         'girder_large_image.source': [
-            'bioformats = large_image_source_bioformats.girder_source:BioformatsGirderTileSource'
-        ]
+            'bioformats = large_image_source_bioformats.girder_source:BioformatsGirderTileSource',
+        ],
     },
 )

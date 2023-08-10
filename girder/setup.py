@@ -73,6 +73,6 @@ setup(
     entry_points={
         'girder.plugin': [
             'large_image = girder_large_image:LargeImagePlugin',
-        ]
+        ],
     },
 )

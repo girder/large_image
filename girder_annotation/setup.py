@@ -71,7 +71,7 @@ setup(
     zip_safe=False,
     entry_points={
         'girder.plugin': [
-            'large_image_annotation = girder_large_image_annotation:LargeImageAnnotationPlugin'
-        ]
+            'large_image_annotation = girder_large_image_annotation:LargeImageAnnotationPlugin',
+        ],
     },
 )

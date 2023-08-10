@@ -66,10 +66,10 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'large_image.source': [
-            'pil = large_image_source_pil:PILFileTileSource'
+            'pil = large_image_source_pil:PILFileTileSource',
         ],
         'girder_large_image.source': [
-            'pil = large_image_source_pil.girder_source:PILGirderTileSource'
-        ]
+            'pil = large_image_source_pil.girder_source:PILGirderTileSource',
+        ],
     },
 )

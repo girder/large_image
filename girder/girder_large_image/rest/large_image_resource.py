@@ -240,7 +240,7 @@ class LargeImageResource(Resource):
         self.route('DELETE', ('tiles', 'incomplete'), self.deleteIncompleteTiles)
 
     @describeRoute(
-        Description('Clear tile source caches to release resources and file handles.')
+        Description('Clear tile source caches to release resources and file handles.'),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def cacheClear(self, params):
@@ -258,14 +258,14 @@ class LargeImageResource(Resource):
         return {'cacheCleared': datetime.datetime.utcnow(), 'before': before, 'after': after}
 
     @describeRoute(
-        Description('Get information on caches.')
+        Description('Get information on caches.'),
     )
     @access.admin(scope=TokenScope.DATA_READ)
     def cacheInfo(self, params):
         return cache_util.cachesInfo()
 
     @describeRoute(
-        Description('Get public settings for large image display.')
+        Description('Get public settings for large image display.'),
     )
     @access.public(scope=TokenScope.DATA_READ)
     def getPublicSettings(self, params):
@@ -280,7 +280,7 @@ class LargeImageResource(Resource):
         .param('spec', 'A JSON list of thumbnail specifications to count.  '
                'If empty, all cached thumbnails are counted.  The '
                'specifications typically include width, height, encoding, and '
-               'encoding options.', required=False)
+               'encoding options.', required=False),
     )
     @access.admin(scope=TokenScope.DATA_READ)
     def countThumbnails(self, params):
@@ -291,7 +291,7 @@ class LargeImageResource(Resource):
                     'large_image items.')
         .param('imageKey', 'If specific, only include images with the '
                'specified key', required=False)
-        .notes('The imageKey can also be "tileFrames".')
+        .notes('The imageKey can also be "tileFrames".'),
     )
     @access.admin(scope=TokenScope.DATA_READ)
     def countAssociatedImages(self, params):
@@ -303,9 +303,10 @@ class LargeImageResource(Resource):
             try:
                 spec = json.loads(spec)
                 if not isinstance(spec, list):
-                    raise ValueError()
+                    raise ValueError
             except ValueError:
-                raise RestException('The spec parameter must be a JSON list.')
+                msg = 'The spec parameter must be a JSON list.'
+                raise RestException(msg)
             spec = [json.dumps(entry, sort_keys=True, separators=(',', ':'))
                     for entry in spec]
         else:
@@ -339,7 +340,7 @@ class LargeImageResource(Resource):
                dataType='float')
         .param('concurrent', 'The number of concurrent threads to use when '
                'making thumbnails.  0 or unspecified to base this on the '
-               'number of reported cpus.', required=False, dataType='int')
+               'number of reported cpus.', required=False, dataType='int'),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def createThumbnails(self, params):
@@ -347,13 +348,15 @@ class LargeImageResource(Resource):
         try:
             spec = json.loads(params['spec'])
             if not isinstance(spec, list):
-                raise ValueError()
+                raise ValueError
         except ValueError:
-            raise RestException('The spec parameter must be a JSON list.')
+            msg = 'The spec parameter must be a JSON list.'
+            raise RestException(msg)
         maxThumbnailFiles = int(Setting().get(
             constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES))
         if maxThumbnailFiles <= 0:
-            raise RestException('Thumbnail files are not enabled.')
+            msg = 'Thumbnail files are not enabled.'
+            raise RestException(msg)
         jobKwargs = {'spec': spec}
         if params.get('logInterval') is not None:
             jobKwargs['logInterval'] = float(params['logInterval'])
@@ -377,7 +380,7 @@ class LargeImageResource(Resource):
         .param('spec', 'A JSON list of thumbnail specifications to delete.  '
                'If empty, all cached thumbnails are deleted.  The '
                'specifications typically include width, height, encoding, and '
-               'encoding options.', required=False)
+               'encoding options.', required=False),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteThumbnails(self, params):
@@ -386,7 +389,7 @@ class LargeImageResource(Resource):
     @describeRoute(
         Description('Delete cached associated image files from large_image items.')
         .param('imageKey', 'If specific, only include images with the '
-               'specified key', required=False)
+               'specified key', required=False),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteAssociatedImages(self, params):
@@ -398,9 +401,10 @@ class LargeImageResource(Resource):
             try:
                 spec = json.loads(spec)
                 if not isinstance(spec, list):
-                    raise ValueError()
+                    raise ValueError
             except ValueError:
-                raise RestException('The spec parameter must be a JSON list.')
+                msg = 'The spec parameter must be a JSON list.'
+                raise RestException(msg)
             spec = [json.dumps(entry, sort_keys=True, separators=(',', ':'))
                     for entry in spec]
         else:
@@ -426,7 +430,7 @@ class LargeImageResource(Resource):
         .notes('This is used to clean up all large image conversion jobs that '
                'have failed to complete.  If a job is in progress, it will be '
                'cancelled.  The return value is the number of items that were '
-               'adjusted.')
+               'adjusted.'),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteIncompleteTiles(self, params):
@@ -452,7 +456,7 @@ class LargeImageResource(Resource):
         Description('List all Girder tile sources with associated extensions, '
                     'mime types, and versions.  Lower values indicate a '
                     'higher priority for an extension or mime type with that '
-                    'source.')
+                    'source.'),
     )
     @access.public(scope=TokenScope.DATA_READ)
     def listSources(self, params):
@@ -474,7 +478,7 @@ class LargeImageResource(Resource):
         return results
 
     @describeRoute(
-        Description('Count the number of cached histograms for large_image items.')
+        Description('Count the number of cached histograms for large_image items.'),
     )
     @access.admin(scope=TokenScope.DATA_READ)
     def countHistograms(self, params):
@@ -487,7 +491,7 @@ class LargeImageResource(Resource):
         return count
 
     @describeRoute(
-        Description('Delete cached histograms from large_image items.')
+        Description('Delete cached histograms from large_image items.'),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteHistograms(self, params):
@@ -562,7 +566,7 @@ class LargeImageResource(Resource):
         Description('Validate a Girder config file')
         .notes('Returns a list of errors found.')
         .param('config', 'The contents of config file to validate.',
-               paramType='body')
+               paramType='body'),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def configValidate(self, config):
@@ -572,7 +576,7 @@ class LargeImageResource(Resource):
     @autoDescribeRoute(  # noqa
         Description('Reformat a Girder config file')
         .param('config', 'The contents of config file to format.',
-               paramType='body')
+               paramType='body'),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def configFormat(self, config):  # noqa
@@ -628,13 +632,14 @@ class LargeImageResource(Resource):
         .param('restart', 'Whether to restart the server after updating the '
                'config file', required=False, dataType='boolean', default=True)
         .param('config', 'The new contents of config file.',
-               paramType='body')
+               paramType='body'),
     )
     @access.admin(scope=TokenScope.USER_AUTH)
     def configReplace(self, config, restart):
         config = config.read().decode('utf8')
         if len(self._configValidate(config)):
-            raise RestException('Invalid config file')
+            msg = 'Invalid config file'
+            raise RestException(msg)
         path = os.path.join(os.path.expanduser('~'), '.girder', 'girder.cfg')
         if 'GIRDER_CONFIG' in os.environ:
             path = os.environ['GIRDER_CONFIG']

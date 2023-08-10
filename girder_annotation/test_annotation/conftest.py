@@ -14,13 +14,13 @@ def unbindGirderEventsByHandlerName(handlerName):
         events.unbind(eventName, handlerName)
 
 
-@pytest.fixture
+@pytest.fixture()
 def unbindLargeImage(db):
     yield True
     unbindGirderEventsByHandlerName('large_image')
 
 
-@pytest.fixture
+@pytest.fixture()
 def unbindAnnotation(db):
     yield True
     unbindGirderEventsByHandlerName('large_image_annotation')

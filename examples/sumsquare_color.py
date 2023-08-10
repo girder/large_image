@@ -3,7 +3,7 @@
 
 import argparse
 
-import numpy
+import numpy as np
 
 import large_image
 
@@ -33,12 +33,12 @@ def sum_squares(imagePath, magnification=None, **kwargs):
             tile['tile_overlap']['left']:
                 data.shape[1] - tile['tile_overlap']['right'],
             :]
-        sumsq = numpy.sum(data**2, axis=(0, 1))
+        sumsq = np.sum(data**2, axis=(0, 1))
         tileSumSquares.append(sumsq)
         print('x: %d  y: %d  w: %d  h: %d  mag: %g  sums: %d %d %d' % (
             tile['x'], tile['y'], tile['width'], tile['height'],
             tile['magnification'], sumsq[0], sumsq[1], sumsq[2]))
-    sumsq = numpy.sum(tileSumSquares, axis=0)
+    sumsq = np.sum(tileSumSquares, axis=0)
     print('Sum of squares: %d %d %d' % (sumsq[0], sumsq[1], sumsq[2]))
     return sumsq
 

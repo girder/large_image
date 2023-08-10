@@ -112,9 +112,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 try:
                     self.dataset = rio.open(self._largeImagePath)
                 except RasterioIOError:
-                    raise TileSourceError('File cannot be opened via rasterio.')
+                    msg = 'File cannot be opened via rasterio.'
+                    raise TileSourceError(msg)
                 if self.dataset.driver == 'netCDF':
-                    raise TileSourceError('netCDF file will not be read via rasterio source.')
+                    msg = 'netCDF file will not be read via rasterio source.'
+                    raise TileSourceError(msg)
 
         # extract default parameters from the image
         self.tileSize = 256
@@ -139,10 +141,9 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # i.e. we don't know where to place it on a map
         isProjected = self.projection or self.dataset.driver.lower() in {'png'}
         if isProjected and not scale:
-            raise TileSourceError(
-                'File does not have a projected scale, '
-                'so will not be opened via rasterio with a projection.'
-            )
+            msg = ('File does not have a projected scale, so will not be '
+                   'opened via rasterio with a projection.')
+            raise TileSourceError(msg)
 
         # set the levels of the tiles
         logX = math.log(float(self.sizeX) / self.tileWidth)
@@ -201,7 +202,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                         'right': bounds['xmax'],
                         'bottom': bounds['ymin'],
                         'units': 'projection',
-                    }
+                    },
                 }
             super(RasterioFileTileSource, RasterioFileTileSource)._scanForMinMax(
                 self,
@@ -233,16 +234,15 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # Since we already converted to bytes decoding is safe here
         dstCrs = self.projection
         if dstCrs.is_geographic:
-            raise TileSourceError(
-                'Projection must not be geographic (it needs to use linear '
-                'units, not longitude/latitude).'
-            )
+            msg = ('Projection must not be geographic (it needs to use linear '
+                   'units, not longitude/latitude).')
+            raise TileSourceError(msg)
 
         if unitsPerPixel is not None:
             self.unitsAcrossLevel0 = float(unitsPerPixel) * self.tileSize
         else:
             self.unitsAcrossLevel0 = ProjUnitsAcrossLevel0.get(
-                self.projection.to_string()
+                self.projection.to_string(),
             )
             if self.unitsAcrossLevel0 is None:
                 # If unitsPerPixel is not specified, the horizontal distance
@@ -252,9 +252,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 west, _ = warp.transform(srcCrs, dstCrs, [180], [0])
                 self.unitsAcrossLevel0 = abs(east[0] - west[0])
                 if not self.unitsAcrossLevel0:
-                    raise TileSourceError(
-                        'unitsPerPixel must be specified for this projection'
-                    )
+                    msg = 'unitsPerPixel must be specified for this projection'
+                    raise TileSourceError(msg)
                 if len(ProjUnitsAcrossLevel0) >= ProjUnitsAcrossLevel0_MaxSize:
                     ProjUnitsAcrossLevel0.clear()
 
@@ -584,7 +583,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             ):
                 pilimg = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
                 return self._outputTile(
-                    pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs
+                    pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs,
                 )
 
             xres = (xmax - xmin) / self.tileWidth
@@ -618,11 +617,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             tile = np.moveaxis(tile, 0, 2)
 
         return self._outputTile(
-            tile, TILE_FORMAT_NUMPY, x, y, z, pilImageAllowed, numpyAllowed, **kwargs
+            tile, TILE_FORMAT_NUMPY, x, y, z, pilImageAllowed, numpyAllowed, **kwargs,
         )
 
     def _convertProjectionUnits(
-        self, left, top, right, bottom, width=None, height=None, units='base_pixels', **kwargs
+        self, left, top, right, bottom, width=None, height=None, units='base_pixels', **kwargs,
     ):
         """Convert projection units.
 
@@ -657,16 +656,15 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         # raise error if we didn't build one of the coordinates
         if (left is None and right is None) or (top is None and bottom is None):
-            raise TileSourceError(
-                'Cannot convert from projection unless at least one of '
-                'left and right and at least one of top and bottom is '
-                'specified.'
-            )
+            msg = ('Cannot convert from projection unless at least one of '
+                   'left and right and at least one of top and bottom is '
+                   'specified.')
+            raise TileSourceError(msg)
 
         # compute the pixel coordinates of the corners if no projection is set
         if not self.projection:
             pleft, ptop = self.toNativePixelCoordinates(
-                right if left is None else left, bottom if top is None else top, units
+                right if left is None else left, bottom if top is None else top, units,
             )
             pright, pbottom = self.toNativePixelCoordinates(
                 left if right is None else right,
@@ -744,7 +742,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # convert the coordinates if a projection exist
         if isUnits and isProj:
             left, top, right, bottom, units = self._convertProjectionUnits(
-                left, top, right, bottom, width, height, units, **kwargs
+                left, top, right, bottom, width, height, units, **kwargs,
             )
 
         if units == 'projection' and self.projection:
@@ -786,7 +784,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             units = 'base_pixels'
 
         return super()._getRegionBounds(
-            metadata, left, top, right, bottom, width, height, units, **kwargs
+            metadata, left, top, right, bottom, width, height, units, **kwargs,
         )
 
     def pixelToProjection(self, x, y, level=None):
@@ -880,7 +878,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                         window = rio.windows.Window(int(x), int(y), 1, 1)
                         try:
                             value = self.dataset.read(
-                                i, window=window, resampling=Resampling.nearest
+                                i, window=window, resampling=Resampling.nearest,
                             )
                             value = value[0][0]  # there should be 1 single pixel
                             pixel.setdefault('bands', {})[i] = value.item()
@@ -913,8 +911,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         if self.projection is None:
             if kwargs.get('encoding') == 'TILED':
-                raise NotImplementedError(
-                    'getRegion() with TILED output can only be used with a projection.')
+                msg = 'getRegion() with TILED output can only be used with a projection.'
+                raise NotImplementedError(msg)
             return super().getRegion(format, **kwargs)
 
         # The tile iterator handles determining the output region
@@ -937,7 +935,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         height = iterInfo['output']['height']
 
         with self._getDatasetLock, tempfile.NamedTemporaryFile(
-            suffix='.tiff', prefix='tiledGeoRegion_', delete=False
+            suffix='.tiff', prefix='tiledGeoRegion_', delete=False,
         ) as output:
 
             xres = (right - left) / width
@@ -952,13 +950,13 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 height=height,
                 width=width,
             ) as vrt:
-                data = vrt.read(resampling=Resampling.nearest,)
+                data = vrt.read(resampling=Resampling.nearest)
 
             profile = self.dataset.meta.copy()
             profile.update(
                 large_image.tilesource.utilities._rasterioParameters(
-                    defaultCompression='lzw', **kwargs
-                )
+                    defaultCompression='lzw', **kwargs,
+                ),
             )
             profile.update({
                 'crs': self.projection,
@@ -992,7 +990,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         try:
             from rio_cogeo.cogeo import cog_validate
         except ImportError:
-            raise ImportError('Please install `rio-cogeo` to check COG validity.')
+            msg = 'Please install `rio-cogeo` to check COG validity.'
+            raise ImportError(msg)
 
         isValid, errors, warnings = cog_validate(self._largeImagePath, strict=strict)
 

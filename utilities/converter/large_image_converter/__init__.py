@@ -11,7 +11,7 @@ import threading
 import time
 from tempfile import TemporaryDirectory
 
-import numpy
+import numpy as np
 import psutil
 import tifftools
 
@@ -329,8 +329,8 @@ def _convert_to_jp2k_tile(lock, fptr, dest, offset, length, shape, dtype, jp2kar
     with lock:
         fptr.seek(offset)
         data = fptr.read(length)
-    data = numpy.frombuffer(data, dtype=dtype)
-    data = numpy.reshape(data, shape)
+    data = np.frombuffer(data, dtype=dtype)
+    data = np.reshape(data, shape)
     glymur.Jp2k(dest, data=data, **jp2kargs)
 
 
@@ -429,8 +429,8 @@ def _convert_to_jp2k(path, **kwargs):
                 ifd['tags'][tifftools.Tag.TileWidth.value]['data'][0],
                 ifd['tags'][tifftools.Tag.TileLength.value]['data'][0],
                 len(ifd['tags'][tifftools.Tag.BitsPerSample.value]['data']))
-            dtype = numpy.uint16 if ifd['tags'][
-                tifftools.Tag.BitsPerSample.value]['data'][0] == 16 else numpy.uint8
+            dtype = np.uint16 if ifd['tags'][
+                tifftools.Tag.BitsPerSample.value]['data'][0] == 16 else np.uint8
             for idx, offset in enumerate(ifd['tags'][tifftools.Tag.TileOffsets.value]['data']):
                 tmppath = path + '%d.jp2k' % processed
                 tasks.append((ifd, idx, processed, tmppath, pool.submit(
@@ -484,7 +484,7 @@ def _convert_large_image_tile(tilelock, strips, tile):
     if data.dtype.char not in large_image.constants.dtypeToGValue:
         data = data.astype('d')
     vimg = pyvips.Image.new_from_memory(
-        numpy.ascontiguousarray(data).data,
+        np.ascontiguousarray(data).data,
         data.shape[1], data.shape[0], data.shape[2],
         large_image.constants.dtypeToGValue[data.dtype.char])
     vimgTemp = pyvips.Image.new_temp_file('%s.v')
@@ -598,7 +598,7 @@ def _output_tiff(inputs, outputPath, tempPath, lidata, extraImages=None, **kwarg
     if len(inputs) > 1:
         if kwargs.get('subifds') is not False:
             info['ifds'][0]['tags'][tifftools.Tag.SubIFD.value] = {
-                'ifds': info['ifds'][1:]
+                'ifds': info['ifds'][1:],
             }
             info['ifds'][1:] = []
         for idx, inputPath in enumerate(inputs):
@@ -618,7 +618,7 @@ def _output_tiff(inputs, outputPath, tempPath, lidata, extraImages=None, **kwarg
             ifdIndices.append(len(info['ifds']))
             if kwargs.get('subifds') is not False:
                 nextInfo['ifds'][0]['tags'][tifftools.Tag.SubIFD.value] = {
-                    'ifds': nextInfo['ifds'][1:]
+                    'ifds': nextInfo['ifds'][1:],
                 }
                 info['ifds'].append(nextInfo['ifds'][0])
             else:
@@ -813,7 +813,7 @@ def _make_li_description(
             'arguments': {
                 k: v for k, v in kwargs.items()
                 if not k.startswith('_') and ('_' + k) not in kwargs and
-                k not in {'overwrite', }},
+                k not in {'overwrite'}},
         },
     }
     if lidata:
@@ -903,7 +903,8 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
             outputPath = (os.path.splitext(inputPath)[0] + '.' +
                           time.strftime('%Y%m%d-%H%M%S') + suffix)
     if os.path.exists(outputPath) and not kwargs.get('overwrite'):
-        raise Exception('Output file already exists.')
+        msg = 'Output file already exists.'
+        raise Exception(msg)
     try:
         tiffinfo = tifftools.read_tiff(inputPath)
     except Exception:

@@ -2,7 +2,7 @@ import os
 from unittest import TestCase
 
 import large_image_source_gdal
-import numpy
+import numpy as np
 import pytest
 
 from .datastore import datastore
@@ -116,7 +116,7 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
             imagePath, projection='EPSG:3857')
         base = source.getThumbnail(encoding='PNG')[0]
         basenp = source.getThumbnail(format='numpy')[0]
-        assert numpy.count_nonzero(basenp[:, :, 3] == 255) > 30000
+        assert np.count_nonzero(basenp[:, :, 3] == 255) > 30000
         source = self.basemodule.open(
             imagePath, projection='EPSG:3857',
             style={'bands': [
@@ -127,4 +127,4 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
         assert not (source.getThumbnail(format='numpy')[0] - basenp).any()
         source = self.basemodule.open(
             imagePath)
-        assert numpy.count_nonzero(source.getThumbnail(format='numpy')[0][:, :, 3] == 255) > 30000
+        assert np.count_nonzero(source.getThumbnail(format='numpy')[0][:, :, 3] == 255) > 30000

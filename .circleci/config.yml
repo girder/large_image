@@ -202,7 +202,7 @@ jobs:
     steps:
       - checkout
       - tox:
-          env: docs,flake8,lintclient
+          env: docs,lint,lintclient
       - store_artifacts:
           path: build/docs
       - persist_to_workspace:

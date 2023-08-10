@@ -25,13 +25,13 @@ class InternalMetadataItemResource(Item):
     def __init__(self, apiRoot):
         super().__init__()
         apiRoot.item.route(
-            'GET', (':itemId', 'internal_metadata', ':key'), self.getMetadataKey
+            'GET', (':itemId', 'internal_metadata', ':key'), self.getMetadataKey,
         )
         apiRoot.item.route(
-            'PUT', (':itemId', 'internal_metadata', ':key'), self.updateMetadataKey
+            'PUT', (':itemId', 'internal_metadata', ':key'), self.updateMetadataKey,
         )
         apiRoot.item.route(
-            'DELETE', (':itemId', 'internal_metadata', ':key'), self.deleteMetadataKey
+            'DELETE', (':itemId', 'internal_metadata', ':key'), self.deleteMetadataKey,
         )
 
     @describeRoute(
@@ -44,7 +44,7 @@ class InternalMetadataItemResource(Item):
             default='meta',
         )
         .errorResponse('ID was invalid.')
-        .errorResponse('Read access was denied for the item.', 403)
+        .errorResponse('Read access was denied for the item.', 403),
     )
     @access.user(scope=TokenScope.DATA_READ)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
@@ -55,7 +55,7 @@ class InternalMetadataItemResource(Item):
 
     @describeRoute(
         Description(
-            'Overwrite the value for a single internal metadata key on this item.'
+            'Overwrite the value for a single internal metadata key on this item.',
         )
         .param('itemId', 'The ID of the item.', paramType='path')
         .param(
@@ -72,7 +72,7 @@ class InternalMetadataItemResource(Item):
             paramType='body',
         )
         .errorResponse('ID was invalid.')
-        .errorResponse('Write access was denied for the item.', 403)
+        .errorResponse('Write access was denied for the item.', 403),
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.WRITE)
@@ -90,7 +90,7 @@ class InternalMetadataItemResource(Item):
             default='meta',
         )
         .errorResponse('ID was invalid.')
-        .errorResponse('Write access was denied for the item.', 403)
+        .errorResponse('Write access was denied for the item.', 403),
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)

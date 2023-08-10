@@ -227,7 +227,8 @@ class IPyLeafletMixin:
                     # This almost works to fix the x, y reversal, but
                     # - bounds are weird and other issues occur
                     # proj4def='+proj=longlat +axis=seu',
-                    # bounds=[[-metadata['sizeX'],-metadata['sizeY']],[metadata['sizeX'],metadata['sizeY']]],
+                    # bounds=[[-metadata['sizeX'],-metadata['sizeY']],
+                    #         [metadata['sizeX'],metadata['sizeY']]],
                     # origin=[0,0],
                 )
 

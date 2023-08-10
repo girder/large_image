@@ -79,6 +79,6 @@ def loadModel(resource, model, plugin='_core', id=None, allowCookie=False,
             'tokenId': tokenStr,
             'expiry': time.time() + LoadModelCacheExpiryDuration,
             'result': entry,
-            'hits': 0
+            'hits': 0,
         }
     return entry

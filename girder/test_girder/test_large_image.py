@@ -148,7 +148,7 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
     # Run a job to create two sizes of thumbnails
     assert _createThumbnails(server, admin, [
         {'width': 160, 'height': 100},
-        {'encoding': 'PNG'}
+        {'encoding': 'PNG'},
     ])
 
     # We should report two thumbnails
@@ -236,7 +236,7 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
     Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 0)
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):
@@ -407,7 +407,7 @@ def testHistogramCaching(server, admin, user, fsAssetstore):
     assert resp.json == 0
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testHistogramConcurrentCaching(server, admin, user, fsAssetstore):
@@ -617,7 +617,7 @@ def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
     assert resp.json['keyE'] == 'value7'
 
 
-@pytest.mark.singular
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testConfigFileEndpoints(server, admin, fsAssetstore):

@@ -2,7 +2,7 @@ import os
 import struct
 
 import large_image_source_openslide
-import numpy
+import numpy as np
 import PIL.Image
 import pytest
 
@@ -150,12 +150,12 @@ def testTileIterator():
     tileCount = 0
     for tile in source.tileIterator(scale={'magnification': 5}):
         tileCount += 1
-        assert isinstance(tile['tile'], numpy.ndarray)
+        assert isinstance(tile['tile'], np.ndarray)
         assert tile['tile'].shape == (
             256 if tile['level_y'] < 11 else 79,
             256 if tile['level_x'] < 11 else 61,
             4)
-        assert tile['tile'].dtype == numpy.dtype('uint8')
+        assert tile['tile'].dtype == np.dtype('uint8')
     assert tileCount == 144
     # Ask for either PIL or IMAGE data, we should get PIL data
     tileCount = 0
@@ -199,7 +199,7 @@ def testGetRegion():
         scale={'magnification': 2.5},
         format=constants.TILE_FORMAT_NUMPY)
     assert imageFormat == constants.TILE_FORMAT_NUMPY
-    assert isinstance(image, numpy.ndarray)
+    assert isinstance(image, np.ndarray)
     assert image.shape == (1447, 1438, 4)
 
     # We should be able to get a PIL image
@@ -277,7 +277,7 @@ def testConvertRegionScale():
         sourceRegion, sourceScale, targetScale,
         format=constants.TILE_FORMAT_NUMPY)
     assert imageFormat == constants.TILE_FORMAT_NUMPY
-    assert isinstance(image, numpy.ndarray)
+    assert isinstance(image, np.ndarray)
     assert image.shape == (506, 575, 4)
     with pytest.raises(TypeError):
         source.getRegionAtAnotherScale(
@@ -292,10 +292,9 @@ def testConvertRegionScale():
         tileCount += 1
     assert tileCount == 72
     with pytest.raises(TypeError):
-        for _tile in source.tileIteratorAtAnotherScale(
-                sourceRegion, sourceScale, region=sourceRegion,
-                format=constants.TILE_FORMAT_NUMPY):
-            tileCount += 1
+        list(source.tileIteratorAtAnotherScale(
+            sourceRegion, sourceScale, region=sourceRegion,
+            format=constants.TILE_FORMAT_NUMPY))
 
 
 def testConvertPointScale():

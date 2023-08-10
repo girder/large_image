@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import PIL
 import PIL.Image
 import PIL.ImageColor
@@ -129,7 +129,7 @@ class LazyTileDict(dict):
                     numpyAllowed='always', sparseFallback=True, frame=self.frame)
                 tileData, _ = _imageToNumpy(tileData)
                 if retile is None:
-                    retile = numpy.zeros(
+                    retile = np.zeros(
                         (self.height, self.width) if len(tileData.shape) == 2 else
                         (self.height, self.width, tileData.shape[2]),
                         dtype=tileData.dtype)
@@ -185,7 +185,7 @@ class LazyTileDict(dict):
                     if self.resample is True else self.resample)
 
             tileFormat = (TILE_FORMAT_PIL if isinstance(tileData, PIL.Image.Image)
-                          else (TILE_FORMAT_NUMPY if isinstance(tileData, numpy.ndarray)
+                          else (TILE_FORMAT_NUMPY if isinstance(tileData, np.ndarray)
                                 else TILE_FORMAT_IMAGE))
             tileEncoding = None if tileFormat != TILE_FORMAT_IMAGE else (
                 'JPEG' if tileData[:3] == b'\xff\xd8\xff' else
@@ -194,7 +194,7 @@ class LazyTileDict(dict):
                 None)
             # Reformat the image if required
             if (not self.alwaysAllowPIL or
-                    (TILE_FORMAT_NUMPY in self.format and isinstance(tileData, numpy.ndarray))):
+                    (TILE_FORMAT_NUMPY in self.format and isinstance(tileData, np.ndarray))):
                 if (tileFormat in self.format and (tileFormat != TILE_FORMAT_IMAGE or (
                         tileEncoding and
                         tileEncoding == self.imageKwargs.get('encoding', self.encoding)))):

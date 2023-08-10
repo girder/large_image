@@ -9,7 +9,7 @@ import threading
 from pathlib import Path
 
 import jsonschema
-import numpy
+import numpy as np
 import yaml
 
 import large_image
@@ -226,7 +226,7 @@ SourceEntrySchema = {
                 '^(c|t|z|xy)$': {
                     'type': 'integer',
                     'exclusiveMinimum': 0,
-                }
+                },
             },
             'additionalProperties': False,
         },
@@ -347,7 +347,7 @@ MultiSourceSchema = {
         },
         'sources': {
             'type': 'array',
-            'items': SourceEntrySchema
+            'items': SourceEntrySchema,
         },
         # TODO: add merge method for cases where the are pixels from multiple
         # sources in the same output location.
@@ -410,7 +410,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 with builtins.open(self._largeImagePath) as fptr:
                     start = fptr.read(1024).strip()
                     if start[:1] not in ('{', '#', '-') and (start[:1] < 'a' or start[:1] > 'z'):
-                        raise TileSourceError('File cannot be opened via multi-source reader.')
+                        msg = 'File cannot be opened via multi-source reader.'
+                        raise TileSourceError(msg)
                     fptr.seek(0)
                     try:
                         import orjson
@@ -419,11 +420,13 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         fptr.seek(0)
                         self._info = yaml.safe_load(fptr)
             except (json.JSONDecodeError, yaml.YAMLError, UnicodeDecodeError):
-                raise TileSourceError('File cannot be opened via multi-source reader.')
+                msg = 'File cannot be opened via multi-source reader.'
+                raise TileSourceError(msg)
             try:
                 self._validator.validate(self._info)
             except jsonschema.ValidationError:
-                raise TileSourceError('File cannot be validated via multi-source reader.')
+                msg = 'File cannot be validated via multi-source reader.'
+                raise TileSourceError(msg)
             self._basePath = Path(self._largeImagePath).parent
         self._basePath /= Path(self._info.get('basePath', '.'))
         for axis in self._info.get('axes', []):
@@ -543,21 +546,22 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             x1 = min(max(pos['crop'].get('right', x1), x0), width)
             y1 = min(max(pos['crop'].get('bottom', y1), y0), height)
             bbox['crop'] = {'left': x0, 'top': y0, 'right': x1, 'bottom': y1}
-        corners = numpy.array([[x0, y0, 1], [x1, y0, 1], [x0, y1, 1], [x1, y1, 1]])
-        m = numpy.identity(3)
+        corners = np.array([[x0, y0, 1], [x1, y0, 1], [x0, y1, 1], [x1, y1, 1]])
+        m = np.identity(3)
         m[0][0] = pos.get('s11', 1) * pos.get('scale', 1)
         m[0][1] = pos.get('s12', 0) * pos.get('scale', 1)
         m[0][2] = pos.get('x', 0)
         m[1][0] = pos.get('s21', 0) * pos.get('scale', 1)
         m[1][1] = pos.get('s22', 1) * pos.get('scale', 1)
         m[1][2] = pos.get('y', 0)
-        if not numpy.array_equal(m, numpy.identity(3)):
+        if not np.array_equal(m, np.identity(3)):
             bbox['transform'] = m
             try:
-                bbox['inverse'] = numpy.linalg.inv(m)
-            except numpy.linalg.LinAlgError:
-                raise TileSourceError('The position for a source is not invertable (%r)', pos)
-        transcorners = numpy.dot(m, corners.T)
+                bbox['inverse'] = np.linalg.inv(m)
+            except np.linalg.LinAlgError:
+                msg = 'The position for a source is not invertable (%r)'
+                raise TileSourceError(msg, pos)
+        transcorners = np.dot(m, corners.T)
         bbox['left'] = min(transcorners[0])
         bbox['top'] = min(transcorners[1])
         bbox['right'] = max(transcorners[0])
@@ -738,7 +742,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for sourceIdx, source in enumerate(sources):
             path = source['path']
             if os.path.abspath(path) == absLargeImagePath:
-                raise TileSourceError('Multi source specification is self-referential')
+                msg = 'Multi source specification is self-referential'
+                raise TileSourceError(msg)
             similar = False
             if (lastSource and source['path'] == lastSource['path'] and
                     source.get('params') == lastSource.get('params')):
@@ -778,7 +783,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         key = '%s-%d' % (basekey, keyidx)
                     self._associatedImages[key] = {
                         'sourcenum': sourceIdx,
-                        'key': key
+                        'key': key,
                     }
             source['metadata'] = tsMeta
             source['bbox'] = bbox
@@ -830,7 +835,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._lastOpenSource = {
                 'source': source,
                 'params': origParams,
-                'ts': ts
+                'ts': ts,
             }
         return ts
 
@@ -856,7 +861,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :return: the list of image keys.
         """
-        return list(sorted(self._associatedImages.keys()))
+        return sorted(self._associatedImages.keys())
 
     def getMetadata(self):
         """
@@ -915,22 +920,22 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if base is None and not x and not y:
             return tile
         if base is None:
-            base = numpy.zeros((0, 0, tile.shape[2]), dtype=tile.dtype)
+            base = np.zeros((0, 0, tile.shape[2]), dtype=tile.dtype)
         base, tile = _makeSameChannelDepth(base, tile)
         if base.shape[0] < tile.shape[0] + y:
-            vfill = numpy.zeros(
+            vfill = np.zeros(
                 (tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] == 2 or base.shape[2] == 4:
                 vfill[:, :, -1] = 1
-            base = numpy.vstack((base, vfill))
+            base = np.vstack((base, vfill))
         if base.shape[1] < tile.shape[1] + x:
-            hfill = numpy.zeros(
+            hfill = np.zeros(
                 (base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] == 2 or base.shape[2] == 4:
                 hfill[:, :, -1] = 1
-            base = numpy.hstack((base, hfill))
+            base = np.hstack((base, hfill))
         base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
 
@@ -959,7 +964,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return tile
         transform = bbox.get('transform')
         srccorners = (
-            list(numpy.dot(bbox['inverse'], numpy.array(corners).T).T)
+            list(np.dot(bbox['inverse'], np.array(corners).T).T)
             if transform is not None else corners)
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
@@ -971,7 +976,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             scaleY = transform[1][1] if transform is not None else 1
             region = {
                 'left': srccorners[0][0], 'top': srccorners[0][1],
-                'right': srccorners[2][0], 'bottom': srccorners[2][1]
+                'right': srccorners[2][0], 'bottom': srccorners[2][1],
             }
             output = {
                 'maxWidth': (corners[2][0] - corners[0][0]) // scale,
@@ -1003,7 +1008,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         #  scipy.ndimage.affine_transform to transform it
         else:
             # TODO
-            raise TileSourceError('Not implemented')
+            msg = 'Not implemented'
+            raise TileSourceError(msg)
         # Crop
         # TODO
         tile = self._mergeTiles(tile, sourceTile, x, y)
@@ -1047,7 +1053,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if fill:
             colors = self._info.get('backgroundColor')
             if colors:
-                tile = numpy.full((self.tileHeight, self.tileWidth, len(colors)), colors)
+                tile = np.full((self.tileHeight, self.tileWidth, len(colors)), colors)
         # Add each source to the tile
         for sourceEntry in sourceList:
             tile = self._addSourceToTile(tile, sourceEntry, corners, scale)
@@ -1055,7 +1061,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # TODO number of channels?
             colors = self._info.get('backgroundColor', [0])
             if colors:
-                tile = numpy.full((self.tileHeight, self.tileWidth, len(colors)), colors)
+                tile = np.full((self.tileHeight, self.tileWidth, len(colors)), colors)
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)

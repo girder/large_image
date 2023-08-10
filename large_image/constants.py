@@ -49,7 +49,7 @@ TileOutputMimeTypes = {
     'JFIF': 'image/jpeg',
 }
 TileOutputPILFormat = {
-    'JFIF': 'JPEG'
+    'JFIF': 'JPEG',
 }
 
 TileInputUnits = {

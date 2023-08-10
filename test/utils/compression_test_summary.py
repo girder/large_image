@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-import pandas
+import pandas as pd
 import tifftools
 
 if not len(sys.argv[1:]) or '--help' in sys.argv[1:]:
@@ -47,5 +47,5 @@ for file in os.listdir(sys.argv[1]):
         print(entry)
         continue
     print(entry)
-df = pandas.DataFrame.from_dict(results)
+df = pd.DataFrame.from_dict(results)
 df.to_csv(sys.argv[2], index=False)

@@ -53,11 +53,14 @@ class PILGirderTileSource(PILFileTileSource, GirderTileSource):
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 mayRedirect=False, **kwargs):
         if z != 0:
-            raise TileSourceError('z layer does not exist')
+            msg = 'z layer does not exist'
+            raise TileSourceError(msg)
         if x != 0:
-            raise TileSourceError('x is outside layer')
+            msg = 'x is outside layer'
+            raise TileSourceError(msg)
         if y != 0:
-            raise TileSourceError('y is outside layer')
+            msg = 'y is outside layer'
+            raise TileSourceError(msg)
         if (mayRedirect and not pilImageAllowed and not numpyAllowed and
                 cherrypy.request and
                 self._pilFormatMatches(self._pilImage, mayRedirect, **kwargs)):

@@ -14,7 +14,7 @@ from . import utilities
 from .datastore import datastore
 
 
-@pytest.fixture
+@pytest.fixture()
 def monitorTileCounts():
     large_image_source_test._counters['tiles'] = 0
 
@@ -32,14 +32,15 @@ def monitorTileCounts():
 
 class LargeImageCachedTilesTest:
 
-    @pytest.mark.singular
+    @pytest.mark.singular()
     def testTilesFromTest(self, monitorTileCounts):
         # Create a test tile with the default options
         params = {'encoding': 'JPEG'}
-        source = monitorTileCounts(None, **dict(params, **{
-            'tileWidth': 256, 'tileHeight': 256,
-            'sizeX': 256 * 2 ** 9, 'sizeY': 256 * 2 ** 9, 'levels': 10
-        }))
+        source = monitorTileCounts(None, **dict(
+            params,
+            tileWidth=256, tileHeight=256,
+            sizeX=256 * 2 ** 9, sizeY=256 * 2 ** 9, levels=10,
+        ))
         meta = source.getMetadata()
         utilities.checkTilesZXY(source, meta, params)
         # We should have generated tiles
@@ -57,13 +58,14 @@ class LargeImageCachedTilesTest:
             'tileHeight': 120,
             'sizeX': 5000,
             'sizeY': 3000,
-            'encoding': 'JPEG'
+            'encoding': 'JPEG',
         }
-        source = monitorTileCounts(None, **dict(params, **{
-            'tileWidth': 160, 'tileHeight': 120,
-            'sizeX': 5000, 'sizeY': 3000, 'levels': 6,
-            'minLevel': 2
-        }))
+        source = monitorTileCounts(None, **dict(
+            params,
+            tileWidth=160, tileHeight=120,
+            sizeX=5000, sizeY=3000, levels=6,
+            minLevel=2,
+        ))
         meta = source.getMetadata()
         meta['minLevel'] = 2
         utilities.checkTilesZXY(source, meta, params)
@@ -75,10 +77,11 @@ class LargeImageCachedTilesTest:
         assert large_image_source_test._counters['tiles'] == counter2
         # Test the fractal tiles with PNG
         params = {'fractal': 'true'}
-        source = monitorTileCounts(None, **dict(params, **{
-            'tileWidth': 256, 'tileHeight': 256,
-            'sizeX': 256 * 2 ** 9, 'sizeY': 256 * 2 ** 9, 'levels': 10
-        }))
+        source = monitorTileCounts(None, **dict(
+            params,
+            tileWidth=256, tileHeight=256,
+            sizeX=256 * 2 ** 9, sizeY=256 * 2 ** 9, levels=10,
+        ))
         meta = source.getMetadata()
         utilities.checkTilesZXY(source, meta, params, utilities.PNGHeader)
         # We should have generated tiles
@@ -88,7 +91,7 @@ class LargeImageCachedTilesTest:
         utilities.checkTilesZXY(source, meta, params, utilities.PNGHeader)
         assert large_image_source_test._counters['tiles'] == counter3
 
-    @pytest.mark.singular
+    @pytest.mark.singular()
     def testLargeRegion(self):
         imagePath = datastore.fetch(
             'sample_jp2k_33003_TCGA-CV-7242-11A-01-TS1.1838afb1-9eee-'
@@ -104,12 +107,12 @@ class LargeImageCachedTilesTest:
                 'maxWidth': 480,
                 'maxHeight': 480,
             },
-            'encoding': 'PNG'
+            'encoding': 'PNG',
         }
         image, mimeType = source.getRegion(**params)
         assert image[:len(utilities.PNGHeader)] == utilities.PNGHeader
 
-    @pytest.mark.singular
+    @pytest.mark.singular()
     def testTiffClosed(self):
         # test the Tiff files are properly closed.
         orig_del = TiledTiffDirectory.__del__

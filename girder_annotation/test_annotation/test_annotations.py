@@ -36,19 +36,19 @@ sampleAnnotation = {
         'center': [20.0, 25.0, 0],
         'width': 14.0,
         'height': 15.0,
-    }]
+    }],
 }
 sampleAnnotationWithMetadata = {
     'name': 'sample',
     'attributes': {
-        'key1': 'value1'
+        'key1': 'value1',
     },
     'elements': [{
         'type': 'rectangle',
         'center': [20.0, 25.0, 0],
         'width': 14.0,
         'height': 15.0,
-    }]
+    }],
 }
 
 
@@ -97,7 +97,7 @@ class TestLargeImageAnnotation:
                 'center': [10, 20, 0],
                 'width': 5,
                 'height': 10,
-            }]
+            }],
         }
         result = Annotation().createAnnotation(item, admin, annotation)
         assert '_id' in result
@@ -390,8 +390,8 @@ class TestLargeImageAnnotation:
             'name': 'testAnnotation',
             'elements': [{
                 'type': 'heatmap',
-                'points': [[random.random() for _ in range(4)] for _ in range(10240)]
-            }]
+                'points': [[random.random() for _ in range(4)] for _ in range(10240)],
+            }],
         }
         annot = Annotation().createAnnotation(item, admin, annotation)
         assert Annotation().load(annot['_id'], user=admin) is not None
@@ -412,8 +412,8 @@ class TestLargeImageAnnotation:
                 'dx': 3,
                 'dy': 4,
                 'gridWidth': 128,
-                'values': [random.random() for _ in range(10240)]
-            }]
+                'values': [random.random() for _ in range(10240)],
+            }],
         }
         annot = Annotation().createAnnotation(item, admin, annotation)
         assert Annotation().load(annot['_id'], user=admin) is not None
@@ -445,7 +445,7 @@ class TestLargeImageAnnotationElement:
 
         # test no transform
         lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
-            'type': 'image', 'girderId': itemId
+            'type': 'image', 'girderId': itemId,
         })
         assert lowx == 0
         assert lowy == 0
@@ -455,7 +455,7 @@ class TestLargeImageAnnotationElement:
         # test offset
         lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
             'type': 'image', 'girderId': itemId,
-            'transform': {'xoffset': 500, 'yoffset': 1000}
+            'transform': {'xoffset': 500, 'yoffset': 1000},
         })
         assert lowx == 500
         assert lowy == 1000
@@ -466,8 +466,8 @@ class TestLargeImageAnnotationElement:
         lowx, highx, lowy, highy = Annotationelement()._overlayBounds({
             'type': 'image', 'girderId': itemId,
             'transform': {
-                'matrix': [[0.5, 0], [0, 0.5]]
-            }
+                'matrix': [[0.5, 0], [0, 0.5]],
+            },
         })
         assert lowx == 0
         assert lowy == 0
@@ -480,8 +480,8 @@ class TestLargeImageAnnotationElement:
             'transform': {
                 'xoffset': 500,
                 'yoffset': 1000,
-                'matrix': [[0.5, 0], [0, 0.5]]
-            }
+                'matrix': [[0.5, 0], [0, 0.5]],
+            },
         })
         assert lowx == 500
         assert lowy == 1000
@@ -625,16 +625,16 @@ class TestLargeImageAnnotationElement:
             'center': [20.0, 25.0, 0],
             'width': 14.0,
             'height': 15.0,
-            'group': 'a'
+            'group': 'a',
         }, {
             'type': 'rectangle',
             'center': [40.0, 15.0, 0],
             'width': 5.0,
-            'height': 5.0
+            'height': 5.0,
         }]
         annotationWithGroup = {
             'name': 'groups',
-            'elements': elements
+            'elements': elements,
         }
 
         annot = Annotation().createAnnotation(item, admin, annotationWithGroup)

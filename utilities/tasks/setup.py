@@ -78,7 +78,7 @@ setup(
     entry_points={
         'girder_worker_plugins': [
             'large_image_tasks = large_image_tasks:LargeImageTasks',
-        ]
+        ],
     },
     packages=find_packages(),
 )

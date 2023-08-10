@@ -41,7 +41,7 @@ CacheProperties = {
         # The cache timeout is not currently being used, but it is set here in
         # case we ever choose to implement it.
         'cacheTimeout': 300,
-    }
+    },
 }
 
 

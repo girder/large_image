@@ -63,7 +63,7 @@ def cachesInfo(*args, **kwargs):
             cache = LruCacheMetaclass.namedCaches[name][0]
             info[name] = {
                 'maxsize': cache.maxsize,
-                'used': cache.currsize
+                'used': cache.currsize,
             }
     if isTileCacheSetup():
         tileCache, tileLock = getTileCache()
@@ -73,7 +73,7 @@ def cachesInfo(*args, **kwargs):
                     'maxsize': tileCache.maxsize,
                     'used': tileCache.currsize,
                     'items': getattr(tileCache, 'curritems' if hasattr(
-                        tileCache, 'curritems') else 'currsize', None)
+                        tileCache, 'curritems') else 'currsize', None),
                 }
         except Exception:
             pass

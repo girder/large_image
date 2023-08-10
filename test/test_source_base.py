@@ -5,7 +5,7 @@ import re
 import sys
 from pathlib import Path
 
-import numpy
+import numpy as np
 import PIL.Image
 import pytest
 
@@ -223,7 +223,7 @@ def testSourcesTilesAndMethods(source, filename):
     cachesClear()
 
 
-@pytest.mark.parametrize('filename,isgeo', [
+@pytest.mark.parametrize(('filename', 'isgeo'), [
     ('04091217_ruc.nc', True),
     ('HENormalN801.czi', False),
     ('landcover_sample_1000.tif', True),
@@ -301,7 +301,7 @@ def testTileOverlap():
     ts = large_image.open(imagePath)
     assert [(
         tiles['x'], tiles['x'] + tiles['width'], tiles['width'],
-        tiles['tile_overlap']['left'], tiles['tile_overlap']['right']
+        tiles['tile_overlap']['left'], tiles['tile_overlap']['right'],
     ) for tiles in ts.tileIterator(
         tile_size=dict(width=75, height=180), tile_overlap=dict(x=60))
     ] == [
@@ -312,7 +312,7 @@ def testTileOverlap():
     ]
     assert [(
         tiles['x'], tiles['x'] + tiles['width'], tiles['width'],
-        tiles['tile_overlap']['left'], tiles['tile_overlap']['right']
+        tiles['tile_overlap']['left'], tiles['tile_overlap']['right'],
     ) for tiles in ts.tileIterator(
         tile_size=dict(width=75, height=180), tile_overlap=dict(x=60, edges=True))
     ] == [
@@ -327,12 +327,12 @@ def testTileOverlap():
     ]
     assert [(
         tiles['x'], tiles['x'] + tiles['width'], tiles['width'],
-        tiles['tile_overlap']['left'], tiles['tile_overlap']['right']
+        tiles['tile_overlap']['left'], tiles['tile_overlap']['right'],
     ) for tiles in ts.tileIterator(
         tile_size=dict(width=60, height=60), tile_overlap=dict(x=40, y=40),
         region=dict(left=55, top=65, width=15, height=15))
     ] == [
-        (55, 70, 15, 0, 0)
+        (55, 70, 15, 0, 0),
     ]
 
 
@@ -368,7 +368,9 @@ def testTileOverlapWithRegionOffset():
     assert firstTile['tile_overlap']['right'] == 200
 
 
-@pytest.mark.parametrize('options,lensrc,lenquads,frame10,src0,srclast,quads10', [
+@pytest.mark.parametrize((
+    'options', 'lensrc', 'lenquads', 'frame10', 'src0', 'srclast', 'quads10',
+), [
     ({'maxTextureSize': 16384}, 1, 250, 10, {
         'encoding': 'JPEG',
         'exact': False,
@@ -471,7 +473,7 @@ def testTileOverlapWithRegionOffset():
         'maxTextures': 8,
         'maxTextureSize': 4096,
         'frameGroup': 250,
-        'frameGroupFactor': 4
+        'frameGroupFactor': 4,
     }, 8, 250, 10, {
         'framesAcross': 5,
         'height': 576,
@@ -485,7 +487,7 @@ def testTileOverlapWithRegionOffset():
         'maxTextures': 8,
         'maxTextureSize': 4096,
         'frameGroup': 50,
-        'frameGroupStride': 5
+        'frameGroupStride': 5,
     }, 5, 250, 50, {
         'framesAcross': 7,
         'height': 432,
@@ -531,7 +533,7 @@ def testGetTileFramesQuadInfo(options, lensrc, lenquads, frame10, src0, srclast,
         'sizeX': 100000,
         'sizeY': 75000,
         'tileHeight': 256,
-        'tileWidth': 256
+        'tileWidth': 256,
     }
     results = large_image.tilesource.utilities.getTileFramesQuadInfo(metadata, options)
     assert len(results['src']) == lensrc
@@ -620,7 +622,7 @@ def testStyleFunctions():
     region2, _ = sourceFunc2.getRegion(
         output=dict(maxWidth=50),
         format=large_image.constants.TILE_FORMAT_NUMPY)
-    assert numpy.any(region2 != region1)
+    assert np.any(region2 != region1)
     sourceFunc3 = large_image.open(imagePath, style={
         'function': {
             'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
@@ -630,7 +632,7 @@ def testStyleFunctions():
     region3, _ = sourceFunc3.getRegion(
         output=dict(maxWidth=50),
         format=large_image.constants.TILE_FORMAT_NUMPY)
-    assert numpy.any(region3 != region2)
+    assert np.any(region3 != region2)
     sourceFunc4 = large_image.open(imagePath, style={
         'function': [{
             'name': 'large_image.tilesource.stylefuncs.maskPixelValues',
@@ -640,7 +642,7 @@ def testStyleFunctions():
     region4, _ = sourceFunc4.getRegion(
         output=dict(maxWidth=50),
         format=large_image.constants.TILE_FORMAT_NUMPY)
-    assert numpy.all(region4 == region2)
+    assert np.all(region4 == region2)
 
 
 def testStyleFunctionsWarnings():
