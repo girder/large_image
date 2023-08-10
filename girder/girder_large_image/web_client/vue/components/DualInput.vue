@@ -4,52 +4,56 @@ export default {
     emits: ['updateValue'],
     data() {
         return {
-            value: this.currentValue,
-        }
+            value: this.currentValue
+        };
     },
     watch: {
         currentValue(v) {
-            this.value = v
+            this.value = v;
         },
         value(v) {
             this.$emit('updateValue', v);
         }
-    },
-}
+    }
+};
 </script>
 
 <template>
-    <tr :class="this.sliderLabels && this.sliderLabels.length ? 'dual-controls tall' : 'dual-controls'">
-        <td><label for="numberControl">{{ label }}: </label></td>
-        <td><input
-            type="number"
-            name="numberControl"
-            min="0"
-            :max="valueMax"
-            v-model="value"
-        ></td>
-        <td style="width:90%">
-            <input
-                type="range"
-                name="sliderControl"
-                min="0"
-                :max="valueMax"
-                v-model="value"
-            >
-            <div class="bubble-wrap">
-                <output
-                    v-if="this.sliderLabels && this.sliderLabels.length > value"
-                    :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
-                    class="bubble"
-                >
-                    {{ this.sliderLabels[value] }}
-                </output>
-                <span v-if="this.sliderLabels && this.sliderLabels.length > value"
-                    :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
-                    class="bubble-after"></span>
-            </div>
-        </td>
-    </tr>
+  <tr :class="sliderLabels && sliderLabels.length ? 'dual-controls tall' : 'dual-controls'">
+    <td><label for="numberControl">{{ label }}: </label></td>
+    <td>
+      <input
+        v-model="value"
+        type="number"
+        name="numberControl"
+        min="0"
+        :max="valueMax"
+      >
+    </td>
+    <td style="width:90%">
+      <input
+        v-model="value"
+        type="range"
+        name="sliderControl"
+        min="0"
+        :max="valueMax"
+      >
+      <div class="bubble-wrap">
+        <output
+          v-if="sliderLabels && sliderLabels.length > value"
+          :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
+          class="bubble"
+        >
+          {{ sliderLabels[value] }}
+        </output>
+        <span
+          v-if="sliderLabels && sliderLabels.length > value"
+          :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
+          class="bubble-after"
+        />
+      </div>
+    </td>
+  </tr>
 </template>
 
 <style scoped>
