@@ -1,3 +1,4 @@
+import logging
 import math
 import os
 import threading
@@ -16,6 +17,8 @@ from large_image.constants import (NEW_IMAGE_PATH_FLAG, TILE_FORMAT_NUMPY,
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import _imageToNumpy
+
+logging.getLogger('pyvips').setLevel(logging.ERROR)
 
 # Default to ignoring files with no extension and some specific extensions.
 config.ConfigValues['source_vips_ignored_names'] = \
