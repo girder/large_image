@@ -12,6 +12,7 @@
 
 ### Changes
 - Minor code changes based on suggestions from ruff linting ([#1257](../../pull/1257))
+- Reduce pyvips log level ([#1258](../../pull/1258))
 
 ### Bug Fixes
 - Guard against ICC profiles that won't parse ([#1245](../../pull/1245))
