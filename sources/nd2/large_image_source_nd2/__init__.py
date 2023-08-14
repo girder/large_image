@@ -131,8 +131,6 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         self._largeImagePath = str(self._getLargeImagePath())
 
-        self._pixelInfo = {}
-
         _lazyImport()
         try:
             self._nd2 = nd2.ND2File(self._largeImagePath, validate_frames=True)
@@ -205,7 +203,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             axisSize = self._nd2.sizes[axis]
             check[axisidx] = axisSize - 1
             try:
-                self._nd2array[tuple(check)].compute()
+                self._nd2array[tuple(check)].compute(scheduler='single-threaded')
                 if axis not in {'X', 'Y', 'S'}:
                     count *= axisSize
                 continue
@@ -218,7 +216,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 nextval = (minval + maxval) // 2
                 check[axisidx] = nextval
                 try:
-                    self._nd2array[tuple(check)].compute()
+                    self._nd2array[tuple(check)].compute(scheduler='single-threaded')
                     minval = nextval
                 except Exception:
                     maxval = nextval
