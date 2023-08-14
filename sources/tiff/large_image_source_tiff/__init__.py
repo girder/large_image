@@ -651,7 +651,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 exception=e, **kwargs)
 
     def _getDirFromCache(self, dirnum, subdir=None):
-        if not hasattr(self, '_directoryCache'):
+        if not hasattr(self, '_directoryCache') or not hasattr(self, '_directoryCacheMaxSize'):
             self._directoryCache = {}
             self._directoryCacheMaxSize = max(20, self.levels * (2 + (
                 self.metadata.get('IndexRange', {}).get('IndexC', 1))))

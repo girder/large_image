@@ -12,7 +12,8 @@
 
 ### Changes
 - Minor code changes based on suggestions from ruff linting ([#1257](../../pull/1257))
-- Reduce pyvips log level ([#1258](../../pull/1258))
+- Reduce pyvips log level ([#1259](../../pull/1259))
+- Don't use dask threads when using nd2 to fetch tiles ([#1260](../../pull/1260))
 
 ### Bug Fixes
 - Guard against ICC profiles that won't parse ([#1245](../../pull/1245))
