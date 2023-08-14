@@ -2135,6 +2135,8 @@ class TileSource(IPyLeafletMixin):
         if tiled:
             return self._addRegionTileToTiled(image, subimage, x, y, width, height, tile, **kwargs)
         if image is None:
+            if (x, y, width, height) == (0, 0, subimage.shape[1], subimage.shape[0]):
+                return subimage
             try:
                 image = np.zeros(
                     (height, width, subimage.shape[2]),
