@@ -1420,7 +1420,9 @@ class TileSource(IPyLeafletMixin):
         if not style or ('icc' in style and len(style) == 1):
             sc.output = image
         else:
-            sc.output = np.zeros((image.shape[0], image.shape[1], 4), float)
+            sc.output = np.zeros(
+                (image.shape[0], image.shape[1], 4),
+                np.float32 if image.dtype != np.float64 else image.dtype)
         image = self._applyStyleFunction(image, sc, 'pre')
         for eidx, entry in enumerate(sc.style['bands']):
             sc.styleIndex = eidx
