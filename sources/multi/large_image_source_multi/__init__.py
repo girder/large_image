@@ -520,6 +520,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._resolvePathPatterns(sources, source)
             else:
                 self._resolveSourcePath(sources, source)
+        for source in sources:
+            if hasattr(source.get('path'), 'resolve'):
+                source['path'] = source['path'].resolve(False)
         return sources
 
     def _sourceBoundingBox(self, source, width, height):
@@ -936,6 +939,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if base.shape[2] == 2 or base.shape[2] == 4:
                 hfill[:, :, -1] = 1
             base = np.hstack((base, hfill))
+        if base.flags.writeable is False:
+            base = base.copy()
         base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
 
