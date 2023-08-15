@@ -1420,8 +1420,14 @@ class TileSource(IPyLeafletMixin):
         if not style or ('icc' in style and len(style) == 1):
             sc.output = image
         else:
+            newwidth = 4
+            if (len(sc.style['bands']) == 1 and sc.style['bands'][0].get('band') != 'alpha' and
+                    image.shape[-1] == 1):
+                palette = getPaletteColors(sc.style['bands'][0].get('palette', ['#000', '#FFF']))
+                if np.array_equal(palette, getPaletteColors('#fff')):
+                    newwidth = 1
             sc.output = np.zeros(
-                (image.shape[0], image.shape[1], 4),
+                (image.shape[0], image.shape[1], newwidth),
                 np.float32 if image.dtype != np.float64 else image.dtype)
         image = self._applyStyleFunction(image, sc, 'pre')
         for eidx, entry in enumerate(sc.style['bands']):
@@ -1493,7 +1499,7 @@ class TileSource(IPyLeafletMixin):
             # divide.
             # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html for
             # some details.
-            for channel in range(4):
+            for channel in range(sc.output.shape[2]):
                 if np.all(sc.palette[:, channel] == sc.palette[0, channel]):
                     if ((sc.palette[0, channel] == 0 and sc.composite != 'multiply') or
                             (sc.palette[0, channel] == 255 and sc.composite == 'multiply')):
