@@ -11,6 +11,7 @@
 - Presets from Large Image Configuration file ([#1248](../../pull/1248), [#1256](../../pull/1256))
 - Reduce memory allocation during some region tiling operations ([#1261](../../pull/1261))
 - Reduce memory allocation during some styling operations ([#1262](../../pull/1262), [#1263](../../pull/1263))
+- Added a max_annotation_input_file_length setting ([#1264](../../pull/1264))
 
 ### Changes
 - Minor code changes based on suggestions from ruff linting ([#1257](../../pull/1257))

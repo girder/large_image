@@ -29,6 +29,8 @@ Configuration parameters:
 
 - ``icc_correction``: If this is True or undefined, ICC color correction will be applied for tile sources that have ICC profile information.  If False, correction will not be applied.  If the style used to open a tilesource specifies ICC correction explicitly (on or off), then this setting is not used.  This may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``True`` is the same as ``perceptual``.
 
+- ``max_annotation_input_file_length``: When an annotation file is uploaded through Girder, it is loaded into memory, validated, and then added to the database.  This is the maximum number of bytes that will be read directly.  Files larger than this are ignored.  If unspecified, this defaults to the larger of 1 GByte and 1/16th of the system virtual memory.
+
 
 Configuration from Python
 -------------------------
@@ -63,6 +65,9 @@ For the Girder plugin, these can also be set in the ``girder.cfg`` file in a ``l
   # The bioformats tilesource won't read files that end in a comma-separated
   # list of extensions
   source_bioformats_ignored_names = r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'
+  # The maximum size of an annotation file that will be ingested into girder
+  # via direct load
+  max_annotation_input_file_length = 1 * 1024 ** 3
 
 Logging from Python
 -------------------
