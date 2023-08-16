@@ -1,5 +1,10 @@
 import logging
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 # Default logger
 fallbackLogger = logging.getLogger('large_image')
 fallbackLogger.setLevel(logging.INFO)
@@ -33,6 +38,11 @@ ConfigValues = {
 
     # Should ICC color correction be applied by default
     'icc_correction': True,
+
+    # The maximum size of an annotation file that will be ingested into girder
+    # via direct load
+    'max_annotation_input_file_length': 1 * 1024 ** 3 if not psutil else max(
+        1 * 1024 ** 3, psutil.virtual_memory().total // 16),
 }
 
 

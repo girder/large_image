@@ -5,6 +5,7 @@ import uuid
 import cachetools
 import orjson
 
+import large_image.config
 from girder import logger
 from girder.constants import AccessType
 from girder.models.file import File
@@ -121,8 +122,11 @@ def process_annotations(event):  # noqa: C901
         logger.error('Could not load models from the database')
         return
     try:
-        if file['size'] > 1 * 1024 ** 3:
-            msg = 'File is larger than will be read into memory.'
+        if file['size'] > int(large_image.config.getConfig(
+                'max_annotation_input_file_length', 1024 ** 3)):
+            msg = ('File is larger than will be read into memory.  If your '
+                   'server will permit it, increase the '
+                   'max_annotation_input_file_length setting.')
             raise Exception(msg)
         data = []
         with File().open(file) as fptr:
