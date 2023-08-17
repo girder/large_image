@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.23.4
+
+### Changes
+- Adjust tifffile log level ([#1265](../../pull/1265))
+
 ## 1.23.3
 
 ### Improvements
