@@ -46,6 +46,7 @@ def _lazyImport():
             msg = 'tifffile module is too old.'
             raise TileSourceError(msg)
         logging.getLogger('tifffile.tifffile').setLevel(logging.ERROR)
+        logging.getLogger('tifffile').setLevel(logging.ERROR)
 
 
 def et_findall(tag, text):
