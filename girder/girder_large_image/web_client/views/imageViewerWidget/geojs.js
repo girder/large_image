@@ -3,7 +3,7 @@
 import $ from 'jquery';
 import _ from 'underscore';
 // Import hammerjs for geojs touch events
-import Hammer from 'hammerjs';
+import Hammer from '@egjs/hammerjs';
 import d3 from 'd3';
 
 import {restRequest} from '@girder/core/rest';
