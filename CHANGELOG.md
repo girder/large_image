@@ -4,6 +4,7 @@
 
 ### Changes
 - Adjust tifffile log level ([#1265](../../pull/1265))
+- Use a newer version of the hammerjs touch events library in Girder ([#1266](../../pull/1266))
 
 ## 1.23.3
 
