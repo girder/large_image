@@ -5,6 +5,9 @@
 ### Changes
 - Adjust tifffile log level ([#1265](../../pull/1265))
 
+### Bug Fixes
+- Allow users with only annotation access to edit annotations ([#1267](../../pull/1267))
+
 ## 1.23.3
 
 ### Improvements
