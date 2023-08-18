@@ -6,6 +6,9 @@
 - Adjust tifffile log level ([#1265](../../pull/1265))
 - Use a newer version of the hammerjs touch events library in Girder ([#1266](../../pull/1266))
 
+### Bug Fixes
+- Allow users with only annotation access to edit annotations ([#1267](../../pull/1267))
+
 ## 1.23.3
 
 ### Improvements

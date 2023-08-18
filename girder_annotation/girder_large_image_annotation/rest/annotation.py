@@ -334,8 +334,9 @@ class AnnotationResource(Resource):
         user = self.getCurrentUser()
         item = Item().load(annotation.get('itemId'), force=True)
         if item is not None:
-            Item().requireAccess(
-                item, user=user, level=AccessType.WRITE)
+            Item().hasAccessFlags(
+                item, user, constants.ANNOTATION_ACCESS_FLAG) or Item().requireAccess(
+                    item, user=user, level=AccessType.WRITE)
         # If we have a content length, then we have replacement JSON.  If
         # elements are not included, don't replace them
         returnElements = True
@@ -347,8 +348,9 @@ class AnnotationResource(Resource):
                 returnElements = False
         if params.get('itemId'):
             newitem = Item().load(params['itemId'], force=True)
-            Item().requireAccess(
-                newitem, user=user, level=AccessType.WRITE)
+            Item().hasAccessFlags(
+                newitem, user, constants.ANNOTATION_ACCESS_FLAG) or Item().requireAccess(
+                    newitem, user=user, level=AccessType.WRITE)
             annotation['itemId'] = newitem['_id']
         try:
             annotation = Annotation().updateAnnotation(annotation, updateUser=user)
@@ -374,8 +376,10 @@ class AnnotationResource(Resource):
         # Ensure that we have write access to the parent item
         item = Item().load(annotation.get('itemId'), force=True)
         if item is not None:
-            Item().requireAccess(
-                item, user=self.getCurrentUser(), level=AccessType.WRITE)
+            user = self.getCurrentUser()
+            Item().hasAccessFlags(
+                item, user, constants.ANNOTATION_ACCESS_FLAG) or Item().requireAccess(
+                    item, user, level=AccessType.WRITE)
         setResponseTimeLimit(86400)
         Annotation().remove(annotation)
 
