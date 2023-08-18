@@ -2,6 +2,9 @@
 
 ## 1.23.4
 
+### Improvements
+- Harden when the bioformats reader claims it has a zero sized image ([#1268](../../pull/1268))
+
 ### Changes
 - Adjust tifffile log level ([#1265](../../pull/1265))
 - Use a newer version of the hammerjs touch events library in Girder ([#1266](../../pull/1266))

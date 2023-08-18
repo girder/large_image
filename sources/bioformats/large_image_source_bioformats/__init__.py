@@ -241,6 +241,9 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     self._metadata[key] = 1
             self.sizeX = self._metadata['sizeX']
             self.sizeY = self._metadata['sizeY']
+            if self.sizeX <= 0 or self.sizeY <= 0:
+                msg = 'File cannot be opened with biofromats.'
+                raise TileSourceError(msg)
             self._computeTiles()
             self._computeLevels()
             self._computeMagnification()
@@ -249,7 +252,6 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self.logger.debug('File cannot be opened via Bioformats. (%s)', es)
             raise TileSourceError('File cannot be opened via Bioformats. (%s)' % es)
         except (AttributeError, UnicodeDecodeError):
-            raise
             self.logger.exception('The bioformats reader threw an unhandled exception.')
             msg = 'The bioformats reader threw an unhandled exception.'
             raise TileSourceError(msg)
