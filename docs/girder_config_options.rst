@@ -100,12 +100,14 @@ This is used to specify how items appear in item lists.  There are two settings,
           value: gloms.length
           title: Number of Gloms
         # You can edit metadata in a item list by adding the edit: true entry
-        # and the options from the itemMetadata records that are shown below.
-        # In this case, edit to metadata that validate are saved immediately.
+        # and the options from the itemMetadata records that are detailed
+        # below.  In this case, edits to metadata that validate are saved
+        # immediately.
         -
           type: metadata
           value: userstain
           title: User Stain
+          edit: true
           # description is used as both a tooltip and as placeholder text
           description: Staining method
           # if required is true, the value can't be empty
