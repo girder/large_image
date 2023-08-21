@@ -1,5 +1,6 @@
 import _ from 'underscore';
 import AccessControlledModel from '@girder/core/models/AccessControlledModel';
+import {getCurrentUser} from '@girder/core/auth';
 import {restRequest} from '@girder/core/rest';
 import MetadataMixin from '@girder/core/models/MetadataMixin';
 
@@ -33,6 +34,7 @@ const AnnotationModel = AccessControlledModel.extend({
     initialize() {
         if (!this.get('updated')) {
             this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+            this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
         }
         this._region = {
             maxDetails: this.get('maxDetails'),
@@ -294,6 +296,7 @@ const AnnotationModel = AccessControlledModel.extend({
             url = `annotation/${this.id}`;
             method = 'PUT';
             this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+            this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
         }
 
         if (this._pageElements === false || isNew) {
@@ -354,6 +357,7 @@ const AnnotationModel = AccessControlledModel.extend({
         let xhr = false;
         if (!this.isNew()) {
             this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+            this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
             xhr = restRequest({
                 url: `annotation/${this.id}`,
                 method: 'DELETE'
