@@ -263,7 +263,7 @@ wrap(ItemListWidget, 'render', function (render) {
                         }
                     });
                 }
-                const key = `${coltag}:` + phrases.join('|||');
+                const key = `${coltag || ''}:` + phrases.map((p) => p.phrase + (p.exact ? '__exact__' : '')).join('|||');
                 if (!phrases.length || usedPhrases[key]) {
                     return;
                 }
@@ -301,12 +301,12 @@ wrap(ItemListWidget, 'render', function (render) {
                         if (key && exact) {
                             clause.push({[key]: {$regex: '^' + phrase + '$', $options: 'i'}});
                             if (!_.isNaN(numval)) {
-                                clause.push({[key]: {$eq: numval}});
+                                clause.push({[key]: numval});
                             }
                         } else if (key) {
                             clause.push({[key]: {$regex: phrase, $options: 'i'}});
                             if (!_.isNaN(numval)) {
-                                clause.push({[key]: {$eq: numval}});
+                                clause.push({[key]: numval});
                                 if (numval > 0 && delta) {
                                     clause.push({[key]: {$gte: numval, $lt: numval + delta}});
                                 } else if (numval < 0 && delta) {
