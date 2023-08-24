@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from .utilities import _imageToNumpy, _imageToPIL
+
 
 def maskPixelValues(image, context, values=None, negative=None, positive=None):
     """
@@ -36,4 +38,57 @@ def maskPixelValues(image, context, values=None, negative=None, positive=None):
     image[mask != True] = negative or [0, 0, 0, 255]  # noqa E712
     image[mask] = positive or [255, 255, 255, 0]
     image = image.astype(np.uint8)
+    return image
+
+
+def medianFilter(image, context=None, kernel=5, weight=1.0):
+    """
+    This is a style utility function that applies a median rank filter to the
+    image to sharpen it.
+
+    :param image: a numpy array of Y, X, Bands.
+    :param context: the style context.  context.image is the source image
+    :param kernel: the filter kernel size.
+    :param weight: the weight of the difference between the image and the
+        filtered image that is used to add into the image.  0 is no effect/
+    :returns: an numpy image which is the filtered version of the source.
+    """
+    import PIL.ImageFilter
+
+    filt = PIL.ImageFilter.MedianFilter(kernel)
+    if len(image.shape) != 3:
+        pimg = _imageToPIL(image)
+    elif image.shape[2] >= 3:
+        pimg = _imageToPIL(image[:, :, :3])
+    else:
+        pimg = _imageToPIL(image[:, :, :1])
+    fimg = _imageToNumpy(pimg.filter(filt))[0]
+    mul = 0
+    clip = 0
+    if image.dtype == np.uint8 or (
+            image.dtype.kind == 'f' and 1 < np.max(image) < 256 and np.min(image) >= 0):
+        mul = 1
+        clip = 255
+    elif image.dtype == np.uint16 or (
+            image.dtype.kind == 'f' and 1 < np.max(image) < 65536 and np.min(image) >= 0):
+        mul = 257
+        clip = 65535
+    elif image.dtype == np.uint32:
+        mul = (2 ** 32 - 1) / 255
+        clip = 2 ** 32 - 1
+    elif image.dtype.kind == 'f':
+        mul = 1
+    if mul:
+        pimg = image.astype(float)
+        if len(pimg.shape) == 2:
+            pimg = np.resize(pimg, (pimg.shape[0], pimg.shape[1], 1))
+        pimg = pimg[:, :, :fimg.shape[2]]
+        dimg = (pimg - fimg.astype(float) * mul) * weight
+        pimg = pimg[:, :, :fimg.shape[2]] + dimg
+        if clip:
+            pimg = pimg.clip(0, clip)
+        if len(image.shape) != 3:
+            image[:, :] = np.resize(pimg.astype(image.dtype), (pimg.shape[0], pimg.shape[1]))
+        else:
+            image[:, :, :fimg.shape[2]] = pimg.astype(image.dtype)
     return image
