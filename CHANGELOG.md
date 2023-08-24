@@ -6,6 +6,7 @@
 - Harden when the bioformats reader claims it has a zero sized image ([#1268](../../pull/1268))
 - Harden internal retiling.  This sometimes affected histograms ([#1269](../../pull/1269))
 - Set annotation update user in client so it appears faster ([#1270](../../pull/1270))
+- Harden reading with tifffile on images with bad axes information ([#1273](../../pull/1273))
 
 ### Changes
 - Adjust tifffile log level ([#1265](../../pull/1265))

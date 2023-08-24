@@ -89,7 +89,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _minAssociatedImageSize = 64
     _maxAssociatedImageSize = 8192
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -146,6 +146,15 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     getattr(self._tf, key)):
                 getattr(self, '_handle_' + key[3:])()
         self._populatedLevels = len(self._baseSeries.levels)
+        # Some files have their axes listed in the wrong order.  Try to access
+        # the lastmost pixel; if that fails, probably the axes and shape don't
+        # match the file (or the file is corrupted).
+        try:
+            self.getPixel(region={'left': self.sizeX - 1, 'top': self.sizeY - 1},
+                          frame=self.frames - 1)
+        except Exception:
+            msg = 'File cannot be opened via tifffile: axes and shape do not match access pattern.'
+            raise TileSourceError(msg)
 
     def _biggestSeries(self):
         """

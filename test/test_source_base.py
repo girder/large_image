@@ -60,7 +60,7 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|tif.*|qptiff|dcm)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej)',  # noqa
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes)',  # noqa
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
@@ -78,11 +78,11 @@ SourceAndFiles = {
         'read': r'\.(ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(oahu|DDX58_AXL|G10-3_pelvis_crop|'
                   r'd042-353\.crop\.small\.float|landcover_sample|US_Geo\.|'
-                  r'imagej)',
+                  r'imagej|bad_axes)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm)$',
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm)$)|bad_axes)',
         'python': sys.version_info >= (3, 7),
     },
     'vips': {
