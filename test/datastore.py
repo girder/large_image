@@ -96,6 +96,8 @@ registry = {
     'synthetic_qptiff.qptiff': 'sha512:652e61c650bcc57beeb2f89b8fa9ac4ba44ce5c0b48c5d3c6fb40ca539b015e36fe831ea5abd95d5650ec342de6a4207a9c22d410f5e2d8bfafbf19e2a6d5d96',  # noqa
     # Blank imageJ file with multiple channels
     'synthetic_imagej.tiff': 'sha512:f4fcf9633b7fc8c819aace248352b3ef89364418d734aa8326096829d64956f11b961c24003bd5ca1f7e46462a8230b64177b37b1517a416d7c7123a0932d5dc',  # noqa
+    # Blank untiled tiff with bad tifffile axes information
+    'bad_axes_description.tif': 'sha512:cbe82614a83d315a2f22c32b14fd32560fadb3f263bfeffc75f42f88e535e8a11728f691499cb7f5714bbbc55938c472ee4a706d7281bdfefe6fdb965c0a2d6b',  # noqa
 }
 
 
