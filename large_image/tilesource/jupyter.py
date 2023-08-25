@@ -92,6 +92,225 @@ def launch_tile_server(tile_source, port=0):
     return manager
 
 
+class Map:
+    """
+    An IPyLeafletMap representation of a large image.
+    """
+
+    def __init__(self, *, ts=None, metadata=None, url=None, gc=None, id=None, resource=None):
+        """
+        Specify the large image to be used with the IPyLeaflet Map.  One of (a)
+        a tile source, (b) metadata dictionary and tile url, (c) girder client
+        and item or file id, or (d) girder client and resource path must be
+        specified.
+
+        :param ts: a TileSource.
+        :param metadata: a metadata dictionary as returned by a tile source or
+            a girder item/{id}/tiles endpoint.
+        :param url: a slippy map template url to fetch tiles (e.g.,
+            .../item/{id}/tiles/zxy/{z}/{x}/{y}?params=...)
+        :param gc: an authenticated girder client.
+        :param id: an item id that exists on the girder client.
+        :param resource: a girder resource path of an item or file that exists
+            on the girder client.
+        """
+        self._layer = self._map = self._metadata = None
+        self._ts = ts
+        if (not url or not metadata) and gc and (id or resource):
+            if id is None:
+                entry = gc.get('resource/lookup', parameters={'path': resource})
+                if entry:
+                    id = entry['itemId'] if entry.get('_modelType') == 'file' else entry['_id']
+            if id:
+                try:
+                    metadata = gc.get(f'item/{id}/tiles')
+                except Exception:
+                    pass
+                if metadata:
+                    url = gc.urlBase + f'item/{id}/tiles' + '/zxy/{z}/{x}/{y}'
+                    if metadata.get('geospatial'):
+                        suffix = '?projection=EPSG:3857&encoding=PNG'
+                        metadata = gc.get(f'item/{id}/tiles' + suffix)
+                        if metadata.get('geospatial') and metadata.get('projection'):
+                            url += suffix
+                else:
+                    self._ts = self._get_temp_source(gc, id)
+        if url and metadata:
+            self._metadata = metadata
+            self._url = url
+            self._layer = self.make_layer(metadata, url)
+            self._map = self.make_map(metadata)
+
+    if ipyleaflet:
+        def _ipython_display_(self):
+            from IPython.display import display
+
+            if self._map:
+                return display(self._map)
+            if self._ts:
+                t = self._ts.as_leaflet_layer()
+                return display(self._ts._map.make_map(
+                    self._ts.metadata, t, self._ts.getCenter(srs='EPSG:4326')))
+
+    def _get_temp_source(self, gc, id):
+        """
+        If the server isn't large_image enabled, download the file to view it.
+        """
+        import tempfile
+
+        import large_image
+
+        try:
+            item = gc.get(f'item/{id}')
+        except Exception:
+            item = None
+        if not item:
+            file = gc.get(f'file/{id}')
+        else:
+            file = gc.get(f'item/{id}/files', parameters={'limit': 1})[0]
+        self._tempfile = tempfile.NamedTemporaryFile(suffix='.' + file['name'].split('.', 1)[-1])
+        gc.downloadFile(file['_id'], self._tempfile)
+        return large_image.open(self._tempfile.name)
+
+    def make_layer(self, metadata, url, **kwargs):
+        """
+        Create an ipyleaflet tile layer given large_image metadata and a tile
+        url.
+        """
+        from ipyleaflet import TileLayer
+
+        self._geospatial = metadata.get('geospatial') and metadata.get('projection')
+        if 'bounds' not in kwargs and not self._geospatial:
+            kwargs = kwargs.copy()
+            kwargs['bounds'] = [[0, 0], [metadata['sizeY'], metadata['sizeX']]]
+        layer = TileLayer(
+            url=url,
+            # attribution='Tiles served with large-image',
+            min_zoom=0,
+            max_native_zoom=metadata['levels'] - 1,
+            max_zoom=20,
+            tile_size=metadata['tileWidth'],
+            **kwargs,
+        )
+        self._layer = layer
+        if not self._metadata:
+            self._metadata = metadata
+        return layer
+
+    def make_map(self, metadata, layer=None, center=None):
+        """
+        Create an ipyleaflet map given large_image metadata, an optional
+        ipyleaflet layer, and the center of the tile source.
+        """
+        from ipyleaflet import Map, basemaps, projections
+
+        try:
+            default_zoom = metadata['levels'] - metadata['sourceLevels']
+        except KeyError:
+            default_zoom = 0
+
+        self._geospatial = metadata.get('geospatial') and metadata.get('projection')
+
+        if self._geospatial:
+            # TODO: better handle other projections
+            crs = projections.EPSG3857
+        else:
+            crs = dict(
+                name='PixelSpace',
+                custom=True,
+                # Why does this need to be 256?
+                resolutions=[2 ** (metadata['levels'] - 1 - l) for l in range(20)],
+
+                # This works but has x and y reversed
+                proj4def='+proj=longlat +axis=esu',
+                bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
+                # Why is origin X, Y but bounds Y, X?
+                origin=[0, metadata['sizeY']],
+
+                # This almost works to fix the x, y reversal, but
+                # - bounds are weird and other issues occur
+                # proj4def='+proj=longlat +axis=seu',
+                # bounds=[[-metadata['sizeX'],-metadata['sizeY']],
+                #         [metadata['sizeX'],metadata['sizeY']]],
+                # origin=[0,0],
+            )
+        layer = layer or self._layer
+
+        if center is None:
+            if 'bounds' in metadata and 'projection' in metadata:
+                import pyproj
+
+                bounds = metadata['bounds']
+                center = (
+                    (bounds['ymax'] + bounds['ymin']) / 2,
+                    (bounds['xmax'] + bounds['xmin']) / 2,
+                )
+                transf = pyproj.Transformer.from_crs(
+                    metadata['projection'], 'EPSG:4326', always_xy=True)
+                center = tuple(transf.transform(center[1], center[0])[::-1])
+            else:
+                center = (metadata['sizeY'] / 2, metadata['sizeX'] / 2)
+
+        m = Map(
+            crs=crs,
+            basemap=basemaps.OpenStreetMap.Mapnik if self._geospatial else layer,
+            center=center,
+            zoom=default_zoom,
+            max_zoom=metadata['levels'] + 1,
+            min_zoom=0,
+            scroll_wheel_zoom=True,
+            dragging=True,
+            attribution_control=False,
+        )
+        if self._geospatial:
+            m.add_layer(layer)
+        self._map = m
+        return m
+
+    @property
+    def layer(self):
+        return self._layer
+
+    @property
+    def map(self):
+        return self._map
+
+    def to_map(self, coordinate):
+        """
+        Convert a coordinate from the image or projected image space to the map
+        space.
+
+        :param coordinate: a two-tuple that is x, y in pixel space or x, y in
+            image projection space.
+        :returns: a two-tuple that is in the map space coordinates.
+        """
+        x, y = coordinate[:2]
+        if self._geospatial:
+            import pyproj
+
+            transf = pyproj.Transformer.from_crs(
+                self._metadata['projection'], 'EPSG:4326', always_xy=True)
+            return tuple(transf.transform(x, y)[::-1])
+        else:
+            return self._metadata['sizeY'] - y, x
+
+    def from_map(self, coordinate):
+        """
+        :param coordinate: a two-tuple that is in the map space coordinates.
+        :returns: a two-tuple that is x, y in pixel space or x, y in image
+            projection space.
+        """
+        y, x = coordinate[:2]
+        if self._geospatial:
+            import pyproj
+
+            transf = pyproj.Transformer.from_crs(
+                'EPSG:4326', self._metadata['projection'], always_xy=True)
+            return transf.transform(x, y)
+        else:
+            return x, self._metadata['sizeY'] - y
+
+
 class IPyLeafletMixin:
     """Mixin class to support interactive visualization in JupyterLab.
 
@@ -149,10 +368,13 @@ class IPyLeafletMixin:
 
     def __init__(self, *args, **kwargs):
         self._jupyter_server_manager = None
+        self._map = Map()
+        if ipyleaflet:
+            self.to_map = self._map.to_map
+            self.from_map = self._map.from_map
 
     def as_leaflet_layer(self, **kwargs):
         # NOTE: `as_leaflet_layer` is supported by ipyleaflet.Map.add
-        from ipyleaflet import TileLayer
 
         if self._jupyter_server_manager is None:
             # Must relaunch to ensure style updates work
@@ -162,8 +384,6 @@ class IPyLeafletMixin:
             self._jupyter_server_manager.tile_source = self
 
         port = self._jupyter_server_manager.port
-
-        metadata = self.getMetadata()
 
         if self.JUPYTER_PROXY:
             if isinstance(self.JUPYTER_PROXY, str):
@@ -175,74 +395,21 @@ class IPyLeafletMixin:
 
         # Use repr in URL params to prevent caching across sources/styles
         endpoint = f'tile?z={{z}}&x={{x}}&y={{y}}&encoding=png&repr={self.__repr__()}'
-
-        if not (self.geospatial and self.projection) and 'bounds' not in kwargs:
-            kwargs = kwargs.copy()
-            kwargs['bounds'] = [[0, 0], [metadata['sizeY'], metadata['sizeX']]]
-        layer = TileLayer(
-            url=f'{base_url}/{endpoint}',
-            # attribution='Tiles served with large-image',
-            min_zoom=0,
-            max_native_zoom=metadata['levels'],
-            max_zoom=20,
-            tile_size=metadata['tileWidth'],
-            **kwargs,
-        )
-        return layer
+        return self._map.make_layer(self.metadata, f'{base_url}/{endpoint}')
 
     # Only make _ipython_display_ available if ipyleaflet is installed
     if ipyleaflet:
 
         def _ipython_display_(self):
-            from ipyleaflet import Map, basemaps, projections
             from IPython.display import display
-
-            metadata = self.getMetadata()
 
             t = self.as_leaflet_layer()
 
-            try:
-                default_zoom = metadata['levels'] - metadata['sourceLevels']
-            except KeyError:
-                default_zoom = 0
+            return display(self._map.make_map(self.metadata, t, self.getCenter(srs='EPSG:4326')))
 
-            geospatial = self.geospatial and self.projection
-
-            if geospatial:
-                # TODO: better handle other projections
-                crs = projections.EPSG3857
-            else:
-                crs = dict(
-                    name='PixelSpace',
-                    custom=True,
-                    # Why does this need to be 256?
-                    resolutions=[2 ** (metadata['levels'] - 1 - l) for l in range(20)],
-
-                    # This works but has x and y reversed
-                    proj4def='+proj=longlat +axis=esu',
-                    bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
-                    # Why is origin X, Y but bounds Y, X?
-                    origin=[0, metadata['sizeY']],
-
-                    # This almost works to fix the x, y reversal, but
-                    # - bounds are weird and other issues occur
-                    # proj4def='+proj=longlat +axis=seu',
-                    # bounds=[[-metadata['sizeX'],-metadata['sizeY']],
-                    #         [metadata['sizeX'],metadata['sizeY']]],
-                    # origin=[0,0],
-                )
-
-            m = Map(
-                crs=crs,
-                basemap=basemaps.OpenStreetMap.Mapnik if geospatial else t,
-                center=self.getCenter(srs='EPSG:4326'),
-                zoom=default_zoom,
-                max_zoom=metadata['levels'] + 1,
-                min_zoom=0,
-                scroll_wheel_zoom=True,
-                dragging=True,
-                # attribution_control=False,
-            )
-            if geospatial:
-                m.add_layer(t)
-            return display(m)
+        @property
+        def iplmap(self):
+            """
+            If using ipyleaflets, get access to the map object.
+            """
+            return self._map.map
