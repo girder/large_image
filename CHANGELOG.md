@@ -15,6 +15,7 @@
 ### Bug Fixes
 - Allow users with only annotation access to edit annotations ([#1267](../../pull/1267))
 - Fix filtering item lists in Girder by multiple phrases ([#1272](../../pull/1272))
+- Style functions after band compositing had a styleIndex value set ([#1274](../../pull/1274))
 
 ## 1.23.3
 

@@ -645,6 +645,89 @@ def testStyleFunctions():
     assert np.all(region4 == region2)
 
 
+def testStyleFunctionsStage():
+    imagePath = datastore.fetch('d042-353.crop.small.jpg')
+    source = large_image.open(imagePath, style={
+        'bands': [{
+            'band': 1, 'palette': 'R',
+        }, {
+            'band': 2, 'palette': 'G',
+        }, {
+            'band': 3, 'palette': 'B',
+        }]})
+    region1, _ = source.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    sourceFunc2 = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.stylefuncs.medianFilter',
+            'parameters': {'kernel': 5, 'weight': 1.5},
+            'stage': 'main',
+        },
+        'bands': [{
+            'band': 1, 'palette': 'R',
+        }, {
+            'band': 2, 'palette': 'G',
+        }, {
+            'band': 3, 'palette': 'B',
+        }]})
+    region2, _ = sourceFunc2.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert np.any(region2 != region1)
+    sourceFunc3 = large_image.open(imagePath, style={
+        'bands': [{
+            'band': 1, 'palette': 'R',
+            'function': {
+                'name': 'large_image.tilesource.stylefuncs.medianFilter',
+                'parameters': {'kernel': 5, 'weight': 1.5},
+                'stage': 'band',
+            },
+        }, {
+            'band': 2, 'palette': 'G',
+        }, {
+            'band': 3, 'palette': 'B',
+        }]})
+    region3, _ = sourceFunc3.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert np.any(region3 != region1)
+    assert np.any(region3 != region2)
+
+    sourceFunc2a = large_image.open(imagePath, style={
+        'function': {
+            'name': 'large_image.tilesource.stylefuncs.medianFilter',
+            'parameters': {'kernel': 5, 'weight': 1.5},
+        },
+        'bands': [{
+            'band': 1, 'palette': 'R',
+        }, {
+            'band': 2, 'palette': 'G',
+        }, {
+            'band': 3, 'palette': 'B',
+        }]})
+    region2a, _ = sourceFunc2a.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert np.all(region2a == region2)
+    sourceFunc3a = large_image.open(imagePath, style={
+        'bands': [{
+            'band': 1, 'palette': 'R',
+            'function': {
+                'name': 'large_image.tilesource.stylefuncs.medianFilter',
+                'parameters': {'kernel': 5, 'weight': 1.5},
+            },
+        }, {
+            'band': 2, 'palette': 'G',
+        }, {
+            'band': 3, 'palette': 'B',
+        }]})
+    region3a, _ = sourceFunc3a.getRegion(
+        output=dict(maxWidth=50),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert np.all(region3a == region3)
+
+
 def testStyleFunctionsWarnings():
     imagePath = datastore.fetch('extraoverview.tiff')
     source = large_image.open(imagePath, style={

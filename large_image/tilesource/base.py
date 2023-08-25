@@ -1531,6 +1531,8 @@ class TileSource(IPyLeafletMixin):
                             sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
                             np.where(sc.mask, clrs, 0))
             sc.output = self._applyStyleFunction(sc.output, sc, 'postband')
+        if hasattr(sc, 'styleIndex'):
+            del sc.styleIndex
         sc.output = self._applyStyleFunction(sc.output, sc, 'main')
         if sc.dtype == 'uint16':
             sc.output = (sc.output * 65535 / 255).astype(np.uint16)
