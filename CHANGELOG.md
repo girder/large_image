@@ -7,7 +7,8 @@
 - Harden internal retiling.  This sometimes affected histograms ([#1269](../../pull/1269))
 - Set annotation update user in client so it appears faster ([#1270](../../pull/1270))
 - Harden reading with tifffile on images with bad axes information ([#1273](../../pull/1273))
-- Include projection in metadata ([#1277](../../pull/1277)
+- Include projection in metadata ([#1277](../../pull/1277))
+- Better expose ipyleaflet maps ([#1278](../../pull/1278))
 
 ### Changes
 - Adjust tifffile log level ([#1265](../../pull/1265))
