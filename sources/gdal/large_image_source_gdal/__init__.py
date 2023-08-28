@@ -590,6 +590,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 'sourceSizeX': self.sourceSizeX,
                 'sourceSizeY': self.sourceSizeY,
                 'bounds': self.getBounds(self.projection),
+                'projection': self.projection.decode() if isinstance(
+                    self.projection, bytes) else self.projection,
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
             })
