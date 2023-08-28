@@ -176,8 +176,8 @@ def testImageGeneration(data_range):
     result = precision_vector(result, data_range[0], data_range[1], data_range[2])
 
     # ignore alpha values for now
-    expected = expected.take(indices=range(0, -1), axis=-1)
-    result = result.take(indices=range(0, -1), axis=-1)
+    expected = expected.take(indices=range(-1), axis=-1)
+    result = result.take(indices=range(-1), axis=-1)
 
     # For debugging
     # difference = numpy.subtract(result, expected)

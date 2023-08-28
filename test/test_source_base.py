@@ -82,7 +82,9 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm)$)|bad_axes)',
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm)$)' +
+                  (r'|bad_axes' if sys.version_info < (3, 9) else '') +
+                  r')',
         'python': sys.version_info >= (3, 7),
     },
     'vips': {
