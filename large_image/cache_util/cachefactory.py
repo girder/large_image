@@ -117,7 +117,7 @@ def getFirstAvailableCache():
         except TileCacheError:
             continue
     if cache is not None:
-        config.getConfig('logprint').info(
+        config.getConfig('logprint').debug(
             f'Automatically setting `{cacheBackend}` as cache_backend from availableCaches',
         )
         config.setConfig('cache_backend', cacheBackend)
@@ -169,7 +169,7 @@ class CacheFactory:
             cacheLock = threading.Lock()
 
         if not inProcess and not CacheFactory.logged:
-            config.getConfig('logprint').info(f'Using {cacheBackend} for large_image caching')
+            config.getConfig('logprint').debug(f'Using {cacheBackend} for large_image caching')
             CacheFactory.logged = True
 
         return cache, cacheLock

@@ -73,4 +73,5 @@ docs/source/*
 .pre-commit-config.yaml
 
 *.ipynb
+!docs/*.ipynb
 NOTES.md
