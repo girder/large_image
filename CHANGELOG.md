@@ -2,6 +2,9 @@
 
 ## 1.23.5
 
+### Improvements
+- Better expose ipyleaflet maps from remote files ([#1280](../../pull/1280))
+
 ### Bug Fixes
 - Fix modifying annotations anonymously ([#1279](../../pull/1279))
 

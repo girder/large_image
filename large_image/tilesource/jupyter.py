@@ -19,6 +19,7 @@ import os
 import weakref
 
 from large_image.exceptions import TileSourceXYZRangeError
+from large_image.tilesource.utilities import JSONDict
 
 try:
     import ipyleaflet
@@ -117,9 +118,12 @@ class Map:
         self._layer = self._map = self._metadata = None
         self._ts = ts
         if (not url or not metadata) and gc and (id or resource):
+            fileId = None
             if id is None:
                 entry = gc.get('resource/lookup', parameters={'path': resource})
                 if entry:
+                    if entry.get('_modelType') == 'file':
+                        fileId = entry['_id']
                     id = entry['itemId'] if entry.get('_modelType') == 'file' else entry['_id']
             if id:
                 try:
@@ -133,8 +137,9 @@ class Map:
                         metadata = gc.get(f'item/{id}/tiles' + suffix)
                         if metadata.get('geospatial') and metadata.get('projection'):
                             url += suffix
+                    self._id = id
                 else:
-                    self._ts = self._get_temp_source(gc, id)
+                    self._ts = self._get_temp_source(gc, fileId or id)
         if url and metadata:
             self._metadata = metadata
             self._url = url
@@ -274,6 +279,14 @@ class Map:
     @property
     def map(self):
         return self._map
+
+    @property
+    def metadata(self):
+        return JSONDict(self._metadata)
+
+    @property
+    def id(self):
+        return getattr(self, '_id', None)
 
     def to_map(self, coordinate):
         """
