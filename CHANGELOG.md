@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.23.5
+
+### Bug Fixes
+- Fix modifying annotations anonymously ([#1279](../../pull/1279))
+
 ## 1.23.4
 
 ### Improvements

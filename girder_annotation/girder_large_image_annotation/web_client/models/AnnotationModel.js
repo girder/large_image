@@ -32,7 +32,7 @@ const AnnotationModel = AccessControlledModel.extend({
     },
 
     initialize() {
-        if (!this.get('updated')) {
+        if (!this.get('updated') && getCurrentUser()) {
             this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
             this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
         }
@@ -295,8 +295,10 @@ const AnnotationModel = AccessControlledModel.extend({
         } else {
             url = `annotation/${this.id}`;
             method = 'PUT';
-            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
-            this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
+            if (getCurrentUser()) {
+                this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+                this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
+            }
         }
 
         if (this._pageElements === false || isNew) {
@@ -356,8 +358,10 @@ const AnnotationModel = AccessControlledModel.extend({
         this.trigger('g:delete', this, this.collection, options);
         let xhr = false;
         if (!this.isNew()) {
-            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
-            this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
+            if (getCurrentUser()) {
+                this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+                this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
+            }
             xhr = restRequest({
                 url: `annotation/${this.id}`,
                 method: 'DELETE'
