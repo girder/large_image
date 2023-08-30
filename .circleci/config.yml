@@ -201,6 +201,9 @@ jobs:
     executor: toxandnode
     steps:
       - checkout
+      - run:
+          name: Install dependencies
+          command: apt-get update -yq && apt-get install -yq pandoc && pandoc --version
       - tox:
           env: docs,lint,lintclient
       - store_artifacts:
