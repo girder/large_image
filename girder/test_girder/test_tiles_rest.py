@@ -1253,6 +1253,31 @@ def testTilesHistogramWithRange(server, admin, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testTilesHistogramCachingJob(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'sample_image.ptif', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False, 'cache': 'report'})
+    assert resp.json['cached'] == [False]
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False, 'cache': 'schedule'})
+    assert 'scheduledJob' in resp.json
+
+    job = Job().load(resp.json['scheduledJob'], force=True)
+    while job['status'] not in (JobStatus.SUCCESS, JobStatus.ERROR, JobStatus.CANCELED):
+        time.sleep(0.1)
+        job = Job().load(job['_id'], force=True)
+    resp = server.request(
+        path='/item/%s/tiles/histogram' % itemId,
+        params={'width': 2048, 'height': 2048, 'resample': False, 'cache': 'report'})
+    assert resp.json['cached'] == [True]
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testTilesInternalMetadata(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
         'sample_image.ptif', admin, fsAssetstore)

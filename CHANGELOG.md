@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.23.6
+
+### Improvements
+- Allow scheduling histogram computation in Girder ([#1282](../../pull/1282))
+
 ## 1.23.5
 
 ### Improvements

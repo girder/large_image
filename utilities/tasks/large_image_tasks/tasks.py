@@ -191,3 +191,29 @@ def cache_tile_frames_job(job):
         logger.exception('Failed caching tile frames')
         job = Job().updateJob(
             job, log='Failed caching tile frames (%s)\n' % exc, status=JobStatus.ERROR)
+
+
+def cache_histograms_job(job):
+    from girder_jobs.constants import JobStatus
+    from girder_jobs.models.job import Job
+    from girder_large_image.models.image_item import ImageItem
+
+    from girder import logger
+
+    kwargs = job['kwargs']
+    item = ImageItem().load(kwargs.pop('itemId'), force=True)
+    job = Job().updateJob(
+        job, log='Started caching histograms\n',
+        status=JobStatus.RUNNING)
+    try:
+        for entry in kwargs.get('histogramList'):
+            job = Job().load(job['_id'], force=True)
+            if job['status'] == JobStatus.CANCELED:
+                return
+            job = Job().updateJob(job, log='Caching %r\n' % entry)
+            ImageItem().histogram(item, checkAndCreate=True, **entry)
+        job = Job().updateJob(job, log='Finished caching histograms\n', status=JobStatus.SUCCESS)
+    except Exception as exc:
+        logger.exception('Failed caching histograms')
+        job = Job().updateJob(
+            job, log='Failed caching histograms (%s)\n' % exc, status=JobStatus.ERROR)
