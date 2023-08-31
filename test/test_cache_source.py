@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 import large_image
@@ -45,3 +47,21 @@ def testCacheSourceStyleFirst():
     assert ts2.getTile(2, 0, 4) is not None
     ts1 = large_image.open(imagePath)
     assert ts1.getTile(0, 0, 4) == tile1
+
+
+@pytest.mark.skipif(sys.version_info < (3, 7),
+                    reason='requires python >= 3.7 for a source with the issue')
+@pytest.mark.singular()
+def testCacheSourceBadStyle():
+    cachesClear()
+    imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
+    ts1 = large_image.open(imagePath, style='{"bands": [{"max": 128}]}')
+    tile1 = ts1.getTile(0, 0, 0)
+    # With nd2 files, a bad style could cause a future segfault
+    with pytest.raises(Exception):
+        large_image.open(imagePath, style='{"bands": [{%,"max": 128}]}')
+    ts2 = large_image.open(imagePath, style='{"bands": [{"max": 160}]}')
+    tile2 = ts2.getTile(0, 0, 0)
+    assert tile1 == tile2
+    ts1 = ts2 = None
+    cachesClear()

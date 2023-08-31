@@ -203,11 +203,12 @@ class TileSource(IPyLeafletMixin):
                 self._jsonstyle = json.dumps(style, sort_keys=True, separators=(',', ':'))
             else:
                 try:
+                    self._style = None
                     style = json.loads(style)
                     if not isinstance(style, dict):
                         raise TypeError
                     self._style = JSONDict(style)
-                except TypeError:
+                except (TypeError, json.decoder.JSONDecodeError):
                     msg = 'Style is not a valid json object.'
                     raise exceptions.TileSourceError(msg)
 
