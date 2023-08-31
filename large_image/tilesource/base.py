@@ -1438,7 +1438,7 @@ class TileSource(IPyLeafletMixin):
             sc.bandidx = 0 if image.shape[2] <= 2 else 1
             sc.band = None
             if ((entry.get('frame') is None and not entry.get('framedelta')) or
-                    entry.get('frame') == frame):
+                    entry.get('frame') == sc.mainFrame):
                 image = sc.mainImage
                 frame = sc.mainFrame
             else:
