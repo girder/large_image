@@ -764,3 +764,45 @@ def testStyleFunctionsWarnings():
         output=dict(maxWidth=50),
         format=large_image.constants.TILE_FORMAT_NUMPY)
     assert source._styleFunctionWarnings
+
+
+@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for the source')
+@pytest.mark.singular()
+def testStyleRepeatedFrame():
+    imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
+    ts1 = large_image.open(imagePath, style={'bands': [
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'R'},
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'G'},
+        {'frame': 1, 'min': 'min', 'max': 'max', 'palette': 'B'},
+    ]})
+    ts2 = large_image.open(imagePath, style={'bands': [
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'G'},
+        {'frame': 1, 'min': 'min', 'max': 'max', 'palette': 'B'},
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'R'},
+    ]})
+    ts3 = large_image.open(imagePath, style={'bands': [
+        {'frame': 1, 'min': 'min', 'max': 'max', 'palette': 'B'},
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'R'},
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'G'},
+    ]})
+    ts4 = large_image.open(imagePath, style={'bands': [
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'R'},
+        {'frame': 1, 'min': 'min', 'max': 'max', 'palette': 'B'},
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'G'},
+    ]})
+    ts5 = large_image.open(imagePath, style={'bands': [
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'G'},
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'R'},
+        {'frame': 1, 'min': 'min', 'max': 'max', 'palette': 'B'},
+    ]})
+    ts6 = large_image.open(imagePath, style={'bands': [
+        {'frame': 1, 'min': 'min', 'max': 'max', 'palette': 'B'},
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'G'},
+        {'frame': 0, 'min': 'min', 'max': 'max', 'palette': 'R'},
+    ]})
+    tile1 = ts1.getTile(0, 0, 0)
+    assert ts2.getTile(0, 0, 0) == tile1
+    assert ts3.getTile(0, 0, 0) == tile1
+    assert ts4.getTile(0, 0, 0) == tile1
+    assert ts5.getTile(0, 0, 0) == tile1
+    assert ts6.getTile(0, 0, 0) == tile1

@@ -7,6 +7,7 @@
 
 ### Bug Fixes
 - Closing some styled sources could lead to prematurely closing file handles ([#1283](../../pull/1283))
+- Band order could matter in styles ([#1284](../../pull/1284))
 
 ## 1.23.5
 
