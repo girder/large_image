@@ -5,6 +5,9 @@
 ### Improvements
 - Allow scheduling histogram computation in Girder ([#1282](../../pull/1282))
 
+### Bug Fixes
+- Closing some styled sources could lead to prematurely closing file handles ([#1283](../../pull/1283))
+
 ## 1.23.5
 
 ### Improvements

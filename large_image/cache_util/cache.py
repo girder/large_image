@@ -208,11 +208,12 @@ class LruCacheMetaclass(type):
                 with subresult._sourceLock:
                     result.__dict__ = subresult.__dict__.copy()
                     result._sourceLock = threading.RLock()
-                result._setStyle(kwargs['style'])
                 result._classkey = key
-                result._unstyledInstance = subresult
                 # for pickling
                 result._initValues = (args, kwargs.copy())
+                result._unstyledInstance = subresult
+                # Has to be after setting the _unstyledInstance
+                result._setStyle(kwargs['style'])
                 with cacheLock:
                     cache[key] = result
                     return result

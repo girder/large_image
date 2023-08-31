@@ -191,7 +191,10 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._tileLock = threading.RLock()
 
     def __del__(self):
-        if hasattr(self, '_nd2'):
+        # If we have an _unstyledInstance attribute, this is not the owner of
+        # the _nd2 handle, so we can't close it.  Otherwise, we need to close
+        # it or the nd2 library complains that we didn't explicitly close it.
+        if hasattr(self, '_nd2') and not hasattr(self, '_unstyledInstance'):
             self._nd2.close()
             del self._nd2
 
