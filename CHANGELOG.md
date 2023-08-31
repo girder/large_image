@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.23.7
+
+### Changes
+- Internal metadata get endpoint is now public ([#1285](../../pull/1285))
+
 ## 1.23.6
 
 ### Improvements
