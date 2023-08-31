@@ -973,6 +973,28 @@ class TilesItemResource(ItemResource):
             raise RestException('Value Error: %s' % e.args[0])
         return pixel
 
+    def _cacheHistograms(self, item, histRange, cache, params):
+        needed = []
+        result = {'cached': []}
+        tilesource = self.imageItemModel._loadTileSource(item, **params)
+        for frame in range(tilesource.frames):
+            if histRange is not None and histRange != 'round':
+                continue
+            checkParams = params.copy()
+            checkParams['range'] = histRange
+            if tilesource.frames > 1:
+                checkParams['frame'] = frame
+            else:
+                checkParams.pop('frame', None)
+            result['cached'].append(self.imageItemModel.histogram(
+                item, checkAndCreate='check', **checkParams))
+            if not result['cached'][-1]:
+                needed.append(checkParams)
+        if cache == 'schedule' and not all(result['cached']):
+            result['scheduledJob'] = str(self.imageItemModel._scheduleHistograms(
+                item, needed, self.getCurrentUser())['_id'])
+        return result
+
     @describeRoute(
         Description('Get a histogram for any region of a large image item.')
         .notes('This can take all of the parameters as the region endpoint, '
@@ -1010,6 +1032,10 @@ class TilesItemResource(ItemResource):
                required=False, dataType='boolean', default=False)
         .param('density', 'If true, scale the results by the number of '
                'samples.', required=False, dataType='boolean', default=False)
+        .param('cache', 'Report on or request caching the specified histogram '
+               'for all frames.  Scheduling creates a local job.',
+               required=False,
+               enum=['none', 'report', 'schedule'])
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
@@ -1053,9 +1079,13 @@ class TilesItemResource(ItemResource):
         if params.get('roundRange'):
             if params.pop('roundRange', False) and histRange is None:
                 histRange = 'round'
+
+        cache = params.pop('cache', None)
+        if cache in {'report', 'schedule'}:
+            return self._cacheHistograms(item, histRange, cache, params)
         result = self.imageItemModel.histogram(item, range=histRange, **params)
         result = result['histogram']
-        # Cast everything to lists and floats so json with encode properly
+        # Cast everything to lists and floats so json will encode properly
         for entry in result:
             for key in {'bin_edges', 'hist', 'range'}:
                 if key in entry:

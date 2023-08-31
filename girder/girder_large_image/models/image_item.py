@@ -550,9 +550,9 @@ class ImageItem(Item):
 
         :param item: the item with the tile source.
         :param checkAndCreate: if False, use the cache.  If True and the result
-            is already cached, just return True.  If is does not, create,
-            cache, and return it.  If 'nosave', return values from the cache,
-            but do not store new results in the cache.
+            is already cached, just return True.  If is not, create, cache, and
+            return it.  If 'nosave', return values from the cache, but do not
+            store new results in the cache.
         :param kwargs: optional arguments.  Some options are left, top,
             right, bottom, regionWidth, regionHeight, units, width, height,
             encoding, jpegQuality, jpegSubsampling, and tiffCompression.  This
@@ -577,7 +577,7 @@ class ImageItem(Item):
         tileSource = self._loadTileSource(item, **kwargs)
         return tileSource.getPixel(**kwargs)
 
-    def histogram(self, item, **kwargs):
+    def histogram(self, item, checkAndCreate=False, **kwargs):
         """
         Using a tile source, get a histogram of the image.
 
@@ -592,8 +592,10 @@ class ImageItem(Item):
         else:
             imageKey = 'histogram'
             result = self._getAndCacheImageOrData(
-                item, 'histogram', False, dict(kwargs, imageKey=imageKey),
-                pickleCache=True, **kwargs)[0]
+                item, 'histogram', checkAndCreate,
+                dict(kwargs, imageKey=imageKey), pickleCache=True, **kwargs)
+            if not isinstance(result, bool):
+                result = result[0]
         return result
 
     def getBandInformation(self, item, statistics=True, **kwargs):
@@ -661,6 +663,31 @@ class ImageItem(Item):
             },
             title='Cache tileFrames',
             type='large_image_cache_tile_frames',
+            user=user,
+            public=True,
+            asynchronous=True,
+        )
+        Job().scheduleJob(job)
+        return job
+
+    def _scheduleHistograms(self, item, histogramList, user):
+        """
+        Schedule generating histograms in a local job.
+
+        :param item: the item.
+        :param histogramList: a list of dictionary of parameters to pass to
+            the histogram method.
+        :param user: the user owning the job.
+        """
+        job = Job().createLocalJob(
+            module='large_image_tasks.tasks',
+            function='cache_histograms_job',
+            kwargs={
+                'itemId': str(item['_id']),
+                'histogramList': histogramList,
+            },
+            title='Cache Histograms',
+            type='large_image_cache_histograms',
             user=user,
             public=True,
             asynchronous=True,
