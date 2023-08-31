@@ -46,7 +46,7 @@ class InternalMetadataItemResource(Item):
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
-    @access.user(scope=TokenScope.DATA_READ)
+    @access.public()
     @loadmodel(model='item', map={'itemId': 'item'}, level=AccessType.READ)
     def getMetadataKey(self, item, key, params):
         if key not in item:
