@@ -4,6 +4,7 @@
 
 ### Improvements
 - Add [common] extra_requires ([#1288](../../pull/1288))
+- Add more logic for determining associated images in tiff source ([#1291](../../pull/1291))
 
 ### Changes
 - Internal metadata get endpoint is now public ([#1285](../../pull/1285))
