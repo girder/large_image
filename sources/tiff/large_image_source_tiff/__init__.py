@@ -447,7 +447,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :param largeImagePath: path to the TIFF file.
         :param directoryNum: libtiff directory number of the image.
-        :param mustBeTiles: if true, use tiled images.  If false, require
+        :param mustBeTiled: if true, use tiled images.  If false, require
            untiled images.
         :param topImage: if specified, add image-embedded metadata to this
            image.
@@ -464,6 +464,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 id = 'dir%d' % directoryNum
                 if not len(self._associatedImages):
                     id = 'macro'
+            if not id and not mustBeTiled:
+                id = {1: 'label', 9: 'macro'}.get(associated._tiffInfo.get('subfiletype'))
             if not isinstance(id, str):
                 id = id.decode()
             # Only use this as an associated image if the parsed id is
@@ -471,7 +473,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # image isn't too large.
             if (id.isalnum() and len(id) > 3 and len(id) <= 20 and
                     associated._pixelInfo['width'] <= self._maxAssociatedImageSize and
-                    associated._pixelInfo['height'] <= self._maxAssociatedImageSize):
+                    associated._pixelInfo['height'] <= self._maxAssociatedImageSize and
+                    id not in self._associatedImages):
                 image = associated._tiffFile.read_image()
                 # Optrascan scanners store xml image descriptions in a "tiled
                 # image".  Check if this is the case, and, if so, parse such
