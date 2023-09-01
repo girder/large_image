@@ -69,12 +69,13 @@ export default {
                 // prefer the item preset; don't show both
                 return false;
             } else if (
-                parseInt(preset.frame) >= this.imageMetadata.frames.length ||
+                parseInt(preset.frame) >= (this.imageMetadata.frames || [null]).length ||
                 !this.availableModes.includes(preset.mode.id)
             ) {
                 return false;
             } else if (
                 preset.style && preset.style.bands &&
+                this.imageMetadata.IndexRange &&
                 this.imageMetadata.IndexRange.IndexC &&
                 preset.style.bands.some((b) => b.framedelta > this.imageMetadata.IndexRange.IndexC)
             ) {

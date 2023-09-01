@@ -8,6 +8,9 @@
 ### Changes
 - Internal metadata get endpoint is now public ([#1285](../../pull/1285))
 
+### Bug Fixes
+- Fix an issue with presets and single frame images ([#1289](../../pull/1289))
+
 ## 1.23.6
 
 ### Improvements
