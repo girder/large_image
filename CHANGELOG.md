@@ -2,6 +2,9 @@
 
 ## 1.23.7
 
+### Improvements
+- Add [common] extra_requires ([#1288](../../pull/1288))
+
 ### Changes
 - Internal metadata get endpoint is now public ([#1285](../../pull/1285))
 
