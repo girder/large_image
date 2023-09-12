@@ -44,6 +44,10 @@ In addition to installing the ``large-image`` package, you'll need at least one 
 Pip
 ~~~
 
+Install common tile sources on linux, OSX, or Windows::
+
+    pip install large-image[common]
+
 Install all tile sources on linux::
 
     pip install large-image[all] --find-links https://girder.github.io/large_image_wheels
@@ -101,6 +105,8 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``performance``: include optional modules that can improve performance
 
+  - ``common``: all of the tile sources and above packages that will install directly from pypi without other external libraries on linux, OSX, and Windows.
+
   - ``all``: for all of the above
 
 - ``large-image-converter``: A utility for using pyvips and other libraries to convert images into pyramidal tiff files that can be read efficiently by large_image.
@@ -108,33 +114,33 @@ Large Image consists of several Python modules designed to work together.  These
 
 - Tile sources:
 
-  - ``large-image-source-tiff``: A tile source for reading pyramidal tiff files in common compression formats.
+  - ``large-image-source-bioformats``: A tile source for reading any file handled by the Java Bioformats library.
 
-  - ``large-image-source-openslide``: A tile source using the OpenSlide library.  This works with svs, ndpi, Mirax, tiff, vms, and other file formats.
+  - ``large-image-source-deepzoom``: A tile source for reading Deepzoom tiles.
 
-  - ``large-image-source-ometiff``: A tile source using the tiff library that can handle some multi-frame OMETiff files.
-
-  - ``large-image-source-pil``: A tile source for small images via the Python Imaging Library (Pillow).
+  - ``large-image-source-dicom``: A tile source for reading DICOM WSI images.
 
   - ``large-image-source-gdal``: A tile source for reading geotiff files via GDAL.  This handles source data with more complex transforms than the mapnik tile source.
 
   - ``large-image-source-mapnik``: A tile source for reading geotiff and netcdf files via Mapnik and GDAL.  This handles more vector issues than the gdal tile source.
 
-  - ``large-image-source-openjpeg``: A tile source using the Glymur library to read jp2 (JPEG 2000) files.
+  - ``large-image-source-multi``: A tile source for compositing other tile sources into a single multi-frame source.
 
   - ``large-image-source-nd2``: A tile source for reading nd2 (NIS Element) images.
 
-  - ``large-image-source-bioformats``: A tile source for reading any file handled by the Java Bioformats library.
+  - ``large-image-source-ometiff``: A tile source using the tiff library that can handle some multi-frame OMETiff files.
 
-  - ``large-image-source-deepzoom``: A tile source for reading Deepzoom tiles.
+  - ``large-image-source-openjpeg``: A tile source using the Glymur library to read jp2 (JPEG 2000) files.
 
-  - ``large-image-source-multi``: A tile source for compositing other tile sources into a single multi-frame source.
+  - ``large-image-source-openslide``: A tile source using the OpenSlide library.  This works with svs, ndpi, Mirax, tiff, vms, and other file formats.
 
-  - ``large-image-source-vips``: A tile source for reading any files handled by libvips.  This also can be used for writing tiled images from numpy arrays.
+  - ``large-image-source-pil``: A tile source for small images via the Python Imaging Library (Pillow).
+
+  - ``large-image-source-tiff``: A tile source for reading pyramidal tiff files in common compression formats.
 
   - ``large-image-source-tifffile``: A tile source using the tifffile library that can handle a wide variety of tiff-like files.
 
-  - ``large-image-source-dicom``: A tile source for reading DICOM WSI images.
+  - ``large-image-source-vips``: A tile source for reading any files handled by libvips.  This also can be used for writing tiled images from numpy arrays.
 
   - ``large-image-source-test``: A tile source that generates test tiles, including a simple fractal pattern.  Useful for testing extreme zoom levels.
 
