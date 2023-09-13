@@ -5,7 +5,8 @@ import {parseQueryString, splitRoute} from '@girder/core/misc';
 
 import ImageViewerWidget from './base';
 
-var baseSAUrl = 'https://unpkg.com/slideatlas-viewer@4.4.1/dist/';
+// var baseSAUrl = 'https://unpkg.com/slideatlas-viewer@4.4.1/dist/';
+var baseSAUrl = 'https://cdn.jsdelivr.net/npm/slideatlas-viewer@4/dist/';
 
 var SlideAtlasImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
