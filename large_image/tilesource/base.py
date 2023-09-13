@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import types
+import uuid
 
 import numpy as np
 import PIL
@@ -57,8 +58,8 @@ class TileSource(IPyLeafletMixin):
     geospatial = False
 
     def __init__(self, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
-                 tiffCompression='raw', edge=False, style=None, *args,
-                 **kwargs):
+                 tiffCompression='raw', edge=False, style=None, noCache=None,
+                 *args, **kwargs):
         """
         Initialize the tile class.
 
@@ -129,6 +130,10 @@ class TileSource(IPyLeafletMixin):
             excepting that each must have a band that is not -1.  Bands are
             composited in the order listed.  This base object may also contain
             the 'dtype' and 'axis' values.
+        :param noCache: if True, the style can be adjusted dynamically and the
+            source is not elibible for caching.  If there is no intention to
+            reuse the source at a later time, this can have performance
+            benefits, such as when first cataloging images that can be read.
         """
         super().__init__(**kwargs)
         self.logger = config.getConfig('logger')
@@ -232,6 +237,27 @@ class TileSource(IPyLeafletMixin):
     @property
     def style(self):
         return self._style
+
+    @style.setter
+    def style(self, value):
+        if not hasattr(self, '_unstyledStyle') and value == getattr(self, '_unstyledStyle', None):
+            return
+        if not getattr(self, '_noCache', False):
+            msg = 'Cannot set the style of a cached source'
+            raise exceptions.TileSourceError(msg)
+        args, kwargs = self._initValues
+        kwargs['style'] = value
+        self._initValues = (args, kwargs.copy())
+        oldval = getattr(self, '_jsonstyle', None)
+        self._setStyle(value)
+        if oldval == getattr(self, '_jsonstyle', None):
+            return
+        self._classkey = str(uuid.uuid4())
+        if (kwargs.get('style') != getattr(self, '_unstyledStyle', None) and
+                not hasattr(self, '_unstyledInstance')):
+            subkwargs = kwargs.copy()
+            subkwargs['style'] = getattr(self, '_unstyledStyle', None)
+            self._unstyledInstance = self.__class__(*args, **subkwargs)
 
     @property
     def dtype(self):

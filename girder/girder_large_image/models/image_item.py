@@ -80,7 +80,7 @@ class ImageItem(Item):
         logger.debug(
             'createImageItem checking if item %s (%s) can be used directly',
             item['_id'], item['name'])
-        sourceName = girder_tilesource.getGirderTileSourceName(item, fileObj)
+        sourceName = girder_tilesource.getGirderTileSourceName(item, fileObj, noCache=True)
         if sourceName:
             logger.info(
                 'createImageItem using source %s for item %s (%s)',

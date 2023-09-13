@@ -1,5 +1,6 @@
 import functools
 import threading
+import uuid
 
 try:
     import resource
@@ -168,7 +169,18 @@ class LruCacheMetaclass(type):
         return cls
 
     def __call__(cls, *args, **kwargs):  # noqa - N805
-
+        if kwargs.get('noCache') or (
+                kwargs.get('noCache') is None and config.getConfig('cache_sources') is False):
+            instance = super().__call__(*args, **kwargs)
+            # for pickling
+            instance._initValues = (args, kwargs.copy())
+            instance._classkey = str(uuid.uuid4())
+            instance._noCache = True
+            if kwargs.get('style') != getattr(cls, '_unstyledStyle', None):
+                subkwargs = kwargs.copy()
+                subkwargs['style'] = getattr(cls, '_unstyledStyle', None)
+                instance._unstyledInstance = subresult = cls(*args, **subkwargs)
+            return instance
         cache, cacheLock = LruCacheMetaclass.classCaches[cls]
 
         if hasattr(cls, 'getLRUHash'):
@@ -212,6 +224,7 @@ class LruCacheMetaclass(type):
                 # for pickling
                 result._initValues = (args, kwargs.copy())
                 result._unstyledInstance = subresult
+                result._derivedSource = True
                 # Has to be after setting the _unstyledInstance
                 result._setStyle(kwargs['style'])
                 with cacheLock:
@@ -233,6 +246,7 @@ class LruCacheMetaclass(type):
                 subkwargs = kwargs.copy()
                 subkwargs['style'] = getattr(cls, '_unstyledStyle', None)
                 instance._unstyledInstance = subresult = cls(*args, **subkwargs)
+                instance._derivedSource = True
             with cacheLock:
                 cache[key] = instance
         return instance

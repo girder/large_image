@@ -3,7 +3,7 @@ import sys
 import pytest
 
 import large_image
-from large_image.cache_util import cachesClear
+from large_image.cache_util import cachesClear, cachesInfo
 
 from .datastore import datastore
 
@@ -65,3 +65,27 @@ def testCacheSourceBadStyle():
     assert tile1 == tile2
     ts1 = ts2 = None
     cachesClear()
+
+
+@pytest.mark.singular()
+def testCacheNoCache():
+    cachesClear()
+    assert cachesInfo()['tilesource']['used'] == 0
+    imagePath = datastore.fetch('sample_image.ptif')
+    ts1 = large_image.open(imagePath, noCache=True)
+    ts2 = large_image.open(imagePath, style={'max': 128}, noCache=True)
+    assert cachesInfo()['tilesource']['used'] == 0
+    ts1.style = {'max': 190}
+    lastkey = ts2._classkey
+    ts2.style = {'max': 190}
+    assert ts2._classkey != lastkey
+    lastkey = ts2._classkey
+    ts2.style = {'max': 190}
+    assert ts2._classkey == lastkey
+    assert cachesInfo()['tilesource']['used'] == 0
+    ts1 = ts2 = None
+    ts1 = large_image.open(imagePath)
+    large_image.open(imagePath, style={'max': 128})
+    assert cachesInfo()['tilesource']['used'] > 0
+    with pytest.raises(large_image.exceptions.TileSourceError):
+        ts1.style = {'max': 190}

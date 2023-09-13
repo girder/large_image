@@ -147,7 +147,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # If we have an _unstyledInstance attribute, this is not the owner of
         # the _docim handle, so we can't close it.  Otherwise, we need to close
         # it or the _dicom library may prevent shutting down.
-        if getattr(self, '_dicom', None) is not None and not hasattr(self, '_unstyledInstance'):
+        if getattr(self, '_dicom', None) is not None and not hasattr(self, '_derivedSource'):
             try:
                 self._dicom.close()
             finally:

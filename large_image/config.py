@@ -25,6 +25,12 @@ ConfigValues = {
     'cache_memcached_username': None,
     'cache_memcached_password': None,
 
+    # If set to False, the default will be to not cache tile sources.  This has
+    # substantial performance penalties if sources are used multiple times, so
+    # should only be set in singular dynamic environments such as experimental
+    # notebooks.
+    'cache_sources': True,
+
     # Generally, these keys are the form of "cache_<cacheName>_<key>"
 
     # For tilesources.  These are also limited by available file handles.

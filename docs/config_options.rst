@@ -23,6 +23,8 @@ Configuration parameters:
 
 - ``cache_tilesource_maximum``: If this is non-zero, this further limits the number of tilesources than can be cached to this value.
 
+- ``cache_sources``: If set to False, the default will be to not cache tile sources.  This has substantial performance penalties if sources are used multiple times, so should only be set in singular dynamic environments such as experimental notebooks.
+
 - ``max_small_image_size``: The PIL tilesource is used for small images if they are no more than this many pixels along their maximum dimension.
 
 - ``source_bioformats_ignored_names``, ``source_pil_ignored_names``, ``source_vips_ignored_names``: Some tile sources can read some files that are better read by other tilesources.  Since reading these files is suboptimal, these tile sources have a setting that, by default, ignores files without extensions or with particular extensions.  This setting is a Python regular expressions.  For bioformats this defaults to ``r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'``.

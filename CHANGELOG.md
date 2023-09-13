@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.24.0
+
+### Features
+- Added a noCache option to opening tile sources ([#1296](../../pull/1296))
+
 ## 1.23.7
 
 ### Improvements
