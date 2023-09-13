@@ -190,7 +190,7 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):  # noqa
             for k, v in properties.items())
         sourceList.append((propertiesClash, fallback, priority, sourceName))
     for _clash, _fallback, _priority, sourceName in sorted(sourceList):
-        if availableSources[sourceName].canRead(item):
+        if availableSources[sourceName].canRead(item, *args, **kwargs):
             return sourceName
 
 

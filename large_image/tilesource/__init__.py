@@ -178,6 +178,9 @@ def canRead(*args, **kwargs):
     """
     Check if large_image can read a path or uri.
 
+    If there is no intention to open the image immediately, conisder adding
+    `noCache=True` to the kwargs to avoid cycling the cache unnecessarily.
+
     :returns: True if any appropriate source reports it can read the path or
         uri.
     """
@@ -191,6 +194,9 @@ def canRead(*args, **kwargs):
 def canReadList(pathOrUri, mimeType=None, *args, **kwargs):
     """
     Check if large_image can read a path or uri via each source.
+
+    If there is no intention to open the image immediately, conisder adding
+    `noCache=True` to the kwargs to avoid cycling the cache unnecessarily.
 
     :param pathOrUri: either a file path or a fixed source via
         large_image://<source>.
