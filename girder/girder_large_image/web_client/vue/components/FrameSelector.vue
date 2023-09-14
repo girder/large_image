@@ -173,7 +173,7 @@ export default Vue.extend({
                     {id: 2, name: 'Channel Compositing'}
                 );
             }
-            if (this.metadata.bandCount > 1) {
+            if (this.metadata.bandCount) {
                 this.sliderModes.push(
                     {id: 3, name: 'Band Compositing'}
                 );
@@ -250,24 +250,24 @@ export default Vue.extend({
     <!-- Use styling instead of v-if to make each invisible so that the components are not unmounted -->
     <div class="image-frame-simple-control">
       <composite-layers
-        v-if="imageMetadata.channels && modesShown[2]"
+        v-if="metadata.channels && modesShown[2]"
         key="channels"
         :item-id="itemId"
         :current-frame="currentFrame"
         :current-style="style[2]"
-        :layers="imageMetadata.channels"
-        :layer-map="imageMetadata.channelmap"
+        :layers="metadata.channels"
+        :layer-map="metadata.channelmap"
         :active="currentModeId === 2"
         :class="currentModeId === 2 ? '' : 'invisible'"
         @updateStyle="(style) => updateStyle(2, style)"
       />
       <composite-layers
-        v-if="imageMetadata.bands && modesShown[3]"
+        v-if="metadata.bands && modesShown[3]"
         key="bands"
         :item-id="itemId"
         :current-frame="currentFrame"
         :current-style="style[3]"
-        :layers="imageMetadata.bands"
+        :layers="metadata.bands"
         :layer-map="undefined"
         :active="currentModeId === 3"
         :class="currentModeId === 3 ? '' : 'invisible'"

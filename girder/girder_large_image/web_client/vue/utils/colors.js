@@ -5,7 +5,11 @@ export const CHANNEL_COLORS = {
     '^CY3(|[^\d].*)$': '#FF8000',  // eslint-disable-line
     '^CY5(|[^\d].*)$': '#FF00FF',  // eslint-disable-line
     '^YFP.*$': '#00FF00',
-    '^GFP.*$': '#00FF00'
+    '^GFP.*$': '#00FF00',
+    '^red$': '#FF0000',
+    '^green$': '#00FF00',
+    '^blue$': '#0000FF',
+    '^gr[ae]y(|scale)$': '#FFFFFF'
 };
 
 export const OTHER_COLORS = [
