@@ -73,7 +73,7 @@ export default {
                 !this.availableModes.includes(preset.mode.id)
             ) {
                 return false;
-            } else if (preset.style && preset.style.bands){
+            } else if (preset.style && preset.style.bands) {
                 if (preset.mode.id === 2) {
                     // Channel compositing, compare to num channels
                     if (this.imageMetadata.IndexRange &&
@@ -104,9 +104,9 @@ export default {
                 }
                 if (this.liConfig.imageFramePresets) {
                     this.folderPresets = this.liConfig.imageFramePresets.filter(this.presetApplicable);
-                    if(this.liConfig.imageFramePresetDefaults) {
-                        this.liConfig.imageFramePresetDefaults.every(({ name }) => {
-                            const presetMatch = this.folderPresets.find((p) => p.name === name)
+                    if (this.liConfig.imageFramePresetDefaults) {
+                        this.liConfig.imageFramePresetDefaults.every(({name}) => {
+                            const presetMatch = this.folderPresets.find((p) => p.name === name);
                             if (presetMatch) {
                                 // found applicable preset in defaults list
                                 // set as selected then return
@@ -114,7 +114,7 @@ export default {
                                 return false;
                             }
                             return true;
-                        })
+                        });
                     }
                 }
                 return undefined;
