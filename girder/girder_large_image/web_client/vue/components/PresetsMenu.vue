@@ -104,6 +104,18 @@ export default {
                 }
                 if (this.liConfig.imageFramePresets) {
                     this.folderPresets = this.liConfig.imageFramePresets.filter(this.presetApplicable);
+                    if(this.liConfig.imageFramePresetDefaults) {
+                        this.liConfig.imageFramePresetDefaults.every(({ name }) => {
+                            const presetMatch = this.folderPresets.find((p) => p.name === name)
+                            if (presetMatch) {
+                                // found applicable preset in defaults list
+                                // set as selected then return
+                                this.selectedPreset = name;
+                                return false;
+                            }
+                            return true;
+                        })
+                    }
                 }
                 return undefined;
             });
