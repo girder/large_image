@@ -6,9 +6,15 @@
 - Added a noCache option to opening tile sources ([#1296](../../pull/1296))
 - Added a display/visible value to the annotation schema ([#1299](../../pull/1299))
 
+### Improvements
+- Band compositing is shown for single band images ([#1300](../../pull/1300))
+
 ### Changes
 - Changed the cdn used for the SlideAtlas viewer ([#1297](../../pull/1297))
 
+### Bug Fixes
+- Band compositing wasn't working ([#1300](../../pull/1300))
+  
 ## 1.23.7
 
 ### Improvements
