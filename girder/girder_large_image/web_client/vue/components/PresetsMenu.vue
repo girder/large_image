@@ -73,13 +73,23 @@ export default {
                 !this.availableModes.includes(preset.mode.id)
             ) {
                 return false;
-            } else if (
-                preset.style && preset.style.bands &&
-                this.imageMetadata.IndexRange &&
-                this.imageMetadata.IndexRange.IndexC &&
-                preset.style.bands.some((b) => b.framedelta > this.imageMetadata.IndexRange.IndexC)
-            ) {
-                return false;
+            } else if (preset.style && preset.style.bands){
+                if (preset.mode.id === 2) {
+                    // Channel compositing, compare to num channels
+                    if (this.imageMetadata.IndexRange &&
+                        this.imageMetadata.IndexRange.IndexC &&
+                        preset.style.bands.some((b) => b.framedelta >= this.imageMetadata.IndexRange.IndexC)
+                    ) {
+                        return false;
+                    }
+                } else if (preset.mode.id === 3) {
+                    // Band compositing, compare to num bands
+                    if (this.imageMetadata.bandCount &&
+                        preset.style.bands.some((b) => b.band >= this.imageMetadata.bandCount)
+                    ) {
+                        return false;
+                    }
+                }
             }
 
             return true;
