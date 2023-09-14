@@ -110,7 +110,8 @@ class AnnotationResource(Resource):
             query['annotation.name'] = params['name']
         fields = list(
             (
-                'annotation.name', 'annotation.description', 'annotation.attributes',
+                'annotation.name', 'annotation.description',
+                'annotation.attributes', 'annotation.display',
                 'access', 'groups', '_version',
             ) + Annotation().baseFields)
         return Annotation().findWithPermissions(

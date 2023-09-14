@@ -558,6 +558,21 @@ class AnnotationSchema:
                 'minLength': 1,
             },
             'description': {'type': 'string'},
+            'display': {
+                'type': 'object',
+                'properties': {
+                    'visible': {
+                        'type': ['boolean', 'string'],
+                        'enum': ['new', True, False],
+                        'description': 'This advises viewers on when the '
+                        'annotation should be shown.  If "new" (the default), '
+                        'show the annotation when it is first added to the '
+                        "system.  If false, don't show the annotation by "
+                        'default.  If true, show the annotation when the item '
+                        'is displayed.',
+                    },
+                },
+            },
             'attributes': {
                 'type': 'object',
                 'additionalProperties': True,

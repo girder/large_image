@@ -4,6 +4,7 @@
 
 ### Features
 - Added a noCache option to opening tile sources ([#1296](../../pull/1296))
+- Added a display/visible value to the annotation schema ([#1299](../../pull/1299))
 
 ### Changes
 - Changed the cdn used for the SlideAtlas viewer ([#1297](../../pull/1297))
