@@ -9,7 +9,7 @@ export const CHANNEL_COLORS = {
     '^red$': '#FF0000',
     '^green$': '#00FF00',
     '^blue$': '#0000FF',
-    '^gr[ae]y(|scale)$': '#FFFFFF',
+    '^gr[ae]y(|scale)$': '#FFFFFF'
 };
 
 export const OTHER_COLORS = [
