@@ -16,6 +16,13 @@ the comments are not part of a valid annotation:
   {
     "name": "MyAnnotationName",              # Non-empty string.  Optional
     "description": "This is a description",  # String.  Optional
+    "display": {                             # Object.  Optional
+        "visible": "new",                    # String or boolean.  Optional.
+                    # If "new", display this annotation when it first is added
+                    # to the system.  If false, don't display the annotation by
+                    # default.  If true, display the annotation when the item
+                    # is loaded.
+    },
     "attributes": {                          # Object.  Optional
       "key1": "value1",
       "key2": ["any", {"value": "can"}, "go", "here"]
