@@ -205,7 +205,7 @@ jobs:
           name: Install dependencies
           command: apt-get update -yq && apt-get install -yq pandoc && pandoc --version
       - tox:
-          env: docs,lint,lintclient
+          env: docs,lint,lintclient,notebook
       - store_artifacts:
           path: build/docs
       - persist_to_workspace:
