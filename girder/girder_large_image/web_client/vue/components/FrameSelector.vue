@@ -173,7 +173,7 @@ export default Vue.extend({
                     {id: 2, name: 'Channel Compositing'}
                 );
             }
-            if (this.metadata.bandCount > 1) {
+            if (this.metadata.bandCount) {
                 this.sliderModes.push(
                     {id: 3, name: 'Band Compositing'}
                 );
