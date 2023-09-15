@@ -14,7 +14,7 @@
 
 ### Bug Fixes
 - Band compositing wasn't working ([#1300](../../pull/1300))
-  
+
 ## 1.23.7
 
 ### Improvements

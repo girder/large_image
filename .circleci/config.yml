@@ -125,7 +125,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.6.15
+          version: "3.6"
           node: v14
       - tox:
           env: test-py36
@@ -138,7 +138,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.7.17
+          version: "3.7"
           node: v14
       - tox:
           env: test-py37
@@ -151,7 +151,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.8.17
+          version: "3.8"
           node: v14
       - tox:
           env: test-py38
@@ -164,7 +164,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.9.17
+          version: "3.9"
           node: v14
       - tox:
           env: test-py39
@@ -177,7 +177,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.10.12
+          version: "3.10"
           node: v14
       - tox:
           env: test-py310
@@ -190,7 +190,7 @@ jobs:
     steps:
       - checkout
       - allservices:
-          version: 3.11.4
+          version: "3.11"
           node: v14
       - tox:
           env: test-py311
