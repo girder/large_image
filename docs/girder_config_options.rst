@@ -198,7 +198,7 @@ By default, item metadata can contain any keys and values.  These can be given b
 Image Frame Presets
 ....................
 
-This is used to specify a list of default presets for viewing images in the folder.
+This is used to specify a list of presets for viewing images in the folder.
 Presets can be customized and saved in the GeoJS Image Viewer.
 To retrieve saved presets, use http://[serverURL]/api/v1/item/[itemID]/internal_metadata/presets.
 You can convert the response to YAML and paste it into the ``imageFramePresets`` key in your config file.
@@ -338,6 +338,40 @@ The YAML below includes some example presets.
         - autoRange: 0.2
           framedelta: 6
           palette: "#FF8000"
+
+
+Image Frame Preset Defaults
+...........................
+This is used to specify a list of preset defaults, in order of precedence.
+These presets are to be automatically applied to an image in this folder if they are applicable.
+In the case that a preset is not applicable to an image, the next item in this list will be used.
+
+** Important: the presets named in this list must have corresponding entries in the `imageFramePresets` configuration, else this configuration will have no effect. **
+
+::
+
+    ---
+    # The preset named "Primary Preset" will be applied to all images in this folder.
+    # Any images for which "Primary Preset" does not apply will have "Secondary Preset" applied.
+    # Any images for which neither "Primary Preset" nor "Secondary Preset" apply will have "Tertiary Preset" applied.
+    imageFramePresetDefaults:
+    - name: Primary Preset
+    - name: Secondary Preset
+    - name: Tertiary Preset
+
+::
+
+    ---
+    # This example would be used with the example for `imageFramePresets` shown above.
+    # Images with 7 or more channels would use "Auto Ranged Channels"
+    # Images with fewer than 7 but at least 4 channels would use "Channels with Min and Max"
+    # Images with 3 channels would use "3 channels"
+    # Images with fewer than 3 channels would not have a default preset applied.
+    imageFramePresetDefaults:
+    - name: Auto Ranged Channels
+    - name: Channels with Min and Max
+    - name: 3 channels
+
 
 
 Editing Configuration Files
