@@ -34,10 +34,12 @@ def testLRUCacheTools():
     cache_test(cachetools.Cache(1000))
 
 
+@pytest.mark.singular()
 def testCacheMemcached():
     cache_test(MemCache())
 
 
+@pytest.mark.singular()
 def testCheckCacheMemcached():
     cache = MemCache()
 
