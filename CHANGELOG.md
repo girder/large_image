@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.24.1
+
+### Improvements
+- Frame selection presets have configurable defaults ([#1301](../../pull/1301))
+
 ## 1.24.0
 
 ### Features
