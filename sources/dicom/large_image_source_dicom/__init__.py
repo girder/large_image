@@ -62,16 +62,19 @@ def dicom_to_dict(ds, base=None):
             key = pydicom.datadict.keyword_for_tag(k)
         except Exception:
             pass
-        if v.get('vr') in {None, 'OB'}:
-            continue
-        if not len(v.get('Value', [])):
-            continue
-        if isinstance(v['Value'][0], dict):
-            val = [dicom_to_dict(ds, entry) for entry in v['Value']]
-        elif len(v['Value']) == 1:
-            val = v['Value'][0]
+        if isinstance(v, str):
+            val = v
         else:
-            val = v['Value']
+            if v.get('vr') in {None, 'OB'}:
+                continue
+            if not len(v.get('Value', [])):
+                continue
+            if isinstance(v['Value'][0], dict):
+                val = [dicom_to_dict(ds, entry) for entry in v['Value']]
+            elif len(v['Value']) == 1:
+                val = v['Value'][0]
+            else:
+                val = v['Value']
         info[key] = val
     return info
 
