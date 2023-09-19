@@ -19,7 +19,7 @@ eventStream.on('g:eventStream.disable', () => {
         let lastTimestamp;
         try {
             lastTimestamp = window.localStorage.getItem('sseFallbackTimestamp');
-            if (lastTimestamp === 'null') {
+            if (lastTimestamp === 'null' || lastTimestamp === 'undefined') {
                 lastTimestamp = undefined;
             }
         } catch (e) {

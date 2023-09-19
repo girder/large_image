@@ -6,6 +6,9 @@
 - Frame selection presets have configurable defaults ([#1301](../../pull/1301))
 - Improved DICOM metadata extraction ([#1305](../../pull/1305))
 
+### Bug Fixes
+- Guard against potential bad event stream timestamp ([#1306](../../pull/1306))
+
 ## 1.24.0
 
 ### Features
