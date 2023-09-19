@@ -2,7 +2,7 @@
 import {restRequest} from '@girder/core/rest';
 import {Chrome} from 'vue-color';
 
-import {CHANNEL_COLORS, OTHER_COLORS} from '../utils/colors';
+import {OTHER_COLORS, getChannelColor} from '../utils/colors';
 import HistogramEditor from './HistogramEditor.vue';
 
 export default {
@@ -114,13 +114,11 @@ export default {
             // Assign colors
             this.layers.forEach((layerName) => {
                 if (!this.compositeLayerInfo[layerName].palette) {
-                    // Search for case-insensitive regex match among known channel-colors
-                    Object.entries(CHANNEL_COLORS).forEach(([channelPattern, color]) => {
-                        if (layerName.match(new RegExp(channelPattern, 'i')) && !usedColors.includes(color)) {
-                            this.compositeLayerInfo[layerName].palette = color;
-                            usedColors.push(color);
-                        }
-                    });
+                    const channelColor = getChannelColor(layerName)
+                    if (channelColor) {
+                        this.compositeLayerInfo[layerName].palette = channelColor;
+                        usedColors.push(channelColor);
+                    }
                 }
             });
             this.layers.forEach((layerName) => {
