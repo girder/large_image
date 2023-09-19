@@ -1,10 +1,11 @@
 <script>
 export default {
-    props: ['label', 'currentValue', 'valueMax', 'sliderLabels'],
-    emits: ['updateValue'],
+    props: ['label', 'currentValue', 'valueMax', 'sliderLabels', 'maxMerge'],
+    emits: ['updateValue', 'updateMaxMerge'],
     data() {
         return {
-            value: this.currentValue
+            value: this.currentValue,
+            merge: this.maxMerge,
         };
     },
     watch: {
@@ -13,6 +14,12 @@ export default {
         },
         value(v) {
             this.$emit('updateValue', v);
+        },
+        maxMerge(v) {
+          this.merge = v;
+        },
+        merge(v) {
+          this.$emit('updateMaxMerge', v);
         }
     }
 };
@@ -28,6 +35,7 @@ export default {
         name="numberControl"
         min="0"
         :max="valueMax"
+        :disabled="merge"
       >
     </td>
     <td style="width:90%">
@@ -37,6 +45,7 @@ export default {
         name="sliderControl"
         min="0"
         :max="valueMax"
+        :disabled="merge"
       >
       <div class="bubble-wrap">
         <output
@@ -52,6 +61,17 @@ export default {
           class="bubble-after"
         />
       </div>
+    </td>
+    <td v-show="merge !== undefined">
+      <input
+        v-model="merge"
+        type="checkbox"
+        name="maxMergeCheck"
+        style="margin: 0px 5px 0px 10px"
+      >
+    </td>
+    <td v-show="merge !== undefined">
+      <label for="maxMergeCheck">Max Merge</label>
     </td>
   </tr>
 </template>
