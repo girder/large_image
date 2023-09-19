@@ -5,7 +5,7 @@ export default {
     data() {
         return {
             value: this.currentValue,
-            merge: this.maxMerge,
+            merge: this.maxMerge
         };
     },
     watch: {
@@ -16,10 +16,10 @@ export default {
             this.$emit('updateValue', v);
         },
         maxMerge(v) {
-          this.merge = v;
+            this.merge = v;
         },
         merge(v) {
-          this.$emit('updateMaxMerge', v);
+            this.$emit('updateMaxMerge', v);
         }
     }
 };

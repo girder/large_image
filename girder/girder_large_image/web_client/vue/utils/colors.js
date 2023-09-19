@@ -16,7 +16,7 @@ export function getChannelColor(name) {
     // Search for case-insensitive regex match among known channel-colors
     for (const [channelPattern, color] of Object.entries(CHANNEL_COLORS)) {
         if (name.match(new RegExp(channelPattern, 'i'))) {
-            return color
+            return color;
         }
     }
 }
