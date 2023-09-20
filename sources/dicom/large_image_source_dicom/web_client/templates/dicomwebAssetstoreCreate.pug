@@ -1,0 +1,26 @@
+include dicomwebAssetstoreMixins
+
+.panel.panel-default
+  .panel-heading(
+      data-toggle="collapse",
+      data-parent="#g-assetstore-accordion",
+      data-target="#g-create-dwas-tab")
+    .panel-title
+      a
+        i.icon-server
+        span Create new #[b DICOMweb] assetstore
+  #g-create-dwas-tab.panel-collapse.collapse
+    .panel-body
+      p.
+        The DICOMweb assetstore can be used to search for and view WSI DICOM
+        files on a DICOMweb server. Each DICOMweb assetstore should point to a
+        particular DICOMweb server.
+      form#g-new-dwas-form(role="form")
+        label.control-label(for="g-new-dwas-name") Assetstore name
+        input#g-new-dwas-name.input-sm.form-control(
+            type="text",
+            placeholder="Name")
+        +g-dwas-parameters
+        p#g-new-dwas-error.g-validation-failed-message
+        input.g-new-assetstore-submit.btn.btn-sm.btn-primary(
+          type="submit", value="Create")

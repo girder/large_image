@@ -57,8 +57,9 @@ setup(
     extras_require={
         'girder': f'girder-large-image{limit_version}',
     },
+    include_package_data=True,
     keywords='large_image, tile source',
-    packages=find_packages(exclude=['test', 'test.*']),
+    packages=find_packages(exclude=['test', 'test.*', 'test_dicom', 'test_dicom.*']),
     url='https://github.com/girder/large_image',
     python_requires='>=3.8',
     entry_points={
@@ -67,6 +68,9 @@ setup(
         ],
         'girder_large_image.source': [
             'dicom = large_image_source_dicom.girder_source:DICOMGirderTileSource',
+        ],
+        'girder.plugin': [
+            'dicomweb = large_image_source_dicom.girder_plugin:DICOMwebPlugin',
         ],
     },
 )

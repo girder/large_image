@@ -1,0 +1,165 @@
+{
+    "name": "@girder/dicomweb",
+    "version": "1.0.0",
+    "peerDependencies": {
+        "@girder/core": "*",
+        "@girder/jobs": "*"
+    },
+    "girderPlugin": {
+        "name": "dicomweb",
+        "main": "./main.js",
+        "dependencies": [
+            "jobs"
+        ]
+    },
+    "devDependencies": {
+        "@girder/eslint-config": "3.0.0-rc1",
+        "@girder/pug-lint-config": "^3.0.0-rc1",
+        "eslint": "^8.20.0",
+        "eslint-config-semistandard": "^17.0.0",
+        "eslint-config-standard": "^17.0.0",
+        "eslint-plugin-backbone": "^2.1.1",
+        "eslint-plugin-import": "^2.26.0",
+        "eslint-plugin-n": "^15.3.0",
+        "eslint-plugin-promise": "^6.0.0",
+        "eslint-plugin-underscore": "^0.0.10",
+        "nyc": "^15.1.0",
+        "phantomjs-prebuilt": "^2.1.16",
+        "pug-lint": "^2.6.0",
+        "stylint": "^2.0.0"
+    },
+    "scripts": {
+        "lint": "eslint --cache . && pug-lint . && stylint",
+        "format": "eslint --cache --fix . && stylint --fix"
+    },
+    "eslintConfig": {
+        "extends": "@girder",
+        "root": true
+    },
+    "eslintIgnore": [
+        "build/",
+        "**/node_modules/"
+    ],
+    "pugLintConfig": {
+        "extends": "@girder/pug-lint-config",
+        "excludeFiles": [
+            "**/node_modules/",
+            "**/.tox/"
+        ]
+    },
+    "stylintrc": {
+        "blocks": false,
+        "brackets": {
+            "expect": "never",
+            "error": true
+        },
+        "colons": {
+            "expect": "never",
+            "error": true
+        },
+        "colors": false,
+        "commaSpace": {
+            "expect": "always",
+            "error": true
+        },
+        "commentSpace": {
+            "expect": "always",
+            "error": true
+        },
+        "cssLiteral": {
+            "expect": "never",
+            "error": true
+        },
+        "depthLimit": false,
+        "duplicates": {
+            "expect": true,
+            "error": true
+        },
+        "efficient": {
+            "expect": "always",
+            "error": true
+        },
+        "exclude": [
+            "**/node_modules/**",
+            "**/.tox/**"
+        ],
+        "extendPref": "@extend",
+        "globalDupe": false,
+        "groupOutputByFile": {
+            "expect": true,
+            "error": true
+        },
+        "indentPref": {
+            "expect": 2,
+            "error": true
+        },
+        "leadingZero": {
+            "expect": "always",
+            "error": true
+        },
+        "maxErrors": false,
+        "maxWarnings": false,
+        "mixed": false,
+        "mixins": [],
+        "namingConvention": false,
+        "namingConventionStrict": false,
+        "none": {
+            "expect": "always",
+            "error": true
+        },
+        "noImportant": false,
+        "parenSpace": {
+            "expect": "never",
+            "error": true
+        },
+        "placeholders": false,
+        "prefixVarsWithDollar": {
+            "expect": "always",
+            "error": true
+        },
+        "quotePref": {
+            "expect": "double",
+            "error": true
+        },
+        "reporterOptions": {
+            "columns": [
+                "lineData",
+                "severity",
+                "description",
+                "rule"
+            ],
+            "columnSplitter": "  ",
+            "showHeaders": false,
+            "truncate": true
+        },
+        "semicolons": {
+            "expect": "never",
+            "error": true
+        },
+        "sortOrder": false,
+        "stackedProperties": {
+            "expect": "never",
+            "error": true
+        },
+        "trailingWhitespace": {
+            "expect": "never",
+            "error": true
+        },
+        "universal": {
+            "expect": "never",
+            "error": true
+        },
+        "valid": {
+            "expect": true,
+            "error": true
+        },
+        "zeroUnits": {
+            "expect": "never",
+            "error": true
+        },
+        "zIndexNormalize": {
+            "expect": 5,
+            "error": true
+        }
+    }
+}
