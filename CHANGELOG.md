@@ -2,6 +2,9 @@
 
 ## 1.24.1
 
+### Features
+- DICOMweb support, including a Girder assetstore ([#1303](../../pull/1303))
+
 ### Improvements
 - Frame selection presets have configurable defaults ([#1301](../../pull/1301))
 - Improved DICOM metadata extraction ([#1305](../../pull/1305))
