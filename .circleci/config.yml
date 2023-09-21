@@ -103,7 +103,7 @@ commands:
       - run:
           name: Upload coverage
           command: |
-              ./codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml build/test/coverage/cobertura-coverage.xml
+              ./codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml,build/test/coverage/cobertura-coverage.xml
 
 jobs:
   testdocker:
