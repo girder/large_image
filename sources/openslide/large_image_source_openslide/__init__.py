@@ -14,6 +14,7 @@
 #  limitations under the License.
 ##############################################################################
 
+import io
 import math
 import os
 
@@ -25,12 +26,6 @@ from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
-
-try:
-    from libtiff import libtiff_ctypes
-except ImportError:
-    libtiff_ctypes = False
-
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -376,13 +371,9 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 # Reopen handle after a lowlevel error
                 self._openslide = openslide.OpenSlide(self._largeImagePath)
                 return None
-        bytePath = self._largeImagePath
-        if not isinstance(bytePath, bytes):
-            bytePath = bytePath.encode()
-        _tiffFile = libtiff_ctypes.TIFF.open(bytePath)
-        _tiffFile.SetDirectory(images[imageKey])
-        img = _tiffFile.read_image()
-        return PIL.Image.fromarray(img)
+        tiff_buffer = io.BytesIO()
+        tifftools.write_tiff(self._tiffinfo['ifds'][images[imageKey]], tiff_buffer)
+        return PIL.Image.open(tiff_buffer)
 
 
 def open(*args, **kwargs):
