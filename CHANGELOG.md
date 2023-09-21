@@ -11,6 +11,7 @@
 
 ### Changes
 - Remove a needless guard around getting an icc profile ([#1316](../../pull/1316))
+- Refactor fetching extra associated images from openslide ([#1318](../../pull/1318))
 
 ### Bug Fixes
 - Guard against potential bad event stream timestamp ([#1306](../../pull/1306))
