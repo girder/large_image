@@ -94,14 +94,13 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except openslide.lowlevel.OpenSlideError:
             msg = 'File will not be opened via OpenSlide.'
             raise TileSourceError(msg)
-        if libtiff_ctypes:
-            try:
-                self._tiffinfo = tifftools.read_tiff(self._largeImagePath)
-                if tifftools.Tag.ICCProfile.value in self._tiffinfo['ifds'][0]['tags']:
-                    self._iccprofiles = [self._tiffinfo['ifds'][0]['tags'][
-                        tifftools.Tag.ICCProfile.value]['data']]
-            except Exception:
-                pass
+        try:
+            self._tiffinfo = tifftools.read_tiff(self._largeImagePath)
+            if tifftools.Tag.ICCProfile.value in self._tiffinfo['ifds'][0]['tags']:
+                self._iccprofiles = [self._tiffinfo['ifds'][0]['tags'][
+                    tifftools.Tag.ICCProfile.value]['data']]
+        except Exception:
+            pass
 
         svsAvailableLevels = self._getAvailableLevels(self._largeImagePath)
         if not len(svsAvailableLevels):

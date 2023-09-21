@@ -9,6 +9,9 @@
 - Frame selection presets have configurable defaults ([#1301](../../pull/1301))
 - Improved DICOM metadata extraction ([#1305](../../pull/1305))
 
+### Changes
+- Remove a needless guard around getting an icc profile ([#1316](../../pull/1316))
+
 ### Bug Fixes
 - Guard against potential bad event stream timestamp ([#1306](../../pull/1306))
 
