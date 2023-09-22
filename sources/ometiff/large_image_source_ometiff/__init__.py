@@ -23,7 +23,6 @@ import numpy as np
 import PIL.Image
 from large_image_source_tiff import TiffFileTileSource
 from large_image_source_tiff.exceptions import InvalidOperationTiffError, IOTiffError, TiffError
-from large_image_source_tiff.tiff_reader import TiledTiffDirectory
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
@@ -103,7 +102,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         self._largeImagePath = str(self._getLargeImagePath())
 
         try:
-            base = TiledTiffDirectory(self._largeImagePath, 0, mustBeTiled=None)
+            base = self.getTiffDir(0, mustBeTiled=None)
         except TiffError:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
@@ -114,7 +113,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             msg = 'Not an OME Tiff'
             raise TileSourceError(msg)
         self._omeinfo = info['OME']
-        self._checkForOMEZLoop(self._largeImagePath)
+        self._checkForOMEZLoop()
         self._parseOMEInfo()
         omeimages = [
             entry['Pixels'] for entry in self._omeinfo['Image'] if
@@ -127,12 +126,12 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         self._omeLevels = [omebylevel.get(key) for key in range(max(omebylevel.keys()) + 1)]
         if base._tiffInfo.get('istiled'):
             self._tiffDirectories = [
-                TiledTiffDirectory(self._largeImagePath, int(entry['TiffData'][0].get('IFD', 0)))
+                self.getTiffDir(int(entry['TiffData'][0].get('IFD', 0)))
                 if entry else None
                 for entry in self._omeLevels]
         else:
             self._tiffDirectories = [
-                TiledTiffDirectory(self._largeImagePath, 0, mustBeTiled=None)
+                self.getTiffDir(0, mustBeTiled=None)
                 if entry else None
                 for entry in self._omeLevels]
             self._checkForInefficientDirectories(warn=False)
@@ -153,13 +152,11 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         self._associatedImages = {}
         self._checkForInefficientDirectories()
 
-    def _checkForOMEZLoop(self, largeImagePath):
+    def _checkForOMEZLoop(self):
         """
         Check if the OME description lists a Z-loop that isn't referenced by
         the frames or TiffData list and is present based on the number of tiff
         directories.  This can modify self._omeinfo.
-
-        :param largeImagePath: used for checking for the maximum directory.
         """
         info = self._omeinfo
         try:
@@ -182,8 +179,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             return
         expecteddir = planes * zloop
         try:
-            lastdir = TiledTiffDirectory(largeImagePath, expecteddir - 1, mustBeTiled=None)
-            if not lastdir._tiffFile.lastdirectory():
+            lastdir = self.getTiffDir(expecteddir - 1, mustBeTiled=None)
+            if not lastdir._tiffInfo.get('lastdirectory'):
                 return
         except Exception:
             return

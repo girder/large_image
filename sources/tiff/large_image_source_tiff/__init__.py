@@ -32,9 +32,9 @@ from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePrio
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
+from . import tiff_reader
 from .exceptions import (InvalidOperationTiffError, IOOpenTiffError,
                          IOTiffError, TiffError, ValidationTiffError)
-from .tiff_reader import TiledTiffDirectory
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -103,13 +103,16 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception as exc:
             config.getConfig('logger').debug('Cannot read with tifftools route; %r', exc)
 
+        alldir = []
         try:
-            alldir = self._scanDirectories()
+            if hasattr(self, '_info'):
+                alldir = self._scanDirectories()
+            else:
+                lastException = 'Could not parse file with tifftools'
         except IOOpenTiffError:
             msg = 'File cannot be opened via tiff source.'
             raise TileSourceError(msg)
         except (ValidationTiffError, TiffError) as exc:
-            alldir = []
             lastException = exc
 
         # If there are no tiled images, raise an exception.
@@ -134,7 +137,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if (td.tileWidth != highest.tileWidth or
                     td.tileHeight != highest.tileHeight):
                 if not len(self._associatedImages):
-                    self._addAssociatedImage(self._largeImagePath, tdir[-2], True, highest)
+                    self._addAssociatedImage(tdir[-2], True, highest)
                 continue
             # If a layer's image is not a multiple of the tile size, it should
             # be near a power of two of the highest resolution image.
@@ -179,6 +182,25 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkForInefficientDirectories()
         self._checkForVendorSpecificTags()
 
+    def getTiffDir(self, directoryNum, mustBeTiled=True, subDirectoryNum=0, validate=True):
+        """
+        Get a tile tiff directory reader class.
+
+        :param directoryNum: The number of the TIFF image file directory to
+            open.
+        :param mustBeTiled: if True, only tiled images validate.  If False,
+            only non-tiled images validate.  None validates both.
+        :param subDirectoryNum: if set, the number of the TIFF subdirectory.
+        :param validate: if False, don't validate that images can be read.
+        :returns: a class that can read from a specific tiff directory.
+        """
+        return tiff_reader.TiledTiffDirectory(
+            filePath=self._largeImagePath,
+            directoryNum=directoryNum,
+            mustBeTiled=mustBeTiled,
+            subDirectoryNum=subDirectoryNum,
+            validate=validate)
+
     def _scanDirectories(self):
         lastException = None
         # Associated images are smallish TIFF images that have an image
@@ -197,7 +219,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for directoryNum in itertools.count():  # pragma: no branch
             try:
                 if dir is None:
-                    dir = TiledTiffDirectory(self._largeImagePath, directoryNum, validate=False)
+                    dir = self.getTiffDir(directoryNum, validate=False)
                 else:
                     dir._setDirectory(directoryNum)
                     dir._loadMetadata()
@@ -226,7 +248,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not alldir and lastException:
             raise lastException
         for directoryNum in associatedDirs:
-            self._addAssociatedImage(self._largeImagePath, directoryNum)
+            self._addAssociatedImage(directoryNum)
         return alldir
 
     def _levelFromIfd(self, ifd, baseifd):
@@ -288,7 +310,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         directories are the same size and format; all non-tiled directories are
         treated as associated images.
         """
-        dir0 = TiledTiffDirectory(self._largeImagePath, 0)
+        dir0 = self.getTiffDir(0)
         self.tileWidth = dir0.tileWidth
         self.tileHeight = dir0.tileHeight
         self.sizeX = dir0.imageWidth
@@ -304,6 +326,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         ))
         self._bandCount = dir0._tiffInfo.get('samplesperpixel')
         info = _cached_read_tiff(self._largeImagePath)
+        self._info = info
         frames = []
         associated = []  # for now, a list of directories
         curframe = -1
@@ -356,11 +379,10 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         raise TileSourceError(msg)
         self._associatedImages = {}
         for dirNum in associated:
-            self._addAssociatedImage(self._largeImagePath, dirNum)
+            self._addAssociatedImage(dirNum)
         self._frames = frames
         self._tiffDirectories = [
-            TiledTiffDirectory(
-                self._largeImagePath,
+            self.getTiffDir(
                 frames[0]['dirs'][idx][0],
                 subDirectoryNum=frames[0]['dirs'][idx][1])
             if frames[0]['dirs'][idx] is not None else None
@@ -439,13 +461,12 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 frame.setdefault('frame', {})
                 frame['frame']['IndexC'] = idx
 
-    def _addAssociatedImage(self, largeImagePath, directoryNum, mustBeTiled=False, topImage=None):
+    def _addAssociatedImage(self, directoryNum, mustBeTiled=False, topImage=None):
         """
         Check if the specified TIFF directory contains an image with a sensible
         image description that can be used as an ID.  If so, and if the image
         isn't too large, add this image as an associated image.
 
-        :param largeImagePath: path to the TIFF file.
         :param directoryNum: libtiff directory number of the image.
         :param mustBeTiled: if true, use tiled images.  If false, require
            untiled images.
@@ -453,7 +474,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
            image.
         """
         try:
-            associated = TiledTiffDirectory(largeImagePath, directoryNum, mustBeTiled)
+            associated = self.getTiffDir(directoryNum, mustBeTiled)
             id = ''
             desc = associated._tiffInfo.get('imagedescription')
             if desc:
@@ -664,8 +685,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if len(self._directoryCache) >= self._directoryCacheMaxSize:
                 self._directoryCache = {}
             try:
-                result = TiledTiffDirectory(
-                    self._largeImagePath, dirnum, mustBeTiled=None, subDirectoryNum=subdir)
+                result = self.getTiffDir(dirnum, mustBeTiled=None, subDirectoryNum=subdir)
             except IOTiffError:
                 result = None
             self._directoryCache[key] = result
