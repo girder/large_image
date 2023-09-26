@@ -20,7 +20,8 @@ export default Vue.extend({
             indices: [],
             indexInfo: {},
             style: {},
-            modesShown: {1: true}
+            modesShown: {1: true},
+            histogramParamStyles: {}
         };
     },
     computed: {
@@ -65,8 +66,23 @@ export default Vue.extend({
                     })
             );
         },
+        updateHistogramParamStyles() {
+            this.histogramParamStyles = {}
+            Array.from([2,3]).forEach((modeID) => {
+                const mergedStyle = this.maxMergeStyle(this.style[modeID])
+                const simpleMergedStyleString = JSON.stringify({
+                    bands: mergedStyle.bands.map((b) => ({
+                        framedelta: b.framedelta,
+                        band: b.band,
+                        // including min, max, and palette gives strange results
+                    }))
+                });
+                this.histogramParamStyles[modeID] = simpleMergedStyleString
+            })
+        },
         updateStyle(idx, style) {
             this.$set(this.style, idx, style);
+            this.updateHistogramParamStyles()
             this.update();
         },
         updateAxisSlider(event) {
@@ -76,6 +92,7 @@ export default Vue.extend({
         updateMaxMergeAxis(event) {
             this.indexInfo[event.index].maxMerge = event.maxMerge;
             this.update();
+            this.updateHistogramParamStyles()
         },
         updateFrameSlider(frame) {
             this.currentFrame = frame;
@@ -86,11 +103,12 @@ export default Vue.extend({
             this.indices.forEach((index) => {
                 if (this.sliderIndices.includes(index)) {
                     const info = this.indexInfo[index];
-                    frame += info.current * info.stride;
+                    if (!info.maxMerge){
+                        frame += info.current * info.stride;
+                    }
                 }
             });
             this.currentFrame = frame;
-            // rerun update maxmerge?
             let style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined;
             if (style && style.preset) delete style.preset;
             style = this.maxMergeStyle(style);
@@ -320,6 +338,7 @@ export default Vue.extend({
         :item-id="itemId"
         :current-frame="currentFrame"
         :current-style="style[2]"
+        :histogram-param-style="histogramParamStyles[2]"
         :layers="metadata.channels"
         :layer-map="metadata.channelmap"
         :active="currentModeId === 2"
@@ -332,6 +351,7 @@ export default Vue.extend({
         :item-id="itemId"
         :current-frame="currentFrame"
         :current-style="style[3]"
+        :histogram-param-style="histogramParamStyles[3]"
         :layers="metadata.bands"
         :layer-map="undefined"
         :active="currentModeId === 3"

@@ -10,7 +10,7 @@ export default {
         'color-picker': Chrome,
         HistogramEditor
     },
-    props: ['itemId', 'currentFrame', 'currentStyle', 'layers', 'layerMap', 'active'],
+    props: ['itemId', 'currentFrame', 'currentStyle', 'histogramParamStyle', 'layers', 'layerMap', 'active'],
     emits: ['updateStyle'],
     data() {
         return {
@@ -20,17 +20,21 @@ export default {
             compositeLayerInfo: {},
             expandedRows: [],
             autoRangeForAll: undefined,
-            histogramParams: {
+            showKeyboardShortcuts: false
+        };
+    },
+    computed: {
+        histogramParams() {
+            return {
                 frame: this.currentFrame,
                 width: 1024,
                 height: 1024,
                 bins: 512,
                 resample: false,
-                style: '{}',
+                style: this.histogramParamStyle,
                 roundRange: true
-            },
-            showKeyboardShortcuts: false
-        };
+            };
+        }
     },
     watch: {
         active() {
@@ -44,6 +48,9 @@ export default {
             if (this.currentStyle.preset) {
                 this.initializeStateFromStyle();
             }
+        },
+        histogramParams() {
+            this.fetchCurrentFrameHistogram()
         }
     },
     mounted() {

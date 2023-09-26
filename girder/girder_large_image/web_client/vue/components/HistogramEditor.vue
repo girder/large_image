@@ -28,6 +28,9 @@ export default {
         currentFrame() {
             this.fetchHistogram();
         },
+        currentFrameHistogram() {
+            this.fetchHistogram();
+        },
         histogram() {
             // allow rerender to occur first
             Vue.nextTick().then(() => {
