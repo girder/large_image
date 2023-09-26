@@ -67,22 +67,22 @@ export default Vue.extend({
             );
         },
         updateHistogramParamStyles() {
-            this.histogramParamStyles = {}
-            Array.from([2,3]).forEach((modeID) => {
-                const mergedStyle = this.maxMergeStyle(this.style[modeID])
+            this.histogramParamStyles = {};
+            Array.from([2, 3]).forEach((modeID) => {
+                const mergedStyle = this.maxMergeStyle(this.style[modeID]);
                 const simpleMergedStyleString = JSON.stringify({
                     bands: mergedStyle.bands.map((b) => ({
                         framedelta: b.framedelta,
-                        band: b.band,
+                        band: b.band
                         // including min, max, and palette gives strange results
                     }))
                 });
-                this.histogramParamStyles[modeID] = simpleMergedStyleString
-            })
+                this.histogramParamStyles[modeID] = simpleMergedStyleString;
+            });
         },
         updateStyle(idx, style) {
             this.$set(this.style, idx, style);
-            this.updateHistogramParamStyles()
+            this.updateHistogramParamStyles();
             this.update();
         },
         updateAxisSlider(event) {
@@ -92,7 +92,7 @@ export default Vue.extend({
         updateMaxMergeAxis(event) {
             this.indexInfo[event.index].maxMerge = event.maxMerge;
             this.update();
-            this.updateHistogramParamStyles()
+            this.updateHistogramParamStyles();
         },
         updateFrameSlider(frame) {
             this.currentFrame = frame;
@@ -103,7 +103,7 @@ export default Vue.extend({
             this.indices.forEach((index) => {
                 if (this.sliderIndices.includes(index)) {
                     const info = this.indexInfo[index];
-                    if (!info.maxMerge){
+                    if (!info.maxMerge) {
                         frame += info.current * info.stride;
                     }
                 }

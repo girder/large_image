@@ -50,7 +50,7 @@ export default {
             }
         },
         histogramParams() {
-            this.fetchCurrentFrameHistogram()
+            this.fetchCurrentFrameHistogram();
         }
     },
     mounted() {
