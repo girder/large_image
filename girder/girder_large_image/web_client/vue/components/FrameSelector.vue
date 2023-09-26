@@ -69,15 +69,19 @@ export default Vue.extend({
         updateHistogramParamStyles() {
             this.histogramParamStyles = {};
             Array.from([2, 3]).forEach((modeID) => {
-                const mergedStyle = this.maxMergeStyle(this.style[modeID]);
-                const simpleMergedStyleString = JSON.stringify({
-                    bands: mergedStyle.bands.map((b) => ({
-                        framedelta: b.framedelta,
-                        band: b.band
-                        // including min, max, and palette gives strange results
-                    }))
-                });
-                this.histogramParamStyles[modeID] = simpleMergedStyleString;
+                const mergedStyle = this.maxMergeStyle();
+                if (mergedStyle.bands.length) {
+                    const simpleMergedStyleString = JSON.stringify({
+                        bands: mergedStyle.bands.map((b) => ({
+                            framedelta: b.framedelta,
+                            band: b.band
+                            // including min, max, and palette gives strange results
+                        }))
+                    });
+                    this.histogramParamStyles[modeID] = simpleMergedStyleString;
+                } else {
+                    this.histogramParamStyles[modeID] = '{}';
+                }
             });
         },
         updateStyle(idx, style) {
@@ -168,7 +172,6 @@ export default Vue.extend({
                 // no max merge permutations to apply, keep old bandsArray
                 newBandsArray = bandsArray;
             }
-
             return {bands: newBandsArray};
         },
         fillMetadata() {
