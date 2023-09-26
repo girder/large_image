@@ -144,7 +144,9 @@ export default Vue.extend({
                     bandsArray.forEach((b) => {
                         frameDeltas.forEach((framedelta) => {
                             newBandsArray.push(
-                                Object.assign({}, b, {framedelta: b.framedelta + framedelta})
+                                Object.assign({}, b, {
+                                    framedelta: b.framedelta ? b.framedelta + framedelta : framedelta
+                                })
                             );
                         });
                     });
