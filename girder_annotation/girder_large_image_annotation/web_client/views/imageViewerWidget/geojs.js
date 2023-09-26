@@ -30,10 +30,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
         this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
-        this.listenTo(events, 's:widgetDrawRegion', this.drawRegion);
-        this.listenTo(events, 's:widgetDrawAddRegion', (model) => this.drawRegion(model, 'rectangle', true));
-        this.listenTo(events, 's:widgetDrawPolygonRegion', (model) => this.drawRegion(model, 'polygon'));
-        this.listenTo(events, 's:widgetDrawAddPolygonRegion', (model) => this.drawRegion(model, 'polygon', true));
+        this.listenTo(events, 's:widgetDrawRegionEvent', this.drawRegion);
         this.listenTo(events, 's:widgetClearRegion', this.clearRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
@@ -712,7 +709,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * Combine two regions into a multipolygon region.
          */
         _mergeRegions(origval, addval) {
-            if (!origval || !origval.length || origval.length < 4 || origval === [-1, -1, -1, -1]) {
+            if (!origval || !origval.length || origval.length < 2 || origval === [-1, -1, -1, -1]) {
                 return addval;
             }
             if (origval.length === 4) {
@@ -745,6 +742,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     addval[0] - addval[3], addval[1] + addval[4]
                 ];
             }
+            if (origval.length === 2 && addval.length === 2) {
+                addval = [addval[0], addval[1], -1, -1];
+            }
             return origval.concat([-1, -1]).concat(addval);
         },
 
@@ -755,15 +755,25 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * returns a promise that resolves to an array defining the region:
          *   [ left, top, width, height ]
          *
-         * @param {Backbone.Model} [model] A model to set the region to
+         * @param {Backbone.Model|Object} [model] A model to set the region to,
+         *   or an object with model, mode, add, and submitCtrl.
          * @param {string} [drawMode='rectangle'] An annotation drawing mode.
          * @param {boolean} [addToExisting=false] If truthy, add the new
          *   annotation to any existing annotation making a multipolygon.
          * @returns {$.Promise}
          */
         drawRegion: function (model, drawMode, addToExisting) {
+            let submitCtrl, origEvent;
+            if (model && model.model && model.add !== undefined) {
+                drawMode = model.mode;
+                addToExisting = model.add;
+                submitCtrl = model.submitCtrl;
+                origEvent = model.event;
+                model = model.model;
+            }
             model = model || new Backbone.Model();
-            return this.startDrawMode(drawMode === 'polygon' ? drawMode : 'rectangle', {trigger: false}).then((elements) => {
+            const startMode = ['polygon', 'line', 'point', 'rectangle'].includes(drawMode) ? drawMode : (drawMode === 'polyline' ? 'line' : (origEvent ? drawMode : 'rectangle'));
+            return this.startDrawMode(startMode, {trigger: false, signalModeChange: true}).then((elements) => {
                 /*
                  * Strictly speaking, the rectangle drawn here could be
                  * rotated, but for simplicity we will set the region model
@@ -773,27 +783,48 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                  * draws a rectangle aligned with the image coordinates.
                  */
                 var element = elements[0];
-                if (drawMode === 'polygon') {
-                    let values = element.points.map(([x, y, z]) => [Math.round(x), Math.round(y)]).flat();
-                    while (values.length > 0 && values.length <= 6) {
-                        values.push(values[0]);
-                        values.push(values[1]);
-                    }
-                    if (addToExisting) {
-                        values = this._mergeRegions(model.get('value'), values);
-                    }
-                    model.set('value', values, {trigger: true});
-                } else {
-                    var width = Math.round(element.width);
-                    var height = Math.round(element.height);
-                    var left = Math.round(element.center[0] - element.width / 2);
-                    var top = Math.round(element.center[1] - element.height / 2);
-                    var values = [left, top, width, height];
-                    if (addToExisting) {
-                        values = this._mergeRegions(model.get('value'), values);
-                    }
-                    model.set('value', values, {trigger: true});
+                let values = '-1,-1,-1,-1';
+                switch (drawMode) {
+                    case 'point':
+                        values = [Math.round(element.center[0]), Math.round(element.center[1])];
+                        break;
+                    case 'line':
+                        values = element.points.map(([x, y, z]) => [Math.round(x), Math.round(y)]).flat();
+                        values = values.slice(0, 4);
+                        values.push(-2);
+                        values.push(-2);
+                        values.push(-2);
+                        values.push(-2);
+                        break;
+                    case 'polyline':
+                        values = element.points.map(([x, y, z]) => [Math.round(x), Math.round(y)]).flat();
+                        values.push(-2);
+                        values.push(-2);
+                        while (values.length > 0 && values.length <= 6) {
+                            values.push(-2);
+                            values.push(-2);
+                        }
+                        break;
+                    case 'polygon':
+                        values = element.points.map(([x, y, z]) => [Math.round(x), Math.round(y)]).flat();
+                        while (values.length > 0 && values.length <= 6) {
+                            values.push(values[0]);
+                            values.push(values[1]);
+                        }
+                        break;
+                    default:
+                        var left = Math.round(element.center[0] - element.width / 2);
+                        var top = Math.round(element.center[1] - element.height / 2);
+                        var width = Math.round(element.width);
+                        var height = Math.round(element.height);
+                        values = [left, top, width, height];
+                        break;
                 }
+                if (addToExisting) {
+                    values = this._mergeRegions(model.get('value'), values);
+                }
+                model.set('value', values, {trigger: true});
+                events.trigger('li:drawRegionUpdate', {values: values, submit: submitCtrl, originalEvent: origEvent});
                 return model.get('value');
             });
         },
@@ -826,6 +857,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             var defer = $.Deferred();
             var element;
 
+            layer.geoOff(window.geo.event.annotation.mode);
             layer.mode(null);
             layer.geoOff(window.geo.event.annotation.state);
             options = _.defaults(options || {}, {trigger: true});
@@ -838,6 +870,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (evt.annotation.state() !== window.geo.annotation.state.done) {
                         return;
                     }
+                    layer.geoOff(window.geo.event.annotation.mode);
                     const opts = {};
                     if (layer.currentBooleanOperation) {
                         opts.currentBooleanOperation = layer.currentBooleanOperation();
@@ -859,6 +892,12 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 }
             );
             layer.mode(type, undefined, options.modeOptions);
+            if (options.signalModeChange) {
+                layer.geoOn(window.geo.event.annotation.mode, (evt) => {
+                    layer.geoOff(window.geo.event.annotation.mode);
+                    events.trigger('li:drawModeChange', {event: evt});
+                });
+            }
             return defer.promise();
         },
 

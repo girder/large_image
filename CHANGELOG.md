@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.24.1
+## 1.25.0
 
 ### Features
 - DICOMweb support, including a Girder assetstore ([#1303](../../pull/1303))
@@ -8,6 +8,7 @@
 ### Improvements
 - Frame selection presets have configurable defaults ([#1301](../../pull/1301))
 - Improved DICOM metadata extraction ([#1305](../../pull/1305))
+- Support more region shapes in the annotation widget  ([#1323](../../pull/1323))
 
 ### Changes
 - Remove a needless guard around getting an icc profile ([#1316](../../pull/1316))
