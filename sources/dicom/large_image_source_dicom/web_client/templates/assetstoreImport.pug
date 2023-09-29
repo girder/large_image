@@ -21,6 +21,9 @@ form.g-dwas-import-form
       .input-group-btn
         button.g-open-browser.btn.btn-default(type="button")
           i.icon-folder-open
+    label(for="g-dwas-import-filters") Filters
+    textarea#g-dwas-import-filters.form-control(rows="10",
+        placeholder="Valid JSON. e.g.:\n\n{\n    \"PatientID\": \"TCGA-05-4244\"\n}")
   .g-validation-failed-message
   button.g-submit-assetstore-import.btn.btn-success(type="submit")
     i.icon-link-ext

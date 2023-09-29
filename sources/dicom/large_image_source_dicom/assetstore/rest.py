@@ -1,3 +1,5 @@
+import json
+
 from girder.api import access
 from girder.api.describe import Description, describeRoute
 from girder.api.rest import Resource, loadmodel
@@ -32,6 +34,8 @@ class DICOMwebAssetstoreResource(Resource):
         parent = ModelImporter.model(parentType).load(params['parentId'], force=True,
                                                       exc=True)
 
+        search_filters = json.loads(params.get('filters', '{}'))
+
         progress = self.boolParam('progress', params, default=False)
 
         adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
@@ -39,16 +43,19 @@ class DICOMwebAssetstoreResource(Resource):
         with ProgressContext(
             progress, user=user, title='Importing DICOM references',
         ) as ctx:
-            adapter.importData(
+            items = adapter.importData(
                 parent,
                 parentType,
                 {
-                    'search_filters': params.get('filters', {}),
+                    'search_filters': search_filters,
                     'auth': None,
                 },
                 ctx,
                 user,
             )
+
+            if not items:
+                raise RestException('No DICOM objects matching the search filters were found')
 
     @access.admin
     @loadmodel(model='assetstore')

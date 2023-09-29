@@ -148,7 +148,9 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         series_uid_key = dicom_key_to_tag('SeriesInstanceUID')
 
         # We are only searching for WSI datasets. Ignore all others.
-        # FIXME: is this actually working?
+        # FIXME: is this actually working? For the SLIM server at
+        # https://imagingdatacommons.github.io/slim/, none of the series
+        # report a SOPClassUID, but we still get all results anyways.
         search_filters = {
             'SOPClassUID': WSI_SOP_CLASS_UID,
             **search_filters,

@@ -12,11 +12,27 @@ const AssetstoreImportView = View.extend({
         'submit .g-dwas-import-form': function (e) {
             e.preventDefault();
             this.$('.g-validation-failed-message').empty();
-            this.$('.g-submit-dwas-import').addClass('disabled');
 
             const parentType = this.$('#g-dwas-import-dest-type').val();
             const parentId = this.$('#g-dwas-import-dest-id').val().trim().split(/\s/)[0];
+            const filters = this.$('#g-dwas-import-filters').val().trim();
 
+            if (!parentId) {
+                this.$('.g-validation-failed-message').html('Invalid Destination ID');
+                return;
+            }
+
+            // Validate the filters
+            if (filters) {
+                try {
+                    JSON.parse(filters);
+                } catch (e) {
+                    this.$('.g-validation-failed-message').html('Invalid filters: ' + e);
+                    return;
+                }
+            }
+
+            this.$('.g-submit-dwas-import').addClass('disabled');
             this.model.off().on('g:imported', function () {
                 router.navigate(parentType + '/' + parentId, { trigger: true });
             }, this).on('g:error', function (err) {
@@ -25,6 +41,7 @@ const AssetstoreImportView = View.extend({
             }, this).dicomwebImport({
                 parentId,
                 parentType,
+                filters,
                 progress: true
             });
         },
