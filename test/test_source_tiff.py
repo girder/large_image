@@ -686,6 +686,13 @@ def testStyleDtypeAxis():
     assert image.shape[2] == 1
     assert image[0][0][0] == 65021
 
+    source = large_image_source_tiff.open(
+        imagePath, style=json.dumps({'dtype': 'source', 'axis': 1}))
+    image, _ = source.getRegion(
+        output={'maxWidth': 456, 'maxHeight': 96}, format=constants.TILE_FORMAT_NUMPY)
+    assert image.shape[2] == 1
+    assert image[0][0][0] == 253
+
 
 def testStyleNoData():
     imagePath = datastore.fetch('sample_image.ptif')
