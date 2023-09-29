@@ -16,6 +16,7 @@ const AssetstoreImportView = View.extend({
             const parentType = this.$('#g-dwas-import-dest-type').val();
             const parentId = this.$('#g-dwas-import-dest-id').val().trim().split(/\s/)[0];
             const filters = this.$('#g-dwas-import-filters').val().trim();
+            const limit = this.$('#g-dwas-import-limit').val().trim();
 
             if (!parentId) {
                 this.$('.g-validation-failed-message').html('Invalid Destination ID');
@@ -41,6 +42,7 @@ const AssetstoreImportView = View.extend({
             }, this).dicomwebImport({
                 parentId,
                 parentType,
+                limit,
                 filters,
                 progress: true
             });

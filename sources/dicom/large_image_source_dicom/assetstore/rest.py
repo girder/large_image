@@ -34,7 +34,14 @@ class DICOMwebAssetstoreResource(Resource):
         parent = ModelImporter.model(parentType).load(params['parentId'], force=True,
                                                       exc=True)
 
-        search_filters = json.loads(params.get('filters', '{}'))
+        limit = params.get('limit')
+        if limit is not None:
+            limit = int(limit)
+
+        try:
+            search_filters = json.loads(params.get('filters') or '{}')
+        except json.JSONDecodeError as e:
+            raise RestException(e)
 
         progress = self.boolParam('progress', params, default=False)
 
@@ -47,6 +54,7 @@ class DICOMwebAssetstoreResource(Resource):
                 parent,
                 parentType,
                 {
+                    'limit': limit,
                     'search_filters': search_filters,
                     'auth': None,
                 },
@@ -68,6 +76,8 @@ class DICOMwebAssetstoreResource(Resource):
         .param('parentType', 'The type of the parent object to import into.',
                enum=('folder', 'user', 'collection'),
                required=False)
+        .param('limit', 'The maximum number of results to import.',
+               required=False, dataType='int')
         .param('filters', 'Any search parameters to filter DICOM objects.',
                required=False)
         .param('progress', 'Whether to record progress on this operation ('
