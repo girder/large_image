@@ -72,6 +72,7 @@ export default Vue.extend({
                 const mergedStyle = this.maxMergeStyle();
                 if (mergedStyle.bands.length) {
                     const simpleMergedStyleString = JSON.stringify({
+                        dtype: 'source',
                         bands: mergedStyle.bands.map((b) => ({
                             framedelta: b.framedelta,
                             band: b.band
