@@ -63,7 +63,8 @@ class DICOMwebAssetstoreResource(Resource):
             )
 
             if not items:
-                raise RestException('No DICOM objects matching the search filters were found')
+                msg = 'No DICOM objects matching the search filters were found'
+                raise RestException(msg)
 
     @access.admin
     @loadmodel(model='assetstore')
