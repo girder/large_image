@@ -38,7 +38,7 @@ export default {
         :disabled="merge"
       >
     </td>
-    <td style="width:90%">
+    <td style="width: 100%">
       <input
         v-model="value"
         type="range"
@@ -62,16 +62,17 @@ export default {
         />
       </div>
     </td>
-    <td v-show="merge !== undefined">
+    <td
+      v-show="merge !== undefined"
+      style="min-width: 150px; text-align: right;"
+    >
       <input
+        :id="'maxMerge'+label"
         v-model="merge"
         type="checkbox"
-        name="maxMergeCheck"
         style="margin: 0px 5px 0px 10px"
       >
-    </td>
-    <td v-show="merge !== undefined">
-      <label for="maxMergeCheck">Max Merge</label>
+      <label :for="'maxMerge'+label">Max Merge</label>
     </td>
   </tr>
 </template>
@@ -79,6 +80,7 @@ export default {
 <style scoped>
 .dual-controls > * > * {
     margin-right: 15px;
+    white-space: nowrap;
 }
 .dual-controls.tall {
     height: 40px;
