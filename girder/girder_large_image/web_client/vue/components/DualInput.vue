@@ -38,7 +38,7 @@ export default {
         :disabled="merge"
       >
     </td>
-    <td style="width: 100%">
+    <td class="slider-control-cell">
       <input
         v-model="value"
         type="range"
@@ -64,13 +64,13 @@ export default {
     </td>
     <td
       v-show="merge !== undefined"
-      style="min-width: 150px; text-align: right;"
+      class="max-merge-cell"
+      :title="'Max Merge ' + label"
     >
       <input
         :id="'maxMerge'+label"
         v-model="merge"
         type="checkbox"
-        style="margin: 0px 5px 0px 10px"
       >
       <label :for="'maxMerge'+label">Max Merge</label>
     </td>
@@ -109,5 +109,15 @@ export default {
   background: rgb(120, 120, 120);
   top: -1px;
   left: 50%;
+}
+.slider-control-cell {
+  width: 100%;
+}
+.max-merge-cell {
+  min-width: 125px;
+  text-align: right;
+}
+.max-merge-cell input[type="checkbox"] {
+  margin: 0px 2px 0px 0px;
 }
 </style>
