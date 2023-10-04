@@ -691,7 +691,7 @@ class TestLargeImageAnnotationAccessMigration:
         Annotation().save(annot)
         with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
             Annotation()._migrateDatabase()
-            logger.warning.assert_called_once()
+            logger.debug.assert_called_once()
         annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot
 
@@ -711,7 +711,7 @@ class TestLargeImageAnnotationAccessMigration:
         Item().save(item)
         with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
             Annotation()._migrateDatabase()
-            logger.warning.assert_called_once()
+            logger.debug.assert_called_once()
         annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot
 
@@ -728,7 +728,7 @@ class TestLargeImageAnnotationAccessMigration:
         Annotation().save(annot)
         with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
             Annotation()._migrateDatabase()
-            logger.warning.assert_called_once()
+            logger.debug.assert_called_once()
         annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot
 
@@ -745,6 +745,6 @@ class TestLargeImageAnnotationAccessMigration:
         Annotation().save(annot)
         with mock.patch('girder_large_image_annotation.models.annotation.logger') as logger:
             Annotation()._migrateDatabase()
-            logger.warning.assert_called_once()
+            logger.debug.assert_called_once()
         annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot
