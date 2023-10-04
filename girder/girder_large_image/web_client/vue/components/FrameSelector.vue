@@ -1,6 +1,8 @@
 <script>
 import Vue from 'vue';
 
+import {getChannelColor} from '../utils/colors';
+
 import CompositeLayers from './CompositeLayers.vue';
 import DualInput from './DualInput.vue';
 import PresetsMenu from './PresetsMenu.vue';
@@ -18,7 +20,8 @@ export default Vue.extend({
             indices: [],
             indexInfo: {},
             style: {},
-            modesShown: {1: true}
+            modesShown: {1: true},
+            histogramParamStyles: {}
         };
     },
     computed: {
@@ -63,13 +66,38 @@ export default Vue.extend({
                     })
             );
         },
+        updateHistogramParamStyles() {
+            this.histogramParamStyles = {};
+            Array.from([2, 3]).forEach((modeID) => {
+                const mergedStyle = this.maxMergeStyle();
+                if (mergedStyle.bands.length) {
+                    const simpleMergedStyleString = JSON.stringify({
+                        dtype: 'source',
+                        bands: mergedStyle.bands.map((b) => ({
+                            framedelta: b.framedelta,
+                            band: b.band
+                            // including min, max, and palette gives strange results
+                        }))
+                    });
+                    this.histogramParamStyles[modeID] = simpleMergedStyleString;
+                } else {
+                    this.histogramParamStyles[modeID] = '{}';
+                }
+            });
+        },
         updateStyle(idx, style) {
             this.$set(this.style, idx, style);
+            this.updateHistogramParamStyles();
             this.update();
         },
         updateAxisSlider(event) {
             this.indexInfo[event.index].current = event.frame;
             this.update();
+        },
+        updateMaxMergeAxis(event) {
+            this.indexInfo[event.index].maxMerge = event.maxMerge;
+            this.update();
+            this.updateHistogramParamStyles();
         },
         updateFrameSlider(frame) {
             this.currentFrame = frame;
@@ -80,13 +108,72 @@ export default Vue.extend({
             this.indices.forEach((index) => {
                 if (this.sliderIndices.includes(index)) {
                     const info = this.indexInfo[index];
-                    frame += info.current * info.stride;
+                    if (!info.maxMerge) {
+                        frame += info.current * info.stride;
+                    }
                 }
             });
             this.currentFrame = frame;
-            const style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined;
+            let style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined;
             if (style && style.preset) delete style.preset;
+            style = this.maxMergeStyle(style);
             this.frameUpdate(frame, style);
+        },
+        maxMergeStyle(style) {
+            const bandsArray = (style ? style.bands : []) || [];
+            let newBandsArray = [];
+            let frameDeltas = [];
+            Object.entries(this.indexInfo).forEach(([indexName, {range, stride, maxMerge}]) => {
+                if (this.currentModeId === 2 && indexName === 'IndexC') {
+                    // channel compositing is already in bandsArray
+                    // skip permutations for this axis
+                } else if (maxMerge) {
+                    const axisFrameDeltas = [...Array(range + 1).keys()].map((i) => i * stride);
+                    if (frameDeltas.length) {
+                        const newFrameDeltas = [];
+                        frameDeltas.forEach((d) => {
+                            axisFrameDeltas.forEach((a) => {
+                                newFrameDeltas.push(d + a);
+                            });
+                        });
+                        frameDeltas = newFrameDeltas;
+                    } else {
+                        frameDeltas = axisFrameDeltas;
+                    }
+                }
+            });
+
+            if (frameDeltas.length) {
+                if (bandsArray.length) {
+                    // some style already applied, add permutations
+                    bandsArray.forEach((b) => {
+                        frameDeltas.forEach((framedelta) => {
+                            newBandsArray.push(
+                                Object.assign({}, b, {
+                                    framedelta: b.framedelta ? b.framedelta + framedelta : framedelta
+                                })
+                            );
+                        });
+                    });
+                } else {
+                    // no style applied yet, create new permutations list
+                    const {bands} = this.metadata;
+                    bands.forEach((b, i) => {
+                        const bandPalette = getChannelColor(b);
+                        frameDeltas.forEach((framedelta) => {
+                            newBandsArray.push({
+                                band: i + 1,
+                                framedelta,
+                                palette: bandPalette
+                            });
+                        });
+                    });
+                }
+            } else {
+                // no max merge permutations to apply, keep old bandsArray
+                newBandsArray = bandsArray;
+            }
+            return {bands: newBandsArray};
         },
         fillMetadata() {
             if (!this.metadata.frames) {
@@ -242,6 +329,8 @@ export default Vue.extend({
         :value-max="indexInfo[index].range"
         :label="index.replace('Index', '')"
         :slider-labels="index === 'IndexC' ? imageMetadata.channels : []"
+        :max-merge="indexInfo[index].maxMerge || false"
+        @updateMaxMerge="(v) => updateMaxMergeAxis({index, maxMerge: v})"
         @updateValue="(v) => updateAxisSlider({index, frame: v})"
       />
     </table>
@@ -255,6 +344,7 @@ export default Vue.extend({
         :item-id="itemId"
         :current-frame="currentFrame"
         :current-style="style[2]"
+        :histogram-param-style="histogramParamStyles[2]"
         :layers="metadata.channels"
         :layer-map="metadata.channelmap"
         :active="currentModeId === 2"
@@ -267,6 +357,7 @@ export default Vue.extend({
         :item-id="itemId"
         :current-frame="currentFrame"
         :current-style="style[3]"
+        :histogram-param-style="histogramParamStyles[3]"
         :layers="metadata.bands"
         :layer-map="undefined"
         :active="currentModeId === 3"
