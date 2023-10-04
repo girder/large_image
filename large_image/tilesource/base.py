@@ -120,7 +120,7 @@ class TileSource(IPyLeafletMixin):
                     intermediately a float numpy array with a value range of
                     [0,255].  If this is 'uint16', it will be cast to that and
                     multiplied by 65535/255.  If 'float', it will be divided by
-                    255.
+                    255.  If 'source', this uses the dtype of the source image.
                 :axis: keep only the specified axis from the numpy intermediate
                     results.  This can be used to extract a single channel
                     after compositing.
@@ -1460,6 +1460,11 @@ class TileSource(IPyLeafletMixin):
         for eidx, entry in enumerate(sc.style['bands']):
             sc.styleIndex = eidx
             sc.dtype = sc.dtype if sc.dtype is not None else entry.get('dtype')
+            if sc.dtype == 'source':
+                if sc.mainImage.dtype == np.uint16:
+                    sc.dtype = 'uint16'
+                elif sc.mainImage.dtype.kind == 'f':
+                    sc.dtype = 'float'
             sc.axis = sc.axis if sc.axis is not None else entry.get('axis')
             sc.bandidx = 0 if image.shape[2] <= 2 else 1
             sc.band = None

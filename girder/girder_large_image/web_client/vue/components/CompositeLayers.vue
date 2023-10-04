@@ -2,7 +2,7 @@
 import {restRequest} from '@girder/core/rest';
 import {Chrome} from 'vue-color';
 
-import {CHANNEL_COLORS, OTHER_COLORS} from '../utils/colors';
+import {OTHER_COLORS, getChannelColor} from '../utils/colors';
 import HistogramEditor from './HistogramEditor.vue';
 
 export default {
@@ -10,7 +10,7 @@ export default {
         'color-picker': Chrome,
         HistogramEditor
     },
-    props: ['itemId', 'currentFrame', 'currentStyle', 'layers', 'layerMap', 'active'],
+    props: ['itemId', 'currentFrame', 'currentStyle', 'histogramParamStyle', 'layers', 'layerMap', 'active'],
     emits: ['updateStyle'],
     data() {
         return {
@@ -20,17 +20,21 @@ export default {
             compositeLayerInfo: {},
             expandedRows: [],
             autoRangeForAll: undefined,
-            histogramParams: {
+            showKeyboardShortcuts: false
+        };
+    },
+    computed: {
+        histogramParams() {
+            return {
                 frame: this.currentFrame,
                 width: 1024,
                 height: 1024,
                 bins: 512,
                 resample: false,
-                style: '{}',
+                style: this.histogramParamStyle,
                 roundRange: true
-            },
-            showKeyboardShortcuts: false
-        };
+            };
+        }
     },
     watch: {
         active() {
@@ -44,6 +48,9 @@ export default {
             if (this.currentStyle.preset) {
                 this.initializeStateFromStyle();
             }
+        },
+        histogramParams() {
+            this.fetchCurrentFrameHistogram();
         }
     },
     mounted() {
@@ -114,13 +121,11 @@ export default {
             // Assign colors
             this.layers.forEach((layerName) => {
                 if (!this.compositeLayerInfo[layerName].palette) {
-                    // Search for case-insensitive regex match among known channel-colors
-                    Object.entries(CHANNEL_COLORS).forEach(([channelPattern, color]) => {
-                        if (layerName.match(new RegExp(channelPattern, 'i')) && !usedColors.includes(color)) {
-                            this.compositeLayerInfo[layerName].palette = color;
-                            usedColors.push(color);
-                        }
-                    });
+                    const channelColor = getChannelColor(layerName);
+                    if (channelColor) {
+                        this.compositeLayerInfo[layerName].palette = channelColor;
+                        usedColors.push(channelColor);
+                    }
                 }
             });
             this.layers.forEach((layerName) => {

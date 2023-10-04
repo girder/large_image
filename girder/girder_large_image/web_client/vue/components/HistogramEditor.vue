@@ -28,6 +28,9 @@ export default {
         currentFrame() {
             this.fetchHistogram();
         },
+        currentFrameHistogram() {
+            this.fetchHistogram();
+        },
         histogram() {
             // allow rerender to occur first
             Vue.nextTick().then(() => {
@@ -290,10 +293,11 @@ export default {
         class="handles-svg"
       >
         <text
+          v-if="vRange[0] !== undefined"
           x="5"
           y="43"
           class="small"
-        >{{ vRange[0] }}</text>
+        >{{ +vRange[0].toFixed(2) || 0 }}</text>
         <rect
           ref="minExclusionBox"
           x="5"
@@ -314,10 +318,11 @@ export default {
           y2="30"
         />
         <text
+          v-if="vRange[1] !== undefined"
           :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 6): 0"
           y="43"
           class="small"
-        >{{ vRange[1] }}</text>
+        >{{ +vRange[1].toFixed(2) || 1 }}</text>
         <rect
           ref="maxExclusionBox"
           x="5"

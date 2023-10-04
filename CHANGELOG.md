@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.25.1
+
+### Improvements
+- Style can specify a dtype of 'source' to maintain the original dtype even when compositing frames ([#1326](../../pull/1326))
+- Max Merge option in Frame Selector ([#1306](../../pull/1306))
+
+### Changes
+- Prohibit bioformats and vips from reading mrxs directly ([#1328](../../pull/1328))
+
 ## 1.25.0
 
 ### Features
@@ -8,7 +17,7 @@
 ### Improvements
 - Frame selection presets have configurable defaults ([#1301](../../pull/1301))
 - Improved DICOM metadata extraction ([#1305](../../pull/1305))
-- Support more region shapes in the annotation widget  ([#1323](../../pull/1323))
+- Support more region shapes in the annotation widget ([#1323](../../pull/1323))
 
 ### Changes
 - Remove a needless guard around getting an icc profile ([#1316](../../pull/1316))

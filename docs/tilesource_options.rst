@@ -60,7 +60,7 @@ A band definition is an object which can contain the following keys:
 
 - ``clamp``: either True to clamp (also called clip or crop) values outside of the [min, max] to the ends of the palette or False to make outside values transparent.
 
-- ``dtype``: if specified, cast the intermediate results to this data type.  Only the first such value is used, and this can be specified as a base key if ``bands`` is specified.  Normally, if a style is applied, the intermediate data is a numpy float array with values from [0,255].  If this is ``uint16``, the results are multiplied by 65535 / 255 and cast to that dtype.  If ``float``, the results are divided by 255.
+- ``dtype``: if specified, cast the intermediate results to this data type.  Only the first such value is used, and this can be specified as a base key if ``bands`` is specified.  Normally, if a style is applied, the intermediate data is a numpy float array with values from [0,255].  If this is ``uint16``, the results are multiplied by 65535 / 255 and cast to that dtype.  If ``float``, the results are divided by 255.  If ``source``, this uses the dtype of the source image.
 
 - ``axis``: if specified, keep on the specified axis (channel) of the intermediate numpy array.  This is typically between 0 and 3 for the red, green, blue, and alpha channels.  Only the first such value is used, and this can be specified as a base key if ``bands`` is specified.
 

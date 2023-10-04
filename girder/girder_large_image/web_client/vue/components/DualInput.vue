@@ -1,10 +1,11 @@
 <script>
 export default {
-    props: ['label', 'currentValue', 'valueMax', 'sliderLabels'],
-    emits: ['updateValue'],
+    props: ['label', 'currentValue', 'valueMax', 'sliderLabels', 'maxMerge'],
+    emits: ['updateValue', 'updateMaxMerge'],
     data() {
         return {
-            value: this.currentValue
+            value: this.currentValue,
+            merge: this.maxMerge
         };
     },
     watch: {
@@ -13,6 +14,12 @@ export default {
         },
         value(v) {
             this.$emit('updateValue', v);
+        },
+        maxMerge(v) {
+            this.merge = v;
+        },
+        merge(v) {
+            this.$emit('updateMaxMerge', v);
         }
     }
 };
@@ -28,15 +35,17 @@ export default {
         name="numberControl"
         min="0"
         :max="valueMax"
+        :disabled="merge"
       >
     </td>
-    <td style="width:90%">
+    <td style="width: 100%">
       <input
         v-model="value"
         type="range"
         name="sliderControl"
         min="0"
         :max="valueMax"
+        :disabled="merge"
       >
       <div class="bubble-wrap">
         <output
@@ -53,12 +62,25 @@ export default {
         />
       </div>
     </td>
+    <td
+      v-show="merge !== undefined"
+      style="min-width: 150px; text-align: right;"
+    >
+      <input
+        :id="'maxMerge'+label"
+        v-model="merge"
+        type="checkbox"
+        style="margin: 0px 5px 0px 10px"
+      >
+      <label :for="'maxMerge'+label">Max Merge</label>
+    </td>
   </tr>
 </template>
 
 <style scoped>
 .dual-controls > * > * {
     margin-right: 15px;
+    white-space: nowrap;
 }
 .dual-controls.tall {
     height: 40px;
