@@ -4,6 +4,7 @@
 
 ### Improvements
 - Style can specify a dtype of 'source' to maintain the original dtype even when compositing frames ([#1326](../../pull/1326))
+- Max Merge option in Frame Selector ([#1306](../../pull/1306))
 
 ### Changes
 - Prohibit bioformats and vips from reading mrxs directly ([#1328](../../pull/1328))
