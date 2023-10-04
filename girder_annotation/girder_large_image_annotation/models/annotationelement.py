@@ -600,7 +600,7 @@ class Annotationelement(Model):
         elements = annotation['annotation'].get('elements', [])
         if not len(elements):
             return
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         threads = multiprocessing.cpu_count()
         chunkSize = int(max(100000 // threads, 10000))
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
