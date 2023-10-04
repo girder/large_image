@@ -787,7 +787,7 @@ class Annotation(AccessControlledModel):
         return annotation
 
     def createAnnotation(self, item, creator, annotation, public=None):
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         doc = {
             'itemId': item['_id'],
             'creatorId': creator['_id'],
@@ -815,7 +815,7 @@ class Annotation(AccessControlledModel):
             type='large_image_annotation.create',
             data={'_id': doc['_id'], 'itemId': doc['itemId']},
             user=creator,
-            expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=1))
+            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
         return doc
 
     def load(self, id, region=None, getElements=True, *args, **kwargs):
@@ -888,7 +888,7 @@ class Annotation(AccessControlledModel):
             type='large_image_annotation.remove',
             data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
             user=User().load(annotation['creatorId'], force=True),
-            expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=1))
+            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
         return result
 
     def save(self, annotation, *args, **kwargs):
@@ -987,14 +987,14 @@ class Annotation(AccessControlledModel):
         :param updateUser: the user who is creating the update.
         :returns: the annotation document that was updated.
         """
-        annotation['updated'] = datetime.datetime.utcnow()
+        annotation['updated'] = datetime.datetime.now(datetime.timezone.utc)
         annotation['updatedId'] = updateUser['_id'] if updateUser else None
         annotation = self.save(annotation)
         Notification().createNotification(
             type='large_image_annotation.update',
             data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
             user=User().load(annotation['creatorId'], force=True),
-            expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=1))
+            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
         return annotation
 
     def _similarElementStructure(self, a, b, parentKey=None):  # noqa
@@ -1324,7 +1324,7 @@ class Annotation(AccessControlledModel):
         if (remove and minAgeInDays < 7) or minAgeInDays < 0:
             msg = 'minAgeInDays must be >= 7'
             raise ValidationException(msg)
-        age = datetime.datetime.utcnow() + datetime.timedelta(-minAgeInDays)
+        age = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(-minAgeInDays)
         if keepInactiveVersions < 0:
             msg = 'keepInactiveVersions mist be non-negative'
             raise ValidationException(msg)
@@ -1425,7 +1425,7 @@ class Annotation(AccessControlledModel):
 
         self.validateKeys(annotation['annotation']['attributes'])
 
-        annotation['updated'] = datetime.datetime.utcnow()
+        annotation['updated'] = datetime.datetime.now(datetime.timezone.utc)
 
         # Validate and save the annotation
         return super().save(annotation)
@@ -1451,6 +1451,6 @@ class Annotation(AccessControlledModel):
         for field in fields:
             annotation['annotation']['attributes'].pop(field, None)
 
-        annotation['updated'] = datetime.datetime.utcnow()
+        annotation['updated'] = datetime.datetime.now(datetime.timezone.utc)
 
         return super().save(annotation)

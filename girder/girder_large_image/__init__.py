@@ -156,7 +156,8 @@ def _updateJob(event):
                 'status': status,
             },
             user={'_id': job.get('userId')},
-            expires=datetime.datetime.utcnow() + datetime.timedelta(seconds=30))
+            expires=(datetime.datetime.now(datetime.timezone.utc) +
+                     datetime.timedelta(seconds=30)))
 
 
 def checkForLargeImageFiles(event):

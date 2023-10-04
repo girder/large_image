@@ -255,7 +255,11 @@ class LargeImageResource(Resource):
             time.sleep(0.1)
             after = cache_util.cachesInfo()
         gc.collect()
-        return {'cacheCleared': datetime.datetime.utcnow(), 'before': before, 'after': after}
+        return {
+            'cacheCleared': datetime.datetime.now(datetime.timezone.utc),
+            'before': before,
+            'after': after,
+        }
 
     @describeRoute(
         Description('Get information on caches.'),
@@ -671,5 +675,5 @@ class LargeImageResource(Resource):
             restart = Restart(cherrypy.engine)
             restart.subscribe()
             restart.start()
-            return {'restarted': datetime.datetime.utcnow()}
-        return {'status': 'updated', 'time': datetime.datetime.utcnow()}
+            return {'restarted': datetime.datetime.now(datetime.timezone.utc)}
+        return {'status': 'updated', 'time': datetime.datetime.now(datetime.timezone.utc)}

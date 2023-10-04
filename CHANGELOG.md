@@ -8,6 +8,7 @@
 
 ### Changes
 - Prohibit bioformats and vips from reading mrxs directly ([#1328](../../pull/1328))
+- Handle Python 3.12 deprecating utcnow ([#1331](../../pull/1331))
 
 ## 1.25.0
 
