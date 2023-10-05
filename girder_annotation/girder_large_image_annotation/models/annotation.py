@@ -759,13 +759,13 @@ class Annotation(AccessControlledModel):
 
         item = Item().load(annotation['itemId'], force=True)
         if item is None:
-            logger.warning(
+            logger.debug(
                 'Could not generate annotation ACL due to missing item %s', annotation['_id'])
             return annotation
 
         folder = Folder().load(item['folderId'], force=True)
         if folder is None:
-            logger.warning(
+            logger.debug(
                 'Could not generate annotation ACL due to missing folder %s', annotation['_id'])
             return annotation
 
@@ -773,7 +773,7 @@ class Annotation(AccessControlledModel):
         if annotation.get('creatorId'):
             user = User().load(annotation['creatorId'], force=True)
         if user is None:
-            logger.warning(
+            logger.debug(
                 'Could not generate annotation ACL due to missing user %s', annotation['_id'])
             return annotation
 
