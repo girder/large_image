@@ -292,7 +292,7 @@ def _vipsCast(image, mustBe8Bit=False, originalScale=None):
     if image.format not in formats or (image.format == pyvips.BandFormat.USHORT and not mustBe8Bit):
         return image
     target, offset, multiplier = formats[image.format]
-    if image.format == pyvips.BandFormat.DOUBLE:
+    if image.format == pyvips.BandFormat.DOUBLE or image.format == pyvips.BandFormat.FLOAT:
         maxVal = image.max()
         # These thresholds are higher than 256 and 65536 because bicubic and
         # other interpolations can cause value spikes
