@@ -346,7 +346,7 @@ This is used to specify a list of preset defaults, in order of precedence.
 These presets are to be automatically applied to an image in this folder if they are applicable.
 In the case that a preset is not applicable to an image, the next item in this list will be used.
 
-** Important: the presets named in this list must have corresponding entries in the `imageFramePresets` configuration, else this configuration will have no effect. **
+** Important: the presets named in this list must have corresponding entries in the ``imageFramePresets`` configuration, else this configuration will have no effect. **
 
 ::
 
@@ -362,7 +362,7 @@ In the case that a preset is not applicable to an image, the next item in this l
 ::
 
     ---
-    # This example would be used with the example for `imageFramePresets` shown above.
+    # This example would be used with the example for ``imageFramePresets`` shown above.
     # Images with 7 or more channels would use "Auto Ranged Channels"
     # Images with fewer than 7 but at least 4 channels would use "Channels with Min and Max"
     # Images with 3 channels would use "3 channels"
