@@ -197,6 +197,19 @@ jobs:
       - coverage
       - store_artifacts:
           path: build/test/artifacts
+  py312:
+    machine:
+      image: ubuntu-2004:202111-02
+    steps:
+      - checkout
+      - allservices:
+          version: "3.12"
+          node: v14
+      - tox:
+          env: test-py312
+      - coverage
+      - store_artifacts:
+          path: build/test/artifacts
   lint_and_docs:
     executor: toxandnode
     steps:
@@ -318,6 +331,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      - py312:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - lint_and_docs:
           filters:
             tags:
@@ -333,6 +353,7 @@ workflows:
             - py39
             - py310
             - py311
+            - py312
             - lint_and_docs
           filters:
             tags:
@@ -348,6 +369,7 @@ workflows:
             - py39
             - py310
             - py311
+            - py312
             - lint_and_docs
           filters:
             tags:
@@ -362,6 +384,7 @@ workflows:
             - py39
             - py310
             - py311
+            - py312
             - lint_and_docs
           filters:
             tags:
@@ -386,5 +409,6 @@ workflows:
       - py39
       - py310
       - py311
+      - py312
       - lint_and_docs
       - wheels
