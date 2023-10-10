@@ -14,6 +14,7 @@ sources/test
 sources/tiff
 sources/tifffile ; python_version >= '3.7'
 sources/vips
+sources/zarr
 # must be after sources/tiff
 sources/ometiff
 # must be after source/gdal

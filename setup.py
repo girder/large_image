@@ -63,6 +63,7 @@ sources = {
     'tiff': [f'large-image-source-tiff{limit_version}'],
     'tifffile': [f'large-image-source-tifffile{limit_version} ; python_version >= "3.7"'],
     'vips': [f'large-image-source-vips{limit_version}'],
+    'zarr': [f'large-image-source-zarr{limit_version}'],
 }
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
@@ -74,7 +75,7 @@ extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) |
 # from pypi with all needed dependencies.
 extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for key in {
     'memcached', 'colormaps', 'performance',
-    'deepzoom', 'dicom', 'multi', 'nd2', 'test', 'tifffile',
+    'deepzoom', 'dicom', 'multi', 'nd2', 'test', 'tifffile', 'zarr',
 })) | {
     f'large-image-source-pil[all]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version} ; python_version >= "3.8"',

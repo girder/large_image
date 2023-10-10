@@ -82,16 +82,17 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm)$)' +
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm|zarr\.db|zarr\.zip)$)' +
                   (r'|bad_axes' if sys.version_info < (3, 9) else '') +
                   r')',
         'python': sys.version_info >= (3, 7),
     },
     'vips': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn)$',
+        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn|zarr\.db|zarr\.zip)$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'  # noqa
     },
+    'zarr': {'read': r'\.(zarr|zgroup|zattrs|db|zarr\.zip)$'},
 }
 
 
