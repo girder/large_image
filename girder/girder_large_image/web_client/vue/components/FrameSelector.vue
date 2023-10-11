@@ -70,7 +70,7 @@ export default Vue.extend({
             this.histogramParamStyles = {};
             Array.from([2, 3]).forEach((modeID) => {
                 const mergedStyle = this.maxMergeStyle();
-                if (mergedStyle.bands.length) {
+                if (mergedStyle && mergedStyle.bands && mergedStyle.bands.length) {
                     const simpleMergedStyleString = JSON.stringify({
                         dtype: 'source',
                         bands: mergedStyle.bands.map((b) => ({
@@ -173,7 +173,7 @@ export default Vue.extend({
                 // no max merge permutations to apply, keep old bandsArray
                 newBandsArray = bandsArray;
             }
-            return {bands: newBandsArray};
+            return newBandsArray.length ? {bands: newBandsArray} : style;
         },
         fillMetadata() {
             if (!this.metadata.frames) {
