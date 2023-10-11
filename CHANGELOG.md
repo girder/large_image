@@ -4,7 +4,7 @@
 
 ### Improvements
 - Style can specify a dtype of 'source' to maintain the original dtype even when compositing frames ([#1326](../../pull/1326))
-- Max Merge option in Frame Selector ([#1306](../../pull/1306), [#1330](../../pull/1330))
+- Max Merge option in Frame Selector ([#1306](../../pull/1306), [#1330](../../pull/1330), [#1336](../../pull/1336))
 - Improve tifffile associated image detection ([#1333](../../pull/1333))
 
 ### Changes
