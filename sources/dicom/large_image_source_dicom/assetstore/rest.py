@@ -2,9 +2,10 @@ import json
 
 from girder.api import access
 from girder.api.describe import Description, describeRoute
-from girder.api.rest import Resource, loadmodel
+from girder.api.rest import Resource, boundHandler
 from girder.constants import TokenScope
 from girder.exceptions import RestException
+from girder.models.assetstore import Assetstore
 from girder.utility import assetstore_utilities
 from girder.utility.model_importer import ModelImporter
 from girder.utility.progress import ProgressContext
@@ -20,20 +21,20 @@ class DICOMwebAssetstoreResource(Resource):
         """
 
         :param assetstore: the destination assetstore.
-        :param params: a dictionary of parameters including parentId,
-            parentType, progress, and filters.
+        :param params: a dictionary of parameters including destinationId,
+            destinationType, progress, and filters.
         """
-        self.requireParams(('parentId'), params)
+        self.requireParams(('destinationId'), params)
 
         user = self.getCurrentUser()
 
-        parentType = params.get('parentType', 'folder')
-        if parentType not in ('folder', 'user', 'collection'):
-            msg = f'Invalid parentType: {parentType}'
+        destinationType = params.get('destinationType', 'folder')
+        if destinationType not in ('folder', 'user', 'collection'):
+            msg = f'Invalid destinationType: {destinationType}'
             raise RestException(msg)
 
-        parent = ModelImporter.model(parentType).load(params['parentId'], force=True,
-                                                      exc=True)
+        parent = ModelImporter.model(destinationType).load(params['destinationId'], force=True,
+                                                           exc=True)
 
         limit = params.get('limit') or None
         if limit is not None:
@@ -61,7 +62,7 @@ class DICOMwebAssetstoreResource(Resource):
         ) as ctx:
             items = adapter.importData(
                 parent,
-                parentType,
+                destinationType,
                 {
                     'limit': limit,
                     'search_filters': search_filters,
@@ -76,14 +77,14 @@ class DICOMwebAssetstoreResource(Resource):
                 raise RestException(msg)
 
     @access.admin(scope=TokenScope.DATA_WRITE)
-    @loadmodel(model='assetstore')
+    @boundHandler
     @describeRoute(
         Description('Import references to DICOM objects from a DICOMweb server')
-        .param('id', 'The ID of the assetstore representing the DICOMweb server.',
-               paramType='path')
-        .param('parentId', 'The ID of the parent folder, collection, or user '
+        .modelParam('id', 'The ID of the assetstore representing the DICOMweb server.',
+                    model=Assetstore)
+        .param('destinationId', 'The ID of the parent folder, collection, or user '
                'in the Girder data hierarchy under which to import the files.')
-        .param('parentType', 'The type of the parent object to import into.',
+        .param('destinationType', 'The type of the parent object to import into.',
                enum=('folder', 'user', 'collection'),
                required=False)
         .param('limit', 'The maximum number of results to import.',
