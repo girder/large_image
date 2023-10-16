@@ -102,7 +102,7 @@ export default {
                 if (presets) {
                     this.itemPresets = presets;
                 }
-                if (this.liConfig.imageFramePresets) {
+                if (this.liConfig && this.liConfig.imageFramePresets) {
                     this.folderPresets = this.liConfig.imageFramePresets.filter(this.presetApplicable);
                     if (this.liConfig.imageFramePresetDefaults) {
                         this.liConfig.imageFramePresetDefaults.every(({name}) => {
