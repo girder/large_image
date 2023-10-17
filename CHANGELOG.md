@@ -6,6 +6,8 @@
 - Style can specify a dtype of 'source' to maintain the original dtype even when compositing frames ([#1326](../../pull/1326))
 - Max Merge option in Frame Selector ([#1306](../../pull/1306), [#1330](../../pull/1330), [#1336](../../pull/1336))
 - Improve tifffile associated image detection ([#1333](../../pull/1333))
+- Guard against throwing a javascript warning ([#1337](../../pull/1337))
+- Test on Python 3.12 ([#1335](../../pull/1335))
 
 ### Changes
 - Prohibit bioformats and vips from reading mrxs directly ([#1328](../../pull/1328))
@@ -496,7 +498,7 @@
 ## 1.15.1
 
 ### Improvements
-- When scaling heatmap annoations, use an appropriate value ([#878](../../pull/878))
+- When scaling heatmap annotations, use an appropriate value ([#878](../../pull/878))
 - Use the girder client build time for cache control ([#879](../../pull/879))
 
 ## 1.15.0

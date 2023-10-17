@@ -531,7 +531,7 @@ def nearPowerOfTwo(val1, val2, tolerance=0.02):
     :param val1: the first value to check.
     :param val2: the second value to check.
     :param tolerance: the maximum difference in the log2 ratio's mantissa.
-    :return: True if the valeus are nearly a power of two different from each
+    :return: True if the values are nearly a power of two different from each
         other; false otherwise.
     """
     # If one or more of the values is zero or they have different signs, then
