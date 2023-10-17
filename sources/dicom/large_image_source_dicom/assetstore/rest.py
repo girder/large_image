@@ -15,7 +15,7 @@ class DICOMwebAssetstoreResource(Resource):
     def __init__(self):
         super().__init__()
         self.resourceName = 'dicomweb_assetstore'
-        self.route('PUT', (':id', 'import'), self.importData)
+        self.route('POST', (':id', 'import'), self.importData)
 
     def _importData(self, assetstore, params):
         """
