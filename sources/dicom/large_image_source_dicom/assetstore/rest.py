@@ -86,13 +86,13 @@ class DICOMwebAssetstoreResource(Resource):
                'in the Girder data hierarchy under which to import the files.')
         .param('destinationType', 'The type of the parent object to import into.',
                enum=('folder', 'user', 'collection'),
-               required=False)
+               required=True)
         .param('limit', 'The maximum number of results to import.',
                required=False, dataType='int')
         .param('filters', 'Any search parameters to filter DICOM objects.',
-               required=False)
+               required=False, default={})
         .param('progress', 'Whether to record progress on this operation ('
-               'default=False)', required=False, dataType='boolean')
+               'default=False)', required=False, default=False, dataType='boolean')
         .errorResponse()
         .errorResponse('You are not an administrator.', 403),
     )
