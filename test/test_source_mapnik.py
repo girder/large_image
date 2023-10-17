@@ -11,7 +11,7 @@ from .source_geo_base import _BaseGeoTests
 
 
 class InvalidMapnikTests:
-    # TODO: fix syling on Mapnik source to match GDAL and delete this test
+    # TODO: fix styling on Mapnik source to match GDAL and delete this test
 
     def testTileLinearStyleFromGeotiffs(self):
         testDir = os.path.dirname(os.path.realpath(__file__))

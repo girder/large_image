@@ -367,7 +367,7 @@ def _pool_add(tasks, newtask):
     Add a new task to a pool, then drain any finished tasks at the start of the
     pool.
 
-    :param tasks: a list contiaining either lists or tuples, the last element
+    :param tasks: a list containing either lists or tuples, the last element
         of which is a task submitted to the pool.  Altered.
     :param newtask: a list or tuple to add to the pool.
     """
@@ -385,7 +385,7 @@ def _drain_pool(pool, tasks):
     Wait for all tasks in a pool to complete, then shutdown the pool.
 
     :param pool: a concurrent futures pool.
-    :param tasks: a list contiaining either lists or tuples, the last element
+    :param tasks: a list containing either lists or tuples, the last element
         of which is a task submitted to the pool.  Altered.
     """
     while len(tasks):
