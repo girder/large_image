@@ -134,6 +134,9 @@ describe('DICOMWeb assetstore', function () {
             const filters = '{"SeriesInstanceUID": "' + verifyItemName + '"}';
             $('#g-dwas-import-filters').val(filters);
 
+            // Set the limit to one
+            $('#g-dwas-import-limit').val('1');
+
             // This one should work fine
             $('.g-submit-assetstore-import').trigger('click');
         });

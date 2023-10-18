@@ -23,8 +23,7 @@ form.g-dwas-import-form
           i.icon-folder-open
     label(for="g-dwas-import-limit") Limit (Studies)
     input#g-dwas-import-limit.form-control(
-        type="number", step="1", min="1", value="",
-        onkeypress="return event.charCode >= 48 && event.charCode <= 57")
+        type="number", step="1", min="1", value="")
     label(for="g-dwas-import-filters") Filters
     textarea#g-dwas-import-filters.form-control(rows="10",
         placeholder="Valid JSON. e.g.:\n\n{\n    \"PatientID\": \"ABC123\"\n}")
