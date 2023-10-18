@@ -41,6 +41,9 @@ class DICOMwebAssetstoreResource(Resource):
             except ValueError:
                 raise RestException('Invalid limit')
 
+            if limit < 1:
+                raise RestException('Invalid limit')
+
         try:
             search_filters = json.loads(params.get('filters') or '{}')
         except json.JSONDecodeError as e:

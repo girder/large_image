@@ -113,7 +113,20 @@ describe('DICOMWeb assetstore', function () {
 
         waitsFor(function () {
             return $('.g-validation-failed-message').html() === 'Invalid limit';
-        }, 'Invalid limit check');
+        }, 'Invalid limit check (float)');
+
+        runs(function () {
+            // Make sure this is cleared (we will be checking the same message).
+            $('.g-validation-failed-message').html('');
+
+            // Test error for negative limit
+            $('#g-dwas-import-limit').val('-1');
+            $('.g-submit-assetstore-import').trigger('click');
+        });
+
+        waitsFor(function () {
+            return $('.g-validation-failed-message').html() === 'Invalid limit';
+        }, 'Invalid limit check (negative)');
 
         runs(function () {
             // Fix the limit
