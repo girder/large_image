@@ -28,7 +28,7 @@ jobs:
       # Build and publish image with all sources
       - name: Extract metadata for the Docker image
         id: meta
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       - name: Build and push the Docker image
@@ -62,7 +62,7 @@ jobs:
       # Build and publish image with only geospatial sources
       - name: Extract metadata for the geospatial Docker image
         id: meta_target
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
