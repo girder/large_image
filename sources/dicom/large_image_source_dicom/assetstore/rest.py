@@ -41,7 +41,8 @@ class DICOMwebAssetstoreResource(Resource):
         try:
             search_filters = json.loads(params.get('filters') or '{}')
         except json.JSONDecodeError as e:
-            raise RestException(e)
+            msg = f'Invalid filters: {e}'
+            raise RestException(msg)
 
         progress = self.boolParam('progress', params, default=False)
 

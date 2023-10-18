@@ -23,16 +23,6 @@ const AssetstoreImportView = View.extend({
                 return;
             }
 
-            // Validate the filters
-            if (filters) {
-                try {
-                    JSON.parse(filters);
-                } catch (e) {
-                    this.$('.g-validation-failed-message').html('Invalid filters: ' + e);
-                    return;
-                }
-            }
-
             this.$('.g-submit-dwas-import').addClass('disabled');
             this.model.off().on('g:imported', function () {
                 router.navigate(parentType + '/' + parentId, { trigger: true });
