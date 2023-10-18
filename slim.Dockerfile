@@ -65,7 +65,7 @@ RUN pip install \
 
 
 # Jupyter all sources
-FROM jupyter/base-notebook:python-3.9.12 as jupyter
+FROM jupyter/base-notebook:python-3.11.6 as jupyter
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
@@ -83,7 +83,7 @@ ENV LARGE_IMAGE_JUPYTER_PROXY='/proxy/'
 
 
 # Jupyter Geospatial sources
-FROM jupyter/base-notebook:python-3.9.12 as jupyter-geo
+FROM jupyter/base-notebook:python-3.11.6 as jupyter-geo
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
