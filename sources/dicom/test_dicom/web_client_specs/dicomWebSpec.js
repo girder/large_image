@@ -106,6 +106,19 @@ describe('DICOMWeb assetstore', function () {
             $('#g-dwas-import-dest-type').val(parentType);
             $('#g-dwas-import-dest-id').val(parentId);
 
+            // Test error for an invalid limit
+            $('#g-dwas-import-limit').val('1.3');
+            $('.g-submit-assetstore-import').trigger('click');
+        });
+
+        waitsFor(function () {
+            return $('.g-validation-failed-message').html() === 'Invalid limit';
+        }, 'Invalid limit check');
+
+        runs(function () {
+            // Fix the limit
+            $('#g-dwas-import-limit').val('1');
+
             // Test error for invalid JSON in the filters parameter
             const filters = '{';
             $('#g-dwas-import-filters').val(filters);
@@ -133,9 +146,6 @@ describe('DICOMWeb assetstore', function () {
             // We will only import this specific SeriesInstanceUID
             const filters = '{"SeriesInstanceUID": "' + verifyItemName + '"}';
             $('#g-dwas-import-filters').val(filters);
-
-            // Set the limit to one
-            $('#g-dwas-import-limit').val('1');
 
             // This one should work fine
             $('.g-submit-assetstore-import').trigger('click');

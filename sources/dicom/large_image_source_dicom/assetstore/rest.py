@@ -36,7 +36,10 @@ class DICOMwebAssetstoreResource(Resource):
 
         limit = params.get('limit') or None
         if limit is not None:
-            limit = int(limit)
+            try:
+                limit = int(limit)
+            except ValueError:
+                raise RestException('Invalid limit')
 
         try:
             search_filters = json.loads(params.get('filters') or '{}')
