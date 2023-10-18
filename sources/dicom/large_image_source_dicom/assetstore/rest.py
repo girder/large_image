@@ -34,7 +34,7 @@ class DICOMwebAssetstoreResource(Resource):
         parent = ModelImporter.model(parentType).load(params['parentId'], force=True,
                                                       exc=True)
 
-        limit = params.get('limit')
+        limit = params.get('limit') or None
         if limit is not None:
             limit = int(limit)
 
