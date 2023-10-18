@@ -1,3 +1,5 @@
+import json
+
 from girder.api import access
 from girder.api.describe import Description, describeRoute
 from girder.api.rest import Resource, loadmodel
@@ -32,6 +34,23 @@ class DICOMwebAssetstoreResource(Resource):
         parent = ModelImporter.model(parentType).load(params['parentId'], force=True,
                                                       exc=True)
 
+        limit = params.get('limit') or None
+        if limit is not None:
+            error_msg = 'Invalid limit'
+            try:
+                limit = int(limit)
+            except ValueError:
+                raise RestException(error_msg)
+
+            if limit < 1:
+                raise RestException(error_msg)
+
+        try:
+            search_filters = json.loads(params.get('filters') or '{}')
+        except json.JSONDecodeError as e:
+            msg = f'Invalid filters: {e}'
+            raise RestException(msg)
+
         progress = self.boolParam('progress', params, default=False)
 
         adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
@@ -39,16 +58,21 @@ class DICOMwebAssetstoreResource(Resource):
         with ProgressContext(
             progress, user=user, title='Importing DICOM references',
         ) as ctx:
-            adapter.importData(
+            items = adapter.importData(
                 parent,
                 parentType,
                 {
-                    'search_filters': params.get('filters', {}),
+                    'limit': limit,
+                    'search_filters': search_filters,
                     'auth': None,
                 },
                 ctx,
                 user,
             )
+
+            if not items:
+                msg = 'No DICOM objects matching the search filters were found'
+                raise RestException(msg)
 
     @access.admin
     @loadmodel(model='assetstore')
@@ -61,6 +85,8 @@ class DICOMwebAssetstoreResource(Resource):
         .param('parentType', 'The type of the parent object to import into.',
                enum=('folder', 'user', 'collection'),
                required=False)
+        .param('limit', 'The maximum number of results to import.',
+               required=False, dataType='int')
         .param('filters', 'Any search parameters to filter DICOM objects.',
                required=False)
         .param('progress', 'Whether to record progress on this operation ('

@@ -118,12 +118,13 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         :param params: Additional parameters required for the import process.
             This dictionary may include the following keys:
 
-            :auth: (optional) if the DICOMweb server requires authentication,
-                this should be an authentication handler derived from
-                requests.auth.AuthBase.
+            :limit: (optional) limit the number of studies imported.
             :search_filters: (optional) a dictionary of additional search
                 filters to use with dicomweb_client's `search_for_series()`
                 function.
+            :auth: (optional) if the DICOMweb server requires authentication,
+                this should be an authentication handler derived from
+                requests.auth.AuthBase.
 
         :type params: dict
         :param progress: Object on which to record progress if possible.
@@ -138,6 +139,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
         from wsidicom.uid import WSI_SOP_CLASS_UID
 
+        limit = params.get('limit')
         search_filters = params.get('search_filters', {})
 
         meta = self.assetstore[DICOMWEB_META_KEY]
@@ -148,7 +150,9 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         series_uid_key = dicom_key_to_tag('SeriesInstanceUID')
 
         # We are only searching for WSI datasets. Ignore all others.
-        # FIXME: is this actually working?
+        # FIXME: is this actually working? For the SLIM server at
+        # https://imagingdatacommons.github.io/slim/, none of the series
+        # report a SOPClassUID, but we still get all results anyways.
         search_filters = {
             'SOPClassUID': WSI_SOP_CLASS_UID,
             **search_filters,
@@ -162,8 +166,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
         # FIXME: might need to search in chunks for larger web servers
         series_results = client.search_for_series(
-            fields=fields, search_filters=search_filters)
-
+            fields=fields, limit=limit, search_filters=search_filters)
         items = []
         for i, result in enumerate(series_results):
             if progress:

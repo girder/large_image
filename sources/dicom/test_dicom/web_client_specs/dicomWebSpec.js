@@ -92,9 +92,75 @@ describe('DICOMWeb assetstore', function () {
         }, 'Import page to load');
 
         runs(function () {
-            // Set the needed options and begin the import
+            // In the import page, trigger a few errors to check validation.
+            // Test error when no ID is set.
+            $('.g-submit-assetstore-import').trigger('click');
+        });
+
+        waitsFor(function () {
+            return $('.g-validation-failed-message').html() === 'Invalid Destination ID';
+        }, 'Invalid ID check');
+
+        runs(function () {
+            // Set dest type and dest id
             $('#g-dwas-import-dest-type').val(parentType);
             $('#g-dwas-import-dest-id').val(parentId);
+
+            // Test error for an invalid limit
+            $('#g-dwas-import-limit').val('1.3');
+            $('.g-submit-assetstore-import').trigger('click');
+        });
+
+        waitsFor(function () {
+            return $('.g-validation-failed-message').html() === 'Invalid limit';
+        }, 'Invalid limit check (float)');
+
+        runs(function () {
+            // Make sure this is cleared (we will be checking the same message).
+            $('.g-validation-failed-message').html('');
+
+            // Test error for negative limit
+            $('#g-dwas-import-limit').val('-1');
+            $('.g-submit-assetstore-import').trigger('click');
+        });
+
+        waitsFor(function () {
+            return $('.g-validation-failed-message').html() === 'Invalid limit';
+        }, 'Invalid limit check (negative)');
+
+        runs(function () {
+            // Fix the limit
+            $('#g-dwas-import-limit').val('1');
+
+            // Test error for invalid JSON in the filters parameter
+            const filters = '{';
+            $('#g-dwas-import-filters').val(filters);
+            $('.g-submit-assetstore-import').trigger('click');
+        });
+
+        waitsFor(function () {
+            return $('.g-validation-failed-message').html().startsWith('Invalid filters');
+        }, 'Invalid filters check');
+
+        runs(function () {
+            // Perform a search where no results are returned
+            const filters = '{"SeriesInstanceUID": "DOES_NOT_EXIST"}';
+            $('#g-dwas-import-filters').val(filters);
+            $('.g-submit-assetstore-import').trigger('click');
+        });
+
+        waitsFor(function () {
+            const msg = 'No DICOM objects matching the search filters were found';
+            return $('.g-validation-failed-message').html() === msg;
+        }, 'No results check');
+
+        runs(function () {
+            // Fix the filters
+            // We will only import this specific SeriesInstanceUID
+            const filters = '{"SeriesInstanceUID": "' + verifyItemName + '"}';
+            $('#g-dwas-import-filters').val(filters);
+
+            // This one should work fine
             $('.g-submit-assetstore-import').trigger('click');
         });
 
