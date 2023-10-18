@@ -3,6 +3,7 @@ import json
 from girder.api import access
 from girder.api.describe import Description, describeRoute
 from girder.api.rest import Resource, loadmodel
+from girder.constants import TokenScope
 from girder.exceptions import RestException
 from girder.utility import assetstore_utilities
 from girder.utility.model_importer import ModelImporter
@@ -74,7 +75,7 @@ class DICOMwebAssetstoreResource(Resource):
                 msg = 'No DICOM objects matching the search filters were found'
                 raise RestException(msg)
 
-    @access.admin
+    @access.admin(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='assetstore')
     @describeRoute(
         Description('Import references to DICOM objects from a DICOMweb server')

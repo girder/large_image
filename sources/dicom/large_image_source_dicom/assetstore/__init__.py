@@ -1,5 +1,4 @@
 from girder import events
-from girder.api import access
 from girder.api.v1.assetstore import Assetstore as AssetstoreResource
 from girder.constants import AssetstoreType
 from girder.models.assetstore import Assetstore
@@ -15,7 +14,6 @@ __all__ = [
 ]
 
 
-@access.admin
 def createAssetstore(event):
     """
     When an assetstore is created, make sure it has a well-formed DICOMweb

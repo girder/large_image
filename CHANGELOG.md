@@ -8,11 +8,13 @@
 - Improve tifffile associated image detection ([#1333](../../pull/1333))
 - Guard against throwing a javascript warning ([#1337](../../pull/1337))
 - Test on Python 3.12 ([#1335](../../pull/1335))
+- Added filtering and limit options to the DICOMweb assetstore ([#1327](../../pull/1327))
 
 ### Changes
 - Prohibit bioformats and vips from reading mrxs directly ([#1328](../../pull/1328))
 - Handle Python 3.12 deprecating utcnow ([#1331](../../pull/1331))
 - Turn down logging about annotation ACLs ([#1332](../../pull/1332))
+- Add scope to the dicomweb import endpoint access decorator ([#1347](../../pull/1347))
 
 ## 1.25.0
 
