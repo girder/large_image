@@ -125,7 +125,7 @@ describe('DICOMWeb assetstore', function () {
 
         waitsFor(function () {
             const msg = 'No DICOM objects matching the search filters were found';
-            return $('.g-validation-failed-message').html().includes(msg);
+            return $('.g-validation-failed-message').html() === msg;
         }, 'No results check');
 
         runs(function () {

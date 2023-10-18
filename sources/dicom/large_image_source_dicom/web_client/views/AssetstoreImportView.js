@@ -38,7 +38,7 @@ const AssetstoreImportView = View.extend({
                 router.navigate(parentType + '/' + parentId, { trigger: true });
             }, this).on('g:error', function (err) {
                 this.$('.g-submit-dwas-import').removeClass('disabled');
-                this.$('.g-validation-failed-message').html(err.responseText);
+                this.$('.g-validation-failed-message').html(err.responseJSON.message);
             }, this).dicomwebImport({
                 parentId,
                 parentType,
