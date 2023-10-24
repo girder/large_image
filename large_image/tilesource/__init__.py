@@ -145,7 +145,7 @@ def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
     sourceName = getSourceNameFromDict(availableSources, pathOrUri, *args, **kwargs)
     if sourceName:
         return availableSources[sourceName](pathOrUri, *args, **kwargs)
-    if not os.path.exists(pathOrUri) and '://' not in pathOrUri:
+    if not os.path.exists(pathOrUri) and '://' not in str(pathOrUri):
         raise TileSourceFileNotFoundError(pathOrUri)
     raise TileSourceError('No available tilesource for %s' % pathOrUri)
 

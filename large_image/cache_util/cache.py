@@ -117,7 +117,7 @@ class LruCacheMetaclass(type):
     namedCaches = {}
     classCaches = {}
 
-    def __new__(metacls, name, bases, namespace, **kwargs):  # noqa - N804
+    def __new__(metacls, name, bases, namespace, **kwargs):
         # Get metaclass parameters by finding and removing them from the class
         # namespace (necessary for Python 2), or preferentially as metaclass
         # arguments (only in Python 3).

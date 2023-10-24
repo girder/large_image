@@ -995,7 +995,7 @@ class TileSource(IPyLeafletMixin):
         # compatibility could be an issue.
         return False
 
-    @methodcache()  # noqa
+    @methodcache()
     def histogram(self, dtype=None, onlyMinMax=False, bins=256,  # noqa
                   density=False, format=None, *args, **kwargs):
         """
