@@ -226,6 +226,13 @@ jobs:
           path: build/tox/compare.txt
       - store_artifacts:
           path: build/tox/compare.yaml
+  type:
+    executor: toxandnode
+    resource_class: large
+    steps:
+      - checkout
+      - tox:
+          env: type
   wheels:
     executor: toxandnode
     steps:
@@ -333,6 +340,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      - type:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - compare:
           filters:
             tags:
@@ -355,6 +369,7 @@ workflows:
             - py311
             - py312
             - lint_and_docs
+            - type
             - wheels
           filters:
             tags:
@@ -369,6 +384,7 @@ workflows:
             - py311
             - py312
             - lint_and_docs
+            - type
             - wheels
           filters:
             tags:
@@ -393,5 +409,6 @@ workflows:
       - py311
       - py312
       - lint_and_docs
+      - type
       - compare
       - wheels

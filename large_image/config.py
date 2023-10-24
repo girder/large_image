@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from typing import cast
+from typing import Any, Optional, Union, cast
 
 from . import exceptions
 
@@ -59,7 +59,8 @@ ConfigValues = {
 }
 
 
-def getConfig(key=None, default=None):
+def getConfig(key: Optional[str] = None,
+              default: Optional[Union[str, bool, int, logging.Logger]] = None) -> Any:
     """
     Get the config dictionary or a value from the cache config settings.
 
@@ -83,7 +84,8 @@ def getConfig(key=None, default=None):
     return ConfigValues.get(key, default)
 
 
-def getLogger(key=None, default=None):
+def getLogger(key: Optional[str] = None,
+              default: Optional[logging.Logger] = None) -> logging.Logger:
     """
     Get a logger from the config.  Ensure that it is a valid logger.
 
@@ -97,7 +99,7 @@ def getLogger(key=None, default=None):
     return logger
 
 
-def setConfig(key, value):
+def setConfig(key: str, value: Optional[Union[str, bool, int, logging.Logger]]) -> None:
     """
     Set a value in the config settings.
 

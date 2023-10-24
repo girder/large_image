@@ -2,6 +2,8 @@ import os
 import re
 import uuid
 from importlib.metadata import entry_points
+from pathlib import PosixPath
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 from .. import config
 from ..constants import NEW_IMAGE_PATH_FLAG, SourcePriority
@@ -13,10 +15,10 @@ from .base import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                    FileTileSource, TileOutputMimeTypes, TileSource,
                    dictToEtree, etreeToDict, nearPowerOfTwo)
 
-AvailableTileSources = {}
+AvailableTileSources: Dict[str, Type[FileTileSource]] = {}
 
 
-def isGeospatial(path):
+def isGeospatial(path: Union[str, PosixPath]) -> bool:
     """
     Check if a path is likely to be a geospatial file.
 
@@ -38,7 +40,8 @@ def isGeospatial(path):
     return False
 
 
-def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTileSources):
+def loadTileSources(entryPointName: str = 'large_image.source',
+                    sourceDict: Dict[str, Type[FileTileSource]] = AvailableTileSources) -> None:
     """
     Load all tilesources from entrypoints and add them to the
     AvailableTileSources dictionary.
@@ -61,7 +64,10 @@ def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTil
                 'Failed to loaded tile source %s' % entryPoint.name)
 
 
-def getSortedSourceList(availableSources, pathOrUri, mimeType=None, *args, **kwargs):
+def getSortedSourceList(
+    availableSources: Dict[str, Type[FileTileSource]], pathOrUri: Union[str, PosixPath],
+    mimeType: Optional[str] = None, *args, **kwargs,
+) -> List[Tuple[bool, bool, SourcePriority, str]]:
     """
     Get an ordered list of sources where earlier sources are more likely to
     work for a specified path or uri.
@@ -108,7 +114,9 @@ def getSortedSourceList(availableSources, pathOrUri, mimeType=None, *args, **kwa
     return sourceList
 
 
-def getSourceNameFromDict(availableSources, pathOrUri, mimeType=None, *args, **kwargs):
+def getSourceNameFromDict(
+        availableSources: Dict[str, Type[FileTileSource]], pathOrUri: Union[str, PosixPath],
+        mimeType: Optional[str] = None, *args, **kwargs) -> Optional[str]:
     """
     Get a tile source based on a ordered dictionary of known sources and a path
     name or URI.  Additional parameters are passed to the tile source and can
@@ -125,9 +133,12 @@ def getSourceNameFromDict(availableSources, pathOrUri, mimeType=None, *args, **k
     for _clash, _fallback, _priority, sourceName in sorted(sourceList):
         if availableSources[sourceName].canRead(pathOrUri, *args, **kwargs):
             return sourceName
+    return None
 
 
-def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
+def getTileSourceFromDict(
+        availableSources: Dict[str, Type[FileTileSource]], pathOrUri: Union[str, PosixPath],
+        *args, **kwargs) -> FileTileSource:
     """
     Get a tile source based on a ordered dictionary of known sources and a path
     name or URI.  Additional parameters are passed to the tile source and can
@@ -146,7 +157,7 @@ def getTileSourceFromDict(availableSources, pathOrUri, *args, **kwargs):
     raise TileSourceError('No available tilesource for %s' % pathOrUri)
 
 
-def getTileSource(*args, **kwargs):
+def getTileSource(*args, **kwargs) -> FileTileSource:
     """
     Get a tilesource using the known sources.  If tile sources have not yet
     been loaded, load them.
@@ -158,7 +169,7 @@ def getTileSource(*args, **kwargs):
     return getTileSourceFromDict(AvailableTileSources, *args, **kwargs)
 
 
-def open(*args, **kwargs):
+def open(*args, **kwargs) -> FileTileSource:
     """
     Alternate name of getTileSource.
 
@@ -170,7 +181,7 @@ def open(*args, **kwargs):
     return getTileSource(*args, **kwargs)
 
 
-def canRead(*args, **kwargs):
+def canRead(*args, **kwargs) -> bool:
     """
     Check if large_image can read a path or uri.
 
@@ -187,7 +198,9 @@ def canRead(*args, **kwargs):
     return False
 
 
-def canReadList(pathOrUri, mimeType=None, *args, **kwargs):
+def canReadList(
+        pathOrUri: Union[str, PosixPath], mimeType: Optional[str] = None,
+        *args, **kwargs) -> List[Tuple[str, bool]]:
     """
     Check if large_image can read a path or uri via each source.
 
@@ -210,7 +223,7 @@ def canReadList(pathOrUri, mimeType=None, *args, **kwargs):
     return result
 
 
-def new(*args, **kwargs):
+def new(*args, **kwargs) -> TileSource:
     """
     Create a new image.
 

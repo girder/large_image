@@ -265,6 +265,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             mm_y = self._dicom.levels[0].pixel_spacing.height or None
         except Exception:
             pass
+        mm_x = float(mm_x) if mm_x else None
+        mm_y = float(mm_y) if mm_y else None
         # Estimate the magnification; we don't have a direct value
         mag = 0.01 / mm_x if mm_x else None
         return {

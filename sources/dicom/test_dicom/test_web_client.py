@@ -22,7 +22,7 @@ def testDICOMWebClient(boundServer, fsAssetstore, db):
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', 'dicomWebSpec.js')
 
     # Replace the template variables
-    with open(spec, 'r') as rf:
+    with open(spec) as rf:
         data = rf.read()
 
     dicomweb_test_url = os.environ['DICOMWEB_TEST_URL']
