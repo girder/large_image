@@ -112,7 +112,7 @@ def cursorNextOrNone(cursor):
     :returns: the next value or None.
     """
     try:
-        return cursor.next()  # noqa - B305
+        return cursor.next()
     except StopIteration:
         return None
 
@@ -577,7 +577,7 @@ class LargeImageResource(Resource):
         config = config.read().decode('utf8')
         return self._configValidate(config)
 
-    @autoDescribeRoute(  # noqa
+    @autoDescribeRoute(
         Description('Reformat a Girder config file')
         .param('config', 'The contents of config file to format.',
                paramType='body'),
