@@ -180,7 +180,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # The following are optional keys
             qido_url_prefix=info.get('qido_prefix'),
             wado_url_prefix=info.get('wado_prefix'),
-            session=info.get('auth'),
+            session=info.get('session'),
         )
 
         wsidicom_client = wsidicom.WsiDicomWebClient(client)

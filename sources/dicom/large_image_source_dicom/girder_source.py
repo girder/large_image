@@ -4,6 +4,7 @@ from girder.constants import AssetstoreType
 from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
+from girder.utility import assetstore_utilities
 
 from . import DICOMFileTileSource
 from .assetstore import DICOMWEB_META_KEY
@@ -61,6 +62,8 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
         file = Item().childFiles(self.item, limit=1)[0]
         file_meta = file['dicomweb_meta']
 
+        adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
+
         return {
             'url': meta['url'],
             'study_uid': file_meta['study_uid'],
@@ -68,5 +71,5 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
             # The following are optional
             'qido_prefix': meta.get('qido_prefix'),
             'wado_prefix': meta.get('wado_prefix'),
-            'auth': meta.get('auth'),
+            'session': adapter.auth_session,
         }

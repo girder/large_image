@@ -58,7 +58,6 @@ class DICOMwebAssetstoreResource(Resource):
             {
                 'limit': limit,
                 'search_filters': search_filters,
-                'auth': None,
             },
             progress,
             user,

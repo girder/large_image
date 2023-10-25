@@ -1,19 +1,52 @@
-mixin g-dwas-parameters
+mixin g-dwas-parameters(label_key)
+  - const key = label_key;
+
+  //- We need to make sure the html elements all have unique ids when this
+  //- mixin is reused in different places, so that we can locate the correct
+  //- html elements in the script.
+  - const url_id = `g-${key}-dwas-url`;
+  - const qido_id = `g-${key}-dwas-qido-prefix`;
+  - const wado_id = `g-${key}-dwas-wado-prefix`;
+  - const auth_type_id = `g-${key}-dwas-auth-type`;
+  - const auth_type_container_id = `g-${key}-dwas-auth-type-container`;
+  - const auth_token_id = `g-${key}-dwas-auth-token`;
+  - const auth_token_container_id = `g-${key}-dwas-auth-token-container`;
+
   .form-group
-    label.control-label(for="g-edit-dwas-url") DICOMweb server URL
-    input#g-edit-dwas-url.input-sm.form-control(
+    label.control-label(for=url_id) DICOMweb server URL
+    input.input-sm.form-control(
+        id=url_id,
         type="text",
         placeholder="URL")
-    label.control-label(for="g-edit-dwas-qido-prefix") DICOMweb QIDO prefix (optional)
-    input#g-edit-dwas-qido-prefix.input-sm.form-control(
+    label.control-label(for=qido_id) DICOMweb QIDO prefix (optional)
+    input.input-sm.form-control(
+        id=qido_id,
         type="text",
         placeholder="QIDO prefix")
-    label.control-label(for="g-edit-dwas-wado-prefix") DICOMweb WADO prefix (optional)
-    input#g-edit-dwas-wado-prefix.input-sm.form-control(
+    label.control-label(for=wado_id) DICOMweb WADO prefix (optional)
+    input.input-sm.form-control(
+        id=wado_id,
         type="text",
         placeholder="WADO prefix")
-  //- COMMENTED OUT UNTIL WE ADD AUTHENTICATION
-    label.control-label(for="g-edit-dwas-auth-type") DICOMweb authentication type (optional)
-    input#g-edit-dwas-auth-type.input-sm.form-control(
-        type="text",
-        placeholder="Authentication type")
+    label.control-label(for=auth_type_id) DICOMweb authentication type (optional)
+    - const auth_type = (assetstore && assetstore.attributes.dicomweb_meta.auth_type) || null;
+    - const updateFuncName = `${key}UpdateVisibilities`;
+    script.
+      var #{updateFuncName} = function () {
+         const isToken = document.getElementById('#{auth_type_id}').value === 'token';
+         const display = isToken ? 'block' : 'none';
+         document.getElementById('#{auth_token_container_id}').style.display = display;
+      };
+    div(id=auth_type_container_id)
+      select.form-control(
+          id=auth_type_id,
+          onchange=updateFuncName + '()')
+        each auth_option in authOptions
+          option(value=auth_option.value, selected=(auth_type === auth_option.value)) #{auth_option.label}
+    - const display = auth_type === 'token' ? 'block': 'none';
+    div(id=auth_token_container_id, style='display: ' + display + ';')
+      label.control-label(for=auth_token_id) DICOMweb authentication token
+      input.input-sm.form-control(
+          id=auth_token_id,
+          type="text",
+          placeholder="Token")

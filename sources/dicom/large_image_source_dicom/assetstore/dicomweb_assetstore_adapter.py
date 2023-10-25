@@ -1,3 +1,4 @@
+import requests
 from requests.exceptions import HTTPError
 
 from girder.exceptions import ValidationException
@@ -45,10 +46,13 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             if isinstance(info.get(field), str) and not info[field].strip():
                 info[field] = None
 
-        # Now, if there is no authentication, verify that we can connect to the server.
-        # If there is authentication, we may need to prompt the user for their
-        # username and password sometime before here.
-        if info['auth_type'] is None:
+        if info['auth_type'] == 'token' and not info.get('auth_token'):
+            msg = 'A token must be provided if the auth type is "token"'
+            raise ValidationException(msg)
+
+        # Verify that we can connect to the server, if the authentication type
+        # allows it.
+        if info['auth_type'] in (None, 'token'):
             study_instance_uid_tag = dicom_key_to_tag('StudyInstanceUID')
             series_instance_uid_tag = dicom_key_to_tag('SeriesInstanceUID')
 
@@ -61,7 +65,8 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                     fields=(study_instance_uid_tag, series_instance_uid_tag),
                 )
             except HTTPError as e:
-                raise ValidationException('Failed to validate DICOMweb server settings: ' + str(e))
+                msg = f'Failed to validate DICOMweb server settings: {e}'
+                raise ValidationException(msg)
 
             # If we found a series, then test the wado prefix as well
             if series:
@@ -76,9 +81,14 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                         series_instance_uid=series_uid,
                     )
                 except HTTPError as e:
-                    raise ValidationException('Failed to validate DICOMweb WADO prefix: ' + str(e))
+                    msg = f'Failed to validate DICOMweb WADO prefix: {e}'
+                    raise ValidationException(msg)
 
         return doc
+
+    @property
+    def assetstore_meta(self):
+        return self.assetstore[DICOMWEB_META_KEY]
 
     def initUpload(self, upload):
         msg = 'DICOMweb assetstores are import only.'
@@ -122,9 +132,6 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             :search_filters: (optional) a dictionary of additional search
                 filters to use with dicomweb_client's `search_for_series()`
                 function.
-            :auth: (optional) if the DICOMweb server requires authentication,
-                this should be an authentication handler derived from
-                requests.auth.AuthBase.
 
         :type params: dict
         :param progress: Object on which to record progress if possible.
@@ -142,9 +149,9 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         limit = params.get('limit')
         search_filters = params.get('search_filters', {})
 
-        meta = self.assetstore[DICOMWEB_META_KEY]
+        meta = self.assetstore_meta
 
-        client = _create_dicomweb_client(meta, auth=params.get('auth'))
+        client = _create_dicomweb_client(meta)
 
         study_uid_key = dicom_key_to_tag('StudyInstanceUID')
         series_uid_key = dicom_key_to_tag('SeriesInstanceUID')
@@ -201,19 +208,37 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             file['imported'] = True
             File().save(file)
 
-            # FIXME: should we return a list of items (like this), or should
-            # we return files?
             items.append(item)
 
         return items
 
+    @property
+    def auth_session(self):
+        return _create_auth_session(self.assetstore_meta)
 
-def _create_dicomweb_client(meta, auth=None):
+
+def _create_auth_session(meta):
+    auth_type = meta.get('auth_type')
+    if auth_type is None:
+        return None
+
+    if auth_type == 'token':
+        return _create_token_auth_session(meta['auth_token'])
+
+    msg = f'Unhandled auth type: {auth_type}'
+    raise NotImplementedError(msg)
+
+
+def _create_token_auth_session(token):
+    s = requests.Session()
+    s.headers.update({'Authorization': f'Bearer {token}'})
+    return s
+
+
+def _create_dicomweb_client(meta):
     from dicomweb_client.api import DICOMwebClient
-    from dicomweb_client.session_utils import create_session_from_auth
 
-    # Create the authentication session
-    session = create_session_from_auth(auth)
+    session = _create_auth_session(meta)
 
     # Make the DICOMwebClient
     return DICOMwebClient(

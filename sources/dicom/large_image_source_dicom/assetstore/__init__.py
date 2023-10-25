@@ -32,6 +32,7 @@ def createAssetstore(event):
                 'qido_prefix': params.get('qido_prefix'),
                 'wado_prefix': params.get('wado_prefix'),
                 'auth_type': params.get('auth_type'),
+                'auth_token': params.get('auth_token'),
             },
         }))
         event.preventDefault()
@@ -53,6 +54,7 @@ def updateAssetstore(event):
             'qido_prefix': params.get('qido_prefix'),
             'wado_prefix': params.get('wado_prefix'),
             'auth_type': params.get('auth_type'),
+            'auth_token': params.get('auth_token'),
         }
 
 
@@ -78,6 +80,9 @@ def load(info):
                required=False)
         .param('auth_type',
                'The authentication type required for the server, if needed (for DICOMweb)',
+               required=False)
+        .param('auth_token',
+               'Token for authentication if needed (for DICOMweb)',
                required=False))
 
     info['apiRoot'].dicomweb_assetstore = DICOMwebAssetstoreResource()
