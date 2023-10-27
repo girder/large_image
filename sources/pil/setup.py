@@ -59,8 +59,10 @@ setup(
     ],
     extras_require={
         'all': [
-            'rawpy ; python_version < "3.7" and python_version < "3.12"',
+            'rawpy ; python_version >= "3.7" and python_version < "3.12"',
             'pillow-heif',
+            'pillow-jxl-plugin ; python_version >= "3.8"',
+            'pillow-jpls ; python_version < "3.12"',
         ],
         'girder': f'girder-large-image{limit_version}',
     },
