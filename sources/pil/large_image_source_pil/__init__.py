@@ -37,6 +37,14 @@ try:
     register_avif_opener()
 except Exception:
     pass
+try:
+    import pillow_jxl  # noqa
+except Exception:
+    pass
+try:
+    import pillow_jpls  # noqa
+except Exception:
+    pass
 
 try:
     from importlib.metadata import PackageNotFoundError

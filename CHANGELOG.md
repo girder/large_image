@@ -9,6 +9,7 @@
 - Guard against throwing a javascript warning ([#1337](../../pull/1337))
 - Test on Python 3.12 ([#1335](../../pull/1335))
 - Added filtering and limit options to the DICOMweb assetstore ([#1327](../../pull/1327))
+- Support more formats through PIL ([#1351](../../pull/1351))
 
 ### Changes
 - Prohibit bioformats and vips from reading mrxs directly ([#1328](../../pull/1328))
