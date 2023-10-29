@@ -45,8 +45,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -57,7 +55,6 @@ setup(
         'girder>=3.1.18',
         'girder-jobs>=3.0.3',
         f'large_image{limit_version}',
-        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'tasks': [
@@ -68,7 +65,7 @@ setup(
     include_package_data=True,
     keywords='girder-plugin, large_image',
     packages=find_packages(exclude=['test', 'test.*', 'test_girder', 'test_girder.*']),
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     url='https://github.com/girder/large_image',
     zip_safe=False,
     entry_points={

@@ -21,6 +21,8 @@ import tempfile
 import threading
 import warnings
 from contextlib import suppress
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import PIL.Image
@@ -43,12 +45,6 @@ from large_image.tilesource.geo import (GDALBaseFileTileSource,
                                         ProjUnitsAcrossLevel0_MaxSize)
 from large_image.tilesource.utilities import JSONDict
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

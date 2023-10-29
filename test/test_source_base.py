@@ -34,7 +34,6 @@ SourceAndFiles = {
     'deepzoom': {},
     'dicom': {
         'read': r'\.dcm$',
-        'python': sys.version_info >= (3, 8),
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
@@ -54,7 +53,6 @@ SourceAndFiles = {
     },
     'nd2': {
         'read': r'\.(nd2)$',
-        'python': sys.version_info >= (3, 7),
     },
     'ometiff': {'read': r'\.(ome\.tif.*)$'},
     'openjpeg': {'read': r'\.(jp2)$'},
@@ -65,13 +63,11 @@ SourceAndFiles = {
     },
     'pil': {
         'read': r'\.(jpg|jpeg|png|tif.*)$',
-        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview' + (
-            r'|sample.*ome' if sys.version_info < (3, 7) else r'') + r')',
+        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview)',
     },
     'rasterio': {
         'read': r'\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
-        'python': sys.version_info >= (3, 8),
     },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
@@ -85,7 +81,6 @@ SourceAndFiles = {
         'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|dcm|zarr\.db|zarr\.zip)$)' +
                   (r'|bad_axes' if sys.version_info < (3, 9) else '') +
                   r')',
-        'python': sys.version_info >= (3, 7),
     },
     'vips': {
         'read': r'',
@@ -767,7 +762,6 @@ def testStyleFunctionsWarnings():
     assert source._styleFunctionWarnings
 
 
-@pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python >= 3.7 for the source')
 @pytest.mark.singular()
 def testStyleRepeatedFrame():
     imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')

@@ -20,6 +20,8 @@ import itertools
 import json
 import math
 import os
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import cachetools
 import numpy as np
@@ -36,12 +38,6 @@ from . import tiff_reader
 from .exceptions import (InvalidOperationTiffError, IOOpenTiffError,
                          IOTiffError, TiffError, ValidationTiffError)
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

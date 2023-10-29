@@ -119,32 +119,6 @@ jobs:
           command: |
               echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
               docker push girder/tox-and-node:latest
-  py36:
-    machine:
-      image: ubuntu-2004:202111-02
-    steps:
-      - checkout
-      - allservices:
-          version: "3.6"
-          node: v14
-      - tox:
-          env: test-py36
-      - coverage
-      - store_artifacts:
-          path: build/test/artifacts
-  py37:
-    machine:
-      image: ubuntu-2004:202111-02
-    steps:
-      - checkout
-      - allservices:
-          version: "3.7"
-          node: v14
-      - tox:
-          env: test-py37
-      - coverage
-      - store_artifacts:
-          path: build/test/artifacts
   py38:
     machine:
       image: ubuntu-2004:202111-02
@@ -289,20 +263,6 @@ workflows:
                 - master
                 # Create a branch of this name to push to docker hub
                 - testdocker
-      - py36:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore:
-                - gh-pages
-      - py37:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore:
-                - gh-pages
       - py38:
           filters:
             tags:
@@ -347,8 +307,6 @@ workflows:
                 - gh-pages
       - wheels:
           requires:
-            - py36
-            - py37
             - py38
             - py39
             - py310
@@ -363,8 +321,6 @@ workflows:
                 - gh-pages
       - release:
           requires:
-            - py36
-            - py37
             - py38
             - py39
             - py310
@@ -378,8 +334,6 @@ workflows:
               only: master
       - docs-deploy:
           requires:
-            - py36
-            - py37
             - py38
             - py39
             - py310
@@ -403,8 +357,6 @@ workflows:
               only:
                 - master
     jobs:
-      - py36
-      - py37
       - py38
       - py39
       - py310

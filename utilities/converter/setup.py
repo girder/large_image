@@ -50,8 +50,6 @@ setup(
         'Topic :: Scientific/Engineering',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -65,7 +63,6 @@ setup(
         'psutil',
         'pyvips',
         'tifftools',
-        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'jp2k': [
@@ -83,5 +80,5 @@ setup(
     entry_points={
         'console_scripts': ['large_image_converter = large_image_converter.__main__:main'],
     },
-    python_requires='>=3.6',
+    python_requires='>=3.8',
 )

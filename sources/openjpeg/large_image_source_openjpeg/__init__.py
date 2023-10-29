@@ -22,6 +22,8 @@ import os
 import queue
 import struct
 import warnings
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 from xml.etree import ElementTree
 
 import glymur
@@ -32,12 +34,6 @@ from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, etreeToDict
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

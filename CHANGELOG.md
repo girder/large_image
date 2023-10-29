@@ -19,6 +19,7 @@
 - Handle Python 3.12 deprecating utcnow ([#1331](../../pull/1331))
 - Turn down logging about annotation ACLs ([#1332](../../pull/1332))
 - Add scope to the dicomweb import endpoint access decorator ([#1347](../../pull/1347))
+- Drop support for Python 3.6 and Python 3.7 ([#1352](../../pull/1352))
 
 ## 1.25.0
 
