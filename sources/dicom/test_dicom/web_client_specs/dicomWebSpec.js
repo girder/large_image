@@ -11,8 +11,8 @@ describe('DICOMWeb assetstore', function () {
             'Admin',
             'adminpassword!'));
     it('Create an assetstore and import data', function () {
-        var parentId;
-        var parentType;
+        var destinationId;
+        var destinationType;
 
         // After importing, we will verify that this item exists
         const verifyItemName = '1.3.6.1.4.1.5962.99.1.3510881361.982628633.1635598486609.2.0';
@@ -54,7 +54,7 @@ describe('DICOMWeb assetstore', function () {
         }, 'DICOMweb assetstore to be created');
 
         runs(function () {
-            // Select the parentId and parentType
+            // Select the destinationId and destinationType
             // Get the user ID
             const resp = girder.rest.restRequest({
                 url: 'user',
@@ -70,15 +70,15 @@ describe('DICOMWeb assetstore', function () {
                 type: 'GET',
                 async: false,
                 data: {
-                    parentType: 'user',
-                    parentId: userId,
+                    destinationType: 'user',
+                    destinationId: userId,
                     name: 'Public',
                 }
             });
 
             // Use the user's public folder
-            parentType = 'folder';
-            parentId = resp.responseJSON[0]._id;
+            destinationType = 'folder';
+            destinationId = resp.responseJSON[0]._id;
         });
 
         runs(function () {
@@ -103,8 +103,8 @@ describe('DICOMWeb assetstore', function () {
 
         runs(function () {
             // Set dest type and dest id
-            $('#g-dwas-import-dest-type').val(parentType);
-            $('#g-dwas-import-dest-id').val(parentId);
+            $('#g-dwas-import-dest-type').val(destinationType);
+            $('#g-dwas-import-dest-id').val(destinationId);
 
             // Test error for an invalid limit
             $('#g-dwas-import-limit').val('1.3');
