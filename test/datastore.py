@@ -98,6 +98,12 @@ registry = {
     'synthetic_imagej.tiff': 'sha512:f4fcf9633b7fc8c819aace248352b3ef89364418d734aa8326096829d64956f11b961c24003bd5ca1f7e46462a8230b64177b37b1517a416d7c7123a0932d5dc',  # noqa
     # Blank untiled tiff with bad tifffile axes information
     'bad_axes_description.tif': 'sha512:cbe82614a83d315a2f22c32b14fd32560fadb3f263bfeffc75f42f88e535e8a11728f691499cb7f5714bbbc55938c472ee4a706d7281bdfefe6fdb965c0a2d6b',  # noqa
+    # Converted from the blank qptiff file
+    'synthetic_channels.zarr.db': 'sha512:84a1e5e55931ca17e914b97c3e90bba786ce0a53eec61956a0026a65eea759f45193052e70add531b9debd13597433fdc06fc0abfa5ebae628fa64d34e0d750d',  # noqa
+    # Converted from a file called normmedia...nd2 and made mostly dull
+    'synthetic_multiaxis.zarr.db': 'sha512:2ca118b67ca73bbc6fe9542c5b71ee6cb5f45f5049575a4682290cec4cfb4deef29aee5e19fb5d4005167322668a94191a86f98f1125c94f5eef3e14c6ec6e26',  # noqa
+    # The same as above, but as a multi directory zip
+    'synthetic_multiaxis.zarr.zip': 'sha512:95da53061bd09deaf4357e745404780d78a0949935f82c10ee75237e775345caace18fad3f05c3452ba36efca6b3ed58d815d041f33197497ab53d2c80b9e2ac',  # noqa
 }
 
 

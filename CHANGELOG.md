@@ -1,6 +1,9 @@
 # Change Log
 
-## 1.25.1
+## 1.26.0
+
+### Features
+- Add a Zarr tile source (including ome.zarr) ([#1350](../../pull/1350))
 
 ### Improvements
 - Style can specify a dtype of 'source' to maintain the original dtype even when compositing frames ([#1326](../../pull/1326))

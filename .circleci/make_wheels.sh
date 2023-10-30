@@ -55,3 +55,5 @@ cd "$ROOTPATH/sources/tifffile"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
 cd "$ROOTPATH/sources/vips"
 pip wheel . --no-deps -w ~/wheels && rm -rf build
+cd "$ROOTPATH/sources/zarr"
+pip wheel . --no-deps -w ~/wheels && rm -rf build
