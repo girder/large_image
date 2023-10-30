@@ -70,8 +70,8 @@ describe('DICOMWeb assetstore', function () {
                 type: 'GET',
                 async: false,
                 data: {
-                    destinationType: 'user',
-                    destinationId: userId,
+                    parentType: 'user',
+                    parentId: userId,
                     name: 'Public',
                 }
             });
