@@ -1,8 +1,8 @@
 import json
 
 from girder.api import access
-from girder.api.describe import Description, describeRoute
-from girder.api.rest import Resource, boundHandler
+from girder.api.describe import Description, autoDescribeRoute
+from girder.api.rest import Resource
 from girder.constants import TokenScope
 from girder.exceptions import RestException
 from girder.models.assetstore import Assetstore
@@ -75,8 +75,7 @@ class DICOMwebAssetstoreResource(Resource):
                 raise RestException(msg)
 
     @access.admin(scope=TokenScope.DATA_WRITE)
-    @boundHandler
-    @describeRoute(
+    @autoDescribeRoute(
         Description('Import references to DICOM objects from a DICOMweb server')
         .modelParam('id', 'The ID of the assetstore representing the DICOMweb server.',
                     model=Assetstore)
