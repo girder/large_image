@@ -24,8 +24,6 @@ class DICOMwebAssetstoreResource(Resource):
         :param params: a dictionary of parameters including destinationId,
             destinationType, progress, and filters.
         """
-        self.requireParams(('destinationId'), params)
-
         user = self.getCurrentUser()
 
         destinationType = params.get('destinationType', 'folder')
