@@ -583,7 +583,7 @@ class LargeImageResource(Resource):
                paramType='body'),
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
-    def configFormat(self, config):  # noqa
+    def configFormat(self, config):
         config = config.read().decode('utf8')
         if len(self._configValidate(config)):
             return config
@@ -617,13 +617,8 @@ class LargeImageResource(Resource):
                 if not key.startswith('__comment__'):
                     valstr = repr(val)
                     if len(valstr) + len(key) + 3 >= 79:
-                        try:
-                            valstr = pprint.pformat(
-                                val, width=79, indent=2, compact=True, sort_dicts=False)
-                        except Exception:
-                            # sort_dicts isn't an option before Python 3.8
-                            valstr = pprint.pformat(
-                                val, width=79, indent=2, compact=True)
+                        valstr = pprint.pformat(
+                            val, width=79, indent=2, compact=True, sort_dicts=False)
                     out.append('%s = %s\n' % (key, valstr))
                 else:
                     out.append(val)

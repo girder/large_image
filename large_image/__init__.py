@@ -14,15 +14,12 @@
 #  limitations under the License.
 #############################################################################
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
+
 from . import tilesource  # noqa
 from .tilesource import canRead, canReadList, getTileSource, new, open  # noqa
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

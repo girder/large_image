@@ -1,5 +1,3 @@
-import sys
-
 try:
     import large_image_source_nd2
 except ImportError:
@@ -8,10 +6,6 @@ import pytest
 
 from . import utilities
 from .datastore import datastore
-
-pytestmark = [
-    pytest.mark.skipif(sys.version_info < (3, 7), reason='requires python3.7 or higher'),
-]
 
 
 def testTilesFromND2():

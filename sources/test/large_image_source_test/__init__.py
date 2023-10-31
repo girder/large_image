@@ -18,6 +18,8 @@ import colorsys
 import itertools
 import math
 import re
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -28,12 +30,6 @@ from large_image.exceptions import TileSourceError
 from large_image.tilesource import TileSource
 from large_image.tilesource.utilities import _imageToNumpy, _imageToPIL
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

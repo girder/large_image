@@ -45,7 +45,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -56,9 +55,7 @@ setup(
         f'large-image{limit_version}',
         'dask[array]',
         'tifffile[all]',
-        'zarr ; python_version >= "3.8" and python_version < "3.11"',
-        'zarr<2.11 ; python_version < "3.8"',
-        'importlib-metadata<5 ; python_version < "3.8"',
+        'zarr',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
@@ -66,7 +63,7 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     entry_points={
         'large_image.source': [
             'tifffile = large_image_source_tifffile:TifffileFileTileSource',

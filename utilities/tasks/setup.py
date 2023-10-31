@@ -50,8 +50,6 @@ setup(
         'Topic :: Scientific/Engineering',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -61,7 +59,6 @@ setup(
     install_requires=[
         # Packages required by both producer and consumer side installations
         'girder-worker-utils>=0.8.5',
-        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
         'girder': [
@@ -75,7 +72,7 @@ setup(
             'girder-worker[worker]>=0.6.0',
         ],
     },
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     entry_points={
         'girder_worker_plugins': [
             'large_image_tasks = large_image_tasks:LargeImageTasks',

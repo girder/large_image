@@ -18,6 +18,8 @@ import copy
 import math
 import os
 from collections import OrderedDict
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import PIL.Image
@@ -28,12 +30,6 @@ from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

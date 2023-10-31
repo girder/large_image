@@ -6,6 +6,8 @@ import math
 import os
 import re
 import threading
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 from pathlib import Path
 
 import jsonschema
@@ -19,12 +21,6 @@ from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import _makeSameChannelDepth
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

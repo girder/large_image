@@ -1,11 +1,7 @@
 import os
 import re
 import uuid
-
-try:
-    from importlib.metadata import entry_points
-except ImportError:
-    from importlib_metadata import entry_points
+from importlib.metadata import entry_points
 
 from .. import config
 from ..constants import NEW_IMAGE_PATH_FLAG, SourcePriority
