@@ -7,7 +7,7 @@ import { restRequest } from '@girder/core/rest';
 AssetstoreModel.prototype.dicomwebImport = function (params) {
     return restRequest({
         url: 'dicomweb_assetstore/' + this.get('_id') + '/import',
-        type: 'PUT',
+        type: 'POST',
         data: params,
         error: null
     }).done(() => {

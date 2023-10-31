@@ -1,10 +1,11 @@
 import json
 
 from girder.api import access
-from girder.api.describe import Description, describeRoute
-from girder.api.rest import Resource, loadmodel
+from girder.api.describe import Description, autoDescribeRoute
+from girder.api.rest import Resource
 from girder.constants import TokenScope
 from girder.exceptions import RestException
+from girder.models.assetstore import Assetstore
 from girder.utility import assetstore_utilities
 from girder.utility.model_importer import ModelImporter
 from girder.utility.progress import ProgressContext
@@ -14,26 +15,24 @@ class DICOMwebAssetstoreResource(Resource):
     def __init__(self):
         super().__init__()
         self.resourceName = 'dicomweb_assetstore'
-        self.route('PUT', (':id', 'import'), self.importData)
+        self.route('POST', (':id', 'import'), self.importData)
 
     def _importData(self, assetstore, params):
         """
 
         :param assetstore: the destination assetstore.
-        :param params: a dictionary of parameters including parentId,
-            parentType, progress, and filters.
+        :param params: a dictionary of parameters including destinationId,
+            destinationType, progress, and filters.
         """
-        self.requireParams(('parentId'), params)
-
         user = self.getCurrentUser()
 
-        parentType = params.get('parentType', 'folder')
-        if parentType not in ('folder', 'user', 'collection'):
-            msg = f'Invalid parentType: {parentType}'
+        destinationType = params.get('destinationType', 'folder')
+        if destinationType not in ('folder', 'user', 'collection'):
+            msg = f'Invalid destinationType: {destinationType}'
             raise RestException(msg)
 
-        parent = ModelImporter.model(parentType).load(params['parentId'], force=True,
-                                                      exc=True)
+        parent = ModelImporter.model(destinationType).load(params['destinationId'], force=True,
+                                                           exc=True)
 
         limit = params.get('limit') or None
         if limit is not None:
@@ -61,7 +60,7 @@ class DICOMwebAssetstoreResource(Resource):
         ) as ctx:
             items = adapter.importData(
                 parent,
-                parentType,
+                destinationType,
                 {
                     'limit': limit,
                     'search_filters': search_filters,
@@ -76,22 +75,21 @@ class DICOMwebAssetstoreResource(Resource):
                 raise RestException(msg)
 
     @access.admin(scope=TokenScope.DATA_WRITE)
-    @loadmodel(model='assetstore')
-    @describeRoute(
+    @autoDescribeRoute(
         Description('Import references to DICOM objects from a DICOMweb server')
-        .param('id', 'The ID of the assetstore representing the DICOMweb server.',
-               paramType='path')
-        .param('parentId', 'The ID of the parent folder, collection, or user '
+        .modelParam('id', 'The ID of the assetstore representing the DICOMweb server.',
+                    model=Assetstore)
+        .param('destinationId', 'The ID of the parent folder, collection, or user '
                'in the Girder data hierarchy under which to import the files.')
-        .param('parentType', 'The type of the parent object to import into.',
+        .param('destinationType', 'The type of the parent object to import into.',
                enum=('folder', 'user', 'collection'),
-               required=False)
+               required=True)
         .param('limit', 'The maximum number of results to import.',
                required=False, dataType='int')
         .param('filters', 'Any search parameters to filter DICOM objects.',
-               required=False)
+               required=False, default={})
         .param('progress', 'Whether to record progress on this operation ('
-               'default=False)', required=False, dataType='boolean')
+               'default=False)', required=False, default=False, dataType='boolean')
         .errorResponse()
         .errorResponse('You are not an administrator.', 403),
     )
