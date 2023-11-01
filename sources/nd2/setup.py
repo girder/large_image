@@ -17,7 +17,7 @@ def prerelease_local_scheme(version):
     """
     from setuptools_scm.version import get_local_node_and_date
 
-    if os.getenv('CIRCLE_BRANCH') in ('master', ):
+    if os.getenv('CIRCLE_BRANCH') in ('master', ) and not os.getenv('TOX_ENV_NAME'):
         return ''
     else:
         return get_local_node_and_date(version)
