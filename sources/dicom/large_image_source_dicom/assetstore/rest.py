@@ -17,7 +17,7 @@ class DICOMwebAssetstoreResource(Resource):
         self.resourceName = 'dicomweb_assetstore'
         self.route('POST', (':id', 'import'), self.importData)
 
-    def _importData(self, assetstore, params):
+    def _importData(self, assetstore, params, progress=None):
         """
 
         :param assetstore: the destination assetstore.
@@ -51,7 +51,7 @@ class DICOMwebAssetstoreResource(Resource):
             msg = f'Invalid filters: {e}'
             raise RestException(msg)
 
-        progress = self.boolParam('progress', params, default=False)
+        progress = progress or self.boolParam('progress', params, default=False)
 
         adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
 
