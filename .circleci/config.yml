@@ -25,7 +25,7 @@ commands:
           # Piping through cat does less buffering of the output but can
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: PYTEST_ADDOPTS=--reruns=3 tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: CIRCLE_BRANCH= PYTEST_ADDOPTS=--reruns=3 tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:
