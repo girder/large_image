@@ -20,6 +20,7 @@
 - Turn down logging about annotation ACLs ([#1332](../../pull/1332))
 - Add scope to the dicomweb import endpoint access decorator ([#1347](../../pull/1347))
 - Drop support for Python 3.6 and Python 3.7 ([#1352](../../pull/1352))
+- Standardize DICOMweb assetstore parameter names/style ([#1338](../../pull/1338))
 
 ## 1.25.0
 
