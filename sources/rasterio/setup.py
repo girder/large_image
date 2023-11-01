@@ -27,7 +27,7 @@ try:
     from setuptools_scm import get_version
 
     version = get_version(root='../..', local_scheme=prerelease_local_scheme)
-    limit_version = f'>={version}' if '+' not in version else ''
+    limit_version = f'>={version}' if '+' not in version and not os.getenv('TOX_ENV_NAME') else ''
 except (ImportError, LookupError):
     limit_version = ''
 
