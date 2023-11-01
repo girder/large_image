@@ -1,14 +1,8 @@
-import sys
-
 import pytest
 
 from large_image.cache_util import cachesClear
 
 from . import utilities
-
-pytestmark = [
-    pytest.mark.skipif(sys.version_info < (3, 8), reason='requires python3.8 or higher'),
-]
 
 
 @pytest.mark.plugin('large_image_source_dicom')

@@ -17,6 +17,8 @@
 import io
 import math
 import os
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import openslide
 import PIL
@@ -27,12 +29,6 @@ from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

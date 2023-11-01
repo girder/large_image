@@ -18,6 +18,8 @@ import datetime
 import json
 import re
 import warnings
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import yaml
 from girder_jobs.constants import JobStatus
@@ -50,12 +52,6 @@ from .rest.item_meta import InternalMetadataItemResource
 from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:

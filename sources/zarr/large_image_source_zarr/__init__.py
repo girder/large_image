@@ -1,8 +1,8 @@
-import functools
 import math
-import operator
 import os
 import threading
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import packaging.version
@@ -15,12 +15,6 @@ from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import nearPowerOfTwo
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _importlib_version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError
-    from importlib_metadata import version as _importlib_version
 try:
     __version__ = _importlib_version(__name__)
 except PackageNotFoundError:
@@ -161,10 +155,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 return
         if 'x' not in axes or 'y' not in axes:
             return
-        # Change this to `math.prod(arr.shape)` when dropping Python 3.7
-        check = (is_ome, functools.reduce(operator.mul, arr.shape, 1),
-                 channels is not None, tuple(axes.keys()),
-                 tuple(channels) if channels else ())
+        check = (is_ome, math.prod(arr.shape), channels is not None,
+                 tuple(axes.keys()), tuple(channels) if channels else ())
         if results['best'] is None or check > results['best']:
             results['best'] = check
             results['series'] = [(group, arr)]

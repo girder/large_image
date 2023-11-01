@@ -1,5 +1,3 @@
-import sys
-
 import pytest
 
 import large_image
@@ -49,8 +47,6 @@ def testCacheSourceStyleFirst():
     assert ts1.getTile(0, 0, 4) == tile1
 
 
-@pytest.mark.skipif(sys.version_info < (3, 7),
-                    reason='requires python >= 3.7 for a source with the issue')
 @pytest.mark.singular()
 def testCacheSourceBadStyle():
     cachesClear()

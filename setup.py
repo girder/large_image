@@ -41,27 +41,26 @@ extraReqs = {
     'tiledoutput': ['pyvips'],
     'performance': [
         'psutil>=4.2.0',
-        'simplejpeg ; python_version >= "3.7"',
-        'simplejpeg<1.6.6 ; python_version < "3.7"',
+        'simplejpeg',
     ],
 }
 sources = {
     'bioformats': [f'large-image-source-bioformats{limit_version}'],
     'deepzoom': [f'large-image-source-deepzoom{limit_version}'],
-    'dicom': [f'large-image-source-dicom{limit_version} ; python_version >= "3.8"'],
+    'dicom': [f'large-image-source-dicom{limit_version}'],
     'dummy': [f'large-image-source-dummy{limit_version}'],
     'gdal': [f'large-image-source-gdal{limit_version}'],
     'mapnik': [f'large-image-source-mapnik{limit_version}'],
     'multi': [f'large-image-source-multi{limit_version}'],
-    'nd2': [f'large-image-source-nd2{limit_version} ; python_version >= "3.7"'],
+    'nd2': [f'large-image-source-nd2{limit_version}'],
     'ometiff': [f'large-image-source-ometiff{limit_version}'],
     'openjpeg': [f'large-image-source-openjpeg{limit_version}'],
     'openslide': [f'large-image-source-openslide{limit_version}'],
     'pil': [f'large-image-source-pil{limit_version}'],
-    'rasterio': [f'large-image-source-rasterio{limit_version} ; python_version >= "3.8"'],
+    'rasterio': [f'large-image-source-rasterio{limit_version}'],
     'test': [f'large-image-source-test{limit_version}'],
     'tiff': [f'large-image-source-tiff{limit_version}'],
-    'tifffile': [f'large-image-source-tifffile{limit_version} ; python_version >= "3.7"'],
+    'tifffile': [f'large-image-source-tifffile{limit_version}'],
     'vips': [f'large-image-source-vips{limit_version}'],
     'zarr': [f'large-image-source-zarr{limit_version}'],
 }
@@ -69,7 +68,7 @@ extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
 extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) | {
     f'large-image-source-pil[all]{limit_version}',
-    f'large-image-source-rasterio[all]{limit_version} ; python_version >= "3.8"',
+    f'large-image-source-rasterio[all]{limit_version}',
 })
 # The common packages are ones that will install on Ubuntu, OSX, and Windows
 # from pypi with all needed dependencies.
@@ -78,7 +77,7 @@ extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for 
     'deepzoom', 'dicom', 'multi', 'nd2', 'test', 'tifffile', 'zarr',
 })) | {
     f'large-image-source-pil[all]{limit_version}',
-    f'large-image-source-rasterio[all]{limit_version} ; python_version >= "3.8"',
+    f'large-image-source-rasterio[all]{limit_version}',
 })
 
 setup(
@@ -86,8 +85,7 @@ setup(
     use_scm_version={'local_scheme': prerelease_local_scheme,
                      'fallback_version': '0.0.0'},
     setup_requires=[
-        'setuptools-scm<7 ; python_version < "3.7"',
-        'setuptools-scm ; python_version >= "3.7"',
+        'setuptools-scm',
     ],
     description=description,
     long_description=long_description,
@@ -98,8 +96,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -111,13 +107,12 @@ setup(
         'palettable',
         'Pillow',
         'numpy',
-        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require=extraReqs,
     include_package_data=True,
     keywords='large_image',
     packages=['large_image'],
     url='https://github.com/girder/large_image',
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     zip_safe=False,
 )

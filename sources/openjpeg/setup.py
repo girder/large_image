@@ -45,8 +45,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -55,9 +53,7 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'glymur>=0.8.18 ; python_version >= "3.7"',
-        'glymur>=0.8.18,<0.9.4 ; python_version < "3.7"',
-        'importlib-metadata<5 ; python_version < "3.8"',
+        'glymur>=0.8.18',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
@@ -65,7 +61,7 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     entry_points={
         'large_image.source': [
             'openjpeg = large_image_source_openjpeg:OpenjpegFileTileSource',
