@@ -17,7 +17,7 @@ class DICOMwebAssetstoreResource(Resource):
         self.resourceName = 'dicomweb_assetstore'
         self.route('POST', (':id', 'import'), self.importData)
 
-    def _importData(self, assetstore, params, progress=None):
+    def _importData(self, assetstore, params, progress):
         """
 
         :param assetstore: the destination assetstore.
@@ -51,28 +51,22 @@ class DICOMwebAssetstoreResource(Resource):
             msg = f'Invalid filters: {e}'
             raise RestException(msg)
 
-        progress = progress or self.boolParam('progress', params, default=False)
-
         adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
+        items = adapter.importData(
+            parent,
+            destinationType,
+            {
+                'limit': limit,
+                'search_filters': search_filters,
+                'auth': None,
+            },
+            progress,
+            user,
+        )
 
-        with ProgressContext(
-            progress, user=user, title='Importing DICOM references',
-        ) as ctx:
-            items = adapter.importData(
-                parent,
-                destinationType,
-                {
-                    'limit': limit,
-                    'search_filters': search_filters,
-                    'auth': None,
-                },
-                ctx,
-                user,
-            )
-
-            if not items:
-                msg = 'No DICOM objects matching the search filters were found'
-                raise RestException(msg)
+        if not items:
+            msg = 'No DICOM objects matching the search filters were found'
+            raise RestException(msg)
 
     @access.admin(scope=TokenScope.DATA_WRITE)
     @autoDescribeRoute(
@@ -87,11 +81,21 @@ class DICOMwebAssetstoreResource(Resource):
         .param('limit', 'The maximum number of results to import.',
                required=False, dataType='int')
         .param('filters', 'Any search parameters to filter DICOM objects.',
-               required=False, default={})
-        .param('progress', 'Whether to record progress on this operation ('
-               'default=False)', required=False, default=False, dataType='boolean')
+               required=False, default='{}')
+        .param('progress', 'Whether to record progress on this operation.',
+               required=False, default=False, dataType='boolean')
         .errorResponse()
         .errorResponse('You are not an administrator.', 403),
     )
-    def importData(self, assetstore, params):
-        return self._importData(assetstore, params)
+    def importData(self, assetstore, destinationId, destinationType, limit, filters, progress):
+        user = self.getCurrentUser()
+
+        with ProgressContext(
+            progress, user=user, title='Importing DICOM references',
+        ) as ctx:
+            return self._importData(assetstore, params={
+                'destinationId': destinationId,
+                'destinationType': destinationType,
+                'limit': limit,
+                'filters': filters,
+            }, progress=ctx)
