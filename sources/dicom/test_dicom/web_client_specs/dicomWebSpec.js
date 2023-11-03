@@ -112,7 +112,7 @@ describe('DICOMWeb assetstore', function () {
         });
 
         waitsFor(function () {
-            return $('.g-validation-failed-message').html().includes('Invalid value');
+            return $('.g-validation-failed-message').html() === 'Invalid limit';
         }, 'Invalid limit check (float)');
 
         runs(function () {

@@ -79,7 +79,7 @@ class DICOMwebAssetstoreResource(Resource):
                enum=('folder', 'user', 'collection'),
                required=True)
         .param('limit', 'The maximum number of results to import.',
-               required=False, dataType='int')
+               required=False, default=None)
         .param('filters', 'Any search parameters to filter DICOM objects.',
                required=False, default='{}')
         .param('progress', 'Whether to record progress on this operation.',
