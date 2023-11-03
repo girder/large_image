@@ -195,7 +195,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                           requested_transfer_syntax=transfer_syntax)
 
     def _identify_dicomweb_transfer_syntax(self, client, study_uid, series_uid):
-        # "client" is a DICOMwebClient
+        # "client" is a dicomweb_client.DICOMwebClient
 
         # This is how we select the JPEG type to return
         # The available transfer syntaxes used by wsidicom may be found here:
