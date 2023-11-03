@@ -5,6 +5,9 @@
 ### Improvements
 - Have zarr use read-only mode ([#1360](../../pull/1360))
 
+### Bug Fixes
+- Default to "None" for the DICOM assetstore limit ([#1359](../../pull/1359))
+
 ## 1.26.0
 
 ### Features

@@ -42,6 +42,7 @@
    _build/girder_large_image_annotation/modules
    girder_annotation_config_options
    annotations
+   caching
    notebooks
    development
 

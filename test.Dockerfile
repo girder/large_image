@@ -131,7 +131,7 @@ RUN for ver in $PYTHON_VERSIONS $OLD_PYTHON_VERSIONS; do \
 # or switch to the pyenv local 3.6 before running
 
 # Use nvm to install node
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
 
 # Default node version
 RUN . ~/.bashrc && \
