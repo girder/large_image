@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.26.1
+
+### Improvements
+- Have zarr use read-only mode ([#1360](../../pull/1360))
+
 ## 1.26.0
 
 ### Features
