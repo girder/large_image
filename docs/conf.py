@@ -42,6 +42,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'sphinxcontrib.jquery',
+    'sphinxcontrib.mermaid',
     'IPython.sphinxext.ipython_console_highlighting',
     'nbsphinx',
 ]
@@ -73,3 +74,8 @@ html_static_path = ['static']
 html_css_files = ['custom.css']
 
 autoclass_content = 'both'
+
+mermaid_version = '10.6.0'
+mermaid_init_js = 'mermaid.initialize({startOnLoad:true});'
+
+nbsphinx_requirejs_path = ''
