@@ -4,6 +4,7 @@
 
 ### Improvements
 - Have zarr use read-only mode ([#1360](../../pull/1360))
+- Use minified geojs ([#1362](../../pull/1362))
 
 ### Bug Fixes
 - Default to "None" for the DICOM assetstore limit ([#1359](../../pull/1359))
