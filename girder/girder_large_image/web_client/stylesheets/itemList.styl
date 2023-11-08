@@ -84,6 +84,20 @@ ul.g-item-list
         justify-content center
         width inherit
 
+  &.li-item-list[layout_mode="grid"]
+    display block
+
+    &>li.g-item-list-entry
+      display inline-block
+      overflow hidden
+      border 1px solid rgba(0, 0, 0, 0.1)
+      padding 1px
+      vertical-align top
+      max-width 250px
+
+    &>li>.li-item-list-cell
+      display inline-block
+
 .li-item-list-filter
   padding-left 12px
 
