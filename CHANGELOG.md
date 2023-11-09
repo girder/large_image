@@ -6,6 +6,7 @@
 - Have zarr use read-only mode ([#1360](../../pull/1360))
 - Use minified geojs ([#1362](../../pull/1362))
 - Configurable item list grid view ([#1363](../../pull/1363))
+- Allow labels in item list view ([#1366](../../pull/1366))
 
 ### Bug Fixes
 - Default to "None" for the DICOM assetstore limit ([#1359](../../pull/1359))
