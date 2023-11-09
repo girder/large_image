@@ -64,7 +64,9 @@ This is used to specify how items appear in item lists.  There are two settings,
         max-width: 250
       # show these columns in order from left to right.  Each column has a
       # "type" and "value".  It optionally has a "title" used for the column
-      # header, and a "format" used for searching and filtering.
+      # header, and a "format" used for searching and filtering.  The "label",
+      # if any, is displayed to the left of the column value.  This is more
+      # useful in an grid view than in a column view.
       columns:
         -
           # The "image" type's value is either "thumbnail" or the name of an
@@ -129,6 +131,7 @@ This is used to specify how items appear in item lists.  There are two settings,
           type: metadata
           value: userstain
           title: User Stain
+          label: User Stain
           edit: true
           # description is used as both a tooltip and as placeholder text
           description: Staining method
