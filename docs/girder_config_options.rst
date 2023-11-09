@@ -72,6 +72,10 @@ This is used to specify how items appear in item lists.  There are two settings,
           type: image
           value: thumbnail
           title: Thumbnail
+          # The maximum size of images can be specified.  It defaults to 160 x
+          # 100.  It will always maintain the original aspect ratio.
+          width: 250
+          height: 250
         -
           type: image
           value: label
