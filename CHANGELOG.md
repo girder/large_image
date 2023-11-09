@@ -9,6 +9,7 @@
 
 ### Bug Fixes
 - Default to "None" for the DICOM assetstore limit ([#1359](../../pull/1359))
+- Fix series detection for some bioformats files ([#1365](../../pull/1365))
 
 ## 1.26.0
 

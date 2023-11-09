@@ -99,7 +99,7 @@ def _reduceLogging():
             'org/slf4j/LoggerFactory', 'getLogger',
             '(Ljava/lang/String;)Lorg/slf4j/Logger;', rootLoggerName)
         logLevel = javabridge.get_static_field(
-            'ch/qos/logback/classic/Level', 'WARN', 'Lch/qos/logback/classic/Level;')
+            'ch/qos/logback/classic/Level', 'ERROR', 'Lch/qos/logback/classic/Level;')
         javabridge.call(rootLogger, 'setLevel', '(Lch/qos/logback/classic/Level;)V', logLevel)
     except Exception:
         pass
@@ -352,7 +352,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for idx in range(1, self._metadata['seriesCount']):
                 rdr.setSeries(idx)
                 if (rdr.getSizeX() == self._metadata['sizeX'] and
-                        rdr.getSizeY == self._metadata['sizeY']):
+                        rdr.getSizeY() == self._metadata['sizeY']):
                     frameList.append([idx])
                     if nextSeriesNum == idx:
                         nextSeriesNum = idx + 1
