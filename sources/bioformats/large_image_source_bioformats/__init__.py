@@ -352,17 +352,20 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for idx in range(1, self._metadata['seriesCount']):
                 rdr.setSeries(idx)
                 if (rdr.getSizeX() == self._metadata['sizeX'] and
-                        rdr.getSizeY() == self._metadata['sizeY']):
+                        rdr.getSizeY() == self._metadata['sizeY'] and
+                        rdr.getImageCount() == self._metadata['imageCount']):
                     frameList.append([idx])
                     if nextSeriesNum == idx:
                         nextSeriesNum = idx + 1
                     lastX, lastY = self._metadata['sizeX'], self._metadata['sizeY']
-                if (rdr.getSizeX() * rdr.getSizeY() >
-                        self._metadata['sizeX'] * self._metadata['sizeY']):
+                if (rdr.getSizeX() * rdr.getSizeY() * rdr.getImageCount() >
+                        self._metadata['sizeX'] * self._metadata['sizeY'] *
+                        self._metadata['imageCount']):
                     frameList = [[idx]]
                     nextSeriesNum = idx + 1
                     self._metadata['sizeX'] = self.sizeX = lastX = rdr.getSizeX()
                     self._metadata['sizeY'] = self.sizeY = lastY = rdr.getSizeY()
+                    self._metadata['imageCount'] = rdr.getImageCount()
                 if (lastX and lastY and
                         nearPowerOfTwo(rdr.getSizeX(), lastX) and rdr.getSizeX() < lastX and
                         nearPowerOfTwo(rdr.getSizeY(), lastY) and rdr.getSizeY() < lastY):
