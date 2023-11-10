@@ -8,6 +8,7 @@
 - Configurable item list grid view ([#1363](../../pull/1363))
 - Allow labels in item list view ([#1366](../../pull/1366))
 - Improve cache key guard ([#1368](../../pull/1368))
+- Improve handling dicom files in the working directory ([#1370](../../pull/137068))
 
 ### Bug Fixes
 - Default to "None" for the DICOM assetstore limit ([#1359](../../pull/1359))
