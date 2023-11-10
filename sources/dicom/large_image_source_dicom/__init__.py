@@ -127,12 +127,13 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             path = str(path)
             if not os.path.isfile(path):
                 raise TileSourceFileNotFoundError(path) from None
-            root = os.path.dirname(path)
+            root = os.path.dirname(path) or '.'
             self._largeImagePath = [
                 os.path.join(root, entry) for entry in os.listdir(root)
                 if os.path.isfile(os.path.join(root, entry)) and
                 self._pathMightBeDicom(entry)]
-            if path not in self._largeImagePath:
+            if (path not in self._largeImagePath and
+                    os.path.join(root, os.path.basename(path)) not in self._largeImagePath):
                 self._largeImagePath = [path]
         else:
             self._largeImagePath = path
