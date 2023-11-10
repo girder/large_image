@@ -1361,7 +1361,7 @@ class Annotation(AccessControlledModel):
                     keep -= 1
                     report['recentVersions'] += 1
                     continue
-                if max(record['created'], record['updated']) < age:
+                if max(record['created'], record['updated']).timestamp() < age.timestamp():
                     if remove:
                         self.collection.delete_one({'_id': record['_id']})
                         Annotationelement().removeWithQuery({'_version': record['_version']})
