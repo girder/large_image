@@ -16,6 +16,7 @@ from large_image.tilesource.utilities import _imageToNumpy, _imageToPIL
 
 from .dicom_tags import dicom_key_to_tag
 
+dicomweb_client = None
 pydicom = None
 wsidicom = None
 
@@ -32,16 +33,19 @@ def _lazyImport():
     module initialization because it is slow.
     """
     global wsidicom
+    global dicomweb_client
     global pydicom
 
     if wsidicom is None:
         try:
+            import dicomweb_client
             import pydicom
             import wsidicom
         except ImportError:
             msg = 'dicom modules not found.'
             raise TileSourceError(msg)
         warnings.filterwarnings('ignore', category=UserWarning, module='wsidicom')
+        warnings.filterwarnings('ignore', category=UserWarning, module='dicomweb_client')
         warnings.filterwarnings('ignore', category=UserWarning, module='pydicom')
 
 
@@ -168,18 +172,16 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         study_uid = info['study_uid']
         series_uid = info['series_uid']
 
-        # These are optional keys
-        qido_prefix = info.get('qido_prefix')
-        wado_prefix = info.get('wado_prefix')
-        auth = info.get('auth')
-
-        # Create the client
-        client = wsidicom.WsiDicomWebClient(
+        # Create the web client
+        client = dicomweb_client.DICOMwebClient(
             url,
-            qido_prefix=qido_prefix,
-            wado_prefix=wado_prefix,
-            auth=auth,
+            # The following are optional keys
+            qido_url_prefix=info.get('qido_prefix'),
+            wado_url_prefix=info.get('wado_prefix'),
+            session=info.get('auth'),
         )
+
+        wsidicom_client = wsidicom.WsiDicomWebClient(client)
 
         # Identify the transfer syntax
         transfer_syntax = self._identify_dicomweb_transfer_syntax(client,
@@ -187,11 +189,11 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                                                   series_uid)
 
         # Open the WSI DICOMweb file
-        return wsidicom.WsiDicom.open_web(client, study_uid, series_uid,
+        return wsidicom.WsiDicom.open_web(wsidicom_client, study_uid, series_uid,
                                           requested_transfer_syntax=transfer_syntax)
 
     def _identify_dicomweb_transfer_syntax(self, client, study_uid, series_uid):
-        # "client" is a wsidicom.WsiDicomWebClient
+        # "client" is a DICOMwebClient
 
         # This is how we select the JPEG type to return
         # The available transfer syntaxes used by wsidicom may be found here:
@@ -211,7 +213,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         # Access the dicom web client, and search for one instance for the given
         # study and series. Check the available transfer syntaxes.
-        result, = client._client.search_for_instances(
+        result, = client.search_for_instances(
             study_uid, series_uid,
             fields=[available_transfer_syntax_tag], limit=1)
 
