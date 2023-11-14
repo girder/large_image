@@ -2,7 +2,7 @@ import EditAssetstoreWidget from '@girder/core/views/widgets/EditAssetstoreWidge
 import { AssetstoreType } from '@girder/core/constants';
 import { wrap } from '@girder/core/utilities/PluginUtils';
 
-import AssetstoreEditFieldsTemplate from '../templates/dicomwebAssetstoreEditFields.pug';
+import DWASEditFieldsTemplate from '../templates/dicomwebAssetstoreEditFields.pug';
 
 /**
  * Adds DICOMweb-specific fields to the edit dialog.
@@ -12,7 +12,7 @@ wrap(EditAssetstoreWidget, 'render', function (render) {
 
     if (this.model.get('type') === AssetstoreType.DICOMWEB) {
         this.$('.g-assetstore-form-fields').append(
-            AssetstoreEditFieldsTemplate({
+            DWASEditFieldsTemplate({
                 assetstore: this.model
             })
         );

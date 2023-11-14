@@ -2,7 +2,7 @@ import NewAssetstoreWidget from '@girder/core/views/widgets/NewAssetstoreWidget'
 import { AssetstoreType } from '@girder/core/constants';
 import { wrap } from '@girder/core/utilities/PluginUtils';
 
-import AssetstoreCreateTemplate from '../templates/dicomwebAssetstoreCreate.pug';
+import DWASCreateTemplate from '../templates/dicomwebAssetstoreCreate.pug';
 
 /**
  * Add UI for creating new DICOMweb assetstore.
@@ -10,7 +10,7 @@ import AssetstoreCreateTemplate from '../templates/dicomwebAssetstoreCreate.pug'
 wrap(NewAssetstoreWidget, 'render', function (render) {
     render.call(this);
 
-    this.$('#g-assetstore-accordion').append(AssetstoreCreateTemplate());
+    this.$('#g-assetstore-accordion').append(DWASCreateTemplate());
     return this;
 });
 
