@@ -3,6 +3,11 @@ access:
   user:
     # itemList adjustments
     itemList:
+      layout:
+        # grid or list
+        # mode: grid
+        # for grids, how wide should items be
+        min-width: 200
       # Show these columns
       columns:
         -
@@ -24,6 +29,11 @@ access:
           type: metadata
           value: Stain
           format: text
+          # Only show this record for entries that match a particular value
+          only:
+            - type: record
+              value: name
+              match: "\\.svs$"
         -
           type: metadata
           value: Classification

@@ -210,27 +210,27 @@ class LruCacheMetaclass(type):
                         return result
                 except KeyError:
                     pass
-            # This conditionally copies a non-styled class and adds a style.
-            if (kwargs.get('style') and hasattr(cls, '_setStyle') and
-                    kwargs.get('style') != getattr(cls, '_unstyledStyle', None)):
-                subkwargs = kwargs.copy()
-                subkwargs['style'] = getattr(cls, '_unstyledStyle', None)
-                subresult = cls(*args, **subkwargs)
-                result = subresult.__class__.__new__(subresult.__class__)
-                with subresult._sourceLock:
-                    result.__dict__ = subresult.__dict__.copy()
-                    result._sourceLock = threading.RLock()
-                result._classkey = key
-                # for pickling
-                result._initValues = (args, kwargs.copy())
-                result._unstyledInstance = subresult
-                result._derivedSource = True
-                # Has to be after setting the _unstyledInstance
-                result._setStyle(kwargs['style'])
-                with cacheLock:
-                    cache[key] = result
-                    return result
             try:
+                # This conditionally copies a non-styled class and adds a style.
+                if (kwargs.get('style') and hasattr(cls, '_setStyle') and
+                        kwargs.get('style') != getattr(cls, '_unstyledStyle', None)):
+                    subkwargs = kwargs.copy()
+                    subkwargs['style'] = getattr(cls, '_unstyledStyle', None)
+                    subresult = cls(*args, **subkwargs)
+                    result = subresult.__class__.__new__(subresult.__class__)
+                    with subresult._sourceLock:
+                        result.__dict__ = subresult.__dict__.copy()
+                        result._sourceLock = threading.RLock()
+                    result._classkey = key
+                    # for pickling
+                    result._initValues = (args, kwargs.copy())
+                    result._unstyledInstance = subresult
+                    result._derivedSource = True
+                    # Has to be after setting the _unstyledInstance
+                    result._setStyle(kwargs['style'])
+                    with cacheLock:
+                        cache[key] = result
+                        return result
                 instance = super().__call__(*args, **kwargs)
                 # for pickling
                 instance._initValues = (args, kwargs.copy())

@@ -1,5 +1,20 @@
 # Change Log
 
+## 1.26.1
+
+### Improvements
+- Have zarr use read-only mode ([#1360](../../pull/1360))
+- Use minified geojs ([#1362](../../pull/1362))
+- Configurable item list grid view ([#1363](../../pull/1363))
+- Allow labels in item list view ([#1366](../../pull/1366))
+- Improve cache key guard ([#1368](../../pull/1368))
+- Improve handling dicom files in the working directory ([#1370](../../pull/137068))
+
+### Bug Fixes
+- Default to "None" for the DICOM assetstore limit ([#1359](../../pull/1359))
+- Fix series detection for some bioformats files ([#1365](../../pull/1365), [#1367](../../pull/1367))
+- Fix time comparison in annotation history check ([#1369](../../pull/1369))
+
 ## 1.26.0
 
 ### Features

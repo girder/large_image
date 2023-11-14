@@ -569,6 +569,13 @@ class TestLargeImageAnnotationRest:
         resp = server.request('/annotation/old', method='GET', user=admin)
         assert utilities.respStatus(resp) == 200
         assert resp.json['abandonedVersions'] == 0
+        resp = server.request(
+            '/annotation/old', method='DELETE', user=admin, params={'versions': -1})
+        assert utilities.respStatus(resp) == 400
+        assert 'keepInactiveVersions' in resp.json['message']
+        resp = server.request(
+            '/annotation/old', method='GET', user=admin, params={'age': 0, 'versions': 0})
+        assert utilities.respStatus(resp) == 200
         resp = server.request('/annotation/old', method='DELETE', user=admin)
         assert utilities.respStatus(resp) == 200
         assert resp.json['abandonedVersions'] == 0

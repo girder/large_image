@@ -55,9 +55,18 @@ This is used to specify how items appear in item lists.  There are two settings,
     ---
     # If present, show a table with column headers in item lists
     itemList:
+      # layout does not need to be specified.
+      layout:
+        # The default layout is a list.  This can optionally be "grid"
+        mode: grid
+        # max-width is only used in grid mode.  It is the maximum width in
+        # pixels for grid entries.  It defaults to 250.
+        max-width: 250
       # show these columns in order from left to right.  Each column has a
       # "type" and "value".  It optionally has a "title" used for the column
-      # header, and a "format" used for searching and filtering.
+      # header, and a "format" used for searching and filtering.  The "label",
+      # if any, is displayed to the left of the column value.  This is more
+      # useful in an grid view than in a column view.
       columns:
         -
           # The "image" type's value is either "thumbnail" or the name of an
@@ -65,6 +74,10 @@ This is used to specify how items appear in item lists.  There are two settings,
           type: image
           value: thumbnail
           title: Thumbnail
+          # The maximum size of images can be specified.  It defaults to 160 x
+          # 100.  It will always maintain the original aspect ratio.
+          width: 250
+          height: 250
         -
           type: image
           value: label
@@ -99,6 +112,17 @@ This is used to specify how items appear in item lists.  There are two settings,
           # the length of arrays.
           value: gloms.length
           title: Number of Gloms
+          # You can have this value be populated for just some of the items by
+          # specifying an "only" list.  Each entry in the only list must have
+          # the "type" and "value" as per the column it is filtering on, plus a
+          # "match" value that is used as a case-insensitive RegExp.  All such
+          # limits must match to show the value.
+          only:
+            -
+              type: record
+              value: name
+              # only show this for items whose names end with ".svs".
+              match: "\\.svs$"
         # You can edit metadata in a item list by adding the edit: true entry
         # and the options from the itemMetadata records that are detailed
         # below.  In this case, edits to metadata that validate are saved
@@ -107,6 +131,7 @@ This is used to specify how items appear in item lists.  There are two settings,
           type: metadata
           value: userstain
           title: User Stain
+          label: User Stain
           edit: true
           # description is used as both a tooltip and as placeholder text
           description: Staining method
