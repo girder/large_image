@@ -2,6 +2,7 @@ import os
 import re
 
 import large_image_source_pil
+import pytest
 
 from large_image import config
 from large_image.cache_util import cachesClear
@@ -10,6 +11,8 @@ from . import utilities
 from .datastore import datastore
 
 
+# Singular because we adjust config
+@pytest.mark.singular()
 def testTilesFromPIL():
     # Ensure this test can run in any order
     cachesClear()
