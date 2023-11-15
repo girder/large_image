@@ -5,9 +5,9 @@ import router from '@girder/core/router';
 import View from '@girder/core/views/View';
 import { restRequest } from '@girder/core/rest';
 
-import AssetstoreImportTemplate from '../templates/assetstoreImport.pug';
+import DWASImportTemplate from '../templates/assetstoreImport.pug';
 
-const AssetstoreImportView = View.extend({
+const DICOMwebImportView = View.extend({
     events: {
         'submit .g-dwas-import-form': function (e) {
             e.preventDefault();
@@ -79,7 +79,7 @@ const AssetstoreImportView = View.extend({
     },
 
     render: function () {
-        this.$el.html(AssetstoreImportTemplate({
+        this.$el.html(DWASImportTemplate({
             assetstore: this.model
         }));
 
@@ -91,4 +91,4 @@ const AssetstoreImportView = View.extend({
     }
 });
 
-export default AssetstoreImportView;
+export default DICOMwebImportView;
