@@ -62,9 +62,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 self._zarr = zarr.open(self._largeImagePath, mode='r')
             except Exception:
-                if os.path.basename(self._largeImagePath) in {'.zgroup', '.zattrs'}:
+                if os.path.basename(self._largeImagePath) in {'.zgroup', '.zattrs', '.zarray'}:
                     try:
-                        self._zarr = zarr.open(os.path.dirname(self._largeImagePath))
+                        self._zarr = zarr.open(os.path.dirname(self._largeImagePath), mode='r')
                     except Exception:
                         pass
         if self._zarr is None:
@@ -131,10 +131,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             associated images.  These have to be culled for the actual groups
             used in the series.
         """
-        attrs = group.attrs.asdict()
+        attrs = group.attrs.asdict() if group is not None else {}
         min_version = packaging.version.Version('0.4')
         is_ome = (
-            isinstance(attrs['multiscales'], list) and
+            isinstance(attrs.get('multiscales', None), list) and
             'omero' in attrs and
             isinstance(attrs['omero'], dict) and
             all(isinstance(m, dict) for m in attrs['multiscales']) and
@@ -185,6 +185,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         if results is None:
             results = {'best': None, 'series': [], 'associated': []}
+        if isinstance(group, zarr.core.Array):
+            self._scanZarrArray(None, group, results)
+            return results
         for val in group.values():
             if isinstance(val, zarr.core.Array):
                 self._scanZarrArray(group, val, results)
@@ -205,7 +208,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         baseGroup, baseArray = self._series[0]
         for idx, (_, arr) in enumerate(self._series):
             levels[idx][0] = arr
-        arrs = [[arr for _, arr in s.arrays()] for s, _ in self._series]
+        arrs = [[arr for _, arr in s.arrays()] if s is not None else [a] for s, a in self._series]
         for idx, arr in enumerate(arrs[0]):
             if any(idx >= len(sarrs) for sarrs in arrs[1:]):
                 break
@@ -295,6 +298,16 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._axisCounts['xy'] = len(self._series)
             stride *= len(self._series)
         self._framecount = stride
+
+    def _nonemptyLevelsList(self, frame=0):
+        """
+        Return a list of one value per level where the value is None if the
+        level does not exist in the file and any other value if it does.
+
+        :param frame: the frame number.
+        :returns: a list of levels length.
+        """
+        return [True if l is not None else None for l in self._levels[0][::-1]]
 
     def getNativeMagnification(self):
         """
@@ -397,27 +410,31 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x1 //= scale
         y1 //= scale
         step //= scale
-        idx = [slice(None) for _ in arr.shape]
-        idx[self._axes['x']] = slice(x0, x1, step)
-        idx[self._axes['y']] = slice(y0, y1, step)
-        for key in self._axes:
-            if key in self._strides:
-                pos = (frame // self._strides[key]) % self._axisCounts[key]
-                idx[self._axes[key]] = slice(pos, pos + 1)
-        trans = [idx for idx in range(len(arr.shape))
-                 if idx not in {self._axes['x'], self._axes['y'],
-                                self._axes.get('s', self._axes['x'])}]
-        squeezeCount = len(trans)
-        trans += [self._axes['y'], self._axes['x']]
-        if 's' in self._axes:
-            trans.append(self._axes['s'])
-        with self._tileLock:
-            tile = arr[tuple(idx)]
-            tile = np.transpose(tile, trans)
-        for _ in range(squeezeCount):
-            tile = tile.squeeze(0)
-        if len(tile.shape) == 2:
-            tile = np.expand_dims(tile, axis=2)
+        if step > 2 ** self._maxSkippedLevels:
+            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile = large_image.tilesource.base._imageToNumpy(tile)[0]
+        else:
+            idx = [slice(None) for _ in arr.shape]
+            idx[self._axes['x']] = slice(x0, x1, step)
+            idx[self._axes['y']] = slice(y0, y1, step)
+            for key in self._axes:
+                if key in self._strides:
+                    pos = (frame // self._strides[key]) % self._axisCounts[key]
+                    idx[self._axes[key]] = slice(pos, pos + 1)
+            trans = [idx for idx in range(len(arr.shape))
+                     if idx not in {self._axes['x'], self._axes['y'],
+                                    self._axes.get('s', self._axes['x'])}]
+            squeezeCount = len(trans)
+            trans += [self._axes['y'], self._axes['x']]
+            if 's' in self._axes:
+                trans.append(self._axes['s'])
+            with self._tileLock:
+                tile = arr[tuple(idx)]
+                tile = np.transpose(tile, trans)
+            for _ in range(squeezeCount):
+                tile = tile.squeeze(0)
+            if len(tile.shape) == 2:
+                tile = np.expand_dims(tile, axis=2)
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

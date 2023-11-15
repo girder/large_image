@@ -57,6 +57,14 @@ class TileSource(IPyLeafletMixin):
 
     geospatial = False
 
+    # When getting tiles for otherwise empty levels (missing powers of two), we
+    # composite the tile from higher resolution levels.  This can use excessive
+    # memory if there are too many missing levels.  For instance, if there are
+    # six missing levels and the tile size is 1024 square RGBA, then 16 Gb are
+    # needed for the composited tile at a minimum.  By setting
+    # _maxSkippedLevels, such large gaps are composited in stages.
+    _maxSkippedLevels = 3
+
     def __init__(self, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
                  tiffCompression='raw', edge=False, style=None, noCache=None,
                  *args, **kwargs):
@@ -1924,6 +1932,54 @@ class TileSource(IPyLeafletMixin):
         y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
         return x0, y0, x1, y1, step
 
+    def _nonemptyLevelsList(self, frame=0):
+        """
+        Return a list of one value per level where the value is None if the
+        level does not exist in the file and any other value if it does.
+
+        :param frame: the frame number.
+        :returns: a list of levels length.
+        """
+        return [True] * self.levels
+
+    def _getTileFromEmptyLevel(self, x, y, z, **kwargs):
+        """
+        Given the x, y, z tile location in an unpopulated level, get tiles from
+        higher resolution levels to make the lower-res tile.
+
+        :param x: location of tile within original level.
+        :param y: location of tile within original level.
+        :param z: original level.
+        :returns: tile in PIL format.
+        """
+        basez = z
+        scale = 1
+        dirlist = self._nonemptyLevelsList(kwargs.get('frame'))
+        while dirlist[z] is None:
+            scale *= 2
+            z += 1
+        while z - basez > self._maxSkippedLevels:
+            z -= self._maxSkippedLevels
+            scale = int(scale / 2 ** self._maxSkippedLevels)
+        tile = PIL.Image.new('RGBA', (
+            min(self.sizeX, self.tileWidth * scale), min(self.sizeY, self.tileHeight * scale)))
+        maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
+        maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
+        for newX in range(scale):
+            for newY in range(scale):
+                if ((newX or newY) and ((x * scale + newX) >= maxX or
+                                        (y * scale + newY) >= maxY)):
+                    continue
+                subtile = self.getTile(
+                    x * scale + newX, y * scale + newY, z,
+                    pilImageAllowed=True, numpyAllowed=False,
+                    sparseFallback=True, edge=False, frame=kwargs.get('frame'))
+                subtile = _imageToPIL(subtile)
+                tile.paste(subtile, (newX * self.tileWidth,
+                                     newY * self.tileHeight))
+        return tile.resize((self.tileWidth, self.tileHeight),
+                           getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 sparseFallback=False, frame=None):
@@ -1993,10 +2049,16 @@ class TileSource(IPyLeafletMixin):
         :param level: desired level
         :returns level: a level with actual data that is no lower resolution.
         """
-        metadata = self.getMetadata()
-        if metadata['levels'] is None:
+        if self.levels is None:
             return level
-        return max(0, min(level, metadata['levels'] - 1))
+        level = max(0, min(level, self.levels - 1))
+        baselevel = level
+        levelList = self._nonemptyLevelsList()
+        while levelList[level] is None and level < self.levels - 1:
+            level += 1
+        while level - baselevel >= self._maxSkippedLevels:
+            level -= self._maxSkippedLevels
+        return level
 
     def convertRegionScale(
             self, sourceRegion, sourceScale=None, targetScale=None,

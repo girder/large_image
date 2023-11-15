@@ -443,6 +443,45 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ], range(len(source.axes)))
             return large_image.tilesource.base._imageToPIL(image)
 
+    def _nonemptyLevelsList(self, frame=0):
+        """
+        Return a list of one value per level where the value is None if the
+        level does not exist in the file and any other value if it does.
+
+        :param frame: the frame number.
+        :returns: a list of levels length.
+        """
+        if frame is None:
+            frame = 0
+        if hasattr(self, '_nonempty_levels_list') and frame in self._nonempty_levels_list:
+            return self._nonempty_levels_list[frame]
+        if len(self._series) > 1:
+            sidx = frame // self._basis['P'][0]
+        else:
+            sidx = 0
+        series = self._tf.series[self._series[sidx]]
+        nonempty = [None] * self.levels
+        nonempty[self.levels - 1] = True
+        xidx = series.axes.index('X')
+        yidx = series.axes.index('Y')
+        with self._zarrlock:
+            if sidx not in self._zarrcache:
+                if len(self._zarrcache) > 10:
+                    self._zarrcache = {}
+                za = zarr.open(series.aszarr(), mode='r')
+                hasgbs = hasattr(za[0], 'get_basic_selection')
+                self._zarrcache[sidx] = (za, hasgbs)
+            za, hasgbs = self._zarrcache[sidx]
+        for ll in range(1, len(series.levels)):
+            scale = round(math.log(max(za[0].shape[xidx] / za[ll].shape[xidx],
+                                       za[0].shape[yidx] / za[ll].shape[yidx])) / math.log(2))
+            if 0 < scale < self.levels:
+                nonempty[self.levels - 1 - int(scale)] = True
+        if not hasattr(self, '_nonempty_levels_list'):
+            self._nonempty_levels_list = {}
+        self._nonempty_levels_list[frame] = nonempty
+        return nonempty
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         frame = self._getFrame(**kwargs)
@@ -479,25 +518,29 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     break
         else:
             bza = za
-        sel = []
-        baxis = ''
-        for aidx, axis in enumerate(series.axes):
-            if axis == 'X':
-                sel.append(slice(x0, x1, step))
-                baxis += 'X'
-            elif axis == 'Y':
-                sel.append(slice(y0, y1, step))
-                baxis += 'Y'
-            elif axis == 'S':
-                sel.append(slice(series.shape[aidx]))
-                baxis += 'S'
-            else:
-                sel.append((frame // self._basis[axis][0]) % self._basis[axis][2])
-        tile = bza[tuple(sel)]
-        # rotate
-        if baxis not in {'YXS', 'YX'}:
-            tile = np.moveaxis(
-                tile, [baxis.index(a) for a in 'YXS' if a in baxis], range(len(baxis)))
+        if step > 2 ** self._maxSkippedLevels:
+            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile = large_image.tilesource.base._imageToNumpy(tile)[0]
+        else:
+            sel = []
+            baxis = ''
+            for aidx, axis in enumerate(series.axes):
+                if axis == 'X':
+                    sel.append(slice(x0, x1, step))
+                    baxis += 'X'
+                elif axis == 'Y':
+                    sel.append(slice(y0, y1, step))
+                    baxis += 'Y'
+                elif axis == 'S':
+                    sel.append(slice(series.shape[aidx]))
+                    baxis += 'S'
+                else:
+                    sel.append((frame // self._basis[axis][0]) % self._basis[axis][2])
+            tile = bza[tuple(sel)]
+            # rotate
+            if baxis not in {'YXS', 'YX'}:
+                tile = np.moveaxis(
+                    tile, [baxis.index(a) for a in 'YXS' if a in baxis], range(len(baxis)))
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

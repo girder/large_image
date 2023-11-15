@@ -480,6 +480,19 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._magnification['magnification'] = float(metadata[key])
                 break
 
+    def _nonemptyLevelsList(self, frame=0):
+        """
+        Return a list of one value per level where the value is None if the
+        level does not exist in the file and any other value if it does.
+
+        :param frame: the frame number.
+        :returns: a list of levels length.
+        """
+        nonempty = [True if v is not None else None
+                    for v in self._metadata['frameSeries'][0]['series']][:self.levels]
+        nonempty += [None] * (self.levels - len(nonempty))
+        return nonempty[::-1]
+
     def getNativeMagnification(self):
         """
         Get the magnification at a particular level.
@@ -537,35 +550,6 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         return self._metadata
 
-    def _getTileFromEmptyLevel(self, x, y, z, **kwargs):
-        """
-        Composite tiles from missing levels from larger levels in pieces to
-        avoid using too much memory.
-        """
-        fac = int(2 ** self._maxSkippedLevels)
-        z += self._maxSkippedLevels
-        scale = 2 ** (self.levels - 1 - z)
-        result = None
-        for tx in range(fac - 1, -1, -1):
-            if x * fac + tx >= int(math.ceil(self.sizeX / self.tileWidth / scale)):
-                continue
-            for ty in range(fac - 1, -1, -1):
-                if y * fac + ty >= int(math.ceil(self.sizeY / self.tileHeight / scale)):
-                    continue
-                tile = self.getTile(
-                    x * fac + tx, y * fac + ty, z, pilImageAllowed=False,
-                    numpyAllowed=True, **kwargs)
-                if result is None:
-                    result = np.zeros((
-                        ty * fac + tile.shape[0],
-                        tx * fac + tile.shape[1],
-                        tile.shape[2]), dtype=tile.dtype)
-                result[
-                    ty * fac:ty * fac + tile.shape[0],
-                    tx * fac:tx * fac + tile.shape[1],
-                    ::] = tile
-        return result[::scale, ::scale, ::]
-
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
         self._xyzInRange(x, y, z)
@@ -601,6 +585,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         if scale >= 2 ** self._maxSkippedLevels:
             tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile = large_image.tilesource.base._imageToNumpy(tile)[0]
             format = TILE_FORMAT_NUMPY
         else:
             with self._tileLock:

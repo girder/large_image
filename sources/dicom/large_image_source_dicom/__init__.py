@@ -157,6 +157,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = int(max(1, math.ceil(math.log(
             max(self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
         self._populatedLevels = len(self._dicom.levels)
+        # We need to detect which levels are functionally present if we want to
+        # return a sensible _nonemptyLevelsList
 
     def _open_wsi_dicom(self, path):
         if isinstance(path, dict):
