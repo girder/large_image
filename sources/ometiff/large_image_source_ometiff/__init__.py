@@ -318,8 +318,9 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
                 sparseFallback=False, **kwargs):
-        if (z < 0 or z >= len(self._omeLevels) or (
-                self._omeLevels[z] is not None and kwargs.get('frame') in (None, 0, '0', ''))):
+        if ((z < 0 or z >= len(self._omeLevels) or (
+                self._omeLevels[z] is not None and kwargs.get('frame') in (None, 0, '0', ''))) and
+                not getattr(self, '_style', None)):
             return super().getTile(
                 x, y, z, pilImageAllowed=pilImageAllowed,
                 numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
