@@ -74,7 +74,10 @@ def _monitor_thread():
                     source._bioimage.close()
                 except Exception:
                     pass
-                source._bioimage = None
+                try:
+                    source._bioimage = None
+                except Exception:
+                    pass
         except AssertionError:
             pass
         finally:
@@ -128,8 +131,8 @@ def _startJavabridge(logger):
             atexit.register(_stopJavabridge)
             logger.info('Started JVM for Bioformats tile source.')
             _javabridgeStarted = True
-        except RuntimeError as exc:
-            logger.exception('Cannot start JVM for Bioformats tile source.', exc)
+        except RuntimeError:
+            logger.exception('Cannot start JVM for Bioformats tile source.')
             _javabridgeStarted = False
     return _javabridgeStarted
 
@@ -178,7 +181,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super().__init__(path, **kwargs)
 
         largeImagePath = str(self._getLargeImagePath())
-        self._ignoreSourceNames('bioformats', largeImagePath, r'\.png$')
+        self._ignoreSourceNames('bioformats', largeImagePath, r'(^[^.]*|\.(png|zarr(\.db|\.zip)))$')
 
         if not _startJavabridge(self.logger):
             msg = 'File cannot be opened by bioformats reader because javabridge failed to start'
@@ -276,6 +279,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._bioimage.close()
                 del self._bioimage
                 _openImages.remove(weakref.ref(self))
+            except Exception:
+                pass
             finally:
                 if javabridge.get_env():
                     javabridge.detach()

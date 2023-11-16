@@ -14,6 +14,7 @@
 ### Changes
 - Update WsiDicomWebClient init call ([#1371](../../pull/1371))
 - Rename DICOMweb AssetstoreImportView ([#1372](../../pull/1372))
+- Harden bioformats shutdown ([#1375](../../pull/1375))
 
 ### Bug Fixes
 - Default to "None" for the DICOM assetstore limit ([#1359](../../pull/1359))
