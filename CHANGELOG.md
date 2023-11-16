@@ -21,6 +21,7 @@
 - Fix series detection for some bioformats files ([#1365](../../pull/1365), [#1367](../../pull/1367))
 - Fix time comparison in annotation history check ([#1369](../../pull/1369))
 - Fix an issue with apply a frame style to ome tiffs ([#1374](../../pull/1374))
+- Guard against bad tifffile magnification values ([#1376](../../pull/1376))
 
 ## 1.26.0
 
