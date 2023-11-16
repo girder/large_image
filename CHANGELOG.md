@@ -19,6 +19,7 @@
 - Default to "None" for the DICOM assetstore limit ([#1359](../../pull/1359))
 - Fix series detection for some bioformats files ([#1365](../../pull/1365), [#1367](../../pull/1367))
 - Fix time comparison in annotation history check ([#1369](../../pull/1369))
+- Fix an issue with apply a frame style to ome tiffs ([#1374](../../pull/1374))
 
 ## 1.26.0
 

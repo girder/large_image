@@ -204,4 +204,6 @@ def testXMLParsing():
 def testFrameStyleOMETiff():
     imagePath = datastore.fetch('DDX58_AXL_EGFR_well2_XY01.ome.tif')
     source = large_image_source_ometiff.open(imagePath, style={'bands': [{'frame': 4}]})
-    assert source.getTile(0, 0, 2)
+    tile1 = source.getTile(0, 0, 2)
+    tile2 = source.getTile(0, 0, 2, frame=1)
+    assert tile1 == tile2
