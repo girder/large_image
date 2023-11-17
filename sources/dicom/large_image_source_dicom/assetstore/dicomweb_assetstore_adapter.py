@@ -1,4 +1,6 @@
 import requests
+from large_image_source_dicom.dicom_metadata import extract_dicom_metadata
+from large_image_source_dicom.dicom_tags import dicom_key_to_tag
 from requests.exceptions import HTTPError
 
 from girder.exceptions import ValidationException
@@ -6,8 +8,6 @@ from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.utility.abstract_assetstore_adapter import AbstractAssetstoreAdapter
-
-from ..dicom_tags import dicom_key_to_tag
 
 DICOMWEB_META_KEY = 'dicomweb_meta'
 
@@ -144,6 +144,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             msg = f'Invalid parent type: {parentType}'
             raise RuntimeError(msg)
 
+        from pydicom import Dataset
         from wsidicom.uid import WSI_SOP_CLASS_UID
 
         limit = params.get('limit')
@@ -190,6 +191,23 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             item = Item().createItem(name=series_uid, creator=user, folder=folder,
                                      reuseExisting=True)
 
+            # Many series-level metadata items are available if we explicitly
+            # request for them in the earlier `search_for_series()` call.
+            # However, some things are not available in the series-level
+            # metadata - in particular, the specimen information is only
+            # on the instance-level metadata.
+            # It seems that, for the most part, all WSI DICOM instances in a
+            # series have virtually identical metadata (except one or two things,
+            # such as the suffix on the serial number, and sometimes one of the
+            # items in the specimen metadata).
+            # We will do as the SLIM viewer does: grab a single volume instance
+            # and use that for the metadata.
+            volume_metadata = _get_first_wsi_volume_metadata(client, study_uid, series_uid)
+            if volume_metadata:
+                dataset = Dataset.from_json(volume_metadata)
+                metadata = extract_dicom_metadata(dataset)
+                Item().setMetadata(item, metadata)
+
             # Create a placeholder file with the same name
             file = File().createFile(
                 name=f'{series_uid}.dcm',
@@ -215,6 +233,40 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
     @property
     def auth_session(self):
         return _create_auth_session(self.assetstore_meta)
+
+
+def _get_first_wsi_volume_metadata(client, study_uid, series_uid):
+    from wsidicom.uid import WSI_SOP_CLASS_UID
+
+    image_type_tag = dicom_key_to_tag('ImageType')
+    instance_uid_tag = dicom_key_to_tag('SOPInstanceUID')
+
+    search_filters = {
+        'SOPClassUID': WSI_SOP_CLASS_UID,
+    }
+    fields = [
+        image_type_tag,
+        instance_uid_tag,
+    ]
+    wsi_instances = client.search_for_instances(
+        study_uid, series_uid, search_filters=search_filters, fields=fields)
+
+    volume_instance = None
+    for instance in wsi_instances:
+        image_type = instance.get(image_type_tag, {}).get('Value')
+        # It would be nice if we could have a search filter for this, but
+        # I didn't see one...
+        if image_type and len(image_type) > 2 and image_type[2] == 'VOLUME':
+            volume_instance = instance
+            break
+
+    if not volume_instance:
+        # No volumes were found...
+        return None
+
+    instance_uid = volume_instance[instance_uid_tag]['Value'][0]
+
+    return client.retrieve_instance_metadata(study_uid, series_uid, instance_uid)
 
 
 def _create_auth_session(meta):
