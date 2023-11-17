@@ -25,7 +25,8 @@ commands:
           # Piping through cat does less buffering of the output but can
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: PYTEST_ADDOPTS=--reruns=3 tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+          # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: PYTEST_ADDOPTS="--reruns=3" tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:
@@ -35,13 +36,13 @@ commands:
       - run:
           name: Upgrade pyenv
           command: |
-            rm -rf /opt/circleci/.pyenv
+            sudo rm -rf /opt/circleci/.pyenv
             curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
             pyenv install --list list
       - run:
           name: Use pyenv to install python
           command: |
-            pyenv install << parameters.version >>
+            pyenv install -s << parameters.version >>
       - run:
           name: Use pyenv to set python version
           command: |
@@ -108,7 +109,7 @@ commands:
 jobs:
   testdocker:
     machine:
-      image: ubuntu-2004:202111-02
+      image: ubuntu-2204:current
     steps:
       - checkout
       - run:
@@ -121,7 +122,7 @@ jobs:
               docker push girder/tox-and-node:latest
   py38:
     machine:
-      image: ubuntu-2004:202111-02
+      image: ubuntu-2204:current
     steps:
       - checkout
       - allservices:
@@ -134,7 +135,7 @@ jobs:
           path: build/test/artifacts
   py39:
     machine:
-      image: ubuntu-2004:202111-02
+      image: ubuntu-2204:current
     steps:
       - checkout
       - allservices:
@@ -147,7 +148,7 @@ jobs:
           path: build/test/artifacts
   py310:
     machine:
-      image: ubuntu-2004:202111-02
+      image: ubuntu-2204:current
     steps:
       - checkout
       - allservices:
@@ -160,7 +161,7 @@ jobs:
           path: build/test/artifacts
   py311:
     machine:
-      image: ubuntu-2004:202111-02
+      image: ubuntu-2204:current
     steps:
       - checkout
       - allservices:
@@ -173,7 +174,7 @@ jobs:
           path: build/test/artifacts
   py312:
     machine:
-      image: ubuntu-2004:202111-02
+      image: ubuntu-2204:current
     steps:
       - checkout
       - allservices:

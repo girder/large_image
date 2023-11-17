@@ -97,6 +97,28 @@ for source, entry in list(SourceAndFiles.items()):
         SourceAndFiles.pop(source, None)
 
 
+def sourceAndRegistry(tiles=False):
+    options = []
+    for source in SourceAndFiles:
+        sourceInfo = SourceAndFiles[source]
+        for filename in registry:
+            if re.search(sourceInfo.get('skip', r'^$'), filename):
+                # this file needs more complex tests
+                continue
+            if tiles:
+                canRead = sourceInfo.get('any') or (
+                    re.search(sourceInfo.get('read', r'^$'), filename) and
+                    not re.search(sourceInfo.get('noread', r'^$'), filename))
+                if not canRead:
+                    # source does not work with this file
+                    continue
+                if re.search(sourceInfo.get('skipTiles', r'^$'), filename):
+                    # source fails tile tests from this file
+                    continue
+            options.append((filename, source))
+    return options
+
+
 def testNearPowerOfTwo():
     assert nearPowerOfTwo(45808, 11456)
     assert nearPowerOfTwo(45808, 11450)
@@ -134,12 +156,9 @@ def testBaseFileNotFound():
         large_image.open('nosuchfile.ext')
 
 
-@pytest.mark.parametrize('filename', registry)
-@pytest.mark.parametrize('source', SourceAndFiles)
-def testSourcesCanRead(source, filename):
+@pytest.mark.parametrize(('filename', 'source'), sourceAndRegistry())
+def testSourcesCanRead(filename, source):
     sourceInfo = SourceAndFiles[source]
-    if re.search(sourceInfo.get('skip', r'^$'), filename):
-        pytest.skip('this file needs more complex tests')
     canRead = sourceInfo.get('any') or (
         re.search(sourceInfo.get('read', r'^$'), filename) and
         not re.search(sourceInfo.get('noread', r'^$'), filename))
@@ -154,12 +173,9 @@ def testSourcesCanRead(source, filename):
     cachesClear()
 
 
-@pytest.mark.parametrize('filename', registry)
-@pytest.mark.parametrize('source', SourceAndFiles)
-def testSourcesCanReadPath(source, filename):
+@pytest.mark.parametrize(('filename', 'source'), sourceAndRegistry())
+def testSourcesCanReadPath(filename, source):
     sourceInfo = SourceAndFiles[source]
-    if re.search(sourceInfo.get('skip', r'^$'), filename):
-        pytest.skip('this file needs more complex tests')
     canRead = sourceInfo.get('any') or (
         re.search(sourceInfo.get('read', r'^$'), filename) and
         not re.search(sourceInfo.get('noread', r'^$'), filename))
@@ -171,19 +187,8 @@ def testSourcesCanReadPath(source, filename):
     cachesClear()
 
 
-@pytest.mark.parametrize('filename', registry)
-@pytest.mark.parametrize('source', SourceAndFiles)
-def testSourcesTilesAndMethods(source, filename):
-    sourceInfo = SourceAndFiles[source]
-    if re.search(sourceInfo.get('skip', r'^$'), filename):
-        pytest.skip('this file needs more complex tests')
-    canRead = sourceInfo.get('any') or (
-        re.search(sourceInfo.get('read', r'^$'), filename) and
-        not re.search(sourceInfo.get('noread', r'^$'), filename))
-    if not canRead:
-        pytest.skip('source does not work with this file')
-    if re.search(sourceInfo.get('skipTiles', r'^$'), filename):
-        pytest.skip('source fails tile tests from this file')
+@pytest.mark.parametrize(('filename', 'source'), sourceAndRegistry(True))
+def testSourcesTilesAndMethods(filename, source):
     imagePath = datastore.fetch(filename)
     large_image.tilesource.loadTileSources()
     sourceClass = large_image.tilesource.AvailableTileSources[source]
