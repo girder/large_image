@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.26.2
+
+### Improvements
+- Fix the DICOM limit to say "Series" instead of "Studies" ([#1379](../../pull/1379))
+
 ## 1.26.1
 
 ### Improvements
