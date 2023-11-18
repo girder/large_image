@@ -767,7 +767,6 @@ def testStyleFunctionsWarnings():
     assert source._styleFunctionWarnings
 
 
-@pytest.mark.singular()
 def testStyleRepeatedFrame():
     imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
     ts1 = large_image.open(imagePath, style={'bands': [
