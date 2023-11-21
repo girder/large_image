@@ -15,7 +15,7 @@ wrap(EditAssetstoreWidget, 'render', function (render) {
     if (this.model.get('type') === AssetstoreType.DICOMWEB) {
         this.$('.g-assetstore-form-fields').append(
             DWASEditFieldsTemplate({
-                assetstore: this.model
+                assetstore: this.model,
                 authOptions
             })
         );
