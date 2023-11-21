@@ -26,7 +26,7 @@ class DICOMwebAssetstoreResource(Resource):
         """
         user = self.getCurrentUser()
 
-        destinationType = params.get('destinationType', 'folder')
+        destinationType = params['destinationType']
         if destinationType not in ('folder', 'user', 'collection'):
             msg = f'Invalid destinationType: {destinationType}'
             raise RestException(msg)
@@ -58,7 +58,6 @@ class DICOMwebAssetstoreResource(Resource):
             {
                 'limit': limit,
                 'search_filters': search_filters,
-                'auth': None,
             },
             progress,
             user,
@@ -77,7 +76,7 @@ class DICOMwebAssetstoreResource(Resource):
                'in the Girder data hierarchy under which to import the files.')
         .param('destinationType', 'The type of the parent object to import into.',
                enum=('folder', 'user', 'collection'),
-               required=True)
+               required=False, default='folder')
         .param('limit', 'The maximum number of results to import.',
                required=False, default=None)
         .param('filters', 'Any search parameters to filter DICOM objects.',

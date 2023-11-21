@@ -40,7 +40,23 @@ describe('DICOMWeb assetstore', function () {
         runs(function () {
             // Create the DICOMweb assetstore
             $('#g-new-dwas-name').val('DICOMweb');
-            $('#g-edit-dwas-url').val('https://idc-external-006.uc.r.appspot.com/dcm4chee-arc/aets/DCM4CHEE/rs');
+            $('#g-new-dwas-url').val('https://idc-external-006.uc.r.appspot.com/dcm4chee-arc/aets/DCM4CHEE/rs');
+
+            // Test error for setting auth type to "token" with no token
+            $('#g-new-dwas-auth-type').val('token');
+            $('#g-new-dwas-form input.btn-primary').click();
+        });
+
+        waitsFor(function () {
+            const msg = 'A token must be provided if the auth type is "token"';
+            return $('#g-new-dwas-error').html() === msg;
+        }, 'No token provided check');
+
+        runs(function () {
+            // Change the auth type back to None
+            $('#g-new-dwas-auth-type').val(null);
+
+            // This should work now
             $('#g-new-dwas-form input.btn-primary').click();
         });
 
