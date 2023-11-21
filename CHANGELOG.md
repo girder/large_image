@@ -5,6 +5,9 @@
 ### Improvements
 - Fix the DICOM limit to say "Series" instead of "Studies" ([#1379](../../pull/1379))
 
+### Bug Fixes
+- Fix an issue applying ICC profile adjustments to multiple image modes ([#1382](../../pull/1382))
+
 ## 1.26.1
 
 ### Improvements

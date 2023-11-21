@@ -1408,14 +1408,14 @@ class TileSource(IPyLeafletMixin):
                 self._iccprofilesObjects[profileIdx] = {
                     'profile': self.getICCProfiles(profileIdx),
                 }
-                if key not in self._iccprofilesObjects[profileIdx]:
-                    self._iccprofilesObjects[profileIdx][key] = \
-                        PIL.ImageCms.buildTransformFromOpenProfiles(
-                            self._iccprofilesObjects[profileIdx]['profile'],
-                            self._iccsrgbprofile, mode, mode,
-                            renderingIntent=intent)
-                    self.logger.debug(
-                        'Created an ICC profile transform for mode %s, intent %s', mode, intent)
+            if key not in self._iccprofilesObjects[profileIdx]:
+                self._iccprofilesObjects[profileIdx][key] = \
+                    PIL.ImageCms.buildTransformFromOpenProfiles(
+                        self._iccprofilesObjects[profileIdx]['profile'],
+                        self._iccsrgbprofile, mode, mode,
+                        renderingIntent=intent)
+                self.logger.debug(
+                    'Created an ICC profile transform for mode %s, intent %s', mode, intent)
             transform = self._iccprofilesObjects[profileIdx][key]
 
             PIL.ImageCms.applyTransform(image, transform, inPlace=True)
