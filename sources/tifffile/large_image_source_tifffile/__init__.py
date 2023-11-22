@@ -125,12 +125,12 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             unit = {2: 25.4, 3: 10}[page.tags['ResolutionUnit'].value.real]
 
-            if (page.tags['XResolution'].value[0] and (
-                    page.tags['XResolution'].value[1] / page.tags['XResolution'].value[0]) >= 100):
+            if (page.tags['XResolution'].value[0] and page.tags['XResolution'].value[1] and (
+                    page.tags['XResolution'].value[0] / page.tags['XResolution'].value[1]) >= 100):
                 self._mm_x = (unit * page.tags['XResolution'].value[1] /
                               page.tags['XResolution'].value[0])
-            if (page.tags['YResolution'].value[0] and (
-                    page.tags['YResolution'].value[1] / page.tags['YResolution'].value[0]) >= 100):
+            if (page.tags['YResolution'].value[0] and page.tags['YResolution'].value[1] and (
+                    page.tags['YResolution'].value[0] / page.tags['YResolution'].value[1]) >= 100):
                 self._mm_y = (unit * page.tags['YResolution'].value[1] /
                               page.tags['YResolution'].value[0])
         except Exception:
