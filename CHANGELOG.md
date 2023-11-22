@@ -5,6 +5,7 @@
 ### Improvements
 - Fix the DICOM limit to say "Series" instead of "Studies" ([#1379](../../pull/1379))
 - Add token authentication option for DICOMweb ([#1349](../../pull/1349))
+- Use vips resize rather than reduce to increase speed ([#1384](../../pull/1384))
 
 ### Bug Fixes
 - Fix an issue applying ICC profile adjustments to multiple image modes ([#1382](../../pull/1382))

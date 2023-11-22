@@ -209,7 +209,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         img = self._getFrameImage(frame)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         tileimg = img.crop(x0, y0, x1 - x0, y1 - y0)
-        tileimg = tileimg.reduce(step, step, kernel=pyvips.enums.Kernel.NEAREST)
+        if step != 1:
+            tileimg = tileimg.resize(1.0 / step, kernel=pyvips.enums.Kernel.NEAREST, gap=0)
         tile = np.ndarray(
             buffer=tileimg.write_to_memory(),
             dtype=GValueToDtype[tileimg.format],
