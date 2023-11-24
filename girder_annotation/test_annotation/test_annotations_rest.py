@@ -623,9 +623,6 @@ class TestLargeImageAnnotationRest:
         assert utilities.respStatus(resp) == 200
         assert len(resp.json) == 1
 
-    #  Add tests for:
-    # find
-
 
 @pytest.mark.plugin('large_image_annotation')
 class TestLargeImageAnnotationElementGroups:
@@ -775,6 +772,61 @@ class TestLargeImageAnnotationElementGroups:
         resp = server.request('/annotation/%s' % resp.json['_id'], user=admin)
         assert utilities.respStatus(resp) == 200
         assert resp.json['groups'] == ['d']
+
+    def testLoadAnnotationGeoJSON(self, server, admin):
+        self.makeAnnot(admin)
+        resp = server.request('/annotation/%s/geojson' % str(self.hasGroups['_id']), user=admin)
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['type'] == 'FeatureCollection'
+        assert len(resp.json['features']) == 3
+
+    def testLoadAnnotationGeoJSONVariety(self, server, admin):
+        self.makeAnnot(admin)
+        annot = Annotation().createAnnotation(
+            self.item, admin,
+            {
+                'name': 'sample',
+                'elements': [{
+                    'type': 'rectangle',
+                    'center': [20.0, 25.0, 0],
+                    'rotation': 0.1,
+                    'width': 14.0,
+                    'height': 15.0,
+                }, {
+                    'type': 'circle',
+                    'center': [10.3, -40.0, 0],
+                    'radius': 5.3,
+                    'fillColor': '#0000ff',
+                }, {
+                    'type': 'ellipse',
+                    'center': [10.3, -40.0, 0],
+                    'width': 5.3,
+                    'height': 17.3,
+                    'rotation': 0,
+                    'normal': [0, 0, 1.0],
+                    'fillColor': 'rgba(0, 255, 0, 1)',
+                }, {
+                    'type': 'point',
+                    'center': [123.3, 144.6, -123],
+                }, {
+                    'type': 'polyline',
+                    'points': [[5, 6, 0], [-17, 6, 0], [56, -45, 6]],
+                    'closed': True,
+                    'holes': [[[10, 10, 0], [20, 30, 0], [10, 30, 0]]],
+                    'fillColor': 'rgba(0, 255, 0, 1)',
+                }, {
+                    'type': 'polyline',
+                    'points': [[7, 8, 0], [17, 6, 0], [27, 9, 0], [37, 14, 0], [46, 8, 0]],
+                    'closed': False,
+                    'fillColor': 'rgba(0, 255, 0, 1)',
+                }],
+            },
+        )
+
+        resp = server.request('/annotation/%s/geojson' % str(annot['_id']), user=admin)
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['type'] == 'FeatureCollection'
+        assert len(resp.json['features']) == 6
 
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
