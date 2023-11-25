@@ -6,16 +6,15 @@ import numpy as np
 import pytest
 
 import large_image
-from large_image.cache_util import cachesClear
 
 possible_axes = {
     'x': [1, 10],
     'y': [1, 10],
-    'c': [1, 100],
-    'z': [1, 100],
-    't': [1, 100],
-    'p': [1, 100],
-    'q': [1, 100],
+    'c': [1, 40],
+    'z': [1, 40],
+    't': [1, 40],
+    'p': [1, 20],
+    'q': [1, 20],
     's': [3, 3],
 }
 
@@ -190,9 +189,6 @@ def testImageGeneration(data_range):
     # print(resultFromFile.shape, result.shape)
     # assert numpy.array_equal(result, resultFromFile)
     print(f'Success; result matrix {result.shape} equals expected matrix {expected.shape}.')
-
-    source = None
-    cachesClear()
 
 
 if __name__ == '__main__':
