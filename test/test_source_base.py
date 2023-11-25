@@ -10,7 +10,6 @@ import PIL.Image
 import pytest
 
 import large_image
-from large_image.cache_util import cachesClear
 from large_image.tilesource import nearPowerOfTwo
 
 from . import utilities
@@ -170,8 +169,6 @@ def testSourcesCanRead(filename, source):
     mod = sys.modules[sourceClass.__module__]
     assert bool(mod.canRead(imagePath)) is bool(canRead)
 
-    cachesClear()
-
 
 @pytest.mark.parametrize(('filename', 'source'), sourceAndRegistry())
 def testSourcesCanReadPath(filename, source):
@@ -183,8 +180,6 @@ def testSourcesCanReadPath(filename, source):
     large_image.tilesource.loadTileSources()
     sourceClass = large_image.tilesource.AvailableTileSources[source]
     assert bool(sourceClass.canRead(Path(imagePath))) is bool(canRead)
-
-    cachesClear()
 
 
 @pytest.mark.parametrize(('filename', 'source'), sourceAndRegistry(True))
@@ -223,8 +218,6 @@ def testSourcesTilesAndMethods(filename, source):
     mod = sys.modules[sourceClass.__module__]
     assert mod.open(imagePath) is not None
 
-    cachesClear()
-
 
 @pytest.mark.parametrize(('filename', 'isgeo'), [
     ('04091217_ruc.nc', True),
@@ -236,8 +229,6 @@ def testSourcesTilesAndMethods(filename, source):
 def testIsGeospatial(filename, isgeo):
     imagePath = datastore.fetch(filename)
     assert large_image.tilesource.isGeospatial(imagePath) == isgeo
-
-    cachesClear()
 
 
 @pytest.mark.parametrize('palette', [

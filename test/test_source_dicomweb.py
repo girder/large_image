@@ -1,7 +1,5 @@
 import pytest
 
-from large_image.cache_util import cachesClear
-
 from . import utilities
 
 
@@ -27,6 +25,3 @@ def testTilesFromDICOMweb():
     assert tileMetadata['levels'] == 9
 
     utilities.checkTilesZXY(source, tileMetadata)
-
-    source = None
-    cachesClear()

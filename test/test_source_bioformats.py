@@ -1,5 +1,3 @@
-from large_image.cache_util import cachesClear
-
 from . import utilities
 from .datastore import datastore
 
@@ -19,9 +17,6 @@ def testTilesFromBioformats():
     # assert tileMetadata['magnification'] == pytest.approx(20, 1)
     utilities.checkTilesZXY(source, tileMetadata)
 
-    source = None
-    cachesClear()
-
 
 def testInternalMetadata():
     import large_image_source_bioformats
@@ -30,6 +25,3 @@ def testInternalMetadata():
     source = large_image_source_bioformats.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'sizeColorPlanes' in metadata
-
-    source = None
-    cachesClear()

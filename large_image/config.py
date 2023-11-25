@@ -36,7 +36,7 @@ ConfigValues = {
     # For tilesources.  These are also limited by available file handles.
     # 'python' cache can use 1/(val) of the available memory based on a very
     # rough estimate of the amount of memory used by a tilesource
-    'cache_tilesource_memory_portion': 8,
+    'cache_tilesource_memory_portion': 16,
     # If >0, this is the maximum number of tilesources that will be cached
     'cache_tilesource_maximum': 0,
 

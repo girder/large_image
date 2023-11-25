@@ -1,4 +1,5 @@
 import large_image_source_openjpeg
+import pytest
 
 from . import utilities
 from .datastore import datastore
@@ -30,6 +31,7 @@ def testAssociatedImagesFromOpenJPEG():
     assert source.getAssociatedImage('nosuchimage') is None
 
 
+@pytest.mark.singular()
 def testBelowLevelTilesFromOpenJPEG():
     from large_image.cache_util import cachesClear
 
