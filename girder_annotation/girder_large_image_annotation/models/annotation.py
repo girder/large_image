@@ -1189,7 +1189,7 @@ class Annotation(AccessControlledModel):
         }, fields=['_id'])
         if not entry:
             return None
-        result = self.load(entry['_id'], user=user, force=force, *args, **kwargs)
+        result = self.load(entry['_id'], *args, user=user, force=force, **kwargs)
         result['_versionId'] = result['_id']
         result['_id'] = result.pop('annotationId', result['_id'])
         return result
