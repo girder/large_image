@@ -40,9 +40,10 @@ def metadataSearchHandler(*args, **kwargs):
     import girder_large_image
 
     return girder_large_image.metadataSearchHandler(
+        *args,
         models=['item'],
         searchModels={('annotation', 'large_image'): {'model': 'item', 'reference': 'itemId'}},
-        metakey='annotation.attributes', *args, **kwargs)
+        metakey='annotation.attributes', **kwargs)
 
 
 # Validators

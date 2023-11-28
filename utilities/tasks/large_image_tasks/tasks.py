@@ -80,7 +80,7 @@ def create_tiff(self, inputFile, outputName=None, outputDir=None, quality=90,
 class JobLogger(logging.Handler):
     def __init__(self, level=logging.NOTSET, job=None, *args, **kwargs):
         self._job = job
-        super().__init__(level=level, *args, **kwargs)
+        super().__init__(level=level, **kwargs)
 
     def emit(self, record):
         from girder_jobs.models.job import Job
