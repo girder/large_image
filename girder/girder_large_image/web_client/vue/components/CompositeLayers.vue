@@ -121,10 +121,9 @@ export default {
             // Assign colors
             this.layers.forEach((layerName) => {
                 if (!this.compositeLayerInfo[layerName].palette) {
-                    const channelColor = getChannelColor(layerName);
+                    const channelColor = getChannelColor(layerName, usedColors);
                     if (channelColor) {
                         this.compositeLayerInfo[layerName].palette = channelColor;
-                        usedColors.push(channelColor);
                     }
                 }
             });

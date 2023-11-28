@@ -12,10 +12,11 @@ export const CHANNEL_COLORS = {
     '^gr[ae]y(|scale)$': '#FFFFFF'
 };
 
-export function getChannelColor(name) {
+export function getChannelColor(name, usedColors) {
     // Search for case-insensitive regex match among known channel-colors
     for (const [channelPattern, color] of Object.entries(CHANNEL_COLORS)) {
-        if (name.match(new RegExp(channelPattern, 'i'))) {
+        if (!usedColors.includes(color) && name.match(new RegExp(channelPattern, 'i'))) {
+            usedColors.push(color);
             return color;
         }
     }
