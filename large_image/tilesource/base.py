@@ -1041,7 +1041,7 @@ class TileSource(IPyLeafletMixin):
         kwargs = kwargs.copy()
         histRange = kwargs.pop('range', None)
         results = None
-        for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+        for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, **kwargs):
             if time.time() - lastlog > 10:
                 self.logger.info(
                     'Calculating histogram min/max %d/%d',
@@ -1105,7 +1105,7 @@ class TileSource(IPyLeafletMixin):
                     rbins = int(math.ceil((record['range'][1] - record['range'][0]) / step))
                     record['range'] = (record['range'][0], record['range'][0] + step * rbins)
                     record['bins'] = rbins
-        for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, *args, **kwargs):
+        for tile in self.tileIterator(format=TILE_FORMAT_NUMPY, **kwargs):
             if time.time() - lastlog > 10:
                 self.logger.info(
                     'Calculating histogram %d/%d',
