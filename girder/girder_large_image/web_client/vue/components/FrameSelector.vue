@@ -278,15 +278,11 @@ export default Vue.extend({
     <div
       id="current_image_frame"
       class="invisible"
-    >
-      {{ currentFrame }}
-    </div>
+    >{{ currentFrame }}</div>
     <div
       id="current_image_style"
       class="invisible"
-    >
-      {{ currentStyle }}
-    </div>
+    >{{ currentStyle }}</div>
     <div>
       <label for="mode">Image control mode: </label>
       <select
