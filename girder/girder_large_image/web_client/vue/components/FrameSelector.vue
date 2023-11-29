@@ -1,7 +1,7 @@
 <script>
 import Vue from 'vue';
 
-import {getChannelColor} from '../utils/colors';
+import {getChannelColor, OTHER_COLORS} from '../utils/colors';
 
 import CompositeLayers from './CompositeLayers.vue';
 import DualInput from './DualInput.vue';
@@ -158,8 +158,10 @@ export default Vue.extend({
                 } else {
                     // no style applied yet, create new permutations list
                     const {bands} = this.metadata;
+                    const usedColors = [];
                     bands.forEach((b, i) => {
-                        const bandPalette = getChannelColor(b);
+                        let bandPalette = getChannelColor(b, usedColors);
+                        if (!bandPalette) bandPalette = OTHER_COLORS.find((c) => !usedColors.includes(c));
                         frameDeltas.forEach((framedelta) => {
                             newBandsArray.push({
                                 band: i + 1,
