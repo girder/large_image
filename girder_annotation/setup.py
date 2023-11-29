@@ -35,7 +35,6 @@ setup(
     name='girder-large-image-annotation',
     use_scm_version={'root': '..', 'local_scheme': prerelease_local_scheme,
                      'fallback_version': '0.0.0'},
-    setup_requires=['setuptools-scm', 'setuptools-git'],
     description=description,
     long_description=long_description,
     license='Apache Software License 2.0',

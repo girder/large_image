@@ -38,7 +38,6 @@ setup(
         'local_scheme': prerelease_local_scheme,
         'fallback_version': 'development',
     },
-    setup_requires=['setuptools-scm'],
     description=description,
     long_description=long_description,
     license='Apache Software License 2.0',

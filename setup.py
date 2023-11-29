@@ -84,9 +84,6 @@ setup(
     name='large-image',
     use_scm_version={'local_scheme': prerelease_local_scheme,
                      'fallback_version': '0.0.0'},
-    setup_requires=[
-        'setuptools-scm',
-    ],
     description=description,
     long_description=long_description,
     license='Apache Software License 2.0',
