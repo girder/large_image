@@ -8,6 +8,9 @@
 - Use vips resize rather than reduce to increase speed ([#1384](../../pull/1384))
 - Added annotation to geojson endpoint and utility ([#1385](../../pull/1385))
 
+### Changes
+- Handle setup_requires deprecation ([#1390](../../pull/1390))
+
 ### Bug Fixes
 - Fix an issue applying ICC profile adjustments to multiple image modes ([#1382](../../pull/1382))
 - Guard against bad tifffile magnification values ([#1383](../../pull/1383))
