@@ -13,6 +13,7 @@
 - Guard against bad tifffile magnification values ([#1383](../../pull/1383))
 - Frame Selector component: ensure that no color can be assigned twice ([#1387](../../pull/1387))
 - Remove white space in frame selector internal fields ([#1389](../../pull/1389))
+- Fix a comparison between integer enums in configured item lists ([#1391](../../pull/1391))
 
 ## 1.26.1
 

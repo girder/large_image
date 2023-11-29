@@ -6,7 +6,7 @@ ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '')
     for column, colidx in itemList.columns
       if column.type !== 'image' || hasAnyLargeImage
         span.li-item-list-header(
-            class=((column.type === 'record' && column.value !== 'controls') || column.type === 'metadata' ? 'sortable' : '') + ' ' + (sort && sort[0].type === column.type && sort[0].value === column.value ? sort[0].dir : ''),
+            class=((column.type === 'record' && column.value !== 'controls') || column.type === 'metadata' ? 'sortable' : '') + ' ' + (sort && sort[0].type === column.type && ('' + sort[0].value === '' + column.value) ? sort[0].dir : ''),
             column_type=column.type, column_value=column.value)
           if column.title !== undefined
             - colNames[colidx] = column.title
@@ -80,7 +80,7 @@ ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '')
                   if column.enum
                     select.input-sm.form-control.g-widget-metadata-value-input.g-widget-metadata-lientry(title=column.description)
                       for enumval in column.enum
-                        option(value=enumval, selected=enumval === value ? 'selected' : null)
+                        option(value=enumval, selected=('' + enumval) === ('' + value) ? 'selected' : null)
                           = enumval
                   else
                     input.input-sm.form-control.g-widget-metadata-value-input.g-widget-metadata-column(placeholder=column.description || "Value", value=value, title=column.description)
