@@ -308,13 +308,6 @@ workflows:
               ignore:
                 - gh-pages
       - wheels:
-          requires:
-            - py38
-            - py39
-            - py310
-            - py311
-            - py312
-            - lint_and_docs
           filters:
             tags:
               only: /^v.*/
@@ -329,6 +322,7 @@ workflows:
             - py311
             - py312
             - lint_and_docs
+            - wheels
           filters:
             tags:
               only: /^v.*/
@@ -342,6 +336,7 @@ workflows:
             - py311
             - py312
             - lint_and_docs
+            - wheels
           filters:
             tags:
               only: /^v.*/
