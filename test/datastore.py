@@ -106,6 +106,8 @@ registry = {
     'synthetic_multiaxis.zarr.zip': 'sha512:95da53061bd09deaf4357e745404780d78a0949935f82c10ee75237e775345caace18fad3f05c3452ba36efca6b3ed58d815d041f33197497ab53d2c80b9e2ac',  # noqa
     # Single flat array zarr
     'flat2.zarr.zip': 'sha512:c49ff5fbfa73615da4c2a7c8602723297d604892b848860a068ab200245eec6c4f638f35d0b40cde0233c55faa6dc4e46351a841b481211f36dc5fb43765d818',  # noqa
+    # OME tiff where tifffile reports no keyframe
+    'test_nokeyframe.ome.tiff': 'sha512:e810420ece0688bf4e1c347ef7e172a303a9cb3f0d56efc3d0068ec40decf05d2588b01a3f5ac9857ccf8f3d088819e532148488f30ad693d6d79c1aa66115d7',  # noqa
 }
 
 

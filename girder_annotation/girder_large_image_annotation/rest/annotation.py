@@ -197,7 +197,8 @@ class AnnotationResource(Resource):
             raise RestException(msg, 404)
 
         def generateResult():
-            yield from Annotation().geojson(annotation)
+            for chunk in Annotation().geojson(annotation):
+                yield chunk.encode()
 
         setResponseHeader('Content-Type', 'application/json')
         return generateResult

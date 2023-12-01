@@ -238,10 +238,10 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         Find associated images from unused pages and series.
         """
         pagesInSeries = [p for s in self._tf.series for ll in s.pages.levels for p in ll.pages]
-        hashes = [p.hash for p in pagesInSeries if p.keyframe is not None]
+        hashes = [p.hash for p in pagesInSeries if getattr(p, 'keyframe', None) is not None]
         self._associatedImages = {}
         for p in self._tf.pages:
-            if (p not in pagesInSeries and p.keyframe is not None and
+            if (p not in pagesInSeries and getattr(p, 'keyframe', None) is not None and
                     p.hash not in hashes and not len(set(p.axes) - set('YXS'))):
                 id = 'image_%s' % p.index
                 entry = {'page': p.index}

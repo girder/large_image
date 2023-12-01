@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.26.3
+
+### Bug Fixes
+- Fix an issue emitting geojson annotations ([#1395](../../pull/1395))
+- Fix an issue when tifffile reports no key frame ([#1396](../../pull/1396))
+
 ## 1.26.2
 
 ### Improvements
@@ -436,6 +442,7 @@
 ### Bug Fixes
 - Use open.read rather than download to access files in Girder ([#989](../../pull/989))
 - Fix nd2 source scale ([#990](../../pull/990))
+- Do not raise a login request when checking if the user can write annotations ([#991](../../pull/991))
 
 ## 1.17.3
 
