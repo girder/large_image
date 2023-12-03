@@ -1,4 +1,5 @@
 import os
+import sys
 
 from setuptools import find_packages, setup
 
@@ -31,6 +32,21 @@ try:
 except (ImportError, LookupError):
     limit_version = ''
 
+entry_points = {
+    'large_image.source': [
+        'dicom = large_image_source_dicom:DICOMFileTileSource',
+    ],
+    'girder_large_image.source': [
+        'dicom = large_image_source_dicom.girder_source:DICOMGirderTileSource',
+    ],
+}
+
+if sys.version_info >= (3, 9):
+    # For Python >= 3.9, include the DICOMweb plugin
+    entry_points['girder.plugin'] = [
+        'dicomweb = large_image_source_dicom.girder_plugin:DICOMwebPlugin',
+    ]
+
 setup(
     name='large-image-source-dicom',
     use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
@@ -62,15 +78,5 @@ setup(
     packages=find_packages(exclude=['test', 'test.*', 'test_dicom', 'test_dicom.*']),
     url='https://github.com/girder/large_image',
     python_requires='>=3.8',
-    entry_points={
-        'large_image.source': [
-            'dicom = large_image_source_dicom:DICOMFileTileSource',
-        ],
-        'girder_large_image.source': [
-            'dicom = large_image_source_dicom.girder_source:DICOMGirderTileSource',
-        ],
-        'girder.plugin': [
-            'dicomweb = large_image_source_dicom.girder_plugin:DICOMwebPlugin',
-        ],
-    },
+    entry_points=entry_points,
 )
