@@ -2,6 +2,9 @@
 
 ## 1.26.3
 
+### Improvements
+- Reduce stderr noise in PIL and rasterio sources ([#1397](../../pull/1397))
+
 ### Bug Fixes
 - Fix an issue emitting geojson annotations ([#1395](../../pull/1395))
 - Fix an issue when tifffile reports no key frame ([#1396](../../pull/1396))

@@ -202,8 +202,10 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             import rawpy
 
-            rgb = rawpy.imread(largeImagePath).postprocess()
-            rgb = large_image.tilesource.utilities._imageToNumpy(rgb)
+            rgb = rawpy._rawpy.RawPy(1)
+            rgb.open_file(largeImagePath)
+            rgb = rgb.postprocess()
+            rgb = large_image.tilesource.utilities._imageToNumpy(rgb)[0]
             if rgb.shape[2] == 2:
                 rgb = rgb[:, :, :1]
             elif rgb.shape[2] > 3:

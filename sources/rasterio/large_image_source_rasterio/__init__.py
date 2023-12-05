@@ -52,6 +52,7 @@ except PackageNotFoundError:
     pass
 
 warnings.filterwarnings('ignore', category=rio.errors.NotGeoreferencedWarning, module='rasterio')
+rio._env.code_map.pop(1, None)
 
 
 def make_crs(projection):
