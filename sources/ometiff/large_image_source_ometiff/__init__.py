@@ -110,7 +110,11 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(msg)
         self._omeinfo = info['OME']
         self._checkForOMEZLoop()
-        self._parseOMEInfo()
+        try:
+            self._parseOMEInfo()
+        except KeyError:
+            msg = 'Not a recognized OME Tiff'
+            raise TileSourceError(msg)
         omeimages = [
             entry['Pixels'] for entry in self._omeinfo['Image'] if
             len(entry['Pixels']['TiffData']) == len(self._omebase['TiffData'])]
