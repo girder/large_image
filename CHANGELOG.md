@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 - Fix an issue emitting geojson annotations ([#1395](../../pull/1395))
+- Fix an issue when tifffile reports no key frame ([#1396](../../pull/1396))
 
 ## 1.26.2
 

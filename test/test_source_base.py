@@ -38,11 +38,13 @@ SourceAndFiles = {
     'gdal': {
         'read': r'\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
+        'skip': r'nokeyframe\.ome\.tiff$',
         'skipTiles': r'\.*nc$',
     },
     'mapnik': {
         'read': r'\.(jpg|jpeg|jp2|ptif|nc|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
+        'skip': r'nokeyframe\.ome\.tiff$',
         # we should only test this with a projection
         'skipTiles': r'',
     },
@@ -53,11 +55,15 @@ SourceAndFiles = {
     'nd2': {
         'read': r'\.(nd2)$',
     },
-    'ometiff': {'read': r'\.(ome\.tif.*)$'},
+    'ometiff': {
+        'read': r'\.(ome\.tif.*)$',
+        'noread': r'nokeyframe\.ome\.tiff$',
+    },
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|tif.*|qptiff|dcm)$',
         'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes)',  # noqa
+        'skip': r'nokeyframe\.ome\.tiff$',
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
@@ -67,13 +73,14 @@ SourceAndFiles = {
     'rasterio': {
         'read': r'\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
+        'skip': r'nokeyframe\.ome\.tiff$',
     },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'\.(ptif|scn|svs|tif.*|qptiff)$',
         'noread': r'(oahu|DDX58_AXL|G10-3_pelvis_crop|'
                   r'd042-353\.crop\.small\.float|landcover_sample|US_Geo\.|'
-                  r'imagej|bad_axes)',
+                  r'imagej|bad_axes|nokeyframe\.ome\.tiff$)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
