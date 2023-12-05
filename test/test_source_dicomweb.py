@@ -25,3 +25,7 @@ def testTilesFromDICOMweb():
     assert tileMetadata['levels'] == 9
 
     utilities.checkTilesZXY(source, tileMetadata)
+
+    # Verify that the internal metadata is working too
+    internalMetadata = source.getInternalMetadata()
+    assert internalMetadata['dicom_meta']['Specimens'][0]['Anatomical Structure'] == 'Lung'

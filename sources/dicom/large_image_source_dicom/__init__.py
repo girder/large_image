@@ -6,6 +6,8 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
 import numpy as np
+from large_image_source_dicom.dicom_metadata import extract_dicom_metadata
+from large_image_source_dicom.dicomweb_utils import get_dicomweb_metadata
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
@@ -119,6 +121,9 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
+        self.logger = config.getConfig('logger')
+        self._dicomWebClient = None
+
         # We want to make a list of paths of files in this item, if multiple,
         # or adjacent items in the folder if the item is a single file.  We
         # filter files with names that have a preferred extension.
@@ -157,6 +162,11 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # We need to detect which levels are functionally present if we want to
         # return a sensible _nonemptyLevelsList
 
+    @property
+    def _isDicomWeb(self):
+        # Keep track of whether this is DICOMweb or not
+        return self._dicomWebClient is not None
+
     def _open_wsi_dicom(self, path):
         if isinstance(path, dict):
             # Use the DICOMweb open method
@@ -186,6 +196,9 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         transfer_syntax = self._identify_dicomweb_transfer_syntax(client,
                                                                   study_uid,
                                                                   series_uid)
+
+        # Save this for future use
+        self._dicomWebClient = client
 
         # Open the WSI DICOMweb file
         return wsidicom.WsiDicom.open_web(wsidicom_client, study_uid, series_uid,
@@ -314,7 +327,35 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         if k not in result['dicom'] or v != result['dicom'][k]:
                             result['dicom']['%s:%d' % (k, idx)] = v
                 idx += 1
+
+        result['dicom_meta'] = self._getDicomMetadata()
+
         return result
+
+    @methodcache()
+    def _getDicomMetadata(self):
+        if self._isDicomWeb:
+            # Get the client, study uid, and series uid
+            client = self._dicomWebClient
+            study_uid = self._dicom.uids.study_instance
+            series_uid = self._dicom.uids.series_instance
+            return get_dicomweb_metadata(client, study_uid, series_uid)
+        else:
+            # Find the first volume instance and extract the metadata
+            volume = None
+            for level in self._dicom.levels:
+                for ds in level.datasets:
+                    if ds.image_type.value == 'VOLUME':
+                        volume = ds
+                        break
+
+                if volume:
+                    break
+
+            if not volume:
+                return None
+
+            return extract_dicom_metadata(volume)
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):

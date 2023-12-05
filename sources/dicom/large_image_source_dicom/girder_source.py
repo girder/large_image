@@ -73,3 +73,11 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
             'wado_prefix': meta.get('wado_prefix'),
             'session': adapter.auth_session,
         }
+
+    def _getDicomMetadata(self):
+        if 'dicomweb_meta' not in self.item:
+            # Cache this in the database
+            self.item['dicomweb_meta'] = super()._getDicomMetadata()
+            Item().save(self.item)
+
+        return self.item['dicomweb_meta']
