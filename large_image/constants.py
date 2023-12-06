@@ -14,8 +14,10 @@
 #  limitations under the License.
 #############################################################################
 
+import enum
 
-class SourcePriority:
+
+class SourcePriority(enum.IntEnum):
     NAMED = 0    # Explicitly requested
     PREFERRED = 1
     HIGHER = 2
