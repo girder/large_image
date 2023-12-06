@@ -498,6 +498,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if sidx not in self._zarrcache:
                 if len(self._zarrcache) > 10:
                     self._zarrcache = {}
+                if self.frames > 1:
+                    series.keyframe.nodata = None
                 za = zarr.open(series.aszarr(), mode='r')
                 hasgbs = hasattr(za[0], 'get_basic_selection')
                 self._zarrcache[sidx] = (za, hasgbs)
