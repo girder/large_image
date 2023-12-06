@@ -14,6 +14,7 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
 import json
 import math
 import os
@@ -202,18 +203,17 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             import rawpy
 
-            rgb = rawpy._rawpy.RawPy(1)
-            rgb.open_file(largeImagePath)
-            rgb = rgb.postprocess()
-            rgb = large_image.tilesource.utilities._imageToNumpy(rgb)[0]
-            if rgb.shape[2] == 2:
-                rgb = rgb[:, :, :1]
-            elif rgb.shape[2] > 3:
-                rgb = rgb[:, :, :3]
-            self._pilImage = PIL.Image.fromarray(
-                rgb.astype(np.uint8) if rgb.dtype != np.uint16 else rgb,
-                ('RGB' if rgb.dtype != np.uint16 else 'RGB;16') if rgb.shape[2] == 3 else
-                ('L' if rgb.dtype != np.uint16 else 'L;16'))
+            with contextlib.redirect_stderr(open(os.devnull, 'w')):
+                rgb = rawpy.imread(largeImagePath).postprocess()
+                rgb = large_image.tilesource.utilities._imageToNumpy(rgb)[0]
+                if rgb.shape[2] == 2:
+                    rgb = rgb[:, :, :1]
+                elif rgb.shape[2] > 3:
+                    rgb = rgb[:, :, :3]
+                self._pilImage = PIL.Image.fromarray(
+                    rgb.astype(np.uint8) if rgb.dtype != np.uint16 else rgb,
+                    ('RGB' if rgb.dtype != np.uint16 else 'RGB;16') if rgb.shape[2] == 3 else
+                    ('L' if rgb.dtype != np.uint16 else 'L;16'))
         except Exception:
             pass
 

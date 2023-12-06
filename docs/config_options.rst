@@ -1,7 +1,7 @@
 Configuration Options
 =====================
 
-Some functionality of large_image is controlled through configuration parameters.  These can be read or set via python using functions in the ``large_image.config`` module, `getConfig <./large_image/large_image.html#large_image.config.getConfig>`_ and `setConfig <./large_image/large_image.html#large_image.config.setConfig>`_.
+Some functionality of large_image is controlled through configuration parameters.  These can be read or set via python using functions in the ``large_image.config`` module, `getConfig <./_build/large_image/large_image.html#large_image.config.getConfig>`_ and `setConfig <./_build/large_image/large_image.html#large_image.config.setConfig>`_.
 
 Configuration parameters:
 
