@@ -6,6 +6,9 @@
 - Reduce stderr noise in PIL and rasterio sources ([#1397](../../pull/1397))
 - Harden OME tiff reader ([#1398](../../pull/1398))
 
+### Changes
+- Use an enum for priority constants ([#1400](../../pull/1400))
+
 ### Bug Fixes
 - Fix an issue emitting geojson annotations ([#1395](../../pull/1395))
 - Fix an issue when tifffile reports no key frame ([#1396](../../pull/1396))
