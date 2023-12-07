@@ -6,6 +6,7 @@
 - Reduce stderr noise in PIL and rasterio sources ([#1397](../../pull/1397))
 - Harden OME tiff reader ([#1398](../../pull/1398))
 - Improve checks for formats we shouldn't read ([#1399](../../pull/1399))
+- Support negative x, y in addTile ([#1401](../../pull/1401))
 
 ### Changes
 - Use an enum for priority constants ([#1400](../../pull/1400))
