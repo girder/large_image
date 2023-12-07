@@ -3,6 +3,7 @@ import shutil
 import tempfile
 
 import large_image_source_vips
+import numpy as np
 import pytest
 import pyvips
 
@@ -210,3 +211,30 @@ def testNewAndWriteWithMask():
         assert resultMetadata['sizeX'] == 4000
     finally:
         shutil.rmtree(tmpdir)
+
+
+def testNewAndWriteNegative():
+    out = large_image_source_vips.new()
+    out.addTile(np.full((4, 4, 3), 1, dtype=np.uint8), x=0, y=0)
+    out.addTile(np.full((5, 4, 3), 2, dtype=np.uint8), x=-2, y=1)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        outputPath = os.path.join(tmpdir, 'temp.tiff')
+        out.write(outputPath, lossy=False)
+        region = out.getRegion(format=large_image.constants.TILE_FORMAT_NUMPY)[0]
+        assert (region[:, :, 0] == np.array([
+            [0, 0, 1, 1, 1, 1],
+            [2, 2, 2, 2, 1, 1],
+            [2, 2, 2, 2, 1, 1],
+            [2, 2, 2, 2, 1, 1],
+            [2, 2, 2, 2, 0, 0],
+            [2, 2, 2, 2, 0, 0]])).all()
+
+        ts = large_image.open(outputPath)
+        region = ts.getRegion(format=large_image.constants.TILE_FORMAT_NUMPY)[0]
+        assert (region[:, :, 0] == np.array([
+            [0, 0, 1, 1, 1, 1],
+            [2, 2, 2, 2, 1, 1],
+            [2, 2, 2, 2, 1, 1],
+            [2, 2, 2, 2, 1, 1],
+            [2, 2, 2, 2, 0, 0],
+            [2, 2, 2, 2, 0, 0]])).all()

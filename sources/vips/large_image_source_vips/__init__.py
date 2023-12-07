@@ -299,7 +299,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         if self._output is not None:
             self._image = None
-            w, h = self._output['width'], self._output['height']
+            w = self._output['width'] - min(0, self._output['minx'])
+            h = self._output['height'] - min(0, self._output['miny'])
             w = max(self.minWidth or w, w)
             h = max(self.minHeight or h, h)
             self.sizeX = w
@@ -311,7 +312,10 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def addTile(self, tile, x=0, y=0, mask=None, interpretation=None):
         """
         Add a numpy or image tile to the image, expanding the image as needed
-        to accommodate it.
+        to accommodate it.  Note that x and y can be negative.  If so, the
+        output image (and internal memory access of the image) will act as if
+        the 0, 0 point is the most negative position.  Cropping is applied
+        after this offset.
 
         :param tile: a numpy array, PIL Image, vips image, or a binary string
             with an image.  The numpy array can have 2 or 3 dimensions.
@@ -432,7 +436,9 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if img.format == 'float' and entry['image'].format == 'double':
                     entryimage = entryimage.cast(img.format)
                 branch = branch.composite(
-                    entryimage, pyvips.BlendMode.OVER, x=entry['x'], y=entry['y'])
+                    entryimage, pyvips.BlendMode.OVER,
+                    x=entry['x'] - min(0, self._output['minx']),
+                    y=entry['y'] - min(0, self._output['miny']))
                 if not ((idx + 1) % leaves) or idx + 1 == len(self._output['images']):
                     trunk = trunk.composite(branch, pyvips.BlendMode.OVER, x=0, y=0)
                     branch = baseimg.copy()
@@ -594,8 +600,14 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not self._editable:
             return self._image.format
         return self._getVipsFormat()
-
     # TODO: specify bit depth / bandFormat explicitly
+
+    @property
+    def origin(self):
+        if not self._editable:
+            return {'x': 0, 'y': 0}
+        return {'x': min(0, self._output['minx'] or 0),
+                'y': min(0, self._output['miny'] or 0)}
 
 
 def open(*args, **kwargs):
