@@ -57,9 +57,9 @@ def loadCaches(entryPointName='large_image.cache', sourceDict=_availableCaches):
         try:
             cacheClass = entryPoint.load()
             sourceDict[entryPoint.name.lower()] = cacheClass
-            config.getConfig('logprint').debug(f'Loaded cache {entryPoint.name}')
+            config.getLogger('logprint').debug(f'Loaded cache {entryPoint.name}')
         except Exception:
-            config.getConfig('logprint').exception(
+            config.getLogger('logprint').exception(
                 f'Failed to load cache {entryPoint.name}',
             )
     # Load memcached last for now
@@ -114,7 +114,7 @@ def getFirstAvailableCache():
         except TileCacheError:
             continue
     if cache is not None:
-        config.getConfig('logprint').debug(
+        config.getLogger('logprint').debug(
             f'Automatically setting `{cacheBackend}` as cache_backend from availableCaches',
         )
         config.setConfig('cache_backend', cacheBackend)
@@ -166,7 +166,7 @@ class CacheFactory:
             cacheLock = threading.Lock()
 
         if not inProcess and not CacheFactory.logged:
-            config.getConfig('logprint').debug(f'Using {cacheBackend} for large_image caching')
+            config.getLogger('logprint').debug(f'Using {cacheBackend} for large_image caching')
             CacheFactory.logged = True
 
         return cache, cacheLock

@@ -230,7 +230,7 @@ def main(args=sys.argv[1:]):
     try:
         import large_image
 
-        li_logger = large_image.config.getConfig('logger')
+        li_logger = large_image.config.getLogger()
         li_logger.setLevel(max(1, logging.CRITICAL - (opts.verbose - opts.silent) * 10))
     except ImportError:
         pass

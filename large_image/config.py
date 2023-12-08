@@ -1,9 +1,11 @@
 import logging
+from typing import cast
 
 try:
     import psutil
+    HAS_PSUTIL = True
 except ImportError:
-    psutil = None
+    HAS_PSUTIL = False
 
 # Default logger
 fallbackLogger = logging.getLogger('large_image')
@@ -47,7 +49,7 @@ ConfigValues = {
 
     # The maximum size of an annotation file that will be ingested into girder
     # via direct load
-    'max_annotation_input_file_length': 1 * 1024 ** 3 if not psutil else max(
+    'max_annotation_input_file_length': 1 * 1024 ** 3 if not HAS_PSUTIL else max(
         1 * 1024 ** 3, psutil.virtual_memory().total // 16),
 }
 
@@ -64,6 +66,20 @@ def getConfig(key=None, default=None):
     if key is None:
         return ConfigValues
     return ConfigValues.get(key, default)
+
+
+def getLogger(key=None, default=None):
+    """
+    Get a logger from the config.  Ensure that it is a valid logger.
+
+    :param key: if None, return the 'logger'.
+    :param default: a value to return if a key is requested and not set.
+    :returns: a logger.
+    """
+    logger = cast(logging.Logger, getConfig(key or 'logger', default))
+    if not isinstance(logger, logging.Logger):
+        logger = fallbackLogger
+    return logger
 
 
 def setConfig(key, value):

@@ -7,6 +7,7 @@
 - Harden OME tiff reader ([#1398](../../pull/1398))
 - Improve checks for formats we shouldn't read ([#1399](../../pull/1399))
 - Support negative x, y in addTile ([#1401](../../pull/1401))
+- Add a utility function for getting loggers ([#1403](../../pull/1403))
 
 ### Changes
 - Use an enum for priority constants ([#1400](../../pull/1400))

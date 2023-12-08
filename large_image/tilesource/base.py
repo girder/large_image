@@ -144,7 +144,7 @@ class TileSource(IPyLeafletMixin):
             benefits, such as when first cataloging images that can be read.
         """
         super().__init__(**kwargs)
-        self.logger = config.getConfig('logger')
+        self.logger = config.getLogger()
         self.cache, self.cache_lock = getTileCache()
 
         self.tileWidth = None

@@ -43,7 +43,7 @@ except ValueError as exc:
     # ImportError.  We convert this to an ImportError, so that we will print a
     # more lucid error message and just fail to load this one tile source
     # instead of failing to load the whole plugin.
-    config.getConfig('logger').warning(
+    config.getLogger().warning(
         'Failed to import libtiff; try upgrading the python module (%s)' % exc)
     raise ImportError(str(exc))
 
@@ -97,7 +97,7 @@ class TiledTiffDirectory:
         :raises: InvalidOperationTiffError or IOTiffError or
             ValidationTiffError
         """
-        self.logger = config.getConfig('logger')
+        self.logger = config.getLogger()
         # create local cache to store Jpeg tables and getTileByteCountsType
         self.cache = cachetools.LRUCache(10)
         self._mustBeTiled = mustBeTiled

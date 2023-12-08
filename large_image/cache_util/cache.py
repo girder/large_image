@@ -106,7 +106,7 @@ def methodcache(key=None):  # noqa
                 pass  # value too large
             except (KeyError, RuntimeError):
                 # the key was refused for some reason
-                config.getConfig('logger').debug(
+                config.getLogger().debug(
                     'Had a cache KeyError while trying to store a value to key %r' % (k))
             return v
         return wrapper
@@ -154,7 +154,7 @@ class LruCacheMetaclass(type):
                 inProcess=True,
             )
             LruCacheMetaclass.namedCaches[cacheName] = (cache, cacheLock)
-            config.getConfig('logger').debug(
+            config.getLogger().debug(
                 'Created LRU Cache for %r with %d maximum size' % (cacheName, cache.maxsize))
         else:
             (cache, cacheLock) = LruCacheMetaclass.namedCaches[cacheName]

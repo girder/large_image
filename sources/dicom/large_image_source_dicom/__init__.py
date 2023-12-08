@@ -7,7 +7,6 @@ from importlib.metadata import version as _importlib_version
 
 import numpy as np
 
-from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
@@ -119,8 +118,6 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param path: a filesystem path for the tile source.
         """
         super().__init__(path, **kwargs)
-
-        self.logger = config.getConfig('logger')
 
         # We want to make a list of paths of files in this item, if multiple,
         # or adjacent items in the folder if the item is a single file.  We
