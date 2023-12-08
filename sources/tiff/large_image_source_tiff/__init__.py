@@ -28,7 +28,6 @@ import numpy as np
 import PIL.Image
 import tifftools
 
-from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
@@ -89,7 +88,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._initWithTiffTools()
             return
         except Exception as exc:
-            config.getConfig('logger').debug('Cannot read with tifftools route; %r', exc)
+            self.logger.debug('Cannot read with tifftools route; %r', exc)
 
         alldir = []
         try:
@@ -109,7 +108,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = "File %s didn't meet requirements for tile source: %s" % (
                 self._largeImagePath, lastException)
-            config.getConfig('logger').debug(msg)
+            self.logger.debug(msg)
             raise TileSourceError(msg)
         # Sort the known directories by image area (width * height).  Given
         # equal area, sort by the level.
@@ -393,7 +392,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._skippedLevels = maxMissing
         if maxMissing >= self._maxSkippedLevels:
             if warn:
-                config.getConfig('logger').warning(
+                self.logger.warning(
                     'Tiff image is missing many lower resolution levels (%d).  '
                     'It will be inefficient to read lower resolution tiles.', maxMissing)
             self._inefficientWarning = True
@@ -501,7 +500,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             # If we fail for other reasons, don't raise an exception, but log
             # what happened.
-            config.getConfig('logger').exception(
+            self.logger.exception(
                 'Could not use non-tiled TIFF image as an associated image.')
 
     def _parseImageXml(self, xml, topImage):

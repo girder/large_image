@@ -55,9 +55,9 @@ def loadTileSources(entryPointName='large_image.source', sourceDict=AvailableTil
             sourceClass = entryPoint.load()
             if sourceClass.name and None in sourceClass.extensions:
                 sourceDict[entryPoint.name] = sourceClass
-                config.getConfig('logprint').debug('Loaded tile source %s' % entryPoint.name)
+                config.getLogger('logprint').debug('Loaded tile source %s' % entryPoint.name)
         except Exception:
-            config.getConfig('logprint').exception(
+            config.getLogger('logprint').exception(
                 'Failed to loaded tile source %s' % entryPoint.name)
 
 

@@ -74,3 +74,5 @@ docs/source/*
 *.ipynb
 !docs/*.ipynb
 NOTES.md
+
+monkeytype.sqlite3

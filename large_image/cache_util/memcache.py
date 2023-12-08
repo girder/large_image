@@ -82,12 +82,12 @@ class MemCache(BaseCache):
         except KeyError:
             return self.__missing__(key)
         except pylibmc.ServerDown:
-            self.logError(pylibmc.ServerDown, config.getConfig('logprint').info,
+            self.logError(pylibmc.ServerDown, config.getLogger('logprint').info,
                           'Memcached ServerDown')
             self._reconnect()
             return self.__missing__(key)
         except pylibmc.Error:
-            self.logError(pylibmc.Error, config.getConfig('logprint').exception,
+            self.logError(pylibmc.Error, config.getLogger('logprint').exception,
                           'pylibmc exception')
             return self.__missing__(key)
 
@@ -103,11 +103,11 @@ class MemCache(BaseCache):
             if len(valueRepr) > 500:
                 valueRepr = valueRepr[:500] + '...'
             self.logError(
-                exc.__class__, config.getConfig('logprint').error,
+                exc.__class__, config.getLogger('logprint').error,
                 '%s: Failed to save value (size %r) with key %s' % (
                     exc.__class__.__name__, valueSize, hashedKey))
         except pylibmc.ServerDown:
-            self.logError(pylibmc.ServerDown, config.getConfig('logprint').info,
+            self.logError(pylibmc.ServerDown, config.getLogger('logprint').info,
                           'Memcached ServerDown')
             self._reconnect()
         except pylibmc.TooBig:
@@ -116,7 +116,7 @@ class MemCache(BaseCache):
             # memcached won't cache items larger than 1 Mb (or a configured
             # size), but this returns a 'SUCCESS' error.  Raise other errors.
             if 'SUCCESS' not in repr(exc.args):
-                self.logError(pylibmc.Error, config.getConfig('logprint').exception,
+                self.logError(pylibmc.Error, config.getLogger('logprint').exception,
                               'pylibmc exception')
 
     @property
@@ -135,7 +135,7 @@ class MemCache(BaseCache):
         try:
             self._lastReconnectBackoff = getattr(self, '_lastReconnectBackoff', 2)
             if time.time() - getattr(self, '_lastReconnect', 0) > self._lastReconnectBackoff:
-                config.getConfig('logprint').info('Trying to reconnect to memcached server')
+                config.getLogger('logprint').info('Trying to reconnect to memcached server')
                 self._client = pylibmc.Client(self._clientParams[0], **self._clientParams[1])
                 self._lastReconnectBackoff = min(self._lastReconnectBackoff + 1, 30)
                 self._lastReconnect = time.time()
@@ -178,6 +178,6 @@ class MemCache(BaseCache):
             cache = MemCache(url, memcachedUsername, memcachedPassword,
                              mustBeAvailable=True)
         except Exception:
-            config.getConfig('logger').info('Cannot use memcached for caching.')
+            config.getLogger().info('Cannot use memcached for caching.')
             cache = None
         return cache, cacheLock
