@@ -26,10 +26,12 @@ import atexit
 import logging
 import math
 import os
+import pathlib
 import re
 import threading
 import types
 import weakref
+import zipfile
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
@@ -53,6 +55,7 @@ bioformats = None
 javabridge = None
 
 _javabridgeStarted = None
+_bioformatsVersion = None
 _openImages = []
 
 
@@ -110,7 +113,7 @@ def _reduceLogging():
 
 
 def _startJavabridge(logger):
-    global _javabridgeStarted
+    global _javabridgeStarted, _bioformatsVersion
 
     if _javabridgeStarted is None:
         # Only import these when first asked.  They are slow to import.
@@ -118,6 +121,15 @@ def _startJavabridge(logger):
         global javabridge
         if bioformats is None:
             import bioformats
+            try:
+                _bioformatsVersion = zipfile.ZipFile(
+                    pathlib.Path(bioformats.__file__).parent /
+                    'jars/bioformats_package.jar',
+                ).open('META-INF/MANIFEST.MF').read(8192).split(
+                    b'Implementation-Version: ')[1].split()[0].decode()
+                logger.info('Bioformats.jar version: %s', _bioformatsVersion)
+            except Exception:
+                pass
         if javabridge is None:
             import javabridge
 
