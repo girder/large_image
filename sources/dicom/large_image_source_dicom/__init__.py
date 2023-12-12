@@ -121,7 +121,6 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
-        self.logger = config.getConfig('logger')
         self._dicomWebClient = None
 
         # We want to make a list of paths of files in this item, if multiple,
