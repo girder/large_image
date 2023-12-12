@@ -75,9 +75,9 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
         }
 
     def _getDicomMetadata(self):
-        if 'dicomweb_meta' not in self.item:
-            # Cache this in the database
-            self.item['dicomweb_meta'] = super()._getDicomMetadata()
-            Item().save(self.item)
+        if self._isDicomWeb:
+            # This should have already been saved in the item
+            return self.item['dicomweb_meta']
 
-        return self.item['dicomweb_meta']
+        # Return the parent result. This is a cached method.
+        return super()._getDicomMetadata()
