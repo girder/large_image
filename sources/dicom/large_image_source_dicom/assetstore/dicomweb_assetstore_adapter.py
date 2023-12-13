@@ -192,7 +192,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
             # Set the DICOMweb metadata
             item['dicomweb_meta'] = get_dicomweb_metadata(client, study_uid, series_uid)
-            Item().save(item)
+            item = Item().save(item)
 
             # Create a placeholder file with the same name
             file = File().createFile(
