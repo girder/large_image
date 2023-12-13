@@ -125,7 +125,7 @@ export default {
                 name: this.newPresetName || this.generatedPresetName,
                 mode: this.currentMode,
                 frame: this.currentFrame,
-                style: this.currentStyle
+                style: {bands: this.currentStyle.bands.map((b) => this.styleToAutoRange(b))}
             };
             newPreset.name = newPreset.name.trim();
             if (!overwrite && this.availablePresets.find((p) => p.name === newPreset.name)) {
@@ -152,6 +152,15 @@ export default {
                 data: JSON.stringify(this.itemPresets),
                 contentType: 'application/json'
             });
+        },
+        styleToAutoRange(band) {
+            band = Object.assign({}, band); // new reference
+            if (band.min && band.min.includes('min:')) {
+                band.autoRange = parseFloat(band.min.replace('min:', '')) * 100;
+                delete band.min;
+                delete band.max;
+            }
+            return band;
         },
         styleFromAutoRange(band) {
             band = Object.assign({}, band); // new reference
