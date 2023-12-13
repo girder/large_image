@@ -9,6 +9,7 @@
 - Support negative x, y in addTile ([#1401](../../pull/1401))
 - Add a utility function for getting loggers ([#1403](../../pull/1403))
 - Get bioformats jar version if bioformats was started ([#1405](../../pull/1405))
+- Improve thread safety of concurrent first reads using bioformats ([#1406](../../pull/1406))
 
 ### Changes
 - Use an enum for priority constants ([#1400](../../pull/1400))
@@ -16,6 +17,7 @@
 ### Bug Fixes
 - Fix an issue emitting geojson annotations ([#1395](../../pull/1395))
 - Fix an issue when tifffile reports no key frame ([#1396](../../pull/1396))
+- Frame Selector: Auto-Range format for saving presets ([#1404](../../pull/1404))
 
 ## 1.26.2
 

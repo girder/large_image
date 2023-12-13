@@ -55,6 +55,7 @@ bioformats = None
 javabridge = None
 
 _javabridgeStarted = None
+_javabridgeStartLock = threading.Lock()
 _bioformatsVersion = None
 _openImages = []
 
@@ -90,7 +91,7 @@ def _monitor_thread():
 
 
 def _reduceLogging():
-    # As of bioformat 4.0.0, org.apache.log4j isn't in the bundled
+    # As of python-bioformats 4.0.0, org.apache.log4j isn't in the bundled
     # jar file, so setting log levels just produces needless warnings.
     # bioformats.log4j.basic_config()
     # javabridge.JClassWrapper('loci.common.Log4jTools').setRootLevel(
@@ -115,37 +116,38 @@ def _reduceLogging():
 def _startJavabridge(logger):
     global _javabridgeStarted, _bioformatsVersion
 
-    if _javabridgeStarted is None:
-        # Only import these when first asked.  They are slow to import.
-        global bioformats
-        global javabridge
-        if bioformats is None:
-            import bioformats
-            try:
-                _bioformatsVersion = zipfile.ZipFile(
-                    pathlib.Path(bioformats.__file__).parent /
-                    'jars/bioformats_package.jar',
-                ).open('META-INF/MANIFEST.MF').read(8192).split(
-                    b'Implementation-Version: ')[1].split()[0].decode()
-                logger.info('Bioformats.jar version: %s', _bioformatsVersion)
-            except Exception:
-                pass
-        if javabridge is None:
-            import javabridge
+    with _javabridgeStartLock:
+        if _javabridgeStarted is None:
+            # Only import these when first asked.  They are slow to import.
+            global bioformats
+            global javabridge
+            if bioformats is None:
+                import bioformats
+                try:
+                    _bioformatsVersion = zipfile.ZipFile(
+                        pathlib.Path(bioformats.__file__).parent /
+                        'jars/bioformats_package.jar',
+                    ).open('META-INF/MANIFEST.MF').read(8192).split(
+                        b'Implementation-Version: ')[1].split()[0].decode()
+                    logger.info('Bioformats.jar version: %s', _bioformatsVersion)
+                except Exception:
+                    pass
+            if javabridge is None:
+                import javabridge
 
-        # We need something to wake up at exit and shut things down
-        monitor = threading.Thread(target=_monitor_thread)
-        monitor.daemon = True
-        monitor.start()
-        try:
-            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
-            _reduceLogging()
-            atexit.register(_stopJavabridge)
-            logger.info('Started JVM for Bioformats tile source.')
-            _javabridgeStarted = True
-        except RuntimeError:
-            logger.exception('Cannot start JVM for Bioformats tile source.')
-            _javabridgeStarted = False
+            # We need something to wake up at exit and shut things down
+            monitor = threading.Thread(target=_monitor_thread)
+            monitor.daemon = True
+            monitor.start()
+            try:
+                javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+                _reduceLogging()
+                atexit.register(_stopJavabridge)
+                logger.info('Started JVM for Bioformats tile source.')
+                _javabridgeStarted = True
+            except RuntimeError:
+                logger.exception('Cannot start JVM for Bioformats tile source.')
+                _javabridgeStarted = False
     return _javabridgeStarted
 
 
@@ -155,6 +157,21 @@ def _stopJavabridge(*args, **kwargs):
     if javabridge is not None:
         javabridge.kill_vm()
     _javabridgeStarted = None
+
+
+def _getBioformatsVersion():
+    """
+    Get the version of the jar file.
+
+    :returns: the version string if it is in the expected format, None
+        otherwise.
+    """
+    if _bioformatsVersion is None:
+        from large_image import config
+
+        logger = config.getLogger()
+        _startJavabridge(logger)
+    return _bioformatsVersion
 
 
 class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):

@@ -30,5 +30,4 @@ def testInternalMetadata():
 def testBioformatsJarVersion():
     import large_image_source_bioformats
 
-    datastore.fetch('HENormalN801.czi')
-    assert '.' in large_image_source_bioformats._bioformatsVersion
+    assert '.' in large_image_source_bioformats._getBioformatsVersion()
