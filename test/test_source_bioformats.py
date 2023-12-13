@@ -25,3 +25,10 @@ def testInternalMetadata():
     source = large_image_source_bioformats.open(imagePath)
     metadata = source.getInternalMetadata()
     assert 'sizeColorPlanes' in metadata
+
+
+def testBioformatsJarVersion():
+    import large_image_source_bioformats
+
+    datastore.fetch('HENormalN801.czi')
+    assert '.' in large_image_source_bioformats._bioformatsVersion
