@@ -73,3 +73,11 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
             'wado_prefix': meta.get('wado_prefix'),
             'session': adapter.auth_session,
         }
+
+    def _getDicomMetadata(self):
+        if self._isDicomWeb:
+            # This should have already been saved in the item
+            return self.item['dicomweb_meta']
+
+        # Return the parent result. This is a cached method.
+        return super()._getDicomMetadata()

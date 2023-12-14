@@ -1,4 +1,6 @@
 import requests
+from large_image_source_dicom.dicom_tags import dicom_key_to_tag
+from large_image_source_dicom.dicomweb_utils import get_dicomweb_metadata
 from requests.exceptions import HTTPError
 
 from girder.exceptions import ValidationException
@@ -6,8 +8,6 @@ from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.utility.abstract_assetstore_adapter import AbstractAssetstoreAdapter
-
-from ..dicom_tags import dicom_key_to_tag
 
 DICOMWEB_META_KEY = 'dicomweb_meta'
 
@@ -189,6 +189,10 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                                            reuseExisting=True)
             item = Item().createItem(name=series_uid, creator=user, folder=folder,
                                      reuseExisting=True)
+
+            # Set the DICOMweb metadata
+            item['dicomweb_meta'] = get_dicomweb_metadata(client, study_uid, series_uid)
+            item = Item().save(item)
 
             # Create a placeholder file with the same name
             file = File().createFile(
