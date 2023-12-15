@@ -15,8 +15,6 @@ from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import _imageToNumpy, _imageToPIL
 
-from .dicom_tags import dicom_key_to_tag
-
 dicomweb_client = None
 pydicom = None
 wsidicom = None
@@ -191,62 +189,11 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         wsidicom_client = wsidicom.WsiDicomWebClient(client)
 
-        # Identify the transfer syntax
-        transfer_syntax = self._identify_dicomweb_transfer_syntax(client,
-                                                                  study_uid,
-                                                                  series_uid)
-
         # Save this for future use
         self._dicomWebClient = client
 
         # Open the WSI DICOMweb file
-        return wsidicom.WsiDicom.open_web(wsidicom_client, study_uid, series_uid,
-                                          requested_transfer_syntax=transfer_syntax)
-
-    def _identify_dicomweb_transfer_syntax(self, client, study_uid, series_uid):
-        # "client" is a dicomweb_client.DICOMwebClient
-
-        # This is how we select the JPEG type to return
-        # The available transfer syntaxes used by wsidicom may be found here:
-        # https://github.com/imi-bigpicture/wsidicom/blob/a2716cd6a443f4102e66e35bbce32b0e2ae72dab/wsidicom/web/wsidicom_web_client.py#L97-L109
-        # (we may need to update this if they add more options)
-        # FIXME: maybe this function better belongs upstream in `wsidicom`?
-        from pydicom.uid import JPEG2000, JPEG2000Lossless, JPEGBaseline8Bit, JPEGExtended12Bit
-
-        # Prefer the transfer syntaxes in this order.
-        transfer_syntax_preferred_order = [
-            JPEGBaseline8Bit,
-            JPEGExtended12Bit,
-            JPEG2000,
-            JPEG2000Lossless,
-        ]
-        available_transfer_syntax_tag = dicom_key_to_tag('AvailableTransferSyntaxUID')
-
-        # Access the dicom web client, and search for one instance for the given
-        # study and series. Check the available transfer syntaxes.
-        result, = client.search_for_instances(
-            study_uid, series_uid,
-            fields=[available_transfer_syntax_tag], limit=1)
-
-        if available_transfer_syntax_tag in result:
-            available_transfer_syntaxes = result[available_transfer_syntax_tag]['Value']
-            for syntax in transfer_syntax_preferred_order:
-                if syntax in available_transfer_syntaxes:
-                    return syntax
-        else:
-            # The server is not telling us which transfer syntaxes are available.
-            # Print a warning, default to JPEG2000, and hope for the best.
-            self.logger.warning(
-                'DICOMweb server is not communicating the available '
-                'transfer syntaxes. Assuming JPEG2000...',
-            )
-            return JPEG2000
-
-        msg = (
-            'Could not find an appropriate transfer syntax. '
-            f'Available transfer syntaxes are: {available_transfer_syntaxes}'
-        )
-        raise TileSourceError(msg)
+        return wsidicom.WsiDicom.open_web(wsidicom_client, study_uid, series_uid)
 
     def __del__(self):
         # If we have an _unstyledInstance attribute, this is not the owner of
