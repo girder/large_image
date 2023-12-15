@@ -189,7 +189,6 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         wsidicom_client = wsidicom.WsiDicomWebClient(client)
 
-
         # Save this for future use
         self._dicomWebClient = client
 
