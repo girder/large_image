@@ -13,6 +13,7 @@
 - Read more metadata from DICOMweb ([#1378](../../pull/1378))
 - Remove logic for determining DICOMweb transfer syntax ([#1393](../../pull/1393))
 - Speed up tile output ([#1407](../../pull/1407))
+- Speed up import time ([#1408](../../pull/1408))
 
 ### Changes
 - Use an enum for priority constants ([#1400](../../pull/1400))

@@ -14,6 +14,7 @@ Please note that this webserver will not work with Classic Notebook and will
 likely lead to crashes. This is only for use in JupyterLab.
 
 """
+import importlib.util
 import json
 import os
 import weakref
@@ -21,10 +22,7 @@ import weakref
 from large_image.exceptions import TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
 
-try:
-    import ipyleaflet
-except ImportError:  # pragma: no cover
-    ipyleaflet = None
+ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
 
 
 def launch_tile_server(tile_source, port=0):
@@ -146,7 +144,7 @@ class Map:
             self._layer = self.make_layer(metadata, url)
             self._map = self.make_map(metadata)
 
-    if ipyleaflet:
+    if ipyleafletPresent:
         def _ipython_display_(self):
             from IPython.display import display
 
@@ -382,7 +380,7 @@ class IPyLeafletMixin:
     def __init__(self, *args, **kwargs):
         self._jupyter_server_manager = None
         self._map = Map()
-        if ipyleaflet:
+        if ipyleafletPresent:
             self.to_map = self._map.to_map
             self.from_map = self._map.from_map
 
@@ -411,7 +409,7 @@ class IPyLeafletMixin:
         return self._map.make_layer(self.metadata, f'{base_url}/{endpoint}')
 
     # Only make _ipython_display_ available if ipyleaflet is installed
-    if ipyleaflet:
+    if ipyleafletPresent:
 
         def _ipython_display_(self):
             from IPython.display import display
