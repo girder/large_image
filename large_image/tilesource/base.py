@@ -285,7 +285,7 @@ class TileSource(IPyLeafletMixin):
     @property
     def bandCount(self):
         if not self._bandCount:
-            if not self._dtype or str(self._dtype) == 'check':
+            if not self._dtype or (isinstance(self._dtype, str) and self._dtype == 'check'):
                 return None
         return self._bandCount
 
@@ -1134,20 +1134,6 @@ class TileSource(IPyLeafletMixin):
                     entry['hist'] = entry['hist'].astype(float) / entry['samples']
         return results
 
-    def _unstyledClassKey(self):
-        """
-        Create a class key that doesn't use style.  If already created, just
-        return the created value.
-        """
-        if not hasattr(self, '_classkey_unstyled'):
-            key = self._classkey
-            if '__STYLEEND__' in key:
-                parts = key.split('__STYLEEND__', 1)
-                key = key.split('__STYLESTART__', 1)[0] + parts[1]
-            key += '__unstyled'
-            self._classkey_unstyled = key
-        return self._classkey_unstyled
-
     def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, onlyMinMax=True, **kwargs):
         """
         Scan the image at a lower resolution to find the minimum and maximum
@@ -1597,7 +1583,10 @@ class TileSource(IPyLeafletMixin):
         :returns: a numpy array and a target PIL image mode.
         """
         tile, mode = _imageToNumpy(tile)
-        if applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')):
+        # if applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')):
+        if (applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
+                (not getattr(self, 'style', None) or len(self.style) != 1 or
+                 self.style.get('icc') is not False)):
             tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = np.zeros(
@@ -1641,7 +1630,7 @@ class TileSource(IPyLeafletMixin):
                 not isEdge and (not applyStyle or not hasStyle)):
             return tile
 
-        if self._dtype is None or str(self._dtype) == 'check':
+        if self._dtype is None or (isinstance(self._dtype, str) and self._dtype == 'check'):
             if tileEncoding == TILE_FORMAT_NUMPY:
                 self._dtype = tile.dtype
                 self._bandCount = tile.shape[-1] if len(tile.shape) == 3 else 1
