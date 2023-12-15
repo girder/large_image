@@ -10,6 +10,9 @@
 - Add a utility function for getting loggers ([#1403](../../pull/1403))
 - Get bioformats jar version if bioformats was started ([#1405](../../pull/1405))
 - Improve thread safety of concurrent first reads using bioformats ([#1406](../../pull/1406))
+- Read more metadata from DICOMweb ([#1378](../../pull/1378))
+- Remove logic for determining DICOMweb transfer syntax ([#1393](../../pull/1393))
+- Speed up tile output ([#1407](../../pull/1407))
 
 ### Changes
 - Use an enum for priority constants ([#1400](../../pull/1400))

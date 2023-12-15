@@ -78,7 +78,7 @@ def extract_specimen_metadata(dataset):
         for prep in getattr(specimen, 'SpecimenPreparationSequence', []):
             steps = {}
             for step in getattr(prep, 'SpecimenPreparationStepContentItemSequence', []):
-                # Only extract entires that have both a name and a value
+                # Only extract entries that have both a name and a value
                 if (len(getattr(step, 'ConceptCodeSequence', [])) > 0 and
                         len(getattr(step, 'ConceptNameCodeSequence', [])) > 0):
                     name = step.ConceptNameCodeSequence[0].CodeMeaning
