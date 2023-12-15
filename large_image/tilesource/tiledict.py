@@ -173,10 +173,11 @@ class LazyTileDict(dict):
             else:
                 tileData = self._retileTile()
 
-            pilData = _imageToPIL(tileData)
-
+            pilData = None
             # resample if needed
             if self.resample not in (False, None) and self.requestedScale:
+                pilData = _imageToPIL(tileData)
+
                 self['width'] = max(1, int(
                     pilData.size[0] / self.requestedScale))
                 self['height'] = max(1, int(
@@ -206,7 +207,7 @@ class LazyTileDict(dict):
                     tileData, _ = _imageToNumpy(tileData)
                     tileFormat = TILE_FORMAT_NUMPY
                 elif TILE_FORMAT_PIL in self.format:
-                    tileData = pilData
+                    tileData = pilData if pilData is not None else _imageToPIL(tileData)
                     tileFormat = TILE_FORMAT_PIL
                 elif TILE_FORMAT_IMAGE in self.format:
                     tileData, mimeType = _encodeImage(
@@ -217,7 +218,7 @@ class LazyTileDict(dict):
                         'Cannot yield tiles in desired format %r' % (
                             self.format, ))
             else:
-                tileData = pilData
+                tileData = pilData if pilData is not None else _imageToPIL(tileData)
                 tileFormat = TILE_FORMAT_PIL
 
             self['tile'] = tileData

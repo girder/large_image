@@ -32,6 +32,7 @@ colormap = {
     'GREEN': '#00ff00',
     'BLUE': '#0000ff',
 }
+modesBySize = ['L', 'LA', 'RGB', 'RGBA']
 
 
 class ImageBytes(bytes):
@@ -187,7 +188,7 @@ def _imageToPIL(image, setMode=None):
             # Fallback for hyperspectral data to just use the first three bands
             if image.shape[2] > 4:
                 image = image[:, :, :3]
-            mode = ['L', 'LA', 'RGB', 'RGBA'][image.shape[2] - 1]
+            mode = modesBySize[image.shape[2] - 1]
         if len(image.shape) == 3 and image.shape[2] == 1:
             image = np.resize(image, image.shape[:2])
         if image.dtype == np.uint32:
@@ -220,6 +221,17 @@ def _imageToNumpy(image):
     :param image: input image.
     :returns: a numpy array and a target PIL image mode.
     """
+    if isinstance(image, np.ndarray) and len(image.shape) == 3 and 1 <= image.shape[2] <= 4:
+        return image, modesBySize[image.shape[2] - 1]
+    if (simplejpeg and isinstance(image, bytes) and image[:3] == b'\xff\xd8\xff' and
+            b'\xff\xc0' in image[:1024]):
+        idx = image.index(b'\xff\xc0')
+        if image[idx + 9:idx + 10] in {b'\x01', b'\x03'}:
+            try:
+                image = simplejpeg.decode_jpeg(
+                    image, colorspace='GRAY' if image[idx + 9:idx + 10] == b'\x01' else 'RGB')
+            except Exception:
+                pass
     if not isinstance(image, np.ndarray):
         if not isinstance(image, PIL.Image.Image):
             image = PIL.Image.open(io.BytesIO(image))
@@ -232,7 +244,8 @@ def _imageToNumpy(image):
             image = np.asarray(image)
     else:
         if len(image.shape) == 3:
-            mode = ['L', 'LA', 'RGB', 'RGBA'][(image.shape[2] - 1) if image.shape[2] <= 4 else 3]
+            mode = modesBySize[(image.shape[2] - 1) if image.shape[2] <= 4 else 3]
+            return image, mode
         else:
             mode = 'L'
     if len(image.shape) == 2:

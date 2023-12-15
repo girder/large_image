@@ -970,6 +970,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
         #   no sheer, use getRegion with an appropriate size (be wary of edges)
+        # TODO: when affine is generalized, only use this if scale is 1
         if (transform is None or
                 transform[0][0] > 0 and transform[0][1] == 0 and
                 transform[1][0] == 0 and transform[1][1] > 0):
