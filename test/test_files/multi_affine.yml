@@ -1,0 +1,72 @@
+---
+name: Multi orientation
+description: A test multi file
+scale:
+  mm_x: 0.0005
+  mm_y: 0.0005
+width: 2048
+height: 1540
+tileWidth: 256
+tileHeight: 256
+backgroundColor:
+  - 0
+  - 0
+  - 255
+sources:
+  - path: ./test_orient1.tif
+    z: 0
+  - path: ./test_orient2.tif
+    z: 1
+    position:
+      scale: 4
+  - path: ./test_orient3.tif
+    z: 2
+    position:
+      scale: 0.25
+  - path: ./test_orient4.tif
+    z: 3
+    position:
+      x: 137
+      y: 32
+      scale: 4
+  - path: ./test_orient5.tif
+    z: 4
+    position:
+      x: 524
+      y: 768
+      s11: 0.866
+      s12: 0.5
+      s21: -0.5
+      s22: 0.866
+  - path: ./test_orient6.tif
+    z: 5
+    position:
+      x: 1024
+      y: 768
+      scale: 2
+      s11: 0.866
+      s12: 0.5
+      s21: -0.5
+      s22: 0.866
+  - path: ./test_orient7.tif
+    z: 6
+    position:
+      x: 1024
+      y: 768
+      s11: 2.598
+      s12: 1.5
+      s21: -1
+      s22: 1.732
+  - path: ./test_orient8.tif
+    z: 7
+    position:
+      x: 1024
+      y: 768
+      s11: 0.866
+      s12: -0.5
+      s21: 0.5
+      s22: 0.866
+      crop:
+        left: 4
+        top: 6
+        right: 170

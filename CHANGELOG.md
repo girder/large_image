@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.27.0
+
+### Features
+- Support affine transforms in the multi-source ([#1415](../../pull/1415))
+
+### Improvements
+- Remove NaN values from band information ([#1414](../../pull/1414))
+
 ## 1.26.3
 
 ### Improvements
