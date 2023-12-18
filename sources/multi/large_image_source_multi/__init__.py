@@ -970,7 +970,6 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
         #   no sheer, use getRegion with an appropriate size (be wary of edges)
-        # TODO: when affine is generalized, only use this if scale is 1
         if (transform is None or
                 transform[0][0] > 0 and transform[0][1] == 0 and
                 transform[1][0] == 0 and transform[1][1] > 0):
@@ -1006,10 +1005,16 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             sourceTile, _ = ts.getRegion(
                 region=region, output=output, frame=sourceEntry.get('frame', 0),
                 format=TILE_FORMAT_NUMPY)
-        # Otherwise, get an area twice as big as needed and use
-        #  scipy.ndimage.affine_transform to transform it
+        # Otherwise, determine where the target tile's corners are located on
+        # the source; fetch that so that we have at least sqrt(2) more
+        # resolution, then use scikit-image warp to transform it.  scikit-image
+        # does a better job than scipy.ndimage.affine_transform.
         else:
-            # TODO
+            # try:
+            #     import skimge.transform
+            # except ImportError:
+            #     msg = 'scikit-image is required for affine transforms.'
+            #     raise TileSourceError(msg)
             msg = 'Not implemented'
             raise TileSourceError(msg)
         # Crop

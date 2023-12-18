@@ -44,8 +44,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -56,10 +54,11 @@ setup(
         'jsonschema',
         f'large-image{limit_version}',
         'pyyaml',
-        'scipy',
-        'importlib-metadata<5 ; python_version < "3.8"',
     ],
     extras_require={
+        'all': [
+            'scikit-image',
+        ],
         'girder': f'girder-large-image{limit_version}',
     },
     keywords='large_image, tile source',

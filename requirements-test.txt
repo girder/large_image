@@ -6,7 +6,7 @@ sources/deepzoom
 sources/dicom
 sources/dummy
 sources/gdal
-sources/multi
+sources/multi[all]
 sources/nd2
 sources/openjpeg
 sources/openslide

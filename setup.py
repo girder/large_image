@@ -67,6 +67,7 @@ sources = {
 extraReqs.update(sources)
 extraReqs['sources'] = list(set(itertools.chain.from_iterable(sources.values())))
 extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) | {
+    f'large-image-source-multi[all]{limit_version}',
     f'large-image-source-pil[all]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version}',
 })
