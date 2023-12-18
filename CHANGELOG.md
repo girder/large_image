@@ -14,6 +14,7 @@
 - Remove logic for determining DICOMweb transfer syntax ([#1393](../../pull/1393))
 - Speed up tile output ([#1407](../../pull/1407))
 - Speed up import time ([#1408](../../pull/1408))
+- Speed up some tile iteration by reducing the chance of multiple image decodes ([#1410](../../pull/1410))
 
 ### Changes
 - Use an enum for priority constants ([#1400](../../pull/1400))

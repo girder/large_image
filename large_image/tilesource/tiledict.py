@@ -165,7 +165,8 @@ class LazyTileDict(dict):
             if not self.retile:
                 tileData = self.source.getTile(
                     self.x, self.y, self.level,
-                    pilImageAllowed=True, numpyAllowed=True,
+                    pilImageAllowed=True,
+                    numpyAllowed='always' if TILE_FORMAT_NUMPY in self.format else True,
                     sparseFallback=True, frame=self.frame)
                 if self.crop:
                     tileData, _ = _imageToNumpy(tileData)
@@ -217,6 +218,10 @@ class LazyTileDict(dict):
                     raise exceptions.TileSourceError(
                         'Cannot yield tiles in desired format %r' % (
                             self.format, ))
+            elif (TILE_FORMAT_PIL not in self.format and TILE_FORMAT_NUMPY in self.format and
+                    not isinstance(tileData, PIL.Image.Image)):
+                tileData, _ = _imageToNumpy(tileData)
+                tileFormat = TILE_FORMAT_NUMPY
             else:
                 tileData = pilData if pilData is not None else _imageToPIL(tileData)
                 tileFormat = TILE_FORMAT_PIL

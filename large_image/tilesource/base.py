@@ -2186,8 +2186,12 @@ class TileSource(IPyLeafletMixin):
                 y0 = 0
             subimage = subimage[:min(subimage.shape[0], regionHeight - y0),
                                 :min(subimage.shape[1], regionWidth - x0)]
-            image = self._addRegionTileToImage(
-                image, subimage, x0, y0, regionWidth, regionHeight, tiled, tile, **kwargs)
+            if tiled:
+                image = self._addRegionTileToTiled(
+                    image, subimage, x0, y0, regionWidth, regionHeight, tile, **kwargs)
+            else:
+                image = self._addRegionTileToImage(
+                    image, subimage, x0, y0, regionWidth, regionHeight, **kwargs)
         # Scale if we need to
         outWidth = int(math.floor(outWidth))
         outHeight = int(math.floor(outHeight))
@@ -2209,7 +2213,7 @@ class TileSource(IPyLeafletMixin):
         return _encodeImage(image, format=format, **kwargs)
 
     def _addRegionTileToImage(
-            self, image, subimage, x, y, width, height, tiled=False, tile=None, **kwargs):
+            self, image, subimage, x, y, width, height, tile=None, **kwargs):
         """
         Add a subtile to a larger image.
 
@@ -2221,12 +2225,8 @@ class TileSource(IPyLeafletMixin):
             the output image.
         :param width: the output image size.
         :param height: the output image size.
-        :param tiled: true to generate a tiled output image.
-        :param tile: the original tile record with the current scale, etc.
         :returns: the output image record.
         """
-        if tiled:
-            return self._addRegionTileToTiled(image, subimage, x, y, width, height, tile, **kwargs)
         if image is None:
             if (x, y, width, height) == (0, 0, subimage.shape[1], subimage.shape[0]):
                 return subimage
@@ -2473,9 +2473,12 @@ class TileSource(IPyLeafletMixin):
                 self.logger.debug(
                     'Tiling frame %d (%d/%d), offset %dx%d',
                     frame, idx, len(frameList), offsetX, offsetY)
-            image = self._addRegionTileToImage(
-                image, subimage, offsetX, offsetY, outWidth, outHeight, tiled,
-                tile=tile, **kwargs)
+            if tiled:
+                image = self._addRegionTileToTiled(
+                    image, subimage, offsetX, offsetY, outWidth, outHeight, tile, **kwargs)
+            else:
+                image = self._addRegionTileToImage(
+                    image, subimage, offsetX, offsetY, outWidth, outHeight, **kwargs)
         if tiled:
             return self._encodeTiledImage(image, outWidth, outHeight, iterInfo, **kwargs)
         return _encodeImage(image, format=format, **kwargs)
