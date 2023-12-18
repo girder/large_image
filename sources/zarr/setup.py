@@ -44,7 +44,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -53,9 +52,7 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'zarr ; python_version >= "3.8"',
-        'zarr<2.11 ; python_version < "3.8"',
-        'importlib-metadata<5 ; python_version < "3.8"',
+        'zarr',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
