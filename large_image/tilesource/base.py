@@ -1583,7 +1583,6 @@ class TileSource(IPyLeafletMixin):
         :returns: a numpy array and a target PIL image mode.
         """
         tile, mode = _imageToNumpy(tile)
-        # if applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')):
         if (applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
                 (not getattr(self, 'style', None) or len(self.style) != 1 or
                  self.style.get('icc') is not False)):

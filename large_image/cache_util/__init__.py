@@ -30,7 +30,7 @@ _cacheClearFuncs = []
 
 
 @atexit.register
-def cachesClear(*args, **kwargs):
+def cachesClearExceptTile(*args, **kwargs):
     """
     Clear the tilesource caches and the load model cache.  Note that this does
     not clear memcached (which could be done with tileCache._client.flush_all,
@@ -39,6 +39,15 @@ def cachesClear(*args, **kwargs):
     for name in LruCacheMetaclass.namedCaches:
         with LruCacheMetaclass.namedCaches[name][1]:
             LruCacheMetaclass.namedCaches[name][0].clear()
+    for func in _cacheClearFuncs:
+        func()
+
+
+def cachesClear(*args, **kwargs):
+    """
+    Clear the tilesource caches, the load model cache, and the tile cache.
+    """
+    cachesClearExceptTile()
     if isTileCacheSetup():
         tileCache, tileLock = getTileCache()
         try:
@@ -46,8 +55,6 @@ def cachesClear(*args, **kwargs):
                 tileCache.clear()
         except Exception:
             pass
-    for func in _cacheClearFuncs:
-        func()
 
 
 def cachesInfo(*args, **kwargs):

@@ -18,6 +18,7 @@
 
 ### Changes
 - Use an enum for priority constants ([#1400](../../pull/1400))
+- Don't automatically flush memcached tile cache on exit ([#1409](../../pull/1409))
 
 ### Bug Fixes
 - Fix an issue emitting geojson annotations ([#1395](../../pull/1395))
