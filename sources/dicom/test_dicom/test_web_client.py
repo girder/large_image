@@ -9,6 +9,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.skip(reason='the remote server we test with is down as of 2023-12-17')
 @pytest.mark.girder()
 @pytest.mark.girder_client()
 @pytest.mark.plugin('large_image')

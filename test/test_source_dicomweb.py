@@ -10,6 +10,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.skip(reason='the remote server we test with is down as of 2023-12-17')
 @pytest.mark.plugin('large_image_source_dicom')
 def testTilesFromDICOMweb():
     import large_image_source_dicom
