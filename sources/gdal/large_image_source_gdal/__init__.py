@@ -592,17 +592,6 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
             })
-        if hasattr(self, '_netcdf'):
-            # To ensure all band information from all subdatasets in netcdf,
-            # we could do the following:
-            # for key in self._netcdf['datasets']:
-            #     dataset = self._netcdf['datasets'][key]
-            #     if 'bands' not in dataset:
-            #         gdaldataset = gdal.Open(dataset['name'], gdalconst.GA_ReadOnly)
-            #         dataset['bands'] = self.getBandInformation(gdaldataset)
-            #         dataset['sizeX'] = gdaldataset.RasterXSize
-            #         dataset['sizeY'] = gdaldataset.RasterYSize
-            metadata['netcdf'] = self._netcdf
         return metadata
 
     def getInternalMetadata(self, **kwargs):
@@ -634,6 +623,17 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 metadatalist = self.dataset.GetMetadata_List(key)
                 if metadatalist:
                     result['Metadata_' + key] = metadatalist
+        if hasattr(self, '_netcdf'):
+            # To ensure all band information from all subdatasets in netcdf,
+            # we could do the following:
+            # for key in self._netcdf['datasets']:
+            #     dataset = self._netcdf['datasets'][key]
+            #     if 'bands' not in dataset:
+            #         gdaldataset = gdal.Open(dataset['name'], gdalconst.GA_ReadOnly)
+            #         dataset['bands'] = self.getBandInformation(gdaldataset)
+            #         dataset['sizeX'] = gdaldataset.RasterXSize
+            #         dataset['sizeY'] = gdaldataset.RasterYSize
+            result['netcdf'] = self._netcdf
         return result
 
     def _bandNumber(self, band, exc=True):  # TODO: use super method?
