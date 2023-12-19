@@ -104,19 +104,39 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
     def downloadFile(self, file, offset=0, headers=True, endByte=None,
                      contentDisposition=None, extraParameters=None, **kwargs):
-        # FIXME: do we want to support downloading files? We probably
-        # wouldn't download them the regular way, but we could instead
-        # use a dicomweb-client like so:
-        # instance = client.retrieve_instance(
-        #     study_instance_uid=...,
-        #     series_instance_uid=...,
-        #     sop_instance_uid=...,
-        # )
-        # pydicom.filewriter.write_file('output_name.dcm', instance)
-        msg = 'Download support not yet implemented for DICOMweb files.'
-        raise NotImplementedError(
-            msg,
-        )
+
+        dicomweb_meta = file['dicomweb_meta']
+        study_uid = dicomweb_meta['study_uid']
+        series_uid = dicomweb_meta['series_uid']
+        instance_uid = dicomweb_meta['instance_uid']
+
+        client = _create_dicomweb_client(self.assetstore_meta)
+
+        def stream():
+            from dicomweb_client.web import _Transaction
+
+            url = client._get_instances_url(
+                _Transaction.RETRIEVE,
+                study_uid,
+                series_uid,
+                instance_uid
+            )
+
+            transfer_syntax = '*'
+            accept_parts = [
+                'multipart/related',
+                'type="application/dicom"',
+                f'transfer-syntax={transfer_syntax}',
+            ]
+            headers = {
+                'Accept': '; '.join(accept_parts),
+            }
+
+            response = client._http_get(url, headers=headers)
+            for part in client._decode_multipart_message(response, False):
+                yield part
+
+        return stream
 
     def importData(self, parent, parentType, params, progress, user, **kwargs):
         """
@@ -155,6 +175,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
         study_uid_key = dicom_key_to_tag('StudyInstanceUID')
         series_uid_key = dicom_key_to_tag('SeriesInstanceUID')
+        instance_uid_key = dicom_key_to_tag('SOPInstanceUID')
 
         # We are only searching for WSI datasets. Ignore all others.
         # FIXME: is this actually working? For the SLIM server at
@@ -194,23 +215,27 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             item['dicomweb_meta'] = get_dicomweb_metadata(client, study_uid, series_uid)
             item = Item().save(item)
 
-            # Create a placeholder file with the same name
-            file = File().createFile(
-                name=f'{series_uid}.dcm',
-                creator=user,
-                item=item,
-                reuseExisting=True,
-                assetstore=self.assetstore,
-                mimeType=None,
-                size=0,
-                saveFile=False,
-            )
-            file['dicomweb_meta'] = {
-                'study_uid': study_uid,
-                'series_uid': series_uid,
-            }
-            file['imported'] = True
-            File().save(file)
+            instance_results = client.search_for_instances(study_uid, series_uid)
+            for instance in instance_results:
+                instance_uid = instance[instance_uid_key]['Value'][0]
+
+                file = File().createFile(
+                    name=f'{instance_uid}.dcm',
+                    creator=user,
+                    item=item,
+                    reuseExisting=True,
+                    assetstore=self.assetstore,
+                    mimeType=None,
+                    size=0,
+                    saveFile=False,
+                )
+                file['dicomweb_meta'] = {
+                    'study_uid': study_uid,
+                    'series_uid': series_uid,
+                    'instance_uid': instance_uid,
+                }
+                file['imported'] = True
+                File().save(file)
 
             items.append(item)
 
