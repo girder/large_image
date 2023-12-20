@@ -561,7 +561,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     if band.GetMaskBand():
                         info['maskband'] = band.GetMaskBand().GetBand() or None
                     # Only keep values that aren't None or the empty string
-                    infoSet[i] = {
+                    infoSet[i + 1] = {
                         k: v for k, v in info.items()
                         if v not in (None, '') and not (
                             isinstance(v, float) and
