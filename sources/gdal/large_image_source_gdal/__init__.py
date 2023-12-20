@@ -562,12 +562,12 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                         info['maskband'] = band.GetMaskBand().GetBand() or None
                     # Only keep values that aren't None or the empty string
                     infoSet[i] = {
-                        k: v for k, v in info.items() 
+                        k: v for k, v in info.items()
                         if v not in (None, '') and not (
                             isinstance(v, float) and
                             math.isnan(v)
                         )
-                    }            
+                    }
             if not cache:
                 return infoSet
             self._bandInfo = infoSet

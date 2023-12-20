@@ -482,7 +482,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
                 # Only keep values that aren't None or the empty string
                 infoSet[i] = {
-                    k: v for k, v in info.items() 
+                    k: v for k, v in info.items()
                     if v not in (None, '') and not (
                         isinstance(v, float) and
                         math.isnan(v)
