@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 import pytest
 
-import large_image
+import large_image_source_zarr
 
 possible_axes = {
     'x': [1, 10],
@@ -115,7 +115,7 @@ def frame_with_zeros(data, desired_size, start_location=None):
 
 @pytest.mark.parametrize('data_range', possible_data_ranges)
 def testImageGeneration(data_range):
-    source = large_image.new()
+    source = large_image_source_zarr.new()
     tile_grid = [
         int(random.randint(*possible_axes['x'])),
         int(random.randint(*possible_axes['y'])),
@@ -161,10 +161,11 @@ def testImageGeneration(data_range):
             np.putmask(expected, framed_mask, framed_tile)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        # TODO: make destination use mdf5 extension
-        destination = pathlib.Path(tmp_dir, 'sample.tiff')
+        destination = pathlib.Path(tmp_dir, 'sample.zarr')
         source.write(destination, lossy=False)
         result, _ = source.getRegion(format='numpy')
+
+    print(result)
 
     # trim unused space from expected
     expected = expected[:max_x, :max_y]

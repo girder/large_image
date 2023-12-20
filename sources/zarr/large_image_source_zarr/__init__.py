@@ -1,6 +1,9 @@
 import math
 import os
 import threading
+import uuid
+from pathlib import Path
+
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
@@ -10,10 +13,10 @@ import zarr
 
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
+from large_image.constants import NEW_IMAGE_PATH_FLAG, TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
-from large_image.tilesource.utilities import nearPowerOfTwo
+from large_image.tilesource.utilities import _imageToNumpy, nearPowerOfTwo
 
 try:
     __version__ = _importlib_version(__name__)
@@ -52,6 +55,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
+        if str(path).startswith(NEW_IMAGE_PATH_FLAG):
+            return self._initNew(path, **kwargs)
         self._largeImagePath = str(self._getLargeImagePath())
         self._zarr = None
         if not os.path.isfile(self._largeImagePath) and '//:' not in self._largeImagePath:
@@ -80,6 +85,42 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             msg = 'File cannot be opened -- not an OME NGFF file or understandable zarr file.'
             raise TileSourceError(msg)
         self._tileLock = threading.RLock()
+
+    def _initNew(self, path, **kwargs):
+        """
+        Initialize the tile class for creating a new image.
+        """
+        self._zarr_store = zarr.SQLiteStore(path)
+        self._zarr = zarr.open(self._zarr_store, mode='w')
+        # Make unpickleable
+        self._unpickleable = True
+        self._largeImagePath = None
+        self._image = None
+        self.sizeX = self.sizeY = self.levels = 0
+        self.tileWidth = self.tileHeight = self._tileSize
+        self._frames = [0]
+        self._cacheValue = str(uuid.uuid4())
+        self._output = None
+        self._editable = True
+        self._bandRanges = None
+        self._addLock = threading.RLock()
+        self._framecount = 0
+        self._mm_x = 0
+        self._mm_y = 0
+
+    def __del__(self):
+        try:
+            self._zarr.close()
+        except:
+            pass
+
+    def _checkEditable(self):
+        """
+        Raise an exception if this is not an editable image.
+        """
+        if not self._editable:
+            msg = 'Not an editable image'
+            raise TileSourceError(msg)
 
     def _getGeneralAxes(self, arr):
         """
@@ -396,6 +437,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
+        # if self._image is None then call _validateZarr
+
         frame = self._getFrame(**kwargs)
         self._xyzInRange(x, y, z, frame, self._framecount)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
@@ -438,6 +481,96 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
+    def addTile(self, tile, x=0, y=0, mask=None, axes=None, **kwargs):
+        """
+        Add a numpy or image tile to the image, expanding the image as needed
+        to accommodate it.  Note that x and y can be negative.  If so, the
+        output image (and internal memory access of the image) will act as if
+        the 0, 0 point is the most negative position.  Cropping is applied
+        after this offset.
+
+        :param tile: a numpy array, PIL Image, or a binary string
+            with an image.  The numpy array can have 2 or 3 dimensions.
+        :param x: location in destination for upper-left corner.
+        :param y: location in destination for upper-left corner.
+        :param mask: a 2-d numpy array (or 3-d if the last dimension is 1).
+            If specified, areas where the mask is false will not be altered.
+        :param axes: a string or list of strings specifying the names of axes 
+            in the same order as the tile dimensions
+        :param kwargs: start locations for any additional axes
+        """
+
+        # default for axes='YXS' for 3d tile, 'YX' for 2d, 
+        # call lower on axis names
+
+        self._checkEditable()
+        tile, mode = _imageToNumpy(tile)
+        tile = tile.astype(float)
+        # interpretation = interpretation or mode
+
+        # set self._image = None
+        
+        # print(self._zarr_store)
+        self._zarr.array('root', tile, overwrite=True)
+        # root = self._zarr.require_dataset('root', [])
+        # root = tile
+        # print(root)
+
+        # if axes is None:
+        #    axes = {}
+        # axes['x'] = x
+        # axes['y'] = y
+
+        # find new zarr shape
+        # reverse_tile_shape = tile.shape.reverse()
+        # reverse_root_shape = self._zarr['root'].shape.reverse()
+        # new_root_shape = [
+        #     s for s in reverse_root_shape
+        # ]
+        # print(axes, tile.shape, self._zarr['root'].shape, new_root_shape)
+
+        
+
+        # TODO: with self._addLock:
+        #     self._updateBandRanges(tile)
+        if mask is not None:
+            # TODO: apply mask
+            pass
+
+    def write(
+        self,
+        path,
+        lossy=True,
+        alpha=True,
+        overwriteAllowed=True,
+        zarr_kwargs=None,
+    ):
+        """
+        Output the current image to a file.
+
+        :param path: output path.
+        :param lossy: if false, emit a lossless file.
+        :param alpha: True if an alpha channel is allowed.
+        :param overwriteAllowed: if False, raise an exception if the output
+            path exists.
+        :param zarr_kwargs: if not None, save the image using these kwargs to
+            the write_to_file function instead of the automatically chosen
+            ones.  In this case, lossy is ignored and all zarr options must be
+            manually specified.
+        """
+        if not overwriteAllowed and os.path.exists(path):
+            raise TileSourceError('Output path exists (%s)' % str(path))
+        if Path(path).suffix.lower() != '.zarr':
+            raise TileSourceError('Output path must use ".zarr" suffix.')
+        # TODO: apply cropping
+
+        if zarr_kwargs is None:
+            zarr_kwargs = dict()
+        arrays = dict(self._zarr.arrays())
+        print(arrays)
+        if not len(arrays):
+            raise TileSourceError('No data; cannot write empty zarr.')
+        zarr.save(path, **arrays)
 
 def open(*args, **kwargs):
     """
@@ -451,3 +584,11 @@ def canRead(*args, **kwargs):
     Check if an input can be read by the module class.
     """
     return ZarrFileTileSource.canRead(*args, **kwargs)
+
+
+def new(*args, **kwargs):
+    """
+    Create a new image, collecting the results from patches of numpy arrays or
+    smaller images.
+    """
+    return ZarrFileTileSource(NEW_IMAGE_PATH_FLAG + str(uuid.uuid4()), *args, **kwargs)
