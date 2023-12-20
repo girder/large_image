@@ -481,7 +481,13 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 #     info["maskband"] = dataset.mask_flag_enums[i - 1][1].value
 
                 # Only keep values that aren't None or the empty string
-                infoSet[i] = {k: v for k, v in info.items() if v not in (None, '')}
+                infoSet[i] = {
+                    k: v for k, v in info.items()
+                    if v not in (None, '') and not (
+                        isinstance(v, float) and
+                        math.isnan(v)
+                    )
+                }
 
         # set the value to cache if needed
         if cache:
