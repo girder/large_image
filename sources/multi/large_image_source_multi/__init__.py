@@ -333,6 +333,11 @@ MultiSourceSchema = {
                 'layout and size, assume all sources are so similar',
             'type': 'boolean',
         },
+        'singleBand': {
+            'description':
+                'If true, output only the first band of compositied results',
+            'type': 'boolean',
+        },
         'axes': {
             'description': 'A list of additional axes that will be parsed.  '
                            'The default axes are z, t, xy, and c.  It is '
@@ -761,7 +766,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                             self._nativeMagnification[key] or tsMag.get(key))
                 numChecked += 1
                 tsMeta = ts.getMetadata()
-                if 'bands' in tsMeta:
+                if 'bands' in tsMeta and self._info.get('singleBand') is not True:
                     if not hasattr(self, '_bands'):
                         self._bands = {}
                     self._bands.update(tsMeta['bands'])
@@ -1200,6 +1205,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 tile = np.full((self.tileHeight, self.tileWidth, len(colors)),
                                colors,
                                dtype=getattr(self, '_firstdtype', np.uint8))
+        if self._info.get('singleBand'):
+            tile = tile[:, :, 0]
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
