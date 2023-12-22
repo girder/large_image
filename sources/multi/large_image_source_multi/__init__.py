@@ -19,7 +19,7 @@ from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
-from large_image.tilesource.utilities import _makeSameChannelDepth
+from large_image.tilesource.utilities import _makeSameChannelDepth, fullAlphaValue
 
 try:
     __version__ = _importlib_version(__name__)
@@ -752,6 +752,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ts = self._openSource(source)
                 self.tileWidth = self.tileWidth or ts.tileWidth
                 self.tileHeight = self.tileHeight or ts.tileHeight
+                if not hasattr(self, '_firstdtype'):
+                    self._firstdtype = ts.dtype
                 if not numChecked:
                     tsMag = ts.getNativeMagnification()
                     for key in self._nativeMagnification:
@@ -920,25 +922,156 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return tile
         if base is None:
             base = np.zeros((0, 0, tile.shape[2]), dtype=tile.dtype)
+            if tile.shape[2] in {2, 4}:
+                base[:, :, -1] = fullAlphaValue(tile)
         base, tile = _makeSameChannelDepth(base, tile)
         if base.shape[0] < tile.shape[0] + y:
             vfill = np.zeros(
                 (tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] == 2 or base.shape[2] == 4:
-                vfill[:, :, -1] = 1
+                vfill[:, :, -1] = fullAlphaValue(base)
             base = np.vstack((base, vfill))
         if base.shape[1] < tile.shape[1] + x:
             hfill = np.zeros(
                 (base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] == 2 or base.shape[2] == 4:
-                hfill[:, :, -1] = 1
+                hfill[:, :, -1] = fullAlphaValue(base)
             base = np.hstack((base, hfill))
         if base.flags.writeable is False:
             base = base.copy()
-        base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
+        if base.shape[2] == 2 or base.shape[2] == 4:
+            baseA = base[y:y + tile.shape[0], x:x + tile.shape[1], -1].astype(
+                float) / fullAlphaValue(base)
+            tileA = tile[:, :, -1].astype(float) / fullAlphaValue(tile)
+            outA = tileA + baseA * (1 - tileA)
+            base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] = (
+                tile[:, :, :-1] * tileA[..., np.newaxis] +
+                base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] * baseA[..., np.newaxis] *
+                (1 - tileA[..., np.newaxis])
+            ) / outA[..., np.newaxis]
+            base[y:y + tile.shape[0], x:x + tile.shape[1], -1] = outA * fullAlphaValue(base)
+        else:
+            base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
+
+    def _getTransformedTile(self, ts, transform, corners, scale, frame, crop=None):
+        """
+        Determine where the target tile's corners are located on the source.
+        Fetch that so that we have at least sqrt(2) more resolution, then use
+        scikit-image warp to transform it.  scikit-image does a better job than
+        scipy.ndimage.affine_transform.
+
+        :param ts: the source of the image to transform.
+        :param transform: a 3x3 affine 2d matrix for transforming the source
+            image at full resolution to the target tile at full resolution.
+        :param corners: corners of the destination in full res coordinates.
+            corner 0 must be the upper left, 2 must be the lower right.
+        :param scale: scaling factor from full res to the target resolution.
+        :param frame: frame number of the source image.
+        :param crop: an optional dictionary to crop the source image in full
+            resolution, untransformed coordinates.  This may contain left, top,
+            right, and bottom values in pixels.
+        :returns: a numpy array tile or None, x, y coordinates within the
+            target tile for the placement of the numpy tile array.
+        """
+        try:
+            import skimage.transform
+        except ImportError:
+            msg = 'scikit-image is required for affine transforms.'
+            raise TileSourceError(msg)
+        # From full res source to full res destination
+        transform = transform.copy() if transform is not None else np.identity(3)
+        # Scale dest corners to actual size; adjust transform for the same
+        corners = np.array(corners)
+        corners[:, :2] //= scale
+        transform[:2, :] /= scale
+        # Offset so our target is the actual destination array we use
+        transform[0][2] -= corners[0][0]
+        transform[1][2] -= corners[0][1]
+        corners[:, :2] -= corners[0, :2]
+        outw, outh = corners[2][0], corners[2][1]
+        if not outh or not outw:
+            return None, 0, 0
+        srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
+        minx = min(c[0] for c in srccorners)
+        maxx = max(c[0] for c in srccorners)
+        miny = min(c[1] for c in srccorners)
+        maxy = max(c[1] for c in srccorners)
+        srcscale = max((maxx - minx) / outw, (maxy - miny) / outh)
+        # we only need every 1/srcscale pixel.
+        srcscale = int(2 ** math.log2(max(1, srcscale)))
+        # Pad to reduce edge effects at tile boundaries
+        border = int(math.ceil(2 * srcscale))
+        region = {
+            'left': int(max(0, minx - border) // srcscale) * srcscale,
+            'top': int(max(0, miny - border) // srcscale) * srcscale,
+            'right': int((min(ts.sizeX, maxx + border) + srcscale - 1) // srcscale) * srcscale,
+            'bottom': int((min(ts.sizeY, maxy + border) + srcscale - 1) // srcscale) * srcscale,
+        }
+        if crop:
+            region['left'] = max(region['left'], crop.get('left', region['left']))
+            region['top'] = max(region['top'], crop.get('top', region['top']))
+            region['right'] = min(region['right'], crop.get('right', region['right']))
+            region['bottom'] = min(region['bottom'], crop.get('bottom', region['bottom']))
+        output = {
+            'maxWidth': (region['right'] - region['left']) // srcscale,
+            'maxHeight': (region['bottom'] - region['top']) // srcscale,
+        }
+        if output['maxWidth'] <= 0 or output['maxHeight'] <= 0:
+            return None, 0, 0
+        srcImage = ts.getRegion(
+            format=TILE_FORMAT_NUMPY, region=region, output=output, frame=frame)[0]
+        # This is the region we actually took in our source coordinates, scaled
+        # for if we took a low res version
+        regioncorners = np.array([
+            [region['left'] // srcscale, region['top'] // srcscale, 1],
+            [region['right'] // srcscale, region['top'] // srcscale, 1],
+            [region['right'] // srcscale, region['bottom'] // srcscale, 1],
+            [region['left'] // srcscale, region['bottom'] // srcscale, 1]], dtype=float)
+        # adjust our transform if we took a low res version of the source
+        transform[:2, :2] *= srcscale
+        # Find where the source corners land on the destination.
+        preshiftcorners = (np.dot(transform, regioncorners.T).T).tolist()
+        regioncorners[:, :2] -= regioncorners[0, :2]
+        destcorners = (np.dot(transform, regioncorners.T).T).tolist()
+        offsetx, offsety = None, None
+        for idx in range(4):
+            if offsetx is None or destcorners[idx][0] < offsetx:
+                x = preshiftcorners[idx][0]
+                offsetx = destcorners[idx][0] - (x - math.floor(x))
+            if offsety is None or destcorners[idx][1] < offsety:
+                y = preshiftcorners[idx][1]
+                offsety = destcorners[idx][1] - (y - math.floor(y))
+        transform[0][2] -= offsetx
+        transform[1][2] -= offsety
+        x, y = int(math.floor(x)), int(math.floor(y))
+        # Recompute where the source corners will land
+        destcorners = (np.dot(transform, regioncorners.T).T).tolist()
+        destsize = (max(math.ceil(c[0]) for c in destcorners),
+                    max(math.ceil(c[1]) for c in destcorners))
+        # Add an alpha band if needed
+        if srcImage.shape[2] in {1, 3}:
+            _, srcImage = _makeSameChannelDepth(np.zeros((1, 1, srcImage.shape[2] + 1)), srcImage)
+        # Add enough space to warp the source image in place
+        srcImage = np.pad(srcImage, (
+            (0, max(0, destsize[1] - srcImage.shape[0])),
+            (0, max(0, destsize[0] - srcImage.shape[1])),
+            (0, 0)), mode='constant')
+        destImage = skimage.transform.warp(
+            srcImage.astype(float),
+            skimage.transform.AffineTransform(np.linalg.inv(
+                transform))).astype(srcImage.dtype)
+        # Trim to target size and location
+        destImage = destImage[max(0, -y):, max(0, -x):, :]
+        x += max(0, -x)
+        y += max(0, -y)
+        if x >= outw or y >= outh:
+            return None, None, None
+        destImage = destImage[:min(destImage.shape[0], outh - y),
+                              :min(destImage.shape[1], outw - x), :]
+        return destImage, x, y
 
     def _addSourceToTile(self, tile, sourceEntry, corners, scale):
         """
@@ -964,17 +1097,20 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 corners[2][1] <= bbox['top'] or corners[0][1] >= bbox['bottom']):
             return tile
         transform = bbox.get('transform')
-        srccorners = (
-            list(np.dot(bbox['inverse'], np.array(corners).T).T)
-            if transform is not None else corners)
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
-        #   no sheer, use getRegion with an appropriate size (be wary of edges)
-        if (transform is None or
+        # no sheer and integer pixel alignment, use getRegion with an
+        # appropriate size
+        scaleX = transform[0][0] if transform is not None else 1
+        scaleY = transform[1][1] if transform is not None else 1
+        if ((transform is None or (
                 transform[0][0] > 0 and transform[0][1] == 0 and
-                transform[1][0] == 0 and transform[1][1] > 0):
-            scaleX = transform[0][0] if transform is not None else 1
-            scaleY = transform[1][1] if transform is not None else 1
+                transform[1][0] == 0 and transform[1][1] > 0 and
+                transform[0][2] % scaleX == 0 and transform[1][2] % scaleY == 0)) and
+                (scaleX % scale) == 0 and (scaleY % scale) == 0):
+            srccorners = (
+                list(np.dot(bbox['inverse'], np.array(corners).T).T)
+                if transform is not None else corners)
             region = {
                 'left': srccorners[0][0], 'top': srccorners[0][1],
                 'right': srccorners[2][0], 'bottom': srccorners[2][1],
@@ -1005,21 +1141,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             sourceTile, _ = ts.getRegion(
                 region=region, output=output, frame=sourceEntry.get('frame', 0),
                 format=TILE_FORMAT_NUMPY)
-        # Otherwise, determine where the target tile's corners are located on
-        # the source; fetch that so that we have at least sqrt(2) more
-        # resolution, then use scikit-image warp to transform it.  scikit-image
-        # does a better job than scipy.ndimage.affine_transform.
         else:
-            # try:
-            #     import skimge.transform
-            # except ImportError:
-            #     msg = 'scikit-image is required for affine transforms.'
-            #     raise TileSourceError(msg)
-            msg = 'Not implemented'
-            raise TileSourceError(msg)
-        # Crop
-        # TODO
-        tile = self._mergeTiles(tile, sourceTile, x, y)
+            sourceTile, x, y = self._getTransformedTile(
+                ts, transform, corners, scale, sourceEntry.get('frame', 0),
+                source.get('position', {}).get('crop'))
+        if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
+            tile = self._mergeTiles(tile, sourceTile, x, y)
         return tile
 
     @methodcache()
@@ -1060,7 +1187,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if fill:
             colors = self._info.get('backgroundColor')
             if colors:
-                tile = np.full((self.tileHeight, self.tileWidth, len(colors)), colors)
+                tile = np.full((self.tileHeight, self.tileWidth, len(colors)),
+                               colors,
+                               dtype=getattr(self, '_firstdtype', np.uint8))
         # Add each source to the tile
         for sourceEntry in sourceList:
             tile = self._addSourceToTile(tile, sourceEntry, corners, scale)
@@ -1068,7 +1197,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # TODO number of channels?
             colors = self._info.get('backgroundColor', [0])
             if colors:
-                tile = np.full((self.tileHeight, self.tileWidth, len(colors)), colors)
+                tile = np.full((self.tileHeight, self.tileWidth, len(colors)),
+                               colors,
+                               dtype=getattr(self, '_firstdtype', np.uint8))
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)

@@ -704,14 +704,28 @@ def getAvailableNamedPalettes(includeColors=True, reduced=False):
     return sorted(palettes)
 
 
+def fullAlphaValue(arr):
+    """
+    Given a numpy array, return the value that should be used for a fully
+    opaque alpha channel.  For uint variants, this is the max value.
+
+    :param arr: a numpy array.
+    :returns: the value for the alpha channel.
+    """
+    if arr.dtype.kind == 'u':
+        return np.iinfo(arr.dtype).max
+    return 1
+
+
 def _makeSameChannelDepth(arr1, arr2):
     """
     Given two numpy arrays that are either two or three dimensions, make the
     third dimension the same for both of them.  Specifically, if they are two
-    dimensions, first convert to trhee dimensions with a single final value.
+    dimensions, first convert to three dimensions with a single final value.
     Otherwise, the dimensions are assumed to be channels of L, LA, RGB, RGBA,
     or <all colors>.  If L is needed to change to RGB, it is repeated (LLL).
-    Missing A channels are filled with 1.
+    Missing A channels are filled with 255, 65535, or 1 depending on if the
+    dtype is uint8, uint16, or something else.
 
     :param arr1: one array to compare.
     :param arr2: a second array to compare.
@@ -729,7 +743,7 @@ def _makeSameChannelDepth(arr1, arr2):
     for key, arr in arrays.items():
         other = arrays['arr1' if key == 'arr2' else 'arr2']
         if arr.shape[2] < 3 and other.shape[2] >= 3:
-            newarr = np.ones((arr.shape[0], arr.shape[1], arr.shape[2] + 2))
+            newarr = np.ones((arr.shape[0], arr.shape[1], arr.shape[2] + 2), dtype=arr.dtype)
             newarr[:, :, 0:1] = arr[:, :, 0:1]
             newarr[:, :, 1:2] = arr[:, :, 0:1]
             newarr[:, :, 2:3] = arr[:, :, 0:1]
@@ -741,9 +755,11 @@ def _makeSameChannelDepth(arr1, arr2):
     for key, arr in arrays.items():
         other = arrays['arr1' if key == 'arr2' else 'arr2']
         if arr.shape[2] < other.shape[2]:
-            newarr = np.ones((arr.shape[0], arr.shape[1], other.shape[2]))
-            newarr[:, :, :arr.shape[2]] = arr
-            arrays[key] = newarr
+            arrays[key] = np.pad(
+                arr,
+                ((0, 0), (0, 0), (0, other.shape[2] - arr.shape[2])),
+                mode='constant',
+                constant_values=fullAlphaValue(arr))
     return arrays['arr1'], arrays['arr2']
 
 

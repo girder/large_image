@@ -1,8 +1,10 @@
+import io
 import json
 import os
 
 import large_image_source_multi
 import numpy as np
+import PIL.Image
 import pytest
 
 import large_image
@@ -262,3 +264,35 @@ def testStyleFrameBase():
     assert image == imageB
     imageC = source.getTile(0, 0, 2, frame=0)
     assert image == imageC
+
+
+def testMultiAffineTransform():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_affine.yml')
+    source = large_image_source_multi.open(imagePath)
+    frameval = [
+        [243, 243, 49065],
+        [3920, 3920, 47672],
+        [13, 13, 49149],
+        [3943, 3943, 47695],
+        [246, 246, 49063],
+        [972, 972, 48785],
+        [1455, 1455, 48597],
+        [204, 204, 49059],
+    ]
+    for frame in range(8):
+        thumbs = {}
+        for res in {256, 512, 1024, 2048}:
+            img = PIL.Image.open(io.BytesIO(source.getThumbnail(
+                frame=frame, width=res, encoding='PNG')[0]))
+            img = np.asarray(img.resize((256, 192), PIL.Image.LANCZOS).convert('RGB'))
+            thumbs[res] = img
+            r = np.sum(img[:, :, 0] >= 128)
+            g = np.sum(img[:, :, 1] >= 128)
+            b = np.sum(img[:, :, 2] >= 128)
+            assert abs(r - frameval[frame][0]) < 200
+            assert abs(g - frameval[frame][1]) < 200
+            assert abs(b - frameval[frame][2]) < 200
+        assert abs(np.average(thumbs[2048] - thumbs[256])) < 7
+        assert abs(np.average(thumbs[1024] - thumbs[256])) < 7
+        assert abs(np.average(thumbs[512] - thumbs[256])) < 7
