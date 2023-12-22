@@ -1560,7 +1560,9 @@ class TileSource(IPyLeafletMixin):
         if hasattr(sc, 'styleIndex'):
             del sc.styleIndex
         sc.output = self._applyStyleFunction(sc.output, sc, 'main')
-        if sc.dtype == 'uint16':
+        if sc.dtype == 'uint8':
+            sc.output = sc.output.astype(np.uint8)
+        elif sc.dtype == 'uint16':
             sc.output = (sc.output * 65535 / 255).astype(np.uint16)
         elif sc.dtype == 'float':
             sc.output /= 255
