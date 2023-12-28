@@ -215,6 +215,17 @@ jobs:
       - persist_to_workspace:
           root: build
           paths: docs
+  compare:
+    executor: toxandnode
+    resource_class: large
+    steps:
+      - checkout
+      - tox:
+          env: compare-py311
+      - store_artifacts:
+          path: build/tox/compare.txt
+      - store_artifacts:
+          path: build/tox/compare.yaml
   wheels:
     executor: toxandnode
     steps:
@@ -322,6 +333,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      - compare:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - wheels:
           filters:
             tags:
@@ -375,4 +393,5 @@ workflows:
       - py311
       - py312
       - lint_and_docs
+      - compare
       - wheels
