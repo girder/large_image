@@ -40,7 +40,7 @@ describe('DICOMWeb assetstore', function () {
         runs(function () {
             // Create the DICOMweb assetstore
             $('#g-new-dwas-name').val('DICOMweb');
-            $('#g-new-dwas-url').val('https://idc-external-006.uc.r.appspot.com/dcm4chee-arc/aets/DCM4CHEE/rs');
+            $('#g-new-dwas-url').val('http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs');
 
             // Test error for setting auth type to "token" with no token
             $('#g-new-dwas-auth-type').val('token');
