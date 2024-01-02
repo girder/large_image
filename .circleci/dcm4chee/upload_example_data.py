@@ -9,12 +9,11 @@ from pydicom import dcmread
 
 def upload_example_data(server_url):
 
+    # This is TCGA-AA-3697
     download_urls = [
-        # 'https://data.kitware.com/api/v1/file/65933ddb9c30d6f4e17c9ca1/download',
-        # 'https://data.kitware.com/api/v1/file/65933dd09c30d6f4e17c9c9e/download',
-
-        # This is the lowest resolution
-        'https://data.kitware.com/api/v1/file/65933ddd9c30d6f4e17c9ca4/download',
+        'https://data.kitware.com/api/v1/file/6594790e9c30d6f4e17c9d0d/download',
+        'https://data.kitware.com/api/v1/file/6594790f9c30d6f4e17c9d10/download',
+        'https://data.kitware.com/api/v1/file/6594790d9c30d6f4e17c9d0a/download',
     ]
     datasets = []
     for url in download_urls:

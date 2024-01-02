@@ -15,7 +15,7 @@ describe('DICOMWeb assetstore', function () {
         var destinationType;
 
         // After importing, we will verify that this item exists
-        const verifyItemName = '1.3.6.1.4.1.5962.99.1.3510881361.982628633.1635598486609.2.0';
+        const verifyItemName = '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0';
 
         runs(function () {
             $('a.g-nav-link[g-target="admin"]').trigger('click');

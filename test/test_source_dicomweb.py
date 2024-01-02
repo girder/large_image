@@ -16,8 +16,8 @@ def testTilesFromDICOMweb():
 
     dicomweb_file = {
         'url': 'http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs',
-        'study_uid': '2.25.18199272949575141157802058345697568861',
-        'series_uid': '1.3.6.1.4.1.5962.99.1.3510881361.982628633.1635598486609.2.0',
+        'study_uid': '2.25.25644321580420796312527343668921514374',
+        'series_uid': '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0',
     }
 
     source = large_image_source_dicom.open(dicomweb_file)
@@ -25,12 +25,12 @@ def testTilesFromDICOMweb():
 
     assert tileMetadata['tileWidth'] == 256
     assert tileMetadata['tileHeight'] == 256
-    assert tileMetadata['sizeX'] == 2896
-    assert tileMetadata['sizeY'] == 2768
-    assert tileMetadata['levels'] == 5
+    assert tileMetadata['sizeX'] == 7081
+    assert tileMetadata['sizeY'] == 10000
+    assert tileMetadata['levels'] == 7
 
     utilities.checkTilesZXY(source, tileMetadata)
 
     # Verify that the internal metadata is working too
     internalMetadata = source.getInternalMetadata()
-    assert internalMetadata['dicom_meta']['Specimens'][0]['Anatomical Structure'] == 'Lung'
+    assert internalMetadata['dicom_meta']['Specimens'][0]['Anatomical Structure'] == 'Colon'
