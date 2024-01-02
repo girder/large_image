@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pytest
@@ -7,6 +8,8 @@ from . import utilities
 # We support Python 3.9 and greater for DICOMweb
 pytestmark = [
     pytest.mark.skipif(sys.version_info < (3, 9), reason='requires python3.9 or higher'),
+    pytest.mark.skipif(os.getenv('DICOMWEB_TEST_URL') is None,
+                       reason='DICOMWEB_TEST_URL is not set'),
 ]
 
 
@@ -15,12 +18,13 @@ def testTilesFromDICOMweb():
     import large_image_source_dicom
 
     dicomweb_file = {
-        'url': 'http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs',
+        'url': os.environ['DICOMWEB_TEST_URL'],
         'study_uid': '2.25.25644321580420796312527343668921514374',
         'series_uid': '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0',
     }
 
     source = large_image_source_dicom.open(dicomweb_file)
+
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 256

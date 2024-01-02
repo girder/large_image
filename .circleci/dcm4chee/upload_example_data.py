@@ -27,5 +27,10 @@ def upload_example_data(server_url):
 
 
 if __name__ == '__main__':
-    url = 'http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs'
+    import os
+
+    url = os.getenv('DICOMWEB_TEST_URL')
+    if url is None:
+        raise Exception('DICOMWEB_TEST_URL must be set')
+
     upload_example_data(url)
