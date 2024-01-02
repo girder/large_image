@@ -134,7 +134,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._largeImagePath = [
                 os.path.join(root, entry) for entry in os.listdir(root)
                 if os.path.isfile(os.path.join(root, entry)) and
-                self._pathMightBeDicom(entry)]
+                self._pathMightBeDicom(entry, path)]
             if (path not in self._largeImagePath and
                     os.path.join(root, os.path.basename(path)) not in self._largeImagePath):
                 self._largeImagePath = [path]
@@ -205,7 +205,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             finally:
                 self._dicom = None
 
-    def _pathMightBeDicom(self, path):
+    def _pathMightBeDicom(self, path, basepath=None):
         """
         Return True if the path looks like it might be a dicom file based on
         its name or extension.
@@ -214,7 +214,12 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: True if this might be a dicom, False otherwise.
         """
         path = os.path.basename(path)
-        if os.path.splitext(path)[-1][1:] in self.extensions:
+        if (basepath is not None and
+                os.path.splitext(os.path.basename(basepath))[-1][1:] not in self.extensions):
+            if os.path.splitext(path)[-1] == os.path.splitext(os.path.basename(basepath))[-1]:
+                return True
+        elif os.path.splitext(path)[-1][1:] in self.extensions:
+
             return True
         if re.match(r'^([1-9][0-9]*|0)(\.([1-9][0-9]*|0))+$', path) and len(path) <= 64:
             return True
