@@ -73,6 +73,8 @@ commands:
           command: |
             docker-compose -f ./.circleci/dcm4chee/docker-compose.yml up -d
             pip install dicomweb_client
+            # Wait up to 30 seconds for the server if it isn't ready
+            curl --retry 30 -f --retry-all-errors --retry-delay 1 -s -o /dev/null http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs/studies
             python ./.circleci/dcm4chee/upload_example_data.py
       - run:
           name: start rabbitmq
