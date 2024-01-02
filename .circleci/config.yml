@@ -69,9 +69,11 @@ commands:
             # docker run --rm -d -p 127.0.0.1:27017:27017 mongo:5.0 bash -c "mkdir /dev/shm/mongo && mongod --nojournal --dbpath=/dev/shm/mongo --noauth --bind_ip_all"
             docker run --rm -d -p 127.0.0.1:27017:27017 mongo:latest bash -c "mongod --noauth --bind_ip_all"
       - run:
-          name: start dcm4chee (for DICOMweb tests)
+          name: start dcm4chee and upload example data (for DICOMweb tests)
           command: |
             docker-compose -f ./.circleci/dcm4chee/docker-compose.yml up -d
+            pip install dicomweb_client
+            python ./.circleci/dcm4chee/upload_example_data.py
       - run:
           name: start rabbitmq
           command: |
