@@ -10,6 +10,9 @@
 - Add a singleBand option to the multi-source specification ([#1416](../../pull/1416))
 - Allow better detection of multiple file dicom ([#1417](../../pull/1417))
 
+### Changes
+- Remove an unused parameter in a private method ([#1419](../../pull/1419))
+
 ## 1.26.3
 
 ### Improvements

@@ -2213,8 +2213,7 @@ class TileSource(IPyLeafletMixin):
             image = _letterboxImage(_imageToPIL(image, mode), maxWidth, maxHeight, kwargs['fill'])
         return _encodeImage(image, format=format, **kwargs)
 
-    def _addRegionTileToImage(
-            self, image, subimage, x, y, width, height, tile=None, **kwargs):
+    def _addRegionTileToImage(self, image, subimage, x, y, width, height, **kwargs):
         """
         Add a subtile to a larger image.
 
