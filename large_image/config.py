@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 from typing import cast
 
 try:
@@ -65,6 +67,16 @@ def getConfig(key=None, default=None):
     """
     if key is None:
         return ConfigValues
+    envKey = f'LARGE_IMAGE_{key.replace(".", "_").upper()}'
+    if envKey in os.environ:
+        value = os.environ[envKey]
+        if value == '__default__':
+            return default
+        try:
+            value = json.loads(value)
+        except ValueError:
+            pass
+        return value
     return ConfigValues.get(key, default)
 
 

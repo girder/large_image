@@ -43,6 +43,11 @@ As an example, configuration parameters can be set via python code like::
 
   large_image.config.setConfig('max_small_image_size', 8192)
 
+Configuration from Environment
+------------------------------
+
+All configuration parameters can be specified as environment parameters by prefixing their uppercase names with ``LARGE_IMAGE_``.  For instance, ``LARGE_IMAGE_CACHE_BACKEND=python`` specifies the cache backend.  If the values can be decoded as json, they will be parsed as such.  That is, numerical values will be parsed as numbers; to parse them as strings, surround them with double quotes.
+
 Configuration within the Girder Plugin
 --------------------------------------
 

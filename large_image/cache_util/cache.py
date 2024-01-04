@@ -1,4 +1,5 @@
 import functools
+import pickle
 import threading
 import uuid
 
@@ -92,7 +93,7 @@ def methodcache(key=None):  # noqa
                     return self.cache[k]
             except KeyError:
                 pass  # key not found
-            except ValueError:
+            except (ValueError, pickle.UnpicklingError):
                 # this can happen if a different version of python wrote the record
                 pass
             v = func(self, *args, **kwargs)
