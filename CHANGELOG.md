@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.27.1
+
+### Improvements
+- Read config files from the environment variables ([#1422](../../pull/1422))
+
 ## 1.27.0
 
 ### Features
