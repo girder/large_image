@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 
 import pytest
 
@@ -19,4 +20,19 @@ def testDICOMWebClient(boundServer, fsAssetstore, db):
     from pytest_girder.web_client import runWebClientTest
 
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', 'dicomWebSpec.js')
-    runWebClientTest(boundServer, spec, 15000)
+
+    # Replace the template variables
+    with open(spec, 'r') as rf:
+        data = rf.read()
+
+    dicomweb_test_url = os.environ['DICOMWEB_TEST_URL']
+    data = data.replace('DICOMWEB_TEST_URL', f"'{dicomweb_test_url}'")
+
+    # Need to avoid context manager for this to work on Windows
+    tf = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        tf.write(data.encode())
+        tf.close()
+        runWebClientTest(boundServer, tf.name, 15000)
+    finally:
+        os.remove(tf.name)

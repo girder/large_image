@@ -1,3 +1,6 @@
+// These will be replaced by templating
+const url = DICOMWEB_TEST_URL;
+
 girderTest.importPlugin('jobs', 'large_image', 'dicomweb');
 
 girderTest.startApp();
@@ -40,7 +43,7 @@ describe('DICOMWeb assetstore', function () {
         runs(function () {
             // Create the DICOMweb assetstore
             $('#g-new-dwas-name').val('DICOMweb');
-            $('#g-new-dwas-url').val(process.env.DICOMWEB_TEST_URL);
+            $('#g-new-dwas-url').val(url);
 
             // Test error for setting auth type to "token" with no token
             $('#g-new-dwas-auth-type').val('token');
