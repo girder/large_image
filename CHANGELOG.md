@@ -9,6 +9,7 @@
 - Remove NaN values from band information ([#1414](../../pull/1414))
 - Add a singleBand option to the multi-source specification ([#1416](../../pull/1416))
 - Allow better detection of multiple file dicom ([#1417](../../pull/1417))
+- Better missing data detection from tifffile ([#1421](../../pull/1421))
 
 ### Changes
 - Remove an unused parameter in a private method ([#1419](../../pull/1419))
