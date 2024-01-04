@@ -103,6 +103,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._output = None
         self._editable = True
         self._bandRanges = None
+        self._tileLock = threading.RLock()
         self._addLock = threading.RLock()
         self._framecount = 0
         self._mm_x = 0
@@ -437,7 +438,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        # if self._image is None then call _validateZarr
+        if self._image is None:
+            self._validateZarr()
 
         frame = self._getFrame(**kwargs)
         self._xyzInRange(x, y, z, frame, self._framecount)
@@ -495,47 +497,75 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param y: location in destination for upper-left corner.
         :param mask: a 2-d numpy array (or 3-d if the last dimension is 1).
             If specified, areas where the mask is false will not be altered.
-        :param axes: a string or list of strings specifying the names of axes 
+        :param axes: a string or list of strings specifying the names of axes
             in the same order as the tile dimensions
         :param kwargs: start locations for any additional axes
         """
 
-        # default for axes='YXS' for 3d tile, 'YX' for 2d, 
-        # call lower on axis names
+        placement = {
+            'x': x,
+            'y': y,
+        }
+        if axes is None:
+            if len(tile.shape) == 2:
+                axes = 'yx'
+            elif len(tile.shape) == 3:
+                axes = 'yxs'
+            else:
+                axes = ''
+        if isinstance(axes, str):
+            axes = axes.lower()
+        elif isinstance(axes, list):
+            axes = [lower(x) for x in axes]
+        else:
+            raise ValueError(f'Invalid type for axes. Must be str or list[str].')
+
+        if len(axes) != len(tile.shape):
+            raise ValueError(f'Invalid value for axes: {axes}. \
+                Length {len(axes)} does not match number of tile dimensions {len(tile.shape)}.')
 
         self._checkEditable()
         tile, mode = _imageToNumpy(tile)
         tile = tile.astype(float)
-        # interpretation = interpretation or mode
+        self._image = None
 
-        # set self._image = None
+        current_arrays = dict(self._zarr.arrays())
+        if 'root' in current_arrays:
+            root = current_arrays['root']
+        else:
+            root = self._zarr.create_dataset('root', data=tile)
         
-        # print(self._zarr_store)
-        self._zarr.array('root', tile, overwrite=True)
-        # root = self._zarr.require_dataset('root', [])
-        # root = tile
-        # print(root)
+        new_dims = {a: max(root.shape[i], placement.get(a, 0) + tile.shape[i]) for i, a in enumerate(axes)}
+        root_data = np.pad(
+            root,
+            [(0, d-root.shape[i]) for i, d in enumerate(new_dims.values())],
+            mode='empty'
+        )
+        root = self._zarr.create_dataset('root', data=root_data, overwrite=True)
 
-        # if axes is None:
-        #    axes = {}
-        # axes['x'] = x
-        # axes['y'] = y
+        tile_data = np.pad(
+            tile,
+            [(placement.get(a, 0), d-placement.get(a, 0)-tile.shape[i]) 
+            for i, (a, d) in enumerate(new_dims.items())],
+            mode='empty'
+        )
 
-        # find new zarr shape
-        # reverse_tile_shape = tile.shape.reverse()
-        # reverse_root_shape = self._zarr['root'].shape.reverse()
-        # new_root_shape = [
-        #     s for s in reverse_root_shape
-        # ]
-        # print(axes, tile.shape, self._zarr['root'].shape, new_root_shape)
-
-        
-
-        # TODO: with self._addLock:
-        #     self._updateBandRanges(tile)
-        if mask is not None:
-            # TODO: apply mask
-            pass
+        if mask is None:
+            mask = np.ones(tile.shape[:-1])
+        mask_data = np.pad(
+            mask,
+            [
+                (placement.get('y', 0), new_dims['y'] - placement.get('y', 0) - mask.shape[0]),
+                (placement.get('x', 0), new_dims['x'] - placement.get('x', 0) - mask.shape[1])
+            ],
+            mode='constant',
+            constant_values=0
+        )
+        while len(mask_data.shape) < len(root_data.shape):
+            mask_data = np.expand_dims(mask_data, axis=-1)
+            mask_data = np.repeat(mask_data, root_data.shape[len(mask_data.shape) - 1], axis=-1)
+        mask_data = mask_data.astype(bool)
+        np.copyto(root_data, tile_data, where=mask_data)
 
     def write(
         self,
@@ -567,10 +597,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if zarr_kwargs is None:
             zarr_kwargs = dict()
         arrays = dict(self._zarr.arrays())
-        print(arrays)
         if not len(arrays):
             raise TileSourceError('No data; cannot write empty zarr.')
-        zarr.save(path, **arrays)
+        zarr.save(str(path), **arrays)
+
+        self._validateZarr()
 
 def open(*args, **kwargs):
     """
