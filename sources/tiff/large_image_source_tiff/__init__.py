@@ -645,7 +645,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 allowStyle = False
                 format = TILE_FORMAT_PIL
             else:
-                tile = dir.getTile(x, y)
+                tile = dir.getTile(x, y, asarray=numpyAllowed == 'always')
                 format = 'JPEG'
             if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
