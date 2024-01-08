@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pytest
@@ -7,33 +8,33 @@ from . import utilities
 # We support Python 3.9 and greater for DICOMweb
 pytestmark = [
     pytest.mark.skipif(sys.version_info < (3, 9), reason='requires python3.9 or higher'),
+    pytest.mark.skipif(os.getenv('DICOMWEB_TEST_URL') is None,
+                       reason='DICOMWEB_TEST_URL is not set'),
 ]
 
 
-@pytest.mark.skip(reason='the remote server we test with is down as of 2023-12-17')
 @pytest.mark.plugin('large_image_source_dicom')
 def testTilesFromDICOMweb():
     import large_image_source_dicom
 
-    # Hopefully this URL and file will work for a long time. But we might need
-    # to update it at some point.
     dicomweb_file = {
-        'url': 'https://idc-external-006.uc.r.appspot.com/dcm4chee-arc/aets/DCM4CHEE/rs',
-        'study_uid': '2.25.18199272949575141157802058345697568861',
-        'series_uid': '1.3.6.1.4.1.5962.99.1.3510881361.982628633.1635598486609.2.0',
+        'url': os.environ['DICOMWEB_TEST_URL'],
+        'study_uid': '2.25.25644321580420796312527343668921514374',
+        'series_uid': '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0',
     }
 
     source = large_image_source_dicom.open(dicomweb_file)
+
     tileMetadata = source.getMetadata()
 
     assert tileMetadata['tileWidth'] == 256
     assert tileMetadata['tileHeight'] == 256
-    assert tileMetadata['sizeX'] == 46336
-    assert tileMetadata['sizeY'] == 44288
-    assert tileMetadata['levels'] == 9
+    assert tileMetadata['sizeX'] == 7081
+    assert tileMetadata['sizeY'] == 10000
+    assert tileMetadata['levels'] == 7
 
     utilities.checkTilesZXY(source, tileMetadata)
 
     # Verify that the internal metadata is working too
     internalMetadata = source.getInternalMetadata()
-    assert internalMetadata['dicom_meta']['Specimens'][0]['Anatomical Structure'] == 'Lung'
+    assert internalMetadata['dicom_meta']['Specimens'][0]['Anatomical Structure'] == 'Colon'

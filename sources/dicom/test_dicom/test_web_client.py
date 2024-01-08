@@ -1,15 +1,17 @@
 import os
 import sys
+import tempfile
 
 import pytest
 
 # We support Python 3.9 and greater for DICOMweb
 pytestmark = [
     pytest.mark.skipif(sys.version_info < (3, 9), reason='requires python3.9 or higher'),
+    pytest.mark.skipif(os.getenv('DICOMWEB_TEST_URL') is None,
+                       reason='DICOMWEB_TEST_URL is not set'),
 ]
 
 
-@pytest.mark.skip(reason='the remote server we test with is down as of 2023-12-17')
 @pytest.mark.girder()
 @pytest.mark.girder_client()
 @pytest.mark.plugin('large_image')
@@ -18,4 +20,19 @@ def testDICOMWebClient(boundServer, fsAssetstore, db):
     from pytest_girder.web_client import runWebClientTest
 
     spec = os.path.join(os.path.dirname(__file__), 'web_client_specs', 'dicomWebSpec.js')
-    runWebClientTest(boundServer, spec, 15000)
+
+    # Replace the template variables
+    with open(spec, 'r') as rf:
+        data = rf.read()
+
+    dicomweb_test_url = os.environ['DICOMWEB_TEST_URL']
+    data = data.replace('DICOMWEB_TEST_URL', f"'{dicomweb_test_url}'")
+
+    # Need to avoid context manager for this to work on Windows
+    tf = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        tf.write(data.encode())
+        tf.close()
+        runWebClientTest(boundServer, tf.name, 15000)
+    finally:
+        os.remove(tf.name)
