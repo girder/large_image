@@ -34,6 +34,10 @@ services:
 
   arc:
     image: dcm4che/dcm4chee-arc-psql:5.26.0
+    # For large_image CI, we want to make sure this doesn't use up too much memory.
+    # Wildfly in this container tends to use around 650 MB. Let's limit it to 600 MB.
+    # We can increase it if it is not stable.
+    mem_limit: 600m
     logging:
       driver: json-file
       options:
