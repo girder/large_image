@@ -754,7 +754,7 @@ class TiledTiffDirectory:
     def pixelInfo(self):
         return self._pixelInfo
 
-    def getTile(self, x, y):
+    def getTile(self, x, y, asarray=False):
         """
         Get the complete JPEG image from a tile.
 
@@ -762,6 +762,8 @@ class TiledTiffDirectory:
         :type x: int
         :param y: The row index of the desired tile.
         :type y: int
+        :param asarray: If True, read jpeg compressed images as arrays.
+        :type asarray: boolean
         :return: either a buffer with a JPEG or a PIL image.
         :rtype: bytes
         :raises: InvalidOperationTiffError or IOTiffError
@@ -774,11 +776,14 @@ class TiledTiffDirectory:
         tileNum = self._toTileNum(x, y)
 
         if (not self._tiffInfo.get('istiled') or
-                self._tiffInfo.get('compression') not in (
-                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005, 34712) or
+                self._tiffInfo.get('compression') not in {
+                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005, 34712} or
                 self._tiffInfo.get('bitspersample') != 8 or
                 self._tiffInfo.get('sampleformat') not in {
-                    None, libtiff_ctypes.SAMPLEFORMAT_UINT}):
+                    None, libtiff_ctypes.SAMPLEFORMAT_UINT} or
+                (asarray and self._tiffInfo.get('compression') not in {33003, 33005, 34712} and (
+                    self._tiffInfo.get('compression') != libtiff_ctypes.COMPRESSION_JPEG or
+                    self._tiffInfo.get('photometric') != libtiff_ctypes.PHOTOMETRIC_YCBCR))):
             return self._getUncompressedTile(tileNum)
 
         imageBuffer = io.BytesIO()

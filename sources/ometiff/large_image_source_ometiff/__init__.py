@@ -352,7 +352,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                     numpyAllowed=numpyAllowed, sparseFallback=sparseFallback,
                     **kwargs)
         try:
-            tile = dir.getTile(x, y)
+            tile = dir.getTile(x, y, asarray=numpyAllowed == 'always')
             format = 'JPEG'
             if isinstance(tile, PIL.Image.Image):
                 format = TILE_FORMAT_PIL
