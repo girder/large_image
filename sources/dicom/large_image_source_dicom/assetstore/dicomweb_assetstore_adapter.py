@@ -105,10 +105,10 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
     def downloadFile(self, file, offset=0, headers=True, endByte=None,
                      contentDisposition=None, extraParameters=None, **kwargs):
 
-        dicomweb_meta = file['dicomweb_meta']
-        study_uid = dicomweb_meta['study_uid']
-        series_uid = dicomweb_meta['series_uid']
-        instance_uid = dicomweb_meta['instance_uid']
+        dicom_uids = file['dicom_uids']
+        study_uid = dicom_uids['study_uid']
+        series_uid = dicom_uids['series_uid']
+        instance_uid = dicom_uids['instance_uid']
 
         client = _create_dicomweb_client(self.assetstore_meta)
 
@@ -219,6 +219,10 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
             # Set the DICOMweb metadata
             item['dicomweb_meta'] = get_dicomweb_metadata(client, study_uid, series_uid)
+            item['dicom_uids'] = {
+                'study_uid': study_uid,
+                'series_uid': series_uid,
+            }
             item = Item().save(item)
 
             instance_results = client.search_for_instances(study_uid, series_uid)
@@ -235,7 +239,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                     size=0,
                     saveFile=False,
                 )
-                file['dicomweb_meta'] = {
+                file['dicom_uids'] = {
                     'study_uid': study_uid,
                     'series_uid': series_uid,
                     'instance_uid': instance_uid,

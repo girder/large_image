@@ -59,15 +59,14 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
 
     def _getDICOMwebLargeImagePath(self, assetstore):
         meta = assetstore[DICOMWEB_META_KEY]
-        file = Item().childFiles(self.item, limit=1)[0]
-        file_meta = file['dicomweb_meta']
+        item_uids = self.item['dicom_uids']
 
         adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
 
         return {
             'url': meta['url'],
-            'study_uid': file_meta['study_uid'],
-            'series_uid': file_meta['series_uid'],
+            'study_uid': item_uids['study_uid'],
+            'series_uid': item_uids['series_uid'],
             # The following are optional
             'qido_prefix': meta.get('qido_prefix'),
             'wado_prefix': meta.get('wado_prefix'),
