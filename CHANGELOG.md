@@ -5,6 +5,7 @@
 ### Improvements
 - Read config values from the environment variables ([#1422](../../pull/1422))
 - Optimizing when reading arrays rather than images from tiff files ([#1423](../../pull/1423))
+- Better filter DICOM adjacent files to ensure they share series instance IDs ([#1424](../../pull/1424))
 
 ## 1.27.0
 

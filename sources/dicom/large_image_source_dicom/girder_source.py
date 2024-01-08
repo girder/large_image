@@ -53,7 +53,7 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
         for item in Folder().childItems(folder):
             if len(list(Item().childFiles(item, limit=2))) == 1:
                 file = next(Item().childFiles(item, limit=2))
-                if self._pathMightBeDicom(file['name']):
+                if self._pathMightBeDicom(File().getLocalFilePath(file)):
                     filelist.append(File().getLocalFilePath(file))
         return filelist
 

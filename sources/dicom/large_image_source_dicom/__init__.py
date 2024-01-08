@@ -48,6 +48,13 @@ def _lazyImport():
         warnings.filterwarnings('ignore', category=UserWarning, module='pydicom')
 
 
+def _lazyImportPydicom():
+    global pydicom
+
+    if pydicom is None:
+        import pydicom
+
+
 def dicom_to_dict(ds, base=None):
     """
     Convert a pydicom dataset to a fairly flat python dictionary for purposes
@@ -134,7 +141,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._largeImagePath = [
                 os.path.join(root, entry) for entry in os.listdir(root)
                 if os.path.isfile(os.path.join(root, entry)) and
-                self._pathMightBeDicom(entry, path)]
+                self._pathMightBeDicom(os.path.join(root, entry), path)]
             if (path not in self._largeImagePath and
                     os.path.join(root, os.path.basename(path)) not in self._largeImagePath):
                 self._largeImagePath = [path]
@@ -213,19 +220,38 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param path: the path to check.
         :returns: True if this might be a dicom, False otherwise.
         """
+        mightbe = False
+        origpath = path
         path = os.path.basename(path)
         if (basepath is not None and
                 os.path.splitext(os.path.basename(basepath))[-1][1:] not in self.extensions):
             if os.path.splitext(path)[-1] == os.path.splitext(os.path.basename(basepath))[-1]:
-                return True
+                mightbe = True
         elif os.path.splitext(path)[-1][1:] in self.extensions:
 
-            return True
-        if re.match(r'^([1-9][0-9]*|0)(\.([1-9][0-9]*|0))+$', path) and len(path) <= 64:
-            return True
-        if re.match(r'^DCM_\d+$', path):
-            return True
-        return False
+            mightbe = True
+        if (not mightbe and re.match(r'^([1-9][0-9]*|0)(\.([1-9][0-9]*|0))+$', path) and
+                len(path) <= 64):
+            mightbe = True
+        if not mightbe and re.match(r'^DCM_\d+$', path):
+            mightbe = True
+        if mightbe and basepath:
+            try:
+                _lazyImportPydicom()
+                base_series_uid = pydicom.filereader.dcmread(
+                    basepath, stop_before_pixels=True,
+                )[pydicom.tag.Tag('SeriesInstanceUID')].value
+            except Exception:
+                base_series_uid = None
+            if base_series_uid:
+                try:
+                    series_uid = pydicom.filereader.dcmread(
+                        origpath, stop_before_pixels=True,
+                    )[pydicom.tag.Tag('SeriesInstanceUID')].value
+                    mightbe = base_series_uid == series_uid
+                except Exception:
+                    mightbe = False
+        return mightbe
 
     def getNativeMagnification(self):
         """
