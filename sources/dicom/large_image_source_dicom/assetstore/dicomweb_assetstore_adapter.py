@@ -420,8 +420,6 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             msg = f'Invalid parent type: {parentType}'
             raise RuntimeError(msg)
 
-        from wsidicom.uid import WSI_SOP_CLASS_UID
-
         limit = params.get('limit')
         search_filters = params.get('search_filters', {})
 
@@ -433,14 +431,6 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         series_uid_key = dicom_key_to_tag('SeriesInstanceUID')
         instance_uid_key = dicom_key_to_tag('SOPInstanceUID')
 
-        # We are only searching for WSI datasets. Ignore all others.
-        # FIXME: is this actually working? For the SLIM server at
-        # https://imagingdatacommons.github.io/slim/, none of the series
-        # report a SOPClassUID, but we still get all results anyways.
-        search_filters = {
-            'SOPClassUID': WSI_SOP_CLASS_UID,
-            **search_filters,
-        }
         fields = [
             study_uid_key,
             series_uid_key,
