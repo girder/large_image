@@ -132,6 +132,12 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                 'Accept': '; '.join(accept_parts),
             }
 
+            if offset != 0 or endByte is not None:
+                # Attempt to make a range request (although all DICOMweb
+                # servers we have seen do not honor it)
+                end_str = '' if endByte is None else endByte
+                headers['Range'] = f'bytes={offset}-{end_str}'
+
             response = client._http_get(url, headers=headers)
             for part in client._decode_multipart_message(response, False):
                 yield part
