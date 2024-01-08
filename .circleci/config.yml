@@ -134,6 +134,7 @@ jobs:
   py38:
     machine:
       image: ubuntu-2204:current
+    resource_class: large
     steps:
       - checkout
       - allservices:
@@ -147,6 +148,7 @@ jobs:
   py39:
     machine:
       image: ubuntu-2204:current
+    resource_class: large
     steps:
       - checkout
       - allservices:
@@ -160,6 +162,7 @@ jobs:
   py310:
     machine:
       image: ubuntu-2204:current
+    resource_class: large
     steps:
       - checkout
       - allservices:
@@ -173,6 +176,7 @@ jobs:
   py311:
     machine:
       image: ubuntu-2204:current
+    resource_class: large
     steps:
       - checkout
       - allservices:
@@ -186,6 +190,7 @@ jobs:
   py312:
     machine:
       image: ubuntu-2204:current
+    resource_class: large
     steps:
       - checkout
       - allservices:
