@@ -358,7 +358,7 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         ts = self.basemodule.open(imagePath, projection='EPSG:3857')
         region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
                                  format=constants.TILE_FORMAT_NUMPY)
-        assert region.shape == (1024, 1024, 4)
+        assert region.shape == (1024, 1024, 3)
 
     def testGCPProjection(self):
         imagePath = datastore.fetch('region_gcp.tiff')
