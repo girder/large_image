@@ -105,6 +105,8 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
     def downloadFile(self, file, offset=0, headers=True, endByte=None,
                      contentDisposition=None, extraParameters=None, **kwargs):
 
+        from dicomweb_client.web import _Transaction
+
         dicom_uids = file['dicom_uids']
         study_uid = dicom_uids['study_uid']
         series_uid = dicom_uids['series_uid']
@@ -113,8 +115,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         client = _create_dicomweb_client(self.assetstore_meta)
 
         def stream():
-            from dicomweb_client.web import _Transaction
-
+            # Create the URL
             url = client._get_instances_url(
                 _Transaction.RETRIEVE,
                 study_uid,
@@ -122,6 +123,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                 instance_uid
             )
 
+            # Build the headers
             transfer_syntax = '*'
             accept_parts = [
                 'multipart/related',
@@ -138,6 +140,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                 end_str = '' if endByte is None else endByte
                 headers['Range'] = f'bytes={offset}-{end_str}'
 
+            # Perform the request
             response = client._http_get(url, headers=headers)
             for part in client._decode_multipart_message(response, False):
                 yield part
@@ -235,7 +238,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                     item=item,
                     reuseExisting=True,
                     assetstore=self.assetstore,
-                    mimeType=None,
+                    mimeType='application/dicom',
                     size=0,
                     saveFile=False,
                 )

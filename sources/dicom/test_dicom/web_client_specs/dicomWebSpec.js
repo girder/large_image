@@ -16,6 +16,7 @@ describe('DICOMWeb assetstore', function () {
     it('Create an assetstore and import data', function () {
         var destinationId;
         var destinationType;
+        var itemId;
 
         // After importing, we will verify that this item exists
         const verifyItemName = '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0';
@@ -195,7 +196,23 @@ describe('DICOMWeb assetstore', function () {
                 }
             }).responseJSON.item;
 
-            return items.length > 0 && items[0].largeImage !== undefined;
+            if (items.length === 0 || items[0].largeImage === undefined) {
+                return false;
+            }
+
+            // Save the itemId
+            itemId = items[0]['_id'];
+            return true
         }, 'Wait for large images to be present');
+
+        // Verify that we can download the item
+        waitsFor(function () {
+            const resp = girder.rest.restRequest({
+                url: 'item/' + itemId + '/download',
+                type: 'GET',
+                async: false,
+            });
+            return resp.status === 200;
+        }, 'Wait to download the DICOM files');
     });
 });
