@@ -487,23 +487,23 @@ class TileSource(IPyLeafletMixin):
                 region[key] = region[key] * scale
         # convert negative references to right or bottom offsets
         for key in ('left', 'right', 'top', 'bottom'):
-            if key in region and region.get(key) < 0:
+            if key in region and region[key] < 0:
                 region[key] += metadata[
                     'sizeX' if key in ('left', 'right') else 'sizeY']
         # Calculate the region we need to fetch
         left = region.get(
             'left',
-            (region.get('right') - region.get('width'))
-            if ('right' in region and 'width' in region) else 0)
+            (region['right'] - region['width'])
+            if 'right' in region and 'width' in region else 0)
         right = region.get(
             'right',
-            (left + region.get('width'))
-            if ('width' in region) else metadata['sizeX'])
+            (left + region['width'])
+            if 'width' in region else metadata['sizeX'])
         top = region.get(
-            'top', region.get('bottom') - region.get('height')
+            'top', region['bottom'] - region['height']
             if 'bottom' in region and 'height' in region else 0)
         bottom = region.get(
-            'bottom', top + region.get('height')
+            'bottom', top + region['height']
             if 'height' in region else metadata['sizeY'])
         if cropToImage:
             # Crop the bounds to integer pixels within the actual source data
@@ -659,18 +659,18 @@ class TileSource(IPyLeafletMixin):
             metadata, desiredMagnification=mag, **kwargs.get('region', {}))
         regionWidth = right - left
         regionHeight = bottom - top
-        requestedScale = None
-        if maxWidth is None and maxHeight is None:
+        magRequestedScale = None
+        if maxWidth is None and maxHeight is None and mag:
             if mag.get('scale') in (1.0, None):
                 maxWidth, maxHeight = regionWidth, regionHeight
-                requestedScale = 1
+                magRequestedScale = 1
             else:
                 maxWidth = regionWidth / mag['scale']
                 maxHeight = regionHeight / mag['scale']
-                requestedScale = mag['scale']
+                magRequestedScale = mag['scale']
         outWidth, outHeight, calcScale = self._calculateWidthHeight(
             maxWidth, maxHeight, regionWidth, regionHeight)
-        requestedScale = calcScale if requestedScale is None else requestedScale
+        requestedScale = calcScale if magRequestedScale is None else magRequestedScale
         if (regionWidth < 0 or regionHeight < 0 or outWidth == 0 or
                 outHeight == 0):
             return None
@@ -1016,7 +1016,7 @@ class TileSource(IPyLeafletMixin):
                         originalQuality = int(5000.0 / 2.5 / image.quantization[0][15])
             except Exception:
                 return False
-            return abs(originalQuality - self.jpegQuality) <= 1
+            return bool(originalQuality and abs(originalQuality - self.jpegQuality) <= 1)
         # We fail for the TIFF file format; it is general enough that ensuring
         # compatibility could be an issue.
         return False
@@ -2189,8 +2189,8 @@ class TileSource(IPyLeafletMixin):
             kwargs['tile_offset'] = {'auto': True}
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
-            image = PIL.Image.new('RGB', (0, 0))
-            return _encodeImage(image, format=format, **kwargs)
+            pilimage = PIL.Image.new('RGB', (0, 0))
+            return _encodeImage(pilimage, format=format, **kwargs)
         regionWidth = iterInfo['region']['width']
         regionHeight = iterInfo['region']['height']
         top = iterInfo['region']['top']
@@ -2199,13 +2199,14 @@ class TileSource(IPyLeafletMixin):
         outWidth = iterInfo['output']['width']
         outHeight = iterInfo['output']['height']
         image = None
+        tiledimage = None
         for tile in self._tileIterator(iterInfo):
             # Add each tile to the image
             subimage, _ = _imageToNumpy(tile['tile'])
             x0, y0 = tile['x'] - left, tile['y'] - top
             if tiled:
-                image = self._addRegionTileToTiled(
-                    image, subimage, x0, y0, regionWidth, regionHeight, tile, **kwargs)
+                tiledimage = self._addRegionTileToTiled(
+                    tiledimage, subimage, x0, y0, regionWidth, regionHeight, tile, **kwargs)
             else:
                 image = _addSubimageToImage(
                     image, subimage, x0, y0, regionWidth, regionHeight)
@@ -2216,7 +2217,7 @@ class TileSource(IPyLeafletMixin):
         outWidth = int(math.floor(outWidth))
         outHeight = int(math.floor(outHeight))
         if tiled:
-            return self._encodeTiledImage(image, outWidth, outHeight, iterInfo, **kwargs)
+            return self._encodeTiledImage(tiledimage, outWidth, outHeight, iterInfo, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
             dtype = image.dtype
             image = _imageToPIL(image, mode).resize(
