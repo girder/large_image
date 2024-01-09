@@ -18,6 +18,7 @@ import psutil
 import tifftools
 
 import large_image
+from large_image.tilesource.utilities import _gdalParameters, _vipsCast, _vipsParameters
 
 from . import format_aperio
 
@@ -129,7 +130,7 @@ def _generate_geotiff(inputPath, outputPath, **kwargs):
     """
     from osgeo import gdal, gdalconst
 
-    cmdopt = large_image.tilesource.base._gdalParameters(**kwargs)
+    cmdopt = _gdalParameters(**kwargs)
     cmd = ['gdal_translate', inputPath, outputPath] + cmdopt
     logger.info('Convert to geotiff: %r', cmd)
     try:
@@ -263,7 +264,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
         and _convert_to_jp2k.
     """
     _import_pyvips()
-    convertParams = large_image.tilesource.base._vipsParameters(forTiled, **kwargs)
+    convertParams = _vipsParameters(forTiled, **kwargs)
     status = (', ' + status) if status else ''
     if isinstance(inputPathOrBuffer, pyvips.vimage.Image):
         source = 'vips image'
@@ -286,7 +287,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
             image.interpretation != pyvips.Interpretation.SCRGB):
         # jp2k compression supports more than 8-bits per sample, but the
         # decompressor claims this is unsupported.
-        image = large_image.tilesource.base._vipsCast(
+        image = _vipsCast(
             image,
             convertParams['compression'] in {'webp', 'jpeg'} or
             kwargs.get('compression') in {'jp2k'})

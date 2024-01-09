@@ -43,7 +43,6 @@ import pyproj
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
-import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, TileOutputMimeTypes)
@@ -54,7 +53,7 @@ from large_image.tilesource.geo import (GDALBaseFileTileSource, InitPrefix,
                                         NeededInitPrefix,
                                         ProjUnitsAcrossLevel0,
                                         ProjUnitsAcrossLevel0_MaxSize)
-from large_image.tilesource.utilities import JSONDict
+from large_image.tilesource.utilities import JSONDict, _gdalParameters, _vipsCast, _vipsParameters
 
 try:
     __version__ = _importlib_version(__name__)
@@ -793,13 +792,10 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             a variety of options similar to the converter utility.
         :returns: a pathlib.Path of the output file and the output mime type.
         """
-        convertParams = large_image.tilesource.base._vipsParameters(
-            defaultCompression='lzw', **kwargs)
+        convertParams = _vipsParameters(defaultCompression='lzw', **kwargs)
         convertParams.pop('pyramid', None)
-        vimg = large_image.tilesource.base._vipsCast(
-            vimg, convertParams['compression'] in {'webp', 'jpeg'})
-        gdalParams = large_image.tilesource.base._gdalParameters(
-            defaultCompression='lzw', **kwargs)
+        vimg = _vipsCast(vimg, convertParams['compression'] in {'webp', 'jpeg'})
+        gdalParams = _gdalParameters(defaultCompression='lzw', **kwargs)
         for ch in range(image['channels']):
             gdalParams += [
                 '-b' if ch not in (1, 3) or ch + 1 != image['channels'] else '-mask', str(ch + 1)]
@@ -874,8 +870,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             iterInfo['region']['right'], iterInfo['region']['bottom'], iterInfo['level'])
         outWidth = iterInfo['output']['width']
         outHeight = iterInfo['output']['height']
-        gdalParams = large_image.tilesource.base._gdalParameters(
-            defaultCompression='lzw', **kwargs)
+        gdalParams = _gdalParameters(defaultCompression='lzw', **kwargs)
         gdalParams += ['-t_srs', srs] if srs is not None else [
             '-to', 'SRC_METHOD=NO_GEOTRANSFORM']
         gdalParams += [

@@ -1,7 +1,10 @@
 import json
 import logging
 import os
+import re
 from typing import cast
+
+from . import exceptions
 
 try:
     import psutil
@@ -104,3 +107,20 @@ def setConfig(key, value):
     curConfig = getConfig()
     if curConfig.get(key) is not value:
         curConfig[key] = value
+
+
+def _ignoreSourceNames(configKey, path, default=None):
+    """
+    Given a path, if it is an actual file and there is a setting
+    "source_<configKey>_ignored_names", raise a TileSourceError if the path
+    matches the ignore names setting regex in a case-insensitive search.
+
+    :param configKey: key to use to fetch value from settings.
+    :param path: the file path to check.
+    :param default: a default ignore regex, or None for no default.
+    """
+    ignored_names = getConfig('source_%s_ignored_names' % configKey) or default
+    if not ignored_names or not os.path.isfile(path):
+        return
+    if re.search(ignored_names, os.path.basename(path), flags=re.IGNORECASE):
+        raise exceptions.TileSourceError('File will not be opened by %s reader' % configKey)

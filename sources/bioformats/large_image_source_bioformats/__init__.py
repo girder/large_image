@@ -210,7 +210,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super().__init__(path, **kwargs)
 
         largeImagePath = str(self._getLargeImagePath())
-        self._ignoreSourceNames('bioformats', largeImagePath, r'(^[^.]*|\.(png|zarr(\.db|\.zip)))$')
+        config._ignoreSourceNames('bioformats', largeImagePath)
 
         if not _startJavabridge(self.logger):
             msg = 'File cannot be opened by bioformats reader because javabridge failed to start'
@@ -343,7 +343,6 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'optimalTileWidth': rdr.getOptimalTileWidth(),
             'optimalTileHeight': rdr.getOptimalTileHeight(),
             'resolutionCount': rdr.getResolutionCount(),
-            'flattenedResolutions': rdr.hasFlattenedResolutions(),
         })
 
     def _getSeriesStarts(self, rdr):  # noqa
