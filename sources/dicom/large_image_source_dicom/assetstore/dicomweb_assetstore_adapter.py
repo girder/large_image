@@ -120,7 +120,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                 _Transaction.RETRIEVE,
                 study_uid,
                 series_uid,
-                instance_uid
+                instance_uid,
             )
 
             # Build the headers
