@@ -53,6 +53,21 @@ libtiff_ctypes.suppress_warnings()
 libtiff_ctypes.suppress_errors()
 
 
+_ctypesFormattbl = {
+    (8, libtiff_ctypes.SAMPLEFORMAT_UINT): np.uint8,
+    (8, libtiff_ctypes.SAMPLEFORMAT_INT): np.int8,
+    (16, libtiff_ctypes.SAMPLEFORMAT_UINT): np.uint16,
+    (16, libtiff_ctypes.SAMPLEFORMAT_INT): np.int16,
+    (16, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): np.float16,
+    (32, libtiff_ctypes.SAMPLEFORMAT_UINT): np.uint32,
+    (32, libtiff_ctypes.SAMPLEFORMAT_INT): np.int32,
+    (32, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): np.float32,
+    (64, libtiff_ctypes.SAMPLEFORMAT_UINT): np.uint64,
+    (64, libtiff_ctypes.SAMPLEFORMAT_INT): np.int64,
+    (64, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): np.float64,
+}
+
+
 def patchLibtiff():
     libtiff_ctypes.libtiff.TIFFFieldWithTag.restype = \
         ctypes.POINTER(libtiff_ctypes.TIFFFieldInfo)
@@ -286,6 +301,7 @@ class TiledTiffDirectory:
         self._tileHeight = info.get('tilelength') or info.get('rowsperstrip')
         self._imageWidth = info.get('imagewidth')
         self._imageHeight = info.get('imagelength')
+        self._tilesAcross = (self._imageWidth + self._tileWidth - 1) // self._tileWidth
         if not info.get('tilelength'):
             self._stripsPerTile = int(max(1, math.ceil(256.0 / self._tileHeight)))
             self._stripHeight = self._tileHeight
@@ -404,12 +420,11 @@ class TiledTiffDirectory:
         #     raise InvalidOperationTiffError(
         #         'Tile x=%d, y=%d does not exist' % (x, y))
         if self._tiffInfo.get('istiled'):
-            tileNum = libtiff_ctypes.libtiff.TIFFComputeTile(
-                self._tiffFile, pixelX, pixelY, 0, 0).value
+            tileNum = pixelX // self._tileWidth + (pixelY // self._tileHeight) * self._tilesAcross
         else:
             # TIFFComputeStrip with sample=0 is just the row divided by the
             # strip height
-            tileNum = int(pixelY // self._stripHeight)
+            tileNum = pixelY // self._stripHeight
         return tileNum
 
     @methodcache(key=partial(strhash, '_getTileByteCountsType'))
@@ -569,34 +584,39 @@ class TiledTiffDirectory:
         :rtype: PIL.Image
         :raises: IOTiffError
         """
-        with self._tileLock:
-            if self._tiffInfo.get('istiled'):
-                tileSize = libtiff_ctypes.libtiff.TIFFTileSize(self._tiffFile).value
-            else:
+        if self._tiffInfo.get('istiled'):
+            if not hasattr(self, '_uncompressedTileSize'):
+                with self._tileLock:
+                    self._uncompressedTileSize = libtiff_ctypes.libtiff.TIFFTileSize(
+                        self._tiffFile).value
+            tileSize = self._uncompressedTileSize
+        else:
+            with self._tileLock:
                 stripSize = libtiff_ctypes.libtiff.TIFFStripSize(
                     self._tiffFile).value
-                stripsCount = min(self._stripsPerTile, self._stripCount - tileNum)
-                tileSize = stripSize * self._stripsPerTile
+            stripsCount = min(self._stripsPerTile, self._stripCount - tileNum)
+            tileSize = stripSize * self._stripsPerTile
         imageBuffer = ctypes.create_string_buffer(tileSize)
-        with self._tileLock:
-            if self._tiffInfo.get('istiled'):
+        if self._tiffInfo.get('istiled'):
+            with self._tileLock:
                 readSize = libtiff_ctypes.libtiff.TIFFReadEncodedTile(
                     self._tiffFile, tileNum, imageBuffer, tileSize)
-            else:
-                readSize = 0
-                for stripNum in range(stripsCount):
+        else:
+            readSize = 0
+            for stripNum in range(stripsCount):
+                with self._tileLock:
                     chunkSize = libtiff_ctypes.libtiff.TIFFReadEncodedStrip(
                         self._tiffFile,
                         tileNum + stripNum,
                         ctypes.byref(imageBuffer, stripSize * stripNum),
                         stripSize).value
-                    if chunkSize <= 0:
-                        msg = 'Read an unexpected number of bytes from an encoded strip'
-                        raise IOTiffError(msg)
-                    readSize += chunkSize
-                if readSize < tileSize:
-                    ctypes.memset(ctypes.byref(imageBuffer, readSize), 0, tileSize - readSize)
-                    readSize = tileSize
+                if chunkSize <= 0:
+                    msg = 'Read an unexpected number of bytes from an encoded strip'
+                    raise IOTiffError(msg)
+                readSize += chunkSize
+            if readSize < tileSize:
+                ctypes.memset(ctypes.byref(imageBuffer, readSize), 0, tileSize - readSize)
+                readSize = tileSize
         if readSize < tileSize:
             raise IOTiffError(
                 'Read an unexpected number of bytes from an encoded tile' if readSize >= 0 else
@@ -612,23 +632,10 @@ class TiledTiffDirectory:
             self._tiffInfo.get('bitspersample'),
             self._tiffInfo.get('sampleformat') if self._tiffInfo.get(
                 'sampleformat') is not None else libtiff_ctypes.SAMPLEFORMAT_UINT)
-        formattbl = {
-            (8, libtiff_ctypes.SAMPLEFORMAT_UINT): np.uint8,
-            (8, libtiff_ctypes.SAMPLEFORMAT_INT): np.int8,
-            (16, libtiff_ctypes.SAMPLEFORMAT_UINT): np.uint16,
-            (16, libtiff_ctypes.SAMPLEFORMAT_INT): np.int16,
-            (16, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): np.float16,
-            (32, libtiff_ctypes.SAMPLEFORMAT_UINT): np.uint32,
-            (32, libtiff_ctypes.SAMPLEFORMAT_INT): np.int32,
-            (32, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): np.float32,
-            (64, libtiff_ctypes.SAMPLEFORMAT_UINT): np.uint64,
-            (64, libtiff_ctypes.SAMPLEFORMAT_INT): np.int64,
-            (64, libtiff_ctypes.SAMPLEFORMAT_IEEEFP): np.float64,
-        }
         image = np.ctypeslib.as_array(ctypes.cast(
             imageBuffer, ctypes.POINTER(ctypes.c_uint8)), (tileSize, )).view(
-                formattbl[format]).reshape(
-                    (th, tw, self._tiffInfo.get('samplesperpixel')))
+                _ctypesFormattbl[format]).reshape(
+                    (th, tw, self._tiffInfo['samplesperpixel']))
         if (self._tiffInfo.get('samplesperpixel') == 3 and
                 self._tiffInfo.get('photometric') == libtiff_ctypes.PHOTOMETRIC_YCBCR):
             if self._tiffInfo.get('bitspersample') == 16:

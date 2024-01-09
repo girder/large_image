@@ -24,11 +24,12 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          TileOutputPILFormat, dtypeToGValue)
 from .jupyter import IPyLeafletMixin
 from .tiledict import LazyTileDict
-from .utilities import (JSONDict, _encodeImage,  # noqa: F401
-                        _encodeImageBinary, _gdalParameters, _imageToNumpy,
-                        _imageToPIL, _letterboxImage, _makeSameChannelDepth,
-                        _vipsCast, _vipsParameters, dictToEtree, etreeToDict,
-                        getPaletteColors, histogramThreshold, nearPowerOfTwo)
+from .utilities import (JSONDict, _addSubimageToImage,  # noqa: F401
+                        _encodeImage, _encodeImageBinary, _gdalParameters,
+                        _imageToNumpy, _imageToPIL, _letterboxImage,
+                        _makeSameChannelDepth, _vipsCast, _vipsParameters,
+                        dictToEtree, etreeToDict, getPaletteColors,
+                        histogramThreshold, nearPowerOfTwo)
 
 
 class TileSource(IPyLeafletMixin):
@@ -513,7 +514,7 @@ class TileSource(IPyLeafletMixin):
 
         return left, top, right, bottom
 
-    def _tileIteratorInfo(self, **kwargs):
+    def _tileIteratorInfo(self, **kwargs):  # noqa
         """
         Get information necessary to construct a tile iterator.
           If one of width or height is specified, the other is determined by
@@ -588,6 +589,14 @@ class TileSource(IPyLeafletMixin):
             :y: the vertical overlap in pixels.
             :edges: if True, then the edge tiles will exclude the overlap
                 distance.  If unset or False, the edge tiles are full size.
+
+        :param tile_offset: if present, adjust tile positions so that the
+            corner of one tile is at the specified location.
+
+            :left: the left offset in pixels.
+            :top: the top offset in pixels.
+            :auto: a boolean, if True, automatically set the offset to align
+                with the region's left and top.
 
         :param kwargs: optional arguments.  Some options are encoding,
             jpegQuality, jpegSubsampling, tiffCompression, frame.
@@ -734,17 +743,26 @@ class TileSource(IPyLeafletMixin):
             tile_overlap['x'] = int(math.ceil(tile_overlap['x'] * requestedScale))
             tile_overlap['y'] = int(math.ceil(tile_overlap['y'] * requestedScale))
 
+        offset_x = kwargs.get('tile_offset', {}).get('left', 0)
+        offset_y = kwargs.get('tile_offset', {}).get('top', 0)
+        if kwargs.get('tile_offset', {}).get('auto'):
+            offset_x = left
+            offset_y = top
+        offset_x = (left - left % tile_size['width']) if offset_x > left else offset_x
+        offset_y = (top - top % tile_size['height']) if offset_y > top else offset_y
         # If the overlapped tiles don't run over the edge, then the functional
         # size of the region is reduced by the overlap.  This factor is stored
         # in the overlap offset_*.
-        xmin = int(left / tile_size['width'])
-        xmax = max(int(math.ceil((float(right) - tile_overlap['range_x']) /
+        xmin = int((left - offset_x) / tile_size['width'])
+        xmax = max(int(math.ceil((float(right - offset_x) - tile_overlap['range_x']) /
                                  tile_size['width'])), xmin + 1)
-        ymin = int(top / tile_size['height'])
-        ymax = max(int(math.ceil((float(bottom) - tile_overlap['range_y']) /
+        ymin = int((top - offset_y) / tile_size['height'])
+        ymax = max(int(math.ceil((float(bottom - offset_y) - tile_overlap['range_y']) /
                                  tile_size['height'])), ymin + 1)
         tile_overlap.update({'xmin': xmin, 'xmax': xmax,
                              'ymin': ymin, 'ymax': ymax})
+        tile_overlap['offset_x'] += offset_x
+        tile_overlap['offset_y'] += offset_y
 
         # Use RGB for JPEG, RGBA for PNG
         mode = 'RGBA' if kwargs.get('encoding') in {'PNG', 'TIFF', 'TILED'} else 'RGB'
@@ -2162,6 +2180,13 @@ class TileSource(IPyLeafletMixin):
         if 'tile_position' in kwargs:
             kwargs = kwargs.copy()
             kwargs.pop('tile_position', None)
+        tiled = TILE_FORMAT_IMAGE in format and kwargs.get('encoding') == 'TILED'
+        if not tiled and 'tile_offset' not in kwargs and 'tile_size' not in kwargs:
+            kwargs = kwargs.copy()
+            kwargs['tile_size'] = {
+                'width': max(self.tileWidth, 4096),
+                'height': max(self.tileHeight, 4096)}
+            kwargs['tile_offset'] = {'auto': True}
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
             image = PIL.Image.new('RGB', (0, 0))
@@ -2173,26 +2198,20 @@ class TileSource(IPyLeafletMixin):
         mode = None if TILE_FORMAT_NUMPY in format else iterInfo['mode']
         outWidth = iterInfo['output']['width']
         outHeight = iterInfo['output']['height']
-        tiled = TILE_FORMAT_IMAGE in format and kwargs.get('encoding') == 'TILED'
         image = None
         for tile in self._tileIterator(iterInfo):
             # Add each tile to the image
             subimage, _ = _imageToNumpy(tile['tile'])
             x0, y0 = tile['x'] - left, tile['y'] - top
-            if x0 < 0:
-                subimage = subimage[:, -x0:]
-                x0 = 0
-            if y0 < 0:
-                subimage = subimage[-y0:, :]
-                y0 = 0
-            subimage = subimage[:min(subimage.shape[0], regionHeight - y0),
-                                :min(subimage.shape[1], regionWidth - x0)]
             if tiled:
                 image = self._addRegionTileToTiled(
                     image, subimage, x0, y0, regionWidth, regionHeight, tile, **kwargs)
             else:
-                image = self._addRegionTileToImage(
-                    image, subimage, x0, y0, regionWidth, regionHeight, **kwargs)
+                image = _addSubimageToImage(
+                    image, subimage, x0, y0, regionWidth, regionHeight)
+            # Somehow discarding the tile here speeds things up.
+            del tile
+            del subimage
         # Scale if we need to
         outWidth = int(math.floor(outWidth))
         outHeight = int(math.floor(outHeight))
@@ -2212,35 +2231,6 @@ class TileSource(IPyLeafletMixin):
         if kwargs.get('fill') and maxWidth and maxHeight:
             image = _letterboxImage(_imageToPIL(image, mode), maxWidth, maxHeight, kwargs['fill'])
         return _encodeImage(image, format=format, **kwargs)
-
-    def _addRegionTileToImage(self, image, subimage, x, y, width, height, **kwargs):
-        """
-        Add a subtile to a larger image.
-
-        :param image: the output image record.  None for not created yet.
-        :param subimage: a numpy array with the sub-image to add.
-        :param x: the location of the upper left point of the sub-image within
-            the output image.
-        :param y: the location of the upper left point of the sub-image within
-            the output image.
-        :param width: the output image size.
-        :param height: the output image size.
-        :returns: the output image record.
-        """
-        if image is None:
-            if (x, y, width, height) == (0, 0, subimage.shape[1], subimage.shape[0]):
-                return subimage
-            try:
-                image = np.zeros(
-                    (height, width, subimage.shape[2]),
-                    dtype=subimage.dtype)
-            except MemoryError:
-                raise exceptions.TileSourceError(
-                    'Insufficient memory to get region of %d x %d pixels.' % (
-                        width, height))
-        image, subimage = _makeSameChannelDepth(image, subimage)
-        image[y:y + subimage.shape[0], x:x + subimage.shape[1], :] = subimage
-        return image
 
     def _vipsAddAlphaBand(self, vimg, *otherImages):
         """
@@ -2477,8 +2467,8 @@ class TileSource(IPyLeafletMixin):
                 image = self._addRegionTileToTiled(
                     image, subimage, offsetX, offsetY, outWidth, outHeight, tile, **kwargs)
             else:
-                image = self._addRegionTileToImage(
-                    image, subimage, offsetX, offsetY, outWidth, outHeight, **kwargs)
+                image = _addSubimageToImage(
+                    image, subimage, offsetX, offsetY, outWidth, outHeight)
         if tiled:
             return self._encodeTiledImage(image, outWidth, outHeight, iterInfo, **kwargs)
         return _encodeImage(image, format=format, **kwargs)
@@ -2750,6 +2740,14 @@ class TileSource(IPyLeafletMixin):
                 is 012, 3, 4, 567.  If the edges option is True, the tiles
                 returned are: 012, 0123, 01234, 12345, 23456, 34567, 4567, 567,
                 with the non-overlapped area of each as 0, 1, 2, 3, 4, 5, 6, 7.
+
+        :param tile_offset: if present, adjust tile positions so that the
+            corner of one tile is at the specified location.
+
+            :left: the left offset in pixels.
+            :top: the top offset in pixels.
+            :auto: a boolean, if True, automatically set the offset to align
+                with the region's left and top.
 
         :param encoding: if format includes TILE_FORMAT_IMAGE, a valid PIL
             encoding (typically 'PNG', 'JPEG', or 'TIFF') or 'TILED' (identical

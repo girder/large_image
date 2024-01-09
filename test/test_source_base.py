@@ -369,6 +369,19 @@ def testTileOverlapWithRegionOffset():
     assert firstTile['tile_overlap']['right'] == 200
 
 
+def testGetRegionAutoOffset():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image.open(imagePath)
+    region1, _ = source.getRegion(
+        region=dict(left=20, top=40, width=400, height=500),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    region2, _ = source.getRegion(
+        region=dict(left=20, top=40, width=400, height=500),
+        tile_size=dict(width=240, height=240),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert np.all(region2 == region1)
+
+
 @pytest.mark.parametrize((
     'options', 'lensrc', 'lenquads', 'frame10', 'src0', 'srclast', 'quads10',
 ), [

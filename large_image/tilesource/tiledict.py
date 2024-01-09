@@ -122,15 +122,14 @@ class LazyTileDict(dict):
         xmax = int((self['x'] + self.width - 1) // self.metadata['tileWidth'] + 1)
         ymin = int(max(0, self['y'] // self.metadata['tileHeight']))
         ymax = int((self['y'] + self.height - 1) // self.metadata['tileHeight'] + 1)
-        for x in range(xmin, xmax):
-            for y in range(ymin, ymax):
+        for y in range(ymin, ymax):
+            for x in range(xmin, xmax):
                 tileData = self.source.getTile(
                     x, y, self.level,
                     numpyAllowed='always', sparseFallback=True, frame=self.frame)
                 tileData, _ = _imageToNumpy(tileData)
                 if retile is None:
-                    retile = np.zeros(
-                        (self.height, self.width) if len(tileData.shape) == 2 else
+                    retile = np.empty(
                         (self.height, self.width, tileData.shape[2]),
                         dtype=tileData.dtype)
                 x0 = int(x * self.metadata['tileWidth'] - self['x'])

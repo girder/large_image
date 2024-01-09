@@ -763,6 +763,32 @@ def _makeSameChannelDepth(arr1, arr2):
     return arrays['arr1'], arrays['arr2']
 
 
+def _addSubimageToImage(image, subimage, x, y, width, height):
+    """
+    Add a subimage to a larger image as numpy arrays.
+
+    :param image: the output image record.  None for not created yet.
+    :param subimage: a numpy array with the sub-image to add.
+    :param x: the location of the upper left point of the sub-image within
+        the output image.
+    :param y: the location of the upper left point of the sub-image within
+        the output image.
+    :param width: the output image size.
+    :param height: the output image size.
+    :returns: the output image record.
+    """
+    if image is None:
+        if (x, y, width, height) == (0, 0, subimage.shape[1], subimage.shape[0]):
+            return subimage
+        image = np.empty(
+            (height, width, subimage.shape[2]),
+            dtype=subimage.dtype)
+    elif len(image.shape) != len(subimage.shape) or image.shape[-1] != subimage.shape[-1]:
+        image, subimage = _makeSameChannelDepth(image, subimage)
+    image[y:y + subimage.shape[0], x:x + subimage.shape[1]] = subimage
+    return image
+
+
 def _computeFramesPerTexture(opts, numFrames, sizeX, sizeY):
     """
     Compute the number of frames for each tile_frames texture.
