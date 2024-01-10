@@ -3,6 +3,7 @@ from large_image_source_dicom.dicom_tags import dicom_key_to_tag
 from large_image_source_dicom.dicomweb_utils import get_dicomweb_metadata
 from requests.exceptions import HTTPError
 
+from girder.api.rest import setContentDisposition, setResponseHeader
 from girder.exceptions import ValidationException
 from girder.models.file import File
 from girder.models.folder import Folder
@@ -105,6 +106,11 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
     def downloadFile(self, file, offset=0, headers=True, endByte=None,
                      contentDisposition=None, extraParameters=None, **kwargs):
 
+        if offset != 0 or endByte is not None:
+            # FIXME: implement range requests
+            msg = 'Range requests are not yet implemented'
+            raise NotImplementedError(msg)
+
         from dicomweb_client.web import _Transaction
 
         dicom_uids = file['dicom_uids']
@@ -114,35 +120,48 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
         client = _create_dicomweb_client(self.assetstore_meta)
 
+        if headers:
+            setResponseHeader('Content-Type', file['mimeType'])
+            setContentDisposition(file['name'], contentDisposition or 'attachment')
+
+            # The filesystem assetstore calls the following function, which sets
+            # the above and also sets the range and content-length headers:
+            # `self.setContentHeaders(file, offset, endByte, contentDisposition)`
+            # However, we can't call that since we don't have a great way of
+            # determining the DICOM file size without downloading the whole thing.
+            # FIXME: call that function if we find a way to determine file size.
+
+        # Create the URL
+        url = client._get_instances_url(
+            _Transaction.RETRIEVE,
+            study_uid,
+            series_uid,
+            instance_uid,
+        )
+
+        # Build the headers
+        transfer_syntax = '*'
+        accept_parts = [
+            'multipart/related',
+            'type="application/dicom"',
+            f'transfer-syntax={transfer_syntax}',
+        ]
+        headers = {
+            'Accept': '; '.join(accept_parts),
+        }
+
+        # FIXME: add this back in when we support range requests
+        # if offset != 0 or endByte is not None:
+        #     # Attempt to make a range request (although all DICOMweb
+        #     # servers we have seen do not honor it)
+        #     end_str = '' if endByte is None else endByte
+        #     headers['Range'] = f'bytes={offset}-{end_str}'
+
         def stream():
-            # Create the URL
-            url = client._get_instances_url(
-                _Transaction.RETRIEVE,
-                study_uid,
-                series_uid,
-                instance_uid,
-            )
-
-            # Build the headers
-            transfer_syntax = '*'
-            accept_parts = [
-                'multipart/related',
-                'type="application/dicom"',
-                f'transfer-syntax={transfer_syntax}',
-            ]
-            headers = {
-                'Accept': '; '.join(accept_parts),
-            }
-
-            if offset != 0 or endByte is not None:
-                # Attempt to make a range request (although all DICOMweb
-                # servers we have seen do not honor it)
-                end_str = '' if endByte is None else endByte
-                headers['Range'] = f'bytes={offset}-{end_str}'
-
             # Perform the request
             response = client._http_get(url, headers=headers)
             for part in client._decode_multipart_message(response, False):
+                # This function produces a single, whole DICOM file
                 yield part
 
         return stream
