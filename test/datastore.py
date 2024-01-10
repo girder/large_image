@@ -130,3 +130,8 @@ datastore = DKCPooch(
     registry=registry,
     retry_if_failed=10,
 )
+
+
+def fetch_all():
+    for key in registry:
+        datastore.fetch(key)

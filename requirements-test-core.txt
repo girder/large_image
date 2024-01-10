@@ -25,6 +25,7 @@ utilities/converter[stats]
 # Extras from main setup.py
 pylibmc>=1.5.1
 matplotlib
+simplejpeg
 
 # External dependencies
 pip>=9
