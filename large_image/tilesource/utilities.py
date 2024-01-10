@@ -11,6 +11,8 @@ import PIL.Image
 import PIL.ImageColor
 import PIL.ImageDraw
 
+from ..constants import dtypeToGValue
+
 try:
     import simplejpeg
 except ImportError:
@@ -787,6 +789,108 @@ def _addSubimageToImage(image, subimage, x, y, width, height):
         image, subimage = _makeSameChannelDepth(image, subimage)
     image[y:y + subimage.shape[0], x:x + subimage.shape[1]] = subimage
     return image
+
+
+def _vipsAddAlphaBand(vimg, *otherImages):
+    """
+    Add an alpha band to a vips image.  The alpha value is either 1, 255, or
+    65535 depending on the max value in the image and any other images passed
+    for reference.
+
+    :param vimg: the image to modify.
+    :param otherImages: a list of other images to use for determining the alpha
+        value.
+    :returns: the original image with an alpha band.
+    """
+    maxValue = vimg.max()
+    for img in otherImages:
+        maxValue = max(maxValue, img.max())
+    alpha = 1
+    if maxValue >= 2 and maxValue < 2**9:
+        alpha = 255
+    elif maxValue >= 2**8 and maxValue < 2**17:
+        alpha = 65535
+    return vimg.bandjoin(alpha)
+
+
+def _addRegionTileToTiled(image, subimage, x, y, width, height, tile=None, **kwargs):
+    """
+    Add a subtile to a vips image.
+
+    :param image: an object with information on the output.
+    :param subimage: a numpy array with the sub-image to add.
+    :param x: the location of the upper left point of the sub-image within the
+        output image.
+    :param y: the location of the upper left point of the sub-image within the
+        output image.
+    :param width: the output image size.
+    :param height: the output image size.
+    :param tile: the original tile record with the current scale, etc.
+    :returns: the output object.
+    """
+    import pyvips
+
+    if subimage.dtype.char not in dtypeToGValue:
+        subimage = subimage.astype('d')
+    vimgMem = pyvips.Image.new_from_memory(
+        np.ascontiguousarray(subimage).data,
+        subimage.shape[1], subimage.shape[0], subimage.shape[2],
+        dtypeToGValue[subimage.dtype.char])
+    vimg = pyvips.Image.new_temp_file('%s.v')
+    vimgMem.write(vimg)
+    if image is None:
+        image = {
+            'width': width,
+            'height': height,
+            'mm_x': tile.get('mm_x') if tile else None,
+            'mm_y': tile.get('mm_y') if tile else None,
+            'magnification': tile.get('magnification') if tile else None,
+            'channels': subimage.shape[2],
+            'strips': {},
+        }
+    if y not in image['strips']:
+        image['strips'][y] = vimg
+        if not x:
+            return image
+    if image['strips'][y].bands + 1 == vimg.bands:
+        image['strips'][y] = _vipsAddAlphaBand(image['strips'][y], vimg)
+    elif vimg.bands + 1 == image['strips'][y].bands:
+        vimg = _vipsAddAlphaBand(vimg, image['strips'][y])
+    image['strips'][y] = image['strips'][y].insert(vimg, x, 0, expand=True)
+    return image
+
+
+def _calculateWidthHeight(width, height, regionWidth, regionHeight):
+    """
+    Given a source width and height and a maximum destination width and/or
+    height, calculate a destination width and height that preserves the aspect
+    ratio of the source.
+
+    :param width: the destination width.  None to only use height.
+    :param height: the destination height.  None to only use width.
+    :param regionWidth: the width of the source data.
+    :param regionHeight: the height of the source data.
+    :returns: the width and height that is no larger than that specified and
+        preserves aspect ratio, and the scaling factor used for the conversion.
+    """
+    if regionWidth == 0 or regionHeight == 0:
+        return 0, 0, 1
+    # Constrain the maximum size if both width and height weren't
+    # specified, in case the image is very short or very narrow.
+    if height and not width:
+        width = height * 16
+    if width and not height:
+        height = width * 16
+    scaledWidth = max(1, int(regionWidth * height / regionHeight))
+    scaledHeight = max(1, int(regionHeight * width / regionWidth))
+    if scaledWidth == width or (
+            width * regionHeight > height * regionWidth and not scaledHeight == height):
+        scale = float(regionHeight) / height
+        width = scaledWidth
+    else:
+        scale = float(regionWidth) / width
+        height = scaledHeight
+    return width, height, scale
 
 
 def _computeFramesPerTexture(opts, numFrames, sizeX, sizeY):

@@ -67,7 +67,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._largeImagePath = str(self._getLargeImagePath())
         self._editable = False
 
-        self._ignoreSourceNames('vips', self._largeImagePath)
+        config._ignoreSourceNames('vips', self._largeImagePath)
         try:
             self._image = pyvips.Image.new_from_file(self._largeImagePath)
         except pyvips.error.Error:

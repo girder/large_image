@@ -10,6 +10,7 @@
 
 ### Changed
 - Cleanup some places where get was needlessly used ([#1428](../../pull/1428)
+- Moved some internal code out of the base class ([#1429](../../pull/1429)
 
 ## 1.27.0
 
