@@ -2,26 +2,32 @@ import functools
 import pickle
 import threading
 import uuid
+from typing import Any, Callable, Dict, Optional, TypeVar
+
+from typing_extensions import ParamSpec
 
 try:
     import resource
+    HAS_RESOURCE = True
 except ImportError:
-    resource = None
+    HAS_RESOURCE = False
 
 from .. import config
 from .cachefactory import CacheFactory, pickAvailableCache
+
+P = ParamSpec('P')
+T = TypeVar('T')
 
 _tileCache = None
 _tileLock = None
 
 _cacheLockKeyToken = '_cacheLock_key'
 
-
 # If we have a resource module, ask to use as many file handles as the hard
 # limit allows, then calculate how may tile sources we can have open based on
 # the actual limit.
 MaximumTileSources = 10
-if resource:
+if HAS_RESOURCE:
     try:
         SoftNoFile, HardNoFile = resource.getrlimit(resource.RLIMIT_NOFILE)
         resource.setrlimit(resource.RLIMIT_NOFILE, (HardNoFile, HardNoFile))
@@ -29,7 +35,7 @@ if resource:
         # Reserve some file handles for general use, and expect that tile
         # sources could use many handles each.  This is conservative, since
         # running out of file handles breaks the program in general.
-        MaximumTileSources = max(3, (SoftNoFile - 10) / 20)
+        MaximumTileSources = max(3, (SoftNoFile - 10) // 20)
     except Exception:
         pass
 
@@ -47,7 +53,7 @@ CacheProperties = {
 }
 
 
-def strhash(*args, **kwargs):
+def strhash(*args, **kwargs) -> str:
     """
     Generate a string hash value for an arbitrary set of args and kwargs.  This
     relies on the repr of each element.
@@ -61,7 +67,7 @@ def strhash(*args, **kwargs):
     return '%r' % (args, )
 
 
-def methodcache(key=None):  # noqa
+def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
     """
     Decorator to wrap a function with a memoizing callable that saves results
     in self.cache.  This is largely taken from cachetools, but uses a cache
@@ -70,9 +76,9 @@ def methodcache(key=None):  # noqa
 
     :param key: if a function, use that for the key, otherwise use self.wrapKey.
     """
-    def decorator(func):
+    def decorator(func: Callable[P, T]) -> Callable[..., T]:
         @functools.wraps(func)
-        def wrapper(self, *args, **kwargs):
+        def wrapper(self, *args: P.args, **kwargs: P.kwargs) -> T:
             k = key(*args, **kwargs) if key else self.wrapKey(*args, **kwargs)
             lock = getattr(self, 'cache_lock', None)
             ck = getattr(self, '_classkey', None)
@@ -115,8 +121,8 @@ def methodcache(key=None):  # noqa
 
 
 class LruCacheMetaclass(type):
-    namedCaches = {}
-    classCaches = {}
+    namedCaches: Dict[str, Any] = {}
+    classCaches: Dict[type, Any] = {}
 
     def __new__(metacls, name, bases, namespace, **kwargs):
         # Get metaclass parameters by finding and removing them from the class
@@ -267,7 +273,7 @@ def getTileCache():
     return _tileCache, _tileLock
 
 
-def isTileCacheSetup():
+def isTileCacheSetup() -> bool:
     """
     Return True if the tile cache has been created.
 

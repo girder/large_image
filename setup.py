@@ -105,6 +105,7 @@ setup(
         'palettable',
         'Pillow',
         'numpy',
+        'typing-extensions',
     ],
     extras_require=extraReqs,
     include_package_data=True,

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import pathlib
 import re
 from typing import Any, Optional, Union, cast
 
@@ -111,7 +112,8 @@ def setConfig(key: str, value: Optional[Union[str, bool, int, logging.Logger]]) 
         curConfig[key] = value
 
 
-def _ignoreSourceNames(configKey, path, default=None):
+def _ignoreSourceNames(
+        configKey: str, path: Union[str, pathlib.Path], default: Optional[str] = None) -> None:
     """
     Given a path, if it is an actual file and there is a setting
     "source_<configKey>_ignored_names", raise a TileSourceError if the path
@@ -123,6 +125,6 @@ def _ignoreSourceNames(configKey, path, default=None):
     """
     ignored_names = getConfig('source_%s_ignored_names' % configKey) or default
     if not ignored_names or not os.path.isfile(path):
-        return
+        return None
     if re.search(ignored_names, os.path.basename(path), flags=re.IGNORECASE):
         raise exceptions.TileSourceError('File will not be opened by %s reader' % configKey)

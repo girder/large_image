@@ -196,6 +196,8 @@ def testSourcesTilesAndMethods(filename, source):
     sourceClass = large_image.tilesource.AvailableTileSources[source]
     ts = sourceClass(imagePath)
     tileMetadata = ts.getMetadata()
+    assert ts.metadata['sizeX'] == tileMetadata['sizeX']
+    assert ts.bandCount == tileMetadata['bandCount']
     utilities.checkTilesZXY(ts, tileMetadata)
     # All of these should succeed
     assert ts.getInternalMetadata() is not None
@@ -633,6 +635,7 @@ def testStyleFunctions():
             'context': True,
             'parameters': {'values': [164, 165]}},
         'bands': []})
+    assert sourceFunc2.style is not None
     region2, _ = sourceFunc2.getRegion(
         output=dict(maxWidth=50),
         format=large_image.constants.TILE_FORMAT_NUMPY)
