@@ -7,6 +7,7 @@
 - Optimizing when reading arrays rather than images from tiff files ([#1423](../../pull/1423))
 - Better filter DICOM adjacent files to ensure they share series instance IDs ([#1424](../../pull/1424))
 - Optimizing small getRegion calls and some tiff tile fetches ([#1427](../../pull/1427)
+- Started adding python types to the core library ([#1430](../../pull/1430)
 
 ### Changed
 - Cleanup some places where get was needlessly used ([#1428](../../pull/1428)
