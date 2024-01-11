@@ -1,11 +1,12 @@
 import math
 import os
+import shutil
+import tempfile
 import threading
 import uuid
-from pathlib import Path
-
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
+from pathlib import Path
 
 import numpy as np
 import packaging.version
@@ -90,12 +91,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Initialize the tile class for creating a new image.
         """
-        self._zarr_store = zarr.SQLiteStore(path)
+        self._tempfile = tempfile.NamedTemporaryFile(suffix=path)
+        self._zarr_store = zarr.SQLiteStore(self._tempfile.name)
         self._zarr = zarr.open(self._zarr_store, mode='w')
         # Make unpickleable
         self._unpickleable = True
         self._largeImagePath = None
-        self._image = None
         self.sizeX = self.sizeY = self.levels = 0
         self.tileWidth = self.tileHeight = self._tileSize
         self._frames = [0]
@@ -112,7 +113,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def __del__(self):
         try:
             self._zarr.close()
-        except:
+            self._tempfile.close()
+        except BaseException:
             pass
 
     def _checkEditable(self):
@@ -438,7 +440,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
-        if self._image is None:
+        if self._levels is None:
             self._validateZarr()
 
         frame = self._getFrame(**kwargs)
@@ -501,10 +503,19 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             in the same order as the tile dimensions
         :param kwargs: start locations for any additional axes
         """
+        # If default zarr chunking, adjust chunking (should only happen once)
+        # min for y and x is 256, max is 2k
+        # for s, use length of s.
+        # for any other axes, let zarr determine appropriate chunking
+
+        # check band bookkeeping
+
+        # also don't change dtypes
 
         placement = {
             'x': x,
             'y': y,
+            **kwargs,
         }
         if axes is None:
             if len(tile.shape) == 2:
@@ -516,56 +527,75 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if isinstance(axes, str):
             axes = axes.lower()
         elif isinstance(axes, list):
-            axes = [lower(x) for x in axes]
+            axes = [x.lower() for x in axes]
         else:
-            raise ValueError(f'Invalid type for axes. Must be str or list[str].')
-
-        if len(axes) != len(tile.shape):
-            raise ValueError(f'Invalid value for axes: {axes}. \
-                Length {len(axes)} does not match number of tile dimensions {len(tile.shape)}.')
+            err = 'Invalid type for axes. Must be str or list[str].'
+            raise ValueError(err)
 
         self._checkEditable()
         tile, mode = _imageToNumpy(tile)
-        tile = tile.astype(float)
-        self._image = None
+        self._levels = None  # reset zarr validation
+
+        while len(tile.shape) < len(axes):
+            tile = np.expand_dims(tile, axis=0)
 
         current_arrays = dict(self._zarr.arrays())
         if 'root' in current_arrays:
             root = current_arrays['root']
         else:
             root = self._zarr.create_dataset('root', data=tile)
-        
-        new_dims = {a: max(root.shape[i], placement.get(a, 0) + tile.shape[i]) for i, a in enumerate(axes)}
+
+        new_dims = {
+            a: max(
+                root.shape[i],
+                placement.get(
+                    a,
+                    0) +
+                tile.shape[i]) for i,
+            a in enumerate(axes)}
         root_data = np.pad(
             root,
-            [(0, d-root.shape[i]) for i, d in enumerate(new_dims.values())],
-            mode='empty'
+            [(0, d - root.shape[i]) for i, d in enumerate(new_dims.values())],
+            mode='empty',
         )
-        root = self._zarr.create_dataset('root', data=root_data, overwrite=True)
 
         tile_data = np.pad(
             tile,
-            [(placement.get(a, 0), d-placement.get(a, 0)-tile.shape[i]) 
-            for i, (a, d) in enumerate(new_dims.items())],
-            mode='empty'
+            [(placement.get(a, 0), d - placement.get(a, 0) - tile.shape[i])
+             for i, (a, d) in enumerate(new_dims.items())],
+            mode='empty',
         )
 
         if mask is None:
             mask = np.ones(tile.shape[:-1])
+        while len(mask.shape) < len(tile_data.shape):
+            mask = np.expand_dims(mask, axis=-1)
+            mask = np.repeat(mask, tile_data.shape[len(mask.shape) - 1], axis=-1)
         mask_data = np.pad(
             mask,
-            [
-                (placement.get('y', 0), new_dims['y'] - placement.get('y', 0) - mask.shape[0]),
-                (placement.get('x', 0), new_dims['x'] - placement.get('x', 0) - mask.shape[1])
-            ],
+            [(placement.get(a, 0), d - placement.get(a, 0) - mask.shape[i])
+             for i, (a, d) in enumerate(new_dims.items())],
             mode='constant',
-            constant_values=0
+            constant_values=0,
         )
-        while len(mask_data.shape) < len(root_data.shape):
-            mask_data = np.expand_dims(mask_data, axis=-1)
-            mask_data = np.repeat(mask_data, root_data.shape[len(mask_data.shape) - 1], axis=-1)
         mask_data = mask_data.astype(bool)
         np.copyto(root_data, tile_data, where=mask_data)
+
+        with self._addLock:
+            root = self._zarr.create_dataset('root', data=root_data, overwrite=True)
+
+            # Edit OME metadata
+            self._zarr.attrs.update({
+                'multiscales': [{
+                    'version': '0.5-dev',
+                    'axes': [{
+                        'name': a,
+                        'type': 'space' if a in ['x', 'y'] else 'other',
+                    } for a in axes],
+                    'datasets': [{'path': 0}],
+                }],
+                'omero': {'version': '0.5-dev'},
+            })
 
     def write(
         self,
@@ -573,7 +603,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         lossy=True,
         alpha=True,
         overwriteAllowed=True,
-        zarr_kwargs=None,
     ):
         """
         Output the current image to a file.
@@ -583,25 +612,33 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param alpha: True if an alpha channel is allowed.
         :param overwriteAllowed: if False, raise an exception if the output
             path exists.
-        :param zarr_kwargs: if not None, save the image using these kwargs to
-            the write_to_file function instead of the automatically chosen
-            ones.  In this case, lossy is ignored and all zarr options must be
-            manually specified.
         """
         if not overwriteAllowed and os.path.exists(path):
-            raise TileSourceError('Output path exists (%s)' % str(path))
-        if Path(path).suffix.lower() != '.zarr':
-            raise TileSourceError('Output path must use ".zarr" suffix.')
+            raise TileSourceError('Output path exists (%s).' % str(path))
         # TODO: apply cropping
-
-        if zarr_kwargs is None:
-            zarr_kwargs = dict()
-        arrays = dict(self._zarr.arrays())
-        if not len(arrays):
-            raise TileSourceError('No data; cannot write empty zarr.')
-        zarr.save(str(path), **arrays)
+        # TODO: compute half, quarter, etc. resolutions
 
         self._validateZarr()
+        suffix = Path(path).suffix
+        if suffix in ['.db', '.sqlite']:
+            shutil.copy2(self._tempfile.name, path)
+
+        # TODO: copy_store raises TypeError
+        elif suffix == '.zip':
+            zip_store = zarr.storage.ZipStore(path)
+            zarr.copy_store(self._zarr_store, zip_store)
+            zip_store.close()
+        elif suffix == '.zarr':
+            dir_store = zarr.storage.DirectoryStore(path)
+            zarr.copy_store(self._zarr_store, dir_store)
+            dir_store.close()
+
+        else:
+            from large_image_converter import convert
+
+            self._tempfile.flush()
+            convert(self._tempfile.name, path, overwrite=overwriteAllowed)
+
 
 def open(*args, **kwargs):
     """
