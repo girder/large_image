@@ -17,7 +17,6 @@
 import builtins
 import io
 import math
-import multiprocessing
 import os
 import queue
 import struct
@@ -29,6 +28,7 @@ from xml.etree import ElementTree
 import glymur
 import PIL.Image
 
+import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
@@ -104,7 +104,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise
-        glymur.set_option('lib.num_threads', multiprocessing.cpu_count())
+        glymur.set_option('lib.num_threads', large_image.tilesource.utilities.cpu_count())
         self._openjpegHandles = queue.LifoQueue()
         for _ in range(self._maxOpenHandles - 1):
             self._openjpegHandles.put(None)

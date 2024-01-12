@@ -26,10 +26,10 @@ import sys
 import time
 
 import cherrypy
-import psutil
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
+import large_image
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
@@ -136,7 +136,8 @@ def createThumbnailsJob(job):
         job, log='Started creating large image thumbnails\n',
         status=JobStatus.RUNNING)
     concurrency = int(job['kwargs'].get('concurrent', 0))
-    concurrency = psutil.cpu_count(logical=True) if concurrency < 1 else concurrency
+    concurrency = large_image.tilesource.utilities.cpu_count(
+        logical=True) if concurrency < 1 else concurrency
     status = {
         'checked': 0,
         'created': 0,

@@ -342,7 +342,7 @@ def _concurrency_to_value(_concurrency=None, **kwargs):
     _concurrency = int(_concurrency) if str(_concurrency).isdigit() else 0
     if _concurrency > 0:
         return _concurrency
-    return max(1, psutil.cpu_count(logical=True) + _concurrency)
+    return max(1, large_image.tilesource.utilities.cpu_count(logical=True) + _concurrency)
 
 
 def _get_thread_pool(memoryLimit=None, **kwargs):
