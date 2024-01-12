@@ -160,25 +160,9 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
         return stream
 
-    def _stream_retrieve_instance_response(self, response):
-        # The first part of this function was largely copied from dicomweb-client's
-        # _decode_multipart_message() function. But we can't use that function here
-        # because it relies on reading the whole DICOM file into memory. We want to
-        # avoid that and stream in chunks.
-
-        # Split the content type and verify that it is multipart/related.
+    def _extract_media_type_and_boundary(self, response):
         content_type = response.headers['content-type']
         media_type, *ct_info = [ct.strip() for ct in content_type.split(';')]
-        if media_type.lower() != 'multipart/related':
-            msg = f'Unexpected media type: "{media_type}". Expected "multipart/related".'
-            raise ValueError(msg)
-
-        # Find the boundary for the multipart/related message.
-        # The beginning boundary and end boundary look slightly different (in my
-        # examples, beginning looks like '--{boundary}\r\n', and ending looks like
-        # '\r\n--{boundary}--'). But we skip over the beginning boundary anyways
-        # since it is before the message body. An end boundary might look like this:
-        # \r\n--50d7ccd118978542c422543a7156abfce929e7615bc024e533c85801cd77--
         boundary = None
         for item in ct_info:
             attr, _, value = item.partition('=')
@@ -186,7 +170,28 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                 boundary = value.strip('"').encode()
                 break
 
+        return media_type, boundary
+
+    def _stream_retrieve_instance_response(self, response):
+        # The first part of this function was largely copied from dicomweb-client's
+        # _decode_multipart_message() function. But we can't use that function here
+        # because it relies on reading the whole DICOM file into memory. We want to
+        # avoid that and stream in chunks.
+
+        # Split the content-type to find the media type and boundary.
+        media_type, boundary = self._extract_media_type_and_boundary(response)
+        if media_type.lower() != 'multipart/related':
+            msg = f'Unexpected media type: "{media_type}". Expected "multipart/related".'
+            raise ValueError(msg)
+
+        # Ensure we have the multipart/related boundary.
+        # The beginning boundary and end boundary look slightly different (in my
+        # examples, beginning looks like '--{boundary}\r\n', and ending looks like
+        # '\r\n--{boundary}--'). But we skip over the beginning boundary anyways
+        # since it is before the message body. An end boundary might look like this:
+        # \r\n--50d7ccd118978542c422543a7156abfce929e7615bc024e533c85801cd77--
         if boundary is None:
+            content_type = response.headers['content-type']
             msg = f'Failed to locate boundary in content-type: {content_type}'
             raise ValueError(msg)
 
