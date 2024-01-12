@@ -12,6 +12,8 @@ from girder.utility.abstract_assetstore_adapter import AbstractAssetstoreAdapter
 
 DICOMWEB_META_KEY = 'dicomweb_meta'
 
+BUF_SIZE = 65536
+
 
 class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
     """
@@ -150,21 +152,110 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             'Accept': '; '.join(accept_parts),
         }
 
-        # FIXME: add this back in when we support range requests
-        # if offset != 0 or endByte is not None:
-        #     # Attempt to make a range request (although all DICOMweb
-        #     # servers we have seen do not honor it)
-        #     end_str = '' if endByte is None else endByte
-        #     headers['Range'] = f'bytes={offset}-{end_str}'
-
         def stream():
             # Perform the request
-            response = client._http_get(url, headers=headers)
-            for part in client._decode_multipart_message(response, False):
-                # This function produces a single, whole DICOM file
-                yield part
+            response = client._http_get(url, headers=headers, stream=True)
+            for chunk in self._stream_retrieve_instance_response(response):
+                yield chunk
 
         return stream
+
+    def _stream_retrieve_instance_response(self, response):
+        # The first part of this function was largely copied from dicomweb-client's
+        # _decode_multipart_message() function. But we can't use that function here
+        # because it relies on reading the whole DICOM file into memory. We want to
+        # avoid that and stream in chunks.
+
+        # Split the content type and verify that it is multipart/related.
+        content_type = response.headers['content-type']
+        media_type, *ct_info = [ct.strip() for ct in content_type.split(';')]
+        if media_type.lower() != 'multipart/related':
+            msg = f'Unexpected media type: "{media_type}". Expected "multipart/related".'
+            raise ValueError(msg)
+
+        # Find the boundary for the multipart/related message.
+        # The beginning boundary and end boundary look slightly different (in my
+        # examples, beginning looks like '--{boundary}\r\n', and ending looks like
+        # '\r\n--{boundary}--'). But we skip over the beginning boundary anyways
+        # since it is before the message body. An end boundary might look like this:
+        # \r\n--50d7ccd118978542c422543a7156abfce929e7615bc024e533c85801cd77--
+        boundary = None
+        for item in ct_info:
+            attr, _, value = item.partition('=')
+            if attr.lower() == 'boundary':
+                boundary = value.strip('"').encode()
+                break
+
+        if boundary is None:
+            msg = f'Failed to locate boundary in content-type: {content_type}'
+            raise ValueError(msg)
+
+        # Both dicomweb-client and requests-toolbelt check for
+        # the ending boundary exactly like so:
+        ending = b'\r\n--' + boundary
+
+        # Sometimes, there are a few extra bytes after the ending, such
+        # as '--' and '\r\n'. Imaging Data Commons has '--\r\n' at the end.
+        # We will make this number large enough to capture possible extra bytes.
+        max_ending_size = len(ending) + 6
+
+        # Make sure the buffer is at least large enough to contain the
+        # full ending, so we can check neighboring chunks for split endings.
+        buffer_size = max(BUF_SIZE, max_ending_size)
+
+        with response:
+            # Create our iterator
+            iterator = response.iter_content(buffer_size)
+
+            # First, stream until we encounter the first `\r\n\r\n`,
+            # which denotes the end of the header section.
+            header_found = False
+            for chunk in iterator:
+                if b'\r\n\r\n' in chunk:
+                    idx = chunk.index(b'\r\n\r\n')
+                    # Yield the first section of data
+                    yield chunk[idx + 4:]
+                    header_found = True
+                    break
+
+            if not header_found:
+                msg = 'Failed to find header in response content'
+                raise ValueError(msg)
+
+            # Now the header has been finished. Stream the data until
+            # we encounter the ending boundary or finish the data.
+            prev_chunk = b''
+            for chunk in iterator:
+                # Ensure the chunk is large enough to contain the whole ending, so
+                # we can be sure the ending won't be split across 3 or more chunks.
+                while len(chunk) < max_ending_size:
+                    try:
+                        chunk += next(iterator)
+                    except StopIteration:
+                        break
+
+                # Check if the ending is split between two different chunks.
+                if ending in prev_chunk + chunk[:max_ending_size]:
+                    # We found the ending! Remove the ending boundary and return.
+                    data = prev_chunk + chunk[:max_ending_size]
+                    yield data.split(ending, maxsplit=1)[0]
+                    return
+
+                if prev_chunk:
+                    yield prev_chunk
+
+                prev_chunk = chunk
+
+            # We did not find the ending while looping.
+            # Check if it is in the final chunk.
+            if ending in prev_chunk:
+                # Found the ending in the final chunk.
+                yield prev_chunk.split(ending, maxsplit=1)[0]
+                return
+
+            # We should have encountered the ending earlier and returned
+            msg = 'Failed to find ending boundary in response content'
+            raise ValueError(msg)
 
     def importData(self, parent, parentType, params, progress, user, **kwargs):
         """
