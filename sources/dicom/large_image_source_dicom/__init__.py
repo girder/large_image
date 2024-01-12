@@ -150,6 +150,10 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         _lazyImport()
         try:
             self._dicom = self._open_wsi_dicom(self._largeImagePath)
+            # To let Python 3.8 work -- if this is insufficient, we may have to
+            # drop 3.8 support.
+            if not hasattr(self._dicom, 'pyramids'):
+                self._dicom.pyramids = [self._dicom.levels]
         except Exception as exc:
             msg = f'File cannot be opened via dicom tile source ({exc}).'
             raise TileSourceError(msg)
@@ -162,7 +166,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.tileHeight = min(max(self.tileHeight, self._minTileSize), self._maxTileSize)
         self.levels = int(max(1, math.ceil(math.log(
             max(self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
-        self._populatedLevels = len(self._dicom.levels)
+        self._populatedLevels = len(self._dicom.pyramids[0])
         # We need to detect which levels are functionally present if we want to
         # return a sensible _nonemptyLevelsList
 
@@ -261,8 +265,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         mm_x = mm_y = None
         try:
-            mm_x = self._dicom.levels[0].pixel_spacing.width or None
-            mm_y = self._dicom.levels[0].pixel_spacing.height or None
+            mm_x = self._dicom.pyramids[0][0].pixel_spacing.width or None
+            mm_y = self._dicom.pyramids[0][0].pixel_spacing.height or None
         except Exception:
             pass
         mm_x = float(mm_x) if mm_x else None
@@ -295,7 +299,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         result = {}
         idx = 0
-        for level in self._dicom.levels:
+        for level in self._dicom.pyramids[0]:
             for ds in level.datasets:
                 result.setdefault('dicom', {})
                 info = dicom_to_dict(ds)
@@ -322,7 +326,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             # Find the first volume instance and extract the metadata
             volume = None
-            for level in self._dicom.levels:
+            for level in self._dicom.pyramids[0]:
                 for ds in level.datasets:
                     if ds.image_type.value == 'VOLUME':
                         volume = ds
@@ -345,9 +349,9 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         bh = self.tileHeight * step
         level = 0
         levelfactor = 1
-        basefactor = self._dicom.levels[0].pixel_spacing.width
-        for checklevel in range(1, len(self._dicom.levels)):
-            factor = round(self._dicom.levels[checklevel].pixel_spacing.width / basefactor)
+        basefactor = self._dicom.pyramids[0][0].pixel_spacing.width
+        for checklevel in range(1, len(self._dicom.pyramids[0])):
+            factor = round(self._dicom.pyramids[0][checklevel].pixel_spacing.width / basefactor)
             if factor <= step:
                 level = checklevel
                 levelfactor = factor
@@ -355,12 +359,12 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 break
         x0f = int(x0 // levelfactor)
         y0f = int(y0 // levelfactor)
-        x1f = min(int(math.ceil(x1 / levelfactor)), self._dicom.levels[level].size.width)
-        y1f = min(int(math.ceil(y1 / levelfactor)), self._dicom.levels[level].size.height)
+        x1f = min(int(math.ceil(x1 / levelfactor)), self._dicom.pyramids[0][level].size.width)
+        y1f = min(int(math.ceil(y1 / levelfactor)), self._dicom.pyramids[0][level].size.height)
         bw = int(bw // levelfactor)
         bh = int(bh // levelfactor)
         tile = self._dicom.read_region(
-            (x0f, y0f), self._dicom.levels[level].level, (x1f - x0f, y1f - y0f))
+            (x0f, y0f), self._dicom.pyramids[0][level].level, (x1f - x0f, y1f - y0f))
         format = TILE_FORMAT_PIL
         if tile.width < bw or tile.height < bh:
             tile = _imageToNumpy(tile)[0]
