@@ -18,13 +18,13 @@ import concurrent.futures
 import datetime
 import io
 import math
-import multiprocessing
 import pickle
 import time
 
 import pymongo
 from girder_large_image.models.image_item import ImageItem
 
+import large_image
 from girder import logger
 from girder.constants import AccessType, SortDir
 from girder.models.file import File
@@ -601,7 +601,7 @@ class Annotationelement(Model):
         if not len(elements):
             return
         now = datetime.datetime.now(datetime.timezone.utc)
-        threads = multiprocessing.cpu_count()
+        threads = large_image.tilesource.utilities.cpu_count()
         chunkSize = int(max(100000 // threads, 10000))
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
             for chunk in range(0, len(elements), chunkSize):

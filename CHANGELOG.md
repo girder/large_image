@@ -8,6 +8,7 @@
 - Better filter DICOM adjacent files to ensure they share series instance IDs ([#1424](../../pull/1424))
 - Optimizing small getRegion calls and some tiff tile fetches ([#1427](../../pull/1427))
 - Started adding python types to the core library ([#1432](../../pull/1432), [#1433](../../pull/1433))
+- Use parallelism in computing tile frames ([#1434](../../pull/1434))
 
 ### Changed
 - Cleanup some places where get was needlessly used ([#1428](../../pull/1428))

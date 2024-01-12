@@ -24,16 +24,12 @@ from ..cache_util import getTileCache, methodcache, strhash
 from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          SourcePriority, TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat)
+from . import utilities
 from .jupyter import IPyLeafletMixin
 from .tiledict import LazyTileDict
-from .utilities import (ImageBytes, JSONDict,  # noqa: F401
-                        _addRegionTileToTiled, _addSubimageToImage,
-                        _calculateWidthHeight, _encodeImage,
-                        _encodeImageBinary, _imageToNumpy, _imageToPIL,
-                        _letterboxImage, _makeSameChannelDepth,
-                        _vipsAddAlphaBand, _vipsCast, _vipsParameters,
-                        dictToEtree, etreeToDict, getPaletteColors,
-                        histogramThreshold, nearPowerOfTwo)
+from .utilities import (ImageBytes, JSONDict, _imageToNumpy,  # noqa: F401
+                        _imageToPIL, dictToEtree, etreeToDict,
+                        getPaletteColors, histogramThreshold, nearPowerOfTwo)
 
 
 class TileSource(IPyLeafletMixin):
@@ -644,7 +640,7 @@ class TileSource(IPyLeafletMixin):
                 maxWidth = regionWidth / cast(float, mag['scale'])
                 maxHeight = regionHeight / cast(float, mag['scale'])
                 magRequestedScale = cast(float, mag['scale'])
-        outWidth, outHeight, calcScale = _calculateWidthHeight(
+        outWidth, outHeight, calcScale = utilities._calculateWidthHeight(
             maxWidth, maxHeight, regionWidth, regionHeight)
         requestedScale = calcScale if magRequestedScale is None else magRequestedScale
         if (regionWidth < 0 or regionHeight < 0 or outWidth == 0 or
@@ -1692,7 +1688,7 @@ class TileSource(IPyLeafletMixin):
         if getattr(tile, 'fp', None) and self._pilFormatMatches(tile):
             tile.fp.seek(0)  # type: ignore
             return tile.fp.read()  # type: ignore
-        result = _encodeImageBinary(
+        result = utilities._encodeImageBinary(
             tile, self.encoding, self.jpegQuality, self.jpegSubsampling, self.tiffCompression)
         return result
 
@@ -2203,7 +2199,7 @@ class TileSource(IPyLeafletMixin):
         iterInfo = self._tileIteratorInfo(**kwargs)
         if iterInfo is None:
             pilimage = PIL.Image.new('RGB', (0, 0))
-            return _encodeImage(pilimage, format=format, **kwargs)
+            return utilities._encodeImage(pilimage, format=format, **kwargs)
         regionWidth = iterInfo['region']['width']
         regionHeight = iterInfo['region']['height']
         top = iterInfo['region']['top']
@@ -2218,10 +2214,10 @@ class TileSource(IPyLeafletMixin):
             subimage, _ = _imageToNumpy(tile['tile'])
             x0, y0 = tile['x'] - left, tile['y'] - top
             if tiled:
-                tiledimage = _addRegionTileToTiled(
+                tiledimage = utilities._addRegionTileToTiled(
                     tiledimage, subimage, x0, y0, regionWidth, regionHeight, tile, **kwargs)
             else:
-                image = _addSubimageToImage(
+                image = utilities._addSubimageToImage(
                     image, subimage, x0, y0, regionWidth, regionHeight)
             # Somehow discarding the tile here speeds things up.
             del tile
@@ -2244,8 +2240,9 @@ class TileSource(IPyLeafletMixin):
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:
-            image = _letterboxImage(_imageToPIL(image, mode), maxWidth, maxHeight, kwargs['fill'])
-        return _encodeImage(image, format=format, **kwargs)
+            image = utilities._letterboxImage(
+                _imageToPIL(image, mode), maxWidth, maxHeight, kwargs['fill'])
+        return utilities._encodeImage(image, format=format, **kwargs)
 
     def _encodeTiledImage(
             self, image: Dict[str, Any], outWidth: int, outHeight: int,
@@ -2277,9 +2274,9 @@ class TileSource(IPyLeafletMixin):
         vimg = cast(pyvips.Image, image['strips'][0])
         for y in sorted(image['strips'].keys())[1:]:
             if image['strips'][y].bands + 1 == vimg.bands:
-                image['strips'][y] = _vipsAddAlphaBand(image['strips'][y], vimg)
+                image['strips'][y] = utilities._vipsAddAlphaBand(image['strips'][y], vimg)
             elif vimg.bands + 1 == image['strips'][y].bands:
-                vimg = _vipsAddAlphaBand(vimg, image['strips'][y])
+                vimg = utilities._vipsAddAlphaBand(vimg, image['strips'][y])
             vimg = vimg.insert(image['strips'][y], 0, y, expand=True)
 
         if outWidth != image['width'] or outHeight != image['height']:
@@ -2314,8 +2311,9 @@ class TileSource(IPyLeafletMixin):
         """
         import pyvips
 
-        convertParams = _vipsParameters(defaultCompression='lzw', **kwargs)
-        vimg = _vipsCast(cast(pyvips.Image, vimg), convertParams['compression'] in {'webp', 'jpeg'})
+        convertParams = utilities._vipsParameters(defaultCompression='lzw', **kwargs)
+        vimg = utilities._vipsCast(
+            cast(pyvips.Image, vimg), convertParams['compression'] in {'webp', 'jpeg'})
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if (kwargs.get('fill') and str(kwargs.get('fill')).lower() != 'none' and
@@ -2355,7 +2353,8 @@ class TileSource(IPyLeafletMixin):
     def tileFrames(
             self, format: Union[str, Tuple[str]] = (TILE_FORMAT_IMAGE, ),
             frameList: Optional[List[int]] = None,
-            framesAcross: Optional[int] = None, **kwargs) -> Tuple[
+            framesAcross: Optional[int] = None,
+            max_workers: Optional[int] = -4, **kwargs) -> Tuple[
                 Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
         Given the parameters for getRegion, plus a list of frames and the
@@ -2373,9 +2372,14 @@ class TileSource(IPyLeafletMixin):
         :param kwargs: optional arguments.  Some options are region, output,
             encoding, jpegQuality, jpegSubsampling, tiffCompression, fill.  See
             tileIterator.
+        :param max_workers: maximum workers for parallelism.  If negative, use
+            the minimum of the absolute value of this number or
+            multiprocessing.cpu_count().
         :returns: regionData, formatOrRegionMime: the image data and either the
             mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
+        import concurrent.futures
+
         lastlog = time.time()
         kwargs = kwargs.copy()
         kwargs.pop('tile_position', None)
@@ -2397,7 +2401,7 @@ class TileSource(IPyLeafletMixin):
         iterInfo = self._tileIteratorInfo(frame=frameList[0], **kwargs)
         if iterInfo is None:
             pilimage = PIL.Image.new('RGB', (0, 0))
-            return _encodeImage(pilimage, format=format, **kwargs)
+            return utilities._encodeImage(pilimage, format=format, **kwargs)
         frameWidth = iterInfo['output']['width']
         frameHeight = iterInfo['output']['height']
         maxWidth = kwargs.get('output', {}).get('maxWidth')
@@ -2409,29 +2413,36 @@ class TileSource(IPyLeafletMixin):
         tile = next(self._tileIterator(iterInfo))
         image = None
         tiledimage = None
-        for idx, frame in enumerate(frameList):
-            subimage, _ = self.getRegion(format=TILE_FORMAT_NUMPY, frame=frame, **kwargs)
-            offsetX = (idx % framesAcross) * frameWidth
-            offsetY = (idx // framesAcross) * frameHeight
-            if time.time() - lastlog > 10:
-                self.logger.info(
-                    'Tiling frame %d (%d/%d), offset %dx%d',
-                    frame, idx, len(frameList), offsetX, offsetY)
-                lastlog = time.time()
+        if max_workers is not None and max_workers < 0:
+            max_workers = max(-max_workers, utilities.cpu_count(False))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = []
+            for idx, frame in enumerate(frameList):
+                futures.append((idx, frame, pool.submit(
+                    self.getRegion, format=TILE_FORMAT_NUMPY, frame=frame, **kwargs)))
+            for idx, frame, future in futures:
+                subimage, _ = future.result()
+                offsetX = (idx % framesAcross) * frameWidth
+                offsetY = (idx // framesAcross) * frameHeight
+                if time.time() - lastlog > 10:
+                    self.logger.info(
+                        'Tiling frame %d (%d/%d), offset %dx%d',
+                        frame, idx, len(frameList), offsetX, offsetY)
+                    lastlog = time.time()
+                else:
+                    self.logger.debug(
+                        'Tiling frame %d (%d/%d), offset %dx%d',
+                        frame, idx, len(frameList), offsetX, offsetY)
+                if tiled:
+                    tiledimage = utilities._addRegionTileToTiled(
+                        tiledimage, subimage, offsetX, offsetY, outWidth, outHeight, tile, **kwargs)
             else:
-                self.logger.debug(
-                    'Tiling frame %d (%d/%d), offset %dx%d',
-                    frame, idx, len(frameList), offsetX, offsetY)
-            if tiled:
-                tiledimage = _addRegionTileToTiled(
-                    tiledimage, subimage, offsetX, offsetY, outWidth, outHeight, tile, **kwargs)
-            else:
-                image = _addSubimageToImage(
+                image = utilities._addSubimageToImage(
                     image, subimage, offsetX, offsetY, outWidth, outHeight)
         if tiled:
             return self._encodeTiledImage(
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, iterInfo, **kwargs)
-        return _encodeImage(image, format=format, **kwargs)
+        return utilities._encodeImage(image, format=format, **kwargs)
 
     def getRegionAtAnotherScale(
             self, sourceRegion: Dict[str, Any],
@@ -2833,14 +2844,14 @@ class TileSource(IPyLeafletMixin):
         width = kwargs.get('width')
         height = kwargs.get('height')
         if width or height:
-            width, height, calcScale = _calculateWidthHeight(
+            width, height, calcScale = utilities._calculateWidthHeight(
                 width, height, imageWidth, imageHeight)
             image = image.resize(
                 (width, height),
                 getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
                 if width > imageWidth else
                 getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
-        return _encodeImage(image, **kwargs)
+        return utilities._encodeImage(image, **kwargs)
 
     def getPixel(self, includeTileRecord: bool = False, **kwargs) -> JSONDict:
         """
