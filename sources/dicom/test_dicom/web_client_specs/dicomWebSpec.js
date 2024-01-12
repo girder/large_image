@@ -20,6 +20,7 @@ describe('DICOMWeb assetstore', function () {
         var destinationType;
         var itemId;
         var fileId;
+        var dicomFileContent;
 
         // After importing, we will verify that this item exists
         const verifyItemName = '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0';
@@ -235,7 +236,35 @@ describe('DICOMWeb assetstore', function () {
             });
 
             // Should be larger than 500k bytes
-            return resp.status === 200 && resp.responseText.length > 500000;
+            const success = resp.status === 200 && resp.responseText.length > 500000;
+            if (!success) {
+                return false;
+            }
+
+            // Save the response text so we can compare with range requests...
+            dicomFileContent = resp.responseText;
+            return true;
         }, 'Wait to download a single DICOM file');
+
+        // Verify that we can make a range request
+        waitsFor(function() {
+            const resp = girder.rest.restRequest({
+                url: 'file/' + fileId + '/download',
+                type: 'GET',
+                async: false,
+                headers: {
+                    'Range': 'bytes=1000-1250'
+                },
+            });
+
+            return (
+                // 206 is a partial content response
+                resp.status === 206 &&
+                // Should be exactly 251 bytes
+                resp.responseText.length === 251 &&
+                // It should be equivalent to the slice of the file content
+                resp.responseText === dicomFileContent.slice(1000, 1251)
+            );
+        }, 'Wait for DICOM range request');
     });
 });

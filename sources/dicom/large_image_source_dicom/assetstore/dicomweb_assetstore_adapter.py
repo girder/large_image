@@ -1,3 +1,4 @@
+import cherrypy
 import requests
 from large_image_source_dicom.dicom_tags import dicom_key_to_tag
 from large_image_source_dicom.dicomweb_utils import get_dicomweb_metadata
@@ -105,13 +106,38 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         # We don't actually need to do anything special
         pass
 
+    def setContentHeaders(self, file, offset, endByte, contentDisposition=None):
+        """
+        Sets the Content-Length, Content-Disposition, Content-Type, and also
+        the Content-Range header if this is a partial download.
+
+        :param file: The file being downloaded.
+        :param offset: The start byte of the download.
+        :type offset: int
+        :param endByte: The end byte of the download (non-inclusive).
+        :type endByte: int or None
+        :param contentDisposition: Content-Disposition response header
+            disposition-type value, if None, Content-Disposition will
+            be set to 'attachment; filename=$filename'.
+        :type contentDisposition: str or None
+        """
+        isRangeRequest = cherrypy.request.headers.get('Range')
+        setResponseHeader('Content-Type', file['mimeType'])
+        setContentDisposition(file['name'], contentDisposition or 'attachment')
+
+        if file.get('size') is not None:
+            # Only set Content-Length and range request headers if we have a file size
+            size = file['size']
+            if endByte is None or endByte > size:
+                endByte = size
+
+            setResponseHeader('Content-Length', max(endByte - offset, 0))
+
+            if offset or endByte < size or isRangeRequest:
+                setResponseHeader('Content-Range', f'bytes {offset}-{endByte - 1}/{size}')
+
     def downloadFile(self, file, offset=0, headers=True, endByte=None,
                      contentDisposition=None, extraParameters=None, **kwargs):
-
-        if offset != 0 or endByte is not None:
-            # FIXME: implement range requests
-            msg = 'Range requests are not yet implemented'
-            raise NotImplementedError(msg)
 
         from dicomweb_client.web import _Transaction
 
@@ -123,15 +149,8 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         client = _create_dicomweb_client(self.assetstore_meta)
 
         if headers:
-            setResponseHeader('Content-Type', file['mimeType'])
-            setContentDisposition(file['name'], contentDisposition or 'attachment')
-
-            # The filesystem assetstore calls the following function, which sets
-            # the above and also sets the range and content-length headers:
-            # `self.setContentHeaders(file, offset, endByte, contentDisposition)`
-            # However, we can't call that since we don't have a great way of
-            # determining the DICOM file size without downloading the whole thing.
-            # FIXME: call that function if we find a way to determine file size.
+            setResponseHeader('Accept-Ranges', 'bytes')
+            self.setContentHeaders(file, offset, endByte, contentDisposition)
 
         # Create the URL
         url = client._get_instances_url(
@@ -148,14 +167,39 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             'type="application/dicom"',
             f'transfer-syntax={transfer_syntax}',
         ]
-        headers = {
+        request_headers = {
             'Accept': '; '.join(accept_parts),
         }
 
         def stream():
             # Perform the request
-            response = client._http_get(url, headers=headers, stream=True)
-            yield from self._stream_retrieve_instance_response(response)
+            response = client._http_get(url, headers=request_headers, stream=True)
+
+            bytes_read = 0
+            for chunk in self._stream_retrieve_instance_response(response):
+                if bytes_read < offset:
+                    # We haven't reached the start of the offset yet
+                    bytes_needed = offset - bytes_read
+                    if bytes_needed >= len(chunk):
+                        # Skip over the whole chunk...
+                        bytes_read += len(chunk)
+                        continue
+                    else:
+                        # Discard all bytes before the offset
+                        chunk = chunk[bytes_needed:]
+                        bytes_read += bytes_needed
+
+                if endByte is not None and bytes_read + len(chunk) >= endByte:
+                    # We have reached the end... remove all bytes after endByte
+                    chunk = chunk[:endByte - bytes_read]
+                    if chunk:
+                        yield chunk
+
+                    bytes_read += len(chunk)
+                    break
+
+                yield chunk
+                bytes_read += len(chunk)
 
         return stream
 
@@ -373,6 +417,23 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
     @property
     def auth_session(self):
         return _create_auth_session(self.assetstore_meta)
+
+    def getFileSize(self, file):
+        # This function will compute the size of the DICOM file (a potentially
+        # expensive operation, since it may have to stream the whole file),
+        # and cache the result in file['size'].
+        # This function is called when the size is needed, such as the girder
+        # fuse mount code, and range requests.
+        if file.get('size') is not None:
+            # It has already been computed once. Return the cached size.
+            return file['size']
+
+        size = 0
+        for chunk in self.downloadFile(file, headers=False)():
+            size += len(chunk)
+
+        # This should get cached in file['size'] in File().updateSize().
+        return size
 
 
 def _create_auth_session(meta):
