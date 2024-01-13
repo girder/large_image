@@ -28,6 +28,13 @@ def testDICOMWebClient(boundServer, fsAssetstore, db):
     dicomweb_test_url = os.environ['DICOMWEB_TEST_URL']
     data = data.replace('DICOMWEB_TEST_URL', f"'{dicomweb_test_url}'")
 
+    dicomweb_test_token = os.getenv('DICOMWEB_TEST_TOKEN')
+    if dicomweb_test_token:
+        dicomweb_test_token = f"'{dicomweb_test_token}'"
+    else:
+        dicomweb_test_token = 'null'
+    data = data.replace('DICOMWEB_TEST_TOKEN', dicomweb_test_token)
+
     # Need to avoid context manager for this to work on Windows
     tf = tempfile.NamedTemporaryFile(delete=False)
     try:
