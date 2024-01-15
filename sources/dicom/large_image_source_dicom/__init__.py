@@ -242,9 +242,12 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if mightbe and basepath:
             try:
                 _lazyImportPydicom()
-                base_series_uid = pydicom.filereader.dcmread(
-                    basepath, stop_before_pixels=True,
-                )[pydicom.tag.Tag('SeriesInstanceUID')].value
+                base = pydicom.filereader.dcmread(basepath, stop_before_pixels=True)
+            except Exception as exc:
+                msg = f'File cannot be opened via dicom tile source ({exc}).'
+                raise TileSourceError(msg)
+            try:
+                base_series_uid = base[pydicom.tag.Tag('SeriesInstanceUID')].value
             except Exception:
                 base_series_uid = None
             if base_series_uid:
