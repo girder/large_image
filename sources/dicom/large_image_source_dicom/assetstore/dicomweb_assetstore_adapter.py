@@ -218,8 +218,8 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             for chunk in iterator:
                 if b'\r\n\r\n' in chunk:
                     idx = chunk.index(b'\r\n\r\n')
-                    # Yield the first section of data
-                    yield chunk[idx + 4:]
+                    # Save the first section of data. We will yield it later.
+                    prev_chunk = chunk[idx + 4:]
                     header_found = True
                     break
 
@@ -229,7 +229,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
             # Now the header has been finished. Stream the data until
             # we encounter the ending boundary or finish the data.
-            prev_chunk = b''
+            # The "prev_chunk" will start out set to the section right after the header.
             for chunk in iterator:
                 # Ensure the chunk is large enough to contain the whole ending, so
                 # we can be sure the ending won't be split across 3 or more chunks.
