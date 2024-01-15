@@ -13,10 +13,12 @@ describe('DICOMWeb assetstore', function () {
             'Admin',
             'Admin',
             'adminpassword!'));
+
     it('Create an assetstore and import data', function () {
         var destinationId;
         var destinationType;
         var itemId;
+        var fileId;
 
         // After importing, we will verify that this item exists
         const verifyItemName = '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0';
@@ -200,8 +202,9 @@ describe('DICOMWeb assetstore', function () {
                 return false;
             }
 
-            // Save the itemId
+            // Save the itemId, and the file id
             itemId = items[0]['_id'];
+            fileId = items[0].largeImage.fileId;
             return true
         }, 'Wait for large images to be present');
 
@@ -212,7 +215,21 @@ describe('DICOMWeb assetstore', function () {
                 type: 'GET',
                 async: false,
             });
-            return resp.status === 200;
-        }, 'Wait to download the DICOM files');
+
+            // Should be larger than 10 million bytes
+            return resp.status === 200 && resp.responseText.length > 10000000;
+        }, 'Wait to download all DICOM files in the item');
+
+        // Verify that we can download a single file
+        waitsFor(function () {
+            const resp = girder.rest.restRequest({
+                url: 'file/' + fileId + '/download',
+                type: 'GET',
+                async: false,
+            });
+
+            // Should be larger than 500k bytes
+            return resp.status === 200 && resp.responseText.length > 500000;
+        }, 'Wait to download a single DICOM file');
     });
 });
