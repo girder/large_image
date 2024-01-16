@@ -1,20 +1,25 @@
 import hashlib
 import threading
 import time
-from typing import Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
 
 import cachetools
+
+_VT = TypeVar('_VT')
 
 
 class BaseCache(cachetools.Cache):
     """Base interface to cachetools.Cache for use with large-image."""
 
-    def __init__(self, *args, getsizeof=None, **kwargs):
-        super().__init__(*args, getsizeof=getsizeof, **kwargs)
-        self.lastError = {}
+    def __init__(
+            self, maxsize: float,
+            getsizeof: Optional[Callable[[_VT], float]] = None,
+            **kwargs) -> None:
+        super().__init__(maxsize=maxsize, getsizeof=getsizeof, **kwargs)
+        self.lastError: Dict[Tuple[Any, Callable], Dict[str, Any]] = {}
         self.throttleErrors = 10  # seconds between logging errors
 
-    def logError(self, err, func, msg):
+    def logError(self, err: Any, func: Callable, msg: str) -> None:
         """
         Log errors, but throttle them so as not to spam the logs.
 
@@ -40,16 +45,16 @@ class BaseCache(cachetools.Cache):
     def __iter__(self):
         raise NotImplementedError
 
-    def __len__(self):
+    def __len__(self) -> int:
         raise NotImplementedError
 
-    def __contains__(self, key):
+    def __contains__(self, item) -> bool:
         raise NotImplementedError
 
     def __delitem__(self, key):
         raise NotImplementedError
 
-    def _hashKey(self, key):
+    def _hashKey(self, key) -> str:
         return hashlib.sha256(key.encode()).hexdigest()
 
     def __getitem__(self, key):
@@ -61,21 +66,21 @@ class BaseCache(cachetools.Cache):
         raise NotImplementedError
 
     @property
-    def curritems(self):
+    def curritems(self) -> int:
         raise NotImplementedError
 
     @property
-    def currsize(self):
+    def currsize(self) -> int:
         raise NotImplementedError
 
     @property
-    def maxsize(self):
+    def maxsize(self) -> int:
         raise NotImplementedError
 
-    def clear(self):
+    def clear(self) -> None:
         raise NotImplementedError
 
     @staticmethod
-    def getCache() -> Tuple['BaseCache', threading.Lock]:
+    def getCache() -> Tuple[Optional['BaseCache'], threading.Lock]:
         # return cache, cacheLock
         raise NotImplementedError

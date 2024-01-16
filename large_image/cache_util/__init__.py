@@ -1,4 +1,4 @@
-###############################################################################
+#############################################################################
 #  Copyright Kitware Inc.
 #
 #  Licensed under the Apache License, Version 2.0 ( the "License" );
@@ -12,25 +12,26 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-###############################################################################
+#############################################################################
 
 import atexit
+from typing import Any, Callable, Dict, List
 
 from .cache import (CacheProperties, LruCacheMetaclass, getTileCache,
                     isTileCacheSetup, methodcache, strhash)
+from .cachefactory import CacheFactory, pickAvailableCache
 
+MemCache: Any
 try:
     from .memcache import MemCache
 except ImportError:
     MemCache = None
 
-from .cachefactory import CacheFactory, pickAvailableCache
-
-_cacheClearFuncs = []
+_cacheClearFuncs: List[Callable] = []
 
 
 @atexit.register
-def cachesClearExceptTile(*args, **kwargs):
+def cachesClearExceptTile(*args, **kwargs) -> None:
     """
     Clear the tilesource caches and the load model cache.  Note that this does
     not clear memcached (which could be done with tileCache._client.flush_all,
@@ -43,7 +44,7 @@ def cachesClearExceptTile(*args, **kwargs):
         func()
 
 
-def cachesClear(*args, **kwargs):
+def cachesClear(*args, **kwargs) -> None:
     """
     Clear the tilesource caches, the load model cache, and the tile cache.
     """
@@ -51,13 +52,16 @@ def cachesClear(*args, **kwargs):
     if isTileCacheSetup():
         tileCache, tileLock = getTileCache()
         try:
-            with tileLock:
+            if tileLock:
+                with tileLock:
+                    tileCache.clear()
+            else:
                 tileCache.clear()
         except Exception:
             pass
 
 
-def cachesInfo(*args, **kwargs):
+def cachesInfo(*args, **kwargs) -> Dict[str, Dict[str, int]]:
     """
     Report on each cache.
 
@@ -75,7 +79,15 @@ def cachesInfo(*args, **kwargs):
     if isTileCacheSetup():
         tileCache, tileLock = getTileCache()
         try:
-            with tileLock:
+            if tileLock:
+                with tileLock:
+                    info['tileCache'] = {
+                        'maxsize': tileCache.maxsize,
+                        'used': tileCache.currsize,
+                        'items': getattr(tileCache, 'curritems' if hasattr(
+                            tileCache, 'curritems') else 'currsize', None),
+                    }
+            else:
                 info['tileCache'] = {
                     'maxsize': tileCache.maxsize,
                     'used': tileCache.currsize,

@@ -16,30 +16,30 @@
 
 import math
 import threading
+from typing import Dict, Optional, Tuple, Type
 
 import cachetools
 
 try:
     import psutil
+    HAS_PSUTIL = True
 except ImportError:
-    psutil = None
+    HAS_PSUTIL = False
 
 from importlib.metadata import entry_points
 
 from .. import config
 from ..exceptions import TileCacheError
-
-try:
-    from .memcache import MemCache
-except ImportError:
-    MemCache = None
+from .memcache import MemCache
 
 # DO NOT MANUALLY ADD ANYTHING TO `_availableCaches`
 #  use entrypoints and let loadCaches fill in `_availableCaches`
-_availableCaches = {}
+_availableCaches: Dict[str, Type[cachetools.Cache]] = {}
 
 
-def loadCaches(entryPointName='large_image.cache', sourceDict=_availableCaches):
+def loadCaches(
+        entryPointName: str = 'large_image.cache',
+        sourceDict: Dict[str, Type[cachetools.Cache]] = _availableCaches) -> None:
     """
     Load all caches from entrypoints and add them to the
     availableCaches dictionary.
@@ -69,7 +69,9 @@ def loadCaches(entryPointName='large_image.cache', sourceDict=_availableCaches):
     # NOTE: `python` cache is viewed as a fallback and isn't listed in `availableCaches`
 
 
-def pickAvailableCache(sizeEach, portion=8, maxItems=None, cacheName=None):
+def pickAvailableCache(
+        sizeEach: int, portion: int = 8, maxItems: Optional[int] = None,
+        cacheName: Optional[str] = None) -> int:
     """
     Given an estimated size of an item, return how many of those items would
     fit in a fixed portion of the available virtual memory.
@@ -90,7 +92,7 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None, cacheName=None):
         if configMaxItems > 0:
             maxItems = configMaxItems
     # Estimate usage based on (1 / portion) of the total virtual memory.
-    if psutil:
+    if HAS_PSUTIL:
         memory = psutil.virtual_memory().total
     else:
         memory = 1024 ** 3
@@ -100,7 +102,7 @@ def pickAvailableCache(sizeEach, portion=8, maxItems=None, cacheName=None):
     return numItems
 
 
-def getFirstAvailableCache():
+def getFirstAvailableCache() -> Tuple[cachetools.Cache, Optional[threading.Lock]]:
     cacheBackend = config.getConfig('cache_backend', None)
     if cacheBackend is not None:
         msg = 'cache_backend already set'
@@ -109,7 +111,7 @@ def getFirstAvailableCache():
     cache, cacheLock = None, None
     for cacheBackend in _availableCaches:
         try:
-            cache, cacheLock = _availableCaches[cacheBackend].getCache()
+            cache, cacheLock = _availableCaches[cacheBackend].getCache()  # type: ignore
             break
         except TileCacheError:
             continue
@@ -124,7 +126,7 @@ def getFirstAvailableCache():
 class CacheFactory:
     logged = False
 
-    def getCacheSize(self, numItems, cacheName=None):
+    def getCacheSize(self, numItems: Optional[int], cacheName: Optional[str] = None) -> int:
         if numItems is None:
             defaultPortion = 32
             try:
@@ -145,7 +147,10 @@ class CacheFactory:
                 pass
         return numItems
 
-    def getCache(self, numItems=None, cacheName=None, inProcess=False):
+    def getCache(
+            self, numItems: Optional[int] = None,
+            cacheName: Optional[str] = None,
+            inProcess: bool = False) -> Tuple[cachetools.Cache, Optional[threading.Lock]]:
         loadCaches()
 
         # Default to `python` cache for inProcess
@@ -156,7 +161,7 @@ class CacheFactory:
 
         cache = None
         if not inProcess and cacheBackend in _availableCaches:
-            cache, cacheLock = _availableCaches[cacheBackend].getCache()
+            cache, cacheLock = _availableCaches[cacheBackend].getCache()  # type: ignore
         elif not inProcess and cacheBackend is None:
             cache, cacheLock = getFirstAvailableCache()
 

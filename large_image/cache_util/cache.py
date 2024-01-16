@@ -2,8 +2,9 @@ import functools
 import pickle
 import threading
 import uuid
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
 
+import cachetools
 from typing_extensions import ParamSpec
 
 try:
@@ -18,8 +19,8 @@ from .cachefactory import CacheFactory, pickAvailableCache
 P = ParamSpec('P')
 T = TypeVar('T')
 
-_tileCache = None
-_tileLock = None
+_tileCache: Optional[cachetools.Cache] = None
+_tileLock: Optional[threading.Lock] = None
 
 _cacheLockKeyToken = '_cacheLock_key'
 
@@ -175,7 +176,7 @@ class LruCacheMetaclass(type):
 
         return cls
 
-    def __call__(cls, *args, **kwargs):  # noqa - N805
+    def __call__(cls, *args, **kwargs) -> Any:  # noqa - N805
         if kwargs.get('noCache') or (
                 kwargs.get('noCache') is None and config.getConfig('cache_sources') is False):
             instance = super().__call__(*args, **kwargs)
@@ -259,7 +260,7 @@ class LruCacheMetaclass(type):
         return instance
 
 
-def getTileCache():
+def getTileCache() -> Tuple[cachetools.Cache, Optional[threading.Lock]]:
     """
     Get the preferred tile cache and lock.
 

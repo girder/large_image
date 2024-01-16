@@ -23,7 +23,7 @@ class TileSourceInefficientError(TileSourceError):
 
 class TileSourceFileNotFoundError(TileSourceError, FileNotFoundError):
     def __init__(self, *args, **kwargs) -> None:
-        return super().__init__(errno.ENOENT, *args, **kwargs)
+        super().__init__(errno.ENOENT, *args, **kwargs)
 
 
 class TileCacheError(TileGeneralError):
