@@ -20,6 +20,7 @@ os.environ['CPL_LOG'] = os.devnull
 
 
 logging.getLogger('tifftools').setLevel(logging.ERROR)
+logging.root.addHandler(logging.NullHandler())
 
 
 def yaml_dict_dump(dumper, data):

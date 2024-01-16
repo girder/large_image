@@ -48,14 +48,13 @@ class LazyTileDict(dict):
         self.alwaysAllowPIL = True
         self.imageKwargs = {}
         self.loaded = False
-        result = super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # We set this initially so that they are listed in known keys using the
         # native dictionary methods
         self['tile'] = None
         self['format'] = None
         self.width = self['width']
         self.height = self['height']
-        return result
 
     def setFormat(self, format, resample=False, imageKwargs=None):
         """

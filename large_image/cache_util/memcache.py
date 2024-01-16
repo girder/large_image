@@ -17,20 +17,25 @@
 import copy
 import threading
 import time
-from typing import Tuple
+from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
 
 from .. import config
 from .base import BaseCache
+
+_VT = TypeVar('_VT')
 
 
 class MemCache(BaseCache):
     """Use memcached as the backing cache."""
 
-    def __init__(self, url='127.0.0.1', username=None, password=None,
-                 getsizeof=None, mustBeAvailable=False):
-        global pylibmc
+    def __init__(
+            self, url: Union[str, List[str]] = '127.0.0.1',
+            username: Optional[str] = None, password: Optional[str] = None,
+            getsizeof: Optional[Callable[[_VT], float]] = None,
+            mustBeAvailable: bool = False) -> None:
         import pylibmc
 
+        self.pylibmc = pylibmc
         super().__init__(0, getsizeof=getsizeof)
         if isinstance(url, str):
             url = [url]
@@ -56,42 +61,42 @@ class MemCache(BaseCache):
             # unreachable, so we don't bother trying to use it.
             self._client['large_image_cache_test'] = time.time()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Memcache doesn't list its keys"
 
     def __iter__(self):
         # return invalid iter
         return None
 
-    def __len__(self):
+    def __len__(self) -> int:
         # return invalid length
         return -1
 
-    def __contains__(self, key):
+    def __contains__(self, item: object) -> bool:
         # cache never contains key
-        return None
+        return False
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         hashedKey = self._hashKey(key)
         del self._client[hashedKey]
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         hashedKey = self._hashKey(key)
         try:
             return self._client[hashedKey]
         except KeyError:
             return self.__missing__(key)
-        except pylibmc.ServerDown:
-            self.logError(pylibmc.ServerDown, config.getLogger('logprint').info,
+        except self.pylibmc.ServerDown:
+            self.logError(self.pylibmc.ServerDown, config.getLogger('logprint').info,
                           'Memcached ServerDown')
             self._reconnect()
             return self.__missing__(key)
-        except pylibmc.Error:
-            self.logError(pylibmc.Error, config.getLogger('logprint').exception,
+        except self.pylibmc.Error:
+            self.logError(self.pylibmc.Error, config.getLogger('logprint').exception,
                           'pylibmc exception')
             return self.__missing__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         hashedKey = self._hashKey(key)
         try:
             self._client[hashedKey] = value
@@ -106,60 +111,60 @@ class MemCache(BaseCache):
                 exc.__class__, config.getLogger('logprint').error,
                 '%s: Failed to save value (size %r) with key %s' % (
                     exc.__class__.__name__, valueSize, hashedKey))
-        except pylibmc.ServerDown:
-            self.logError(pylibmc.ServerDown, config.getLogger('logprint').info,
+        except self.pylibmc.ServerDown:
+            self.logError(self.pylibmc.ServerDown, config.getLogger('logprint').info,
                           'Memcached ServerDown')
             self._reconnect()
-        except pylibmc.TooBig:
+        except self.pylibmc.TooBig:
             pass
-        except pylibmc.Error as exc:
+        except self.pylibmc.Error as exc:
             # memcached won't cache items larger than 1 Mb (or a configured
             # size), but this returns a 'SUCCESS' error.  Raise other errors.
             if 'SUCCESS' not in repr(exc.args):
-                self.logError(pylibmc.Error, config.getLogger('logprint').exception,
+                self.logError(self.pylibmc.Error, config.getLogger('logprint').exception,
                               'pylibmc exception')
 
     @property
-    def curritems(self):
+    def curritems(self) -> int:
         return self._getStat('curr_items')
 
     @property
-    def currsize(self):
+    def currsize(self) -> int:
         return self._getStat('bytes')
 
     @property
-    def maxsize(self):
+    def maxsize(self) -> int:
         return self._getStat('limit_maxbytes')
 
-    def _reconnect(self):
+    def _reconnect(self) -> None:
         try:
             self._lastReconnectBackoff = getattr(self, '_lastReconnectBackoff', 2)
             if time.time() - getattr(self, '_lastReconnect', 0) > self._lastReconnectBackoff:
                 config.getLogger('logprint').info('Trying to reconnect to memcached server')
-                self._client = pylibmc.Client(self._clientParams[0], **self._clientParams[1])
+                self._client = self.pylibmc.Client(self._clientParams[0], **self._clientParams[1])
                 self._lastReconnectBackoff = min(self._lastReconnectBackoff + 1, 30)
                 self._lastReconnect = time.time()
         except Exception:
             pass
 
-    def _blockingClient(self):
+    def _blockingClient(self) -> Any:
         params = copy.deepcopy(self._clientParams)
-        params[1]['behaviors']['no_block'] = False
-        return pylibmc.Client(params[0], **params[1])
+        params[1]['behaviors']['no_block'] = False  # type: ignore
+        return self.pylibmc.Client(params[0], **params[1])
 
-    def _getStat(self, key):
+    def _getStat(self, key: str) -> int:
         try:
             stats = self._blockingClient().get_stats()
             value = sum(int(s[key]) for server, s in stats)
         except Exception:
-            return None
+            return 0
         return value
 
-    def clear(self):
+    def clear(self) -> None:
         self._client.flush_all()
 
     @staticmethod
-    def getCache() -> Tuple['MemCache', threading.Lock]:
+    def getCache() -> Tuple[Optional['MemCache'], threading.Lock]:
         # lock needed because pylibmc(memcached client) is not threadsafe
         cacheLock = threading.Lock()
 

@@ -63,7 +63,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super().__init__(path, **kwargs)
 
         if str(path).startswith(NEW_IMAGE_PATH_FLAG):
-            return self._initNew(**kwargs)
+            self._initNew(**kwargs)
+            return
         self._largeImagePath = str(self._getLargeImagePath())
         self._editable = False
 
