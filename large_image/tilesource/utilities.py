@@ -5,6 +5,7 @@ import types
 import xml.etree.ElementTree
 from collections import defaultdict
 from operator import attrgetter
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 import numpy as np
 import PIL
@@ -45,24 +46,26 @@ class ImageBytes(bytes):
     Display the number of bytes and, if known, the mimetype.
     """
 
-    def __new__(cls, source: bytes, mimetype: str = None):
+    def __new__(cls, source: bytes, mimetype: Optional[str] = None):
         self = super().__new__(cls, source)
-        self._mime_type = mimetype
+        vars(self)['_mime_type'] = mimetype
         return self
 
     @property
-    def mimetype(self):
-        return self._mime_type
+    def mimetype(self) -> Optional[str]:
+        return vars(self)['_mime_type']
 
-    def _repr_png_(self):
+    def _repr_png_(self) -> Optional[bytes]:
         if self.mimetype == 'image/png':
             return self
+        return None
 
-    def _repr_jpeg_(self):
+    def _repr_jpeg_(self) -> Optional[bytes]:
         if self.mimetype == 'image/jpeg':
             return self
+        return None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.mimetype:
             return f'ImageBytes<{len(self)}> ({self.mimetype})'
         return f'ImageBytes<{len(self)}> (wrapped image bytes)'
@@ -71,15 +74,17 @@ class ImageBytes(bytes):
 class JSONDict(dict):
     """Wrapper class to improve Jupyter repr of JSON-able dicts."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # TODO: validate JSON serializable?
 
-    def _repr_json_(self):
+    def _repr_json_(self) -> Dict:
         return self
 
 
-def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompression):
+def _encodeImageBinary(
+        image: PIL.Image.Image, encoding: str, jpegQuality: Union[str, int],
+        jpegSubsampling: Union[str, int], tiffCompression: str) -> bytes:
     """
     Encode a PIL Image to a binary representation of the image (a jpeg, png, or
     tif).
@@ -95,7 +100,7 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
     encoding = TileOutputPILFormat.get(encoding, encoding)
     if image.width == 0 or image.height == 0:
         return b''
-    params = {}
+    params: Dict[str, Any] = {}
     if encoding == 'JPEG':
         if image.mode not in ({'L', 'RGB', 'RGBA'} if simplejpeg else {'L', 'RGB'}):
             image = image.convert('RGB' if image.mode != 'LA' else 'L')
@@ -105,7 +110,7 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
                 quality=jpegQuality,
                 colorspace=image.mode if image.mode in {'RGB', 'RGBA'} else 'GRAY',
                 colorsubsampling={-1: '444', 0: '444', 1: '422', 2: '420'}.get(
-                    jpegSubsampling, str(jpegSubsampling).strip(':')),
+                    cast(int, jpegSubsampling), str(jpegSubsampling).strip(':')),
             ), mimetype='image/jpeg')
         params['quality'] = jpegQuality
         params['subsampling'] = jpegSubsampling
@@ -137,11 +142,15 @@ def _encodeImageBinary(image, encoding, jpegQuality, jpegSubsampling, tiffCompre
     )
 
 
-def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
-                 format=(TILE_FORMAT_IMAGE, ), tiffCompression='raw',
-                 **kwargs):
+def _encodeImage(
+    image: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray],
+    encoding: str = 'JPEG', jpegQuality: int = 95, jpegSubsampling: int = 0,
+    format: Union[str, Tuple[str]] = (TILE_FORMAT_IMAGE, ),
+    tiffCompression: str = 'raw', **kwargs,
+) -> Tuple[Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray], str]:
     """
-    Convert a PIL or numpy image into raw output bytes and a mime type.
+    Convert a PIL or numpy image into raw output bytes, a numpy image, or a PIL
+    Image, and a mime type.
 
     :param image: a PIL image.
     :param encoding: a valid PIL encoding (typically 'PNG' or 'JPEG').  Must
@@ -177,7 +186,9 @@ def _encodeImage(image, encoding='JPEG', jpegQuality=95, jpegSubsampling=0,
     return imageData, imageFormatOrMimeType
 
 
-def _imageToPIL(image, setMode=None):
+def _imageToPIL(
+        image: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray],
+        setMode: Optional[str] = None) -> PIL.Image.Image:
     """
     Convert an image in PIL, numpy, or image file format to a PIL image.
 
@@ -216,7 +227,8 @@ def _imageToPIL(image, setMode=None):
     return image
 
 
-def _imageToNumpy(image):
+def _imageToNumpy(
+        image: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray]) -> Tuple[np.ndarray, 'str']:
     """
     Convert an image in PIL, numpy, or image file format to a numpy array.  The
     output numpy array always has three dimensions.
@@ -256,7 +268,7 @@ def _imageToNumpy(image):
     return image, mode
 
 
-def _letterboxImage(image, width, height, fill):
+def _letterboxImage(image: PIL.Image.Image, width: int, height: int, fill: str) -> PIL.Image.Image:
     """
     Given a PIL image, width, height, and fill color, letterbox or pillarbox
     the image to make it the specified dimensions.  The image is never
@@ -283,17 +295,17 @@ def _letterboxImage(image, width, height, fill):
     return result
 
 
-def _vipsCast(image, mustBe8Bit=False, originalScale=None):
+def _vipsCast(image: Any, mustBe8Bit: bool = False) -> Any:
     """
     Cast a vips image to a format we want.
 
     :param image: a vips image
     :param mustBe9Bit: if True, then always cast to unsigned 8-bit.
-    :param originalScale:
     :returns: a vips image
     """
     import pyvips
 
+    image = cast(pyvips.Image, image)
     formats = {
         pyvips.BandFormat.CHAR: (pyvips.BandFormat.UCHAR, 2**7, 1),
         pyvips.BandFormat.COMPLEX: (pyvips.BandFormat.USHORT, 0, 65535),
@@ -324,13 +336,15 @@ def _vipsCast(image, mustBe8Bit=False, originalScale=None):
     return image
 
 
-def _rasterioParameters(defaultCompression=None, eightbit=None, **kwargs):
+def _rasterioParameters(
+        defaultCompression: Optional[str] = None,
+        eightbit: Optional[bool] = None, **kwargs) -> Dict[str, Any]:
     """
     Return a dictionary of creation option for the rasterio driver
 
     :param defaultCompression: if not specified, use this value.
     :param eightbit: True or False to indicate that the bit depth per sample
-        s known.  None for unknown.
+        is known.  None for unknown.
 
     Optional parameters that can be specified in kwargs:
 
@@ -359,12 +373,14 @@ def _rasterioParameters(defaultCompression=None, eightbit=None, **kwargs):
 
     # add the remaining options
     options.update(tiled=True, bigtiff='IF_SAFER')
-    'predictor' not in options or options.update(predictor=predictor[options['predictor']])
+    'predictor' not in options or options.update(predictor=predictor[str(options['predictor'])])
 
     return options
 
 
-def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
+def _gdalParameters(
+        defaultCompression: Optional[str] = None,
+        eightbit: Optional[bool] = None, **kwargs) -> List[str]:
     """
     Return an array of gdal translation parameters.
 
@@ -402,7 +418,9 @@ def _gdalParameters(defaultCompression=None, eightbit=None, **kwargs):
     return cmdopt
 
 
-def _vipsParameters(forTiled=True, defaultCompression=None, **kwargs):
+def _vipsParameters(
+        forTiled: bool = True, defaultCompression: Optional[str] = None,
+        **kwargs) -> Dict[str, Any]:
     """
     Return a dictionary of vips conversion parameters.
 
@@ -472,7 +490,7 @@ def _vipsParameters(forTiled=True, defaultCompression=None, **kwargs):
     return convertParams
 
 
-def etreeToDict(t):
+def etreeToDict(t: xml.etree.ElementTree.Element) -> Dict[str, Any]:
     """
     Convert an xml etree to a nested dictionary without schema names in the
     keys.  If you have an xml string, this can be converted to a dictionary via
@@ -483,7 +501,7 @@ def etreeToDict(t):
     """
     # Remove schema
     tag = t.tag.split('}', 1)[1] if t.tag.startswith('{') else t.tag
-    d = {tag: {}}
+    d: Dict[str, Any] = {tag: {}}
     children = list(t)
     if children:
         entries = defaultdict(list)
@@ -504,7 +522,9 @@ def etreeToDict(t):
     return d
 
 
-def dictToEtree(d, root=None):
+def dictToEtree(
+        d: Dict[str, Any],
+        root: Optional[xml.etree.ElementTree.Element] = None) -> xml.etree.ElementTree.Element:
     """
     Convert a dictionary in the style produced by etreeToDict back to an etree.
     Make an xml string via xml.etree.ElementTree.tostring(dictToEtree(
@@ -540,7 +560,7 @@ def dictToEtree(d, root=None):
     return root
 
 
-def nearPowerOfTwo(val1, val2, tolerance=0.02):
+def nearPowerOfTwo(val1: float, val2: float, tolerance: float = 0.02) -> bool:
     """
     Check if two values are different by nearly a power of two.
 
@@ -559,31 +579,31 @@ def nearPowerOfTwo(val1, val2, tolerance=0.02):
     return abs(log2ratio - round(log2ratio)) < tolerance
 
 
-def _arrayToPalette(palette):
+def _arrayToPalette(palette: List[Union[str, float, Tuple[float, ...]]]) -> np.ndarray:
     """
     Given an array of color strings, tuples, or lists, return a numpy array.
 
     :param palette: an array of color strings, tuples, or lists.
     :returns: a numpy array of RGBA value on the scale of [0-255].
     """
-    arr = []
+    arr: List[Union[np.ndarray, Tuple[float, ...]]] = []
     for clr in palette:
         if isinstance(clr, (tuple, list)):
             arr.append(np.array((list(clr) + [1, 1, 1])[:4]) * 255)
         else:
             try:
-                arr.append(PIL.ImageColor.getcolor(str(colormap.get(clr, clr)), 'RGBA'))
+                arr.append(PIL.ImageColor.getcolor(str(colormap.get(str(clr), clr)), 'RGBA'))
             except ValueError:
                 try:
                     import matplotlib as mpl
 
-                    arr.append(PIL.ImageColor.getcolor(mpl.colors.to_hex(clr), 'RGBA'))
+                    arr.append(PIL.ImageColor.getcolor(mpl.colors.to_hex(cast(str, clr)), 'RGBA'))
                 except (ImportError, ValueError):
                     raise ValueError('cannot be used as a color palette: %r.' % palette)
     return np.array(arr)
 
 
-def getPaletteColors(value):
+def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]]]) -> np.ndarray:
     """
     Given a list or a name, return a list of colors in the form of a numpy
     array of RGBA.  If a list, each entry is a color name resolvable by either
@@ -603,7 +623,7 @@ def getPaletteColors(value):
         palette = value
     if palette is None:
         try:
-            PIL.ImageColor.getcolor(str(colormap.get(value, value)), 'RGBA')
+            PIL.ImageColor.getcolor(str(colormap.get(str(value), value)), 'RGBA')
             palette = ['#000', str(value)]
         except ValueError:
             pass
@@ -619,10 +639,10 @@ def getPaletteColors(value):
             import matplotlib as mpl
 
             if value in mpl.colors.get_named_colors_mapping():
-                palette = ['#0000', mpl.colors.to_hex(value)]
+                palette = ['#0000', mpl.colors.to_hex(str(value))]
             else:
-                cmap = mpl.colormaps.get_cmap(value) if hasattr(getattr(
-                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(value)
+                cmap = mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
+                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(str(value))
                 palette = [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
         except (ImportError, ValueError, AttributeError):
             pass
@@ -631,7 +651,7 @@ def getPaletteColors(value):
     return _arrayToPalette(palette)
 
 
-def isValidPalette(value):
+def isValidPalette(value: Union[str, List[Union[str, float, Tuple[float, ...]]]]) -> bool:
     """
     Check if a value can be used as a palette.
 
@@ -646,7 +666,9 @@ def isValidPalette(value):
         return False
 
 
-def _recursePalettablePalettes(module, palettes, root=None, depth=0):
+def _recursePalettablePalettes(
+        module: types.ModuleType, palettes: Set[str],
+        root: Optional[str] = None, depth: int = 0) -> None:
     """
     Walk the modules in palettable to find all of the available palettes.
 
@@ -665,7 +687,7 @@ def _recursePalettablePalettes(module, palettes, root=None, depth=0):
                 palettes.add(root + '.' + key)
 
 
-def getAvailableNamedPalettes(includeColors=True, reduced=False):
+def getAvailableNamedPalettes(includeColors: bool = True, reduced: bool = False) -> List[str]:
     """
     Get a list of all named palettes that can be used with getPaletteColors.
 
@@ -690,7 +712,7 @@ def getAvailableNamedPalettes(includeColors=True, reduced=False):
             palettes |= set(mpl.colors.get_named_colors_mapping())
         # matplotlib has made the colormap list more public in recent versions
         mplcm = (mpl.colormaps if hasattr(mpl, 'colormaps')
-                 else mpl.cm._cmap_registry)
+                 else mpl.cm._cmap_registry)  # type: ignore
         for key in mplcm:
             if isValidPalette(key):
                 palettes.add(key)
@@ -707,7 +729,7 @@ def getAvailableNamedPalettes(includeColors=True, reduced=False):
     return sorted(palettes)
 
 
-def fullAlphaValue(arr):
+def fullAlphaValue(arr: np.ndarray) -> int:
     """
     Given a numpy array, return the value that should be used for a fully
     opaque alpha channel.  For uint variants, this is the max value.
@@ -720,7 +742,7 @@ def fullAlphaValue(arr):
     return 1
 
 
-def _makeSameChannelDepth(arr1, arr2):
+def _makeSameChannelDepth(arr1: np.ndarray, arr2: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given two numpy arrays that are either two or three dimensions, make the
     third dimension the same for both of them.  Specifically, if they are two
@@ -745,28 +767,31 @@ def _makeSameChannelDepth(arr1, arr2):
     # If any array is RGB, make sure all arrays are RGB.
     for key, arr in arrays.items():
         other = arrays['arr1' if key == 'arr2' else 'arr2']
-        if arr.shape[2] < 3 and other.shape[2] >= 3:
-            newarr = np.ones((arr.shape[0], arr.shape[1], arr.shape[2] + 2), dtype=arr.dtype)
+        if arr.shape[2] < 3 and other.shape[2] >= 3:  # type: ignore[misc]
+            newarr = np.ones(
+                (arr.shape[0], arr.shape[1], arr.shape[2] + 2),  # type: ignore[misc]
+                dtype=arr.dtype)
             newarr[:, :, 0:1] = arr[:, :, 0:1]
             newarr[:, :, 1:2] = arr[:, :, 0:1]
             newarr[:, :, 2:3] = arr[:, :, 0:1]
-            if arr.shape[2] == 2:
+            if arr.shape[2] == 2:  # type: ignore[misc]
                 newarr[:, :, 3:4] = arr[:, :, 1:2]
             arrays[key] = newarr
     # If only one array has an A channel, make sure all arrays have an A
     # channel
     for key, arr in arrays.items():
         other = arrays['arr1' if key == 'arr2' else 'arr2']
-        if arr.shape[2] < other.shape[2]:
+        if arr.shape[2] < other.shape[2]:  # type: ignore[misc]
             arrays[key] = np.pad(
                 arr,
-                ((0, 0), (0, 0), (0, other.shape[2] - arr.shape[2])),
-                mode='constant',
+                ((0, 0), (0, 0), (0, other.shape[2] - arr.shape[2])),  # type: ignore[misc]
                 constant_values=fullAlphaValue(arr))
     return arrays['arr1'], arrays['arr2']
 
 
-def _addSubimageToImage(image, subimage, x, y, width, height):
+def _addSubimageToImage(
+        image: Optional[np.ndarray], subimage: np.ndarray, x: int, y: int,
+        width: int, height: int) -> np.ndarray:
     """
     Add a subimage to a larger image as numpy arrays.
 
@@ -784,7 +809,7 @@ def _addSubimageToImage(image, subimage, x, y, width, height):
         if (x, y, width, height) == (0, 0, subimage.shape[1], subimage.shape[0]):
             return subimage
         image = np.empty(
-            (height, width, subimage.shape[2]),
+            (height, width, subimage.shape[2]),  # type: ignore[misc]
             dtype=subimage.dtype)
     elif len(image.shape) != len(subimage.shape) or image.shape[-1] != subimage.shape[-1]:
         image, subimage = _makeSameChannelDepth(image, subimage)
@@ -792,15 +817,15 @@ def _addSubimageToImage(image, subimage, x, y, width, height):
     return image
 
 
-def _vipsAddAlphaBand(vimg, *otherImages):
+def _vipsAddAlphaBand(vimg: Any, otherImages: List[Any]) -> Any:
     """
     Add an alpha band to a vips image.  The alpha value is either 1, 255, or
     65535 depending on the max value in the image and any other images passed
     for reference.
 
-    :param vimg: the image to modify.
-    :param otherImages: a list of other images to use for determining the alpha
-        value.
+    :param vimg: the vips image to modify.
+    :param otherImages: a list of other vips images to use for determining the
+        alpha value.
     :returns: the original image with an alpha band.
     """
     maxValue = vimg.max()
@@ -814,7 +839,9 @@ def _vipsAddAlphaBand(vimg, *otherImages):
     return vimg.bandjoin(alpha)
 
 
-def _addRegionTileToTiled(image, subimage, x, y, width, height, tile=None, **kwargs):
+def _addRegionTileToTiled(
+        image: Optional[Dict[str, Any]], subimage: np.ndarray, x: int, y: int,
+        width: int, height: int, tile: Dict[str, Any], **kwargs) -> Dict[str, Any]:
     """
     Add a subtile to a vips image.
 
@@ -835,7 +862,7 @@ def _addRegionTileToTiled(image, subimage, x, y, width, height, tile=None, **kwa
         subimage = subimage.astype('d')
     vimgMem = pyvips.Image.new_from_memory(
         np.ascontiguousarray(subimage).data,
-        subimage.shape[1], subimage.shape[0], subimage.shape[2],
+        subimage.shape[1], subimage.shape[0], subimage.shape[2],  # type: ignore[misc]
         dtypeToGValue[subimage.dtype.char])
     vimg = pyvips.Image.new_temp_file('%s.v')
     vimgMem.write(vimg)
@@ -846,7 +873,7 @@ def _addRegionTileToTiled(image, subimage, x, y, width, height, tile=None, **kwa
             'mm_x': tile.get('mm_x') if tile else None,
             'mm_y': tile.get('mm_y') if tile else None,
             'magnification': tile.get('magnification') if tile else None,
-            'channels': subimage.shape[2],
+            'channels': subimage.shape[2],  # type: ignore[misc]
             'strips': {},
         }
     if y not in image['strips']:
@@ -861,7 +888,9 @@ def _addRegionTileToTiled(image, subimage, x, y, width, height, tile=None, **kwa
     return image
 
 
-def _calculateWidthHeight(width, height, regionWidth, regionHeight):
+def _calculateWidthHeight(
+        width: Optional[float], height: Optional[float], regionWidth: float,
+        regionHeight: float) -> Tuple[int, int, float]:
     """
     Given a source width and height and a maximum destination width and/or
     height, calculate a destination width and height that preserves the aspect
@@ -882,19 +911,22 @@ def _calculateWidthHeight(width, height, regionWidth, regionHeight):
         width = height * 16
     if width and not height:
         height = width * 16
-    scaledWidth = max(1, int(regionWidth * height / regionHeight))
-    scaledHeight = max(1, int(regionHeight * width / regionWidth))
+    scaledWidth = max(1, int(regionWidth * cast(float, height) / regionHeight))
+    scaledHeight = max(1, int(regionHeight * cast(float, width) / regionWidth))
     if scaledWidth == width or (
-            width * regionHeight > height * regionWidth and not scaledHeight == height):
-        scale = float(regionHeight) / height
+            cast(float, width) * regionHeight > cast(float, height) * regionWidth and
+            not scaledHeight == height):
+        scale = float(regionHeight) / cast(float, height)
         width = scaledWidth
     else:
-        scale = float(regionWidth) / width
+        scale = float(regionWidth) / cast(float, width)
         height = scaledHeight
-    return width, height, scale
+    return int(cast(float, width)), int(cast(float, height)), scale
 
 
-def _computeFramesPerTexture(opts, numFrames, sizeX, sizeY):
+def _computeFramesPerTexture(
+        opts: Dict[str, Any], numFrames: int, sizeX: int,
+        sizeY: int) -> Tuple[int, int, int, int, int]:
     """
     Compute the number of frames for each tile_frames texture.
 
@@ -966,7 +998,8 @@ def _computeFramesPerTexture(opts, numFrames, sizeX, sizeY):
         return fw, fh, fhorz, fperframe, textures
 
 
-def getTileFramesQuadInfo(metadata, options=None):
+def getTileFramesQuadInfo(
+        metadata: Dict[str, Any], options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Compute what tile_frames need to be requested for a particular condition.
 
@@ -1034,35 +1067,37 @@ def getTileFramesQuadInfo(metadata, options=None):
     opts.update(options or {})
 
     opts['frameStride'] = (
-        int(opts['frameStride']) if str(opts['frameStride']).isdigit() else
-        metadata.get('IndexRange', {}).get('Index' + opts['frameStride'].upper(), 1))
+        int(cast(Union[str, int], opts['frameStride'])) if str(opts['frameStride']).isdigit() else
+        metadata.get('IndexRange', {}).get('Index' + str(opts['frameStride']).upper(), 1))
     opts['frameGroup'] = (
-        int(opts['frameGroup']) if str(opts['frameGroup']).isdigit() else
-        metadata.get('IndexRange', {}).get('Index' + opts['frameGroup'].upper(), 1))
+        int(cast(Union[str, int], opts['frameGroup'])) if str(opts['frameGroup']).isdigit() else
+        metadata.get('IndexRange', {}).get('Index' + str(opts['frameGroup']).upper(), 1))
     opts['frameGroupStride'] = (
-        int(opts['frameGroupStride']) if opts['frameGroupStride'] != 'auto' else
-        max(1, opts['frameGroup'] // opts['frameStride']))
+        int(cast(Union[str, int], opts['frameGroupStride']))
+        if opts['frameGroupStride'] != 'auto' else
+        max(1, cast(int, opts['frameGroup']) // cast(int, opts['frameStride'])))
     if str(opts['frameBase']).isdigit():
-        opts['frameBase'] = int(opts['frameBase'])
+        opts['frameBase'] = int(cast(Union[str, int], opts['frameBase']))
     else:
-        status = {
+        statusidx = {
             'metadata': metadata,
             'options': opts,
             'src': [],
         }
         for val in range(metadata.get(
-                'IndexRange', {}).get('Index' + opts['frameBase'].upper(), 1)):
+                'IndexRange', {}).get('Index' + str(opts['frameBase']).upper(), 1)):
             opts['frameBase'] = val
             result = getTileFramesQuadInfo(metadata, opts)
-            status['src'].extend(result['src'])
-        return status
+            cast(List[Any], statusidx['src']).extend(cast(List[Any], result['src']))
+        return statusidx
     sizeX, sizeY = metadata['sizeX'], metadata['sizeY']
     numFrames = len(metadata.get('frames', [])) or 1
     frames = []
-    for fds in range(opts['frameGroupStride']):
+    for fds in range(cast(int, opts['frameGroupStride'])):
         frames.extend(list(range(
-            opts['frameBase'] + fds * opts['frameStride'], numFrames,
-            opts['frameStride'] * opts['frameGroupStride'])))
+            cast(int, opts['frameBase']) + fds * cast(int, opts['frameStride']),
+            numFrames,
+            cast(int, opts['frameStride']) * cast(int, opts['frameGroupStride']))))
     numFrames = len(frames)
     # check if numFrames zero and return early?
     fw, fh, fhorz, fperframe, textures = _computeFramesPerTexture(
@@ -1071,7 +1106,7 @@ def getTileFramesQuadInfo(metadata, options=None):
     usedw = int(math.floor(sizeX / max(sizeX / fw, sizeY / fh)))
     usedh = int(math.floor(sizeY / max(sizeX / fw, sizeY / fh)))
     # get the set of texture images
-    status = {
+    status: Dict[str, Any] = {
         'metadata': metadata,
         'options': opts,
         'src': [],
@@ -1087,7 +1122,7 @@ def getTileFramesQuadInfo(metadata, options=None):
     status['framesToIdx'] = {frame: idx for idx, frame in enumerate(frames)}
     for idx in range(textures):
         frameList = frames[idx * fperframe: (idx + 1) * fperframe]
-        tfparams = {
+        tfparams: Dict[str, Any] = {
             'framesAcross': fhorz,
             'width': fw,
             'height': fh,
@@ -1096,8 +1131,8 @@ def getTileFramesQuadInfo(metadata, options=None):
         }
         if len(frameList) != len(metadata.get('frames', [])):
             tfparams['frameList'] = frameList
-        tfparams.update(opts['format'])
-        tfparams.update(opts['query'])
+        tfparams.update(cast(Dict[str, Any], opts['format']))
+        tfparams.update(cast(Dict[str, Any], opts['query']))
         status['src'].append(tfparams)
         f = len(frameList)
         ivert = int(math.ceil(f / fhorz))
@@ -1122,10 +1157,10 @@ def getTileFramesQuadInfo(metadata, options=None):
     return status
 
 
-_recentThresholds = {}
+_recentThresholds: Dict[Tuple, Any] = {}
 
 
-def histogramThreshold(histogram, threshold, fromMax=False):
+def histogramThreshold(histogram: Dict[str, Any], threshold: float, fromMax: bool = False) -> float:
     """
     Given a histogram and a threshold on a scale of [0, 1], return the bin
     edge that excludes no more than the specified threshold amount of values.
@@ -1176,7 +1211,7 @@ def cpu_count(logical: bool = True) -> int:
         hyperthreading).  False for the physical usable CPUs.
     :returns: the number of usable CPUs.
     """
-    count = os.cpu_count()
+    count = os.cpu_count() or 2
     try:
         count = min(count, len(os.sched_getaffinity(0)))
     except AttributeError:
@@ -1190,7 +1225,7 @@ def cpu_count(logical: bool = True) -> int:
     return max(1, count)
 
 
-def addPILFormatsToOutputOptions():
+def addPILFormatsToOutputOptions() -> None:
     """
     Check PIL for available formats that be saved and add them to the lists of
     of available formats.

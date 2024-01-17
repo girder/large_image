@@ -842,8 +842,9 @@ class TileSource(IPyLeafletMixin):
 
         self.logger.debug(
             'Fetching region of an image with a source size of %d x %d; '
-            'getting %d tiles',
-            regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin))
+            'getting %d tile%s',
+            regionWidth, regionHeight, (xmax - xmin) * (ymax - ymin),
+            '' if (xmax - xmin) * (ymax - ymin) == 1 else 's')
 
         # If tile is specified, return at most one tile
         if iterInfo.get('tile_position') is not None:
@@ -1604,7 +1605,7 @@ class TileSource(IPyLeafletMixin):
             tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = np.zeros(
-                (self.tileHeight, self.tileWidth, tile.shape[2]),
+                (self.tileHeight, self.tileWidth, tile.shape[2]),  # type: ignore[misc]
                 dtype=tile.dtype)
             extend[:min(self.tileHeight, tile.shape[0]),
                    :min(self.tileWidth, tile.shape[1])] = tile
@@ -1672,10 +1673,10 @@ class TileSource(IPyLeafletMixin):
                                 sizeY - (maxY - self.tileHeight))
             tile, mode = _imageToNumpy(tile)
             if self.edge in (True, 'crop'):
-                tile = cast(np.ndarray, tile)[:contentHeight, :contentWidth]
+                tile = tile[:contentHeight, :contentWidth]
             else:
-                color = PIL.ImageColor.getcolor(self.edge, cast(str, mode))
-                tile = cast(np.ndarray, tile).copy()
+                color = PIL.ImageColor.getcolor(self.edge, mode)
+                tile = tile.copy()
                 tile[:, contentWidth:] = color
                 tile[contentHeight:] = color
         if isinstance(tile, np.ndarray) and numpyAllowed:
@@ -2207,7 +2208,7 @@ class TileSource(IPyLeafletMixin):
         mode = None if TILE_FORMAT_NUMPY in format else iterInfo['mode']
         outWidth = iterInfo['output']['width']
         outHeight = iterInfo['output']['height']
-        image: Optional[np.ndarray] = None
+        image: Optional[Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes]] = None
         tiledimage = None
         for tile in self._tileIterator(iterInfo):
             # Add each tile to the image
@@ -2218,7 +2219,7 @@ class TileSource(IPyLeafletMixin):
                     tiledimage, subimage, x0, y0, regionWidth, regionHeight, tile, **kwargs)
             else:
                 image = utilities._addSubimageToImage(
-                    image, subimage, x0, y0, regionWidth, regionHeight)
+                    cast(Optional[np.ndarray], image), subimage, x0, y0, regionWidth, regionHeight)
             # Somehow discarding the tile here speeds things up.
             del tile
             del subimage
@@ -2230,7 +2231,7 @@ class TileSource(IPyLeafletMixin):
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, iterInfo, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
             dtype = cast(np.ndarray, image).dtype
-            image = _imageToPIL(image, mode).resize(
+            image = _imageToPIL(cast(np.ndarray, image), mode).resize(
                 (outWidth, outHeight),
                 getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
                 if outWidth > regionWidth else
@@ -2241,8 +2242,8 @@ class TileSource(IPyLeafletMixin):
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:
             image = utilities._letterboxImage(
-                _imageToPIL(image, mode), maxWidth, maxHeight, kwargs['fill'])
-        return utilities._encodeImage(image, format=format, **kwargs)
+                _imageToPIL(cast(np.ndarray, image), mode), maxWidth, maxHeight, kwargs['fill'])
+        return utilities._encodeImage(cast(np.ndarray, image), format=format, **kwargs)
 
     def _encodeTiledImage(
             self, image: Dict[str, Any], outWidth: int, outHeight: int,
@@ -2435,14 +2436,16 @@ class TileSource(IPyLeafletMixin):
                         frame, idx, len(frameList), offsetX, offsetY)
                 if tiled:
                     tiledimage = utilities._addRegionTileToTiled(
-                        tiledimage, subimage, offsetX, offsetY, outWidth, outHeight, tile, **kwargs)
-            else:
-                image = utilities._addSubimageToImage(
-                    image, subimage, offsetX, offsetY, outWidth, outHeight)
+                        tiledimage, cast(np.ndarray, subimage), offsetX,
+                        offsetY, outWidth, outHeight, tile, **kwargs)
+                else:
+                    image = utilities._addSubimageToImage(
+                        image, cast(np.ndarray, subimage), offsetX, offsetY,
+                        outWidth, outHeight)
         if tiled:
             return self._encodeTiledImage(
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, iterInfo, **kwargs)
-        return utilities._encodeImage(image, format=format, **kwargs)
+        return utilities._encodeImage(cast(np.ndarray, image), format=format, **kwargs)
 
     def getRegionAtAnotherScale(
             self, sourceRegion: Dict[str, Any],
@@ -2851,7 +2854,7 @@ class TileSource(IPyLeafletMixin):
                 getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
                 if width > imageWidth else
                 getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
-        return utilities._encodeImage(image, **kwargs)
+        return cast(Tuple[ImageBytes, str], utilities._encodeImage(image, **kwargs))
 
     def getPixel(self, includeTileRecord: bool = False, **kwargs) -> JSONDict:
         """

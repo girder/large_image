@@ -1,11 +1,17 @@
 # This module contains functions for use in styles
 
+from types import SimpleNamespace
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
 
 from .utilities import _imageToNumpy, _imageToPIL
 
 
-def maskPixelValues(image, context, values=None, negative=None, positive=None):
+def maskPixelValues(
+        image: np.ndarray, context: SimpleNamespace,
+        values: List[Union[int, List[int], Tuple[int, ...]]],
+        negative: Optional[int] = None, positive: Optional[int] = None) -> np.ndarray:
     """
     This is a style utility function that returns a black-and-white 8-bit image
     where the image is white if the pixel of the source image is in a list of
@@ -27,13 +33,16 @@ def maskPixelValues(image, context, values=None, negative=None, positive=None):
     src = context.image
     mask = np.full(src.shape[:2], False)
     for val in values:
+        vallist: List[float]
         if not isinstance(val, (list, tuple)):
             if src.shape[-1] == 1:
-                val = [val]
+                vallist = [val]
             else:
-                val = [val % 256, val // 256 % 256, val // 65536 % 256]
-        val = (list(val) + [255] * src.shape[2])[:src.shape[2]]
-        match = np.array(val)
+                vallist = [val % 256, val // 256 % 256, val // 65536 % 256]
+        else:
+            vallist = list(val)
+        vallist = (vallist + [255] * src.shape[2])[:src.shape[2]]
+        match = np.array(vallist)
         mask = mask | (src == match).all(axis=-1)
     image[mask != True] = negative or [0, 0, 0, 255]  # noqa E712
     image[mask] = positive or [255, 255, 255, 0]
@@ -41,7 +50,9 @@ def maskPixelValues(image, context, values=None, negative=None, positive=None):
     return image
 
 
-def medianFilter(image, context=None, kernel=5, weight=1.0):
+def medianFilter(
+        image: np.ndarray, context: Optional[SimpleNamespace] = None,
+        kernel: int = 5, weight: float = 1.0) -> np.ndarray:
     """
     This is a style utility function that applies a median rank filter to the
     image to sharpen it.
@@ -57,13 +68,13 @@ def medianFilter(image, context=None, kernel=5, weight=1.0):
 
     filt = PIL.ImageFilter.MedianFilter(kernel)
     if len(image.shape) != 3:
-        pimg = _imageToPIL(image)
+        pilimg = _imageToPIL(image)
     elif image.shape[2] >= 3:
-        pimg = _imageToPIL(image[:, :, :3])
+        pilimg = _imageToPIL(image[:, :, :3])
     else:
-        pimg = _imageToPIL(image[:, :, :1])
-    fimg = _imageToNumpy(pimg.filter(filt))[0]
-    mul = 0
+        pilimg = _imageToPIL(image[:, :, :1])
+    fimg = _imageToNumpy(pilimg.filter(filt))[0]
+    mul: float = 0
     clip = 0
     if image.dtype == np.uint8 or (
             image.dtype.kind == 'f' and 1 < np.max(image) < 256 and np.min(image) >= 0):
@@ -79,12 +90,12 @@ def medianFilter(image, context=None, kernel=5, weight=1.0):
     elif image.dtype.kind == 'f':
         mul = 1
     if mul:
-        pimg = image.astype(float)
+        pimg: np.ndarray = image.astype(float)
         if len(pimg.shape) == 2:
             pimg = np.resize(pimg, (pimg.shape[0], pimg.shape[1], 1))
-        pimg = pimg[:, :, :fimg.shape[2]]
+        pimg = pimg[:, :, :fimg.shape[2]]  # type: ignore[index,misc]
         dimg = (pimg - fimg.astype(float) * mul) * weight
-        pimg = pimg[:, :, :fimg.shape[2]] + dimg
+        pimg = pimg[:, :, :fimg.shape[2]] + dimg  # type: ignore[index,misc]
         if clip:
             pimg = pimg.clip(0, clip)
         if len(image.shape) != 3:
