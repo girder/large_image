@@ -201,12 +201,13 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
         # Sometimes, there are a few extra bytes after the ending, such
         # as '--' and '\r\n'. Imaging Data Commons has '--\r\n' at the end.
-        # We will make this number large enough to capture possible extra bytes.
-        max_ending_size = len(ending) + 6
+        # But we don't care about what comes after the ending. As soon as we
+        # encounter the ending, we are done.
+        ending_size = len(ending)
 
         # Make sure the buffer is at least large enough to contain the
-        # full ending, so we can check neighboring chunks for split endings.
-        buffer_size = max(BUF_SIZE, max_ending_size)
+        # ending_size - 1, so that the ending cannot be split between more than 2 chunks.
+        buffer_size = max(BUF_SIZE, ending_size - 1)
 
         with response:
             # Create our iterator
@@ -215,11 +216,12 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             # First, stream until we encounter the first `\r\n\r\n`,
             # which denotes the end of the header section.
             header_found = False
+            end_header_delimiter = b'\r\n\r\n'
             for chunk in iterator:
-                if b'\r\n\r\n' in chunk:
-                    idx = chunk.index(b'\r\n\r\n')
+                if end_header_delimiter in chunk:
+                    idx = chunk.index(end_header_delimiter)
                     # Save the first section of data. We will yield it later.
-                    prev_chunk = chunk[idx + 4:]
+                    prev_chunk = chunk[idx + len(end_header_delimiter):]
                     header_found = True
                     break
 
@@ -231,18 +233,18 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             # we encounter the ending boundary or finish the data.
             # The "prev_chunk" will start out set to the section right after the header.
             for chunk in iterator:
-                # Ensure the chunk is large enough to contain the whole ending, so
-                # we can be sure the ending won't be split across 3 or more chunks.
-                while len(chunk) < max_ending_size:
+                # Ensure the chunk is large enough to contain the ending_size - 1, so
+                # we can be sure the ending won't be split across more than 2 chunks.
+                while len(chunk) < ending_size - 1:
                     try:
                         chunk += next(iterator)
                     except StopIteration:
                         break
 
-                # Check if the ending is split between two different chunks.
-                if ending in prev_chunk + chunk[:max_ending_size]:
+                # Check if the ending is split between the previous and current chunks.
+                if ending in prev_chunk + chunk[:ending_size - 1]:
                     # We found the ending! Remove the ending boundary and return.
-                    data = prev_chunk + chunk[:max_ending_size]
+                    data = prev_chunk + chunk[:ending_size - 1]
                     yield data.split(ending, maxsplit=1)[0]
                     return
 
