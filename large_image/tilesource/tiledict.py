@@ -1,3 +1,5 @@
+from typing import Any, Dict, Optional, Tuple, cast
+
 import numpy as np
 import PIL
 import PIL.Image
@@ -23,7 +25,7 @@ class LazyTileDict(dict):
     as PIL images.
     """
 
-    def __init__(self, tileInfo, *args, **kwargs):
+    def __init__(self, tileInfo: Dict[str, Any], *args, **kwargs) -> None:
         """
         Create a LazyTileDict dictionary where there is enough information to
         load the tile image.  ang and kwargs are as for the dict() class.
@@ -41,12 +43,12 @@ class LazyTileDict(dict):
         self.source = tileInfo['source']
         self.resample = tileInfo.get('resample', False)
         self.requestedScale = tileInfo.get('requestedScale')
-        self.metadata = tileInfo.get('metadata')
+        self.metadata = cast(Dict[str, Any], tileInfo.get('metadata'))
         self.retile = tileInfo.get('retile') and self.metadata
 
         self.deferredKeys = ('tile', 'format')
         self.alwaysAllowPIL = True
-        self.imageKwargs = {}
+        self.imageKwargs: Dict[str, Any] = {}
         self.loaded = False
         super().__init__(*args, **kwargs)
         # We set this initially so that they are listed in known keys using the
@@ -56,7 +58,9 @@ class LazyTileDict(dict):
         self.width = self['width']
         self.height = self['height']
 
-    def setFormat(self, format, resample=False, imageKwargs=None):
+    def setFormat(
+            self, format: Tuple[str, ...], resample: bool = False,
+            imageKwargs: Optional[Dict[str, Any]] = None) -> None:
         """
         Set a more restrictive output format for a tile, possibly also resizing
         it via resampling.  If this is not called, the tile may either be
@@ -111,7 +115,7 @@ class LazyTileDict(dict):
             self.imageKwargs = imageKwargs
             self.loaded = False
 
-    def _retileTile(self):
+    def _retileTile(self) -> np.ndarray:
         """
         Given the tile information, create a numpy array and merge multiple
         tiles together to form a tile of a different size.
@@ -141,13 +145,13 @@ class LazyTileDict(dict):
                     y0 = 0
                 tileData = tileData[:min(tileData.shape[0], self.height - y0),
                                     :min(tileData.shape[1], self.width - x0)]
-                if tileData.shape[2] < retile.shape[2]:
+                if tileData.shape[2] < retile.shape[2]:  # type: ignore[misc]
                     retile = retile[:, :, :tileData.shape[2]]
                 retile[y0:y0 + tileData.shape[0], x0:x0 + tileData.shape[1]] = tileData[
-                    :, :, :retile.shape[2]]
-        return retile
+                    :, :, :retile.shape[2]]  # type: ignore[misc]
+        return cast(np.ndarray, retile)
 
-    def __getitem__(self, key, *args, **kwargs):
+    def __getitem__(self, key: str, *args, **kwargs) -> Any:
         """
         If this is the first time either the tile or format key is requested,
         load the tile image data.  Otherwise, just return the internal
@@ -228,7 +232,7 @@ class LazyTileDict(dict):
             self['format'] = tileFormat
         return super().__getitem__(key, *args, **kwargs)
 
-    def release(self):
+    def release(self) -> None:
         """
         If the tile has been loaded, unload it.  It can be loaded again.  This
         is useful if you want to keep tiles available in memory but not their
