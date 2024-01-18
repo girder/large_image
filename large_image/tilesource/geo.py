@@ -1,11 +1,15 @@
+import pathlib
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urlencode, urlparse
 
-from large_image.cache_util import CacheProperties, methodcache
-from large_image.constants import SourcePriority, TileInputUnits
-from large_image.exceptions import TileSourceError
+import numpy as np
+import PIL.Image
 
+from ..cache_util import CacheProperties, methodcache
+from ..constants import SourcePriority, TileInputUnits
+from ..exceptions import TileSourceError
 from .base import FileTileSource
-from .utilities import JSONDict, getPaletteColors
+from .utilities import ImageBytes, JSONDict, getPaletteColors
 
 try:
     import pyproj
@@ -20,16 +24,16 @@ CacheProperties['tilesource']['itemExpectedSize'] = max(
     100 * 1024 ** 2)
 
 # Used to cache pixel size for projections
-ProjUnitsAcrossLevel0 = {}
+ProjUnitsAcrossLevel0: Dict[str, float] = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
 InitPrefix = ''
 NeededInitPrefix = '+init=' if has_pyproj and _pyproj_under_6 else InitPrefix
 
 
-def make_vsi(url: str, **options):
+def make_vsi(url: Union[str, pathlib.Path, Dict[Any, Any]], **options) -> str:
     if str(url).startswith('s3://'):
-        s3_path = url.replace('s3://', '')
+        s3_path = str(url).replace('s3://', '')
         vsi = f'/vsis3/{s3_path}'
     else:
         gdal_options = {
@@ -74,7 +78,14 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         'image/x-tiff': SourcePriority.LOW,
     }
 
-    def _getDriver(self):
+    projection: Union[str, bytes]
+    projectionOrigin: Tuple[float, float]
+    sourceLevels: int
+    sourceSizeX: int
+    sourceSizeY: int
+    unitsAcrossLevel0: float
+
+    def _getDriver(self) -> str:
         """
         Get the GDAL driver used to read this dataset.
 
@@ -82,20 +93,20 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         """
         raise NotImplementedError
 
-    def _convertProjectionUnits(self, *args, **kwargs):
+    def _convertProjectionUnits(self, *args, **kwargs) -> Tuple[float, float, float, float, str]:
         raise NotImplementedError
 
-    def pixelToProjection(self, *args, **kwargs):
+    def pixelToProjection(self, *args, **kwargs) -> Tuple[float, float]:
         raise NotImplementedError
 
-    def toNativePixelCoordinates(self, *args, **kwargs):
+    def toNativePixelCoordinates(self, *args, **kwargs) -> Tuple[float, float]:
         raise NotImplementedError
 
-    def getBounds(self, *args, **kwargs):
+    def getBounds(self, *args, **kwargs) -> Dict[str, Any]:
         raise NotImplementedError
 
     @staticmethod
-    def isGeospatial(path):
+    def isGeospatial(path: Union[str, pathlib.Path]) -> bool:
         """
         Check if a path is likely to be a geospatial file.
 
@@ -105,13 +116,13 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         raise NotImplementedError
 
     @property
-    def geospatial(self):
+    def geospatial(self) -> bool:
         """
         This is true if the source has geospatial information.
         """
         return bool(self.projection)
 
-    def _getLargeImagePath(self):
+    def _getLargeImagePath(self) -> str:
         """Get GDAL-compatible image path.
 
         This will cast the output to a string and can also handle URLs
@@ -122,7 +133,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             return make_vsi(self.largeImagePath)
         return str(self.largeImagePath)
 
-    def _setStyle(self, style):
+    def _setStyle(self, style: Any) -> None:
         """
         Check and set the specified style from a json string or a dictionary.
 
@@ -132,7 +143,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         if hasattr(self, '_getTileLock'):
             self._setDefaultStyle()
 
-    def _styleBands(self):
+    def _styleBands(self) -> List[Dict[str, Any]]:
         interpColorTable = {
             'red': ['#000000', '#ff0000'],
             'green': ['#000000', '#00ff00'],
@@ -178,7 +189,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
                     })
         return style
 
-    def _setDefaultStyle(self):
+    def _setDefaultStyle(self) -> None:
         """If no style was specified, create a default style."""
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
@@ -224,16 +235,16 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             self._style = JSONDict({'bands': style})
 
     @staticmethod
-    def getHexColors(palette):
+    def getHexColors(palette: Union[str, List[Union[str, float, Tuple[float, ...]]]]) -> List[str]:
         """
         Returns list of hex colors for a given color palette
 
         :returns: List of colors
         """
-        palette = getPaletteColors(palette)
-        return ['#%02X%02X%02X%02X' % tuple(int(val) for val in clr) for clr in palette]
+        pal = getPaletteColors(palette)
+        return ['#%02X%02X%02X%02X' % tuple(int(val) for val in clr) for clr in pal]
 
-    def getPixelSizeInMeters(self):
+    def getPixelSizeInMeters(self) -> Optional[float]:
         """
         Get the approximate base pixel size in meters.  This is calculated as
         the average scale of the four edges in the WGS84 ellipsoid.
@@ -242,13 +253,13 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         """
         bounds = self.getBounds(NeededInitPrefix + 'epsg:4326')
         if not bounds:
-            return
+            return None
         if has_pyproj:
             geod = pyproj.Geod(ellps='WGS84')
-            computer = geod.inv
+            computer = cast(Callable[[Any, Any, Any, Any], Tuple[Any, Any, float]], geod.inv)
         else:
             # Estimate based on great-cirlce distance
-            def computer(lon1, lat1, lon2, lat2):
+            def computer(lon1, lat1, lon2, lat2) -> Tuple[Any, Any, float]:
                 from math import acos, cos, radians, sin
                 lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
                 return None, None, 6.378e+6 * (
@@ -264,7 +275,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
                             bounds['ul']['x'], bounds['ul']['y'])
         return (s1 + s2 + s3 + s4) / (self.sourceSizeX * 2 + self.sourceSizeY * 2)
 
-    def getNativeMagnification(self):
+    def getNativeMagnification(self) -> Dict[str, Optional[float]]:
         """
         Get the magnification at the base level.
 
@@ -277,7 +288,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             'mm_y': scale * 100 if scale else None,
         }
 
-    def getTileCorners(self, z, x, y):
+    def getTileCorners(self, z: int, x: float, y: float) -> Tuple[float, float, float, float]:
         """
         Returns bounds of a tile for a given x,y,z index.
 
@@ -307,7 +318,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             ymin, ymax = self.sourceSizeY - ymax, self.sourceSizeY - ymin
         return xmin, ymin, xmax, ymax
 
-    def _bandNumber(self, band, exc=True):
+    def _bandNumber(self, band: Optional[Union[str, int]], exc: bool = True) -> Optional[int]:
         """Given a band number or interpretation name, return a validated band number.
 
         :param band: either -1, a positive integer, or the name of a band interpretation
@@ -339,9 +350,13 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
 
         return band
 
-    def _getRegionBounds(self, metadata, left=None, top=None, right=None,
-                         bottom=None, width=None, height=None, units=None,
-                         **kwargs):
+    def _getRegionBounds(
+            self, metadata: JSONDict, left: Optional[float] = None,
+            top: Optional[float] = None, right: Optional[float] = None,
+            bottom: Optional[float] = None, width: Optional[float] = None,
+            height: Optional[float] = None, units: Optional[str] = None,
+            desiredMagnification: Optional[Dict[str, Optional[float]]] = None,
+            cropToImage: bool = True, **kwargs) -> Tuple[float, float, float, float]:
         """
         Given a set of arguments that can include left, right, top, bottom,
         width, height, and units, generate actual pixel values for left, top,
@@ -385,7 +400,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             if top is None:
                 top = bounds['ymax'] if bottom is None or width is None else bottom - width
             if bottom is None:
-                bottom = bounds['ymin'] if width is None else top + height
+                bottom = bounds['ymin'] if width is None else cast(float, top) + cast(float, height)
             if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
                 width = height = None
             # Convert to [-0.5, 0.5], [-0.5, 0.5] coordinate range
@@ -401,14 +416,18 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             top = max(0, min(yScale, (0.5 - top) * yScale))
             bottom = max(0, min(yScale, (0.5 - bottom) * yScale))
             # Ensure correct ordering
-            left, right = min(left, right), max(left, right)
-            top, bottom = min(top, bottom), max(top, bottom)
+            left, right = min(cast(float, left), cast(float, right)), max(left, cast(float, right))
+            top, bottom = min(cast(float, top), cast(float, bottom)), max(top, cast(float, bottom))
             units = 'base_pixels'
         return super()._getRegionBounds(
-            metadata, left, top, right, bottom, width, height, units, **kwargs)
+            metadata, left, top, right, bottom, width, height, units,
+            desiredMagnification, cropToImage, **kwargs)
 
     @methodcache()
-    def getThumbnail(self, width=None, height=None, **kwargs):
+    def getThumbnail(
+            self, width: Optional[Union[str, int]] = None,
+            height: Optional[Union[str, int]] = None, **kwargs) -> Tuple[
+                Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is
         preserved.  If neither width nor height is given, a default value is
@@ -424,8 +443,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         :returns: thumbData, thumbMime: the image data and the mime type.
         """
         if self.projection:
-            if ((width is not None and width < 2) or
-                    (height is not None and height < 2)):
+            if ((width is not None and float(width) < 2) or
+                    (height is not None and float(height) < 2)):
                 msg = 'Invalid width or height.  Minimum value is 2.'
                 raise ValueError(msg)
             if width is None and height is None:

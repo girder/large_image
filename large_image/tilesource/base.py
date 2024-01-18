@@ -56,8 +56,6 @@ class TileSource(IPyLeafletMixin):
     nameMatches: Dict[str, SourcePriority] = {
     }
 
-    geospatial = False
-
     # When getting tiles for otherwise empty levels (missing powers of two), we
     # composite the tile from higher resolution levels.  This can use excessive
     # memory if there are too many missing levels.  For instance, if there are
@@ -202,6 +200,10 @@ class TileSource(IPyLeafletMixin):
 
     def _repr_png_(self):
         return self.getThumbnail(encoding='PNG')[0]
+
+    @property
+    def geospatial(self) -> bool:
+        return False
 
     def _setStyle(self, style: Any) -> None:
         """
