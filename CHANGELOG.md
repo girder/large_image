@@ -9,11 +9,13 @@
 - Optimizing small getRegion calls and some tiff tile fetches ([#1427](../../pull/1427))
 - Started adding python types to the core library ([#1432](../../pull/1432), [#1433](../../pull/1433), [#1437](../../pull/1437), [#1438](../../pull/1438), [#1439](../../pull/1439))
 - Use parallelism in computing tile frames ([#1434](../../pull/1434))
+- Support downloading DICOMweb files ([#1429](../../pull/1429))
 
-### Changed
+### Changes
 - Cleanup some places where get was needlessly used ([#1428](../../pull/1428))
 - Moved some internal code out of the base class ([#1429](../../pull/1429))
 - Handle changes to wsidicom ([#1435](../../pull/1435))
+- Refactored the tile iterator to its own class ([#1441](../../pull/1441))
 
 ## 1.27.0
 

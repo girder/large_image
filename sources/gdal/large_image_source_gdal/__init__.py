@@ -853,7 +853,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if not isinstance(format, (tuple, set, list)):
             format = (format, )
         # The tile iterator handles determining the output region
-        iterInfo = self._tileIteratorInfo(**kwargs)
+        iterInfo = self.tileIterator(format=TILE_FORMAT_NUMPY, resample=None, **kwargs).info
         # Only use gdal.Warp of the original image if the region has not been
         # styled.
         useGDALWarp = (
