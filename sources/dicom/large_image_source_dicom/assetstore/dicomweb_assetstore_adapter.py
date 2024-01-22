@@ -3,6 +3,7 @@ from large_image_source_dicom.dicom_tags import dicom_key_to_tag
 from large_image_source_dicom.dicomweb_utils import get_dicomweb_metadata
 from requests.exceptions import HTTPError
 
+from girder.api.rest import setContentDisposition, setResponseHeader
 from girder.exceptions import ValidationException
 from girder.models.file import File
 from girder.models.folder import Folder
@@ -10,6 +11,8 @@ from girder.models.item import Item
 from girder.utility.abstract_assetstore_adapter import AbstractAssetstoreAdapter
 
 DICOMWEB_META_KEY = 'dicomweb_meta'
+
+BUF_SIZE = 65536
 
 
 class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
@@ -104,19 +107,162 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
     def downloadFile(self, file, offset=0, headers=True, endByte=None,
                      contentDisposition=None, extraParameters=None, **kwargs):
-        # FIXME: do we want to support downloading files? We probably
-        # wouldn't download them the regular way, but we could instead
-        # use a dicomweb-client like so:
-        # instance = client.retrieve_instance(
-        #     study_instance_uid=...,
-        #     series_instance_uid=...,
-        #     sop_instance_uid=...,
-        # )
-        # pydicom.filewriter.write_file('output_name.dcm', instance)
-        msg = 'Download support not yet implemented for DICOMweb files.'
-        raise NotImplementedError(
-            msg,
+
+        if offset != 0 or endByte is not None:
+            # FIXME: implement range requests
+            msg = 'Range requests are not yet implemented'
+            raise NotImplementedError(msg)
+
+        from dicomweb_client.web import _Transaction
+
+        dicom_uids = file['dicom_uids']
+        study_uid = dicom_uids['study_uid']
+        series_uid = dicom_uids['series_uid']
+        instance_uid = dicom_uids['instance_uid']
+
+        client = _create_dicomweb_client(self.assetstore_meta)
+
+        if headers:
+            setResponseHeader('Content-Type', file['mimeType'])
+            setContentDisposition(file['name'], contentDisposition or 'attachment')
+
+            # The filesystem assetstore calls the following function, which sets
+            # the above and also sets the range and content-length headers:
+            # `self.setContentHeaders(file, offset, endByte, contentDisposition)`
+            # However, we can't call that since we don't have a great way of
+            # determining the DICOM file size without downloading the whole thing.
+            # FIXME: call that function if we find a way to determine file size.
+
+        # Create the URL
+        url = client._get_instances_url(
+            _Transaction.RETRIEVE,
+            study_uid,
+            series_uid,
+            instance_uid,
         )
+
+        # Build the headers
+        transfer_syntax = '*'
+        accept_parts = [
+            'multipart/related',
+            'type="application/dicom"',
+            f'transfer-syntax={transfer_syntax}',
+        ]
+        headers = {
+            'Accept': '; '.join(accept_parts),
+        }
+
+        def stream():
+            # Perform the request
+            response = client._http_get(url, headers=headers, stream=True)
+            for chunk in self._stream_retrieve_instance_response(response):
+                yield chunk
+
+        return stream
+
+    def _extract_media_type_and_boundary(self, response):
+        content_type = response.headers['content-type']
+        media_type, *ct_info = [ct.strip() for ct in content_type.split(';')]
+        boundary = None
+        for item in ct_info:
+            attr, _, value = item.partition('=')
+            if attr.lower() == 'boundary':
+                boundary = value.strip('"').encode()
+                break
+
+        return media_type, boundary
+
+    def _stream_retrieve_instance_response(self, response):
+        # The first part of this function was largely copied from dicomweb-client's
+        # _decode_multipart_message() function. But we can't use that function here
+        # because it relies on reading the whole DICOM file into memory. We want to
+        # avoid that and stream in chunks.
+
+        # Split the content-type to find the media type and boundary.
+        media_type, boundary = self._extract_media_type_and_boundary(response)
+        if media_type.lower() != 'multipart/related':
+            msg = f'Unexpected media type: "{media_type}". Expected "multipart/related".'
+            raise ValueError(msg)
+
+        # Ensure we have the multipart/related boundary.
+        # The beginning boundary and end boundary look slightly different (in my
+        # examples, beginning looks like '--{boundary}\r\n', and ending looks like
+        # '\r\n--{boundary}--'). But we skip over the beginning boundary anyways
+        # since it is before the message body. An end boundary might look like this:
+        # \r\n--50d7ccd118978542c422543a7156abfce929e7615bc024e533c85801cd77--
+        if boundary is None:
+            content_type = response.headers['content-type']
+            msg = f'Failed to locate boundary in content-type: {content_type}'
+            raise ValueError(msg)
+
+        # Both dicomweb-client and requests-toolbelt check for
+        # the ending boundary exactly like so:
+        ending = b'\r\n--' + boundary
+
+        # Sometimes, there are a few extra bytes after the ending, such
+        # as '--' and '\r\n'. Imaging Data Commons has '--\r\n' at the end.
+        # But we don't care about what comes after the ending. As soon as we
+        # encounter the ending, we are done.
+        ending_size = len(ending)
+
+        # Make sure the buffer is at least large enough to contain the
+        # ending_size - 1, so that the ending cannot be split between more than 2 chunks.
+        buffer_size = max(BUF_SIZE, ending_size - 1)
+
+        with response:
+            # Create our iterator
+            iterator = response.iter_content(buffer_size)
+
+            # First, stream until we encounter the first `\r\n\r\n`,
+            # which denotes the end of the header section.
+            header_found = False
+            end_header_delimiter = b'\r\n\r\n'
+            for chunk in iterator:
+                if end_header_delimiter in chunk:
+                    idx = chunk.index(end_header_delimiter)
+                    # Save the first section of data. We will yield it later.
+                    prev_chunk = chunk[idx + len(end_header_delimiter):]
+                    header_found = True
+                    break
+
+            if not header_found:
+                msg = 'Failed to find header in response content'
+                raise ValueError(msg)
+
+            # Now the header has been finished. Stream the data until
+            # we encounter the ending boundary or finish the data.
+            # The "prev_chunk" will start out set to the section right after the header.
+            for chunk in iterator:
+                # Ensure the chunk is large enough to contain the ending_size - 1, so
+                # we can be sure the ending won't be split across more than 2 chunks.
+                while len(chunk) < ending_size - 1:
+                    try:
+                        chunk += next(iterator)
+                    except StopIteration:
+                        break
+
+                # Check if the ending is split between the previous and current chunks.
+                if ending in prev_chunk + chunk[:ending_size - 1]:
+                    # We found the ending! Remove the ending boundary and return.
+                    data = prev_chunk + chunk[:ending_size - 1]
+                    yield data.split(ending, maxsplit=1)[0]
+                    return
+
+                if prev_chunk:
+                    yield prev_chunk
+
+                prev_chunk = chunk
+
+            # We did not find the ending while looping.
+            # Check if it is in the final chunk.
+            if ending in prev_chunk:
+                # Found the ending in the final chunk.
+                yield prev_chunk.split(ending, maxsplit=1)[0]
+                return
+
+            # We should have encountered the ending earlier and returned
+            msg = 'Failed to find ending boundary in response content'
+            raise ValueError(msg)
 
     def importData(self, parent, parentType, params, progress, user, **kwargs):
         """
@@ -155,6 +301,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
         study_uid_key = dicom_key_to_tag('StudyInstanceUID')
         series_uid_key = dicom_key_to_tag('SeriesInstanceUID')
+        instance_uid_key = dicom_key_to_tag('SOPInstanceUID')
 
         # We are only searching for WSI datasets. Ignore all others.
         # FIXME: is this actually working? For the SLIM server at
@@ -192,25 +339,33 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
             # Set the DICOMweb metadata
             item['dicomweb_meta'] = get_dicomweb_metadata(client, study_uid, series_uid)
-            item = Item().save(item)
-
-            # Create a placeholder file with the same name
-            file = File().createFile(
-                name=f'{series_uid}.dcm',
-                creator=user,
-                item=item,
-                reuseExisting=True,
-                assetstore=self.assetstore,
-                mimeType=None,
-                size=0,
-                saveFile=False,
-            )
-            file['dicomweb_meta'] = {
+            item['dicom_uids'] = {
                 'study_uid': study_uid,
                 'series_uid': series_uid,
             }
-            file['imported'] = True
-            File().save(file)
+            item = Item().save(item)
+
+            instance_results = client.search_for_instances(study_uid, series_uid)
+            for instance in instance_results:
+                instance_uid = instance[instance_uid_key]['Value'][0]
+
+                file = File().createFile(
+                    name=f'{instance_uid}.dcm',
+                    creator=user,
+                    item=item,
+                    reuseExisting=True,
+                    assetstore=self.assetstore,
+                    mimeType='application/dicom',
+                    size=None,
+                    saveFile=False,
+                )
+                file['dicom_uids'] = {
+                    'study_uid': study_uid,
+                    'series_uid': series_uid,
+                    'instance_uid': instance_uid,
+                }
+                file['imported'] = True
+                File().save(file)
 
             items.append(item)
 
