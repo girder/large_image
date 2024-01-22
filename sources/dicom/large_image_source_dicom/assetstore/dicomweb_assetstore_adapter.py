@@ -356,7 +356,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                     reuseExisting=True,
                     assetstore=self.assetstore,
                     mimeType='application/dicom',
-                    size=0,
+                    size=None,
                     saveFile=False,
                 )
                 file['dicom_uids'] = {
