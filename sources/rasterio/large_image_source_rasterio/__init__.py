@@ -921,7 +921,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             return super().getRegion(format, **kwargs)
 
         # The tile iterator handles determining the output region
-        iterInfo = self._tileIteratorInfo(**kwargs)
+        iterInfo = self.tileIterator(format=TILE_FORMAT_NUMPY, resample=None, **kwargs).info
 
         if not (
             iterInfo and
