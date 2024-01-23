@@ -8,40 +8,44 @@ volumes:
 
 services:
   ldap:
-    image: dcm4che/slapd-dcm4chee:2.6.0-26.0
+    image: dcm4che/slapd-dcm4chee:2.6.5-31.2
     logging:
       driver: json-file
       options:
         max-size: "10m"
     expose:
       - 389
-    env_file: docker-compose.env
+    environment:
+      STORAGE_DIR: /storage/fs1
     volumes:
       - ldap_data:/var/lib/openldap/openldap-data
       - ldap_config:/etc/openldap/slapd.d
-
   db:
-    image: dcm4che/postgres-dcm4chee:14.2-26
+    image: dcm4che/postgres-dcm4chee:15.4-31
     logging:
       driver: json-file
       options:
         max-size: "10m"
     expose:
       - 5432
-    env_file: docker-compose.env
+    environment:
+      POSTGRES_DB: pacsdb
+      POSTGRES_USER: pacs
+      POSTGRES_PASSWORD: pacs
     volumes:
       - db_data:/var/lib/postgresql/data
-
   arc:
-    image: dcm4che/dcm4chee-arc-psql:5.26.0
+    image: dcm4che/dcm4chee-arc-psql:5.31.2
     logging:
       driver: json-file
       options:
         max-size: "10m"
     ports:
       - "8008:8080"
-    env_file: docker-compose.env
     environment:
+      POSTGRES_DB: pacsdb
+      POSTGRES_USER: pacs
+      POSTGRES_PASSWORD: pacs
       WILDFLY_CHOWN: /opt/wildfly/standalone /storage
       WILDFLY_WAIT_FOR: ldap:389 db:5432
     depends_on:

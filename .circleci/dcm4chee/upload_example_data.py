@@ -5,9 +5,10 @@ from io import BytesIO
 
 from dicomweb_client import DICOMwebClient
 from pydicom import dcmread
+from requests import Session
 
 
-def upload_example_data(server_url):
+def upload_example_data(server_url, token=None):
 
     # This is TCGA-AA-3697
     sha512s = [
@@ -26,7 +27,13 @@ def upload_example_data(server_url):
         dataset = dcmread(BytesIO(data))
         datasets.append(dataset)
 
-    client = DICOMwebClient(server_url)
+    if token is not None:
+        session = Session()
+        session.headers.update({'Authorization': f'Bearer {token}'})
+    else:
+        session = None
+
+    client = DICOMwebClient(server_url, session=session)
     client.store_instances(datasets)
 
 
@@ -38,4 +45,5 @@ if __name__ == '__main__':
         msg = 'DICOMWEB_TEST_URL must be set'
         raise Exception(msg)
 
-    upload_example_data(url)
+    token = os.getenv('DICOMWEB_TEST_TOKEN')
+    upload_example_data(url, token=token)

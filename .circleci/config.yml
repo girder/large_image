@@ -71,12 +71,29 @@ commands:
       - run:
           name: start dcm4chee and upload example data (for DICOMweb tests)
           command: |
-            docker-compose -f ./.circleci/dcm4chee/docker-compose.yml up -d
+            docker-compose -f ./.circleci/dcm4chee/auth-docker-compose.yml up -d
             export DICOMWEB_TEST_URL=http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs
             echo "export DICOMWEB_TEST_URL=$DICOMWEB_TEST_URL" >> $BASH_ENV
-            pip install dicomweb_client
+            pip install dicomweb_client python-keycloak
+
+            # Wait up to 60 seconds for keycloak to be ready
+            echo 'Waiting for keycloak to start...'
+            KEYCLOAK_URL=https://localhost:8843
+            curl -k --retry 60 -f --retry-all-errors --retry-delay 1 -s -o /dev/null $KEYCLOAK_URL
+            echo 'Updating keycloak token lifespan...'
+            python -W ignore ./.circleci/dcm4chee/update_access_token_lifespan.py
+
+            echo 'Creating keycloak access token...'
+            # Now create the token
+            export DICOMWEB_TEST_TOKEN=$(python -W ignore ./.circleci/dcm4chee/create_keycloak_token.py)
+            echo "export DICOMWEB_TEST_TOKEN=$DICOMWEB_TEST_TOKEN" >> $BASH_ENV
+
             # Wait up to 30 seconds for the server if it isn't ready
-            curl --retry 30 -f --retry-all-errors --retry-delay 1 -s -o /dev/null $DICOMWEB_TEST_URL/studies
+            echo 'Waiting for dcm4chee to start...'
+            curl --header "Authorization: Bearer $DICOMWEB_TEST_TOKEN" --retry 30 -f --retry-all-errors --retry-delay 1 -s -o /dev/null $DICOMWEB_TEST_URL/studies
+
+            # Upload the example data
+            echo 'Uploading example data...'
             python ./.circleci/dcm4chee/upload_example_data.py
       - run:
           name: start rabbitmq

@@ -1,5 +1,6 @@
 // These will be replaced by templating
 const url = DICOMWEB_TEST_URL;
+const token = DICOMWEB_TEST_TOKEN;
 
 girderTest.importPlugin('jobs', 'large_image', 'dicomweb');
 
@@ -59,8 +60,13 @@ describe('DICOMWeb assetstore', function () {
         }, 'No token provided check');
 
         runs(function () {
-            // Change the auth type back to None
-            $('#g-new-dwas-auth-type').val(null);
+            if (token == null) {
+                // Change the auth type back to None
+                $('#g-new-dwas-auth-type').val(null);
+            } else {
+                // Set the token
+                $('#g-new-dwas-auth-token').val(token);
+            }
 
             // This should work now
             $('#g-new-dwas-form input.btn-primary').click();
