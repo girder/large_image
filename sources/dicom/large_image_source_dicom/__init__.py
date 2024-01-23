@@ -53,6 +53,7 @@ def _lazyImportPydicom():
 
     if pydicom is None:
         import pydicom
+    return pydicom
 
 
 def dicom_to_dict(ds, base=None):
@@ -138,6 +139,12 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(path):
                 raise TileSourceFileNotFoundError(path) from None
             root = os.path.dirname(path) or '.'
+            try:
+                _lazyImportPydicom()
+                pydicom.filereader.dcmread(path, stop_before_pixels=True)
+            except Exception as exc:
+                msg = f'File cannot be opened via dicom tile source ({exc}).'
+                raise TileSourceError(msg)
             self._largeImagePath = [
                 os.path.join(root, entry) for entry in os.listdir(root)
                 if os.path.isfile(os.path.join(root, entry)) and

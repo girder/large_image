@@ -5,8 +5,9 @@ from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.utility import assetstore_utilities
+from large_image.exceptions import TileSourceError
 
-from . import DICOMFileTileSource
+from . import DICOMFileTileSource, _lazyImportPydicom
 from .assetstore import DICOMWEB_META_KEY
 
 
@@ -46,8 +47,13 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
         filelist = [
             File().getLocalFilePath(file) for file in Item().childFiles(self.item)
             if self._pathMightBeDicom(file['name'])]
-        if len(filelist) > 1:
+        if len(filelist) != 1:
             return filelist
+        try:
+            _lazyImportPydicom().filereader.dcmread(filelist[0], stop_before_pixels=True)
+        except Exception as exc:
+            msg = f'File cannot be opened via dicom tile source ({exc}).'
+            raise TileSourceError(msg)
         filelist = []
         folder = Folder().load(self.item['folderId'], force=True)
         for item in Folder().childItems(folder):
