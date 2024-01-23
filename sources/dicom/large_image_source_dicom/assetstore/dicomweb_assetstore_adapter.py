@@ -155,14 +155,13 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         def stream():
             # Perform the request
             response = client._http_get(url, headers=headers, stream=True)
-            for chunk in self._stream_retrieve_instance_response(response):
-                yield chunk
+            yield from self._stream_retrieve_instance_response(response)
 
         return stream
 
     def _extract_media_type_and_boundary(self, response):
         content_type = response.headers['content-type']
-        media_type, *ct_info = [ct.strip() for ct in content_type.split(';')]
+        media_type, *ct_info = (ct.strip() for ct in content_type.split(';'))
         boundary = None
         for item in ct_info:
             attr, _, value = item.partition('=')
