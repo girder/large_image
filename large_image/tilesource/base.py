@@ -115,13 +115,13 @@ class TileSource(IPyLeafletMixin):
                     maximum otherwise.  'min' or 'max' to always uses the
                     reported minimum or maximum.  'full' to use the maximum
                     value of the base data type (either 1, 255, or 65535).
-                :palette: a list of two or more color strings, where color
-                    strings are of the form #RRGGBB, #RRGGBBAA, #RGB, #RGBA, or
-                    any string parseable by the PIL modules, or, if it is
-                    installed, byt matplotlib.  Alternately, this can be a
-                    single color, which implies ['#000', <color>], or the name
-                    of a palettable paletter or, if available, a matplotlib
-                    palette.
+                :palette: a single color string, a palette name, or a list of
+                    two or more color strings.  Color strings are of the form
+                    #RRGGBB, #RRGGBBAA, #RGB, #RGBA, or any string parseable by
+                    the PIL modules, or, if it is installed, by matplotlib.   A
+                    single color string is the same as the list ['#000',
+                    <color>].  Palette names are the name of a palettable
+                    palette or, if available, a matplotlib palette.
                 :nodata: the value to use for missing data.  null or unset to
                     not use a nodata value.
                 :composite: either 'lighten' or 'multiply'.  Defaults to
