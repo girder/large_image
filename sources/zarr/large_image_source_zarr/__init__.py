@@ -57,7 +57,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super().__init__(path, **kwargs)
 
         if str(path).startswith(NEW_IMAGE_PATH_FLAG):
-            return self._initNew(path, **kwargs)
+            self._initNew(path, **kwargs)
+        else:
+            self._initOpen(**kwargs)
+        self._tileLock = threading.RLock()
+
+    def _initOpen(self, **kwargs):
         self._largeImagePath = str(self._getLargeImagePath())
         self._zarr = None
         if not os.path.isfile(self._largeImagePath) and '//:' not in self._largeImagePath:
@@ -85,7 +90,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             msg = 'File cannot be opened -- not an OME NGFF file or understandable zarr file.'
             raise TileSourceError(msg)
-        self._tileLock = threading.RLock()
 
     def _initNew(self, path, **kwargs):
         """
@@ -104,7 +108,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._output = None
         self._editable = True
         self._bandRanges = None
-        self._tileLock = threading.RLock()
         self._addLock = threading.RLock()
         self._framecount = 0
         self._mm_x = 0
