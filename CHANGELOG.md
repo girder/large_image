@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.27.2
+
+### Improvements
+- Support range requests when downloading DICOMweb files ([#1444](../../pull/1444))
+- Bypass some scaling code when compositing multi sources ([#1447](../../pull/1447))
+
 ## 1.27.1
 
 ### Improvements

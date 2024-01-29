@@ -1112,7 +1112,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 transform[0][0] > 0 and transform[0][1] == 0 and
                 transform[1][0] == 0 and transform[1][1] > 0 and
                 transform[0][2] % scaleX == 0 and transform[1][2] % scaleY == 0)) and
-                (scaleX % scale) == 0 and (scaleY % scale) == 0):
+                ((scaleX % scale) == 0 or math.log(scaleX, 2).is_integer) and
+                ((scaleY % scale) == 0 or math.log(scaleY, 2).is_integer)) and False:
             srccorners = (
                 list(np.dot(bbox['inverse'], np.array(corners).T).T)
                 if transform is not None else corners)
