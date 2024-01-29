@@ -117,7 +117,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             self._zarr.close()
             self._tempfile.close()
-        except BaseException:
+        except Exception:
             pass
 
     def _checkEditable(self):
