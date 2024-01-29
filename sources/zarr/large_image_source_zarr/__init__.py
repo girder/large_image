@@ -503,14 +503,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             in the same order as the tile dimensions
         :param kwargs: start locations for any additional axes
         """
-        # If default zarr chunking, adjust chunking (should only happen once)
-        # min for y and x is 256, max is 2k
-        # for s, use length of s.
-        # for any other axes, let zarr determine appropriate chunking
-
-        # check band bookkeeping
-
-        # also don't change dtypes
+        # TODO: improve band bookkeeping
 
         placement = {
             'x': x,
@@ -582,6 +575,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         np.copyto(root_data, tile_data, where=mask_data)
 
         with self._addLock:
+            # This will rechunk data when necessary, according to new shape
             root = self._zarr.create_dataset('root', data=root_data, overwrite=True)
 
             # Edit OME metadata
@@ -623,7 +617,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if suffix in ['.db', '.sqlite']:
             shutil.copy2(self._tempfile.name, path)
 
-        # TODO: copy_store raises TypeError
         elif suffix == '.zip':
             zip_store = zarr.storage.ZipStore(path)
             zarr.copy_store(self._zarr_store, zip_store)
