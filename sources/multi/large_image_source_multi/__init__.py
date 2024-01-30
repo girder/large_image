@@ -743,6 +743,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # construct a frame list.  Each frame is a list of sources that affect
         # it along with the frame number from that source.
         lastSource = None
+        bandCount = 0
         for sourceIdx, source in enumerate(sources):
             path = source['path']
             if os.path.abspath(path) == absLargeImagePath:
@@ -766,11 +767,14 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                             self._nativeMagnification[key] or tsMag.get(key))
                 numChecked += 1
                 tsMeta = ts.getMetadata()
+                bandCount = max(bandCount, ts.bandCount or 0)
                 if 'bands' in tsMeta and self._info.get('singleBand') is not True:
                     if not hasattr(self, '_bands'):
                         self._bands = {}
                     self._bands.update(tsMeta['bands'])
                 lastSource = source
+            self._bandcount = 1 if self._info.get('singleBand') else (
+                len(self._bands) if hasattr(self, '_bands') else (bandCount or None))
             bbox = self._sourceBoundingBox(source, tsMeta['sizeX'], tsMeta['sizeY'])
             computedWidth = max(computedWidth, int(math.ceil(bbox['right'])))
             computedHeight = max(computedHeight, int(math.ceil(bbox['bottom'])))
@@ -1206,13 +1210,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 tile = np.full((self.tileHeight, self.tileWidth, len(colors)),
                                colors,
                                dtype=getattr(self, '_firstdtype', np.uint8))
-        # colors = self._info.get('backgroundColor')
         if self._info.get('singleBand'):
             tile = tile[:, :, 0]
-        # elif tile.shape[2] in {2, 4} and (colors is None or len(colors) < tile.shape[2]):
-        #     # remove a needless alpha channel
-        #     if np.all(tile[:, :, -1] == fullAlphaValue(tile)):
-        #         tile = tile[:, :, :-1]
+        elif tile.shape[2] in {2, 4} and (self._bandCount or tile.shape[2]) < tile.shape[2]:
+            # remove a needless alpha channel
+            if np.all(tile[:, :, -1] == fullAlphaValue(tile)):
+                tile = tile[:, :, :-1]
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
