@@ -934,19 +934,19 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             vfill = np.zeros(
                 (tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]),
                 dtype=base.dtype)
-            if base.shape[2] == 2 or base.shape[2] == 4:
+            if base.shape[2] in {2, 4}:
                 vfill[:, :, -1] = fullAlphaValue(base)
             base = np.vstack((base, vfill))
         if base.shape[1] < tile.shape[1] + x:
             hfill = np.zeros(
                 (base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]),
                 dtype=base.dtype)
-            if base.shape[2] == 2 or base.shape[2] == 4:
+            if base.shape[2] in {2, 4}:
                 hfill[:, :, -1] = fullAlphaValue(base)
             base = np.hstack((base, hfill))
         if base.flags.writeable is False:
             base = base.copy()
-        if base.shape[2] == 2 or base.shape[2] == 4:
+        if base.shape[2] in {2, 4}:
             baseA = base[y:y + tile.shape[0], x:x + tile.shape[1], -1].astype(
                 float) / fullAlphaValue(base)
             tileA = tile[:, :, -1].astype(float) / fullAlphaValue(tile)
@@ -1112,8 +1112,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 transform[0][0] > 0 and transform[0][1] == 0 and
                 transform[1][0] == 0 and transform[1][1] > 0 and
                 transform[0][2] % scaleX == 0 and transform[1][2] % scaleY == 0)) and
-                ((scaleX % scale) == 0 or math.log(scaleX, 2).is_integer) and
-                ((scaleY % scale) == 0 or math.log(scaleY, 2).is_integer)) and False:
+                ((scaleX % scale) == 0 or math.log(scaleX, 2).is_integer()) and
+                ((scaleY % scale) == 0 or math.log(scaleY, 2).is_integer())):
             srccorners = (
                 list(np.dot(bbox['inverse'], np.array(corners).T).T)
                 if transform is not None else corners)
@@ -1206,8 +1206,13 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 tile = np.full((self.tileHeight, self.tileWidth, len(colors)),
                                colors,
                                dtype=getattr(self, '_firstdtype', np.uint8))
+        # colors = self._info.get('backgroundColor')
         if self._info.get('singleBand'):
             tile = tile[:, :, 0]
+        # elif tile.shape[2] in {2, 4} and (colors is None or len(colors) < tile.shape[2]):
+        #     # remove a needless alpha channel
+        #     if np.all(tile[:, :, -1] == fullAlphaValue(tile)):
+        #         tile = tile[:, :, :-1]
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
