@@ -931,36 +931,34 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return tile
         if base is None:
             base = np.zeros((0, 0, tile.shape[2]), dtype=tile.dtype)
-            if tile.shape[2] in {2, 4}:
-                base[:, :, -1] = fullAlphaValue(tile)
         base, tile = _makeSameChannelDepth(base, tile)
         if base.shape[0] < tile.shape[0] + y:
             vfill = np.zeros(
                 (tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] in {2, 4}:
-                vfill[:, :, -1] = fullAlphaValue(base)
+                vfill[:, :, -1] = fullAlphaValue(self.dtype)
             base = np.vstack((base, vfill))
         if base.shape[1] < tile.shape[1] + x:
             hfill = np.zeros(
                 (base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] in {2, 4}:
-                hfill[:, :, -1] = fullAlphaValue(base)
+                hfill[:, :, -1] = fullAlphaValue(self.dtype)
             base = np.hstack((base, hfill))
         if base.flags.writeable is False:
             base = base.copy()
         if base.shape[2] in {2, 4}:
             baseA = base[y:y + tile.shape[0], x:x + tile.shape[1], -1].astype(
-                float) / fullAlphaValue(base)
-            tileA = tile[:, :, -1].astype(float) / fullAlphaValue(tile)
+                float) / fullAlphaValue(self.dtype)
+            tileA = tile[:, :, -1].astype(float) / fullAlphaValue(self.dtype)
             outA = tileA + baseA * (1 - tileA)
             base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] = (
-                tile[:, :, :-1] * tileA[..., np.newaxis] +
+                np.where(tileA[..., np.newaxis], tile[:, :, :-1], 0) +
                 base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] * baseA[..., np.newaxis] *
                 (1 - tileA[..., np.newaxis])
-            ) / outA[..., np.newaxis]
-            base[y:y + tile.shape[0], x:x + tile.shape[1], -1] = outA * fullAlphaValue(base)
+            ) / np.where(outA[..., np.newaxis], outA[..., np.newaxis], 1)
+            base[y:y + tile.shape[0], x:x + tile.shape[1], -1] = outA * fullAlphaValue(self.dtype)
         else:
             base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
@@ -1030,8 +1028,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         }
         if output['maxWidth'] <= 0 or output['maxHeight'] <= 0:
             return None, 0, 0
-        srcImage = ts.getRegion(
-            format=TILE_FORMAT_NUMPY, region=region, output=output, frame=frame)[0]
+        srcImage, _ = ts.getRegion(
+            region=region, output=output, frame=frame,
+            format=TILE_FORMAT_NUMPY)
         # This is the region we actually took in our source coordinates, scaled
         # for if we took a low res version
         regioncorners = np.array([

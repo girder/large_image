@@ -9,6 +9,9 @@
 - Infer DICOM file size, when possible ([#1448](../../pull/1448))
 - Swap styles faster in the frame viewer ([#1452](../../pull/1452))
 
+### Bug Fixes
+- Fix an issue with compositing sources in the multi source caused by alpha range ([#1453](../../pull/1453))
+
 ## 1.27.1
 
 ### Improvements
