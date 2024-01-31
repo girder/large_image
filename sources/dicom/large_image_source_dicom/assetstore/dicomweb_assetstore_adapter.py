@@ -438,7 +438,6 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         if progress:
             progress.update(message='Searching for series...')
 
-        # FIXME: might need to search in chunks for larger web servers
         series_results = client.search_for_series(
             fields=fields, limit=limit, search_filters=search_filters)
         items = []
