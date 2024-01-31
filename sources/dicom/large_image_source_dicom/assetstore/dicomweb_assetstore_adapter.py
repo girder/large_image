@@ -431,6 +431,20 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         series_uid_key = dicom_key_to_tag('SeriesInstanceUID')
         instance_uid_key = dicom_key_to_tag('SOPInstanceUID')
 
+        # Search for studies. Apply the limit and search filters.
+        fields = [
+            study_uid_key,
+        ]
+        if progress:
+            progress.update(message='Searching for studies...')
+
+        studies_results = client.search_for_studies(
+            limit=limit,
+            fields=fields,
+            search_filters=search_filters,
+        )
+
+        # Search for all series in the returned studies.
         fields = [
             study_uid_key,
             series_uid_key,
@@ -438,8 +452,12 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         if progress:
             progress.update(message='Searching for series...')
 
-        series_results = client.search_for_series(
-            fields=fields, limit=limit, search_filters=search_filters)
+        series_results = []
+        for study in studies_results:
+            study_uid = study[study_uid_key]['Value'][0]
+            series_results += client.search_for_series(study_uid, fields=fields)
+
+        # Create folders for each study, items for each series, and files for each instance.
         items = []
         for i, result in enumerate(series_results):
             if progress:

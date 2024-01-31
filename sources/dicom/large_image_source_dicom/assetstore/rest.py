@@ -77,9 +77,9 @@ class DICOMwebAssetstoreResource(Resource):
         .param('destinationType', 'The type of the parent object to import into.',
                enum=('folder', 'user', 'collection'),
                required=False, default='folder')
-        .param('limit', 'The maximum number of results to import.',
+        .param('limit', 'The maximum number of studies to import.',
                required=False, default=None)
-        .param('filters', 'Any search parameters to filter DICOM objects.',
+        .param('filters', 'Any search parameters to filter the studies query.',
                required=False, default='{}')
         .param('progress', 'Whether to record progress on this operation.',
                required=False, default=False, dataType='boolean')

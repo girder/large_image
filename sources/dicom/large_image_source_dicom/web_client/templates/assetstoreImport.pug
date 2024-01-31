@@ -21,13 +21,13 @@ form.g-dwas-import-form
       .input-group-btn
         button.g-open-browser.btn.btn-default(type="button")
           i.icon-folder-open
-    label(for="g-dwas-import-limit") Limit (Series)
+    label(for="g-dwas-import-limit") Limit (Studies)
     input#g-dwas-import-limit.form-control(
-        type="number", step="1", min="1", value="20")
-    label(for="g-dwas-import-filters") Filters (Series)
+        type="number", step="1", min="1", value="10")
+    label(for="g-dwas-import-filters") Filters (Studies)
     textarea#g-dwas-import-filters.form-control(rows="10")
         | {
-        |     "Modality": "SM"
+        |     "ModalitiesInStudy": "SM"
         | }
   .g-validation-failed-message
   button.g-submit-assetstore-import.btn.btn-success(type="submit")
