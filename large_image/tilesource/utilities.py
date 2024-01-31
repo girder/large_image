@@ -8,6 +8,7 @@ from operator import attrgetter
 from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 import numpy as np
+import numpy.typing as npt
 import PIL
 import PIL.Image
 import PIL.ImageColor
@@ -729,7 +730,7 @@ def getAvailableNamedPalettes(includeColors: bool = True, reduced: bool = False)
     return sorted(palettes)
 
 
-def fullAlphaValue(arr: np.ndarray) -> int:
+def fullAlphaValue(arr: Union[np.ndarray, npt.DTypeLike]) -> int:
     """
     Given a numpy array, return the value that should be used for a fully
     opaque alpha channel.  For uint variants, this is the max value.
@@ -737,8 +738,9 @@ def fullAlphaValue(arr: np.ndarray) -> int:
     :param arr: a numpy array.
     :returns: the value for the alpha channel.
     """
-    if arr.dtype.kind == 'u':
-        return np.iinfo(arr.dtype).max
+    dtype = arr.dtype if isinstance(arr, np.ndarray) else arr
+    if dtype.kind == 'u':
+        return np.iinfo(dtype).max
     return 1
 
 
