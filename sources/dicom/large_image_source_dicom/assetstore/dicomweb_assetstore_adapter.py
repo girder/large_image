@@ -1,3 +1,4 @@
+import cherrypy
 import requests
 from large_image_source_dicom.dicom_tags import dicom_key_to_tag
 from large_image_source_dicom.dicomweb_utils import get_dicomweb_metadata
@@ -105,14 +106,123 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         # We don't actually need to do anything special
         pass
 
+    def setContentHeaders(self, file, offset, endByte, contentDisposition=None):
+        """
+        Sets the Content-Length, Content-Disposition, Content-Type, and also
+        the Content-Range header if this is a partial download.
+
+        :param file: The file being downloaded.
+        :param offset: The start byte of the download.
+        :type offset: int
+        :param endByte: The end byte of the download (non-inclusive).
+        :type endByte: int or None
+        :param contentDisposition: Content-Disposition response header
+            disposition-type value, if None, Content-Disposition will
+            be set to 'attachment; filename=$filename'.
+        :type contentDisposition: str or None
+        """
+        isRangeRequest = cherrypy.request.headers.get('Range')
+        setResponseHeader('Content-Type', file['mimeType'])
+        setContentDisposition(file['name'], contentDisposition or 'attachment')
+
+        if file.get('size') is not None:
+            # Only set Content-Length and range request headers if we have a file size
+            size = file['size']
+            if endByte is None or endByte > size:
+                endByte = size
+
+            setResponseHeader('Content-Length', max(endByte - offset, 0))
+
+            if offset or endByte < size or isRangeRequest:
+                setResponseHeader('Content-Range', f'bytes {offset}-{endByte - 1}/{size}')
+
     def downloadFile(self, file, offset=0, headers=True, endByte=None,
                      contentDisposition=None, extraParameters=None, **kwargs):
 
-        if offset != 0 or endByte is not None:
-            # FIXME: implement range requests
-            msg = 'Range requests are not yet implemented'
-            raise NotImplementedError(msg)
+        if headers:
+            setResponseHeader('Accept-Ranges', 'bytes')
+            self.setContentHeaders(file, offset, endByte, contentDisposition)
 
+        def stream():
+            # Perform the request
+            # Try a single-part download first. If that doesn't work, do multipart.
+            response = self._request_retrieve_instance_prefer_singlepart(file)
+
+            bytes_read = 0
+            for chunk in self._stream_retrieve_instance_response(response):
+                if bytes_read < offset:
+                    # We haven't reached the start of the offset yet
+                    bytes_needed = offset - bytes_read
+                    if bytes_needed >= len(chunk):
+                        # Skip over the whole chunk...
+                        bytes_read += len(chunk)
+                        continue
+                    else:
+                        # Discard all bytes before the offset
+                        chunk = chunk[bytes_needed:]
+                        bytes_read += bytes_needed
+
+                if endByte is not None and bytes_read + len(chunk) >= endByte:
+                    # We have reached the end... remove all bytes after endByte
+                    chunk = chunk[:endByte - bytes_read]
+                    if chunk:
+                        yield chunk
+
+                    bytes_read += len(chunk)
+                    break
+
+                yield chunk
+                bytes_read += len(chunk)
+
+        return stream
+
+    def _request_retrieve_instance_prefer_singlepart(self, file, transfer_syntax='*'):
+        # Try to perform a singlepart request. If it fails, perform a multipart request
+        # instead.
+        response = None
+        try:
+            response = self._request_retrieve_instance(file, multipart=False,
+                                                       transfer_syntax=transfer_syntax)
+        except requests.HTTPError:
+            # If there is an HTTPError, the server might not accept single-part requests...
+            pass
+
+        if self._is_singlepart_response(response):
+            return response
+
+        # Perform the multipart request instead
+        return self._request_retrieve_instance(file, transfer_syntax=transfer_syntax)
+
+    def _request_retrieve_instance(self, file, multipart=True, transfer_syntax='*'):
+        # Multipart requests are officially supported by the DICOMweb standard.
+        # Singlepart requests are not officially supported, but they are easier
+        # to work with.
+        # Google Healthcare API support it.
+        # See here: https://cloud.google.com/healthcare-api/docs/dicom#dicom_instances
+
+        # Create the URL
+        client = _create_dicomweb_client(self.assetstore_meta)
+        url = self._create_retrieve_instance_url(client, file)
+
+        # Build the headers
+        headers = {}
+        if multipart:
+            # This is officially supported by the DICOMweb standard.
+            headers['Accept'] = '; '.join((
+                'multipart/related',
+                'type="application/dicom"',
+                f'transfer-syntax={transfer_syntax}',
+            ))
+        else:
+            # This is not officially supported by the DICOMweb standard,
+            # but it is easier to work with, and some servers such as
+            # Google Healthcare API support it.
+            # See here: https://cloud.google.com/healthcare-api/docs/dicom#dicom_instances
+            headers['Accept'] = f'application/dicom; transfer-syntax={transfer_syntax}'
+
+        return client._http_get(url, headers=headers, stream=True)
+
+    def _create_retrieve_instance_url(self, client, file):
         from dicomweb_client.web import _Transaction
 
         dicom_uids = file['dicom_uids']
@@ -120,44 +230,21 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         series_uid = dicom_uids['series_uid']
         instance_uid = dicom_uids['instance_uid']
 
-        client = _create_dicomweb_client(self.assetstore_meta)
-
-        if headers:
-            setResponseHeader('Content-Type', file['mimeType'])
-            setContentDisposition(file['name'], contentDisposition or 'attachment')
-
-            # The filesystem assetstore calls the following function, which sets
-            # the above and also sets the range and content-length headers:
-            # `self.setContentHeaders(file, offset, endByte, contentDisposition)`
-            # However, we can't call that since we don't have a great way of
-            # determining the DICOM file size without downloading the whole thing.
-            # FIXME: call that function if we find a way to determine file size.
-
-        # Create the URL
-        url = client._get_instances_url(
+        return client._get_instances_url(
             _Transaction.RETRIEVE,
             study_uid,
             series_uid,
             instance_uid,
         )
 
-        # Build the headers
-        transfer_syntax = '*'
-        accept_parts = [
-            'multipart/related',
-            'type="application/dicom"',
-            f'transfer-syntax={transfer_syntax}',
-        ]
-        headers = {
-            'Accept': '; '.join(accept_parts),
-        }
-
-        def stream():
-            # Perform the request
-            response = client._http_get(url, headers=headers, stream=True)
-            yield from self._stream_retrieve_instance_response(response)
-
-        return stream
+    def _stream_retrieve_instance_response(self, response):
+        # Check if the original request asked for multipart data
+        if 'multipart/related' in response.request.headers.get('Accept', ''):
+            yield from self._stream_dicom_multipart_response(response)
+        else:
+            # The content should *only* contain the DICOM file
+            with response:
+                yield from response.iter_content(BUF_SIZE)
 
     def _extract_media_type_and_boundary(self, response):
         content_type = response.headers['content-type']
@@ -171,7 +258,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
 
         return media_type, boundary
 
-    def _stream_retrieve_instance_response(self, response):
+    def _stream_dicom_multipart_response(self, response):
         # The first part of this function was largely copied from dicomweb-client's
         # _decode_multipart_message() function. But we can't use that function here
         # because it relies on reading the whole DICOM file into memory. We want to
@@ -262,6 +349,50 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             # We should have encountered the ending earlier and returned
             msg = 'Failed to find ending boundary in response content'
             raise ValueError(msg)
+
+    def _infer_file_size(self, file):
+        # Try various methods to infer the file size, without streaming the
+        # whole file. Returns the file size if successful, or `None` if unsuccessful.
+        if file.get('size') is not None:
+            # The file size was already determined.
+            return file['size']
+
+        # Only method currently is inferring from single-part content_length
+        return self._infer_file_size_singlepart_content_length(file)
+
+    def _is_singlepart_response(self, response):
+        if response is None:
+            return False
+
+        content_type = response.headers.get('Content-Type')
+        return (
+            response.status_code == 200 and
+            not any(x in content_type for x in ('multipart/related', 'boundary'))
+        )
+
+    def _infer_file_size_singlepart_content_length(self, file):
+        # First, try to see if single-part requests work, and if the Content-Length
+        # is returned. This works for Google Healthcare API.
+        try:
+            response = self._request_retrieve_instance(file, multipart=False)
+        except requests.HTTPError:
+            # If there is an HTTPError, the server might not accept single-part requests...
+            return
+
+        if not self._is_singlepart_response(response):
+            # Does not support single-part requests...
+            return
+
+        content_length = response.headers.get('Content-Length')
+        if not content_length:
+            # The server did not return a Content-Length
+            return
+
+        try:
+            # The DICOM file size is equal to the Content-Length
+            return int(content_length)
+        except ValueError:
+            return
 
     def importData(self, parent, parentType, params, progress, user, **kwargs):
         """
@@ -364,7 +495,10 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                     'instance_uid': instance_uid,
                 }
                 file['imported'] = True
-                File().save(file)
+
+                # Try to infer the file size without streaming, if possible.
+                file['size'] = self._infer_file_size(file)
+                file = File().save(file)
 
             items.append(item)
 
@@ -373,6 +507,30 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
     @property
     def auth_session(self):
         return _create_auth_session(self.assetstore_meta)
+
+    def getFileSize(self, file):
+        # This function will compute the size of the DICOM file (a potentially
+        # expensive operation, since it may have to stream the whole file).
+        # The caller is expected to cache the result in file['size'].
+        # This function is called when the size is needed, such as the girder
+        # fuse mount code, and range requests.
+        if file.get('size') is not None:
+            # It has already been computed once. Return the cached size.
+            return file['size']
+
+        # Try to infer the file size without streaming, if possible.
+        size = self._infer_file_size(file)
+        if size:
+            return size
+
+        # We must stream the whole file to get the file size...
+        size = 0
+        response = self._request_retrieve_instance_prefer_singlepart(file)
+        for chunk in self._stream_retrieve_instance_response(response):
+            size += len(chunk)
+
+        # This should get cached in file['size'] in File().updateSize().
+        return size
 
 
 def _create_auth_session(meta):

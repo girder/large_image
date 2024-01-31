@@ -1036,7 +1036,10 @@ class TileSource(IPyLeafletMixin):
                            np.full(image.shape[:2], 255, np.uint8))
                 sc.composite = entry.get('composite', 'multiply')
             if sc.band is None:
-                sc.band = image[:, :, sc.bandidx]
+                sc.band = image[
+                    :, :, sc.bandidx  # type: ignore[index]
+                    if sc.bandidx is not None and sc.bandidx < image.shape[2]  # type: ignore[misc]
+                    else 0]
             sc.band = self._applyStyleFunction(sc.band, sc, 'preband')
             sc.palette = getPaletteColors(entry.get(
                 'palette', ['#000', '#FFF']

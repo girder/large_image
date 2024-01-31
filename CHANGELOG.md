@@ -1,5 +1,17 @@
 # Change Log
 
+## 1.27.2
+
+### Improvements
+- Support range requests when downloading DICOMweb files ([#1444](../../pull/1444))
+- Bypass some scaling code when compositing multi sources ([#1447](../../pull/1447), [#1449](../../pull/1449))
+- Do not create needless alpha bands in the multi source ([#1451](../../pull/1451))
+- Infer DICOM file size, when possible ([#1448](../../pull/1448))
+- Swap styles faster in the frame viewer ([#1452](../../pull/1452))
+
+### Bug Fixes
+- Fix an issue with compositing sources in the multi source caused by alpha range ([#1453](../../pull/1453))
+
 ## 1.27.1
 
 ### Improvements

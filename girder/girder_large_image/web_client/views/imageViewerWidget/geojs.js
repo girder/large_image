@@ -175,10 +175,25 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         frame = frame || 0;
         this._nextframe = frame;
         this._nextstyle = style;
-        if ((frame !== this._frame || style !== this._style) && !this._updating) {
+        if ((frame !== this._frame || style !== this._style)) {
             this._frame = frame;
             this._style = style;
             this.trigger('g:imageFrameChanging', this, frame);
+            if (this._updating) {
+                this._layer2.url(this.getFrameAndUrl().url);
+                if (this._style === undefined) {
+                    if (this._layer2.setFrameQuad) {
+                        this._layer2.setFrameQuad(frame);
+                    }
+                    this._layer2.frame = frame;
+                } else {
+                    if (this._layer2.setFrameQuad) {
+                        this._layer2.setFrameQuad(undefined);
+                    }
+                    this._layer2.frame = undefined;
+                }
+                return;
+            }
             const quadLoaded = ((this._layer.setFrameQuad || {}).status || {}).loaded;
             if (quadLoaded && this._style === undefined) {
                 this._layer.url(this.getFrameAndUrl().url);
@@ -194,7 +209,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 this._layer.frame = undefined;
             }
             this._updating = true;
-            this.viewer.onIdle(() => {
+            this._layer.onIdle(() => {
                 this._layer2.url(this.getFrameAndUrl().url);
                 if (this._style === undefined) {
                     if (this._layer2.setFrameQuad) {
@@ -207,7 +222,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     }
                     this._layer2.frame = undefined;
                 }
-                this.viewer.onIdle(() => {
+                this._layer2.onIdle(() => {
                     if (this._layer.zIndex() > this._layer2.zIndex()) {
                         this._layer.moveDown();
                         if (!this._layer.options.keepLower) {
