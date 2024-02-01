@@ -1731,6 +1731,10 @@ class TileSource(IPyLeafletMixin):
                 'width': max(self.tileWidth, 4096),
                 'height': max(self.tileHeight, 4096)}
             kwargs['tile_offset'] = {'auto': True}
+        resample = True
+        if 'resample' in kwargs:
+            kwargs = kwargs.copy()
+            resample = kwargs.pop('resample', None)
         tileIter = TileIterator(self, format=TILE_FORMAT_NUMPY, resample=None, **kwargs)
         if tileIter.info is None:
             pilimage = PIL.Image.new('RGB', (0, 0))
@@ -1767,6 +1771,8 @@ class TileSource(IPyLeafletMixin):
             dtype = cast(np.ndarray, image).dtype
             image = _imageToPIL(cast(np.ndarray, image), mode).resize(
                 (outWidth, outHeight),
+                getattr(PIL.Image, 'Resampling', PIL.Image).NEAREST
+                if resample is None else
                 getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
                 if outWidth > regionWidth else
                 getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
