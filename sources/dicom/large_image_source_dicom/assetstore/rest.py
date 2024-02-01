@@ -64,7 +64,7 @@ class DICOMwebAssetstoreResource(Resource):
         )
 
         if not items:
-            msg = 'No DICOM objects matching the search filters were found'
+            msg = 'No studies matching the search filters were found'
             raise RestException(msg)
 
     @access.admin(scope=TokenScope.DATA_WRITE)
