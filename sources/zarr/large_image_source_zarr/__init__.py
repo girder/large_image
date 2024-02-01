@@ -594,6 +594,31 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'omero': {'version': '0.5-dev'},
             })
 
+    @property
+    def crop(self):
+        """
+        Crop only applies to the output file, not the internal data access.
+
+        It consists of x, y, w, h in pixels.
+        """
+        return getattr(self, '_crop', None)
+
+    @crop.setter
+    def crop(self, value):
+        self._checkEditable()
+        if value is None:
+            self._crop = None
+            return
+        x, y, w, h = value
+        x = int(x)
+        y = int(y)
+        w = int(w)
+        h = int(h)
+        if x < 0 or y < 0 or w <= 0 or h <= 0:
+            msg = 'Crop must have non-negative x, y and positive w, h'
+            raise TileSourceError(msg)
+        self._crop = (x, y, w, h)
+
     def write(
         self,
         path,
@@ -610,30 +635,56 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param overwriteAllowed: if False, raise an exception if the output
             path exists.
         """
+        # TODO: compute half, quarter, etc. resolutions
         if not overwriteAllowed and os.path.exists(path):
             raise TileSourceError('Output path exists (%s).' % str(path))
-        # TODO: apply cropping
-        # TODO: compute half, quarter, etc. resolutions
 
         self._validateZarr()
         suffix = Path(path).suffix
+        data_file = self._tempfile
+        data_store = self._zarr_store
+
+        if self.crop:
+            x, y, w, h = self.crop
+            current_arrays = dict(self._zarr.arrays())
+            # create new temp storage for cropped data
+            data_file = tempfile.NamedTemporaryFile()
+            data_store = zarr.SQLiteStore(data_file.name)
+            cropped_zarr = zarr.open(data_store, mode='w')
+            for arr_name in current_arrays:
+                arr = np.array(current_arrays[arr_name])
+                cropped_arr = arr.take(
+                    indices=range(x, x + w),
+                    axis=self._axes.get('x'),
+                ).take(
+                    indices=range(y, y + h),
+                    axis=self._axes.get('y'),
+                )
+                cropped_zarr.create_dataset(arr_name, data=cropped_arr, overwrite=True)
+                cropped_zarr.attrs.update(self._zarr.attrs)
+
+        data_file.flush()
+
         if suffix in ['.db', '.sqlite']:
-            shutil.copy2(self._tempfile.name, path)
+            shutil.copy2(data_file.name, path)
 
         elif suffix == '.zip':
             zip_store = zarr.storage.ZipStore(path)
-            zarr.copy_store(self._zarr_store, zip_store)
+            zarr.copy_store(data_store, zip_store)
             zip_store.close()
+
         elif suffix == '.zarr':
             dir_store = zarr.storage.DirectoryStore(path)
-            zarr.copy_store(self._zarr_store, dir_store)
+            zarr.copy_store(data_store, dir_store)
             dir_store.close()
 
         else:
             from large_image_converter import convert
 
-            self._tempfile.flush()
-            convert(self._tempfile.name, path, overwrite=overwriteAllowed)
+            convert(data_file.name, path, overwrite=overwriteAllowed)
+
+        if self.crop:
+            data_file.close()
 
 
 def open(*args, **kwargs):
