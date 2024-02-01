@@ -8,6 +8,7 @@
 - Do not create needless alpha bands in the multi source ([#1451](../../pull/1451))
 - Infer DICOM file size, when possible ([#1448](../../pull/1448))
 - Swap styles faster in the frame viewer ([#1452](../../pull/1452))
+- Reduce color fringing in multi source compositing ([#1456](../../pull/1456))
 
 ### Bug Fixes
 - Fix an issue with compositing sources in the multi source caused by alpha range ([#1453](../../pull/1453))
