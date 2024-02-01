@@ -115,8 +115,8 @@ A band definition is an object which can contain the following keys:
 
     - ``palette``: the normalized palette for a band.
 
-    - ``palettebase``: a numpy linear interpolation array for non-discrete paletes.
-    - ``discete``: True if the scheme is discrete.
+    - ``palettebase``: a numpy linear interpolation array for non-discrete palettes.
+    - ``discrete``: True if the scheme is discrete.
 
     - ``nodata``: the nodata value for the band or None.
 
