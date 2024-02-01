@@ -503,8 +503,9 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                 }
                 file['imported'] = True
 
-                # Try to infer the file size without streaming, if possible.
-                file['size'] = self._infer_file_size(file)
+                # Inferring the file size can take a long time, so don't
+                # do it right away, unless we figure out a way to make it faster.
+                # file['size'] = self._infer_file_size(file)
                 file = File().save(file)
 
             items.append(item)
