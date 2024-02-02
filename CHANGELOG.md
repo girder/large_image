@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.27.3
+
+### Bug Fixes
+- Fix an issue with uniform band depth on multi source with non uniform sources ([#1459](../../pull/1459))
+
 ## 1.27.2
 
 ### Improvements
