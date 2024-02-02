@@ -1215,6 +1215,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # remove a needless alpha channel
             if np.all(tile[:, :, -1] == fullAlphaValue(tile)):
                 tile = tile[:, :, :-1]
+        if self._bandCount and tile.shape[2] < self._bandCount:
+            _, tile = _makeSameChannelDepth(np.zeros((1, 1, self._bandCount)), tile)
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
