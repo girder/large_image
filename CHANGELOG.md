@@ -2,6 +2,9 @@
 
 ## 1.27.3
 
+### Improvements
+- Log and recover from occasional openslide failures ([#1461](../../pull/1461))
+
 ### Bug Fixes
 - Fix an issue with uniform band depth on multi source with non uniform sources ([#1459](../../pull/1459))
 
