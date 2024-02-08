@@ -213,6 +213,8 @@ export default Vue.extend({
                     case 4:
                         this.metadata.bands = ['red', 'green', 'blue', 'alpha'];
                         break;
+                    default:
+                        this.metadata.bands = [...Array(this.metadata.bandCount).keys()].map((i) => `Band ${i+1}`)
                 }
             } else {
                 this.metadata.bands = Object.values(this.metadata.bands).map(
