@@ -1029,7 +1029,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if output['maxWidth'] <= 0 or output['maxHeight'] <= 0:
             return None, 0, 0
         srcImage, _ = ts.getRegion(
-            region=region, output=output, frame=frame,
+            region=region, output=output, frame=frame, resample=None,
             format=TILE_FORMAT_NUMPY)
         # This is the region we actually took in our source coordinates, scaled
         # for if we took a low res version
@@ -1149,7 +1149,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self.logger.debug('getRegion: ts: %r, region: %r, output: %r', ts, region, output)
             sourceTile, _ = ts.getRegion(
                 region=region, output=output, frame=sourceEntry.get('frame', 0),
-                format=TILE_FORMAT_NUMPY)
+                resample=None, format=TILE_FORMAT_NUMPY)
         else:
             sourceTile, x, y = self._getTransformedTile(
                 ts, transform, corners, scale, sourceEntry.get('frame', 0),
@@ -1215,6 +1215,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # remove a needless alpha channel
             if np.all(tile[:, :, -1] == fullAlphaValue(tile)):
                 tile = tile[:, :, :-1]
+        if self._bandCount and tile.shape[2] < self._bandCount:
+            _, tile = _makeSameChannelDepth(np.zeros((1, 1, self._bandCount)), tile)
         # We should always have a tile
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)

@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.27.3
+
+### Improvements
+- Log and recover from occasional openslide failures ([#1461](../../pull/1461))
+
+### Bug Fixes
+- Fix an issue with uniform band depth on multi source with non uniform sources ([#1459](../../pull/1459))
+
 ## 1.27.2
 
 ### Improvements
@@ -8,6 +16,8 @@
 - Do not create needless alpha bands in the multi source ([#1451](../../pull/1451))
 - Infer DICOM file size, when possible ([#1448](../../pull/1448))
 - Swap styles faster in the frame viewer ([#1452](../../pull/1452))
+- Reduce color fringing in multi source compositing ([#1456](../../pull/1456))
+- Retry read_region if openslide reports an error ([#1457](../../pull/1457))
 
 ### Bug Fixes
 - Fix an issue with compositing sources in the multi source caused by alpha range ([#1453](../../pull/1453))

@@ -297,14 +297,28 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if svslevel['scale'] > 2 ** self._maxSkippedLevels:
             tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
         else:
-            try:
-                tile = self._openslide.read_region(
-                    (offsetx, offsety), svslevel['svslevel'],
-                    (self.tileWidth * svslevel['scale'],
-                     self.tileHeight * svslevel['scale']))
-            except openslide.lowlevel.OpenSlideError as exc:
-                raise TileSourceError(
-                    'Failed to get OpenSlide region (%r).' % exc)
+            retries = 3
+            while retries > 0:
+                try:
+                    tile = self._openslide.read_region(
+                        (offsetx, offsety), svslevel['svslevel'],
+                        (self.tileWidth * svslevel['scale'],
+                         self.tileHeight * svslevel['scale']))
+                    break
+                except openslide.lowlevel.OpenSlideError as exc:
+                    self._largeImagePath = str(self._getLargeImagePath())
+                    msg = (
+                        'Failed to get OpenSlide region '
+                        f'({exc} on {self._largeImagePath}: {self}).')
+                    self.logger.info(msg)
+                    # Reopen handle after a lowlevel error
+                    try:
+                        self._openslide = openslide.OpenSlide(self._largeImagePath)
+                    except Exception:
+                        raise TileSourceError(msg)
+                    retries -= 1
+                    if retries <= 0:
+                        raise TileSourceError(msg)
             # Always scale to the svs level 0 tile size.
             if svslevel['scale'] != 1:
                 tile = tile.resize((self.tileWidth, self.tileHeight),
