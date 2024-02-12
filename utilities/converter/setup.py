@@ -56,7 +56,6 @@ setup(
         'Programming Language :: Python :: 3.12',
     ],
     install_requires=[
-        'gdal',
         f'large-image-source-tiff{limit_version}',
         'numpy',
         'psutil',
@@ -67,10 +66,20 @@ setup(
         'jp2k': [
             'glymur',
         ],
+        'geospatial': [
+            'gdal',
+        ],
         'sources': [
             f'large-image[sources]{limit_version}',
         ],
         'stats': [
+            'packaging',
+            'scikit-image',
+        ],
+        'all': [
+            'glymur',
+            'gdal',
+            f'large-image[sources]{limit_version}',
             'packaging',
             'scikit-image',
         ],

@@ -5,6 +5,9 @@
 ### Improvements
 - Log and recover from occasional openslide failures ([#1461](../../pull/1461))
 
+### Changes
+- Make GDAL an optional dependency for the converter ([#1464](../../pull/1464))
+
 ### Bug Fixes
 - Fix an issue with uniform band depth on multi source with non uniform sources ([#1459](../../pull/1459))
 
