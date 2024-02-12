@@ -110,7 +110,7 @@ Large Image consists of several Python modules designed to work together.  These
   - ``all``: for all of the above
 
 - ``large-image-converter``: A utility for using pyvips and other libraries to convert images into pyramidal tiff files that can be read efficiently by large_image.
-  You can specify extras_require of ``jp2k`` to include modules to allow output to JPEG2000 compression, ``sources`` to include all sources, and ``stats`` to include modules to allow computing compression noise statistics.
+  You can specify extras_require of ``jp2k`` to include modules to allow output to JPEG2000 compression, ``sources`` to include all sources, ``stats`` to include modules to allow computing compression noise statistics, ``geospatial`` to include support for converting geospatial sources, or ``all`` for all of the optional extras_require.
 
 - Tile sources:
 
