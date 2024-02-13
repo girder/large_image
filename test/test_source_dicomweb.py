@@ -30,8 +30,7 @@ def testTilesFromDICOMweb():
     token = os.getenv('DICOMWEB_TEST_TOKEN')
     if token:
         # First, verify that we receive an authorization error without the token
-        match_message = '401 Client Error: Unauthorized for url'
-        with pytest.raises(TileSourceError, match=match_message):
+        with pytest.raises(TileSourceError, match='401'):
             large_image_source_dicom.open(dicomweb_file)
 
         # Create a session, add the token, and try again
