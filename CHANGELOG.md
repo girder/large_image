@@ -10,6 +10,7 @@
 
 ### Bug Fixes
 - Fix an issue with uniform band depth on multi source with non uniform sources ([#1459](../../pull/1459))
+- Fix histogram request bug in band compositing mode ([#1463](../../pull/1463))
 
 ## 1.27.2
 
