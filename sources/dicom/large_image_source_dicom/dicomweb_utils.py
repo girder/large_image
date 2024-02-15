@@ -31,18 +31,25 @@ def get_first_wsi_volume_metadata(client, study_uid, series_uid):
     image_type_tag = dicom_key_to_tag('ImageType')
     instance_uid_tag = dicom_key_to_tag('SOPInstanceUID')
 
-    search_filters = {
-        'SOPClassUID': WSI_SOP_CLASS_UID,
-    }
+    # We can't include the SOPClassUID as a search filter because Imaging Data Commons
+    # produces an error if we do. Perform the filtering manually instead.
+    class_uid_tag = dicom_key_to_tag('SOPClassUID')
+
     fields = [
         image_type_tag,
         instance_uid_tag,
+        class_uid_tag,
     ]
     wsi_instances = client.search_for_instances(
-        study_uid, series_uid, search_filters=search_filters, fields=fields)
+        study_uid, series_uid, fields=fields)
 
     volume_instance = None
     for instance in wsi_instances:
+        class_type = instance.get(class_uid_tag, {}).get('Value')
+        if not class_type or class_type[0] != WSI_SOP_CLASS_UID:
+            # Only look at WSI classes
+            continue
+
         image_type = instance.get(image_type_tag, {}).get('Value')
         # It would be nice if we could have a search filter for this, but
         # I didn't see one...
