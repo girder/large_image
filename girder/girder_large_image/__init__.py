@@ -17,6 +17,7 @@
 import datetime
 import json
 import re
+import threading
 import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
@@ -60,6 +61,7 @@ except PackageNotFoundError:
 
 
 mimetypes = None
+_configWriteLock = threading.RLock()
 
 
 # Girder 3 is pinned to use pymongo < 4; its warnings aren't relevant until
@@ -496,12 +498,20 @@ def yamlConfigFileWrite(folder, name, user, yaml_config):
     yaml.safe_load(yaml_config)
     item = Item().createItem(name, user, folder, reuseExisting=True)
     existingFiles = list(Item().childFiles(item))
-    upload = Upload().createUpload(
-        user, name, 'item', item, size=len(yaml_config), mimeType='text/yaml',
-        save=True)
-    Upload().handleChunk(upload, yaml_config)
-    for file in existingFiles:
-        File().remove(file)
+    if (len(existingFiles) == 1 and
+            existingFiles[0]['mimeType'] == 'text/yaml' and
+            existingFiles[0]['name'] == name):
+        upload = Upload().createUploadToFile(
+            existingFiles[0], user, size=len(yaml_config))
+    else:
+        upload = Upload().createUpload(
+            user, name, 'item', item, size=len(yaml_config),
+            mimeType='text/yaml', save=True)
+    newfile = Upload().handleChunk(upload, yaml_config)
+    with _configWriteLock:
+        for entry in list(Item().childFiles(item)):
+            if entry['_id'] != newfile['_id'] and len(Item().childFiles(item)) > 1:
+                File().remove(entry)
 
 
 # Validators
