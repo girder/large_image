@@ -24,6 +24,7 @@ import cachetools
 from .. import config
 from ..exceptions import TileCacheError
 from .memcache import MemCache
+from .rediscache import RedisCache
 
 # DO NOT MANUALLY ADD ANYTHING TO `_availableCaches`
 #  use entrypoints and let loadCaches fill in `_availableCaches`
@@ -59,6 +60,8 @@ def loadCaches(
     if MemCache is not None:
         # TODO: put this in an entry point for a new package
         _availableCaches['memcached'] = MemCache
+    if RedisCache is not None:
+        _availableCaches['redis'] = RedisCache
     # NOTE: `python` cache is viewed as a fallback and isn't listed in `availableCaches`
 
 

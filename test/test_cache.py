@@ -7,7 +7,7 @@ import pytest
 
 import large_image.cache_util.cache
 from large_image import config
-from large_image.cache_util import (LruCacheMetaclass, MemCache, cachesClear,
+from large_image.cache_util import (LruCacheMetaclass, MemCache, RedisCache, cachesClear,
                                     cachesInfo, getTileCache, methodcache,
                                     strhash)
 
@@ -51,6 +51,23 @@ def testCheckCacheMemcached():
     assert val == 354224848179261915075
 
 
+@pytest.mark.singular()
+def testCacheRedis():
+    cache_test(RedisCache())
+
+
+@pytest.mark.singular()
+def testCheckCacheRedis():
+    cache = RedisCache()
+
+    cache_test(cache)
+
+    val = cache['(2,)']
+    assert val == 1
+    val = cache['(100,)']
+    assert val == 354224848179261915075
+
+
 def testBadMemcachedUrl():
     # go though and check if all 100 fib numbers are in cache
     # it is stored in cache as ('fib', #)
@@ -78,6 +95,14 @@ def testGetTileCacheMemcached():
     tileCache, tileLock = getTileCache()
     assert isinstance(tileCache, MemCache)
 
+
+@pytest.mark.singular()
+def testGetTileCacheRedis():
+    large_image.cache_util.cache._tileCache = None
+    large_image.cache_util.cache._tileLock = None
+    config.setConfig('cache_backend', 'redis')
+    tileCache, tileLock = getTileCache()
+    assert isinstance(tileCache, RedisCache)
 
 class TestClass:
     def testLRUThreadSafety(self):

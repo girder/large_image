@@ -22,10 +22,15 @@ from .cache import (CacheProperties, LruCacheMetaclass, getTileCache,
 from .cachefactory import CacheFactory, pickAvailableCache
 
 MemCache: Any
+RedisCache: Any
 try:
     from .memcache import MemCache
 except ImportError:
     MemCache = None
+try:
+    from .rediscache import RedisCache
+except ImportError:
+    RedisCache = None
 
 _cacheClearFuncs: List[Callable] = []
 
@@ -99,6 +104,6 @@ def cachesInfo(*args, **kwargs) -> Dict[str, Dict[str, int]]:
     return info
 
 
-__all__ = ('CacheFactory', 'getTileCache', 'isTileCacheSetup', 'MemCache',
+__all__ = ('CacheFactory', 'getTileCache', 'isTileCacheSetup', 'MemCache', 'RedisCache',
            'strhash', 'LruCacheMetaclass', 'pickAvailableCache', 'methodcache',
            'CacheProperties')
