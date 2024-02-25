@@ -117,11 +117,11 @@ class RedisCache(BaseCache):
 
     @property
     def maxsize(self) -> int:
-        maxmemory = self._getStat["maxmemory"]
+        maxmemory = self._getStat("maxmemory")
         if maxmemory:
             return maxmemory
         else:
-            return self._getStat["total_system_memory"]
+            return self._getStat("total_system_memory")
 
     def _reconnect(self) -> None:
         try:
