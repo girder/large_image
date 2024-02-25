@@ -19,6 +19,12 @@ Configuration parameters:
 
 - ``cache_memcached_password``: A password for the memcached server.  Default ``None``.
 
+- ``cache_redis_url``: If tiles are cached in redis, the url or list of urls where the redis server is located.  Default '127.0.0.1:6379'.
+
+- ``cache_redis_username``: A username for the redis server.  Default ``None``.
+
+- ``cache_redis_password``: A password for the redis server.  Default ``None``.
+
 - ``cache_tilesource_memory_portion``: Tilesources are cached on open so that subsequent accesses can be faster.  These use file handles and memory.  This limits the maximum based on a memory estimation and using no more than 1 / (``cache_tilesource_memory_portion``) of the available memory.
 
 - ``cache_tilesource_maximum``: If this is non-zero, this further limits the number of tilesources than can be cached to this value.

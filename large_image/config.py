@@ -25,13 +25,15 @@ ConfigValues = {
     'logprint': fallbackLogger,
 
     # For tiles
-    'cache_backend': None,  # 'python' or 'memcached'
+    'cache_backend': None,  # 'python', 'redis' or 'memcached'
     # 'python' cache can use 1/(val) of the available memory
     'cache_python_memory_portion': 32,
     # cache_memcached_url may be a list
     'cache_memcached_url': '127.0.0.1',
     'cache_memcached_username': None,
     'cache_memcached_password': None,
+    'cache_redis_url': '127.0.0.1:6379',
+    'cache_redis_password': None,
 
     # If set to False, the default will be to not cache tile sources.  This has
     # substantial performance penalties if sources are used multiple times, so
