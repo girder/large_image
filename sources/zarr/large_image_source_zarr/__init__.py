@@ -114,11 +114,15 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._mm_y = 0
 
     def __del__(self):
-        try:
-            self._zarr.close()
-            self._tempfile.close()
-        except Exception:
-            pass
+        if not hasattr(self, '_derivedSource'):
+            try:
+                self._zarr.close()
+            except Exception:
+                pass
+            try:
+                self._tempfile.close()
+            except Exception:
+                pass
 
     def _checkEditable(self):
         """
