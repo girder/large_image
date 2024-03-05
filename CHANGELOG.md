@@ -5,6 +5,7 @@
 ### Improvements
 - Log and recover from occasional openslide failures ([#1461](../../pull/1461))
 - Add support for Imaging Data Commons ([#1450](../../pull/1450))
+- Speed up some retiling ([#1471](../../pull/1471))
 
 ### Changes
 - Make GDAL an optional dependency for the converter ([#1464](../../pull/1464))

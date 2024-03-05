@@ -65,7 +65,7 @@ def strhash(*args, **kwargs) -> str:
     """
     if kwargs:
         return '%r,%r' % (args, sorted(kwargs.items()))
-    return '%r' % (args, )
+    return repr(args)
 
 
 def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
