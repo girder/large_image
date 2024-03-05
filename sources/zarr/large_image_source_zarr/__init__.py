@@ -512,6 +512,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         # TODO: improve band bookkeeping
 
+        self._checkEditable()
         placement = {
             'x': x,
             'y': y,
@@ -531,11 +532,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             err = 'Invalid type for axes. Must be str or list[str].'
             raise ValueError(err)
+        self._axes = {k: i for i, k in enumerate(axes)}
 
-        self._checkEditable()
         tile, mode = _imageToNumpy(tile)
-        self._levels = None  # reset zarr validation
-
         while len(tile.shape) < len(axes):
             tile = np.expand_dims(tile, axis=0)
 
@@ -551,8 +550,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 placement.get(
                     a,
                     0) +
-                tile.shape[i]) for i,
-            a in enumerate(axes)}
+                tile.shape[i]) 
+            for a, i in self._axes.items()
+        }
+        self._dtype = tile.dtype
+        self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
+        self.sizeX = new_dims.get('x')
+        self.sizeY = new_dims.get('y')
+        self._framecount = np.prod([
+            length
+            for axis, length in new_dims.items()
+            if axis in axes[:-3]
+        ])
+        self.levels = int(max(1, math.ceil(math.log(max(
+            self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+
         root_data = np.pad(
             root,
             [(0, d - root.shape[i]) for i, d in enumerate(new_dims.values())],
