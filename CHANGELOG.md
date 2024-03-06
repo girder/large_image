@@ -4,9 +4,15 @@
 
 ### Improvements
 - Log and recover from occasional openslide failures ([#1461](../../pull/1461))
+- Add support for Imaging Data Commons ([#1450](../../pull/1450))
+
+### Changes
+- Make GDAL an optional dependency for the converter ([#1464](../../pull/1464))
 
 ### Bug Fixes
 - Fix an issue with uniform band depth on multi source with non uniform sources ([#1459](../../pull/1459))
+- Fix histogram request bug in band compositing mode ([#1463](../../pull/1463))
+- Prevent duplicating config files with multiple writes ([#1467](../../pull/1467))
 
 ## 1.27.2
 

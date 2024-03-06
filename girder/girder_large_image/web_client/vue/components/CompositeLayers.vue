@@ -455,6 +455,7 @@ export default {
                 :auto-range="autoRange"
                 :current-min="min"
                 :current-max="max"
+                :active="active"
                 @updateMin="(v, d) => updateLayerMin(layerName, v, d)"
                 @updateMax="(v, d) => updateLayerMax(layerName, v, d)"
                 @updateAutoRange="(v) => updateLayerAutoRange(layerName, v)"

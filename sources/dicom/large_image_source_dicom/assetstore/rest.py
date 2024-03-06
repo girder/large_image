@@ -64,7 +64,7 @@ class DICOMwebAssetstoreResource(Resource):
         )
 
         if not items:
-            msg = 'No DICOM objects matching the search filters were found'
+            msg = 'No studies matching the search filters were found'
             raise RestException(msg)
 
     @access.admin(scope=TokenScope.DATA_WRITE)
@@ -77,9 +77,9 @@ class DICOMwebAssetstoreResource(Resource):
         .param('destinationType', 'The type of the parent object to import into.',
                enum=('folder', 'user', 'collection'),
                required=False, default='folder')
-        .param('limit', 'The maximum number of results to import.',
+        .param('limit', 'The maximum number of studies to import.',
                required=False, default=None)
-        .param('filters', 'Any search parameters to filter DICOM objects.',
+        .param('filters', 'Any search parameters to filter the studies query.',
                required=False, default='{}')
         .param('progress', 'Whether to record progress on this operation.',
                required=False, default=False, dataType='boolean')

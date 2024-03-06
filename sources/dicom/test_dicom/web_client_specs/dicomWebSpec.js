@@ -23,7 +23,9 @@ describe('DICOMWeb assetstore', function () {
         var dicomFileContent;
 
         // After importing, we will verify that this item exists
-        const verifyItemName = '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0';
+        const studyUID = '2.25.25644321580420796312527343668921514374';
+        const seriesUID = '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0';
+        const verifyItemName = seriesUID;
 
         runs(function () {
             $('a.g-nav-link[g-target="admin"]').trigger('click');
@@ -173,20 +175,20 @@ describe('DICOMWeb assetstore', function () {
 
         runs(function () {
             // Perform a search where no results are returned
-            const filters = '{"SeriesInstanceUID": "DOES_NOT_EXIST"}';
+            const filters = '{"StudyInstanceUID": "DOES_NOT_EXIST"}';
             $('#g-dwas-import-filters').val(filters);
             $('.g-submit-assetstore-import').trigger('click');
         });
 
         waitsFor(function () {
-            const msg = 'No DICOM objects matching the search filters were found';
+            const msg = 'No studies matching the search filters were found';
             return $('.g-validation-failed-message').html() === msg;
         }, 'No results check');
 
         runs(function () {
             // Fix the filters
-            // We will only import this specific SeriesInstanceUID
-            const filters = '{"SeriesInstanceUID": "' + verifyItemName + '"}';
+            // We will only import this specific StudyInstanceUID
+            const filters = '{"StudyInstanceUID": "' + studyUID + '"}';
             $('#g-dwas-import-filters').val(filters);
 
             // This one should work fine

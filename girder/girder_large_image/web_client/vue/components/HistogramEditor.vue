@@ -14,7 +14,8 @@ export default {
         'framedelta',
         'currentMin',
         'currentMax',
-        'autoRange'
+        'autoRange',
+        'active'
     ],
     emits: ['updateMin', 'updateMax', 'updateAutoRange'],
     data() {
@@ -64,6 +65,7 @@ export default {
     },
     methods: {
         fetchHistogram() {
+            if (!this.active) return undefined;
             if (this.framedelta !== undefined) {
                 restRequest({
                     type: 'GET',
