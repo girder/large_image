@@ -581,7 +581,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 root.resize(*tuple(new_dims.values()))
                 data = root[:]
                 np.place(data, full_mask, tile)
-                root[:] = data     
+                root[:] = data
 
             # Edit OME metadata
             self._zarr.attrs.update({
