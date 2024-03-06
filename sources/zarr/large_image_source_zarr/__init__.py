@@ -101,9 +101,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Make unpickleable
         self._unpickleable = True
         self._largeImagePath = None
+        self._dims = {}
         self.sizeX = self.sizeY = self.levels = 0
         self.tileWidth = self.tileHeight = self._tileSize
-        self._frames = [0]
         self._cacheValue = str(uuid.uuid4())
         self._output = None
         self._editable = True
@@ -538,21 +538,14 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         while len(tile.shape) < len(axes):
             tile = np.expand_dims(tile, axis=0)
 
-        current_arrays = dict(self._zarr.arrays())
-        if 'root' in current_arrays:
-            root = current_arrays['root']
-        else:
-            root = self._zarr.create_dataset('root', data=tile)
-
         new_dims = {
             a: max(
-                root.shape[i],
-                placement.get(
-                    a,
-                    0) +
-                tile.shape[i]) 
+                self._dims.get(a, 0),
+                placement.get(a, 0) + tile.shape[i],
+            )
             for a, i in self._axes.items()
         }
+        self._dims = new_dims
         self._dtype = tile.dtype
         self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
         self.sizeX = new_dims.get('x')
@@ -565,37 +558,30 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = int(max(1, math.ceil(math.log(max(
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
 
-        root_data = np.pad(
-            root,
-            [(0, d - root.shape[i]) for i, d in enumerate(new_dims.values())],
-            mode='empty',
-        )
+        if not mask:
+            mask = np.full(tile.shape, True)
+        full_mask = np.full(tuple(new_dims.values()), False)
+        mask_placement_slices = tuple([
+            slice(placement.get(a, 0), placement.get(a, 0) + mask.shape[i], 1)
+            for i, a in enumerate(axes)
+        ])
+        full_mask[mask_placement_slices] = mask
 
-        tile_data = np.pad(
-            tile,
-            [(placement.get(a, 0), d - placement.get(a, 0) - tile.shape[i])
-             for i, (a, d) in enumerate(new_dims.items())],
-            mode='empty',
-        )
-
-        if mask is None:
-            mask = np.ones(tile.shape[:-1])
-        while len(mask.shape) < len(tile_data.shape):
-            mask = np.expand_dims(mask, axis=-1)
-            mask = np.repeat(mask, tile_data.shape[len(mask.shape) - 1], axis=-1)
-        mask_data = np.pad(
-            mask,
-            [(placement.get(a, 0), d - placement.get(a, 0) - mask.shape[i])
-             for i, (a, d) in enumerate(new_dims.items())],
-            mode='constant',
-            constant_values=0,
-        )
-        mask_data = mask_data.astype(bool)
-        np.copyto(root_data, tile_data, where=mask_data)
-
+        current_arrays = dict(self._zarr.arrays())
         with self._addLock:
-            # This will rechunk data when necessary, according to new shape
-            root = self._zarr.create_dataset('root', data=root_data, overwrite=True)
+            if 'root' not in current_arrays:
+                chunking = tuple([
+                    self._tileSize if a in ['x', 'y'] else
+                    32 if a == 's' else 1
+                    for a in axes
+                ])
+                self._zarr.create_dataset('root', data=tile, chunks=chunking)
+            else:
+                root = current_arrays['root']
+                root.resize(*tuple(new_dims.values()))
+                data = root[:]
+                np.place(data, full_mask, tile)
+                root[:] = data     
 
             # Edit OME metadata
             self._zarr.attrs.update({
