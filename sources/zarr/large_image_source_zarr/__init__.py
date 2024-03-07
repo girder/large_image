@@ -555,6 +555,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for axis, length in new_dims.items()
             if axis in axes[:-3]
         ])
+        self._levels = None
         self.levels = int(max(1, math.ceil(math.log(max(
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
 
