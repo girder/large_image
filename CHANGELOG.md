@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.27.4
+
+### Improvements
+- Add a guard when reading incorrect associated images ([#1472](../../pull/1472))
+
 ## 1.27.3
 
 ### Improvements

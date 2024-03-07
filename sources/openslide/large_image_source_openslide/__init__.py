@@ -395,7 +395,15 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._openslide = openslide.OpenSlide(self._largeImagePath)
                 return None
         tiff_buffer = io.BytesIO()
-        tifftools.write_tiff(self._tiffinfo['ifds'][images[imageKey]], tiff_buffer)
+        ifd = self._tiffinfo['ifds'][images[imageKey]]
+        if (tifftools.Tag.Photometric.value in ifd['tags'] and
+                ifd['tags'][tifftools.Tag.Photometric.value]['data'][0] ==
+                tifftools.constants.Photometric.RGB and
+                tifftools.Tag.SamplesPerPixel.value in ifd['tags'] and
+                ifd['tags'][tifftools.Tag.SamplesPerPixel.value]['data'][0] == 1):
+            ifd['tags'][tifftools.Tag.Photometric.value]['data'][
+                0] = tifftools.constants.Photometric.MinIsBlack
+        tifftools.write_tiff(ifd, tiff_buffer)
         return PIL.Image.open(tiff_buffer)
 
 
