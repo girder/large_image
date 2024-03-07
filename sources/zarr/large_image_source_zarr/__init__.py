@@ -561,12 +561,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         if not mask:
             mask = np.full(tile.shape, True)
-        full_mask = np.full(tuple(new_dims.values()), False)
         mask_placement_slices = tuple([
             slice(placement.get(a, 0), placement.get(a, 0) + mask.shape[i], 1)
             for i, a in enumerate(axes)
         ])
-        full_mask[mask_placement_slices] = mask
 
         current_arrays = dict(self._zarr.arrays())
         with self._addLock:
@@ -580,9 +578,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 root = current_arrays['root']
                 root.resize(*tuple(new_dims.values()))
-                data = root[:]
+                data = root[mask_placement_slices]
+                if mask is not None:
+                    np.place(data, mask, tile)
+                else:
+                    data = tile
                 np.place(data, full_mask, tile)
-                root[:] = data
+                root[mask_placement_slices] = data
 
             # Edit OME metadata
             self._zarr.attrs.update({
