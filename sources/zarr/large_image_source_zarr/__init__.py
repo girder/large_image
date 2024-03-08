@@ -559,10 +559,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = int(max(1, math.ceil(math.log(max(
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
 
-        if not mask:
-            mask = np.full(tile.shape, True)
-        mask_placement_slices = tuple([
-            slice(placement.get(a, 0), placement.get(a, 0) + mask.shape[i], 1)
+        placement_slices = tuple([
+            slice(placement.get(a, 0), placement.get(a, 0) + tile.shape[i], 1)
             for i, a in enumerate(axes)
         ])
 
@@ -578,10 +576,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 root = current_arrays['root']
                 root.resize(*tuple(new_dims.values()))
-                if mask:
-                    root[mask_placement_slices] = np.where(mask, tile, root[mask_placement_slices])
+                if mask is not None:
+                    root[placement_slices] = np.where(mask, tile, root[placement_slices])
                 else:
-                    root[mask_placement_slices] = tile
+                    root[placement_slices] = tile
 
             # Edit OME metadata
             self._zarr.attrs.update({
