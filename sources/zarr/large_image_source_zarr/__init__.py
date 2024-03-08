@@ -578,13 +578,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 root = current_arrays['root']
                 root.resize(*tuple(new_dims.values()))
-                data = root[mask_placement_slices]
-                if mask is not None:
-                    np.place(data, mask, tile)
+                if mask:
+                    root[mask_placement_slices] = np.where(mask, tile, root[mask_placement_slices])
                 else:
-                    data = tile
-                np.place(data, full_mask, tile)
-                root[mask_placement_slices] = data
+                    root[mask_placement_slices] = tile
 
             # Edit OME metadata
             self._zarr.attrs.update({
