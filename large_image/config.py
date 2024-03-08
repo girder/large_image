@@ -1,3 +1,4 @@
+import functools
 import json
 import logging
 import os
@@ -60,6 +61,8 @@ ConfigValues = {
 }
 
 
+# Fix when we drop Python 3.8 to just be @functools.cache
+@functools.lru_cache(maxsize=None)
 def getConfig(key: Optional[str] = None,
               default: Optional[Union[str, bool, int, logging.Logger]] = None) -> Any:
     """
@@ -110,6 +113,7 @@ def setConfig(key: str, value: Optional[Union[str, bool, int, logging.Logger]]) 
     curConfig = getConfig()
     if curConfig.get(key) is not value:
         curConfig[key] = value
+        getConfig.cache_clear()
 
 
 def _ignoreSourceNames(

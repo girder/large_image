@@ -596,13 +596,27 @@ class TiledTiffDirectory:
                     self._tiffFile).value
             stripsCount = min(self._stripsPerTile, self._stripCount - tileNum)
             tileSize = stripSize * self._stripsPerTile
-        imageBuffer = ctypes.create_string_buffer(tileSize)
+        tw, th = self._tileWidth, self._tileHeight
+        if self._tiffInfo.get('orientation') in {
+                libtiff_ctypes.ORIENTATION_LEFTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTTOP,
+                libtiff_ctypes.ORIENTATION_RIGHTBOT,
+                libtiff_ctypes.ORIENTATION_LEFTBOT}:
+            tw, th = th, tw
+        format = (
+            self._tiffInfo.get('bitspersample'),
+            self._tiffInfo.get('sampleformat') if self._tiffInfo.get(
+                'sampleformat') is not None else libtiff_ctypes.SAMPLEFORMAT_UINT)
+        image = np.empty((th, tw, self._tiffInfo['samplesperpixel']),
+                         dtype=_ctypesFormattbl[format])
+        imageBuffer = image.ctypes.data_as(ctypes.POINTER(ctypes.c_char))
         if self._tiffInfo.get('istiled'):
             with self._tileLock:
                 readSize = libtiff_ctypes.libtiff.TIFFReadEncodedTile(
                     self._tiffFile, tileNum, imageBuffer, tileSize)
         else:
             readSize = 0
+            imageBuffer = ctypes.cast(imageBuffer, ctypes.POINTER(ctypes.c_char * 2)).contents
             for stripNum in range(stripsCount):
                 with self._tileLock:
                     chunkSize = libtiff_ctypes.libtiff.TIFFReadEncodedStrip(
@@ -621,21 +635,6 @@ class TiledTiffDirectory:
             raise IOTiffError(
                 'Read an unexpected number of bytes from an encoded tile' if readSize >= 0 else
                 'Failed to read from an encoded tile')
-        tw, th = self._tileWidth, self._tileHeight
-        if self._tiffInfo.get('orientation') in {
-                libtiff_ctypes.ORIENTATION_LEFTTOP,
-                libtiff_ctypes.ORIENTATION_RIGHTTOP,
-                libtiff_ctypes.ORIENTATION_RIGHTBOT,
-                libtiff_ctypes.ORIENTATION_LEFTBOT}:
-            tw, th = th, tw
-        format = (
-            self._tiffInfo.get('bitspersample'),
-            self._tiffInfo.get('sampleformat') if self._tiffInfo.get(
-                'sampleformat') is not None else libtiff_ctypes.SAMPLEFORMAT_UINT)
-        image = np.ctypeslib.as_array(ctypes.cast(
-            imageBuffer, ctypes.POINTER(ctypes.c_uint8)), (tileSize, )).view(
-                _ctypesFormattbl[format]).reshape(
-                    (th, tw, self._tiffInfo['samplesperpixel']))
         if (self._tiffInfo.get('samplesperpixel') == 3 and
                 self._tiffInfo.get('photometric') == libtiff_ctypes.PHOTOMETRIC_YCBCR):
             if self._tiffInfo.get('bitspersample') == 16:
