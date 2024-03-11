@@ -563,6 +563,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             slice(placement.get(a, 0), placement.get(a, 0) + tile.shape[i], 1)
             for i, a in enumerate(axes)
         ])
+        if mask is not None and len(mask.shape) + 1 == len(tile.shape):
+            mask = mask[:, :, np.newaxis]
 
         current_arrays = dict(self._zarr.arrays())
         with self._addLock:
