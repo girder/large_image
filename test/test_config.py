@@ -7,6 +7,8 @@ def testConfigFunctions():
     assert getConfig('cache_backend') == 'python'
     setConfig('cache_backend', 'memcached')
     assert getConfig('cache_backend') == 'memcached'
+    setConfig('cache_backend', 'redis')
+    assert getConfig('cache_backend') == 'redis'
     setConfig('cache_backend', None)
     assert getConfig('cache_backend') is None
     assert getConfig('unknown', 'python') == 'python'

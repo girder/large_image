@@ -36,6 +36,7 @@ long_description = readme
 
 extraReqs = {
     'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
+    'redis': ['redis>=4.5.5'],
     'converter': [f'large-image-converter{limit_version}'],
     'colormaps': ['matplotlib'],
     'tiledoutput': ['pyvips'],
@@ -74,7 +75,7 @@ extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) |
 # The common packages are ones that will install on Ubuntu, OSX, and Windows
 # from pypi with all needed dependencies.
 extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for key in {
-    'memcached', 'colormaps', 'performance',
+    'memcached', 'redis', 'colormaps', 'performance',
     'deepzoom', 'dicom', 'multi', 'nd2', 'test', 'tifffile', 'zarr',
 })) | {
     f'large-image-source-pil[all]{limit_version}',
