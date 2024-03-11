@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.27.5
+
+### Bug Fixes
+- Fix an issue with single band on multi source with non uniform sources ([#1474](../../pull/1474))
+
 ## 1.27.4
 
 ### Improvements
