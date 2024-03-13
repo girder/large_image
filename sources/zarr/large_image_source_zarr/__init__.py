@@ -518,23 +518,20 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'y': y,
             **kwargs,
         }
-        if axes is None:
-            if len(tile.shape) == 2:
-                axes = 'yx'
-            elif len(tile.shape) == 3:
-                axes = 'yxs'
-            else:
-                axes = ''
-        if isinstance(axes, str):
-            axes = axes.lower()
-        elif isinstance(axes, list):
-            axes = [x.lower() for x in axes]
-        else:
+        if not isinstance(tile, np.ndarray) or axes is None:
+            axes = 'yxs'
+            tile, mode = _imageToNumpy(tile)
+        elif not isinstance(axes, str) and not isinstance(axes, list):
             err = 'Invalid type for axes. Must be str or list[str].'
+            raise ValueError(err)
+        axes = [x.lower() for x in axes]
+        if axes[-1] != 's':
+            axes.append('s')
+        if 'x' not in axes or 'y' not in axes:
+            err = 'Invalid value for axes. Must contain "y" and "x".'
             raise ValueError(err)
         self._axes = {k: i for i, k in enumerate(axes)}
 
-        tile, mode = _imageToNumpy(tile)
         while len(tile.shape) < len(axes):
             tile = np.expand_dims(tile, axis=0)
 
