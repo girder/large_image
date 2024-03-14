@@ -568,7 +568,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if 'root' not in current_arrays:
                 chunking = tuple([
                     self._tileSize if a in ['x', 'y'] else
-                    32 if a == 's' else 1
+                    new_dims.get('s') if a == 's' else 1
                     for a in axes
                 ])
                 self._zarr.create_dataset('root', data=tile, chunks=chunking)
@@ -579,6 +579,15 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     root[placement_slices] = np.where(mask, tile, root[placement_slices])
                 else:
                     root[placement_slices] = tile
+
+                if root.chunks[-1] != new_dims.get('s'):
+                    # rechunk if length of samples axis changes
+                    chunking = tuple([
+                        self._tileSize if a in ['x', 'y'] else
+                        new_dims.get('s') if a == 's' else 1
+                        for a in axes
+                    ])
+                    self._zarr.create_dataset('root', data=root[:], chunks=chunking, overwrite=True)
 
             # Edit OME metadata
             self._zarr.attrs.update({
