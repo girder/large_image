@@ -530,8 +530,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if 'x' not in axes or 'y' not in axes:
             err = 'Invalid value for axes. Must contain "y" and "x".'
             raise ValueError(err)
+        for k in placement:
+            if k not in axes:
+                axes[0:0] = [k]
         self._axes = {k: i for i, k in enumerate(axes)}
-
         while len(tile.shape) < len(axes):
             tile = np.expand_dims(tile, axis=0)
 
@@ -555,31 +557,26 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._levels = None
         self.levels = int(max(1, math.ceil(math.log(max(
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
-
+        if mask is not None and len(mask.shape) + 1 == len(tile.shape):
+            mask = mask[:, :, np.newaxis]
         placement_slices = tuple([
             slice(placement.get(a, 0), placement.get(a, 0) + tile.shape[i], 1)
             for i, a in enumerate(axes)
         ])
-        if mask is not None and len(mask.shape) + 1 == len(tile.shape):
-            mask = mask[:, :, np.newaxis]
 
         current_arrays = dict(self._zarr.arrays())
         with self._addLock:
+            chunking = None
             if 'root' not in current_arrays:
+                root = np.empty(tuple(new_dims.values()))
                 chunking = tuple([
                     self._tileSize if a in ['x', 'y'] else
                     new_dims.get('s') if a == 's' else 1
                     for a in axes
                 ])
-                self._zarr.create_dataset('root', data=tile, chunks=chunking)
             else:
                 root = current_arrays['root']
                 root.resize(*tuple(new_dims.values()))
-                if mask is not None:
-                    root[placement_slices] = np.where(mask, tile, root[placement_slices])
-                else:
-                    root[placement_slices] = tile
-
                 if root.chunks[-1] != new_dims.get('s'):
                     # rechunk if length of samples axis changes
                     chunking = tuple([
@@ -587,7 +584,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         new_dims.get('s') if a == 's' else 1
                         for a in axes
                     ])
-                    self._zarr.create_dataset('root', data=root[:], chunks=chunking, overwrite=True)
+                    
+            if mask is not None:
+                root[placement_slices] = np.where(mask, tile, root[placement_slices])
+            else:
+                root[placement_slices] = tile
+            if chunking:
+                self._zarr.create_dataset('root', data=root[:], chunks=chunking, overwrite=True)                
 
             # Edit OME metadata
             self._zarr.attrs.update({
