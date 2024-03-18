@@ -68,7 +68,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not os.path.isfile(self._largeImagePath) and '//:' not in self._largeImagePath:
             raise TileSourceFileNotFoundError(self._largeImagePath) from None
         try:
-            self._zarr = zarr.open(zarr.SQLiteStore(self._largeImagePath), mode='r')
+            self._zarr = zarr.open(zarr.DirectoryStore(self._largeImagePath), mode='r')
         except Exception:
             try:
                 self._zarr = zarr.open(self._largeImagePath, mode='r')
@@ -95,8 +95,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Initialize the tile class for creating a new image.
         """
-        self._tempfile = tempfile.NamedTemporaryFile(suffix=path)
-        self._zarr_store = zarr.SQLiteStore(self._tempfile.name)
+        self._tempdir = tempfile.TemporaryDirectory(path)
+        self._zarr_store = zarr.DirectoryStore(self._tempdir.name)
         self._zarr = zarr.open(self._zarr_store, mode='w')
         # Make unpickleable
         self._unpickleable = True
@@ -120,7 +120,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except Exception:
                 pass
             try:
-                self._tempfile.close()
+                shutil.rmtree(self._tempdir)
             except Exception:
                 pass
 
@@ -643,21 +643,27 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param overwriteAllowed: if False, raise an exception if the output
             path exists.
         """
-        # TODO: compute half, quarter, etc. resolutions
-        if not overwriteAllowed and os.path.exists(path):
-            raise TileSourceError('Output path exists (%s).' % str(path))
+        if os.path.exists(path):
+            if overwriteAllowed:
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
+            else:
+                raise TileSourceError('Output path exists (%s).' % str(path))
 
+        # TODO: compute half, quarter, etc. resolutions
         self._validateZarr()
         suffix = Path(path).suffix
-        data_file = self._tempfile
+        data_dir = self._tempdir
         data_store = self._zarr_store
 
         if self.crop:
             x, y, w, h = self.crop
             current_arrays = dict(self._zarr.arrays())
             # create new temp storage for cropped data
-            data_file = tempfile.NamedTemporaryFile()
-            data_store = zarr.SQLiteStore(data_file.name)
+            data_dir = tempfile.TemporaryDirectory()
+            data_store = zarr.DirectoryStore(data_dir.name)
             cropped_zarr = zarr.open(data_store, mode='w')
             for arr_name in current_arrays:
                 arr = np.array(current_arrays[arr_name])
@@ -671,28 +677,27 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 cropped_zarr.create_dataset(arr_name, data=cropped_arr, overwrite=True)
                 cropped_zarr.attrs.update(self._zarr.attrs)
 
-        data_file.flush()
+        if suffix == '.zarr':
+            shutil.copytree(data_dir.name, path)
 
-        if suffix in ['.db', '.sqlite']:
-            shutil.copy2(data_file.name, path)
+        elif suffix in ['.db', '.sqlite']:
+            sqlite_store = zarr.SQLiteStore(path)
+            zarr.copy_store(data_store, sqlite_store, if_exists='replace')
+            sqlite_store.close()
 
         elif suffix == '.zip':
-            zip_store = zarr.storage.ZipStore(path)
-            zarr.copy_store(data_store, zip_store)
+            zip_store = zarr.ZipStore(path)
+            zarr.copy_store(data_store, zip_store, if_exists='replace')
             zip_store.close()
-
-        elif suffix == '.zarr':
-            dir_store = zarr.storage.DirectoryStore(path)
-            zarr.copy_store(data_store, dir_store)
-            dir_store.close()
 
         else:
             from large_image_converter import convert
 
-            convert(data_file.name, path, overwrite=overwriteAllowed)
+            attrs_path = Path(data_dir.name) / '.zattrs'
+            convert(str(attrs_path), path, overwrite=overwriteAllowed)
 
         if self.crop:
-            data_file.close()
+            shutil.rmtree(data_dir.name)
 
 
 def open(*args, **kwargs):
