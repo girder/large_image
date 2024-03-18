@@ -1210,7 +1210,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                colors,
                                dtype=getattr(self, '_firstdtype', np.uint8))
         if self._info.get('singleBand'):
-            tile = tile[:, :, 0]
+            tile = tile[:, :, :1]
         elif tile.shape[2] in {2, 4} and (self._bandCount or tile.shape[2]) < tile.shape[2]:
             # remove a needless alpha channel
             if np.all(tile[:, :, -1] == fullAlphaValue(tile)):
