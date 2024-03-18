@@ -544,19 +544,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             )
             for a, i in self._axes.items()
         }
-        self._dims = new_dims
-        self._dtype = tile.dtype
-        self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
-        self.sizeX = new_dims.get('x')
-        self.sizeY = new_dims.get('y')
-        self._framecount = np.prod([
-            length
-            for axis, length in new_dims.items()
-            if axis in axes[:-3]
-        ])
-        self._levels = None
-        self.levels = int(max(1, math.ceil(math.log(max(
-            self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
         if mask is not None and len(mask.shape) + 1 == len(tile.shape):
             mask = mask[:, :, np.newaxis]
         placement_slices = tuple([
@@ -604,6 +591,22 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 }],
                 'omero': {'version': '0.5-dev'},
             })
+
+            # Edit large_image attributes
+            self._dims = new_dims
+            self._dtype = tile.dtype
+            self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
+            self.sizeX = new_dims.get('x')
+            self.sizeY = new_dims.get('y')
+            self._framecount = np.prod([
+                length
+                for axis, length in new_dims.items()
+                if axis in axes[:-3]
+            ])
+            self._levels = None
+            self.levels = int(max(1, math.ceil(math.log(max(
+                self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+
 
     @property
     def crop(self):
