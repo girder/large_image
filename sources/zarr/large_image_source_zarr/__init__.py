@@ -571,13 +571,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         new_dims.get('s') if a == 's' else 1
                         for a in axes
                     ])
-                    
+
             if mask is not None:
                 root[placement_slices] = np.where(mask, tile, root[placement_slices])
             else:
                 root[placement_slices] = tile
             if chunking:
-                self._zarr.create_dataset('root', data=root[:], chunks=chunking, overwrite=True)                
+                self._zarr.create_dataset('root', data=root[:], chunks=chunking, overwrite=True)
 
             # Edit OME metadata
             self._zarr.attrs.update({
@@ -606,7 +606,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._levels = None
             self.levels = int(max(1, math.ceil(math.log(max(
                 self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
-
 
     @property
     def crop(self):
