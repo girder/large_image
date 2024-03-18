@@ -538,8 +538,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._axes = {k: i for i, k in enumerate(axes)}
         while len(tile.shape) < len(axes):
             tile = np.expand_dims(tile, axis=0)
-        while len(mask.shape) < len(axes):
-            mask = np.expand_dims(mask, axis=0)
+        if mask is not None:
+            while len(mask.shape) < len(axes):
+                mask = np.expand_dims(mask, axis=0)
 
         new_dims = {
             a: max(
