@@ -3,15 +3,171 @@ import concurrent.futures
 import inspect
 import itertools
 import os
+import sys
+import time
 from pathlib import Path
 
-import algorithms
+try:
+    import algorithms
+except ImportError:
+    from . import algorithms
+import large_image_source_vips
+import large_image_source_zarr
 import numpy as np
 import yaml
 
 import large_image
 
-VARIABLE_LAYERS = ['z', 'c', 't']
+
+class SweepAlgorithm:
+    def __init__(self, algorithm, input_filename, input_params, param_order,
+                 output_filename, max_workers, multiprocessing):
+        self.algorithm = algorithm
+        self.input_filename = input_filename
+        self.output_filename = output_filename
+        self.input_params = input_params
+        self.param_order = param_order
+        self.max_workers = max_workers
+        self.multiprocessing = multiprocessing
+
+        self.combos = list(itertools.product(*[p['range'] for p in input_params.values()]))
+
+    def getOverallSink(self):
+        msg = 'Not implemented'
+        raise Exception(msg)
+
+    def getTileSink(self, sink):
+        msg = 'Not implemented'
+        raise Exception(msg)
+
+    def writeTileSink(self, tilesink, iteration_id):
+        msg = 'Not implemented'
+        raise Exception(msg)
+
+    def writeOverallSink(self, sink):
+        msg = 'Not implemented'
+        raise Exception(msg)
+
+    def collectResult(self, result):
+        msg = 'Not implemented'
+        raise Exception(msg)
+
+    def addTile(self, tilesink, *args, **kwargs):
+        return tilesink.addTile(*args, **kwargs)
+
+    def applyAlgorithm(self, sink, params):
+        source = large_image.open(self.input_filename)
+        param_indices = {
+            param_name: list(values['range']).index(params[index])
+            for index, (param_name, values) in enumerate(self.input_params.items())
+        }
+        iteration_id = [param_indices[param_name] for param_name in self.param_order]
+        tilesink = self.getTileSink(sink)
+        for tile in source.tileIterator(
+            format=large_image.tilesource.TILE_FORMAT_NUMPY,
+            tile_size=dict(width=2048, height=2048),
+        ):
+            altered_data = self.algorithm(tile['tile'], *params)
+            self.addTile(
+                tilesink,
+                altered_data, tile['x'], tile['y'],
+                **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())})
+        return self.writeTileSink(tilesink, iteration_id)
+
+    def run(self):
+        starttime = time.time()
+        sink = self.getOverallSink()
+
+        print(f'Beginning {len(self.combos)} runs on {self.max_workers} workers...')
+        num_done = 0
+        poolExecutor = (
+            concurrent.futures.ProcessPoolExecutor if self.multiprocessing else
+            concurrent.futures.ThreadPoolExecutor)
+        with poolExecutor(max_workers=self.max_workers) as executor:
+            futures = [
+                executor.submit(
+                    self.applyAlgorithm,
+                    sink,
+                    combo,
+                )
+                for combo in self.combos
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                self.collectResult(future.result())
+                num_done += 1
+                sys.stdout.write(f'Completed {num_done} of {len(self.combos)} runs.\r')
+                sys.stdout.flush()
+        print(f'Generation time {time.time() - starttime:5.3f}        ')
+        starttime = time.time()
+        self.writeOverallSink(sink)
+        print(f'Save time {time.time() - starttime:5.3f}')
+
+
+class SweepAlgorithmMulti(SweepAlgorithm):
+    def getOverallSink(self):
+        os.makedirs(self.output_filename, exist_ok=True)
+        algorithm_name = self.algorithm.__name__.replace('_', ' ').title()
+        self.yaml_dict = {
+            'name': f'{algorithm_name} iterative results',
+            'description': f'{algorithm_name} algorithm performed on {self.input_filename}',
+            'axes': [p['axis'] for p in self.param_order.values()],
+            'sources': [],
+            'uniformSources': True,
+        }
+        return True
+
+    def writeOverallSink(self, sink):
+        with open(Path(self.output_filename, 'results.yml'), 'w') as f:
+            yaml.dump(
+                self.yaml_dict,
+                f,
+                default_flow_style=False,
+                sort_keys=False,
+            )
+
+    def writeTileSink(self, tilesink, iteration_id):
+        filename = f'{self.algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.tiff'
+        filepath = Path(self.output_filename, filename)
+
+        desc = dict(
+            path=filename,
+            **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())},
+        )
+        tilesink.write(str(filepath), lossy=False)
+        return desc
+
+    def addTile(self, tilesink, *args, **kwargs):
+        return tilesink.addTile(*args)
+
+    def collectResult(self, result):
+        self.yaml_dict['sources'].append(result)
+
+
+class SweepAlgorithmMultiVips(SweepAlgorithmMulti):
+    def getTileSink(self, sink):
+        return large_image_source_vips.new()
+
+
+class SweepAlgorithmMultiZarr(SweepAlgorithmMulti):
+    def getTileSink(self, sink):
+        return large_image_source_zarr.new()
+
+
+class SweepAlgorithmZarr(SweepAlgorithm):
+    def getOverallSink(self):
+        return large_image_source_zarr.new()
+
+    def writeOverallSink(self, sink):
+        sink.write(self.output_filename, lossy=False)
+
+    def getTileSink(self, sink):
+        return sink
+
+    def writeTileSink(self, tilesink, iteration_id):
+        pass
+
+    def collectResult(self, result):
+        pass
 
 
 def create_argparser():
@@ -27,10 +183,8 @@ def create_argparser():
     )
     argparser.add_argument('input_filename', help='Path to an image to use as input')
     argparser.add_argument(
-        '-o',
-        '--output_dir',
-        required=False,
-        help='Name for a new directory in this location, wherein result images will be stored',
+        'output_filename',
+        help='Name for output file or directory',
     )
     argparser.add_argument(
         '-w',
@@ -41,116 +195,62 @@ def create_argparser():
         help='Number of workers to use for processing algorithm iterations',
     )
     argparser.add_argument(
+        '--multiprocessing',
+        '--process',
+        '--mp',
+        action='store_true',
+        help='Use multiprocessing for workers',
+    )
+    argparser.add_argument(
+        '--threading',
+        '--thread',
+        '--mt',
+        dest='multiprocessing',
+        action='store_false',
+        help='Use threading for workers',
+    )
+    argparser.add_argument(
+        '--sink',
+        required=False,
+        default='zarr',
+        help='Either zarr, multizarr, or multivips',
+    )
+    argparser.add_argument(
         '-p',
         '--param',
         action='append',
         required=False,
-        nargs='*',
-        help='A parameter to pass to the algorithm; '
-             'instead of using the default value, '
-             'Pass every item in the number space, '
-             'specified as `--param=param_name,start,end,num_items[,open]`',
+        help='A parameter to pass to the algorithm; instead of using the '
+             'default value, Pass every item in the number space, specified '
+             'as `--param=param_name,[axis_name,]start,end,num_items[,open]`',
     )
     return argparser
 
 
-def apply_algorithm(algorithm, input_filename, output_dir, params, param_space, param_order):
-    param_indices = {
-        param_name: list(values).index(params[index])
-        for index, (param_name, values) in enumerate(param_space.items())
-    }
-    iteration_id = [param_indices[param_name] for param_name in param_order]
-    filename = f'{algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.tiff'
-    filepath = Path(output_dir, filename)
-
-    desc = dict(
-        path=filename,
-        **{VARIABLE_LAYERS[i]: v for i, v in enumerate(iteration_id)},
-    )
-
-    source = large_image.open(input_filename)
-    new_source = large_image.new()
-    for tile in source.tileIterator(
-        format=large_image.tilesource.TILE_FORMAT_NUMPY,
-        tile_size=dict(width=2048, height=2048),
-    ):
-        altered_data = algorithm(tile['tile'], *params)
-    new_source.addTile(altered_data, tile['x'], tile['y'])
-    new_source.write(str(filepath), lossy=False)
-    return desc
-
-
-def sweep_algorithm(algorithm, input_filename, input_params, param_oder, output_dir, max_workers):
-    algorithm_name = algorithm.__name__.replace('_', ' ').title()
-    yaml_dict = {
-        'name': f'{algorithm_name} iterative results',
-        'description': f'{algorithm_name} algorithm performed on {input_filename}',
-        'sources': [],
-        'uniformSources': True,
-    }
-    param_desc = [
-        f'{VARIABLE_LAYERS[i]} represents change in {n} as an index of {p}'
-        if len(p) > 1 and i < len(VARIABLE_LAYERS)
-        else f'{n} remains unchanged per run with a value of {p[0]}'
-        for i, (n, p) in enumerate(input_params.items())
-    ]
-    if len(param_desc) > 0:
-        yaml_dict['description'] += f', where {", ".join(param_desc)}'
-
-    param_space_combos = list(itertools.product(*input_params.values()))
-    print(f'Beginning {len(param_space_combos)} runs on {max_workers} workers...')
-    num_done = 0
-    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-        # cannot pass source through submitted task; it is unpickleable
-        futures = [
-            executor.submit(
-                apply_algorithm,
-                algorithm,
-                input_filename,
-                output_dir,
-                combo,
-                input_params,
-                param_order,
-            )
-            for combo in param_space_combos
-        ]
-        for future in concurrent.futures.as_completed(futures):
-            num_done += 1
-            print(f'Completed {num_done} of {len(param_space_combos)} runs.')
-            yaml_dict['sources'].append(future.result())
-
-    with open(Path(output_dir, 'results.yml'), 'w') as f:
-        yaml.dump(
-            yaml_dict,
-            f,
-            default_flow_style=False,
-            sort_keys=False,
-        )
-
-
-if __name__ == '__main__':
+def main(argv):
     argparser = create_argparser()
-    args = argparser.parse_args()
+    args = argparser.parse_args(argv[1:])
 
     algorithm_code = args.algorithm_code
     input_filename = args.input_filename
-    output_dir = args.output_dir
-    max_workers = args.num_workers
-    if args.param:
-        input_params = {
-            p[0].split(',')[0]: [i.strip() for i in p[0].split(',')[1:]]
-            for p in args.param
+    input_params = {}
+    defaultAxes = ['z', 'c', 't']
+    axesUsed = set()
+    for p in args.param or []:
+        parts = [i.strip() for i in p.split(',')]
+        rangevals = (parts[1:] if parts[1].isdigit() else parts[2:]) + ['']
+        input_params[parts[0]] = {
+            'param': parts[0],
+            'axis': (
+                (defaultAxes[0] if len(defaultAxes) else parts[0])
+                if parts[1].isdigit() else parts[1]),
+            'range': np.linspace(
+                float(rangevals[0]), float(rangevals[1]),
+                int(rangevals[2]), endpoint=bool(rangevals[3])),
         }
-    else:
-        input_params = {}
-    input_params = {
-        key: np.linspace(
-            float(value[0]), float(value[1]), int(value[2]), endpoint=len(value) > 3,
-        )
-        for key, value in input_params.items()
-        if len(value) >= 3
-    }
-    param_order = list(input_params.keys())
+        axesUsed.add(input_params[parts[0]]['axis'].lower())
+        if input_params[parts[0]]['axis'].lower() in defaultAxes:
+            defaultAxes.remove(input_params[parts[0]]['axis'].lower())
 
     if not Path(input_filename).exists():
         msg = f'Cannot locate file {input_filename}.'
@@ -159,26 +259,29 @@ if __name__ == '__main__':
     algorithm = algorithms.ALGORITHM_CODES[algorithm_code]
     sig = inspect.signature(algorithm)
 
-    if not output_dir:
-        output_dir = f'{algorithm.__name__}_output'
-        i = 0
-        while Path(output_dir).exists():
-            i += 1
-            output_dir = f'{algorithm.__name__}_output_{i}'
-        os.mkdir(output_dir)
-    else:
-        if not Path(output_dir).exists():
-            os.mkdir(output_dir)
-
     params = {
         param.name: (
             input_params[param.name]
             if param.name in input_params
-            else [param.default]
+            else {
+                'param': param.name,
+                'axis': getattr(param, 'axis', param.name),
+                'range': [param.default]}
         )
-        for param in sig.parameters.values()
+        for param in sig.parameters.values() if param.name != 'data'
     }
 
-    del params['data']
-    sweep_algorithm(algorithm, input_filename, params, param_order, output_dir, max_workers)
-    print('Process complete.')
+    # Use args.sink to pick class
+    cls = {
+        'multivips': SweepAlgorithmMultiVips,
+        'zarr': SweepAlgorithmZarr,
+        'multizarr': SweepAlgorithmMultiZarr,
+    }[args.sink]
+
+    sweep = cls(algorithm, input_filename, params, input_params,
+                args.output_filename, args.num_workers, args.multiprocessing)
+    sweep.run()
+
+
+if __name__ == '__main__':
+    main(sys.argv)
