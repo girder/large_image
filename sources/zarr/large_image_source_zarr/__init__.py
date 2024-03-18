@@ -1,3 +1,4 @@
+import itertools
 import math
 import os
 import shutil
@@ -11,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import packaging.version
 import zarr
+from PIL import Image
 
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -18,6 +20,8 @@ from large_image.constants import NEW_IMAGE_PATH_FLAG, TILE_FORMAT_NUMPY, Source
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import _imageToNumpy, nearPowerOfTwo
+
+from .resample import ResampleMethod
 
 try:
     __version__ = _importlib_version(__name__)
@@ -652,12 +656,57 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(msg)
         self._crop = (x, y, w, h)
 
+    def _generateDownsampledLevels(self, resample_method):
+        self._checkEditable()
+        current_arrays = dict(self._zarr.arrays())
+        if 'root' not in current_arrays:
+            msg = 'No root data found, cannot generate lower resolution levels.'
+            raise TileSourceError(msg)
+        if 'x' not in self._axes or 'y' not in self._axes:
+            msg = 'Data must have an X axis and Y axis to generate lower resolution levels.'
+            raise TileSourceError(msg)
+
+        x = self._axes.get('x')
+        y = self._axes.get('y')
+
+        current_data = current_arrays['root']
+        current_shape = list(current_data.shape)
+        for level in range(self.levels):
+            current_shape[x] = int(current_shape[x] / 2)
+            current_shape[y] = int(current_shape[y] / 2)
+            resized_data = np.empty(current_shape)
+
+            if resample_method in [
+                ResampleMethod.PIL_BICUBIC,
+                ResampleMethod.PIL_BILINEAR,
+                ResampleMethod.PIL_BOX,
+                ResampleMethod.PIL_HAMMING,
+                ResampleMethod.PIL_LANCZOS,
+                ResampleMethod.PIL_NEAREST,
+            ]:
+                frame_dims = current_shape[:-3]
+                frame_shape = current_shape[-3:-1]
+                # TODO: for multiband (>4) images, split by band axis as well
+                # TODO: for single band images, use bilinear? explore this!
+                for frame_ind in itertools.product(*[range(f) for f in frame_dims]):
+                    img = Image.fromarray(current_data[(*frame_ind,)])
+                    resized_img = img.resize(frame_shape, resample=resample_method.value)
+                    resized_data[(*frame_ind,)] = np.transpose(np.array(resized_img), (1, 0, 2))
+            else:
+                # TODO: Implement non-PIL resample methods
+                print(resample_method)
+
+            print(current_shape, resized_data.shape)
+            # TODO: rename root dataset to whatever schema works, try variations of level index
+            self._zarr.create_dataset(level + 1, data=resized_data)
+
     def write(
         self,
         path,
         lossy=True,
         alpha=True,
         overwriteAllowed=True,
+        resample=ResampleMethod.PIL_NEAREST,
     ):
         """
         Output the current image to a file.
@@ -677,7 +726,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 raise TileSourceError('Output path exists (%s).' % str(path))
 
-        # TODO: compute half, quarter, etc. resolutions
+        self._generateDownsampledLevels(resample)
         self._validateZarr()
         suffix = Path(path).suffix
         data_dir = self._tempdir
