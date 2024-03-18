@@ -527,6 +527,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         axes = [x.lower() for x in axes]
         if axes[-1] != 's':
             axes.append('s')
+            if mask is not None and len(axes) - 1 == len(mask.shape):
+                mask = mask[:, :, np.newaxis]
         if 'x' not in axes or 'y' not in axes:
             err = 'Invalid value for axes. Must contain "y" and "x".'
             raise ValueError(err)
@@ -536,6 +538,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._axes = {k: i for i, k in enumerate(axes)}
         while len(tile.shape) < len(axes):
             tile = np.expand_dims(tile, axis=0)
+        while len(mask.shape) < len(axes):
+            mask = np.expand_dims(mask, axis=0)
 
         new_dims = {
             a: max(
@@ -544,8 +548,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             )
             for a, i in self._axes.items()
         }
-        if mask is not None and len(mask.shape) + 1 == len(tile.shape):
-            mask = mask[:, :, np.newaxis]
         placement_slices = tuple([
             slice(placement.get(a, 0), placement.get(a, 0) + tile.shape[i], 1)
             for i, a in enumerate(axes)
