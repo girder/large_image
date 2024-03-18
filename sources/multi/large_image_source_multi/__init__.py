@@ -30,7 +30,7 @@ except PackageNotFoundError:
 
 SourceEntrySchema = {
     'type': 'object',
-    'additionalProperties': False,
+    'additionalProperties': True,
     'properties': {
         'name': {'type': 'string'},
         'description': {'type': 'string'},
