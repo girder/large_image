@@ -535,27 +535,26 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for k in placement:
             if k not in axes:
                 axes[0:0] = [k]
-        self._axes = {k: i for i, k in enumerate(axes)}
-        while len(tile.shape) < len(axes):
-            tile = np.expand_dims(tile, axis=0)
-        if mask is not None:
-            while len(mask.shape) < len(axes):
+        with self._addLock:
+            self._axes = {k: i for i, k in enumerate(axes)}
+            while len(tile.shape) < len(axes):
+                tile = np.expand_dims(tile, axis=0)
+            while mask is not None and len(mask.shape) < len(axes):
                 mask = np.expand_dims(mask, axis=0)
 
-        new_dims = {
-            a: max(
-                self._dims.get(a, 0),
-                placement.get(a, 0) + tile.shape[i],
-            )
-            for a, i in self._axes.items()
-        }
-        placement_slices = tuple([
-            slice(placement.get(a, 0), placement.get(a, 0) + tile.shape[i], 1)
-            for i, a in enumerate(axes)
-        ])
+            new_dims = {
+                a: max(
+                    self._dims.get(a, 0),
+                    placement.get(a, 0) + tile.shape[i],
+                )
+                for a, i in self._axes.items()
+            }
+            placement_slices = tuple([
+                slice(placement.get(a, 0), placement.get(a, 0) + tile.shape[i], 1)
+                for i, a in enumerate(axes)
+            ])
 
-        current_arrays = dict(self._zarr.arrays())
-        with self._addLock:
+            current_arrays = dict(self._zarr.arrays())
             chunking = None
             if 'root' not in current_arrays:
                 root = np.empty(tuple(new_dims.values()))
