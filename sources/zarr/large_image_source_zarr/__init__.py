@@ -334,6 +334,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 baseArray.shape[self._axes.get('c')] in {1, 3, 4}):
             self._bandCount = baseArray.shape[self._axes['c']]
             self._axes['s'] = self._axes.pop('c')
+        elif 's' in self._axes:
+            self._bandCount = baseArray.shape[self._axes['s']]
         self._zarrFindLevels()
         self._getScale()
         stride = 1
