@@ -121,6 +121,8 @@ def testImageCopySmall(file_type, tmp_path):
 def testImageCopySmallMultiband(file_type, tmp_path):
     output_file = tmp_path / f'test.{file_type}'
     sink = large_image_source_zarr.new()
+    bands = 'red=400-12000,green=0-65535,blue=800-4000'
+    bands += ',ir1=200-24000,ir2=200-22000,gray=100-10000,other=0-65535'
     source = large_image_source_test.TestTileSource(
         fractal=True,
         tileWidth=128,
@@ -128,7 +130,7 @@ def testImageCopySmallMultiband(file_type, tmp_path):
         sizeX=512,
         sizeY=1024,
         frames='c=2,z=3',
-        bands='red=400-12000,green=0-65535,blue=800-4000,ir1=200-24000,ir2=200-22000,gray=100-10000,other=0-65535',
+        bands=bands,
     )
     copyFromSource(source, sink)
 
