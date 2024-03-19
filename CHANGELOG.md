@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 - Fix an issue with single band on multi source with non uniform sources ([#1474](../../pull/1474))
+- Allow alternate name axes in the multi source schema ([#1476](../../pull/1476))
 
 ## 1.27.4
 

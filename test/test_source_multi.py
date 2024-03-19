@@ -127,10 +127,12 @@ def testTilesFromMultiString():
 
 
 def testTilesFromNonschemaMultiString():
-    sourceString = json.dumps({'sources': [{
-        'sourceName': 'test', 'path': '__none__',
+    sourceString = json.dumps({
+        'sources': [{
+            'sourceName': 'test', 'path': '__none__',
+            'params': {'sizeX': 10000, 'sizeY': 10000}}],
         'notAKnownKey': 'X',
-        'params': {'sizeX': 10000, 'sizeY': 10000}}]})
+    })
     with pytest.raises(large_image.exceptions.TileSourceError):
         large_image_source_multi.open(sourceString)
 
