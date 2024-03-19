@@ -383,6 +383,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: metadata dictionary.
         """
+        if self._levels is None:
+            self._validateZarr()
         result = super().getMetadata()
         if self._framecount > 1:
             result['frames'] = frames = []
