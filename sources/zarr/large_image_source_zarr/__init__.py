@@ -557,7 +557,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             current_arrays = dict(self._zarr.arrays())
             chunking = None
             if 'root' not in current_arrays:
-                root = np.empty(tuple(new_dims.values()))
+                root = np.empty(tuple(new_dims.values()), dtype=tile.dtype)
                 chunking = tuple([
                     self._tileSize if a in ['x', 'y'] else
                     new_dims.get('s') if a == 's' else 1
