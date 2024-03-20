@@ -53,7 +53,7 @@ def testIsVips():
     ({'compression': 'lzw'}, {
         tifftools.Tag.Compression.value: tifftools.constants.Compression.LZW.value,
     }),
-    ({'compression': 'packbits'}, {
+    ({'compression': 'packbits', 'predictor': 'yes'}, {
         tifftools.Tag.Compression.value: tifftools.constants.Compression.Packbits.value,
     }),
     ({'compression': 'zstd'}, {
