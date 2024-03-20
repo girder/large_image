@@ -112,6 +112,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._framecount = 0
         self._mm_x = 0
         self._mm_y = 0
+        self._levels = []
 
     def __del__(self):
         if not hasattr(self, '_derivedSource'):

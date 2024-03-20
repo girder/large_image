@@ -32,6 +32,12 @@ def copyFromSource(source, sink):
             sink.addTile(t, x=x, y=y, **kwargs)
 
 
+def testNew():
+    sink = large_image_source_zarr.new()
+    assert sink.metadata['levels'] == 0
+    assert sink.getRegion(format='numpy')[0].shape[:2] == (0, 0)
+
+
 def testBasicAddTile():
     sink = large_image_source_zarr.new()
     sink.addTile(np.random.random((10, 10)), 0, 0)
