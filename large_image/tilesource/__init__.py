@@ -3,7 +3,7 @@ import re
 import uuid
 from importlib.metadata import entry_points
 from pathlib import PosixPath
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Type, Union, cast
 
 from .. import config
 from ..constants import NEW_IMAGE_PATH_FLAG, SourcePriority
@@ -86,11 +86,14 @@ def getSortedSourceList(
     properties = {
         '_geospatial_source': isGeospatial(pathOrUri),
     }
+    isNew = str(pathOrUri).startswith(NEW_IMAGE_PATH_FLAG)
     sourceList = []
     for sourceName in availableSources:
         sourceExtensions = availableSources[sourceName].extensions
         priority = sourceExtensions.get(None, SourcePriority.MANUAL)
         fallback = True
+        if isNew and getattr(availableSources[sourceName], 'newPriority', None) is not None:
+            priority = min(priority, cast(SourcePriority, availableSources[sourceName].newPriority))
         if (mimeType and getattr(availableSources[sourceName], 'mimeTypes', None) and
                 mimeType in availableSources[sourceName].mimeTypes):
             fallback = False
@@ -130,7 +133,8 @@ def getSourceNameFromDict(
         there is no such source.
     """
     sourceList = getSortedSourceList(availableSources, pathOrUri, mimeType, *args, **kwargs)
-    for _clash, _fallback, _priority, sourceName in sorted(sourceList):
+    for entry in sorted(sourceList):
+        sourceName = entry[-1]
         if availableSources[sourceName].canRead(pathOrUri, *args, **kwargs):
             return sourceName
     return None
@@ -217,7 +221,8 @@ def canReadList(
     sourceList = getSortedSourceList(
         AvailableTileSources, pathOrUri, mimeType, *args, **kwargs)
     result = []
-    for _clash, _fallback, _priority, sourceName in sorted(sourceList):
+    for entry in sorted(sourceList):
+        sourceName = entry[-1]
         result.append((sourceName, AvailableTileSources[sourceName].canRead(
             pathOrUri, *args, **kwargs)))
     return result

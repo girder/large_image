@@ -50,6 +50,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     mimeTypes = {
         None: SourcePriority.FALLBACK,
     }
+    newPriority = SourcePriority.MEDIUM
 
     _tileSize = 256
 
