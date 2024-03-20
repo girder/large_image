@@ -51,6 +51,20 @@ def testBasicAddTile():
     assert metadata.get('dtype') == 'float64'
 
 
+def testAddTileWithMask():
+    sink = large_image_source_zarr.new()
+    tile0 = np.random.random((10, 10))
+    sink.addTile(tile0, 0, 0)
+    orig = sink.getRegion(format='numpy')[0]
+    tile1 = np.random.random((10, 10))
+    sink.addTile(tile1, 0, 0, mask=np.random.random((10, 10)) > 0.5)
+    cur = sink.getRegion(format='numpy')[0]
+    assert (tile0 == orig[:, :, 0]).all()
+    assert not (tile1 == orig[:, :, 0]).all()
+    assert not (tile0 == cur[:, :, 0]).all()
+    assert not (tile1 == cur[:, :, 0]).all()
+
+
 def testExtraAxis():
     sink = large_image_source_zarr.new()
     sink.addTile(np.random.random((256, 256)), 0, 0, z=1)

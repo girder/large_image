@@ -379,6 +379,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'mm_y': mm_y,
         }
 
+    def getState(self):
+        # Use the _cacheValue to avoid caching the source and tiles if we are
+        # creating something new.
+        if not hasattr(self, '_cacheValue'):
+            return super().getState()
+        return super().getState() + ',%s' % (self._cacheValue, )
+
     def getMetadata(self):
         """
         Return a dictionary of metadata containing levels, sizeX, sizeY,
@@ -610,6 +617,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 for axis, length in new_dims.items()
                 if axis in axes[:-3]
             ])
+            self._cacheValue = str(uuid.uuid4())
             self._levels = None
             self.levels = int(max(1, math.ceil(math.log(max(
                 self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
