@@ -2,6 +2,9 @@
 
 ## 1.27.5
 
+### Improvements
+- Add a dependency to the zarr source to read more compression types ([#1480](../../pull/1480))
+
 ### Bug Fixes
 - Fix an issue with single band on multi source with non uniform sources ([#1474](../../pull/1474))
 - Allow alternate name axes in the multi source schema ([#1476](../../pull/1476))

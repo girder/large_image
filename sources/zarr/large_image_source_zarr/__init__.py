@@ -34,6 +34,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'zarr': SourcePriority.PREFERRED,
         'zgroup': SourcePriority.PREFERRED,
         'zattrs': SourcePriority.PREFERRED,
+        'zarray': SourcePriority.PREFERRED,
         'db': SourcePriority.MEDIUM,
     }
 
