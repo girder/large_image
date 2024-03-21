@@ -1,6 +1,4 @@
 import os
-import shutil
-import tempfile
 
 import large_image_source_vips
 import numpy as np
@@ -37,7 +35,7 @@ def testInternalMetadata():
     assert 'vips-loader' in metadata
 
 
-def testNewAndWrite():
+def testNewAndWrite(tmp_path):
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
     out = large_image_source_vips.new()
@@ -55,19 +53,15 @@ def testNewAndWrite():
     out.mm_y = source.getNativeMagnification()['mm_y']
     assert out.mm_x == 0.00025
     assert out.mm_y == 0.00025
-    tmpdir = tempfile.mkdtemp()
-    outputPath = os.path.join(tmpdir, 'temp.tiff')
-    try:
-        out.write(outputPath)
-        assert os.path.getsize(outputPath) > 50000
-        result = large_image.open(outputPath)
-        resultMetadata = result.getMetadata()
-        assert resultMetadata['sizeX'] == 4000
-    finally:
-        shutil.rmtree(tmpdir)
+    outputPath = os.path.join(tmp_path, 'temp.tiff')
+    out.write(outputPath)
+    assert os.path.getsize(outputPath) > 50000
+    result = large_image.open(outputPath)
+    resultMetadata = result.getMetadata()
+    assert resultMetadata['sizeX'] == 4000
 
 
-def testNewAndWriteLossless():
+def testNewAndWriteLossless(tmp_path):
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
     out = large_image_source_vips.new()
@@ -77,19 +71,15 @@ def testNewAndWriteLossless():
     ):
         out.addTile(tile['tile'], x=tile['x'], y=tile['y'])
 
-    tmpdir = tempfile.mkdtemp()
-    outputPath = os.path.join(tmpdir, 'temp.tiff')
-    try:
-        out.write(outputPath, lossy=False)
-        assert os.path.getsize(outputPath) > 50000
-        result = large_image.open(outputPath)
-        resultMetadata = result.getMetadata()
-        assert resultMetadata['sizeX'] == 4000
-    finally:
-        shutil.rmtree(tmpdir)
+    outputPath = os.path.join(tmp_path, 'temp.tiff')
+    out.write(outputPath, lossy=False)
+    assert os.path.getsize(outputPath) > 50000
+    result = large_image.open(outputPath)
+    resultMetadata = result.getMetadata()
+    assert resultMetadata['sizeX'] == 4000
 
 
-def testNewAndWriteCrop():
+def testNewAndWriteCrop(tmp_path):
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
     out = large_image_source_vips.new()
@@ -107,19 +97,15 @@ def testNewAndWriteCrop():
     ):
         out.addTile(tile['tile'], x=tile['x'], y=tile['y'])
 
-    tmpdir = tempfile.mkdtemp()
-    outputPath = os.path.join(tmpdir, 'temp.tiff')
-    try:
-        out.write(outputPath)
-        result = large_image.open(outputPath)
-        resultMetadata = result.getMetadata()
-        assert resultMetadata['sizeX'] == 2000
-        assert resultMetadata['sizeY'] == 1990
-    finally:
-        shutil.rmtree(tmpdir)
+    outputPath = os.path.join(tmp_path, 'temp.tiff')
+    out.write(outputPath)
+    result = large_image.open(outputPath)
+    resultMetadata = result.getMetadata()
+    assert resultMetadata['sizeX'] == 2000
+    assert resultMetadata['sizeY'] == 1990
 
 
-def testNewAndWriteMinSize():
+def testNewAndWriteMinSize(tmp_path):
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
     out = large_image_source_vips.new()
@@ -145,28 +131,24 @@ def testNewAndWriteMinSize():
     ):
         out.addTile(tile['tile'], x=tile['x'], y=tile['y'])
 
-    tmpdir = tempfile.mkdtemp()
-    outputPath = os.path.join(tmpdir, 'temp.tiff')
-    try:
-        out.write(outputPath)
-        result = large_image.open(outputPath)
-        resultMetadata = result.getMetadata()
-        assert resultMetadata['sizeX'] == 4030
-        assert resultMetadata['sizeY'] == 2030
+    outputPath = os.path.join(tmp_path, 'temp.tiff')
+    out.write(outputPath)
+    result = large_image.open(outputPath)
+    resultMetadata = result.getMetadata()
+    assert resultMetadata['sizeX'] == 4030
+    assert resultMetadata['sizeY'] == 2030
 
-        outputPath2 = os.path.join(tmpdir, 'temp2.tiff')
-        out.minWidth = 2000
-        out.minHeight = 1000
-        out.write(outputPath2)
-        result = large_image.open(outputPath2)
-        resultMetadata = result.getMetadata()
-        assert resultMetadata['sizeX'] == 4000
-        assert resultMetadata['sizeY'] == 2000
-    finally:
-        shutil.rmtree(tmpdir)
+    outputPath2 = os.path.join(tmp_path, 'temp2.tiff')
+    out.minWidth = 2000
+    out.minHeight = 1000
+    out.write(outputPath2)
+    result = large_image.open(outputPath2)
+    resultMetadata = result.getMetadata()
+    assert resultMetadata['sizeX'] == 4000
+    assert resultMetadata['sizeY'] == 2000
 
 
-def testNewAndWriteJPEG():
+def testNewAndWriteJPEG(tmp_path):
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
     # Update this if it doesn't direct to vips source
@@ -176,18 +158,14 @@ def testNewAndWriteJPEG():
         region=dict(right=4000, bottom=2000),
     ):
         out.addTile(tile['tile'], x=tile['x'], y=tile['y'])
-    tmpdir = tempfile.mkdtemp()
-    outputPath = os.path.join(tmpdir, 'temp.jpeg')
-    try:
-        out.write(outputPath, vips_kwargs=dict(Q=80))
-        assert os.path.getsize(outputPath) > 50000
-        image = open(outputPath, 'rb').read()
-        assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
-    finally:
-        shutil.rmtree(tmpdir)
+    outputPath = os.path.join(tmp_path, 'temp.jpeg')
+    out.write(outputPath, vips_kwargs=dict(Q=80))
+    assert os.path.getsize(outputPath) > 50000
+    image = open(outputPath, 'rb').read()
+    assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
 
 
-def testNewAndWriteWithMask():
+def testNewAndWriteWithMask(tmp_path):
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
     out = large_image_source_vips.new()
@@ -201,40 +179,35 @@ def testNewAndWriteWithMask():
             mask = None
         out.addTile(tile['tile'], x=tile['x'], y=tile['y'], mask=mask)
 
-    tmpdir = tempfile.mkdtemp()
-    outputPath = os.path.join(tmpdir, 'temp.tiff')
-    try:
-        out.write(outputPath, lossy=False)
-        assert os.path.getsize(outputPath) > 50000
-        result = large_image.open(outputPath)
-        resultMetadata = result.getMetadata()
-        assert resultMetadata['sizeX'] == 4000
-    finally:
-        shutil.rmtree(tmpdir)
+    outputPath = os.path.join(tmp_path, 'temp.tiff')
+    out.write(outputPath, lossy=False)
+    assert os.path.getsize(outputPath) > 50000
+    result = large_image.open(outputPath)
+    resultMetadata = result.getMetadata()
+    assert resultMetadata['sizeX'] == 4000
 
 
-def testNewAndWriteNegative():
+def testNewAndWriteNegative(tmp_path):
     out = large_image_source_vips.new()
     out.addTile(np.full((4, 4, 3), 1, dtype=np.uint8), x=0, y=0)
     out.addTile(np.full((5, 4, 3), 2, dtype=np.uint8), x=-2, y=1)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        outputPath = os.path.join(tmpdir, 'temp.tiff')
-        out.write(outputPath, lossy=False)
-        region = out.getRegion(format=large_image.constants.TILE_FORMAT_NUMPY)[0]
-        assert (region[:, :, 0] == np.array([
-            [0, 0, 1, 1, 1, 1],
-            [2, 2, 2, 2, 1, 1],
-            [2, 2, 2, 2, 1, 1],
-            [2, 2, 2, 2, 1, 1],
-            [2, 2, 2, 2, 0, 0],
-            [2, 2, 2, 2, 0, 0]])).all()
+    outputPath = os.path.join(tmp_path, 'temp.tiff')
+    out.write(outputPath, lossy=False)
+    region = out.getRegion(format=large_image.constants.TILE_FORMAT_NUMPY)[0]
+    assert (region[:, :, 0] == np.array([
+        [0, 0, 1, 1, 1, 1],
+        [2, 2, 2, 2, 1, 1],
+        [2, 2, 2, 2, 1, 1],
+        [2, 2, 2, 2, 1, 1],
+        [2, 2, 2, 2, 0, 0],
+        [2, 2, 2, 2, 0, 0]])).all()
 
-        ts = large_image.open(outputPath)
-        region = ts.getRegion(format=large_image.constants.TILE_FORMAT_NUMPY)[0]
-        assert (region[:, :, 0] == np.array([
-            [0, 0, 1, 1, 1, 1],
-            [2, 2, 2, 2, 1, 1],
-            [2, 2, 2, 2, 1, 1],
-            [2, 2, 2, 2, 1, 1],
-            [2, 2, 2, 2, 0, 0],
-            [2, 2, 2, 2, 0, 0]])).all()
+    ts = large_image.open(outputPath)
+    region = ts.getRegion(format=large_image.constants.TILE_FORMAT_NUMPY)[0]
+    assert (region[:, :, 0] == np.array([
+        [0, 0, 1, 1, 1, 1],
+        [2, 2, 2, 2, 1, 1],
+        [2, 2, 2, 2, 1, 1],
+        [2, 2, 2, 2, 1, 1],
+        [2, 2, 2, 2, 0, 0],
+        [2, 2, 2, 2, 0, 0]])).all()

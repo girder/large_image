@@ -1,7 +1,5 @@
 import os
-import pathlib
 import subprocess
-import tempfile
 
 import pytest
 
@@ -90,17 +88,16 @@ def test_sum_squares_import():
     # ('zarr', 'sample.zip', 'sample.zip'),
     # ('multizarr', 'sample', 'sample/results.yml'),
 ])
-def test_algorithm_progression(sink, outname, openpath):
+def test_algorithm_progression(sink, outname, openpath, tmp_path):
     import large_image
     from examples.algorithm_progression import main
 
     imagePath = datastore.fetch('sample_Easy1.png')
-    with tempfile.TemporaryDirectory() as tmpdir:
-        outpath = str(pathlib.Path(tmpdir) / outname)
-        main(['', 'ppc',
-              '--param=hue_value,hue,0,1,5,open',
-              '--param=hue_width,width,0.10,0.25,2',
-              '-w', '4', '--threading', '--sink', sink,
-              imagePath, outpath])
-        source = large_image.open(pathlib.Path(tmpdir) / openpath)
-        assert source.frames == 10
+    outpath = str(tmp_path / outname)
+    main(['', 'ppc',
+          '--param=hue_value,hue,0,1,5,open',
+          '--param=hue_width,width,0.10,0.25,2',
+          '-w', '4', '--threading', '--sink', sink,
+          imagePath, outpath])
+    source = large_image.open(tmp_path / openpath)
+    assert source.frames == 10
