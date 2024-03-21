@@ -420,8 +420,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         result = {}
         result['zarr'] = {
             'base': self._zarr.attrs.asdict(),
-            'main': self._series[0][0].attrs.asdict(),
         }
+        try:
+            result['zarr']['main'] = self._series[0][0].attrs.asdict()
+        except Exception:
+            pass
         return result
 
     def getAssociatedImagesList(self):
