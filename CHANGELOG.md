@@ -2,7 +2,11 @@
 
 ## 1.27.5
 
+### Features
+- Zarr tile sink ([#1446](../../pull/1446))
+
 ### Improvements
+- Prioritize tile sinks ([#1478](../../pull/1478))
 - Add a dependency to the zarr source to read more compression types ([#1480](../../pull/1480))
 
 ### Bug Fixes

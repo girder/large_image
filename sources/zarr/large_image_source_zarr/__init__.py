@@ -41,6 +41,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'zarray': SourcePriority.PREFERRED,
         'db': SourcePriority.MEDIUM,
     }
+    newPriority = SourcePriority.HIGH
 
     _tileSize = 512
     _minTileSize = 128

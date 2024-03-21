@@ -151,8 +151,7 @@ def testNewAndWriteMinSize(tmp_path):
 def testNewAndWriteJPEG(tmp_path):
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
-    # Update this if it doesn't direct to vips source
-    out = large_image.new()
+    out = large_image_source_vips.new()
     for tile in source.tileIterator(
         format=large_image.constants.TILE_FORMAT_NUMPY,
         region=dict(right=4000, bottom=2000),

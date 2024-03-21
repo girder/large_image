@@ -57,6 +57,10 @@ class TileSource(IPyLeafletMixin):
     nameMatches: Dict[str, SourcePriority] = {
     }
 
+    # If a source supports creating new tiled images, specify its basic
+    # priority based on expected feature set
+    newPriority: Optional[SourcePriority] = None
+
     # When getting tiles for otherwise empty levels (missing powers of two), we
     # composite the tile from higher resolution levels.  This can use excessive
     # memory if there are too many missing levels.  For instance, if there are
