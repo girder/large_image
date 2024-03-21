@@ -85,8 +85,8 @@ def test_sum_squares_import():
 
 @pytest.mark.parametrize(('sink', 'outname', 'openpath'), [
     ('multivips', 'sample', 'sample/results.yml'),
-    # ('zarr', 'sample.zip', 'sample.zip'),
-    # ('multizarr', 'sample', 'sample/results.yml'),
+    ('zarr', 'sample.zip', 'sample.zip'),
+    ('multizarr', 'sample', 'sample/results.yml'),
 ])
 def test_algorithm_progression(sink, outname, openpath, tmp_path):
     import large_image
