@@ -819,3 +819,9 @@ def testStyleRepeatedFrame():
     assert ts4.getTile(0, 0, 0) == tile1
     assert ts5.getTile(0, 0, 0) == tile1
     assert ts6.getTile(0, 0, 0) == tile1
+
+
+def testKnownExtensionList():
+    assert len(large_image.tilesource.listSources()['extensions']) > 100
+    assert len(large_image.listExtensions()) > 100
+    assert len(large_image.listMimeTypes()) > 10

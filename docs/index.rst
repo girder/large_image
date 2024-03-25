@@ -14,6 +14,7 @@
    example_usage
    config_options
    image_conversion
+   formats
    upgrade
    _build/large_image/modules
    _build/large_image_source_bioformats/modules

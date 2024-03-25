@@ -45,7 +45,8 @@ from importlib.metadata import version as _importlib_version
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, TileOutputMimeTypes)
+                                   TILE_FORMAT_PIL, SourcePriority,
+                                   TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
@@ -90,6 +91,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             specify unitsPerPixel.
         """
         super().__init__(path, **kwargs)
+        self.addKnownExtensions()
         self._bounds = {}
         self._largeImagePath = self._getLargeImagePath()
         try:
@@ -952,6 +954,25 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             if ds.GetDriver().ShortName in {'NITF', 'netCDF'}:
                 return True
         return False
+
+    @classmethod
+    def addKnownExtensions(cls):
+        if not hasattr(cls, '_addedExtensions'):
+            cls._addedExtensions = True
+            cls.extensions = cls.extensions.copy()
+            cls.mimeTypes = cls.mimeTypes.copy()
+            for idx in range(gdal.GetDriverCount()):
+                drv = gdal.GetDriver(idx)
+                if drv.GetMetadataItem(gdal.DCAP_RASTER):
+                    drvexts = drv.GetMetadataItem(gdal.DMD_EXTENSIONS)
+                    if drvexts is not None:
+                        for ext in drvexts.split():
+                            if ext.lower() not in cls.extensions:
+                                cls.extensions[ext.lower()] = SourcePriority.IMPLICIT
+                    drvmimes = drv.GetMetadataItem(gdal.DMD_MIMETYPE)
+                    if drvmimes is not None:
+                        if drvmimes not in cls.mimeTypes:
+                            cls.mimeTypes[drvmimes] = SourcePriority.IMPLICIT
 
 
 def open(*args, **kwargs):

@@ -109,6 +109,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._largeImagePath = str(self._getLargeImagePath())
 
         _lazyImport()
+        self.addKnownExtensions()
         try:
             self._tf = tifffile.TiffFile(self._largeImagePath)
         except Exception:
@@ -557,6 +558,16 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     tile, [baxis.index(a) for a in 'YXS' if a in baxis], range(len(baxis)))
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
+
+    @classmethod
+    def addKnownExtensions(cls):
+        if not hasattr(cls, '_addedExtensions'):
+            _lazyImport()
+            cls._addedExtensions = True
+            cls.extensions = cls.extensions.copy()
+            for ext in tifffile.TIFF.FILE_EXTENSIONS:
+                if ext not in cls.extensions:
+                    cls.extensions[ext] = SourcePriority.IMPLICIT
 
 
 def open(*args, **kwargs):
