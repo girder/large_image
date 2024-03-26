@@ -1,0 +1,15 @@
+.indextable.genindextable td {
+  padding-right: 10px
+}
+.indextable.genindextable li {
+  word-break: break-word;
+}
+.indextable.genindextable a:before {
+  content: "\2022\00A0";
+}
+.wy-nav-content {
+  max-width: 1000px;
+}
+html.writer-html5 .rst-content dl.field-list dl.field-list {
+    grid-template-columns: auto minmax(60%,95%);
+}

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caching in Large Image &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=5e6b5e6b" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="https://unpkg.com/mermaid@10.6.0/dist/mermaid.min.js"></script>
+        <script>mermaid.initialize({startOnLoad:true});</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Jupyter Notebook Examples" href="notebooks.html" />
+    <link rel="prev" title="Annotation Schema" href="annotations.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_usage.html">Example Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config_options.html">Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formats.html">Image Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Previous Versions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image/modules.html">large_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_bioformats/modules.html">large_image_source_bioformats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_deepzoom/modules.html">large_image_source_deepzoom</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_dicom/modules.html">large_image_source_dicom</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_dummy/modules.html">large_image_source_dummy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_gdal/modules.html">large_image_source_gdal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_mapnik/modules.html">large_image_source_mapnik</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_multi/modules.html">large_image_source_multi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_nd2/modules.html">large_image_source_nd2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_ometiff/modules.html">large_image_source_ometiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_openjpeg/modules.html">large_image_source_openjpeg</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_openslide/modules.html">large_image_source_openslide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_pil/modules.html">large_image_source_pil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_rasterio/modules.html">large_image_source_rasterio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_test/modules.html">large_image_source_test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_tiff/modules.html">large_image_source_tiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_tifffile/modules.html">large_image_source_tifffile</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_vips/modules.html">large_image_source_vips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_zarr/modules.html">large_image_source_zarr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_converter/modules.html">large_image_converter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_tasks/modules.html">large_image_tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/girder_large_image/modules.html">girder_large_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="girder_config_options.html">Girder Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/girder_large_image_annotation/modules.html">girder_large_image_annotation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="girder_annotation_config_options.html">Girder Annotation Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Caching in Large Image</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#caching-in-large-image-in-girder">Caching in Large Image in Girder</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">Jupyter Notebook Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Caching in Large Image</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/caching.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="caching-in-large-image">
+<h1>Caching in Large Image<a class="headerlink" href="#caching-in-large-image" title="Link to this heading">¶</a></h1>
+<p>There are two main caches in large_image in addition to caching done on the operating system level.  These are:</p>
+<ul class="simple">
+<li><p>Tile Cache: The tile cache stores individual images and/or numpy arrays for each tile processed.</p>
+<ul>
+<li><p>May be stored in the python process memory or memcached.  Other cache backends can also be added.</p></li>
+<li><p>The cache key is a hash that includes the tile source, tile location within the source, format and compression, and style.</p></li>
+<li><p>If memcached is used, cached tiles can be shared across multiple processes.</p></li>
+<li><p>Tiles are often bigger than what memcached was optimized for, so memcached needs to be set to allow larger values.</p></li>
+<li><p>Cached tiles can include original as-read data as well as styled or transformed data.  Tiles can be synthesized for sources that are missing specific resolutions; these are also cached.</p></li>
+<li><p>If using memcached, memcached determines how much memory is used (and what machine it is stored on).  If using the python process, memory is limited to a fraction of total memory as reported by psutils.</p></li>
+</ul>
+</li>
+<li><p>Tile Source Cache: The source cache stores file handles, parsed metadata, and other values to optimize reading a specific large image.</p>
+<ul>
+<li><p>Always stored in the python process memory (not shared between processes).</p></li>
+<li><p>Memory use is wildly different depending on tile source; an estimate is based on sample files and then the maximum number of sources that should be tiled is based on a frame of total memory as reported by psutils and this estimate.</p></li>
+<li><p>The cache key includes the tile source, default tile format, and style.</p></li>
+<li><p>File handles and other metadata are shared if sources only differ in style (for example if ICC color correction is applied in one and not in another).</p></li>
+<li><p>Because file handles are shared across sources that only differ in style, if a source implements a custom <code class="docutils literal notranslate"><span class="pre">__del__</span></code> operator, it needs to check if it is the unstyled source.</p></li>
+</ul>
+</li>
+</ul>
+<section id="caching-in-large-image-in-girder">
+<h2>Caching in Large Image in Girder<a class="headerlink" href="#caching-in-large-image-in-girder" title="Link to this heading">¶</a></h2>
+<p>Tile sources are opened: when large image files uploaded or imported; when large image files are viewed; when thumbnails are generated; when an item page with a large image is viewd; and from some API calls.  All of these result in the source being placed in the cache _except_ import.</p>
+<p>Since there are multiple users, the cache size should be large enough that no user has an image that they are actively viewing fall out of cache.</p>
+<p>Example of cache use when the <code class="docutils literal notranslate"><span class="pre">GET</span></code> <code class="docutils literal notranslate"><span class="pre">/item/{id}/tile/zxy/{z}/{x}/{y}?style=&lt;style&gt;&amp;encoding=&lt;encoding&gt;&amp;...</span></code> endpoint is called:</p>
+<div class="mermaid">
+            graph TD;
+  apicall([&quot;GET /item/{id}/tile/zxy/{z}/{x}/{y}?style=&amp;lt;style&amp;gt;&amp;amp;encoding=&amp;lt;encoding&amp;gt;&amp;amp;...&quot;])
+  checktile1{Is tile in\ntile cache?}
+  apicall --&gt; checktile1;
+  getfile[(&quot;Get file-like object\nor url from Girder&quot;)]
+  checktile1 -- No --&gt; getfile;
+  servetile([&quot;Serve tile 🖼️&quot;])
+  checktile1 -- Yes --&gt; servetile;
+  checksource{&quot;Is file-like object\nin source cache\nwith {style}\nand {encoding}?&quot;}
+  getfile --&gt; checksource;
+  checkunstyled{&quot;Is unstyled file\nin source cache\nwith {encoding}?&quot;}
+  checksource -- No --&gt; checkunstyled;
+  openunstyle[&quot;Open unstyled file with {encoding}&quot;]
+  checkunstyled -- No --&gt; openunstyle;
+  putunstyledsource[/&quot;Put unstyled source in cache&quot;/]
+  openunstyle --&gt; putunstyledsource;
+  alter[&quot;Copy unstyled source\nand alter for {style}&quot;]
+  putunstyledsource --&gt; alter;
+  checkunstyled -- Yes --&gt; alter;
+  putsource[/&quot;Put styled source in cache&quot;/]
+  alter --&gt; putsource;
+  checktile2{&quot;Is unstyled tile\n{x}, {y}, {z},\n{frame}, {encoding}\nin tile cache?&quot;}
+  putsource --&gt; checktile2;
+  checksource -- Yes --&gt; checktile2;
+  checktile3{&quot;Does tile exist\nin the file?&quot;}
+  checktile2 -- No --&gt; checktile3;
+  maketile[[&quot;Synthesize tile\nfrom higher\nresolution tiles&quot;]]
+  checktile3 -- No --&gt; maketile;
+  readfile[(&quot;Read tile from file&quot;)]
+  checktile3 -- Yes --&gt; readfile;
+  puttile1[/&quot;Put unstyled\ntile in cache&quot;/]
+  maketile --&gt; puttile1;
+  readfile --&gt; puttile1;
+  gettile[\&quot;Read unstyled tile\nfrom cache&quot;\]
+  checktile2 -- Yes --&gt; gettile;
+  needstyle{&quot;Is {style}\nrequired?&quot;}
+  puttile1 --&gt; needstyle;
+  gettile --&gt; needstyle;
+  checkencoding{&quot;Is tile\nin {encoding}?&quot;}
+  needstyle -- No --&gt; checkencoding;
+  isnumpy{&quot;Is unstyled\ntile a\nnumpy array?&quot;}
+  needstyle -- Yes --&gt; isnumpy;
+  makenumpy[&quot;Convert tile to numpy&quot;]
+  isnumpy -- No --&gt; makenumpy;
+  makestyle[&quot;Generate styled tile in numpy format\n(Note that this could fetch other tiles)&quot;]
+  isnumpy -- Yes --&gt; makestyle;
+  makenumpy --&gt; makestyle;
+  makestyle --&gt; checkencoding;
+  encode[&quot;Encode tile to {encoding}&quot;]
+  checkencoding -- No --&gt; encode;
+  puttile2[/&quot;Put encoded tile\nin cache&quot;/]
+  encode --&gt; puttile2;
+  checkencoding -- Yes --&gt; puttile2;
+  puttile2 --&gt; servetile;
+        </div></section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="annotations.html" class="btn btn-neutral float-left" title="Annotation Schema" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="notebooks.html" class="btn btn-neutral float-right" title="Jupyter Notebook Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
