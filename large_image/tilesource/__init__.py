@@ -1,9 +1,10 @@
 import os
 import re
+import sys
 import uuid
 from importlib.metadata import entry_points
 from pathlib import PosixPath
-from typing import Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 from .. import config
 from ..constants import NEW_IMAGE_PATH_FLAG, SourcePriority
@@ -96,16 +97,16 @@ def getSortedSourceList(
             priority = min(priority, cast(SourcePriority, availableSources[sourceName].newPriority))
         if (mimeType and getattr(availableSources[sourceName], 'mimeTypes', None) and
                 mimeType in availableSources[sourceName].mimeTypes):
-            fallback = False
             priority = min(priority, availableSources[sourceName].mimeTypes[mimeType])
+            fallback = False
         for regex in getattr(availableSources[sourceName], 'nameMatches', {}):
             if re.match(regex, baseName):
-                fallback = False
                 priority = min(priority, availableSources[sourceName].nameMatches[regex])
+                fallback = False
         for ext in extensions:
             if ext in sourceExtensions:
-                fallback = False
                 priority = min(priority, sourceExtensions[ext])
+                fallback = False
         if isLargeImageUri and sourceName == uriWithoutProtocol:
             priority = SourcePriority.NAMED
         if priority >= SourcePriority.MANUAL:
@@ -237,6 +238,75 @@ def new(*args, **kwargs) -> TileSource:
     return getTileSource(NEW_IMAGE_PATH_FLAG + str(uuid.uuid4()), *args, **kwargs)
 
 
+def listSources(
+    availableSources: Optional[Dict[str, Type[FileTileSource]]] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Get a dictionary with all sources, all known extensions, and all known
+    mimetypes.
+
+    :param availableSources: an ordered dictionary of sources to try.
+    :returns: a dictionary with sources, extensions, and mimeTypes.  The
+        extensions and mimeTypes list their matching sources in priority order.
+        The sources list their supported extensions and mimeTypes with their
+        priority.
+    """
+    if availableSources is None:
+        if not len(AvailableTileSources):
+            loadTileSources()
+        availableSources = AvailableTileSources
+    results: Dict[str, Dict[str, Any]] = {'sources': {}, 'extensions': {}, 'mimeTypes': {}}
+    for key, source in availableSources.items():
+        if hasattr(source, 'addKnownExtensions'):
+            source.addKnownExtensions()
+        results['sources'][key] = {
+            'extensions': {
+                k or 'default': v for k, v in source.extensions.items()},
+            'mimeTypes': {
+                k or 'default': v for k, v in source.mimeTypes.items()},
+        }
+        for k, v in source.extensions.items():
+            if k is not None:
+                results['extensions'].setdefault(k, [])
+                results['extensions'][k].append((v, key))
+                results['extensions'][k].sort()
+        for k, v in source.mimeTypes.items():
+            if k is not None:
+                results['mimeTypes'].setdefault(k, [])
+                results['mimeTypes'][k].append((v, key))
+                results['mimeTypes'][k].sort()
+        for cls in source.__mro__:
+            try:
+                if sys.modules[cls.__module__].__version__:
+                    results['sources'][key]['version'] = sys.modules[cls.__module__].__version__
+                    break
+            except Exception:
+                pass
+    return results
+
+
+def listExtensions(
+        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None) -> List[str]:
+    """
+    Get a list of all known extensions.
+
+    :param availableSources: an ordered dictionary of sources to try.
+    :returns: a list of extensions (without leading dots).
+    """
+    return sorted(listSources(availableSources)['extensions'].keys())
+
+
+def listMimeTypes(
+        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None) -> List[str]:
+    """
+    Get a list of all known mime types.
+
+    :param availableSources: an ordered dictionary of sources to try.
+    :returns: a list of mime types.
+    """
+    return sorted(listSources(availableSources)['mimeTypes'].keys())
+
+
 __all__ = [
     'TileSource', 'FileTileSource',
     'exceptions', 'TileGeneralError', 'TileSourceError',
@@ -245,5 +315,6 @@ __all__ = [
     'TileOutputMimeTypes', 'TILE_FORMAT_IMAGE', 'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY',
     'AvailableTileSources', 'getTileSource', 'getSourceNameFromDict', 'nearPowerOfTwo',
     'canRead', 'open', 'new',
+    'listSources', 'listExtensions', 'listMimeTypes',
     'etreeToDict', 'dictToEtree',
 ]

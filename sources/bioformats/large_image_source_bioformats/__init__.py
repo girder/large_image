@@ -215,6 +215,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not _startJavabridge(self.logger):
             msg = 'File cannot be opened by bioformats reader because javabridge failed to start'
             raise TileSourceError(msg)
+        self.addKnownExtensions()
 
         self._tileLock = threading.RLock()
 
@@ -698,6 +699,18 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if javabridge.get_env():
                     javabridge.detach()
         return large_image.tilesource.base._imageToPIL(image)
+
+    @classmethod
+    def addKnownExtensions(cls):
+        # This starts javabridge/bioformats if needed
+        _getBioformatsVersion()
+        if not hasattr(cls, '_addedExtensions'):
+            cls._addedExtensions = True
+            cls.extensions = cls.extensions.copy()
+            for dotext in bioformats.READABLE_FORMATS:
+                ext = dotext.strip('.')
+                if ext not in cls.extensions:
+                    cls.extensions[ext] = SourcePriority.IMPLICIT
 
 
 def open(*args, **kwargs):

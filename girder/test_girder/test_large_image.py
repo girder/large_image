@@ -66,6 +66,7 @@ def _createThumbnails(server, admin, spec, cancel=False):
         time.sleep(0.1)
 
 
+@pytest.mark.singular()
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testSettings(server):

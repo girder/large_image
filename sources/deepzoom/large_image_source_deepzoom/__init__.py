@@ -22,6 +22,7 @@ class DeepzoomFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     extensions = {
         None: SourcePriority.LOW,
         'dzi': SourcePriority.HIGH,
+        'dzc': SourcePriority.HIGH,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
