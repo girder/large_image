@@ -678,10 +678,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         current_data = current_arrays['root']
         current_shape = list(current_data.shape)
-        for level in range(self.levels):
+        for level in range(self.levels - 1):
             current_shape[x] = int(current_shape[x] / 2)
             current_shape[y] = int(current_shape[y] / 2)
-            resized_data = np.empty(current_shape)
+            resized_data = np.empty(current_shape, dtype=self.dtype)
 
             if resample_method in [
                 ResampleMethod.PIL_BICUBIC,
@@ -693,18 +693,28 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ]:
                 frame_dims = current_shape[:-3]
                 frame_shape = current_shape[-3:-1]
-                # TODO: for multiband (>4) images, split by band axis as well
+                num_bands = current_shape[-1]
+                slice_indices = []
                 # TODO: for single band images, use bilinear? explore this!
-                for frame_ind in itertools.product(*[range(f) for f in frame_dims]):
-                    img = Image.fromarray(current_data[(*frame_ind,)])
-                    resized_img = img.resize(frame_shape, resample=resample_method.value)
-                    resized_data[(*frame_ind,)] = np.transpose(np.array(resized_img), (1, 0, 2))
+                for frame_index in itertools.product(*[range(f) for f in frame_dims]):
+                    if num_bands > 4:
+                        for band_index in range(num_bands):
+                            img = Image.fromarray(current_data[(*frame_index, ..., band_index)], mode='L')
+                            resized_img = img.resize(frame_shape, resample=resample_method.value)
+                            result = np.array(resized_img).astype(self.dtype)
+                            # result = np.transpose(result)
+                            resized_data[(*frame_index, ..., band_index)] = result
+                    else:
+                        img = Image.fromarray(current_data[(*frame_index,)])
+                        resized_img = img.resize(frame_shape, resample=resample_method.value)
+                        result = np.array(resized_img).astype(self.dtype)
+                        # result = np.transpose(result, (1, 0, 2))
+                        resized_data[(*frame_index,)] = result
+
             else:
                 # TODO: Implement non-PIL resample methods
-                print(resample_method)
+                pass
 
-            print(current_shape, resized_data.shape)
-            # TODO: rename root dataset to whatever schema works, try variations of level index
             self._zarr.create_dataset(level + 1, data=resized_data)
 
     def write(
