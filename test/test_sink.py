@@ -7,6 +7,7 @@ from pathlib import Path  # remove this import later
 
 import large_image
 
+
 TMP_DIR = 'tmp/zarr_sink'
 FILE_TYPES = [
     'tiff',
@@ -18,7 +19,7 @@ FILE_TYPES = [
     # 'svi',
     # 'svs',
 ]
-RESAMPLE_METHODS = list(large_image.resample.ResampleMethod)
+RESAMPLE_METHODS = list(large_image_source_zarr.resample.ResampleMethod)
 
 
 def copyFromSource(source, sink):
