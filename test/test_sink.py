@@ -3,6 +3,7 @@ import large_image_source_test
 import large_image_source_zarr
 import numpy as np
 import pytest
+from pathlib import Path  # remove this import later
 
 import large_image
 
@@ -17,6 +18,7 @@ FILE_TYPES = [
     # 'svi',
     # 'svs',
 ]
+RESAMPLE_METHODS = list(large_image.resample.ResampleMethod)
 
 
 def copyFromSource(source, sink):
@@ -122,7 +124,6 @@ def testImageCopySmall(file_type, tmp_path):
     assert metadata.get('bandCount') == 3
     assert len(metadata.get('frames')) == 6
 
-    # TODO: fix these failures; unexpected metadata when reading it back
     sink.write(output_file)
     if file_type == 'zarr':
         output_file /= '.zattrs'
@@ -164,7 +165,6 @@ def testImageCopySmallMultiband(file_type, tmp_path):
     assert metadata.get('bandCount') == 7
     assert len(metadata.get('frames')) == 6
 
-    # TODO: fix these failures; unexpected metadata when reading it back
     sink.write(output_file)
     if file_type == 'zarr':
         output_file /= '.zattrs'
@@ -177,3 +177,68 @@ def testImageCopySmallMultiband(file_type, tmp_path):
     assert new_metadata.get('levels') == 2 or new_metadata.get('levels') == 3
     assert new_metadata.get('bandCount') == 7
     assert len(new_metadata.get('frames')) == 6
+
+
+@pytest.mark.parametrize('resample_method', RESAMPLE_METHODS)
+def testImageCopyLargeDownsampling(resample_method, tmp_path):
+    tmp_path = Path('tmp')  # keep results; remove this later
+    output_file = tmp_path / f'{resample_method}.db'
+    sink = large_image_source_zarr.new()
+    source = large_image_source_test.TestTileSource(
+        fractal=True,
+        tileWidth=128,
+        tileHeight=128,
+        sizeX=2048,
+        sizeY=4096,
+        frames="c=2,z=3",
+    )
+    copyFromSource(source, sink)
+    sink.write(output_file, resample=resample_method)
+    written = large_image_source_zarr.open(output_file)
+    written_arrays = dict(written._zarr.arrays())
+
+    assert len(written_arrays) == written.levels
+    assert written_arrays.get('root') is not None
+    assert written_arrays.get('root').shape == (2, 3, 4096, 2048, 3)
+    assert written_arrays.get('1') is not None
+    assert written_arrays.get('1').shape == (2, 3, 2048, 1024, 3)
+    assert written_arrays.get('2') is not None
+    assert written_arrays.get('2').shape == (2, 3, 1024, 512, 3)
+    assert written_arrays.get('3') is not None
+    assert written_arrays.get('3').shape == (2, 3, 512, 256, 3)
+
+    # TODO: Can the content of the downsampled data be compared back to the test source?
+
+
+@pytest.mark.parametrize('resample_method', RESAMPLE_METHODS)
+def testImageCopyLargeDownsamplingMultiband(resample_method, tmp_path):
+    tmp_path = Path('tmp')  # keep results; remove this later
+    output_file = tmp_path / f'{resample_method}_multiband.db'
+    sink = large_image_source_zarr.new()
+    bands = (
+        'red=400-12000,green=0-65535,blue=800-4000,'
+        'ir1=200-24000,ir2=200-22000,gray=100-10000,other=0-65535'
+    )
+    source = large_image_source_test.TestTileSource(
+        fractal=True,
+        tileWidth=128,
+        tileHeight=128,
+        sizeX=2048,
+        sizeY=4096,
+        frames="c=2,z=3",
+        bands=bands,
+    )
+    copyFromSource(source, sink)
+    sink.write(output_file, resample=resample_method)
+    written = large_image_source_zarr.open(output_file)
+    written_arrays = dict(written._zarr.arrays())
+
+    assert len(written_arrays) == written.levels
+    assert written_arrays.get('root') is not None
+    assert written_arrays.get('root').shape == (2, 3, 4096, 2048, 7)
+    assert written_arrays.get('1') is not None
+    assert written_arrays.get('1').shape == (2, 3, 2048, 1024, 7)
+    assert written_arrays.get('2') is not None
+    assert written_arrays.get('2').shape == (2, 3, 1024, 512, 7)
+    assert written_arrays.get('3') is not None
+    assert written_arrays.get('3').shape == (2, 3, 512, 256, 7)
