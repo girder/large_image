@@ -1,4 +1,3 @@
-import itertools
 import math
 import os
 import shutil
@@ -541,6 +540,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # TODO: improve band bookkeeping
 
         self._checkEditable()
+        store_path = str(kwargs.pop('level', 0))
         placement = {
             'x': x,
             'y': y,
@@ -572,29 +572,35 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             new_dims = {
                 a: max(
-                    self._dims.get(a, 0),
+                    self._dims.get(store_path, {}).get(a, 0),
                     placement.get(a, 0) + tile.shape[i],
                 )
                 for a, i in self._axes.items()
             }
+            self._dims[store_path] = new_dims
             placement_slices = tuple([
                 slice(placement.get(a, 0), placement.get(a, 0) + tile.shape[i], 1)
                 for i, a in enumerate(axes)
             ])
 
             current_arrays = dict(self._zarr.arrays())
+            if store_path == '0':
+                # if writing to base data, invalidate generated levels
+                for path in current_arrays:
+                    if path != store_path:
+                        self._zarr_store.rmdir(path)
             chunking = None
-            if 'root' not in current_arrays:
-                root = np.empty(tuple(new_dims.values()), dtype=tile.dtype)
+            if store_path not in current_arrays:
+                arr = np.empty(tuple(new_dims.values()), dtype=tile.dtype)
                 chunking = tuple([
                     self._tileSize if a in ['x', 'y'] else
                     new_dims.get('s') if a == 's' else 1
                     for a in axes
                 ])
             else:
-                root = current_arrays['root']
-                root.resize(*tuple(new_dims.values()))
-                if root.chunks[-1] != new_dims.get('s'):
+                arr = current_arrays[store_path]
+                arr.resize(*tuple(new_dims.values()))
+                if arr.chunks[-1] != new_dims.get('s'):
                     # rechunk if length of samples axis changes
                     chunking = tuple([
                         self._tileSize if a in ['x', 'y'] else
@@ -603,40 +609,45 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     ])
 
             if mask is not None:
-                root[placement_slices] = np.where(mask, tile, root[placement_slices])
+                arr[placement_slices] = np.where(mask, tile, arr[placement_slices])
             else:
-                root[placement_slices] = tile
+                arr[placement_slices] = tile
             if chunking:
-                self._zarr.create_dataset('root', data=root[:], chunks=chunking, overwrite=True)
+                zarr.array(
+                    arr,
+                    chunks=chunking,
+                    overwrite=True,
+                    store=self._zarr_store,
+                    path=store_path,
+                )
 
-            # Edit OME metadata
-            self._zarr.attrs.update({
-                'multiscales': [{
-                    'version': '0.5-dev',
-                    'axes': [{
-                        'name': a,
-                        'type': 'space' if a in ['x', 'y'] else 'other',
-                    } for a in axes],
-                    'datasets': [{'path': 0}],
-                }],
-                'omero': {'version': '0.5-dev'},
-            })
+            # If base data changed, update large_image attributes and OME metadata
+            if store_path == '0':
+                self._zarr.attrs.update({
+                    'multiscales': [{
+                        'version': '0.5-dev',
+                        'axes': [{
+                            'name': a,
+                            'type': 'space' if a in ['x', 'y'] else 'other',
+                        } for a in axes],
+                        'datasets': [{'path': 0}],
+                    }],
+                    'omero': {'version': '0.5-dev'},
+                })
 
-            # Edit large_image attributes
-            self._dims = new_dims
-            self._dtype = tile.dtype
-            self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
-            self.sizeX = new_dims.get('x')
-            self.sizeY = new_dims.get('y')
-            self._framecount = np.prod([
-                length
-                for axis, length in new_dims.items()
-                if axis in axes[:-3]
-            ])
-            self._cacheValue = str(uuid.uuid4())
-            self._levels = None
-            self.levels = int(max(1, math.ceil(math.log(max(
-                self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+                self._dtype = tile.dtype
+                self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
+                self.sizeX = new_dims.get('x')
+                self.sizeY = new_dims.get('y')
+                self._framecount = np.prod([
+                    length
+                    for axis, length in new_dims.items()
+                    if axis in axes[:-3]
+                ])
+                self._cacheValue = str(uuid.uuid4())
+                self._levels = None
+                self.levels = int(max(1, math.ceil(math.log(max(
+                    self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
 
     @property
     def crop(self):
@@ -663,59 +674,96 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(msg)
         self._crop = (x, y, w, h)
 
+    def _downsampleTile(self, tile, resample_method):
+        new_shape = {
+            'height': int(tile.shape[0] / 2),
+            'width': int(tile.shape[1] / 2),
+            'bands': 1,
+        }
+        if len(tile.shape) > 2:
+            new_shape['bands'] = tile.shape[-1]
+        if new_shape['bands'] > 4:
+            result = np.empty(
+                (new_shape['height'], new_shape['width'], new_shape['bands']),
+                dtype=self.dtype,
+            )
+            for band_index in range(new_shape['bands']):
+                selection = tile[(..., band_index)]
+                print(selection.shape, band_index)
+                # use mode I;16 to support 16-bit integers
+                img = Image.fromarray(selection, mode='I;16')
+                # TODO: Only NEAREST works for 16 bit images
+                resized_img = img.resize(
+                    (new_shape['width'], new_shape['height']),
+                    resample=resample_method.value,
+                )
+                result[(..., band_index)] = np.array(resized_img).astype(self.dtype)
+            return result
+        else:
+            img = Image.fromarray(tile)
+            resized_img = img.resize(
+                (new_shape['width'], new_shape['height']),
+                resample=resample_method.value,
+            )
+            result = np.array(resized_img).astype(self.dtype)
+            return result
+
     def _generateDownsampledLevels(self, resample_method):
         self._checkEditable()
         current_arrays = dict(self._zarr.arrays())
-        if 'root' not in current_arrays:
+        if '0' not in current_arrays:
             msg = 'No root data found, cannot generate lower resolution levels.'
             raise TileSourceError(msg)
         if 'x' not in self._axes or 'y' not in self._axes:
             msg = 'Data must have an X axis and Y axis to generate lower resolution levels.'
             raise TileSourceError(msg)
 
-        x = self._axes.get('x')
-        y = self._axes.get('y')
+        metadata = self.getMetadata()
+        tile_size = dict(width=4096, height=4096)
+        for level in range(1, self.levels):
+            scale_factor = 2 ** level
+            iterator_output = dict(
+                maxWidth=self.sizeX // scale_factor,
+                maxHeight=self.sizeY // scale_factor,
+            )
+            for frame in metadata.get('frames', [{'Index': 0}]):
+                frame_position = {
+                    k.replace('Index', '').lower(): v
+                    for k, v in frame.items()
+                    if k.replace('Index', '').lower() in self._axes
+                }
+                for tile in self.tileIterator(
+                    tile_size=tile_size,
+                    tile_overlap=dict(x=4, y=4),
+                    frame=frame['Index'],
+                    output=iterator_output,
+                    resample=False,  # TODO: incorporate resampling in core
+                ):
+                    new_tile = self._downsampleTile(tile['tile'], resample_method)
+                    overlap = {k: int(v / 2) for k, v in tile['tile_overlap'].items()}
+                    new_tile = new_tile[
+                        slice(overlap['top'], new_tile.shape[0] - overlap['bottom']),
+                        slice(overlap['left'], new_tile.shape[1] - overlap['right']),
+                    ]
 
-        current_data = current_arrays['root']
-        current_shape = list(current_data.shape)
-        for level in range(self.levels - 1):
-            current_shape[x] = int(current_shape[x] / 2)
-            current_shape[y] = int(current_shape[y] / 2)
-            resized_data = np.empty(current_shape, dtype=self.dtype)
+                    x = int(
+                        tile['tile_position']['level_x'] *
+                        (tile_size['width'] / 2),
+                    )
+                    y = int(
+                        tile['tile_position']['level_y'] *
+                        (tile_size['height'] / 2),
+                    )
 
-            if resample_method in [
-                ResampleMethod.PIL_BICUBIC,
-                ResampleMethod.PIL_BILINEAR,
-                ResampleMethod.PIL_BOX,
-                ResampleMethod.PIL_HAMMING,
-                ResampleMethod.PIL_LANCZOS,
-                ResampleMethod.PIL_NEAREST,
-            ]:
-                frame_dims = current_shape[:-3]
-                frame_shape = current_shape[-3:-1]
-                num_bands = current_shape[-1]
-                slice_indices = []
-                # TODO: for single band images, use bilinear? explore this!
-                for frame_index in itertools.product(*[range(f) for f in frame_dims]):
-                    if num_bands > 4:
-                        for band_index in range(num_bands):
-                            img = Image.fromarray(current_data[(*frame_index, ..., band_index)], mode='L')
-                            resized_img = img.resize(frame_shape, resample=resample_method.value)
-                            result = np.array(resized_img).astype(self.dtype)
-                            # result = np.transpose(result)
-                            resized_data[(*frame_index, ..., band_index)] = result
-                    else:
-                        img = Image.fromarray(current_data[(*frame_index,)])
-                        resized_img = img.resize(frame_shape, resample=resample_method.value)
-                        result = np.array(resized_img).astype(self.dtype)
-                        # result = np.transpose(result, (1, 0, 2))
-                        resized_data[(*frame_index,)] = result
-
-            else:
-                # TODO: Implement non-PIL resample methods
-                pass
-
-            self._zarr.create_dataset(level + 1, data=resized_data)
+                    self.addTile(
+                        new_tile,
+                        x=x,
+                        y=y,
+                        **frame_position,
+                        axes=list(self._axes.keys()),
+                        level=level,
+                    )
+            self._validateZarr()  # refresh self._levels before continuing
 
     def write(
         self,
@@ -744,7 +792,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceError('Output path exists (%s).' % str(path))
 
         self._generateDownsampledLevels(resample)
-        self._validateZarr()
         suffix = Path(path).suffix
         data_dir = self._tempdir
         data_store = self._zarr_store
