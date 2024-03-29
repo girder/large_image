@@ -11,6 +11,9 @@
 - Guard fetching internal metadata on zarr sources that have less data ([#1481](../../pull/1481))
 - Add a method to list registered extensions and mimetypes ([#1488](../../pull/1488))
 
+### Changes
+- Prohibit bioformats from reading zip directly ([#1491](../../pull/1491))
+
 ### Bug Fixes
 - Fix an issue with single band on multi source with non uniform sources ([#1474](../../pull/1474))
 - Allow alternate name axes in the multi source schema ([#1476](../../pull/1476))
