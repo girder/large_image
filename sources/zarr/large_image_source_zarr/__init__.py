@@ -43,6 +43,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'zattrs': SourcePriority.PREFERRED,
         'zarray': SourcePriority.PREFERRED,
         'db': SourcePriority.MEDIUM,
+        'zip': SourcePriority.LOWER,
+    }
+    mimeTypes = {
+        None: SourcePriority.FALLBACK,
+        'application/zip+zarr': SourcePriority.PREFERRED,
+        'application/vnd+zarr': SourcePriority.PREFERRED,
+        'application/x-zarr': SourcePriority.PREFERRED,
     }
     newPriority = SourcePriority.HIGH
 

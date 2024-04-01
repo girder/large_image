@@ -9,6 +9,10 @@
 - Prioritize tile sinks ([#1478](../../pull/1478))
 - Add a dependency to the zarr source to read more compression types ([#1480](../../pull/1480))
 - Guard fetching internal metadata on zarr sources that have less data ([#1481](../../pull/1481))
+- Add a method to list registered extensions and mimetypes ([#1488](../../pull/1488))
+
+### Changes
+- Prohibit bioformats from reading zip directly ([#1491](../../pull/1491))
 
 ### Bug Fixes
 - Fix an issue with single band on multi source with non uniform sources ([#1474](../../pull/1474))

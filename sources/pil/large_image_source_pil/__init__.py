@@ -115,6 +115,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             used.
         """
         super().__init__(path, **kwargs)
+        self.addKnownExtensions()
 
         self._maxSize = maxSize
         if isinstance(maxSize, str):
@@ -286,6 +287,20 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             img = self._pilImage
         return self._outputTile(img, TILE_FORMAT_PIL, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
+
+    @classmethod
+    def addKnownExtensions(cls):
+        if not hasattr(cls, '_addedExtensions'):
+            cls._addedExtensions = True
+            cls.extensions = cls.extensions.copy()
+            cls.mimeTypes = cls.mimeTypes.copy()
+            for dotext in PIL.Image.registered_extensions():
+                ext = dotext.lstrip('.')
+                if ext not in cls.extensions:
+                    cls.extensions[ext] = SourcePriority.IMPLICIT_HIGH
+            for mimeType in PIL.Image.MIME.values():
+                if mimeType not in cls.mimeTypes:
+                    cls.mimeTypes[mimeType] = SourcePriority.IMPLICIT_HIGH
 
 
 def open(*args, **kwargs):

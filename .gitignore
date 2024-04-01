@@ -70,6 +70,7 @@ test/externaldata
 docs/source/*
 !docs/source/*.py
 !docs/source/*.rst
+docs/_build
 
 *.ipynb
 !docs/*.ipynb

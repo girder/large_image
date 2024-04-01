@@ -62,6 +62,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param path: a filesystem path for the tile source.
         """
         super().__init__(path, **kwargs)
+        self.addKnownExtensions()
 
         if str(path).startswith(NEW_IMAGE_PATH_FLAG):
             self._initNew(**kwargs)
@@ -610,6 +611,16 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return {'x': 0, 'y': 0}
         return {'x': min(0, self._output['minx'] or 0),
                 'y': min(0, self._output['miny'] or 0)}
+
+    @classmethod
+    def addKnownExtensions(cls):
+        if not hasattr(cls, '_addedExtensions'):
+            cls._addedExtensions = True
+            cls.extensions = cls.extensions.copy()
+            for dotext in pyvips.base.get_suffixes():
+                ext = dotext.lstrip('.')
+                if ext not in cls.extensions:
+                    cls.extensions[ext] = SourcePriority.IMPLICIT
 
 
 def open(*args, **kwargs):

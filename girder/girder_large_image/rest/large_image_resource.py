@@ -22,7 +22,6 @@ import os
 import pprint
 import re
 import shutil
-import sys
 import time
 
 import cherrypy
@@ -465,22 +464,8 @@ class LargeImageResource(Resource):
     )
     @access.public(scope=TokenScope.DATA_READ)
     def listSources(self, params):
-        results = {}
-        for key, source in girder_tilesource.AvailableGirderTileSources.items():
-            results[key] = {
-                'extensions': {
-                    k or 'default': v for k, v in source.extensions.items()},
-                'mimeTypes': {
-                    k or 'default': v for k, v in source.mimeTypes.items()},
-            }
-            for cls in source.__mro__:
-                try:
-                    if sys.modules[cls.__module__].__version__:
-                        results[key]['version'] = sys.modules[cls.__module__].__version__
-                        break
-                except Exception:
-                    pass
-        return results
+        return large_image.tilesource.listSources(
+            girder_tilesource.AvailableGirderTileSources)['sources']
 
     @describeRoute(
         Description('Count the number of cached histograms for large_image items.'),
