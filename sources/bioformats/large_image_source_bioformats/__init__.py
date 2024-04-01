@@ -221,7 +221,21 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             javabridge.attach()
             try:
-                self._bioimage = bioformats.ImageReader(largeImagePath)
+                self._bioimage = bioformats.ImageReader(largeImagePath, perform_init=False)
+                try:
+                    # So this as a separate step so, if it fails, we can ask to
+                    # open something that does not exist and bioformats will
+                    # release some file handles.
+                    self._bioimage.init_reader()
+                except Exception as exc:
+                    try:
+                        # Ask to open a file that should never exist
+                        self._bioimage.rdr.setId('__\0__')
+                    except Exception:
+                        pass
+                    self._bioimage.close()
+                    self._bioimage = None
+                    raise exc
             except (AttributeError, OSError) as exc:
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
