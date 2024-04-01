@@ -519,6 +519,31 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
+    def _validateNewTile(self, tile, mask, placement, axes):
+        if not isinstance(tile, np.ndarray) or axes is None:
+            axes = 'yxs'
+            tile, mode = _imageToNumpy(tile)
+        elif not isinstance(axes, str) and not isinstance(axes, list):
+            err = 'Invalid type for axes. Must be str or list[str].'
+            raise ValueError(err)
+        axes = [x.lower() for x in axes]
+        if axes[-1] != 's':
+            axes.append('s')
+        if mask is not None and len(axes) - 1 == len(mask.shape):
+            mask = mask[:, :, np.newaxis]
+        if 'x' not in axes or 'y' not in axes:
+            err = 'Invalid value for axes. Must contain "y" and "x".'
+            raise ValueError(err)
+        for k in placement:
+            if k not in axes:
+                axes[0:0] = [k]
+        while len(tile.shape) < len(axes):
+            tile = np.expand_dims(tile, axis=0)
+        while mask is not None and len(mask.shape) < len(axes):
+            mask = np.expand_dims(mask, axis=0)
+
+        return tile, mask, placement, axes
+
     def addTile(self, tile, x=0, y=0, mask=None, axes=None, **kwargs):
         """
         Add a numpy or image tile to the image, expanding the image as needed
@@ -546,30 +571,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'y': y,
             **kwargs,
         }
-        if not isinstance(tile, np.ndarray) or axes is None:
-            axes = 'yxs'
-            tile, mode = _imageToNumpy(tile)
-        elif not isinstance(axes, str) and not isinstance(axes, list):
-            err = 'Invalid type for axes. Must be str or list[str].'
-            raise ValueError(err)
-        axes = [x.lower() for x in axes]
-        if axes[-1] != 's':
-            axes.append('s')
-        if mask is not None and len(axes) - 1 == len(mask.shape):
-            mask = mask[:, :, np.newaxis]
-        if 'x' not in axes or 'y' not in axes:
-            err = 'Invalid value for axes. Must contain "y" and "x".'
-            raise ValueError(err)
-        for k in placement:
-            if k not in axes:
-                axes[0:0] = [k]
+        tile, mask, placement, axes = self._validateNewTile(tile, mask, placement, axes)
+
         with self._addLock:
             self._axes = {k: i for i, k in enumerate(axes)}
-            while len(tile.shape) < len(axes):
-                tile = np.expand_dims(tile, axis=0)
-            while mask is not None and len(mask.shape) < len(axes):
-                mask = np.expand_dims(mask, axis=0)
-
             new_dims = {
                 a: max(
                     self._dims.get(store_path, {}).get(a, 0),
