@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import concurrent.futures
 import inspect
@@ -21,7 +23,7 @@ import large_image
 
 class SweepAlgorithm:
     def __init__(self, algorithm, input_filename, input_params, param_order,
-                 output_filename, max_workers, multiprocessing):
+                 output_filename, max_workers, multiprocessing, overlay):
         self.algorithm = algorithm
         self.input_filename = input_filename
         self.output_filename = output_filename
@@ -29,6 +31,7 @@ class SweepAlgorithm:
         self.param_order = param_order
         self.max_workers = max_workers
         self.multiprocessing = multiprocessing
+        self.overlay = overlay
 
         self.combos = list(itertools.product(*[p['range'] for p in input_params.values()]))
 
@@ -67,10 +70,19 @@ class SweepAlgorithm:
             format=large_image.tilesource.TILE_FORMAT_NUMPY,
             tile_size=dict(width=2048, height=2048),
         ):
+            if self.overlay:
+                self.addTile(
+                    tilesink,
+                    tile['tile'], tile['x'], tile['y'],
+                    **{p['axis']: iteration_id[i] for i, p in enumerate(
+                        self.param_order.values())})
             altered_data = self.algorithm(tile['tile'], *params)
+            mask = None
+            if self.overlay:
+                mask = altered_data[:, :, -1] != 0
             self.addTile(
                 tilesink,
-                altered_data, tile['x'], tile['y'],
+                altered_data, tile['x'], tile['y'], mask=mask,
                 **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())})
         return self.writeTileSink(tilesink, iteration_id)
 
@@ -152,6 +164,17 @@ class SweepAlgorithmMultiZarr(SweepAlgorithmMulti):
     def getTileSink(self, sink):
         return large_image_source_zarr.new()
 
+    def writeTileSink(self, tilesink, iteration_id):
+        filename = f'{self.algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.zarr.zip'
+        filepath = Path(self.output_filename, filename)
+
+        desc = dict(
+            path=filename,
+            **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())},
+        )
+        tilesink.write(str(filepath), lossy=False)
+        return desc
+
 
 class SweepAlgorithmZarr(SweepAlgorithm):
     def getOverallSink(self):
@@ -208,6 +231,11 @@ def create_argparser():
         dest='multiprocessing',
         action='store_false',
         help='Use threading for workers',
+    )
+    argparser.add_argument(
+        '--overlay',
+        action='store_true',
+        help='Overlay algorithm results on top of source data.',
     )
     argparser.add_argument(
         '--sink',
@@ -279,7 +307,8 @@ def main(argv):
     }[args.sink]
 
     sweep = cls(algorithm, input_filename, params, input_params,
-                args.output_filename, args.num_workers, args.multiprocessing)
+                args.output_filename, args.num_workers, args.multiprocessing,
+                args.overlay)
     sweep.run()
 
 
