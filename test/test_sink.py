@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 import large_image
+from large_image.tilesource.resample import ResampleMethod
 
 TMP_DIR = 'tmp/zarr_sink'
 FILE_TYPES = [
@@ -12,11 +13,8 @@ FILE_TYPES = [
     'db',
     'zip',
     'zarr',
-    # "dz",
-    # 'svi',
-    # 'svs',
 ]
-RESAMPLE_METHODS = list(large_image_source_zarr.resample.ResampleMethod)
+RESAMPLE_METHODS = list(ResampleMethod)
 
 
 def copyFromSource(source, sink):
