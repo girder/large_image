@@ -11,16 +11,14 @@ from pathlib import Path
 import numpy as np
 import packaging.version
 import zarr
-from PIL import Image
 
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import NEW_IMAGE_PATH_FLAG, TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
+from large_image.tilesource.resample import ResampleMethod, downsampleTileHalfRes
 from large_image.tilesource.utilities import _imageToNumpy, nearPowerOfTwo
-
-from .resample import ResampleMethod
 
 try:
     __version__ = _importlib_version(__name__)
@@ -679,40 +677,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(msg)
         self._crop = (x, y, w, h)
 
-    def _downsampleTile(self, tile, resample_method):
-        new_shape = {
-            'height': int(tile.shape[0] / 2),
-            'width': int(tile.shape[1] / 2),
-            'bands': 1,
-        }
-        if len(tile.shape) > 2:
-            new_shape['bands'] = tile.shape[-1]
-        if new_shape['bands'] > 4:
-            result = np.empty(
-                (new_shape['height'], new_shape['width'], new_shape['bands']),
-                dtype=self.dtype,
-            )
-            for band_index in range(new_shape['bands']):
-                selection = tile[(..., band_index)]
-                print(selection.shape, band_index)
-                # use mode I;16 to support 16-bit integers
-                img = Image.fromarray(selection, mode='I;16')
-                # TODO: Only NEAREST works for 16 bit images
-                resized_img = img.resize(
-                    (new_shape['width'], new_shape['height']),
-                    resample=resample_method.value,
-                )
-                result[(..., band_index)] = np.array(resized_img).astype(self.dtype)
-            return result
-        else:
-            img = Image.fromarray(tile)
-            resized_img = img.resize(
-                (new_shape['width'], new_shape['height']),
-                resample=resample_method.value,
-            )
-            result = np.array(resized_img).astype(self.dtype)
-            return result
-
     def _generateDownsampledLevels(self, resample_method):
         self._checkEditable()
         current_arrays = dict(self._zarr.arrays())
@@ -744,7 +708,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     output=iterator_output,
                     resample=False,  # TODO: incorporate resampling in core
                 ):
-                    new_tile = self._downsampleTile(tile['tile'], resample_method)
+                    new_tile = downsampleTileHalfRes(tile['tile'], resample_method)
                     overlap = {k: int(v / 2) for k, v in tile['tile_overlap'].items()}
                     new_tile = new_tile[
                         slice(overlap['top'], new_tile.shape[0] - overlap['bottom']),
@@ -776,7 +740,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         lossy=True,
         alpha=True,
         overwriteAllowed=True,
-        resample=ResampleMethod.PIL_NEAREST,
+        resample=None,
     ):
         """
         Output the current image to a file.
@@ -795,6 +759,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     os.remove(path)
             else:
                 raise TileSourceError('Output path exists (%s).' % str(path))
+
+        if resample is None:
+            resample = ResampleMethod.NP_NEAREST if not lossy else ResampleMethod.PIL_LANCZOS
 
         self._generateDownsampledLevels(resample)
         suffix = Path(path).suffix
