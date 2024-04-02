@@ -66,6 +66,7 @@ class SweepAlgorithm:
         }
         iteration_id = [param_indices[param_name] for param_name in self.param_order]
         tilesink = self.getTileSink(sink)
+        lastlogtime = time.time()
         for tile in source.tileIterator(
             format=large_image.tilesource.TILE_FORMAT_NUMPY,
             tile_size=dict(width=2048, height=2048),
@@ -79,11 +80,22 @@ class SweepAlgorithm:
             altered_data = self.algorithm(tile['tile'], *params)
             mask = None
             if self.overlay:
-                mask = altered_data[:, :, -1] != 0
+                if altered_data.shape[2] in {2, 4}:
+                    mask = altered_data[:, :, -1] != 0
+                    if altered_data.shape[2] == tile['tile'].shape[2] + 1:
+                        altered_data = altered_data[:, :, :-1]
+            elif altered_data.shape[2] in {2, 4}:
+                altered_data[:, :, -1] = 255
             self.addTile(
                 tilesink,
                 altered_data, tile['x'], tile['y'], mask=mask,
                 **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())})
+            if time.time() - lastlogtime > 10:
+                sys.stdout.write(
+                    f'Processed {tile["tile_position"]["position"]} of '
+                    f'{tile["iterator_range"]["position"]} tiles\n')
+                sys.stdout.flush()
+                lastlogtime = time.time()
         return self.writeTileSink(tilesink, iteration_id)
 
     def run(self):
