@@ -46,6 +46,7 @@ def numpyResize(
     if resample_method == ResampleMethod.NP_NEAREST:
         return tile[::2, ::2]
     else:
+        pixel_selection = None
         subarrays = np.asarray(
             [
                 tile[0::2, 0::2],
@@ -54,34 +55,42 @@ def numpyResize(
                 tile[1::2, 1::2],
             ],
         )
+
         if resample_method == ResampleMethod.NP_MEAN:
             return np.mean(subarrays, axis=0).astype(tile.dtype)
         elif resample_method == ResampleMethod.NP_MEDIAN:
             return np.median(subarrays, axis=0).astype(tile.dtype)
         elif resample_method == ResampleMethod.NP_MODE:
-            result_shape = subarrays[0].shape
-            result = np.empty(result_shape)
-            subarrays = subarrays.transpose(1, 2, 0, 3)
-            for y in range(result_shape[0]):
-                for x in range(result_shape[1]):
-                    vals, counts = np.unique(subarrays[y, x], axis=0, return_counts=True)
-                    mode = vals[np.argmax(counts)]
-                    result[y, x] = mode
-            return result
+            # if a pixel occurs twice in a set of four, it is a mode
+            # if no mode, default to pixel 0. check for minimal matches 1=2, 1=3, 2=3
+            pixel_selection = np.where(
+                (
+                    (subarrays[1] == subarrays[2]).all(axis=2) |
+                    (subarrays[1] == subarrays[3]).all(axis=2)
+                ),
+                1, np.where(
+                    (subarrays[2] == subarrays[3]).all(axis=2),
+                    2, 0,
+                ),
+            )
         elif resample_method == ResampleMethod.NP_MAX:
             summed = np.sum(subarrays, axis=3)
-            indexes = np.argmax(summed, axis=0)
-            indexes = np.repeat(indexes[:, :, np.newaxis], tile.shape[2], axis=2)
-            return np.choose(indexes, subarrays).astype(tile.dtype)
+            pixel_selection = np.argmax(summed, axis=0)
         elif resample_method == ResampleMethod.NP_MIN:
             summed = np.sum(subarrays, axis=3)
-            indexes = np.argmin(summed, axis=0)
-            indexes = np.repeat(indexes[:, :, np.newaxis], tile.shape[2], axis=2)
-            return np.choose(indexes, subarrays).astype(tile.dtype)
+            pixel_selection = np.argmin(summed, axis=0)
         elif resample_method == ResampleMethod.NP_MAX_CROSSBAND:
             return np.max(subarrays, axis=0).astype(tile.dtype)
         elif resample_method == ResampleMethod.NP_MIN_CROSSBAND:
             return np.min(subarrays, axis=0).astype(tile.dtype)
+
+        if pixel_selection is not None:
+            pixel_selection = np.expand_dims(pixel_selection, axis=2)
+            pixel_selection = np.repeat(pixel_selection, tile.shape[2], axis=2)
+            return np.choose(pixel_selection, subarrays).astype(tile.dtype)
+        else:
+            msg = f'Unknown resample method {resample_method}.'
+            raise ValueError(msg)
 
 
 def downsampleTileHalfRes(
