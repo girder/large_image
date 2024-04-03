@@ -85,8 +85,9 @@ def numpyResize(
             return np.min(subarrays, axis=0).astype(tile.dtype)
 
         if pixel_selection is not None:
-            pixel_selection = np.expand_dims(pixel_selection, axis=2)
-            pixel_selection = np.repeat(pixel_selection, tile.shape[2], axis=2)
+            if len(tile.shape) > 2:
+                pixel_selection = np.expand_dims(pixel_selection, axis=2)
+                pixel_selection = np.repeat(pixel_selection, tile.shape[2], axis=2)
             return np.choose(pixel_selection, subarrays).astype(tile.dtype)
         else:
             msg = f'Unknown resample method {resample_method}.'
