@@ -761,7 +761,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceError('Output path exists (%s).' % str(path))
 
         if resample is None:
-            resample = ResampleMethod.NP_NEAREST if not lossy else ResampleMethod.PIL_LANCZOS
+            resample = (
+                ResampleMethod.PIL_LANCZOS
+                if lossy and self.dtype == np.uint8
+                else ResampleMethod.NP_NEAREST
+            )
 
         self._generateDownsampledLevels(resample)
         suffix = Path(path).suffix
