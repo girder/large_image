@@ -9,7 +9,7 @@ exclude = [
     "*/web_client/*",
     "*/*egg*/*",
 ]
-ignore = [
+lint.ignore = [
     "B017",
     "B026",
     "B904",
@@ -38,7 +38,7 @@ ignore = [
     "PT017",
 ]
 line-length = 100
-select = [
+lint.select = [
     "B",  # bugbear
     "C90",  # mccabe
     "D",  # pydocstyle
@@ -61,14 +61,14 @@ select = [
     "RSE",
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # allow "useless expressions" as it shows output
 # allow non-top level imports
 # allow long lines
 "docs/large_image_examples.ipynb" = ["B018", "E402", "E501"]
 
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 14

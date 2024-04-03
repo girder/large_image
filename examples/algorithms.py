@@ -56,7 +56,7 @@ def positive_pixel_count(
         mask_weak * Labels.WEAK + mask_pos * Labels.PLAIN + mask_strong * Labels.STRONG
     )
     color_map = np.empty((4, 4), dtype=np.uint8)
-    color_map[Labels.NEGATIVE] = 255, 255, 255, 255
+    color_map[Labels.NEGATIVE] = 255, 255, 255, 0
     color_map[Labels.WEAK] = 60, 78, 194, 255
     color_map[Labels.PLAIN] = 221, 220, 220, 255
     color_map[Labels.STRONG] = 180, 4, 38, 255
