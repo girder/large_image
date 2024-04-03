@@ -99,8 +99,8 @@ def downsampleTileHalfRes(
     resample_method: ResampleMethod,
 ) -> np.ndarray:
     new_shape = {
-        'height': int(tile.shape[0] / 2),
-        'width': int(tile.shape[1] / 2),
+        'height': (tile.shape[0] + 1) // 2,
+        'width': (tile.shape[1] + 1) // 2,
         'bands': 1,
     }
     if len(tile.shape) > 2:
