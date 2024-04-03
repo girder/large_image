@@ -85,9 +85,8 @@ def numpyResize(
             return np.min(subarrays, axis=0).astype(tile.dtype)
 
         if pixel_selection is not None:
-            if len(tile.shape) > 2:
-                pixel_selection = np.expand_dims(pixel_selection, axis=2)
-                pixel_selection = np.repeat(pixel_selection, tile.shape[2], axis=2)
+            pixel_selection = np.expand_dims(pixel_selection, axis=2)
+            pixel_selection = np.repeat(pixel_selection, tile.shape[2], axis=2)
             return np.choose(pixel_selection, subarrays).astype(tile.dtype)
         else:
             msg = f'Unknown resample method {resample_method}.'
@@ -98,12 +97,6 @@ def downsampleTileHalfRes(
     tile: np.ndarray,
     resample_method: ResampleMethod,
 ) -> np.ndarray:
-
-    resize_function = (
-        pilResize
-        if resample_method.value <= ResampleMethod.PIL_MAX_ENUM.value
-        else numpyResize
-    )
     new_shape = {
         'height': int(tile.shape[0] / 2),
         'width': int(tile.shape[1] / 2),
@@ -111,17 +104,20 @@ def downsampleTileHalfRes(
     }
     if len(tile.shape) > 2:
         new_shape['bands'] = tile.shape[-1]
-    if new_shape['bands'] > 4:
-        result = np.empty(
-            (new_shape['height'], new_shape['width'], new_shape['bands']),
-            dtype=tile.dtype,
-        )
-        for band_index in range(new_shape['bands']):
-            result[(..., band_index)] = resize_function(
-                tile[(..., band_index)],
-                new_shape,
-                resample_method,
+    if resample_method.value <= ResampleMethod.PIL_MAX_ENUM.value:
+        if new_shape['bands'] > 4:
+            result = np.empty(
+                (new_shape['height'], new_shape['width'], new_shape['bands']),
+                dtype=tile.dtype,
             )
-        return result
+            for band_index in range(new_shape['bands']):
+                result[(..., band_index)] = pilResize(
+                    tile[(..., band_index)],
+                    new_shape,
+                    resample_method,
+                )
+            return result
+        else:
+            return pilResize(tile, new_shape, resample_method)
     else:
-        return resize_function(tile, new_shape, resample_method)
+        return numpyResize(tile, new_shape, resample_method)
