@@ -726,8 +726,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         slice(overlap['left'], new_tile.shape[1] - overlap['right']),
                     ]
 
-                    x = int((tile['x'] + overlap['left']) / 2)
-                    y = int((tile['y'] + overlap['top']) / 2)
+                    x = int(tile['x'] / 2 + overlap['left'])
+                    y = int(tile['y'] / 2 + overlap['top'])
 
                     self.addTile(
                         new_tile,
