@@ -19,8 +19,8 @@ class ResampleMethod(Enum):
     NP_MAX = 9
     NP_MIN = 10
     NP_NEAREST = 11
-    NP_MAX_CROSSBAND = 12
-    NP_MIN_CROSSBAND = 13
+    NP_MAX_COLOR = 12
+    NP_MIN_COLOR = 13
 
 
 def pilResize(
@@ -65,6 +65,16 @@ def numpyResize(
             return np.mean(subarrays, axis=0).astype(tile.dtype)
         elif resample_method == ResampleMethod.NP_MEDIAN:
             return np.median(subarrays, axis=0).astype(tile.dtype)
+        elif resample_method == ResampleMethod.NP_MAX:
+            return np.max(subarrays, axis=0).astype(tile.dtype)
+        elif resample_method == ResampleMethod.NP_MIN:
+            return np.min(subarrays, axis=0).astype(tile.dtype)
+        elif resample_method == ResampleMethod.NP_MAX_COLOR:
+            summed = np.sum(subarrays, axis=3)
+            pixel_selection = np.argmax(summed, axis=0)
+        elif resample_method == ResampleMethod.NP_MIN_COLOR:
+            summed = np.sum(subarrays, axis=3)
+            pixel_selection = np.argmin(summed, axis=0)
         elif resample_method == ResampleMethod.NP_MODE:
             # if a pixel occurs twice in a set of four, it is a mode
             # if no mode, default to pixel 0. check for minimal matches 1=2, 1=3, 2=3
@@ -78,16 +88,6 @@ def numpyResize(
                     2, 0,
                 ),
             )
-        elif resample_method == ResampleMethod.NP_MAX:
-            summed = np.sum(subarrays, axis=3)
-            pixel_selection = np.argmax(summed, axis=0)
-        elif resample_method == ResampleMethod.NP_MIN:
-            summed = np.sum(subarrays, axis=3)
-            pixel_selection = np.argmin(summed, axis=0)
-        elif resample_method == ResampleMethod.NP_MAX_CROSSBAND:
-            return np.max(subarrays, axis=0).astype(tile.dtype)
-        elif resample_method == ResampleMethod.NP_MIN_CROSSBAND:
-            return np.min(subarrays, axis=0).astype(tile.dtype)
 
         if pixel_selection is not None:
             if len(tile.shape) > 2:
