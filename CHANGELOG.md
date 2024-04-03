@@ -11,6 +11,7 @@
 - Guard fetching internal metadata on zarr sources that have less data ([#1481](../../pull/1481))
 - Add a method to list registered extensions and mimetypes ([#1488](../../pull/1488))
 - Reduce bioformats keeping file handles open ([#1492](../../pull/1492))
+- Use more tile-frame textures in high frame count images ([#1494](../../pull/1494))
 
 ### Changes
 - Prohibit bioformats from reading zip directly ([#1491](../../pull/1491))

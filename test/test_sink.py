@@ -1,4 +1,3 @@
-
 import large_image_source_test
 import large_image_source_zarr
 import numpy as np
