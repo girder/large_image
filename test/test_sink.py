@@ -234,12 +234,7 @@ def testImageCopyLargeDownsampling(resample_method, tmp_path):
 def testImageCopyLargeDownsamplingMultiband(resample_method, tmp_path):
     output_file = tmp_path / f'{resample_method}_multiband.db'
     sink = large_image_source_zarr.new()
-    # TODO: fix 16-bit images with modes other than NEAREST
-    # bands = (
-    #     'red=400-12000,green=0-65535,blue=800-4000,'
-    #     'ir1=200-24000,ir2=200-22000,gray=100-10000,other=0-65535'
-    # )
-    bands = 'red=0-50,green=50-100,blue=100-250,other=250-255'
+    bands = 'red=0-255,green=0-255,blue=0-255,ir=0-255,gray=0-255,other=0-255'
     source = large_image_source_test.TestTileSource(
         fractal=True,
         tileWidth=128,
@@ -256,10 +251,10 @@ def testImageCopyLargeDownsamplingMultiband(resample_method, tmp_path):
 
     assert len(written_arrays) == written.levels
     assert written_arrays.get('0') is not None
-    assert written_arrays.get('0').shape == (2, 3, 4096, 2048, 4)
+    assert written_arrays.get('0').shape == (2, 3, 4096, 2048, 6)
     assert written_arrays.get('1') is not None
-    assert written_arrays.get('1').shape == (2, 3, 2048, 1024, 4)
+    assert written_arrays.get('1').shape == (2, 3, 2048, 1024, 6)
     assert written_arrays.get('2') is not None
-    assert written_arrays.get('2').shape == (2, 3, 1024, 512, 4)
+    assert written_arrays.get('2').shape == (2, 3, 1024, 512, 6)
     assert written_arrays.get('3') is not None
-    assert written_arrays.get('3').shape == (2, 3, 512, 256, 4)
+    assert written_arrays.get('3').shape == (2, 3, 512, 256, 6)
