@@ -688,7 +688,18 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(msg)
 
         metadata = self.getMetadata()
-        tile_size = dict(width=4096, height=4096)
+
+        if (
+            resample_method.value < ResampleMethod.PIL_MAX_ENUM.value and
+            resample_method != ResampleMethod.PIL_NEAREST
+        ):
+            tile_overlap = dict(x=4, y=4, edges=True)
+        else:
+            tile_overlap = dict(x=0, y=0)
+        tile_size = dict(
+            width=4096 + tile_overlap['x'],
+            height=4096 + tile_overlap['y'],
+        )
         for level in range(1, self.levels):
             scale_factor = 2 ** level
             iterator_output = dict(
@@ -703,7 +714,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 }
                 for tile in self.tileIterator(
                     tile_size=tile_size,
-                    tile_overlap=dict(x=4, y=4),
+                    tile_overlap=tile_overlap,
                     frame=frame['Index'],
                     output=iterator_output,
                     resample=False,  # TODO: incorporate resampling in core
@@ -715,14 +726,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         slice(overlap['left'], new_tile.shape[1] - overlap['right']),
                     ]
 
-                    x = int(
-                        tile['tile_position']['level_x'] *
-                        (tile_size['width'] / 2),
-                    )
-                    y = int(
-                        tile['tile_position']['level_y'] *
-                        (tile_size['height'] / 2),
-                    )
+                    x = int((tile['x'] + overlap['left']) / 2)
+                    y = int((tile['y'] + overlap['top']) / 2)
 
                     self.addTile(
                         new_tile,
