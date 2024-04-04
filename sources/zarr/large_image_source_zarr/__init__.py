@@ -765,58 +765,57 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 raise TileSourceError('Output path exists (%s).' % str(path))
 
-        if resample is None:
-            resample = (
-                ResampleMethod.PIL_LANCZOS
-                if lossy and self.dtype == np.uint8
-                else ResampleMethod.NP_NEAREST
-            )
-
-        self._generateDownsampledLevels(resample)
         suffix = Path(path).suffix
-        data_dir = self._tempdir
-        data_store = self._zarr_store
+        source = self
 
         if self.crop:
-            x, y, w, h = self.crop
-            current_arrays = dict(self._zarr.arrays())
-            # create new temp storage for cropped data
-            data_dir = tempfile.TemporaryDirectory()
-            data_store = zarr.DirectoryStore(data_dir.name)
-            cropped_zarr = zarr.open(data_store, mode='w')
-            for arr_name in current_arrays:
-                arr = np.array(current_arrays[arr_name])
-                cropped_arr = arr.take(
-                    indices=range(x, x + w),
-                    axis=self._axes.get('x'),
-                ).take(
-                    indices=range(y, y + h),
-                    axis=self._axes.get('y'),
+            top, left, height, width = self.crop
+            source = new()
+            source._zarr.attrs.update(self._zarr.attrs)
+            for frame in self.getMetadata().get('frames', [{'Index': 0}]):
+                frame_position = {
+                    k.replace('Index', '').lower(): v
+                    for k, v in frame.items()
+                    if k.replace('Index', '').lower() in self._axes
+                }
+                for tile in self.tileIterator(
+                    frame=frame['Index'],
+                    region=dict(top=top, left=left, width=width, height=height),
+                    resample=False,
+                ):
+                    source.addTile(
+                        tile['tile'],
+                        x=tile['x'] - left,
+                        y=tile['y'] - top,
+                        axes=list(self._axes.keys()),
+                        **frame_position,
+                    )
+
+        if suffix in ['.zarr', '.db', '.sqlite', '.zip']:
+            if resample is None:
+                resample = (
+                    ResampleMethod.PIL_LANCZOS
+                    if lossy and source.dtype == np.uint8
+                    else ResampleMethod.NP_NEAREST
                 )
-                cropped_zarr.create_dataset(arr_name, data=cropped_arr, overwrite=True)
-                cropped_zarr.attrs.update(self._zarr.attrs)
+            source._generateDownsampledLevels(resample)
 
-        if suffix == '.zarr':
-            shutil.copytree(data_dir.name, path)
-
-        elif suffix in ['.db', '.sqlite']:
-            sqlite_store = zarr.SQLiteStore(path)
-            zarr.copy_store(data_store, sqlite_store, if_exists='replace')
-            sqlite_store.close()
-
-        elif suffix == '.zip':
-            zip_store = zarr.ZipStore(path)
-            zarr.copy_store(data_store, zip_store, if_exists='replace')
-            zip_store.close()
+            if suffix == '.zarr':
+                shutil.copytree(source._tempdir.name, path)
+            elif suffix in ['.db', '.sqlite']:
+                sqlite_store = zarr.SQLiteStore(path)
+                zarr.copy_store(source._zarr_store, sqlite_store, if_exists='replace')
+                sqlite_store.close()
+            elif suffix == '.zip':
+                zip_store = zarr.ZipStore(path)
+                zarr.copy_store(source._zarr_store, zip_store, if_exists='replace')
+                zip_store.close()
 
         else:
             from large_image_converter import convert
 
-            attrs_path = Path(data_dir.name) / '.zattrs'
+            attrs_path = Path(source._tempdir.name) / '.zattrs'
             convert(str(attrs_path), path, overwrite=overwriteAllowed)
-
-        if self.crop:
-            shutil.rmtree(data_dir.name)
 
 
 def open(*args, **kwargs):
