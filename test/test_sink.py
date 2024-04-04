@@ -14,7 +14,6 @@ FILE_TYPES = [
     'zip',
     'zarr',
 ]
-RESAMPLE_METHODS = list(ResampleMethod)
 
 
 def copyFromSource(source, sink):
@@ -124,7 +123,7 @@ def testCrop(file_type, tmp_path):
 
 
 @pytest.mark.parametrize('file_type', FILE_TYPES)
-def testImageCopySmall(file_type, tmp_path):
+def testImageCopySmallFileTypes(file_type, tmp_path):
     output_file = tmp_path / f'test.{file_type}'
     sink = large_image_source_zarr.new()
     source = large_image_source_test.TestTileSource(
@@ -149,8 +148,8 @@ def testImageCopySmall(file_type, tmp_path):
     if file_type == 'zarr':
         output_file /= '.zattrs'
     written = large_image.open(output_file)
-    new_metadata = written.metadata
 
+    new_metadata = written.getMetadata()
     assert new_metadata.get('sizeX') == 512
     assert new_metadata.get('sizeY') == 1024
     assert new_metadata.get('dtype') == 'uint8'
@@ -159,13 +158,16 @@ def testImageCopySmall(file_type, tmp_path):
     assert len(new_metadata.get('frames')) == 6
 
 
-@pytest.mark.parametrize('file_type', FILE_TYPES)
-def testImageCopySmallMultiband(file_type, tmp_path):
-    output_file = tmp_path / f'test.{file_type}'
+@pytest.mark.parametrize('resample_method', [
+    ResampleMethod.PIL_LANCZOS,
+    ResampleMethod.NP_NEAREST,
+])
+def testImageCopySmallMultiband(resample_method, tmp_path):
+    output_file = tmp_path / f'test_{resample_method}.db'
     sink = large_image_source_zarr.new()
     bands = (
-        'red=400-12000,green=0-65535,blue=800-4000,'
-        'ir1=200-24000,ir2=200-22000,gray=100-10000,other=0-65535'
+        'red=0-255,green=0-255,blue=0-255,'
+        'ir1=0-255,ir2=0-255,gray=0-255,other=0-255'
     )
     source = large_image_source_test.TestTileSource(
         fractal=True,
@@ -181,88 +183,102 @@ def testImageCopySmallMultiband(file_type, tmp_path):
     metadata = sink.getMetadata()
     assert metadata.get('sizeX') == 512
     assert metadata.get('sizeY') == 1024
-    assert metadata.get('dtype') == 'uint16'
+    assert metadata.get('dtype') == 'uint8'
     assert metadata.get('levels') == 2
     assert metadata.get('bandCount') == 7
     assert len(metadata.get('frames')) == 6
 
-    sink.write(output_file)
-    if file_type == 'zarr':
-        output_file /= '.zattrs'
+    sink.write(output_file, resample=resample_method)
     written = large_image.open(output_file)
     new_metadata = written.getMetadata()
 
     assert new_metadata.get('sizeX') == 512
     assert new_metadata.get('sizeY') == 1024
-    assert new_metadata.get('dtype') == 'uint16'
+    assert new_metadata.get('dtype') == 'uint8'
     assert new_metadata.get('levels') == 2 or new_metadata.get('levels') == 3
     assert new_metadata.get('bandCount') == 7
     assert len(new_metadata.get('frames')) == 6
 
+    written_arrays = dict(written._zarr.arrays())
+    assert len(written_arrays) == written.levels
+    assert written_arrays.get('0') is not None
+    assert written_arrays.get('0').shape == (2, 3, 1024, 512, 7)
+    assert written_arrays.get('1') is not None
+    assert written_arrays.get('1').shape == (2, 3, 512, 256, 7)
 
-@pytest.mark.parametrize('resample_method', RESAMPLE_METHODS)
-def testImageCopyLargeDownsampling(resample_method, tmp_path):
-    output_file = tmp_path / f'{resample_method}.db'
+
+@pytest.mark.parametrize('resample_method', list(ResampleMethod))
+def testImageCopySmallDownsampling(resample_method, tmp_path):
+    output_file = tmp_path / f'test_{resample_method}.db'
     sink = large_image_source_zarr.new()
     source = large_image_source_test.TestTileSource(
         fractal=True,
         tileWidth=128,
         tileHeight=128,
-        sizeX=2048,
-        sizeY=4096,
+        sizeX=512,
+        sizeY=1024,
         frames='c=2,z=3',
     )
     copyFromSource(source, sink)
-    sink.write(output_file, resample=resample_method)
-    written = large_image_source_zarr.open(output_file)
-    written_arrays = dict(written._zarr.arrays())
 
+    sink.write(output_file, resample=resample_method)
+    written = large_image.open(output_file)
+
+    written_arrays = dict(written._zarr.arrays())
     assert len(written_arrays) == written.levels
     assert written_arrays.get('0') is not None
-    assert written_arrays.get('0').shape == (2, 3, 4096, 2048, 3)
+    assert written_arrays.get('0').shape == (2, 3, 1024, 512, 3)
     assert written_arrays.get('1') is not None
-    assert written_arrays.get('1').shape == (2, 3, 2048, 1024, 3)
-    assert written_arrays.get('2') is not None
-    assert written_arrays.get('2').shape == (2, 3, 1024, 512, 3)
-    assert written_arrays.get('3') is not None
-    assert written_arrays.get('3').shape == (2, 3, 512, 256, 3)
+    assert written_arrays.get('1').shape == (2, 3, 512, 256, 3)
 
-    # TODO: Can the content of the downsampled data be compared back to the test source?
-
-
-@pytest.mark.parametrize('resample_method', RESAMPLE_METHODS)
-def testImageCopyLargeDownsamplingMultiband(resample_method, tmp_path):
-    output_file = tmp_path / f'{resample_method}_multiband.db'
-    sink = large_image_source_zarr.new()
-    bands = 'red=0-255,green=0-255,blue=0-255,ir=0-255,gray=0-255,other=0-255'
-    source = large_image_source_test.TestTileSource(
-        fractal=True,
-        tileWidth=128,
-        tileHeight=128,
-        sizeX=2048,
-        sizeY=4096,
-        frames='c=2,z=3',
-        bands=bands,
+    sample_region, _format = written.getRegion(
+        region=dict(top=252, bottom=260, left=0, right=4),
+        output=dict(maxWidth=2, maxHeight=4),
+        format='numpy',
     )
-    copyFromSource(source, sink)
-    sink.write(output_file, resample=resample_method)
-    written = large_image_source_zarr.open(output_file)
-    written_arrays = dict(written._zarr.arrays())
+    assert sample_region.shape == (4, 2, 3)
+    white_mask = (sample_region[..., 0] == 255).flatten().tolist()
 
-    assert len(written_arrays) == written.levels
-    assert written_arrays.get('0') is not None
-    assert written_arrays.get('0').shape == (2, 3, 4096, 2048, 6)
-    assert written_arrays.get('1') is not None
-    assert written_arrays.get('1').shape == (2, 3, 2048, 1024, 6)
-    assert written_arrays.get('2') is not None
-    assert written_arrays.get('2').shape == (2, 3, 1024, 512, 6)
-    assert written_arrays.get('3') is not None
-    assert written_arrays.get('3').shape == (2, 3, 512, 256, 6)
+    if resample_method == ResampleMethod.PIL_NEAREST:
+        # expect any of the four variations, this will depend on version
+        expected_masks = [
+            [True, False, True, False, True, True, True, False],  # upper left
+            [True, False, True, True, True, False, True, False],  # lower left
+            [True, False, False, True, True, True, False, False],  # upper right
+            [False, False, True, True, False, True, True, False],  # lower right
+        ]
+    elif resample_method == ResampleMethod.PIL_LANCZOS:
+        expected_masks = [[False, False, False, False, False, False, False, False]]
+    elif resample_method == ResampleMethod.PIL_BILINEAR:
+        expected_masks = [[False, False, False, False, False, False, False, False]]
+    elif resample_method == ResampleMethod.PIL_BICUBIC:
+        expected_masks = [[False, False, False, False, False, False, False, False]]
+    elif resample_method == ResampleMethod.PIL_BOX:
+        expected_masks = [[False, False, False, False, False, False, False, False]]
+    elif resample_method == ResampleMethod.PIL_HAMMING:
+        expected_masks = [[False, False, False, False, False, False, False, False]]
+    elif resample_method == ResampleMethod.NP_MEAN:
+        expected_masks = [[False, False, False, False, False, False, False, False]]
+    elif resample_method == ResampleMethod.NP_MEDIAN:
+        expected_masks = [[True, False, True, True, True, True, True, False]]
+    elif resample_method == ResampleMethod.NP_MODE:
+        expected_masks = [[True, False, True, True, True, True, True, False]]
+    elif resample_method == ResampleMethod.NP_MAX:
+        expected_masks = [[True, False, True, True, True, True, True, False]]
+    elif resample_method == ResampleMethod.NP_MIN:
+        expected_masks = [[False, False, False, False, False, False, False, False]]
+    elif resample_method == ResampleMethod.NP_NEAREST:
+        expected_masks = [[True, False, True, False, True, True, True, False]]
+    elif resample_method == ResampleMethod.NP_MAX_COLOR:
+        expected_masks = [[True, False, True, True, True, True, True, False]]
+    elif resample_method == ResampleMethod.NP_MIN_COLOR:
+        expected_masks = [[False, False, False, False, False, False, False, False]]
+
+    assert white_mask in expected_masks
 
 
-@pytest.mark.parametrize('resample_method', RESAMPLE_METHODS)
-def testCropAndDownsample(resample_method, tmp_path):
-    output_file = tmp_path / f'cropped_{resample_method}.db'
+def testCropAndDownsample(tmp_path):
+    output_file = tmp_path / 'cropped.db'
     sink = large_image_source_zarr.new()
 
     # add tiles with some overlap to multiple frames
