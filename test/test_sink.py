@@ -258,3 +258,36 @@ def testImageCopyLargeDownsamplingMultiband(resample_method, tmp_path):
     assert written_arrays.get('2').shape == (2, 3, 1024, 512, 6)
     assert written_arrays.get('3') is not None
     assert written_arrays.get('3').shape == (2, 3, 512, 256, 6)
+
+
+@pytest.mark.parametrize('resample_method', RESAMPLE_METHODS)
+def testCropAndDownsample(resample_method, tmp_path):
+    output_file = tmp_path / f'cropped_{resample_method}.db'
+    sink = large_image_source_zarr.new()
+
+    # add tiles with some overlap to multiple frames
+    num_frames = 4
+    num_bands = 5
+    for z in range(num_frames):
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 900, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 900, z=z)
+
+    current_arrays = dict(sink._zarr.arrays())
+    assert len(current_arrays) == 1
+    assert current_arrays.get('0') is not None
+    assert current_arrays.get('0').shape == (num_frames, 1900, 1950, num_bands)
+
+    sink.crop = (100, 50, 1800, 1825)
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    written_arrays = dict(written._zarr.arrays())
+
+    assert len(written_arrays) == written.levels
+    assert written_arrays.get('0') is not None
+    assert written_arrays.get('0').shape == (num_frames, 1800, 1825, num_bands)
+    assert written_arrays.get('1') is not None
+    assert written_arrays.get('1').shape == (num_frames, 900, 913, num_bands)
+    assert written_arrays.get('2') is not None
+    assert written_arrays.get('2').shape == (num_frames, 450, 456, num_bands)
