@@ -239,42 +239,43 @@ def testImageCopySmallDownsampling(resample_method, tmp_path):
     assert sample_region.shape == (4, 2, 3)
     white_mask = (sample_region[..., 0] == 255).flatten().tolist()
 
-    if resample_method == ResampleMethod.PIL_NEAREST:
-        # expect any of the four variations, this will depend on version
-        expected_masks = [
+    expected_masks = {
+        ResampleMethod.PIL_NEAREST: [
+            # expect any of the four variations, this will depend on version
             [True, False, True, False, True, True, True, False],  # upper left
             [True, False, True, True, True, False, True, False],  # lower left
             [True, False, False, True, True, True, False, False],  # upper right
             [False, False, True, True, False, True, True, False],  # lower right
-        ]
-    elif resample_method == ResampleMethod.PIL_LANCZOS:
-        expected_masks = [[False, False, False, False, False, False, False, False]]
-    elif resample_method == ResampleMethod.PIL_BILINEAR:
-        expected_masks = [[False, False, False, False, False, False, False, False]]
-    elif resample_method == ResampleMethod.PIL_BICUBIC:
-        expected_masks = [[False, False, False, False, False, False, False, False]]
-    elif resample_method == ResampleMethod.PIL_BOX:
-        expected_masks = [[False, False, False, False, False, False, False, False]]
-    elif resample_method == ResampleMethod.PIL_HAMMING:
-        expected_masks = [[False, False, False, False, False, False, False, False]]
-    elif resample_method == ResampleMethod.NP_MEAN:
-        expected_masks = [[False, False, False, False, False, False, False, False]]
-    elif resample_method == ResampleMethod.NP_MEDIAN:
-        expected_masks = [[True, False, True, True, True, True, True, False]]
-    elif resample_method == ResampleMethod.NP_MODE:
-        expected_masks = [[True, False, True, True, True, True, True, False]]
-    elif resample_method == ResampleMethod.NP_MAX:
-        expected_masks = [[True, False, True, True, True, True, True, False]]
-    elif resample_method == ResampleMethod.NP_MIN:
-        expected_masks = [[False, False, False, False, False, False, False, False]]
-    elif resample_method == ResampleMethod.NP_NEAREST:
-        expected_masks = [[True, False, True, False, True, True, True, False]]
-    elif resample_method == ResampleMethod.NP_MAX_COLOR:
-        expected_masks = [[True, False, True, True, True, True, True, False]]
-    elif resample_method == ResampleMethod.NP_MIN_COLOR:
-        expected_masks = [[False, False, False, False, False, False, False, False]]
+        ],
+        ResampleMethod.PIL_LANCZOS:
+        [[False, False, False, False, False, False, False, False]],
+        ResampleMethod.PIL_BILINEAR:
+        [[False, False, False, False, False, False, False, False]],
+        ResampleMethod.PIL_BICUBIC:
+        [[False, False, False, False, False, False, False, False]],
+        ResampleMethod.PIL_BOX:
+        [[False, False, False, False, False, False, False, False]],
+        ResampleMethod.PIL_HAMMING:
+        [[False, False, False, False, False, False, False, False]],
+        ResampleMethod.NP_MEAN:
+        [[False, False, False, False, False, False, False, False]],
+        ResampleMethod.NP_MEDIAN:
+        [[True, False, True, True, True, True, True, False]],
+        ResampleMethod.NP_MODE:
+        [[True, False, True, True, True, True, True, False]],
+        ResampleMethod.NP_MAX:
+        [[True, False, True, True, True, True, True, False]],
+        ResampleMethod.NP_MIN:
+        [[False, False, False, False, False, False, False, False]],
+        ResampleMethod.NP_NEAREST:
+        [[True, False, True, False, True, True, True, False]],
+        ResampleMethod.NP_MAX_COLOR:
+        [[True, False, True, True, True, True, True, False]],
+        ResampleMethod.NP_MIN_COLOR:
+        [[False, False, False, False, False, False, False, False]],
+    }
 
-    assert white_mask in expected_masks
+    assert white_mask in expected_masks[resample_method]
 
 
 def testCropAndDownsample(tmp_path):
