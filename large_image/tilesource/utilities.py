@@ -815,7 +815,12 @@ def _addSubimageToImage(
             dtype=subimage.dtype)
     elif len(image.shape) != len(subimage.shape) or image.shape[-1] != subimage.shape[-1]:
         image, subimage = _makeSameChannelDepth(image, subimage)
-    image[y:y + subimage.shape[0], x:x + subimage.shape[1]] = subimage
+    if subimage.shape[-1] in {2, 4}:
+        mask = (subimage[:, :, -1] > 0)[:, :, np.newaxis]
+        image[y:y + subimage.shape[0], x:x + subimage.shape[1]] = np.where(
+            mask, subimage, image[y:y + subimage.shape[0], x:x + subimage.shape[1]])
+    else:
+        image[y:y + subimage.shape[0], x:x + subimage.shape[1]] = subimage
     return image
 
 

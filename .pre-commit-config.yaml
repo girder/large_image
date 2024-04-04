@@ -71,7 +71,7 @@ repos:
         - --keep-percent-format
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.3.4
+  rev: v0.3.5
   hooks:
     - id: ruff
       args: [--fix, --exit-non-zero-on-fix]
