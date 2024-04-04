@@ -1960,7 +1960,7 @@ class TileSource(IPyLeafletMixin):
         image = None
         tiledimage = None
         if max_workers is not None and max_workers < 0:
-            max_workers = max(-max_workers, utilities.cpu_count(False))
+            max_workers = min(-max_workers, utilities.cpu_count(False))
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
             futures = []
             for idx, frame in enumerate(frameList):
