@@ -49,7 +49,7 @@ def numpyResize(
         if tile.shape[0] % 2 != 0:
             tile = np.append(tile, np.expand_dims(tile[-1], axis=0), axis=0)
         if tile.shape[1] % 2 != 0:
-            tile = np.append(tile,  np.expand_dims(tile[:, -1], axis=1), axis=1)
+            tile = np.append(tile, np.expand_dims(tile[:, -1], axis=1), axis=1)
 
         pixel_selection = None
         subarrays = np.asarray(
