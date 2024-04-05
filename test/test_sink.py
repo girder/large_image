@@ -215,8 +215,8 @@ def testImageCopySmallDownsampling(resample_method, tmp_path):
         fractal=True,
         tileWidth=128,
         tileHeight=128,
-        sizeX=512,
-        sizeY=1024,
+        sizeX=511,
+        sizeY=1023,
         frames='c=2,z=3',
     )
     copyFromSource(source, sink)
@@ -227,7 +227,7 @@ def testImageCopySmallDownsampling(resample_method, tmp_path):
     written_arrays = dict(written._zarr.arrays())
     assert len(written_arrays) == written.levels
     assert written_arrays.get('0') is not None
-    assert written_arrays.get('0').shape == (2, 3, 1024, 512, 3)
+    assert written_arrays.get('0').shape == (2, 3, 1023, 511, 3)
     assert written_arrays.get('1') is not None
     assert written_arrays.get('1').shape == (2, 3, 512, 256, 3)
 
