@@ -20,6 +20,7 @@
 - Fix an issue with single band on multi source with non uniform sources ([#1474](../../pull/1474))
 - Allow alternate name axes in the multi source schema ([#1476](../../pull/1476))
 - Adjust default threading on tile-frame generation to match documentation ([#1495](../../pull/1495))
+- Fix how zarr sink directory is cleaned up ([#1496](../../pull/1496))
 
 ## 1.27.4
 
