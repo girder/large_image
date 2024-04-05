@@ -130,7 +130,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except Exception:
                 pass
             try:
-                shutil.rmtree(self._tempdir)
+                self._tempdir.cleanup()
             except Exception:
                 pass
 
