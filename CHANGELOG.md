@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.28.1
+
+### Changes
+- Improve algorithm sweep example options ([#1498](../../pull/1498))
+
 ## 1.28.0
 
 ### Features

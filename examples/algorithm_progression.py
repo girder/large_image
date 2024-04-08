@@ -193,6 +193,10 @@ class SweepAlgorithmMultiZarr(SweepAlgorithmMulti):
         tilesink.write(str(filepath), lossy=False)
         return desc
 
+    def addTile(self, tilesink, *args, **kwargs):
+        return tilesink.addTile(*args, **{
+            k: v for k, v in kwargs.items() if k in {'mask'}})
+
 
 class SweepAlgorithmZarr(SweepAlgorithm):
     def getOverallSink(self):
