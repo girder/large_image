@@ -919,7 +919,7 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
     else:
         with TemporaryDirectory() as tempDir:
             tempPath = os.path.join(tempDir, os.path.basename(outputPath))
-            lidata = _data_from_large_image(inputPath, tempPath, **kwargs)
+            lidata = _data_from_large_image(str(inputPath), tempPath, **kwargs)
             logger.log(logging.DEBUG - 1, 'large_image information for %s: %r',
                        inputPath, lidata)
             if lidata and (not is_vips(inputPath) or (
