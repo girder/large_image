@@ -244,6 +244,17 @@ Any of the frames of such an image are accessed by adding a ``frame=<integer>`` 
         format=large_image.constants.TILE_FORMAT_NUMPY)
     # nparray will contain data from the middle channel image
 
+Channels, Bands, Samples, and Axes
+----------------------------------
+
+Various large image formats refer to channels, bands, and samples.  This isn't consistent across different libraries.  In an attempt to harmonize the geospatial and medical image terminology, large_image uses ``bands`` or ``samples`` to refer to image plane components, such as red, green, blue, and alpha.  For geospatial data this can often have additional bands, such as near infrared or panchromatic.  ``channels`` are stored as separate frames and can be interpreted as different imaging modalities.  For example, a fluorescence microscopy image might have DAPI, CY5, and A594 channels.  A common color photograph file has 3 bands and 1 channel.
+
+At times, image ``axes`` are used to indicate the order of data, especially when interpreted as an n-dimensional array.  The ``x`` and ``y`` axes are the horizontal and vertical dimensions of the image.  The ``s`` axis is the ``bands`` or ``samples``, such as red, green, and blue.  The ``c`` axis is the ``channels`` with special support for channel names.  This corresponds to distinct frames.
+
+The ``z`` and ``t`` are common enough that they are sometimes considered as primary axes.  ``z`` corresponds to the direction orthogonal to ``x`` and ``y`` and is usually associated with altitude or microscope stage height.  ``t`` is time.
+
+Other axes are supported provided their names are case-insensitively unique.
+
 Styles - Changing colors, scales, and other properties
 ------------------------------------------------------
 
@@ -282,7 +293,7 @@ You can also composite a multi-frame image into a false-color output:
 Writing an Image
 ----------------
 
-If you wish to visualize numpy data, large_image can write a tiled tiff.  This requires a tile source that supports writing to be installed.  As of this writing, only the ``large-image-source-vips`` source supports this.
+If you wish to visualize numpy data, large_image can write a tiled tiff.  This requires a tile source that supports writing to be installed.  As of this writing, the ``large-image-source-zarr`` and ``large-image-source-vips`` sources supports this.  If both are installed, the ``large-image-source-zarr`` is the default.
 
 .. code-block:: python
 
@@ -292,3 +303,14 @@ If you wish to visualize numpy data, large_image can write a tiled tiff.  This r
         # We could optionally add a mask to limit the output
         source.addTile(nparray, x, y)
     source.write('/tmp/sample.tiff', lossy=False)
+
+The ``large-image-source-zarr`` can be used to store multiple frame data with arbitrary axes.
+
+.. code-block:: python
+
+    import large_image
+    source = large_image.new()
+    for nparray, x, y, time, param1 in fancy_algorithm():
+        source.addTile(nparray, x, y, time=time, p1=param1)
+    # The writer supports a variety of formats
+    source.write('/tmp/sample.zarr.zip', lossy=False)

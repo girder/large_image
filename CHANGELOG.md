@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.27.5
+## 1.28.0
 
 ### Features
 - Zarr tile sink ([#1446](../../pull/1446))

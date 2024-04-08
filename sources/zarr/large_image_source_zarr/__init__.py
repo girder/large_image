@@ -557,8 +557,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param mask: a 2-d numpy array (or 3-d if the last dimension is 1).
             If specified, areas where the mask is false will not be altered.
         :param axes: a string or list of strings specifying the names of axes
-            in the same order as the tile dimensions
-        :param kwargs: start locations for any additional axes
+            in the same order as the tile dimensions.
+        :param kwargs: start locations for any additional axes.  Note that
+            ``level`` is a reserved word and not permitted for an axis name.
         """
         # TODO: improve band bookkeeping
 
@@ -755,6 +756,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param alpha: True if an alpha channel is allowed.
         :param overwriteAllowed: if False, raise an exception if the output
             path exists.
+        :param resample: one of the ``ResampleMethod`` enum values.  Defaults
+            to ``NP_NEAREST`` for lossless and non-uint8 data and to
+            ``PIL_LANCZOS`` for lossy uint8 data.
         """
         if os.path.exists(path):
             if overwriteAllowed:
