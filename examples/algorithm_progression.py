@@ -5,6 +5,7 @@ import concurrent.futures
 import inspect
 import itertools
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -13,6 +14,7 @@ try:
     import algorithms
 except ImportError:
     from . import algorithms
+import large_image_converter
 import large_image_source_vips
 import large_image_source_zarr
 import numpy as np
@@ -129,7 +131,7 @@ class SweepAlgorithm:
 
 class SweepAlgorithmMulti(SweepAlgorithm):
     def getOverallSink(self):
-        os.makedirs(self.output_filename, exist_ok=True)
+        os.makedirs(os.path.splitext(self.output_filename)[0], exist_ok=True)
         algorithm_name = self.algorithm.__name__.replace('_', ' ').title()
         self.yaml_dict = {
             'name': f'{algorithm_name} iterative results',
@@ -141,17 +143,21 @@ class SweepAlgorithmMulti(SweepAlgorithm):
         return True
 
     def writeOverallSink(self, sink):
-        with open(Path(self.output_filename, 'results.yml'), 'w') as f:
+        resultpath = Path(os.path.splitext(self.output_filename)[0], 'results.yml')
+        with open(resultpath, 'w') as f:
             yaml.dump(
                 self.yaml_dict,
                 f,
                 default_flow_style=False,
                 sort_keys=False,
             )
+        if os.path.splitext(self.output_filename)[1]:
+            large_image_converter.convert(resultpath, self.output_filename, overwrite=True)
+            shutil.rmtree(os.path.splitext(self.output_filename)[0])
 
     def writeTileSink(self, tilesink, iteration_id):
         filename = f'{self.algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.tiff'
-        filepath = Path(self.output_filename, filename)
+        filepath = Path(os.path.splitext(self.output_filename)[0], filename)
 
         desc = dict(
             path=filename,
@@ -178,7 +184,7 @@ class SweepAlgorithmMultiZarr(SweepAlgorithmMulti):
 
     def writeTileSink(self, tilesink, iteration_id):
         filename = f'{self.algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.zarr.zip'
-        filepath = Path(self.output_filename, filename)
+        filepath = Path(os.path.splitext(self.output_filename)[0], filename)
 
         desc = dict(
             path=filename,
