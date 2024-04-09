@@ -4,6 +4,8 @@ import argparse
 import concurrent.futures
 import inspect
 import itertools
+import json
+import math
 import os
 import shutil
 import sys
@@ -15,9 +17,8 @@ try:
 except ImportError:
     from . import algorithms
 import large_image_converter
-import large_image_source_vips
-import large_image_source_zarr
 import numpy as np
+import tifftools
 import yaml
 
 import large_image
@@ -25,7 +26,8 @@ import large_image
 
 class SweepAlgorithm:
     def __init__(self, algorithm, input_filename, input_params, param_order,
-                 output_filename, max_workers, multiprocessing, overlay):
+                 output_filename, max_workers, multiprocessing, overlay,
+                 lossy=False, scale=1):
         self.algorithm = algorithm
         self.input_filename = input_filename
         self.output_filename = output_filename
@@ -34,6 +36,8 @@ class SweepAlgorithm:
         self.max_workers = max_workers
         self.multiprocessing = multiprocessing
         self.overlay = overlay
+        self.lossy = lossy
+        self.scale = float(scale)
 
         self.combos = list(itertools.product(*[p['range'] for p in input_params.values()]))
 
@@ -69,14 +73,22 @@ class SweepAlgorithm:
         iteration_id = [param_indices[param_name] for param_name in self.param_order]
         tilesink = self.getTileSink(sink)
         lastlogtime = time.time()
+        tiparams = {}
+        if self.scale and self.scale != 1:
+            tiparams['output'] = {
+                'maxWidth': int(math.ceil(source.sizeX / self.scale)),
+                'maxHeight': int(math.ceil(source.sizeY / self.scale)),
+            }
         for tile in source.tileIterator(
             format=large_image.tilesource.TILE_FORMAT_NUMPY,
             tile_size=dict(width=2048, height=2048),
+            **tiparams,
         ):
+            scaled = tile.get('scaled', 1)
             if self.overlay:
                 self.addTile(
                     tilesink,
-                    tile['tile'], tile['x'], tile['y'],
+                    tile['tile'], int(tile['x'] * scaled), int(tile['y'] * scaled),
                     **{p['axis']: iteration_id[i] for i, p in enumerate(
                         self.param_order.values())})
             altered_data = self.algorithm(tile['tile'], *params)
@@ -90,11 +102,11 @@ class SweepAlgorithm:
                 altered_data[:, :, -1] = 255
             self.addTile(
                 tilesink,
-                altered_data, tile['x'], tile['y'], mask=mask,
+                altered_data, int(tile['x'] * scaled), int(tile['y'] * scaled), mask=mask,
                 **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())})
             if time.time() - lastlogtime > 10:
                 sys.stdout.write(
-                    f'Processed {tile["tile_position"]["position"]} of '
+                    f'Processed {tile["tile_position"]["position"] + 1} of '
                     f'{tile["iterator_range"]["position"]} tiles\n')
                 sys.stdout.flush()
                 lastlogtime = time.time()
@@ -152,18 +164,61 @@ class SweepAlgorithmMulti(SweepAlgorithm):
                 sort_keys=False,
             )
         if os.path.splitext(self.output_filename)[1]:
-            large_image_converter.convert(resultpath, self.output_filename, overwrite=True)
-            shutil.rmtree(os.path.splitext(self.output_filename)[0])
+            if (os.path.splitext(self.output_filename)[1] in {'.tif', '.tiff'} and
+                    os.path.splitext(self.yaml_dict['sources'][0]['path'])[1] == '.tiff'):
+                lastlogtime = time.time()
+                rts = large_image.open(resultpath, noCache=True)
+                info = None
+                for idx, srcinfo in enumerate(rts.metadata['frames']):
+                    for src in self.yaml_dict['sources']:
+                        skip = False
+                        for k, v in src.items():
+                            if k != 'path':
+                                if srcinfo['Index' + k.upper()] != v:
+                                    skip = True
+                        if not skip:
+                            break
+                    ti = tifftools.read_tiff(Path(
+                        os.path.splitext(self.output_filename)[0], src['path']))
+                    desc = {
+                        'frame': srcinfo,
+                    }
+                    if info is None:
+                        info = ti
+                        desc['metadata'] = rts.metadata
+                        if 'channels' in rts.metadata:
+                            desc['channels'] = rts.metadata['channels']
+                    else:
+                        info['ifds'].extend(ti['ifds'])
+                    ti['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value] = {
+                        'datatype': tifftools.Datatype.ASCII,
+                        'data': json.dumps(
+                            desc, separators=(',', ':'), sort_keys=True,
+                            default=large_image_converter.json_serial),
+                    }
+                    ti = None
+                    if time.time() - lastlogtime > 10:
+                        sys.stdout.write(
+                            f'Collected {idx + 1} of {len(self.yaml_dict["sources"])} frames\n')
+                        sys.stdout.flush()
+                        lastlogtime = time.time()
+                tifftools.write_tiff(info, self.output_filename, allowExisting=True)
+                rts = None
+                info = None
+            else:
+                large_image_converter.convert(resultpath, self.output_filename, overwrite=True)
+            shutil.rmtree(os.path.splitext(self.output_filename)[0], ignore_errors=True)
 
     def writeTileSink(self, tilesink, iteration_id):
-        filename = f'{self.algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.tiff'
+        ext = '.tiff'
+        filename = f'{self.algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}{ext}'
         filepath = Path(os.path.splitext(self.output_filename)[0], filename)
 
         desc = dict(
             path=filename,
             **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())},
         )
-        tilesink.write(str(filepath), lossy=False)
+        tilesink.write(str(filepath), lossy=self.lossy)
         return desc
 
     def addTile(self, tilesink, *args, **kwargs):
@@ -175,22 +230,29 @@ class SweepAlgorithmMulti(SweepAlgorithm):
 
 class SweepAlgorithmMultiVips(SweepAlgorithmMulti):
     def getTileSink(self, sink):
+        import large_image_source_vips
+
         return large_image_source_vips.new()
 
 
 class SweepAlgorithmMultiZarr(SweepAlgorithmMulti):
     def getTileSink(self, sink):
+        import large_image_source_zarr
+
         return large_image_source_zarr.new()
 
     def writeTileSink(self, tilesink, iteration_id):
-        filename = f'{self.algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}.zarr.zip'
+        ext = '.zarr.zip'
+        if os.path.splitext(self.output_filename)[1] in {'.tif', '.tiff'}:
+            ext = '.tiff'
+        filename = f'{self.algorithm.__name__}_{"_".join([str(v) for v in iteration_id])}{ext}'
         filepath = Path(os.path.splitext(self.output_filename)[0], filename)
 
         desc = dict(
             path=filename,
             **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())},
         )
-        tilesink.write(str(filepath), lossy=False)
+        tilesink.write(str(filepath), lossy=self.lossy)
         return desc
 
     def addTile(self, tilesink, *args, **kwargs):
@@ -200,10 +262,12 @@ class SweepAlgorithmMultiZarr(SweepAlgorithmMulti):
 
 class SweepAlgorithmZarr(SweepAlgorithm):
     def getOverallSink(self):
+        import large_image_source_zarr
+
         return large_image_source_zarr.new()
 
     def writeOverallSink(self, sink):
-        sink.write(self.output_filename, lossy=False)
+        sink.write(self.output_filename, lossy=self.lossy)
 
     def getTileSink(self, sink):
         return sink
@@ -235,7 +299,7 @@ def create_argparser():
         '-w',
         '--num_workers',
         required=False,
-        default=4,
+        default=-1,
         type=int,
         help='Number of workers to use for processing algorithm iterations',
     )
@@ -260,10 +324,23 @@ def create_argparser():
         help='Overlay algorithm results on top of source data.',
     )
     argparser.add_argument(
+        '--lossy',
+        action='store_true',
+        help='Store tiff files with lossy compression.',
+    )
+    argparser.add_argument(
         '--sink',
         required=False,
         default='zarr',
-        help='Either zarr, multizarr, or multivips',
+        help='Either zarr, multizarr, or multivips.',
+    )
+    argparser.add_argument(
+        '--scale',
+        required=False,
+        default=1,
+        type=float,
+        help='Only process a lower resolution version of the source data.  '
+        'Values greater than 1 reduce the size of the data processed.',
     )
     argparser.add_argument(
         '-p',
@@ -280,6 +357,13 @@ def create_argparser():
 def main(argv):
     argparser = create_argparser()
     args = argparser.parse_args(argv[1:])
+    if args.num_workers < 1:
+        args.num_workers = large_image.tilesource.utilities.cpu_count(False)
+    if os.environ.get('VIPS_CONCURRENCY') is None:
+        os.environ['VIPS_CONCURRENCY'] = str(max(
+            1, large_image.tilesource.utilities.cpu_count(False) // args.num_workers))
+    if args.multiprocessing and os.environ.get('LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION') is None:
+        os.environ['LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION'] = str(32 * args.num_workers)
 
     algorithm_code = args.algorithm_code
     input_filename = args.input_filename
@@ -330,7 +414,7 @@ def main(argv):
 
     sweep = cls(algorithm, input_filename, params, input_params,
                 args.output_filename, args.num_workers, args.multiprocessing,
-                args.overlay)
+                args.overlay, args.lossy, args.scale)
     sweep.run()
 
 
