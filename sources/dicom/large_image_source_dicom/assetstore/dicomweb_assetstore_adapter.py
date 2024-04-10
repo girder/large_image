@@ -1,3 +1,5 @@
+import json
+
 import cherrypy
 import requests
 from large_image_source_dicom.dicom_tags import dicom_key_to_tag
@@ -394,31 +396,10 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         except ValueError:
             return
 
-    def importData(self, parent, parentType, params, progress, user, **kwargs):
-        """
-        Import DICOMweb WSI instances from a DICOMweb server.
-
-        :param parent: The parent object to import into.
-        :param parentType: The model type of the parent object.
-        :type parentType: str
-        :param params: Additional parameters required for the import process.
-            This dictionary may include the following keys:
-
-            :limit: (optional) limit the number of studies imported.
-            :search_filters: (optional) a dictionary of additional search
-                filters to use with dicomweb_client's `search_for_series()`
-                function.
-
-        :type params: dict
-        :param progress: Object on which to record progress if possible.
-        :type progress: :py:class:`girder.utility.progress.ProgressContext`
-        :param user: The Girder user performing the import.
-        :type user: dict or None
-        :return: a list of items that were created
-        """
+    def _importData(self, parent, parentType, params, progress, user):
         if parentType not in ('folder', 'user', 'collection'):
             msg = f'Invalid parent type: {parentType}'
-            raise RuntimeError(msg)
+            raise ValidationException(msg)
 
         limit = params.get('limit')
         search_filters = params.get('search_filters', {})
@@ -509,6 +490,63 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                 file = File().save(file)
 
             items.append(item)
+
+        return items
+
+    def importData(self, parent, parentType, params, progress, user, **kwargs):
+        """
+        Import DICOMweb WSI instances from a DICOMweb server.
+
+        :param parent: The parent object to import into.
+        :param parentType: The model type of the parent object.
+        :type parentType: str
+        :param params: Additional parameters required for the import process.
+            This dictionary may include the following keys:
+
+            :limit: (optional) limit the number of studies imported.
+            :search_filters: (optional) a dictionary of additional search
+                filters to use with dicomweb_client's `search_for_series()`
+                function.
+
+        :type params: dict
+        :param progress: Object on which to record progress if possible.
+        :type progress: :py:class:`girder.utility.progress.ProgressContext`
+        :param user: The Girder user performing the import.
+        :type user: dict or None
+        :return: a list of items that were created
+        """
+        # Validate the parameters
+        limit = params.get('limit') or None
+        if limit is not None:
+            error_msg = f'Invalid limit: {limit}'
+            try:
+                limit = int(limit)
+            except ValueError:
+                raise ValidationException(error_msg)
+
+            if limit < 1:
+                raise ValidationException(error_msg)
+
+        try:
+            search_filters = json.loads(params.get('filters') or '{}')
+        except json.JSONDecodeError as e:
+            msg = f'Invalid filters: "{params.get("filters")}". {e}'
+            raise ValidationException(msg)
+
+        items = self._importData(
+            parent,
+            parentType,
+            {
+                'limit': limit,
+                'search_filters': search_filters,
+            },
+            progress,
+            user,
+        )
+
+        if not items or len(items) == 0:
+            msg = 'No studies matching the search filters were found'
+            raise ValidationException(msg)
 
         return items
 
