@@ -2,6 +2,9 @@
 
 ## 1.28.1
 
+### Improvements
+- When writing zarr sinks through the converter, use jpeg compression for lossy data ([#1501](../../pull/1501))
+
 ### Changes
 - Improve algorithm sweep example options ([#1498](../../pull/1498))
 
