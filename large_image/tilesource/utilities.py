@@ -1,6 +1,7 @@
 import io
 import math
 import os
+import threading
 import types
 import xml.etree.ElementTree
 from collections import defaultdict
@@ -26,6 +27,11 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
 
 # Turn off decompression warning check
 PIL.Image.MAX_IMAGE_PIXELS = None
+
+# This is used by any submodule that uses vips to avoid a race condition in
+# new_from_file.  Since vips is technically optional and the various modules
+# might pull it in independently, it is located here to make is shareable.
+_newFromFileLock = threading.RLock()
 
 # Extend colors so G and GREEN map to expected values.  CSS green is #0080ff,
 # which is unfortunate.
