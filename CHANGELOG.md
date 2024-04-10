@@ -5,6 +5,9 @@
 ### Changes
 - Improve algorithm sweep example options ([#1498](../../pull/1498))
 
+### Bug Fixes
+- Guard a race condition in vips new_from_file ([#1500](../../pull/1500))
+
 ## 1.28.0
 
 ### Features
