@@ -18,7 +18,9 @@ import psutil
 import tifftools
 
 import large_image
-from large_image.tilesource.utilities import _gdalParameters, _vipsCast, _vipsParameters
+from large_image.tilesource.utilities import (_gdalParameters,
+                                              _newFromFileLock, _vipsCast,
+                                              _vipsParameters)
 
 from . import format_aperio
 
@@ -77,7 +79,7 @@ def _data_from_large_image(path, outputPath, **kwargs):
     _import_pyvips()
     if not path.startswith('large_image://test'):
         try:
-            ts = large_image.open(path)
+            ts = large_image.open(path, noCache=True)
         except Exception:
             return
     else:
@@ -164,7 +166,8 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
     """
     _import_pyvips()
 
-    image = pyvips.Image.new_from_file(inputPath)
+    with _newFromFileLock:
+        image = pyvips.Image.new_from_file(inputPath)
     width = image.width
     height = image.height
     pages = 1
@@ -180,7 +183,8 @@ def _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
     # Process each image separately to pyramidize it
     for page in range(pages):
         subInputPath = inputPath + '[page=%d]' % page
-        subImage = pyvips.Image.new_from_file(subInputPath)
+        with _newFromFileLock:
+            subImage = pyvips.Image.new_from_file(subInputPath)
         imageSizes.append((subImage.width, subImage.height, subInputPath, page))
         if subImage.width != width or subImage.height != height:
             if subImage.width * subImage.height <= width * height:
@@ -274,7 +278,8 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
         image = pyvips.Image.new_from_buffer(inputPathOrBuffer, '')
     else:
         source = inputPathOrBuffer
-        image = pyvips.Image.new_from_file(inputPathOrBuffer)
+        with _newFromFileLock:
+            image = pyvips.Image.new_from_file(inputPathOrBuffer)
     logger.info('Input: %s, Output: %s, Options: %r%s',
                 source, outputPath, convertParams, status)
     image = image.autorot()
@@ -736,7 +741,8 @@ def _is_multiframe(path):
     """
     _import_pyvips()
     try:
-        image = pyvips.Image.new_from_file(path)
+        with _newFromFileLock:
+            image = pyvips.Image.new_from_file(path)
     except Exception:
         try:
             open(path, 'rb').read(1)
@@ -971,7 +977,8 @@ def is_vips(path):
     """
     _import_pyvips()
     try:
-        image = pyvips.Image.new_from_file(path)
+        with _newFromFileLock:
+            image = pyvips.Image.new_from_file(path)
         # image(0, 0) will throw if vips can't decode the image
         if not image.width or not image.height or image(0, 0) is None:
             return False
