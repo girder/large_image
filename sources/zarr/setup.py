@@ -59,6 +59,9 @@ setup(
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
+        'all': [
+            'large-image-converter',
+        ],
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
