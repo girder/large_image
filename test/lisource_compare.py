@@ -268,7 +268,7 @@ def source_compare(sourcePath, opts):  # noqa
                     (v, k) for k, v in ts.metadata['IndexStride'].items()
                     if ts.metadata['IndexRange'][k] > 1])]
                 sys.stdout.write(' %-4s' % (''.join(
-                    k[5:] if k != 'IndexXY' else 'x' for k in axes)))
+                    k[5:6] if k != 'IndexXY' else 'x' for k in axes)[:4]))
             else:
                 sys.stdout.write('     ')
             result['opentime'] = opentime
