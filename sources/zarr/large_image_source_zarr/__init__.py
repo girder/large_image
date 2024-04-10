@@ -819,7 +819,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             from large_image_converter import convert
 
             attrs_path = Path(source._tempdir.name) / '.zattrs'
-            convert(str(attrs_path), path, overwrite=overwriteAllowed)
+            params = {}
+            if lossy and self.dtype == np.uint8:
+                params['compression'] = 'jpeg'
+            convert(str(attrs_path), path, overwrite=overwriteAllowed, **params)
 
 
 def open(*args, **kwargs):
