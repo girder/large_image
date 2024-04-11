@@ -10,6 +10,7 @@
 
 ### Bug Fixes
 - Guard a race condition in vips new_from_file ([#1500](../../pull/1500))
+- Fix cropping with the zarr sink ([#1505](../../pull/1505))
 
 ## 1.28.0
 
