@@ -773,7 +773,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         source = self
 
         if self.crop:
-            top, left, height, width = self.crop
+            left, top, width, height = self.crop
             source = new()
             source._zarr.attrs.update(self._zarr.attrs)
             for frame in self.getMetadata().get('frames', [{'Index': 0}]):
