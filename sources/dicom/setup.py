@@ -69,7 +69,7 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'wsidicom>=0.9.0',
-        'girder>=3.2.3.dev23',
+        'girder>=3.2.3',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
