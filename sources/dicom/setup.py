@@ -69,10 +69,9 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'wsidicom>=0.9.0',
-        'girder>=3.2.3',
     ],
     extras_require={
-        'girder': f'girder-large-image{limit_version}',
+        'girder': [f'girder-large-image{limit_version}', 'girder>=3.2.3'],
     },
     include_package_data=True,
     keywords='large_image, tile source',
