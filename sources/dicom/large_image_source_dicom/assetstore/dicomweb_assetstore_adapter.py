@@ -504,7 +504,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             This dictionary may include the following keys:
 
             :limit: (optional) limit the number of studies imported.
-            :search_filters: (optional) a dictionary of additional search
+            :filters: (optional) a dictionary/JSON string of additional search
                 filters to use with dicomweb_client's `search_for_series()`
                 function.
 
@@ -527,11 +527,13 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             if limit < 1:
                 raise ValidationException(error_msg)
 
-        try:
-            search_filters = json.loads(params.get('filters') or '{}')
-        except json.JSONDecodeError as e:
-            msg = f'Invalid filters: "{params.get("filters")}". {e}'
-            raise ValidationException(msg)
+        search_filters = params.get('filters', {})
+        if isinstance(search_filters, str):
+            try:
+                search_filters = json.loads(search_filters)
+            except json.JSONDecodeError as e:
+                msg = f'Invalid filters: "{params.get("filters")}". {e}'
+                raise ValidationException(msg)
 
         items = self._importData(
             parent,
@@ -544,7 +546,7 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             user,
         )
 
-        if not items or len(items) == 0:
+        if not items:
             msg = 'No studies matching the search filters were found'
             raise ValidationException(msg)
 
