@@ -296,7 +296,7 @@ def testCropAndDownsample(tmp_path):
     assert current_arrays.get('0') is not None
     assert current_arrays.get('0').shape == (num_frames, 1900, 1950, num_bands)
 
-    sink.crop = (100, 50, 1800, 1825)
+    sink.crop = (50, 100, 1825, 1800)
     sink.write(output_file)
     written = large_image_source_zarr.open(output_file)
     written_arrays = dict(written._zarr.arrays())
@@ -308,3 +308,28 @@ def testCropAndDownsample(tmp_path):
     assert written_arrays.get('1').shape == (num_frames, 900, 913, num_bands)
     assert written_arrays.get('2') is not None
     assert written_arrays.get('2').shape == (num_frames, 450, 456, num_bands)
+
+
+def testCropToTiff(tmp_path):
+    output_file = tmp_path / 'cropped.tiff'
+    sink = large_image_source_zarr.new()
+
+    # add tiles with some overlap to multiple frames
+    num_frames = 1
+    num_bands = 3
+    for z in range(num_frames):
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 900, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 900, z=z)
+
+    current_arrays = dict(sink._zarr.arrays())
+    assert len(current_arrays) == 1
+    assert current_arrays.get('0') is not None
+    assert current_arrays.get('0').shape == (num_frames, 1900, 1950, num_bands)
+
+    sink.crop = (100, 50, 1800, 1825)
+    sink.write(output_file)
+    source = large_image.open(output_file)
+    assert source.sizeX == 1800
+    assert source.sizeY == 1825
