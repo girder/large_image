@@ -648,23 +648,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self.levels = int(max(1, math.ceil(math.log(max(
                     self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
 
-    def addAssociatedImage(self, image, overwrite=False):
+    def addAssociatedImage(self, image):
         """
         Add an associated image to this source.
 
         :param image: a numpy array, PIL Image, or a binary string
             with an image.  The numpy array can have 2 or 3 dimensions.
-        :param overwrite: If true, allow overwriting an existing associated image with the same label
         """
         data, _ = _imageToNumpy(image)
         with self._addLock:
             # Each associated image should be in its own group
             num_existing = len(self.getAssociatedImagesList())
             name = f'associated_{num_existing + 1}'
-            group = self._zarr.require_group(name, overwrite=overwrite)
+            group = self._zarr.require_group(name)
             arr = zarr.array(
                 data,
-                overwrite=overwrite,
                 store=self._zarr_store,
                 path=f'{name}/image')
             self._associatedImages.append((group, arr))
