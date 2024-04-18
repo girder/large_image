@@ -1,4 +1,5 @@
 import math
+from PIL import Image
 
 import large_image_source_test
 import large_image_source_zarr
@@ -427,3 +428,42 @@ def testMetadata(tmp_path):
     assert rdefs is not None
     assert rdefs.get('model') == 'color'
     assert rdefs.get('defaultZ') == 0
+
+def testAddAssociatedImages(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+
+    num_frames = 4
+    num_bands = 5
+    for z in range(num_frames):
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 900, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 900, z=z)
+
+    image_sizes = [
+        (200, 300, 3),
+        (400, 500, 3),
+        (600, 700, 3)
+    ]
+
+    for image_size in image_sizes:
+        image_data = (np.random.random(image_size) * 255).astype(np.uint8)
+        img = Image.fromarray(image_data)
+        sink.addAssociatedImage(img)
+
+    original_image_list = sink.getAssociatedImagesList()
+    
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    written_image_list = written.getAssociatedImagesList()
+
+    for image_list in [original_image_list, written_image_list]:
+        assert len(image_list) == len(image_sizes)
+        for i, image_name in enumerate(image_list):
+            retrieved = sink._getAssociatedImage(image_name)
+            expected_size = image_sizes[i]
+            assert retrieved is not None
+            assert isinstance(retrieved, Image.Image)
+            # PIL Image size doesn't include bands and swaps x & y
+            assert retrieved.size == (expected_size[1], expected_size[0])
