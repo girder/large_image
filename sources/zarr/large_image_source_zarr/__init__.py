@@ -662,9 +662,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             num_existing = len(self.getAssociatedImagesList())
             name = f'associated_{num_existing + 1}'
             group = self._zarr.require_group(name, overwrite=overwrite)
-            arr = zarr.array(data, overwrite=overwrite, store=self._zarr_store, path=f'{name}/image')
+            arr = zarr.array(
+                data,
+                overwrite=overwrite,
+                store=self._zarr_store,
+                path=f'{name}/image')
             self._associatedImages.append((group, arr))
-    
+
     def _writeInternalMetadata(self):
         self._checkEditable()
         with self._addLock:

@@ -1,10 +1,10 @@
 import math
-from PIL import Image
 
 import large_image_source_test
 import large_image_source_zarr
 import numpy as np
 import pytest
+from PIL import Image
 
 import large_image
 from large_image.constants import NEW_IMAGE_PATH_FLAG
@@ -429,6 +429,7 @@ def testMetadata(tmp_path):
     assert rdefs.get('model') == 'color'
     assert rdefs.get('defaultZ') == 0
 
+
 def testAddAssociatedImages(tmp_path):
     output_file = tmp_path / 'test.db'
     sink = large_image_source_zarr.new()
@@ -444,7 +445,7 @@ def testAddAssociatedImages(tmp_path):
     image_sizes = [
         (200, 300, 3),
         (400, 500, 3),
-        (600, 700, 3)
+        (600, 700, 3),
     ]
 
     for image_size in image_sizes:
@@ -453,7 +454,7 @@ def testAddAssociatedImages(tmp_path):
         sink.addAssociatedImage(img)
 
     original_image_list = sink.getAssociatedImagesList()
-    
+
     sink.write(output_file)
     written = large_image_source_zarr.open(output_file)
     written_image_list = written.getAssociatedImagesList()
