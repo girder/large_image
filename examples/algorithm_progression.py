@@ -122,7 +122,10 @@ class SweepAlgorithm:
         poolExecutor = (
             concurrent.futures.ProcessPoolExecutor if self.multiprocessing else
             concurrent.futures.ThreadPoolExecutor)
-        with poolExecutor(max_workers=self.max_workers) as executor:
+        poolParams = {}
+        if self.multiprocessing and sys.version_info >= (3, 11):
+            poolParams['max_tasks_per_child'] = 1
+        with poolExecutor(max_workers=self.max_workers, **poolParams) as executor:
             futures = [
                 executor.submit(
                     self.applyAlgorithm,
