@@ -1773,15 +1773,20 @@ class TileSource(IPyLeafletMixin):
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
             dtype = cast(np.ndarray, image).dtype
-            image = _imageToPIL(cast(np.ndarray, image), mode).resize(
-                (outWidth, outHeight),
-                getattr(PIL.Image, 'Resampling', PIL.Image).NEAREST
-                if resample is None else
-                getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
-                if outWidth > regionWidth else
-                getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
-            if dtype == np.uint16 and TILE_FORMAT_NUMPY in format:
-                image = _imageToNumpy(image)[0].astype(dtype) * 257
+            if dtype == np.uint8 or resample is not None:
+                image = _imageToPIL(cast(np.ndarray, image), mode).resize(
+                    (outWidth, outHeight),
+                    getattr(PIL.Image, 'Resampling', PIL.Image).NEAREST
+                    if resample is None else
+                    getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
+                    if outWidth > regionWidth else
+                    getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+                if dtype == np.uint16 and TILE_FORMAT_NUMPY in format:
+                    image = _imageToNumpy(image)[0].astype(dtype) * 257
+            else:
+                cols = [int(idx * regionWidth / outWidth) for idx in range(outWidth)]
+                rows = [int(idx * regionHeight / outHeight) for idx in range(outHeight)]
+                image = np.take(np.take(image, rows, axis=0), cols, axis=1)
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:
