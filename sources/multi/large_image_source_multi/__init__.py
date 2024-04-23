@@ -1098,12 +1098,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a numpy array of the tile.
         """
         source = self._sources[sourceEntry['sourcenum']]
-        ts = self._openSource(source, sourceEntry['kwargs'])
         # If tile is outside of bounding box, skip it
         bbox = source['bbox']
         if (corners[2][0] <= bbox['left'] or corners[0][0] >= bbox['right'] or
                 corners[2][1] <= bbox['top'] or corners[0][1] >= bbox['bottom']):
             return tile
+        ts = self._openSource(source, sourceEntry['kwargs'])
         transform = bbox.get('transform')
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
