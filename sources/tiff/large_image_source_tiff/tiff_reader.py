@@ -207,8 +207,8 @@ class TiledTiffDirectory:
         # the create_image.py script, such as flatten or colourspace.  These
         # should only be done if necessary, which would require the conversion
         # job to check output and perform subsequent processing as needed.
-        if (not self._tiffInfo.get('samplesperpixel') or
-                self._tiffInfo.get('samplesperpixel') < 1):
+        if (not self._tiffInfo.get('samplesperpixel', 1) or
+                self._tiffInfo.get('samplesperpixel', 1) < 1):
             msg = 'Only RGB and greyscale TIFF files are supported'
             raise ValidationTiffError(msg)
 
@@ -607,7 +607,7 @@ class TiledTiffDirectory:
             self._tiffInfo.get('bitspersample'),
             self._tiffInfo.get('sampleformat') if self._tiffInfo.get(
                 'sampleformat') is not None else libtiff_ctypes.SAMPLEFORMAT_UINT)
-        image = np.empty((th, tw, self._tiffInfo['samplesperpixel']),
+        image = np.empty((th, tw, self._tiffInfo.get('samplesperpixel', 1)),
                          dtype=_ctypesFormattbl[format])
         imageBuffer = image.ctypes.data_as(ctypes.POINTER(ctypes.c_char))
         if self._tiffInfo.get('istiled'):
@@ -635,7 +635,7 @@ class TiledTiffDirectory:
             raise IOTiffError(
                 'Read an unexpected number of bytes from an encoded tile' if readSize >= 0 else
                 'Failed to read from an encoded tile')
-        if (self._tiffInfo.get('samplesperpixel') == 3 and
+        if (self._tiffInfo.get('samplesperpixel', 1) == 3 and
                 self._tiffInfo.get('photometric') == libtiff_ctypes.PHOTOMETRIC_YCBCR):
             if self._tiffInfo.get('bitspersample') == 16:
                 image = np.floor_divide(image, 256).astype(np.uint8)
