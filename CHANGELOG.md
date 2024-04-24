@@ -5,6 +5,7 @@
 ### Improvements
 - Improve uint16 image scaling ([#1511](../../pull/1511))
 - Read some untiled tiffs using the tiff source ([#1512](../../pull/1512))
+- Speed up multi source compositing in tiled cases ([#1513](../../pull/1513))
 
 ## 1.28.1
 
