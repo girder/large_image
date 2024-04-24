@@ -894,7 +894,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Return additional known metadata about the tile source.  Data returned
         from this method is not guaranteed to be in any particular format or
-        have specific values.
+        have specific values.  Also, only the first 100 sources are used.
 
         :returns: a dictionary of data or None.
         """
@@ -903,7 +903,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'sources': copy.deepcopy(self._sources),
             'sourceFiles': [],
         }
-        for path in self._sourcePaths.values():
+        for path in list(self._sourcePaths.values())[:100]:
             source = self._sources[min(path['sourcenum'])]
             ts = self._openSource(source)
             result['sourceFiles'].append({
