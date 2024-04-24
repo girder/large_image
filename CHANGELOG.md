@@ -3,7 +3,8 @@
 ## 1.28.2
 
 ### Improvements
-- Improve uint16 image scaling  ([#1511](../../pull/1511))
+- Improve uint16 image scaling ([#1511](../../pull/1511))
+- Read some untiled tiffs using the tiff source ([#1512](../../pull/1512))
 
 ## 1.28.1
 
