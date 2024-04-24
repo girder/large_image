@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.28.2
+
+### Improvements
+- Improve uint16 image scaling  ([#1511](../../pull/1511))
+
 ## 1.28.1
 
 ### Improvements
