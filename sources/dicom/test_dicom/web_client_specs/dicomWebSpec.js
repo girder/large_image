@@ -143,7 +143,7 @@ describe('DICOMWeb assetstore', function () {
         });
 
         waitsFor(function () {
-            return $('.g-validation-failed-message').html() === 'Invalid limit';
+            return $('.g-validation-failed-message').html() === 'Invalid limit: 1.3';
         }, 'Invalid limit check (float)');
 
         runs(function () {
@@ -156,7 +156,7 @@ describe('DICOMWeb assetstore', function () {
         });
 
         waitsFor(function () {
-            return $('.g-validation-failed-message').html() === 'Invalid limit';
+            return $('.g-validation-failed-message').html() === 'Invalid limit: -1';
         }, 'Invalid limit check (negative)');
 
         runs(function () {
