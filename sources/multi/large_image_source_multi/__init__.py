@@ -894,7 +894,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Return additional known metadata about the tile source.  Data returned
         from this method is not guaranteed to be in any particular format or
-        have specific values.
+        have specific values.  Also, only the first 100 sources are used.
 
         :returns: a dictionary of data or None.
         """
@@ -903,7 +903,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'sources': copy.deepcopy(self._sources),
             'sourceFiles': [],
         }
-        for path in self._sourcePaths.values():
+        for path in list(self._sourcePaths.values())[:100]:
             source = self._sources[min(path['sourcenum'])]
             ts = self._openSource(source)
             result['sourceFiles'].append({
@@ -1098,12 +1098,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a numpy array of the tile.
         """
         source = self._sources[sourceEntry['sourcenum']]
-        ts = self._openSource(source, sourceEntry['kwargs'])
         # If tile is outside of bounding box, skip it
         bbox = source['bbox']
         if (corners[2][0] <= bbox['left'] or corners[0][0] >= bbox['right'] or
                 corners[2][1] <= bbox['top'] or corners[0][1] >= bbox['bottom']):
             return tile
+        ts = self._openSource(source, sourceEntry['kwargs'])
         transform = bbox.get('transform')
         x = y = 0
         # If there is no transform or the diagonals are positive and there is

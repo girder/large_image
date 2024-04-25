@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.28.2
+
+### Improvements
+- Improve uint16 image scaling ([#1511](../../pull/1511))
+- Read some untiled tiffs using the tiff source ([#1512](../../pull/1512))
+- Speed up multi source compositing in tiled cases ([#1513](../../pull/1513))
+
+### Changes
+- Limit internal metadata on multi-source files with huge numbers of sources ([#1514](../../pull/1514))
+
 ## 1.28.1
 
 ### Improvements

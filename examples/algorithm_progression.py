@@ -27,7 +27,7 @@ import large_image
 class SweepAlgorithm:
     def __init__(self, algorithm, input_filename, input_params, param_order,
                  output_filename, max_workers, multiprocessing, overlay,
-                 lossy=False, scale=1):
+                 lossy=False, scale=1, dedup=False):
         self.algorithm = algorithm
         self.input_filename = input_filename
         self.output_filename = output_filename
@@ -38,6 +38,7 @@ class SweepAlgorithm:
         self.overlay = overlay
         self.lossy = lossy
         self.scale = float(scale)
+        self.dedup = dedup
 
         self.combos = list(itertools.product(*[p['range'] for p in input_params.values()]))
 
@@ -121,7 +122,10 @@ class SweepAlgorithm:
         poolExecutor = (
             concurrent.futures.ProcessPoolExecutor if self.multiprocessing else
             concurrent.futures.ThreadPoolExecutor)
-        with poolExecutor(max_workers=self.max_workers) as executor:
+        poolParams = {}
+        if self.multiprocessing and sys.version_info >= (3, 11):
+            poolParams['max_tasks_per_child'] = 1
+        with poolExecutor(max_workers=self.max_workers, **poolParams) as executor:
             futures = [
                 executor.submit(
                     self.applyAlgorithm,
@@ -202,7 +206,9 @@ class SweepAlgorithmMulti(SweepAlgorithm):
                             f'Collected {idx + 1} of {len(self.yaml_dict["sources"])} frames\n')
                         sys.stdout.flush()
                         lastlogtime = time.time()
-                tifftools.write_tiff(info, self.output_filename, allowExisting=True)
+                tifftools.write_tiff(
+                    info, self.output_filename, allowExisting=True,
+                    ifdsFirst=self.dedup, dedup=self.dedup)
                 rts = None
                 info = None
             else:
@@ -343,6 +349,13 @@ def create_argparser():
         'Values greater than 1 reduce the size of the data processed.',
     )
     argparser.add_argument(
+        '--dedup',
+        action='store_true',
+        help='If specified and the destination is a tiff file, rewrite the '
+        'output with the dedup option.  This may make a smaller output tiff '
+        'file at the cost of a substainally longer combination tile.',
+    )
+    argparser.add_argument(
         '-p',
         '--param',
         action='append',
@@ -414,8 +427,16 @@ def main(argv):
 
     sweep = cls(algorithm, input_filename, params, input_params,
                 args.output_filename, args.num_workers, args.multiprocessing,
-                args.overlay, args.lossy, args.scale)
+                args.overlay, args.lossy, args.scale, args.dedup)
     sweep.run()
+    if (args.dedup and args.sink in {'zarr'} and
+            os.path.splitext(args.output_filename)[1] in {'.tif', '.tiff'}):
+        print('Rewriting with dedup')
+        starttime = time.time()
+        ti = tifftools.read_tiff(args.output_filename)
+        tifftools.write_tiff(ti, args.output_filename, allowExisting=True,
+                             ifdsFirst=True, dedup=True)
+        print(f'Rewrite time {time.time() - starttime:5.3f}')
 
 
 if __name__ == '__main__':
