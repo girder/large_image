@@ -12,6 +12,7 @@ import ImageViewerWidget from './base';
 import setFrameQuad from './setFrameQuad.js';
 
 window.hammerjs = Hammer;
+window.Hammer = Hammer;
 window.d3 = d3;
 
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
