@@ -828,7 +828,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         with self._lastOpenSourceLock:
             if (hasattr(self, '_lastOpenSource') and
                     self._lastOpenSource['source'] == source and
-                    self._lastOpenSource['params'] == params):
+                    (self._lastOpenSource['params'] == params or (
+                        params == {} and self._lastOpenSource['params'] is None))):
                 return self._lastOpenSource['ts']
         if not len(large_image.tilesource.AvailableTileSources):
             large_image.tilesource.loadTileSources()
@@ -841,6 +842,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if params is None:
             params = source.get('params', {})
         ts = openFunc(source['path'], **params)
+        source['sourceName'] = ts.name
         with self._lastOpenSourceLock:
             self._lastOpenSource = {
                 'source': source,

@@ -474,19 +474,12 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             sidx = frame // self._basis['P'][0]
         else:
             sidx = 0
-        series = self._tf.series[self._series[sidx]]
         nonempty = [None] * self.levels
         nonempty[self.levels - 1] = True
+        series = self._tf.series[self._series[sidx]]
+        za, hasgbs = self._getZarrArray(series, sidx)
         xidx = series.axes.index('X')
         yidx = series.axes.index('Y')
-        with self._zarrlock:
-            if sidx not in self._zarrcache:
-                if len(self._zarrcache) > 10:
-                    self._zarrcache = {}
-                za = zarr.open(series.aszarr(), mode='r')
-                hasgbs = hasattr(za[0], 'get_basic_selection')
-                self._zarrcache[sidx] = (za, hasgbs)
-            za, hasgbs = self._zarrcache[sidx]
         for ll in range(1, len(series.levels)):
             scale = round(math.log(max(za[0].shape[xidx] / za[ll].shape[xidx],
                                        za[0].shape[yidx] / za[ll].shape[yidx])) / math.log(2))
@@ -496,6 +489,19 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._nonempty_levels_list = {}
         self._nonempty_levels_list[frame] = nonempty
         return nonempty
+
+    def _getZarrArray(self, series, sidx):
+        with self._zarrlock:
+            if sidx not in self._zarrcache:
+                if len(self._zarrcache) > 10:
+                    self._zarrcache = {}
+                za = zarr.open(series.aszarr(), mode='r')
+                hasgbs = hasattr(za[0], 'get_basic_selection')
+                if not hasgbs and math.prod(series.shape) < 256 * 1024 ** 2:
+                    za = series.asarray()
+                self._zarrcache[sidx] = (za, hasgbs)
+            za, hasgbs = self._zarrcache[sidx]
+        return za, hasgbs
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
@@ -507,14 +513,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             sidx = 0
         series = self._tf.series[self._series[sidx]]
-        with self._zarrlock:
-            if sidx not in self._zarrcache:
-                if len(self._zarrcache) > 10:
-                    self._zarrcache = {}
-                za = zarr.open(series.aszarr(), mode='r')
-                hasgbs = hasattr(za[0], 'get_basic_selection')
-                self._zarrcache[sidx] = (za, hasgbs)
-            za, hasgbs = self._zarrcache[sidx]
+        za, hasgbs = self._getZarrArray(series, sidx)
         xidx = series.axes.index('X')
         yidx = series.axes.index('Y')
         if hasgbs:
