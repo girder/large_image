@@ -12,6 +12,9 @@
 - Limit internal metadata on multi-source files with huge numbers of sources ([#1514](../../pull/1514))
 - Make DICOMweb assetstore imports compatible with Girder generics ([#1504](../../pull/1504))
 
+### Bug Fixes
+- Fix touch actions in the image viewer in some instances ([#1516](../../pull/1516))
+
 ## 1.28.1
 
 ### Improvements
