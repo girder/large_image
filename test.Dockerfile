@@ -18,7 +18,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # Consumers of this package aren't expecting an existing ubuntu user (there
 # wasn't one in the ubuntu:22.04 base)
-RUN userdel ubuntu 2>/dev/null
+RUN userdel -r ubuntu 2>/dev/null
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
