@@ -8,6 +8,7 @@
 - Speed up multi source compositing in tiled cases ([#1513](../../pull/1513))
 - Speed up some tifffile and multi source access cases ([#1515](../../pull/1515))
 - Allow specifying a minimum number of annotations elements when maxDetails is used ([#1521](../../pull/1521))
+- Improved import of GeoJSON annotations ([#1522](../../pull/1522))
 
 ### Changes
 - Limit internal metadata on multi-source files with huge numbers of sources ([#1514](../../pull/1514))
@@ -15,6 +16,7 @@
 
 ### Bug Fixes
 - Fix touch actions in the image viewer in some instances ([#1516](../../pull/1516))
+- Fix multisource dtype issues that resulted in float32 results ([#1520](../../pull/1520))
 
 ## 1.28.1
 

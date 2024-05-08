@@ -157,3 +157,180 @@ class AnnotationGeoJSON:
         if result['geometry']['type'].lower() != element['type']:
             result['properties']['type'] = element['type']
         return result
+
+    @property
+    def geojson(self):
+        return ''.join(self)
+
+
+class GeoJSONAnnotation:
+    def __init__(self, geojson):
+        if not isinstance(geojson, (dict, list, tuple)):
+            geojson = json.loads(geojson)
+        self._elements = []
+        self._annotation = {'elements': self._elements}
+        self._parseFeature(geojson)
+
+    def _parseFeature(self, geoelem):
+        if isinstance(geoelem, (list, tuple)):
+            for entry in geoelem:
+                self._parseFeature(entry)
+        if not isinstance(geoelem, dict) or 'type' not in geoelem:
+            return
+        if geoelem['type'] == 'FeatureCollection':
+            return self._parseFeature(geoelem.get('features', []))
+        if geoelem['type'] == 'GeometryCollection' and isinstance(geoelem.get('geometries'), list):
+            for entry in geoelem['geometry']:
+                self._parseFeature({'type': 'Feature', 'geometry': entry})
+            return
+        if geoelem['type'] in {'Point', 'LineString', 'Polygon', 'MultiPoint',
+                               'MultiLineString', 'MultiPolygon'}:
+            geoelem = {'type': 'Feature', 'geometry': geoelem}
+        element = {k: v for k, v in geoelem.get('properties', {}).items() if k in {
+            'id', 'label', 'group', 'user', 'lineColor', 'lineWidth',
+            'fillColor', 'radius', 'width', 'height', 'rotation',
+            'normal',
+        }}
+        if 'annotation' in geoelem.get('properties', {}):
+            self._annotation.update(geoelem['properties']['annotation'])
+            self._annotation['elements'] = self._elements
+        elemtype = geoelem.get('properties', {}).get('type', '') or geoelem['geometry']['type']
+        func = getattr(self, elemtype.lower() + 'Type', None)
+        if func is not None:
+            result = func(geoelem['geometry'], element)
+            if isinstance(result, list):
+                self._elements.extend(result)
+            else:
+                self._elements.append(result)
+
+    def circleType(self, elem, result):
+        cx = sum(e[0] for e in elem['coordinates'][0][:4]) / 4
+        cy = sum(e[1] for e in elem['coordinates'][0][:4]) / 4
+        try:
+            cz = elem['coordinates'][0][0][2]
+        except Exception:
+            cz = 0
+        radius = (max(e[0] for e in elem['coordinates'][0][:4]) -
+                  min(e[0] for e in elem['coordinates'][0][:4])) / 2
+        result['type'] = 'circle'
+        result['radius'] = radius
+        result['center'] = [cx, cy, cz]
+        return result
+
+    def ellipseType(self, elem, result):
+        result = self.rectangleType(elem, result)
+        result['type'] = 'ellipse'
+        return result
+
+    def rectangleType(self, elem, result):
+        coor = elem['coordinates'][0]
+        cx = sum(e[0] for e in coor[:4]) / 4
+        cy = sum(e[1] for e in coor[:4]) / 4
+        try:
+            cz = elem['coordinates'][0][0][2]
+        except Exception:
+            cz = 0
+        width = ((coor[0][0] - coor[1][0]) ** 2 + (coor[0][1] - coor[1][1]) ** 2) ** 0.5
+        height = ((coor[1][0] - coor[2][0]) ** 2 + (coor[1][1] - coor[2][1]) ** 2) ** 0.5
+        rotation = math.atan2(coor[1][1] - coor[0][1], coor[1][0] - coor[0][0])
+        result['center'] = [cx, cy, cz]
+        result['width'] = width
+        result['height'] = height
+        result['rotation'] = rotation
+        result['type'] = 'rectangle'
+        return result
+
+    def pointType(self, elem, result):
+        result['center'] = (elem['coordinates'] + [0, 0, 0])[:3]
+        result['type'] = 'point'
+        return result
+
+    def multipointType(self, elem, result):
+        results = []
+        result['type'] = 'point'
+        for entry in elem['coordinates']:
+            subresult = result.copy()
+            subresult['center'] = (entry + [0, 0, 0])[:3]
+            results.append(subresult)
+        return results
+
+    def polylineType(self, elem, result):
+        if elem.get('type') == 'LineString':
+            return self.linestringType(elem, result)
+        return self.polygonType(elem, result)
+
+    def polygonType(self, elem, result):
+        result['points'] = [(pt + [0])[:3] for pt in elem['coordinates'][0][:-1]]
+        if len(elem['coordinates']) > 1:
+            result['holes'] = [
+                [(pt + [0])[:3] for pt in loop[:-1]]
+                for loop in elem['coordinates'][1:]
+            ]
+        result['closed'] = True
+        result['type'] = 'polyline'
+        return result
+
+    def multipolygonType(self, elem, result):
+        results = []
+        result['closed'] = True
+        result['type'] = 'polyline'
+        for entry in elem['coordinates']:
+            subresult = result.copy()
+            subresult['points'] = [(pt + [0])[:3] for pt in entry[0][:-1]]
+            if len(entry) > 1:
+                subresult['holes'] = [
+                    [(pt + [0])[:3] for pt in loop[:-1]]
+                    for loop in entry[1:]
+                ]
+            results.append(subresult)
+        return results
+
+    def linestringType(self, elem, result):
+        result['points'] = [(pt + [0])[:3] for pt in elem['coordinates']]
+        result['closed'] = False
+        result['type'] = 'polyline'
+        return result
+
+    def multilinestringType(self, elem, result):
+        results = []
+        result['closed'] = False
+        result['type'] = 'polyline'
+        for entry in elem['coordinates']:
+            subresult = result.copy()
+            subresult['points'] = [(pt + [0])[:3] for pt in entry]
+            results.append(subresult)
+        return results
+
+    def annotationToJSON(self):
+        return json.dumps(self._annotation)
+
+    @property
+    def annotation(self):
+        return self._annotation
+
+    @property
+    def elements(self):
+        return self._elements
+
+    @property
+    def elementCount(self):
+        return len(self._elements)
+
+
+def isGeoJSON(annotation):
+    """
+    Check if a list or dictionary appears to contain a GeoJSON record.
+
+    :param annotation: a list or dictionary.
+    :returns: True if this appears to be GeoJSON
+    """
+    if isinstance(annotation, list):
+        if len(annotation) < 1:
+            return False
+        annotation = annotation[0]
+    if not isinstance(annotation, dict) or 'type' not in annotation:
+        return False
+    return annotation['type'] in {
+        'Feature', 'FeatureCollection', 'GeometryCollection', 'Point',
+        'LineString', 'Polygon', 'MultiPoint', 'MultiLineString',
+        'MultiPolygon'}
