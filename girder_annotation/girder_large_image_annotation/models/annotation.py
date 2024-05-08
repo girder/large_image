@@ -38,7 +38,7 @@ from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.models.user import User
 
-from ..utils import AnnotationGeoJSON
+from ..utils import AnnotationGeoJSON, GeoJSONAnnotation, isGeoJSON
 from .annotationelement import Annotationelement
 
 # Some arrays longer than this are validated using numpy rather than jsonschema
@@ -788,6 +788,10 @@ class Annotation(AccessControlledModel):
         return annotation
 
     def createAnnotation(self, item, creator, annotation, public=None):
+        if isGeoJSON(annotation):
+            geojson = GeoJSONAnnotation(annotation)
+            if geojson.elementCount:
+                annotation = geojson.annotation
         now = datetime.datetime.now(datetime.timezone.utc)
         doc = {
             'itemId': item['_id'],
