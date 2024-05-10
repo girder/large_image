@@ -27,6 +27,7 @@ const AnnotationModel = AccessControlledModel.extend({
 
     defaults: {
         annotation: {},
+        minElements: 5000,
         maxDetails: 250000,
         maxCentroids: 2000000
     },
@@ -38,6 +39,7 @@ const AnnotationModel = AccessControlledModel.extend({
         }
         this._region = {
             maxDetails: this.get('maxDetails'),
+            minElements: this.get('minElements'),
             sort: 'size',
             sortdir: -1
         };
