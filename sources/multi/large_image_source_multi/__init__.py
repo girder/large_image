@@ -939,28 +939,28 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 (tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] in {2, 4}:
-                vfill[:, :, -1] = fullAlphaValue(self.dtype)
+                vfill[:, :, -1] = fullAlphaValue(base.dtype)
             base = np.vstack((base, vfill))
         if base.shape[1] < tile.shape[1] + x:
             hfill = np.zeros(
                 (base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] in {2, 4}:
-                hfill[:, :, -1] = fullAlphaValue(self.dtype)
+                hfill[:, :, -1] = fullAlphaValue(base.dtype)
             base = np.hstack((base, hfill))
         if base.flags.writeable is False:
             base = base.copy()
         if base.shape[2] in {2, 4}:
             baseA = base[y:y + tile.shape[0], x:x + tile.shape[1], -1].astype(
-                float) / fullAlphaValue(self.dtype)
-            tileA = tile[:, :, -1].astype(float) / fullAlphaValue(self.dtype)
+                float) / fullAlphaValue(base.dtype)
+            tileA = tile[:, :, -1].astype(float) / fullAlphaValue(tile.dtype)
             outA = tileA + baseA * (1 - tileA)
             base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] = (
                 np.where(tileA[..., np.newaxis], tile[:, :, :-1], 0) +
                 base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] * baseA[..., np.newaxis] *
                 (1 - tileA[..., np.newaxis])
             ) / np.where(outA[..., np.newaxis], outA[..., np.newaxis], 1)
-            base[y:y + tile.shape[0], x:x + tile.shape[1], -1] = outA * fullAlphaValue(self.dtype)
+            base[y:y + tile.shape[0], x:x + tile.shape[1], -1] = outA * fullAlphaValue(base.dtype)
         else:
             base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
@@ -1157,6 +1157,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ts, transform, corners, scale, sourceEntry.get('frame', 0),
                 source.get('position', {}).get('crop'))
         if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
+            sourceTile = sourceTile.astype(ts.dtype)
             tile = self._mergeTiles(tile, sourceTile, x, y)
         return tile
 
