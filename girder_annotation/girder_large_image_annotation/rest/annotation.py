@@ -155,6 +155,9 @@ class AnnotationResource(Resource):
                'points are used to defined it.  This is applied in addition '
                'to the limit.  Using maxDetails helps ensure results will be '
                'able to be rendered.', required=False, dataType='int')
+        .param('minElements', 'If maxDetails is specified, always return at '
+               'least this many elements, even if they are very detailed.',
+               required=False, dataType='int')
         .param('centroids', 'If true, only return the centroids of each '
                'element.  The results are returned as a packed binary array '
                'with a json wrapper.', dataType='boolean', required=False)
