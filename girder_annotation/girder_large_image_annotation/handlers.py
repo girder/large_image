@@ -13,6 +13,7 @@ from girder.models.item import Item
 from girder.models.user import User
 
 from .models.annotation import Annotation
+from .utils import isGeoJSON
 
 _recentIdentifiers = cachetools.TTLCache(maxsize=100, ttl=86400)
 
@@ -142,7 +143,7 @@ def process_annotations(event):  # noqa: C901
     if time.time() - startTime > 10:
         logger.info('Decoded json in %5.3fs', time.time() - startTime)
 
-    if not isinstance(data, list):
+    if not isinstance(data, list) or isGeoJSON(data):
         data = [data]
     data = [entry['annotation'] if 'annotation' in entry else entry for entry in data]
     # Check some of the early elements to see if there are any girderIds
