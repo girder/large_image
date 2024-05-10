@@ -146,6 +146,8 @@ class Annotationelement(Model):
                 exceed maxDetails slightly (the sum of all but the last element
                 will be less than maxDetails, but the last element may exceed
                 the value).
+            :minElements: if maxDetails is specified, always return this many
+                elements even if they are very detailed.
             :centroids: if specified and true, only return the id, center of
                 the bounding box, and bounding box size for each element.
 
@@ -184,6 +186,8 @@ class Annotationelement(Model):
                 exceed maxDetails slightly (the sum of all but the last element
                 will be less than maxDetails, but the last element may exceed
                 the value).
+            :minElements: if maxDetails is specified, always return this many
+                elements even if they are very detailed.
             :centroids: if specified and true, only return the id, center of
                 the bounding box, and bounding box size for each element.
             :bbox: if specified and true and centroids are not specified,
@@ -221,7 +225,9 @@ class Annotationelement(Model):
         sortdir = int(region['sortdir']) if region.get('sortdir') else SortDir.ASCENDING
         limit = int(region['limit']) if region.get('limit') else 0
         maxDetails = int(region.get('maxDetails') or 0)
-        queryLimit = maxDetails if maxDetails and (not limit or maxDetails < limit) else limit
+        minElements = int(region.get('minElements') or 0)
+        queryLimit = max(minElements, maxDetails) if maxDetails and (
+            not limit or max(minElements, maxDetails) < limit) else limit
         offset = int(region['offset']) if region.get('offset') else 0
         logger.debug('element query %r for %r', query, region)
         fields = {'_id': True, 'element': True, 'bbox.details': True, 'datafile': True}
@@ -262,6 +268,8 @@ class Annotationelement(Model):
         details = count = 0
         if maxDetails:
             info['maxDetails'] = maxDetails
+        if minElements:
+            info['minElements'] = minElements
         if limit:
             info['limit'] = limit
         for entry in elementCursor:
@@ -323,7 +331,7 @@ class Annotationelement(Model):
                 yield element
                 details += entry.get('bbox', {}).get('details', 1)
             count += 1
-            if maxDetails and details >= maxDetails:
+            if maxDetails and details >= maxDetails and count >= minElements:
                 break
         info['returned'] = count
         info['details'] = details
