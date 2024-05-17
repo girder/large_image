@@ -978,7 +978,12 @@ class Annotation(AccessControlledModel):
         annotation.pop('groups', None)
         self.injectAnnotationGroupSet(annotation)
 
-        logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
+        if annotation['annotation'].get('elements') is not None:
+            logger.info(
+                'Saved annotation %s in %5.3fs with %d element(s)',
+                annotation.get('_id', None),
+                time.time() - starttime,
+                len(annotation['annotation']['elements']))
         events.trigger('large_image.annotations.save_history', {
             'annotation': annotation,
         }, asynchronous=True)

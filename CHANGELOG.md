@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.28.3
+
+### Changes
+- Log more when saving annotations ([#1525](../../pull/1525))
+
 ## 1.28.2
 
 ### Improvements
