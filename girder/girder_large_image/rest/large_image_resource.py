@@ -22,6 +22,7 @@ import os
 import pprint
 import re
 import shutil
+import threading
 import time
 
 import cherrypy
@@ -117,6 +118,11 @@ def cursorNextOrNone(cursor):
 
 
 def createThumbnailsJob(job):
+    thread = threading.Thread(target=createThumbnailsJobThread, args=(job, ), daemon=True)
+    thread.start()
+
+
+def createThumbnailsJobThread(job):
     """
     Create thumbnails for all of the large image items.
 
