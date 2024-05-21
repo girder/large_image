@@ -6,6 +6,9 @@
 - Log more when saving annotations ([#1525](../../pull/1525))
 - Thumbnail generation jobs are less blocking ([#1528](../../pull/1528))
 
+### Bug Fixes
+- Annotations are sometimes paged when they shouldn't be ([#1529](../../pull/1529))
+
 ## 1.28.2
 
 ### Improvements
