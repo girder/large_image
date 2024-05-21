@@ -178,10 +178,11 @@ def createThumbnailsJobThread(job):  # noqa
                 tasks.append(pool.submit(createThumbnailsJobTask, nextitem, spec))
                 try:
                     nextitem = cursorNextOrNone(items)
-                except pymongo.CursorNotFound:
+                except pymongo.errors.CursorNotFound:
                     # If the process takes long enough, the cursor is removed.
                     # In this case, redo the query and keep going.
                     items = Item().find(query, sort=sort)
+                    nextitem = cursorNextOrNone(items)
                 if nextitem is not None:
                     query['_id'] = {'$gt': nextitem['_id']}
             # Wait a short time or until the oldest task is complete
