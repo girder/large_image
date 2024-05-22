@@ -2,6 +2,9 @@
 
 ## 1.28.3
 
+### Improvements
+- Better detect available memory in containers ([#1532](../../pull/1532))
+
 ### Changes
 - Log more when saving annotations ([#1525](../../pull/1525))
 - Thumbnail generation jobs are less blocking ([#1528](../../pull/1528), [#1530](../../pull/1530))
