@@ -132,3 +132,50 @@ def _ignoreSourceNames(
         return None
     if re.search(ignored_names, os.path.basename(path), flags=re.IGNORECASE):
         raise exceptions.TileSourceError('File will not be opened by %s reader' % configKey)
+
+
+def cpu_count(logical: bool = True) -> int:
+    """
+    Get the usable CPU count.  If psutil is available, it is used, since it can
+    determine the number of physical CPUS versus logical CPUs.  This returns
+    the smaller of that value from psutil and the number of cpus allowed by the
+    os scheduler, which means that for physical requests (logical=False), the
+    returned value may be more the the number of physical cpus that are usable.
+
+    :param logical: True to get the logical usable CPUs (which include
+        hyperthreading).  False for the physical usable CPUs.
+    :returns: the number of usable CPUs.
+    """
+    count = os.cpu_count() or 2
+    try:
+        count = min(count, len(os.sched_getaffinity(0)))
+    except AttributeError:
+        pass
+    try:
+        import psutil
+
+        count = min(count, psutil.cpu_count(logical))
+    except ImportError:
+        pass
+    return max(1, count)
+
+
+def total_memory() -> int:
+    """
+    Get the total memory in the system.  If this is in a container, try to
+    determine the memory available to the cgroup.
+
+    :returns: the available memory in bytes, or 8 GB if unknown.
+    """
+    mem = 0
+    if HAS_PSUTIL:
+        mem = psutil.virtual_memory().total
+    try:
+        cgroup = int(open('/sys/fs/cgroup/memory/memory.limit_in_bytes').read().strip())
+        if 1024 ** 3 <= cgroup < 1024 ** 4 and (mem is None or cgroup < mem):
+            mem = cgroup
+    except Exception:
+        pass
+    if mem:
+        return mem
+    return 8 * 1024 ** 3

@@ -371,10 +371,10 @@ def main(argv):
     argparser = create_argparser()
     args = argparser.parse_args(argv[1:])
     if args.num_workers < 1:
-        args.num_workers = large_image.tilesource.utilities.cpu_count(False)
+        args.num_workers = large_image.config.cpu_count(False)
     if os.environ.get('VIPS_CONCURRENCY') is None:
         os.environ['VIPS_CONCURRENCY'] = str(max(
-            1, large_image.tilesource.utilities.cpu_count(False) // args.num_workers))
+            1, large_image.config.cpu_count(False) // args.num_workers))
     if args.multiprocessing and os.environ.get('LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION') is None:
         os.environ['LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION'] = str(32 * args.num_workers)
 

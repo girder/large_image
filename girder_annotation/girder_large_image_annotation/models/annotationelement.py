@@ -609,7 +609,7 @@ class Annotationelement(Model):
         if not len(elements):
             return
         now = datetime.datetime.now(datetime.timezone.utc)
-        threads = large_image.tilesource.utilities.cpu_count()
+        threads = large_image.config.cpu_count()
         chunkSize = int(max(100000 // threads, 10000))
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
             for chunk in range(0, len(elements), chunkSize):

@@ -142,7 +142,7 @@ def createThumbnailsJobThread(job):  # noqa
         job, log='Started creating large image thumbnails\n',
         status=JobStatus.RUNNING)
     concurrency = int(job['kwargs'].get('concurrent', 0))
-    concurrency = large_image.tilesource.utilities.cpu_count(
+    concurrency = large_image.config.cpu_count(
         logical=True) if concurrency < 1 else concurrency
     status = {
         'checked': 0,
