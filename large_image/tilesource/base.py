@@ -190,7 +190,7 @@ class TileSource(IPyLeafletMixin):
         Allow pickling.
 
         Reduce can pass the args but not the kwargs, so use a partial class
-        call to recosntruct kwargs.
+        call to reconstruct kwargs.
         """
         import functools
         import pickle
