@@ -17,8 +17,8 @@
 import pickle
 import threading
 import time
-
-from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+import asyncio
+from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union, Awaitable
 
 from .. import config
 from .base import BaseCache
@@ -57,13 +57,13 @@ class RedisCache(BaseCache):
 
     def __len__(self) -> int:
         # return invalid length
-        keys = self._client.keys(f'{self._cache_key_prefix}*')
+        keys = self._get_sync_result(self._client.keys(f'{self._cache_key_prefix}*'))
         return len(keys)
 
     def __contains__(self, key) -> bool:
         # cache never contains key
         _key = self._cache_key_prefix + self._hashKey(key)
-        return self._client.exists(_key)
+        return self._get_sync_result(self._client.exists(_key))
 
     def __delitem__(self, key: str) -> None:
         if not self.__contains__(key):
@@ -77,7 +77,7 @@ class RedisCache(BaseCache):
             # must determine if tke key exists , otherwise cache_test can not be passed.
             if not self.__contains__(key):
                 raise KeyError
-            return pickle.loads(self._client.get(_key))
+            return pickle.loads(self._get_sync_result(self._client.get(_key)))
         except KeyError:
             return self.__missing__(key)
         except self.redis.ConnectionError:
@@ -112,7 +112,7 @@ class RedisCache(BaseCache):
 
     @property
     def curritems(self) -> int:
-        return self._client.dbsize()
+        return self._get_sync_result(self._client.dbsize())
 
     @property
     def currsize(self) -> int:
@@ -140,14 +140,14 @@ class RedisCache(BaseCache):
 
     def _getStat(self, key: str) -> int:
         try:
-            stats = self._client.info()
+            stats = self._get_sync_result(self._client.info())
             value = stats[key]
         except Exception:
             return 0
         return value
 
     def clear(self) -> None:
-        keys = self._client.keys(f'{self._cache_key_prefix}*')
+        keys = self._get_sync_result(self._client.keys(f'{self._cache_key_prefix}*'))
         if keys:
             self._client.delete(*keys)
 
@@ -173,3 +173,8 @@ class RedisCache(BaseCache):
             config.getLogger().info('Cannot use redis for caching.')
             cache = None
         return cache, cacheLock
+
+    def _get_sync_result(self, result: Union[Awaitable[Any], Any]) -> Any:
+            if isinstance(result, Awaitable):
+                return asyncio.run(result)
+            return result
