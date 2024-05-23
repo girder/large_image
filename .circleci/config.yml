@@ -106,7 +106,7 @@ commands:
       - run:
           name: start redis
           command: |
-            docker run --rm -d -p 6379:6379 redis -m 64
+            docker run --rm -d -p 6379:6379 redis
       - run:
           name: Use nvm
           # see https://discuss.circleci.com/t/nvm-does-not-change-node-version-on-machine/28973/14
