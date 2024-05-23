@@ -88,6 +88,9 @@ def getSortedSourceList(
         '_geospatial_source': isGeospatial(pathOrUri),
     }
     isNew = str(pathOrUri).startswith(NEW_IMAGE_PATH_FLAG)
+    ignored_names = config.getConfig('all_sources_ignored_names')
+    ignoreName = (ignored_names and re.search(
+        ignored_names, os.path.basename(str(pathOrUri)), flags=re.IGNORECASE))
     sourceList = []
     for sourceName in availableSources:
         sourceExtensions = availableSources[sourceName].extensions
@@ -109,7 +112,7 @@ def getSortedSourceList(
                 fallback = False
         if isLargeImageUri and sourceName == uriWithoutProtocol:
             priority = SourcePriority.NAMED
-        if priority >= SourcePriority.MANUAL:
+        if priority >= SourcePriority.MANUAL or (ignoreName and fallback):
             continue
         propertiesClash = any(
             getattr(availableSources[sourceName], k, False) != v
