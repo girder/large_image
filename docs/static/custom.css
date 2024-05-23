@@ -27,6 +27,9 @@
 .wy-menu-vertical ul {
   padding-bottom: 4em;
 }
+.wy-menu-vertical ul ul {
+  padding-bottom: 0;
+}
 html.writer-html5 .rst-content dl.field-list dl.field-list {
     grid-template-columns: auto minmax(60%,95%);
 }
