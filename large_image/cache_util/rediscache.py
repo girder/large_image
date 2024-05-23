@@ -17,6 +17,7 @@
 import pickle
 import threading
 import time
+
 from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
 
 from .. import config
@@ -33,13 +34,15 @@ class RedisCache(BaseCache):
             getsizeof: Optional[Callable[[_VT], float]] = None,
             mustBeAvailable: bool = False) -> None:
         import redis
+        from redis.client import Redis
         
         self.redis = redis
+        self._redisCls = Redis
         super().__init__(0, getsizeof=getsizeof)
         self._cache_key_prefix = 'large_image_'
-        self._clientParams = (f"redis://{url}", dict(
+        self._clientParams = (f'redis://{url}', dict(
             username=username, password=password, db=0, retry_on_timeout=1))
-        self._client = redis.Redis.from_url(self._clientParams[0], **self._clientParams[1])
+        self._client = Redis.from_url(self._clientParams[0], **self._clientParams[1])
         if mustBeAvailable:
             # Try to ping server; this will throw an error if the server is
             # unreachable, so we don't bother trying to use it.
@@ -54,7 +57,7 @@ class RedisCache(BaseCache):
 
     def __len__(self) -> int:
         # return invalid length
-        keys = self._client.keys(f"{self._cache_key_prefix}*")
+        keys = self._client.keys(f'{self._cache_key_prefix}*')
         return len(keys)
 
     def __contains__(self, key) -> bool:
@@ -117,18 +120,19 @@ class RedisCache(BaseCache):
 
     @property
     def maxsize(self) -> int:
-        maxmemory = self._getStat("maxmemory")
+        maxmemory = self._getStat('maxmemory')
         if maxmemory:
             return maxmemory
         else:
-            return self._getStat("total_system_memory")
+            return self._getStat('total_system_memory')
 
     def _reconnect(self) -> None:
         try:
             self._lastReconnectBackoff = getattr(self, '_lastReconnectBackoff', 2)
             if time.time() - getattr(self, '_lastReconnect', 0) > self._lastReconnectBackoff:
                 config.getLogger('logprint').info('Trying to reconnect to redis server')
-                self._client = self.redis.Redis.from_url(self._clientParams[0], **self._clientParams[1])
+                self._client = self._redisCls.from_url(self._clientParams[0], 
+                                                         **self._clientParams[1])
                 self._lastReconnectBackoff = min(self._lastReconnectBackoff + 1, 30)
                 self._lastReconnect = time.time()
         except Exception:
@@ -143,7 +147,7 @@ class RedisCache(BaseCache):
         return value
 
     def clear(self) -> None:
-        keys = self._client.keys(f"{self._cache_key_prefix}*")
+        keys = self._client.keys(f'{self._cache_key_prefix}*')
         if keys:
             self._client.delete(*keys)
 
