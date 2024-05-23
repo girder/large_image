@@ -7,9 +7,9 @@ import pytest
 
 import large_image.cache_util.cache
 from large_image import config
-from large_image.cache_util import (LruCacheMetaclass, MemCache, RedisCache, cachesClear,
-                                    cachesInfo, getTileCache, methodcache,
-                                    strhash)
+from large_image.cache_util import (LruCacheMetaclass, MemCache, RedisCache,
+                                    cachesClear, cachesInfo, getTileCache,
+                                    methodcache, strhash)
 
 
 class Fib:
@@ -103,6 +103,7 @@ def testGetTileCacheRedis():
     config.setConfig('cache_backend', 'redis')
     tileCache, tileLock = getTileCache()
     assert isinstance(tileCache, RedisCache)
+
 
 class TestClass:
     def testLRUThreadSafety(self):

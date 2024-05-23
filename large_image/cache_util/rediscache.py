@@ -17,7 +17,9 @@
 import pickle
 import threading
 import time
-from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Sized, Tuple, TypeVar, Union, cast
+
+from typing_extensions import Buffer
 
 from .. import config
 from .base import BaseCache
@@ -34,7 +36,7 @@ class RedisCache(BaseCache):
             mustBeAvailable: bool = False) -> None:
         import redis
         from redis.client import Redis
-        
+
         self.redis = redis
         self._redisCls = Redis
         super().__init__(0, getsizeof=getsizeof)
@@ -57,12 +59,12 @@ class RedisCache(BaseCache):
     def __len__(self) -> int:
         # return invalid length
         keys = self._client.keys(f'{self._cache_key_prefix}*')
-        return len(keys)
+        return len(cast(Sized, keys))
 
     def __contains__(self, key) -> bool:
         # cache never contains key
         _key = self._cache_key_prefix + self._hashKey(key)
-        return self._client.exists(_key)
+        return bool(self._client.exists(_key))
 
     def __delitem__(self, key: str) -> None:
         if not self.__contains__(key):
@@ -76,7 +78,7 @@ class RedisCache(BaseCache):
             # must determine if tke key exists , otherwise cache_test can not be passed.
             if not self.__contains__(key):
                 raise KeyError
-            return pickle.loads(self._client.get(_key))
+            return pickle.loads(cast(Buffer, self._client.get(_key)))
         except KeyError:
             return self.__missing__(key)
         except self.redis.ConnectionError:
@@ -111,7 +113,7 @@ class RedisCache(BaseCache):
 
     @property
     def curritems(self) -> int:
-        return self._client.dbsize()
+        return cast(int, self._client.dbsize())
 
     @property
     def currsize(self) -> int:
@@ -130,7 +132,7 @@ class RedisCache(BaseCache):
             self._lastReconnectBackoff = getattr(self, '_lastReconnectBackoff', 2)
             if time.time() - getattr(self, '_lastReconnect', 0) > self._lastReconnectBackoff:
                 config.getLogger('logprint').info('Trying to reconnect to redis server')
-                self._client = self._redisCls.from_url(self._clientParams[0], 
+                self._client = self._redisCls.from_url(self._clientParams[0],
                                                          **self._clientParams[1])
                 self._lastReconnectBackoff = min(self._lastReconnectBackoff + 1, 30)
                 self._lastReconnect = time.time()
@@ -140,7 +142,7 @@ class RedisCache(BaseCache):
     def _getStat(self, key: str) -> int:
         try:
             stats = self._client.info()
-            value = stats[key]
+            value = cast(dict, stats)[key]
         except Exception:
             return 0
         return value
@@ -148,7 +150,7 @@ class RedisCache(BaseCache):
     def clear(self) -> None:
         keys = self._client.keys(f'{self._cache_key_prefix}*')
         if keys:
-            self._client.delete(*keys)
+            self._client.delete(*list(cast(Iterable[Any], keys)))
 
     @staticmethod
     def getCache() -> Tuple[Optional['RedisCache'], threading.Lock]:
@@ -167,7 +169,7 @@ class RedisCache(BaseCache):
             redisPassword = None
         try:
             cache = RedisCache(url, redisUsername, redisPassword,
-                             mustBeAvailable=True)
+                               mustBeAvailable=True)
         except Exception:
             config.getLogger().info('Cannot use redis for caching.')
             cache = None
