@@ -104,7 +104,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise
-        glymur.set_option('lib.num_threads', large_image.tilesource.utilities.cpu_count())
+        glymur.set_option('lib.num_threads', large_image.config.cpu_count())
         self._openjpegHandles = queue.LifoQueue()
         for _ in range(self._maxOpenHandles - 1):
             self._openjpegHandles.put(None)

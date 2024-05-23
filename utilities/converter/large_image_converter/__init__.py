@@ -14,7 +14,6 @@ from importlib.metadata import version as _importlib_version
 from tempfile import TemporaryDirectory
 
 import numpy as np
-import psutil
 import tifftools
 
 import large_image
@@ -347,7 +346,7 @@ def _concurrency_to_value(_concurrency=None, **kwargs):
     _concurrency = int(_concurrency) if str(_concurrency).isdigit() else 0
     if _concurrency > 0:
         return _concurrency
-    return max(1, large_image.tilesource.utilities.cpu_count(logical=True) + _concurrency)
+    return max(1, large_image.config.cpu_count(logical=True) + _concurrency)
 
 
 def _get_thread_pool(memoryLimit=None, **kwargs):
@@ -359,7 +358,7 @@ def _get_thread_pool(memoryLimit=None, **kwargs):
     """
     concurrency = _concurrency_to_value(**kwargs)
     if memoryLimit:
-        concurrency = min(concurrency, psutil.virtual_memory().total // memoryLimit)
+        concurrency = min(concurrency, large_image.config.total_memory() // memoryLimit)
     concurrency = max(1, concurrency)
     return concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
 
