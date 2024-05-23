@@ -892,12 +892,14 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 }
             );
             layer.mode(type, undefined, options.modeOptions);
-            if (options.signalModeChange) {
-                layer.geoOn(window.geo.event.annotation.mode, (evt) => {
-                    layer.geoOff(window.geo.event.annotation.mode);
+            layer.geoOn(window.geo.event.annotation.mode, (evt) => {
+                layer.geoOff(window.geo.event.annotation.state);
+                layer.geoOff(window.geo.event.annotation.mode);
+                if (options.signalModeChange) {
                     events.trigger('li:drawModeChange', {event: evt});
-                });
-            }
+                }
+                defer.reject();
+            });
             return defer.promise();
         },
 
