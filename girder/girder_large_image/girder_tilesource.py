@@ -173,12 +173,12 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):  # noqa
         fallback = True
         if (mimeType and getattr(availableSources[sourceName], 'mimeTypes', None) and
                 mimeType in availableSources[sourceName].mimeTypes):
-            fallback = False
             priority = min(priority, availableSources[sourceName].mimeTypes[mimeType])
+            fallback = False
         for regex in getattr(availableSources[sourceName], 'nameMatches', {}):
             if re.match(regex, baseName):
-                fallback = False
                 priority = min(priority, availableSources[sourceName].nameMatches[regex])
+                fallback = False
         for ext in extensions:
             if ext in sourceExtensions:
                 priority = min(priority, sourceExtensions[ext])

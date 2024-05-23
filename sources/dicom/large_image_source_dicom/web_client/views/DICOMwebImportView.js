@@ -5,6 +5,9 @@ import router from '@girder/core/router';
 import View from '@girder/core/views/View';
 import { restRequest } from '@girder/core/rest';
 
+import { assetstoreImportViewMap } from '@girder/core/views/body/AssetstoresView';
+import { AssetstoreType } from '@girder/core/constants';
+
 import DWASImportTemplate from '../templates/assetstoreImport.pug';
 
 const DICOMwebImportView = View.extend({
@@ -24,12 +27,12 @@ const DICOMwebImportView = View.extend({
             }
 
             this.$('.g-submit-dwas-import').addClass('disabled');
-            this.model.off().on('g:imported', function () {
+            this.assetstore.off().on('g:imported', function () {
                 router.navigate(destinationType + '/' + destinationId, { trigger: true });
             }, this).on('g:error', function (err) {
                 this.$('.g-submit-dwas-import').removeClass('disabled');
                 this.$('.g-validation-failed-message').html(err.responseJSON.message);
-            }, this).dicomwebImport({
+            }, this).import({
                 destinationId,
                 destinationType,
                 limit,
@@ -40,7 +43,7 @@ const DICOMwebImportView = View.extend({
         'click .g-open-browser': '_openBrowser'
     },
 
-    initialize: function () {
+    initialize: function (settings) {
         this._browserWidgetView = new BrowserWidget({
             parentView: this,
             titleText: 'Destination',
@@ -75,12 +78,13 @@ const DICOMwebImportView = View.extend({
                 }
             });
         });
+        this.assetstore = settings.assetstore;
         this.render();
     },
 
     render: function () {
         this.$el.html(DWASImportTemplate({
-            assetstore: this.model
+            assetstore: this.assetstore
         }));
 
         return this;
@@ -90,5 +94,7 @@ const DICOMwebImportView = View.extend({
         this._browserWidgetView.setElement($('#g-dialog-container')).render();
     }
 });
+
+assetstoreImportViewMap[AssetstoreType.DICOMWEB] = DICOMwebImportView;
 
 export default DICOMwebImportView;

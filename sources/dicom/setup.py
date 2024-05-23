@@ -41,11 +41,14 @@ entry_points = {
     ],
 }
 
+girder_extras = [f'girder-large-image{limit_version}']
+
 if sys.version_info >= (3, 9):
     # For Python >= 3.9, include the DICOMweb plugin
     entry_points['girder.plugin'] = [
         'dicomweb = large_image_source_dicom.girder_plugin:DICOMwebPlugin',
     ]
+    girder_extras.append('girder>=3.2.3')
 
 setup(
     name='large-image-source-dicom',
@@ -71,7 +74,7 @@ setup(
         'wsidicom>=0.9.0',
     ],
     extras_require={
-        'girder': f'girder-large-image{limit_version}',
+        'girder': girder_extras,
     },
     include_package_data=True,
     keywords='large_image, tile source',

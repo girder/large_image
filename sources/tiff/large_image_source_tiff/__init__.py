@@ -63,6 +63,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'ptif': SourcePriority.PREFERRED,
         'ptiff': SourcePriority.PREFERRED,
         'qptiff': SourcePriority.PREFERRED,
+        'svs': SourcePriority.MEDIUM,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
@@ -72,6 +73,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     }
 
     _maxAssociatedImageSize = 8192
+    _maxUntiledImage = 4096
 
     def __init__(self, path, **kwargs):  # noqa
         """
@@ -84,18 +86,18 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         self._largeImagePath = str(self._getLargeImagePath())
 
+        lastException = None
         try:
             self._initWithTiffTools()
             return
         except Exception as exc:
             self.logger.debug('Cannot read with tifftools route; %r', exc)
+            lastException = exc
 
         alldir = []
         try:
             if hasattr(self, '_info'):
                 alldir = self._scanDirectories()
-            else:
-                lastException = 'Could not parse file with tifftools'
         except IOOpenTiffError:
             msg = 'File cannot be opened via tiff source.'
             raise TileSourceError(msg)
@@ -156,7 +158,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tifftools.constants.SampleFormat[sampleformat or 1].name,
             bitspersample,
         ))
-        self._bandCount = highest._tiffInfo.get('samplesperpixel')
+        self._bandCount = highest._tiffInfo.get('samplesperpixel', 1)
         # Sort the directories so that the highest resolution is the last one;
         # if a level is missing, put a None value in its place.
         self._tiffDirectories = [directories.get(key) for key in
@@ -251,8 +253,13 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         sizeX = ifd['tags'][tifftools.Tag.ImageWidth.value]['data'][0]
         sizeY = ifd['tags'][tifftools.Tag.ImageLength.value]['data'][0]
-        tileWidth = baseifd['tags'][tifftools.Tag.TileWidth.value]['data'][0]
-        tileHeight = baseifd['tags'][tifftools.Tag.TileLength.value]['data'][0]
+        if tifftools.Tag.TileWidth.value in baseifd['tags']:
+            tileWidth = baseifd['tags'][tifftools.Tag.TileWidth.value]['data'][0]
+            tileHeight = baseifd['tags'][tifftools.Tag.TileLength.value]['data'][0]
+        else:
+            tileWidth = sizeX
+            tileHeight = baseifd['tags'][tifftools.Tag.RowsPerStrip.value]['data'][0]
+
         for tag in {
                 tifftools.Tag.SamplesPerPixel.value,
                 tifftools.Tag.BitsPerSample.value,
@@ -297,7 +304,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         directories are the same size and format; all non-tiled directories are
         treated as associated images.
         """
-        dir0 = self.getTiffDir(0)
+        dir0 = self.getTiffDir(0, mustBeTiled=None)
         self.tileWidth = dir0.tileWidth
         self.tileHeight = dir0.tileHeight
         self.sizeX = dir0.imageWidth
@@ -311,12 +318,11 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tifftools.constants.SampleFormat[sampleformat or 1].name,
             bitspersample,
         ))
-        self._bandCount = dir0._tiffInfo.get('samplesperpixel')
+        self._bandCount = dir0._tiffInfo.get('samplesperpixel', 1)
         info = _cached_read_tiff(self._largeImagePath)
         self._info = info
         frames = []
         associated = []  # for now, a list of directories
-        curframe = -1
         for idx, ifd in enumerate(info['ifds']):
             # if not tiles, add to associated images
             if tifftools.Tag.tileWidth.value not in ifd['tags']:
@@ -325,7 +331,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             level = self._levelFromIfd(ifd, info['ifds'][0])
             # if the same resolution as the main image, add a frame
             if level == self.levels - 1:
-                curframe += 1
                 frames.append({'dirs': [None] * self.levels})
                 frames[-1]['dirs'][-1] = (idx, 0)
                 try:
@@ -364,6 +369,35 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     else:
                         msg = 'Tile layers are in a surprising order'
                         raise TileSourceError(msg)
+        # If we have a single untiled ifd that is "small", use it
+        if tifftools.Tag.tileWidth.value not in info['ifds'][0]['tags']:
+            if (
+                self.sizeX > self._maxUntiledImage or self.sizeY > self._maxUntiledImage or
+                (len(info['ifds']) != 1 or tifftools.Tag.SubIfd.value in ifd['tags']) or
+                (tifftools.Tag.ImageDescription.value in ifd['tags'] and
+                 'ImageJ' in ifd['tags'][tifftools.Tag.ImageDescription.value]['data'])
+            ):
+                msg = 'A tiled TIFF is required.'
+                raise ValidationTiffError(msg)
+            associated = []
+            level = self._levelFromIfd(ifd, info['ifds'][0])
+            frames.append({'dirs': [None] * self.levels})
+            frames[-1]['dirs'][-1] = (idx, 0)
+            try:
+                frameMetadata = json.loads(
+                    ifd['tags'][tifftools.Tag.ImageDescription.value]['data'])
+                for key in {'channels', 'frame'}:
+                    if key in frameMetadata:
+                        frames[-1][key] = frameMetadata[key]
+            except Exception:
+                pass
+            if tifftools.Tag.ICCProfile.value in ifd['tags']:
+                if not hasattr(self, '_iccprofiles'):
+                    self._iccprofiles = []
+                while len(self._iccprofiles) < len(frames) - 1:
+                    self._iccprofiles.append(None)
+                self._iccprofiles.append(ifd['tags'][
+                    tifftools.Tag.ICCProfile.value]['data'])
         self._associatedImages = {}
         for dirNum in associated:
             self._addAssociatedImage(dirNum)

@@ -16,17 +16,10 @@
 
 import math
 import threading
+from importlib.metadata import entry_points
 from typing import Dict, Optional, Tuple, Type
 
 import cachetools
-
-try:
-    import psutil
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
-
-from importlib.metadata import entry_points
 
 from .. import config
 from ..exceptions import TileCacheError
@@ -95,10 +88,7 @@ def pickAvailableCache(
         if configMaxItems > 0:
             maxItems = configMaxItems
     # Estimate usage based on (1 / portion) of the total virtual memory.
-    if HAS_PSUTIL:
-        memory = psutil.virtual_memory().total
-    else:
-        memory = 1024 ** 3
+    memory = config.total_memory()
     numItems = max(int(math.floor(memory / portion / sizeEach)), 2)
     if maxItems:
         numItems = min(numItems, maxItems)

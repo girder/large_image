@@ -61,8 +61,7 @@ _openImages = []
 
 
 # Default to ignoring files with no extension and some specific extensions.
-config.ConfigValues['source_bioformats_ignored_names'] = \
-    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2|ome|nc|json|isyntax|mrxs|zarr(\.db|\.zip)))$'
+config.ConfigValues['source_bioformats_ignored_names'] = r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2|ome|nc|json|isyntax|mrxs|zip|zarr(\.db|\.zip)))$'  # noqa
 
 
 def _monitor_thread():
@@ -215,13 +214,28 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not _startJavabridge(self.logger):
             msg = 'File cannot be opened by bioformats reader because javabridge failed to start'
             raise TileSourceError(msg)
+        self.addKnownExtensions()
 
         self._tileLock = threading.RLock()
 
         try:
             javabridge.attach()
             try:
-                self._bioimage = bioformats.ImageReader(largeImagePath)
+                self._bioimage = bioformats.ImageReader(largeImagePath, perform_init=False)
+                try:
+                    # So this as a separate step so, if it fails, we can ask to
+                    # open something that does not exist and bioformats will
+                    # release some file handles.
+                    self._bioimage.init_reader()
+                except Exception as exc:
+                    try:
+                        # Ask to open a file that should never exist
+                        self._bioimage.rdr.setId('__\0__')
+                    except Exception:
+                        pass
+                    self._bioimage.close()
+                    self._bioimage = None
+                    raise exc
             except (AttributeError, OSError) as exc:
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
@@ -698,6 +712,18 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if javabridge.get_env():
                     javabridge.detach()
         return large_image.tilesource.base._imageToPIL(image)
+
+    @classmethod
+    def addKnownExtensions(cls):
+        # This starts javabridge/bioformats if needed
+        _getBioformatsVersion()
+        if not hasattr(cls, '_addedExtensions'):
+            cls._addedExtensions = True
+            cls.extensions = cls.extensions.copy()
+            for dotext in bioformats.READABLE_FORMATS:
+                ext = dotext.strip('.')
+                if ext not in cls.extensions:
+                    cls.extensions[ext] = SourcePriority.IMPLICIT
 
 
 def open(*args, **kwargs):

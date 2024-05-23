@@ -27,6 +27,7 @@ const AnnotationModel = AccessControlledModel.extend({
 
     defaults: {
         annotation: {},
+        minElements: 5000,
         maxDetails: 250000,
         maxCentroids: 2000000
     },
@@ -38,6 +39,7 @@ const AnnotationModel = AccessControlledModel.extend({
         }
         this._region = {
             maxDetails: this.get('maxDetails'),
+            minElements: this.get('minElements'),
             sort: 'size',
             sortdir: -1
         };
@@ -439,18 +441,20 @@ const AnnotationModel = AccessControlledModel.extend({
         if (canskip && !this._inFetch) {
             return;
         }
-        var lastRegion = Object.assign({}, this._region);
-        this._region.left = Math.max(0, bounds.left - xoverlap);
-        this._region.top = Math.max(0, bounds.top - yoverlap);
-        this._region.right = Math.min(sizeX || 1e6, bounds.right + xoverlap);
-        this._region.bottom = Math.min(sizeY || 1e6, bounds.bottom + yoverlap);
-        this._lastZoom = zoom;
-        /* Don't ask for a minimum size; we show centroids if the data is
-         * incomplete. */
-        if (noFetch) {
-            return;
+        if (this._pageElements || this._region.left !== undefined) {
+            var lastRegion = Object.assign({}, this._region);
+            this._region.left = Math.max(0, bounds.left - xoverlap);
+            this._region.top = Math.max(0, bounds.top - yoverlap);
+            this._region.right = Math.min(sizeX || 1e6, bounds.right + xoverlap);
+            this._region.bottom = Math.min(sizeY || 1e6, bounds.bottom + yoverlap);
+            this._lastZoom = zoom;
+            /* Don't ask for a minimum size; we show centroids if the data is
+             * incomplete. */
+            if (['left', 'top', 'right', 'bottom', 'minimumSize'].every((key) => this._region[key] === lastRegion[key])) {
+                return;
+            }
         }
-        if (['left', 'top', 'right', 'bottom', 'minumumSize'].every((key) => this._region[key] === lastRegion[key])) {
+        if (noFetch) {
             return;
         }
         if (!this._nextFetch) {

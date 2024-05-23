@@ -1,6 +1,4 @@
 import os
-import shutil
-import tempfile
 
 import pytest
 
@@ -13,32 +11,26 @@ except ImportError:
     pass
 
 
-def test_conversion():
+def test_conversion(tmp_path):
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
 
-    tmpdir = tempfile.mkdtemp()
-    outputPath = tasks.create_tiff(imagePath, 'temp.tiff', tmpdir)
+    outputPath = tasks.create_tiff(imagePath, 'temp.tiff', tmp_path)
     assert os.path.getsize(outputPath) > 500000
-    shutil.rmtree(tmpdir)
 
 
-def test_conversion_with_non_tiff_name():
+def test_conversion_with_non_tiff_name(tmp_path):
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
-    tmpdir = tempfile.mkdtemp()
-    outputPath = tasks.create_tiff(imagePath, 'temp.test', tmpdir)
+    outputPath = tasks.create_tiff(imagePath, 'temp.test', tmp_path)
     assert os.path.getsize(outputPath) > 500000
-    shutil.rmtree(tmpdir)
 
 
-def test_conversion_with_no_name():
+def test_conversion_with_no_name(tmp_path):
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    tmpdir = tempfile.mkdtemp()
-    outputPath = tasks.create_tiff(imagePath, outputDir=tmpdir)
+    outputPath = tasks.create_tiff(imagePath, outputDir=tmp_path)
     assert os.path.getsize(outputPath) > 2000
-    shutil.rmtree(tmpdir)
 
 
 def test_conversion_with_no_directory():

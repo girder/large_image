@@ -23,7 +23,7 @@ from .datastore import datastore, registry
 # a download order.
 SourceAndFiles = {
     'bioformats': {
-        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff)|[0-9a-f].*\.dcm)$',
+        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi)|[0-9a-f].*\.dcm)$',
         'noread': r'JK-kidney_B',
         'skip': r'TCGA-AA-A02O.*\.svs',
         # We need to modify the bioformats reader similar to tiff's
@@ -36,13 +36,13 @@ SourceAndFiles = {
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
+        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'skip': r'nokeyframe\.ome\.tiff$',
         'skipTiles': r'\.*nc$',
     },
     'mapnik': {
-        'read': r'(\.(jpg|jpeg|jp2|ptif|nc|scn|svs|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
+        'read': r'(\.(jpg|jpeg|jp2|ptif|nc|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         'skip': r'nokeyframe\.ome\.tiff$',
         # we should only test this with a projection
@@ -61,8 +61,8 @@ SourceAndFiles = {
     },
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
-        'read': r'\.(ptif|svs|tif.*|qptiff|dcm)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes)',  # noqa
+        'read': r'\.(ptif|svs|ndpi|tif.*|qptiff|dcm)$',
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled)',  # noqa
         'skip': r'nokeyframe\.ome\.tiff$',
         'skipTiles': r'one_layer_missing',
     },
@@ -71,27 +71,25 @@ SourceAndFiles = {
         'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview)',  # noqa
     },
     'rasterio': {
-        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
+        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'skip': r'nokeyframe\.ome\.tiff$',
     },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'(\.(ptif|scn|svs|tif.*|qptiff)|[-0-9a-f]{36}\.dcm)$',
-        'noread': r'(oahu|DDX58_AXL|G10-3_pelvis_crop|'
-                  r'd042-353\.crop\.small\.float|landcover_sample|US_Geo\.|'
-                  r'imagej|bad_axes|nokeyframe\.ome\.tiff$)',
+        'noread': r'(DDX58_AXL|G10-3_pelvis_crop|landcover_sample|US_Geo\.|imagej)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm)$)' +  # noqa
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|ndpi|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm)$)' +  # noqa
                   (r'|bad_axes' if sys.version_info < (3, 9) else '') +
                   r')',
     },
     'vips': {
         'read': r'',
         'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn|zarr\.db|zarr\.zip)$',
-        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview)'  # noqa
+        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)'  # noqa
     },
     'zarr': {'read': r'\.(zarr|zgroup|zattrs|db|zarr\.zip)$'},
 }
@@ -819,3 +817,9 @@ def testStyleRepeatedFrame():
     assert ts4.getTile(0, 0, 0) == tile1
     assert ts5.getTile(0, 0, 0) == tile1
     assert ts6.getTile(0, 0, 0) == tile1
+
+
+def testKnownExtensionList():
+    assert len(large_image.tilesource.listSources()['extensions']) > 100
+    assert len(large_image.listExtensions()) > 100
+    assert len(large_image.listMimeTypes()) > 10

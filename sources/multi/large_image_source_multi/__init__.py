@@ -30,7 +30,7 @@ except PackageNotFoundError:
 
 SourceEntrySchema = {
     'type': 'object',
-    'additionalProperties': False,
+    'additionalProperties': True,
     'properties': {
         'name': {'type': 'string'},
         'description': {'type': 'string'},
@@ -828,7 +828,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         with self._lastOpenSourceLock:
             if (hasattr(self, '_lastOpenSource') and
                     self._lastOpenSource['source'] == source and
-                    self._lastOpenSource['params'] == params):
+                    (self._lastOpenSource['params'] == params or (
+                        params == {} and self._lastOpenSource['params'] is None))):
                 return self._lastOpenSource['ts']
         if not len(large_image.tilesource.AvailableTileSources):
             large_image.tilesource.loadTileSources()
@@ -841,6 +842,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if params is None:
             params = source.get('params', {})
         ts = openFunc(source['path'], **params)
+        source['sourceName'] = ts.name
         with self._lastOpenSourceLock:
             self._lastOpenSource = {
                 'source': source,
@@ -894,7 +896,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Return additional known metadata about the tile source.  Data returned
         from this method is not guaranteed to be in any particular format or
-        have specific values.
+        have specific values.  Also, only the first 100 sources are used.
 
         :returns: a dictionary of data or None.
         """
@@ -903,7 +905,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'sources': copy.deepcopy(self._sources),
             'sourceFiles': [],
         }
-        for path in self._sourcePaths.values():
+        for path in list(self._sourcePaths.values())[:100]:
             source = self._sources[min(path['sourcenum'])]
             ts = self._openSource(source)
             result['sourceFiles'].append({
@@ -937,28 +939,28 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 (tile.shape[0] + y - base.shape[0], base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] in {2, 4}:
-                vfill[:, :, -1] = fullAlphaValue(self.dtype)
+                vfill[:, :, -1] = fullAlphaValue(base.dtype)
             base = np.vstack((base, vfill))
         if base.shape[1] < tile.shape[1] + x:
             hfill = np.zeros(
                 (base.shape[0], tile.shape[1] + x - base.shape[1], base.shape[2]),
                 dtype=base.dtype)
             if base.shape[2] in {2, 4}:
-                hfill[:, :, -1] = fullAlphaValue(self.dtype)
+                hfill[:, :, -1] = fullAlphaValue(base.dtype)
             base = np.hstack((base, hfill))
         if base.flags.writeable is False:
             base = base.copy()
         if base.shape[2] in {2, 4}:
             baseA = base[y:y + tile.shape[0], x:x + tile.shape[1], -1].astype(
-                float) / fullAlphaValue(self.dtype)
-            tileA = tile[:, :, -1].astype(float) / fullAlphaValue(self.dtype)
+                float) / fullAlphaValue(base.dtype)
+            tileA = tile[:, :, -1].astype(float) / fullAlphaValue(tile.dtype)
             outA = tileA + baseA * (1 - tileA)
             base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] = (
                 np.where(tileA[..., np.newaxis], tile[:, :, :-1], 0) +
                 base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] * baseA[..., np.newaxis] *
                 (1 - tileA[..., np.newaxis])
             ) / np.where(outA[..., np.newaxis], outA[..., np.newaxis], 1)
-            base[y:y + tile.shape[0], x:x + tile.shape[1], -1] = outA * fullAlphaValue(self.dtype)
+            base[y:y + tile.shape[0], x:x + tile.shape[1], -1] = outA * fullAlphaValue(base.dtype)
         else:
             base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
@@ -1098,12 +1100,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a numpy array of the tile.
         """
         source = self._sources[sourceEntry['sourcenum']]
-        ts = self._openSource(source, sourceEntry['kwargs'])
         # If tile is outside of bounding box, skip it
         bbox = source['bbox']
         if (corners[2][0] <= bbox['left'] or corners[0][0] >= bbox['right'] or
                 corners[2][1] <= bbox['top'] or corners[0][1] >= bbox['bottom']):
             return tile
+        ts = self._openSource(source, sourceEntry['kwargs'])
         transform = bbox.get('transform')
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
@@ -1155,6 +1157,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ts, transform, corners, scale, sourceEntry.get('frame', 0),
                 source.get('position', {}).get('crop'))
         if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
+            sourceTile = sourceTile.astype(ts.dtype)
             tile = self._mergeTiles(tile, sourceTile, x, y)
         return tile
 
@@ -1210,7 +1213,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                colors,
                                dtype=getattr(self, '_firstdtype', np.uint8))
         if self._info.get('singleBand'):
-            tile = tile[:, :, 0]
+            tile = tile[:, :, :1]
         elif tile.shape[2] in {2, 4} and (self._bandCount or tile.shape[2]) < tile.shape[2]:
             # remove a needless alpha channel
             if np.all(tile[:, :, -1] == fullAlphaValue(tile)):

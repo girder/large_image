@@ -38,7 +38,7 @@ from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.models.user import User
 
-from ..utils import AnnotationGeoJSON
+from ..utils import AnnotationGeoJSON, GeoJSONAnnotation, isGeoJSON
 from .annotationelement import Annotationelement
 
 # Some arrays longer than this are validated using numpy rather than jsonschema
@@ -788,6 +788,10 @@ class Annotation(AccessControlledModel):
         return annotation
 
     def createAnnotation(self, item, creator, annotation, public=None):
+        if isGeoJSON(annotation):
+            geojson = GeoJSONAnnotation(annotation)
+            if geojson.elementCount:
+                annotation = geojson.annotation
         now = datetime.datetime.now(datetime.timezone.utc)
         doc = {
             'itemId': item['_id'],
@@ -974,7 +978,12 @@ class Annotation(AccessControlledModel):
         annotation.pop('groups', None)
         self.injectAnnotationGroupSet(annotation)
 
-        logger.debug('Saved annotation in %5.3fs' % (time.time() - starttime))
+        if annotation['annotation'].get('elements') is not None:
+            logger.info(
+                'Saved annotation %s in %5.3fs with %d element(s)',
+                annotation.get('_id', None),
+                time.time() - starttime,
+                len(annotation['annotation']['elements']))
         events.trigger('large_image.annotations.save_history', {
             'annotation': annotation,
         }, asynchronous=True)

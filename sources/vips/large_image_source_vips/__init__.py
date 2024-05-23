@@ -16,7 +16,7 @@ from large_image.constants import (NEW_IMAGE_PATH_FLAG, TILE_FORMAT_NUMPY,
                                    dtypeToGValue)
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
-from large_image.tilesource.utilities import _imageToNumpy
+from large_image.tilesource.utilities import _imageToNumpy, _newFromFileLock
 
 logging.getLogger('pyvips').setLevel(logging.ERROR)
 
@@ -50,6 +50,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     mimeTypes = {
         None: SourcePriority.FALLBACK,
     }
+    newPriority = SourcePriority.MEDIUM
 
     _tileSize = 256
 
@@ -61,6 +62,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param path: a filesystem path for the tile source.
         """
         super().__init__(path, **kwargs)
+        self.addKnownExtensions()
 
         if str(path).startswith(NEW_IMAGE_PATH_FLAG):
             self._initNew(**kwargs)
@@ -70,7 +72,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         config._ignoreSourceNames('vips', self._largeImagePath)
         try:
-            self._image = pyvips.Image.new_from_file(self._largeImagePath)
+            with _newFromFileLock:
+                self._image = pyvips.Image.new_from_file(self._largeImagePath)
         except pyvips.error.Error:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
@@ -85,7 +88,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._frames = [0]
         for page in range(1, pages):
             subInputPath = self._largeImagePath + '[page=%d]' % page
-            subImage = pyvips.Image.new_from_file(subInputPath)
+            with _newFromFileLock:
+                subImage = pyvips.Image.new_from_file(subInputPath)
             if subImage.width == self.sizeX and subImage.height == self.sizeY:
                 self._frames.append(page)
                 continue
@@ -185,7 +189,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             with self._frameLock:
                 if frame not in self._recentFrames:
                     subpath = self._largeImagePath + '[page=%d]' % self._frames[frame]
-                    img = pyvips.Image.new_from_file(subpath)
+                    with _newFromFileLock:
+                        img = pyvips.Image.new_from_file(subpath)
                     self._recentFrames[frame] = img
                 else:
                     img = self._recentFrames[frame]
@@ -609,6 +614,16 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return {'x': 0, 'y': 0}
         return {'x': min(0, self._output['minx'] or 0),
                 'y': min(0, self._output['miny'] or 0)}
+
+    @classmethod
+    def addKnownExtensions(cls):
+        if not hasattr(cls, '_addedExtensions'):
+            cls._addedExtensions = True
+            cls.extensions = cls.extensions.copy()
+            for dotext in pyvips.base.get_suffixes():
+                ext = dotext.lstrip('.')
+                if ext not in cls.extensions:
+                    cls.extensions[ext] = SourcePriority.IMPLICIT
 
 
 def open(*args, **kwargs):

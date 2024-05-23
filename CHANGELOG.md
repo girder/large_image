@@ -1,10 +1,81 @@
 # Change Log
 
+## 1.28.3
+
+### Improvements
+- Better detect available memory in containers ([#1532](../../pull/1532))
+
+### Changes
+- Log more when saving annotations ([#1525](../../pull/1525))
+- Thumbnail generation jobs are less blocking ([#1528](../../pull/1528), [#1530](../../pull/1530))
+
+### Bug Fixes
+- Annotations are sometimes paged when they shouldn't be ([#1529](../../pull/1529))
+
+## 1.28.2
+
+### Improvements
+- Improve uint16 image scaling ([#1511](../../pull/1511))
+- Read some untiled tiffs using the tiff source ([#1512](../../pull/1512))
+- Speed up multi source compositing in tiled cases ([#1513](../../pull/1513))
+- Speed up some tifffile and multi source access cases ([#1515](../../pull/1515))
+- Allow specifying a minimum number of annotations elements when maxDetails is used ([#1521](../../pull/1521))
+- Improved import of GeoJSON annotations ([#1522](../../pull/1522))
+
+### Changes
+- Limit internal metadata on multi-source files with huge numbers of sources ([#1514](../../pull/1514))
+- Make DICOMweb assetstore imports compatible with Girder generics ([#1504](../../pull/1504))
+
+### Bug Fixes
+- Fix touch actions in the image viewer in some instances ([#1516](../../pull/1516))
+- Fix multisource dtype issues that resulted in float32 results ([#1520](../../pull/1520))
+
+## 1.28.1
+
+### Improvements
+- When writing zarr sinks through the converter, use jpeg compression for lossy data ([#1501](../../pull/1501))
+
+### Changes
+- Improve algorithm sweep example options ([#1498](../../pull/1498))
+
+### Bug Fixes
+- Guard a race condition in vips new_from_file ([#1500](../../pull/1500))
+- Fix cropping with the zarr sink ([#1505](../../pull/1505))
+
+## 1.28.0
+
+### Features
+- Zarr tile sink ([#1446](../../pull/1446))
+
+### Improvements
+- Prioritize tile sinks ([#1478](../../pull/1478))
+- Add a dependency to the zarr source to read more compression types ([#1480](../../pull/1480))
+- Guard fetching internal metadata on zarr sources that have less data ([#1481](../../pull/1481))
+- Add a method to list registered extensions and mimetypes ([#1488](../../pull/1488))
+- Reduce bioformats keeping file handles open ([#1492](../../pull/1492))
+- Use more tile-frame textures in high frame count images ([#1494](../../pull/1494))
+- Zarr tile sink: generate downsampled levels ([#1490](../../pull/1490))
+
+### Changes
+- Prohibit bioformats from reading zip directly ([#1491](../../pull/1491))
+
+### Bug Fixes
+- Fix an issue with single band on multi source with non uniform sources ([#1474](../../pull/1474))
+- Allow alternate name axes in the multi source schema ([#1476](../../pull/1476))
+- Adjust default threading on tile-frame generation to match documentation ([#1495](../../pull/1495))
+- Fix how zarr sink directory is cleaned up ([#1496](../../pull/1496))
+
+## 1.27.4
+
+### Improvements
+- Add a guard when reading incorrect associated images ([#1472](../../pull/1472))
+
 ## 1.27.3
 
 ### Improvements
 - Log and recover from occasional openslide failures ([#1461](../../pull/1461))
 - Add support for Imaging Data Commons ([#1450](../../pull/1450))
+- Speed up some retiling ([#1471](../../pull/1471))
 
 ### Changes
 - Make GDAL an optional dependency for the converter ([#1464](../../pull/1464))

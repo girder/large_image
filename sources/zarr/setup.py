@@ -53,9 +53,15 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'zarr',
+        # I am uncertain why this is required, since numcodecs is required by
+        # zarr; but without it some jpeg encoded data cannot be read
+        'imagecodecs-numcodecs',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
+        'all': [
+            'large-image-converter',
+        ],
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),

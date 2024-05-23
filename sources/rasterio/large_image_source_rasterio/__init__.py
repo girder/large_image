@@ -35,8 +35,8 @@ from rasterio.errors import RasterioIOError
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, TileInputUnits,
-                                   TileOutputMimeTypes)
+                                   TILE_FORMAT_PIL, SourcePriority,
+                                   TileInputUnits, TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
@@ -87,6 +87,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         """
         # init the object
         super().__init__(path, **kwargs)
+        self.addKnownExtensions()
 
         # create a thread lock
         self._getDatasetLock = threading.RLock()
@@ -1030,6 +1031,17 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         if len(ds.gcps[0]) and ds.gcps[1]:
             return True
         return False
+
+    @classmethod
+    def addKnownExtensions(cls):
+        import rasterio.drivers
+
+        if not hasattr(cls, '_addedExtensions'):
+            cls._addedExtensions = True
+            cls.extensions = cls.extensions.copy()
+            for ext in rasterio.drivers.raster_driver_extensions():
+                if ext not in cls.extensions:
+                    cls.extensions[ext] = SourcePriority.IMPLICIT
 
 
 def open(*args, **kwargs):

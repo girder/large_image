@@ -120,35 +120,43 @@ class LazyTileDict(dict):
         Given the tile information, create a numpy array and merge multiple
         tiles together to form a tile of a different size.
         """
+        tileWidth = self.metadata['tileWidth']
+        tileHeight = self.metadata['tileHeight']
+        level = self.level
+        frame = self.frame
+        width = self.width
+        height = self.height
+        tx = self['x']
+        ty = self['y']
+
         retile = None
-        xmin = int(max(0, self['x'] // self.metadata['tileWidth']))
-        xmax = int((self['x'] + self.width - 1) // self.metadata['tileWidth'] + 1)
-        ymin = int(max(0, self['y'] // self.metadata['tileHeight']))
-        ymax = int((self['y'] + self.height - 1) // self.metadata['tileHeight'] + 1)
+        xmin = int(max(0, tx // tileWidth))
+        xmax = int((tx + width - 1) // tileWidth + 1)
+        ymin = int(max(0, ty // tileHeight))
+        ymax = int((ty + height - 1) // tileHeight + 1)
         for y in range(ymin, ymax):
             for x in range(xmin, xmax):
                 tileData = self.source.getTile(
-                    x, y, self.level,
-                    numpyAllowed='always', sparseFallback=True, frame=self.frame)
-                tileData, _ = _imageToNumpy(tileData)
-                if retile is None:
-                    retile = np.empty(
-                        (self.height, self.width, tileData.shape[2]),
-                        dtype=tileData.dtype)
-                x0 = int(x * self.metadata['tileWidth'] - self['x'])
-                y0 = int(y * self.metadata['tileHeight'] - self['y'])
+                    x, y, level,
+                    numpyAllowed='always', sparseFallback=True, frame=frame)
+                if not isinstance(tileData, np.ndarray) or len(tileData.shape) != 3:
+                    tileData, _ = _imageToNumpy(tileData)
+                x0 = int(x * tileWidth - tx)
+                y0 = int(y * tileHeight - ty)
                 if x0 < 0:
                     tileData = tileData[:, -x0:]
                     x0 = 0
                 if y0 < 0:
                     tileData = tileData[-y0:, :]
                     y0 = 0
-                tileData = tileData[:min(tileData.shape[0], self.height - y0),
-                                    :min(tileData.shape[1], self.width - x0)]
-                if tileData.shape[2] < retile.shape[2]:  # type: ignore[misc]
+                tw = min(tileData.shape[1], width - x0)
+                th = min(tileData.shape[0], height - y0)
+                if retile is None:
+                    retile = np.empty((height, width, tileData.shape[2]), dtype=tileData.dtype)
+                elif tileData.shape[2] < retile.shape[2]:
                     retile = retile[:, :, :tileData.shape[2]]
-                retile[y0:y0 + tileData.shape[0], x0:x0 + tileData.shape[1]] = tileData[
-                    :, :, :retile.shape[2]]  # type: ignore[misc]
+                retile[y0:y0 + th, x0:x0 + tw] = tileData[
+                    :th, :tw, :retile.shape[2]]  # type: ignore[misc]
         return cast(np.ndarray, retile)
 
     def __getitem__(self, key: str, *args, **kwargs) -> Any:

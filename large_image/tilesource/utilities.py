@@ -1,6 +1,6 @@
 import io
 import math
-import os
+import threading
 import types
 import xml.etree.ElementTree
 from collections import defaultdict
@@ -16,6 +16,8 @@ import PIL.ImageDraw
 
 from ..constants import dtypeToGValue
 
+# This was exposed here, once.
+
 try:
     import simplejpeg
 except ImportError:
@@ -26,6 +28,11 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
 
 # Turn off decompression warning check
 PIL.Image.MAX_IMAGE_PIXELS = None
+
+# This is used by any submodule that uses vips to avoid a race condition in
+# new_from_file.  Since vips is technically optional and the various modules
+# might pull it in independently, it is located here to make is shareable.
+_newFromFileLock = threading.RLock()
 
 # Extend colors so G and GREEN map to expected values.  CSS green is #0080ff,
 # which is unfortunate.
@@ -643,7 +650,8 @@ def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]
                 palette = ['#0000', mpl.colors.to_hex(str(value))]
             else:
                 cmap = mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
-                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(str(value))
+                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(  # type: ignore
+                        str(value))
                 palette = [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
         except (ImportError, ValueError, AttributeError):
             pass
@@ -815,7 +823,12 @@ def _addSubimageToImage(
             dtype=subimage.dtype)
     elif len(image.shape) != len(subimage.shape) or image.shape[-1] != subimage.shape[-1]:
         image, subimage = _makeSameChannelDepth(image, subimage)
-    image[y:y + subimage.shape[0], x:x + subimage.shape[1]] = subimage
+    if subimage.shape[-1] in {2, 4}:
+        mask = (subimage[:, :, -1] > 0)[:, :, np.newaxis]
+        image[y:y + subimage.shape[0], x:x + subimage.shape[1]] = np.where(
+            mask, subimage, image[y:y + subimage.shape[0], x:x + subimage.shape[1]])
+    else:
+        image[y:y + subimage.shape[0], x:x + subimage.shape[1]] = subimage
     return image
 
 
@@ -1199,32 +1212,6 @@ def histogramThreshold(histogram: Dict[str, Any], threshold: float, fromMax: boo
         _recentThresholds.clear()
     _recentThresholds[key] = result
     return result
-
-
-def cpu_count(logical: bool = True) -> int:
-    """
-    Get the usable CPU count.  If psutil is available, it is used, since it can
-    determine the number of physical CPUS versus logical CPUs.  This returns
-    the smaller of that value from psutil and the number of cpus allowed by the
-    os scheduler, which means that for physical requests (logical=False), the
-    returned value may be more the the number of physical cpus that are usable.
-
-    :param logical: True to get the logical usable CPUs (which include
-        hyperthreading).  False for the physical usable CPUs.
-    :returns: the number of usable CPUs.
-    """
-    count = os.cpu_count() or 2
-    try:
-        count = min(count, len(os.sched_getaffinity(0)))
-    except AttributeError:
-        pass
-    try:
-        import psutil
-
-        count = min(count, psutil.cpu_count(logical))
-    except ImportError:
-        pass
-    return max(1, count)
 
 
 def addPILFormatsToOutputOptions() -> None:

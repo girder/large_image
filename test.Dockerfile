@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # This is mostly based on the Dockerfiles from themattrix/pyenv and
 # themattrix/tox-base.  It has some added packages, most notably liblzma-dev,
@@ -15,6 +15,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
     OLD_PYTHON_VERSIONS="3.6.15" \
     PYTHON_VERSIONS="3.9 3.8 3.7 3.10 3.11 3.12"
+
+# Consumers of this package aren't expecting an existing ubuntu user (there
+# wasn't one in the ubuntu:22.04 base)
+RUN userdel -r ubuntu 2>/dev/null
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

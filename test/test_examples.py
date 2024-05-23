@@ -1,6 +1,8 @@
 import os
 import subprocess
 
+import pytest
+
 from .datastore import datastore
 
 
@@ -79,3 +81,23 @@ def test_sum_squares_import():
         imagePath, 2.5, tile_width=657, tile_height=323, overlap_x=41,
         overlap_y=27, overlap_edges=True).tolist()
     assert finalColor == firstColor
+
+
+@pytest.mark.parametrize(('sink', 'outname', 'openpath'), [
+    ('multivips', 'sample', 'sample/results.yml'),
+    ('zarr', 'sample.zip', 'sample.zip'),
+    ('multizarr', 'sample', 'sample/results.yml'),
+])
+def test_algorithm_progression(sink, outname, openpath, tmp_path):
+    import large_image
+    from examples.algorithm_progression import main
+
+    imagePath = datastore.fetch('sample_Easy1.png')
+    outpath = str(tmp_path / outname)
+    main(['', 'ppc',
+          '--param=hue_value,hue,0,1,5,open',
+          '--param=hue_width,width,0.10,0.25,2',
+          '-w', '4', '--threading', '--sink', sink,
+          imagePath, outpath])
+    source = large_image.open(tmp_path / openpath)
+    assert source.frames == 10

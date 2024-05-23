@@ -112,6 +112,10 @@ registry = {
     'd4db7ae6-1344-467e-8380-4ce13cc3f59e.dcm': 'sha512:48cb562b94d0daf4060abd9eef150c851d3509d9abbff4bea11d00832955720bf1941073a51e6fb68fb5cc23704dec2659fc0c02360a8ac753dc523dca2c8c36',  # noqa
     '18f6378f-433c-42bf-9373-1ff9c808c118.dcm': 'sha512:36432183380eb7d44417a2210a19d550527abd1181255e19ed5c1d17695d8bb8ca42f5b426a63fa73b84e0e17b770401a377ae0c705d0ed7fdf30d571ef60e2d',  # noqa
     'a131592c-a069-4aa7-8031-398654aa8a3d.dcm': 'sha512:99bd3da4b8e11ce7b4f7ed8a294ed0c37437320667a06c40c383f4b29be85fe8e6094043e0600bee0ba879f2401de4c57285800a4a23da2caf2eb94e5b847ee0',  # noqa
+    # Synthetic newer ndpi with binary data and nonblank image labelled as RGB
+    'synthetic_ndpi_2024.ndpi': 'sha512:192cdcf551a824277ef70358b8ed6225dca0c5b5d0817fe0d800b72638e0ad9416cd5bc40cb186219da60fd324b676d1b32cc05a276a33b71b485d665a31e42e',  # noqa
+    # Synthetic uint16 untiled tiff that can be read with the tiff source
+    'synthetic_untiled_16.tiff': 'sha512:f4773fcfa749ba9c2db25319c9e8ad8586dd148de4366dae0393a3703906dace9f11233eafdb24418b598170d6372ef1ca861bf8d7a8212cac21a0eb8636ee77',  # noqa
 }
 
 

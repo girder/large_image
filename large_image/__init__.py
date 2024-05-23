@@ -18,7 +18,8 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
 from . import tilesource  # noqa
-from .tilesource import canRead, canReadList, getTileSource, new, open  # noqa
+from .tilesource import (canRead, canReadList, getTileSource,  # noqa
+                         listExtensions, listMimeTypes, listSources, new, open)
 
 try:
     __version__ = _importlib_version(__name__)

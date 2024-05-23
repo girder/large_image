@@ -12,6 +12,7 @@ import ImageViewerWidget from './base';
 import setFrameQuad from './setFrameQuad.js';
 
 window.hammerjs = Hammer;
+window.Hammer = Hammer;
 window.d3 = d3;
 
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
@@ -81,14 +82,16 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             params.layer.autoshareRenderer = false;
             this._layer = this.viewer.createLayer('osm', params.layer);
             if (this.metadata.frames && this.metadata.frames.length > 1) {
+                const maxTextures = Math.max(1, Math.min(16, Math.ceil(
+                    this.metadata.frames.length / 1024)));
                 const baseUrl = this._getTileUrl('{z}', '{x}', '{y}');
                 const match = baseUrl.match(/[?&](_=[^&]*)/);
                 const updated = match && match[1] ? ('&' + match[1]) : '';
                 setFrameQuad(this.metadata, this._layer, {
                     // allow more and larger textures is slower, balancing
                     // performance and appearance
-                    // maxTextures: 16,
-                    // maxTotalTexturePixels: 256 * 1024 * 1024,
+                    maxTextures: maxTextures,
+                    // maxTotalTexturePixels: maxTextures * 64 * 1024 * 1024,
                     baseUrl: baseUrl.split('/tiles/')[0] + '/tiles',
                     restRequest: restRequest,
                     restUrl: 'item/' + this.itemId + '/tiles',

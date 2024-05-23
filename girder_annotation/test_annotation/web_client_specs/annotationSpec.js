@@ -578,7 +578,7 @@ describe('Annotations', function () {
 
         it('fetch a paged annotation', function () {
             var done;
-            annotation = new largeImageAnnotation.models.AnnotationModel({_id: annotationId, maxDetails: 100, maxCentroids: 500});
+            annotation = new largeImageAnnotation.models.AnnotationModel({_id: annotationId, maxDetails: 100, minElements: 1, maxCentroids: 500});
             annotation.once('g:fetched', function () { done = true; });
             annotation.fetch().done(function () {
                 expect(annotation.get('itemId')).toBeDefined();
