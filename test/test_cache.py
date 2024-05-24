@@ -1,4 +1,5 @@
 import concurrent.futures
+import os
 import threading
 import time
 
@@ -52,12 +53,16 @@ def testCheckCacheMemcached():
 
 
 @pytest.mark.singular()
+@pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
 def testCacheRedis():
+    config.setConfig('cache_redis_url', os.getenv('REDIS_TEST_URL'))
     cache_test(RedisCache())
 
 
 @pytest.mark.singular()
+@pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
 def testCheckCacheRedis():
+    config.setConfig('cache_redis_url', os.getenv('REDIS_TEST_URL'))
     cache = RedisCache()
 
     cache_test(cache)
@@ -85,6 +90,7 @@ def testGetTileCachePython():
     config.setConfig('cache_backend', 'python')
     tileCache, tileLock = getTileCache()
     assert isinstance(tileCache, cachetools.LRUCache)
+    assert 'tileCache' in cachesInfo()
 
 
 @pytest.mark.singular()
@@ -94,15 +100,19 @@ def testGetTileCacheMemcached():
     config.setConfig('cache_backend', 'memcached')
     tileCache, tileLock = getTileCache()
     assert isinstance(tileCache, MemCache)
+    assert 'tileCache' in cachesInfo()
 
 
 @pytest.mark.singular()
+@pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
 def testGetTileCacheRedis():
     large_image.cache_util.cache._tileCache = None
     large_image.cache_util.cache._tileLock = None
     config.setConfig('cache_backend', 'redis')
+    config.setConfig('cache_redis_url', os.getenv('REDIS_TEST_URL'))
     tileCache, tileLock = getTileCache()
     assert isinstance(tileCache, RedisCache)
+    assert 'tileCache' in cachesInfo()
 
 
 class TestClass:
