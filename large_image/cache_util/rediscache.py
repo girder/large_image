@@ -26,6 +26,7 @@ from .base import BaseCache
 
 _VT = TypeVar('_VT')
 
+
 class RedisCache(BaseCache):
     """Use redis as the backing cache."""
 
@@ -133,7 +134,7 @@ class RedisCache(BaseCache):
             if time.time() - getattr(self, '_lastReconnect', 0) > self._lastReconnectBackoff:
                 config.getLogger('logprint').info('Trying to reconnect to redis server')
                 self._client = self._redisCls.from_url(self._clientParams[0],
-                                                         **self._clientParams[1])
+                                                       **self._clientParams[1])
                 self._lastReconnectBackoff = min(self._lastReconnectBackoff + 1, 30)
                 self._lastReconnect = time.time()
         except Exception:
