@@ -15,7 +15,7 @@ Large Image
    :target: https://codecov.io/github/girder/large_image?branch=master
    :alt: codecov.io
 
-.. |doi-badge| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4723355-blue
+.. |doi-badge| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4723355-blue.svg
    :target: https://zenodo.org/badge/latestdoi/45569214
 
 .. |pypi-badge| image:: https://img.shields.io/pypi/v/large-image.svg?logo=python&logoColor=white
