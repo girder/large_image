@@ -533,6 +533,7 @@ def command():
         for key in list(large_image.config.ConfigValues):
             if '_ignored_names' in key:
                 del large_image.config.ConfigValues[key]
+        large_image.config.ConfigValues.pop('all_sources_ignored_names', None)
     main(opts)
 
 

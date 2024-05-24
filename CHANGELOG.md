@@ -5,6 +5,7 @@
 ### Improvements
 - Better detect available memory in containers ([#1532](../../pull/1532))
 - Reject the promise from a canceled annotation ([#1535](../../pull/1535))
+- Disallow certain names from being read by any but specific sources ([#1537](../../pull/1537))
 
 ### Changes
 - Log more when saving annotations ([#1525](../../pull/1525))

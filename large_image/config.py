@@ -58,6 +58,10 @@ ConfigValues = {
     # via direct load
     'max_annotation_input_file_length': 1 * 1024 ** 3 if not HAS_PSUTIL else max(
         1 * 1024 ** 3, psutil.virtual_memory().total // 16),
+
+    # Any path that matches here will only be opened by a source that matches
+    # extension or mime type.
+    'all_sources_ignored_names': r'(\.mrxs|\.vsi)$',
 }
 
 
