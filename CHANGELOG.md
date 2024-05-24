@@ -2,6 +2,9 @@
 
 ## 1.28.3
 
+### Features
+- Add redis as cache backend option ([#1469](../../pull/1469))
+
 ### Improvements
 - Better detect available memory in containers ([#1532](../../pull/1532))
 - Reject the promise from a canceled annotation ([#1535](../../pull/1535))
