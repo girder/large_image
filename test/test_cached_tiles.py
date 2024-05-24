@@ -168,6 +168,7 @@ class TestRedisCache(LargeImageCachedTilesTest):
         large_image.cache_util.cache._tileLock = None
         config.setConfig('cache_backend', 'redis')
 
+
 class TestPythonCache(LargeImageCachedTilesTest):
     @classmethod
     def setup_class(cls):
