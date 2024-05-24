@@ -161,6 +161,14 @@ class TestMemcachedCache(LargeImageCachedTilesTest):
         config.setConfig('cache_backend', 'memcached')
 
 
+class TestRedisCache(LargeImageCachedTilesTest):
+    @classmethod
+    def setup_class(cls):
+        large_image.cache_util.cache._tileCache = None
+        large_image.cache_util.cache._tileLock = None
+        config.setConfig('cache_backend', 'redis')
+
+
 class TestPythonCache(LargeImageCachedTilesTest):
     @classmethod
     def setup_class(cls):
