@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.28.3
+## 1.29.0
 
 ### Features
 - Add redis as cache backend option ([#1469](../../pull/1469))
@@ -10,6 +10,7 @@
 - Reject the promise from a canceled annotation ([#1535](../../pull/1535))
 - Disallow certain names from being read by any but specific sources ([#1537](../../pull/1537))
 - Add the ability to specify the dtype of a multi-source file ([#1542](../../pull/1542))
+- Handle bounds on openslide sources to handle sparse sources ([#1543](../../pull/1543))
 
 ### Changes
 - Log more when saving annotations ([#1525](../../pull/1525))

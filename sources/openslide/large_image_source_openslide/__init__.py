@@ -154,6 +154,30 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'svslevel': bestlevel,
                 'scale': scale,
             })
+        self._bounds = None
+        try:
+            bounds = {
+                'x': int(self._openslide.properties[openslide.PROPERTY_NAME_BOUNDS_X]),
+                'y': int(self._openslide.properties[openslide.PROPERTY_NAME_BOUNDS_Y]),
+                'width': int(self._openslide.properties[openslide.PROPERTY_NAME_BOUNDS_WIDTH]),
+                'height': int(self._openslide.properties[openslide.PROPERTY_NAME_BOUNDS_HEIGHT]),
+            }
+            if (
+                bounds['x'] >= 0 and bounds['width'] > 0 and
+                bounds['x'] + bounds['width'] <= self.sizeX and
+                bounds['y'] >= 0 and bounds['height'] > 0 and
+                bounds['y'] + bounds['height'] <= self.sizeY and
+                (bounds['width'] < self.sizeX or bounds['height'] < self.sizeY)
+            ):
+                self._bounds = bounds
+                self.sizeX, self.sizeY = bounds['width'], bounds['height']
+                prevlevels = self.levels
+                self.levels = int(math.ceil(max(
+                    math.log(float(self.sizeX) / self.tileWidth),
+                    math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1
+                self._svslevels = self._svslevels[prevlevels - self.levels:]
+        except Exception:
+            pass
         self._populatedLevels = len({l['svslevel'] for l in self._svslevels})
 
     def _getTileSize(self):
@@ -292,6 +316,9 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         scale = 2 ** (self.levels - 1 - z)
         offsetx = x * self.tileWidth * scale
         offsety = y * self.tileHeight * scale
+        if self._bounds is not None:
+            offsetx += self._bounds['x'] // svslevel['scale']
+            offsety += self._bounds['y'] // svslevel['scale']
         # We ask to read an area that will cover the tile at the z level.  The
         # scale we computed in the __init__ process for this svs level tells
         # how much larger a region we need to read.
