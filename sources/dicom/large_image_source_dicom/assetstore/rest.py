@@ -1,14 +1,13 @@
-import json
-
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import Resource
 from girder.constants import TokenScope
 from girder.exceptions import RestException
 from girder.models.assetstore import Assetstore
-from girder.utility import assetstore_utilities
 from girder.utility.model_importer import ModelImporter
 from girder.utility.progress import ProgressContext
+
+from .dicomweb_assetstore_adapter import DICOMwebAssetstoreAdapter
 
 
 class DICOMwebAssetstoreResource(Resource):
@@ -34,38 +33,13 @@ class DICOMwebAssetstoreResource(Resource):
         parent = ModelImporter.model(destinationType).load(params['destinationId'], force=True,
                                                            exc=True)
 
-        limit = params.get('limit') or None
-        if limit is not None:
-            error_msg = 'Invalid limit'
-            try:
-                limit = int(limit)
-            except ValueError:
-                raise RestException(error_msg)
-
-            if limit < 1:
-                raise RestException(error_msg)
-
-        try:
-            search_filters = json.loads(params.get('filters') or '{}')
-        except json.JSONDecodeError as e:
-            msg = f'Invalid filters: {e}'
-            raise RestException(msg)
-
-        adapter = assetstore_utilities.getAssetstoreAdapter(assetstore)
-        items = adapter.importData(
+        return DICOMwebAssetstoreAdapter(assetstore).importData(
             parent,
             destinationType,
-            {
-                'limit': limit,
-                'search_filters': search_filters,
-            },
+            params,
             progress,
             user,
         )
-
-        if not items:
-            msg = 'No studies matching the search filters were found'
-            raise RestException(msg)
 
     @access.admin(scope=TokenScope.DATA_WRITE)
     @autoDescribeRoute(

@@ -19,6 +19,12 @@ Configuration parameters:
 
 - ``cache_memcached_password``: A password for the memcached server.  Default ``None``.
 
+- ``cache_redis_url``: If tiles are cached in redis, the url or list of urls where the redis server is located.  Default '127.0.0.1:6379'.
+
+- ``cache_redis_username``: A username for the redis server.  Default ``None``.
+
+- ``cache_redis_password``: A password for the redis server.  Default ``None``.
+
 - ``cache_tilesource_memory_portion``: Tilesources are cached on open so that subsequent accesses can be faster.  These use file handles and memory.  This limits the maximum based on a memory estimation and using no more than 1 / (``cache_tilesource_memory_portion``) of the available memory.
 
 - ``cache_tilesource_maximum``: If this is non-zero, this further limits the number of tilesources than can be cached to this value.
@@ -27,7 +33,9 @@ Configuration parameters:
 
 - ``max_small_image_size``: The PIL tilesource is used for small images if they are no more than this many pixels along their maximum dimension.
 
-- ``source_bioformats_ignored_names``, ``source_pil_ignored_names``, ``source_vips_ignored_names``: Some tile sources can read some files that are better read by other tilesources.  Since reading these files is suboptimal, these tile sources have a setting that, by default, ignores files without extensions or with particular extensions.  This setting is a Python regular expressions.  For bioformats this defaults to ``r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'``.
+- ``source_bioformats_ignored_names``, ``source_pil_ignored_names``, ``source_vips_ignored_names``: Some tile sources can read some files that are better read by other tilesources.  Since reading these files is suboptimal, these tile sources have a setting that, by default, ignores files without extensions or with particular extensions.  This setting is a Python regular expression.  For bioformats this defaults to ``r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'``.
+
+- ``all_sources_ignored_names``: If a file matches the regular expression in this setting, it will only be opened by sources that explicitly match the extension or mimetype.  Some formats are composed of multiple files that can be read as either a small image or as a large image depending on the source; this prohibits all sources that don't explicitly support the format.
 
 - ``icc_correction``: If this is True or undefined, ICC color correction will be applied for tile sources that have ICC profile information.  If False, correction will not be applied.  If the style used to open a tilesource specifies ICC correction explicitly (on or off), then this setting is not used.  This may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``True`` is the same as ``perceptual``.
 
@@ -47,6 +55,8 @@ Configuration from Environment
 ------------------------------
 
 All configuration parameters can be specified as environment parameters by prefixing their uppercase names with ``LARGE_IMAGE_``.  For instance, ``LARGE_IMAGE_CACHE_BACKEND=python`` specifies the cache backend.  If the values can be decoded as json, they will be parsed as such.  That is, numerical values will be parsed as numbers; to parse them as strings, surround them with double quotes.
+
+As another example, to use the least memory possible, set ``LARGE_IMAGE_CACHE_BACKEND=python LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION=1000 LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=2``.  The first setting specifies caching tiles in the main process and not in memcached or an external cache.  The second setting asks to use 1/1000th of the memory for a tile cache.  The third settings caches no more than 2 tile sources (2 is the minimum).
 
 Configuration within the Girder Plugin
 --------------------------------------

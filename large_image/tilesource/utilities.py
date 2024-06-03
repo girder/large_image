@@ -1,6 +1,5 @@
 import io
 import math
-import os
 import threading
 import types
 import xml.etree.ElementTree
@@ -16,6 +15,8 @@ import PIL.ImageColor
 import PIL.ImageDraw
 
 from ..constants import dtypeToGValue
+
+# This was exposed here, once.
 
 try:
     import simplejpeg
@@ -649,7 +650,8 @@ def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]
                 palette = ['#0000', mpl.colors.to_hex(str(value))]
             else:
                 cmap = mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
-                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(str(value))
+                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(  # type: ignore
+                        str(value))
                 palette = [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
         except (ImportError, ValueError, AttributeError):
             pass
@@ -1210,32 +1212,6 @@ def histogramThreshold(histogram: Dict[str, Any], threshold: float, fromMax: boo
         _recentThresholds.clear()
     _recentThresholds[key] = result
     return result
-
-
-def cpu_count(logical: bool = True) -> int:
-    """
-    Get the usable CPU count.  If psutil is available, it is used, since it can
-    determine the number of physical CPUS versus logical CPUs.  This returns
-    the smaller of that value from psutil and the number of cpus allowed by the
-    os scheduler, which means that for physical requests (logical=False), the
-    returned value may be more the the number of physical cpus that are usable.
-
-    :param logical: True to get the logical usable CPUs (which include
-        hyperthreading).  False for the physical usable CPUs.
-    :returns: the number of usable CPUs.
-    """
-    count = os.cpu_count() or 2
-    try:
-        count = min(count, len(os.sched_getaffinity(0)))
-    except AttributeError:
-        pass
-    try:
-        import psutil
-
-        count = min(count, psutil.cpu_count(logical))
-    except ImportError:
-        pass
-    return max(1, count)
 
 
 def addPILFormatsToOutputOptions() -> None:

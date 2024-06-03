@@ -16,21 +16,15 @@
 
 import math
 import threading
+from importlib.metadata import entry_points
 from typing import Dict, Optional, Tuple, Type
 
 import cachetools
 
-try:
-    import psutil
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
-
-from importlib.metadata import entry_points
-
 from .. import config
 from ..exceptions import TileCacheError
 from .memcache import MemCache
+from .rediscache import RedisCache
 
 # DO NOT MANUALLY ADD ANYTHING TO `_availableCaches`
 #  use entrypoints and let loadCaches fill in `_availableCaches`
@@ -66,6 +60,8 @@ def loadCaches(
     if MemCache is not None:
         # TODO: put this in an entry point for a new package
         _availableCaches['memcached'] = MemCache
+    if RedisCache is not None:
+        _availableCaches['redis'] = RedisCache
     # NOTE: `python` cache is viewed as a fallback and isn't listed in `availableCaches`
 
 
@@ -92,10 +88,7 @@ def pickAvailableCache(
         if configMaxItems > 0:
             maxItems = configMaxItems
     # Estimate usage based on (1 / portion) of the total virtual memory.
-    if HAS_PSUTIL:
-        memory = psutil.virtual_memory().total
-    else:
-        memory = 1024 ** 3
+    memory = config.total_memory()
     numItems = max(int(math.floor(memory / portion / sizeEach)), 2)
     if maxItems:
         numItems = min(numItems, maxItems)

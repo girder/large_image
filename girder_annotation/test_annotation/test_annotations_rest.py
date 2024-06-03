@@ -780,6 +780,15 @@ class TestLargeImageAnnotationElementGroups:
         assert resp.json['type'] == 'FeatureCollection'
         assert len(resp.json['features']) == 3
 
+    def testGeoJSONRoundTrip(self, admin):
+        import girder_large_image_annotation
+
+        self.makeAnnot(admin)
+        geojson = girder_large_image_annotation.utils.AnnotationGeoJSON(
+            self.hasGroups['_id']).geojson
+        annot = girder_large_image_annotation.utils.GeoJSONAnnotation(geojson)
+        assert annot.elementCount == 3
+
     def testLoadAnnotationGeoJSONVariety(self, server, admin):
         self.makeAnnot(admin)
         annot = Annotation().createAnnotation(
@@ -827,6 +836,20 @@ class TestLargeImageAnnotationElementGroups:
         assert utilities.respStatus(resp) == 200
         assert resp.json['type'] == 'FeatureCollection'
         assert len(resp.json['features']) == 6
+
+        import girder_large_image_annotation
+        annot = girder_large_image_annotation.utils.GeoJSONAnnotation(resp.json)
+        assert annot.elementCount == 6
+
+        resp = server.request(
+            path='/annotation/item/{}'.format(self.item['_id']),
+            method='POST',
+            user=admin,
+            type='application/json',
+            body=json.dumps(resp.json),
+        )
+        assert utilities.respStatus(resp) == 200
+        assert resp.json == 1
 
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')

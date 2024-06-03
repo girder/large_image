@@ -22,9 +22,11 @@ import os
 import pprint
 import re
 import shutil
+import threading
 import time
 
 import cherrypy
+import pymongo
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
@@ -33,7 +35,7 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource
-from girder.constants import TokenScope
+from girder.constants import SortDir, TokenScope
 from girder.exceptions import RestException
 from girder.models.file import File
 from girder.models.item import Item
@@ -117,6 +119,11 @@ def cursorNextOrNone(cursor):
 
 
 def createThumbnailsJob(job):
+    thread = threading.Thread(target=createThumbnailsJobThread, args=(job, ), daemon=True)
+    thread.start()
+
+
+def createThumbnailsJobThread(job):  # noqa
     """
     Create thumbnails for all of the large image items.
 
@@ -135,7 +142,7 @@ def createThumbnailsJob(job):
         job, log='Started creating large image thumbnails\n',
         status=JobStatus.RUNNING)
     concurrency = int(job['kwargs'].get('concurrent', 0))
-    concurrency = large_image.tilesource.utilities.cpu_count(
+    concurrency = large_image.config.cpu_count(
         logical=True) if concurrency < 1 else concurrency
     status = {
         'checked': 0,
@@ -154,7 +161,9 @@ def createThumbnailsJob(job):
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=concurrency)
     try:
         # Get a cursor with the list of images
-        items = Item().find({'largeImage.fileId': {'$exists': True}})
+        query = {'largeImage.fileId': {'$exists': True}}
+        sort = [('_id', SortDir.ASCENDING)]
+        items = Item().find(query, sort=sort)
         if hasattr(items, 'count'):
             status['items'] = items.count()
         status['specs'] = len(spec)
@@ -167,7 +176,15 @@ def createThumbnailsJob(job):
             # be exhausted before we are done.
             while len(tasks) < concurrency * 4 and nextitem is not None:
                 tasks.append(pool.submit(createThumbnailsJobTask, nextitem, spec))
-                nextitem = cursorNextOrNone(items)
+                try:
+                    nextitem = cursorNextOrNone(items)
+                except pymongo.errors.CursorNotFound:
+                    # If the process takes long enough, the cursor is removed.
+                    # In this case, redo the query and keep going.
+                    items = Item().find(query, sort=sort)
+                    nextitem = cursorNextOrNone(items)
+                if nextitem is not None:
+                    query['_id'] = {'$gt': nextitem['_id']}
             # Wait a short time or until the oldest task is complete
             try:
                 tasks[0].result(0.1)

@@ -1,4 +1,5 @@
 import concurrent.futures
+import os
 import threading
 import time
 
@@ -7,9 +8,9 @@ import pytest
 
 import large_image.cache_util.cache
 from large_image import config
-from large_image.cache_util import (LruCacheMetaclass, MemCache, cachesClear,
-                                    cachesInfo, getTileCache, methodcache,
-                                    strhash)
+from large_image.cache_util import (LruCacheMetaclass, MemCache, RedisCache,
+                                    cachesClear, cachesInfo, getTileCache,
+                                    methodcache, strhash)
 
 
 class Fib:
@@ -51,6 +52,27 @@ def testCheckCacheMemcached():
     assert val == 354224848179261915075
 
 
+@pytest.mark.singular()
+@pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
+def testCacheRedis():
+    config.setConfig('cache_redis_url', os.getenv('REDIS_TEST_URL'))
+    cache_test(RedisCache())
+
+
+@pytest.mark.singular()
+@pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
+def testCheckCacheRedis():
+    config.setConfig('cache_redis_url', os.getenv('REDIS_TEST_URL'))
+    cache = RedisCache()
+
+    cache_test(cache)
+
+    val = cache['(2,)']
+    assert val == 1
+    val = cache['(100,)']
+    assert val == 354224848179261915075
+
+
 def testBadMemcachedUrl():
     # go though and check if all 100 fib numbers are in cache
     # it is stored in cache as ('fib', #)
@@ -68,6 +90,7 @@ def testGetTileCachePython():
     config.setConfig('cache_backend', 'python')
     tileCache, tileLock = getTileCache()
     assert isinstance(tileCache, cachetools.LRUCache)
+    assert 'tileCache' in cachesInfo()
 
 
 @pytest.mark.singular()
@@ -77,6 +100,19 @@ def testGetTileCacheMemcached():
     config.setConfig('cache_backend', 'memcached')
     tileCache, tileLock = getTileCache()
     assert isinstance(tileCache, MemCache)
+    assert 'tileCache' in cachesInfo()
+
+
+@pytest.mark.singular()
+@pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
+def testGetTileCacheRedis():
+    large_image.cache_util.cache._tileCache = None
+    large_image.cache_util.cache._tileLock = None
+    config.setConfig('cache_backend', 'redis')
+    config.setConfig('cache_redis_url', os.getenv('REDIS_TEST_URL'))
+    tileCache, tileLock = getTileCache()
+    assert isinstance(tileCache, RedisCache)
+    assert 'tileCache' in cachesInfo()
 
 
 class TestClass:

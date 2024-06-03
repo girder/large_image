@@ -991,6 +991,7 @@ $(function () {
                         annotations[i] = new largeImageAnnotation.models.AnnotationModel({
                             _id: resp._id,
                             maxDetails: 50,
+                            minElements: 1,
                             maxCentroids: 500
                         });
                         count += 1;

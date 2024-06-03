@@ -1,5 +1,42 @@
 # Change Log
 
+## 1.29.0
+
+### Features
+- Add redis as cache backend option ([#1469](../../pull/1469))
+
+### Improvements
+- Better detect available memory in containers ([#1532](../../pull/1532))
+- Reject the promise from a canceled annotation ([#1535](../../pull/1535))
+- Disallow certain names from being read by any but specific sources ([#1537](../../pull/1537))
+- Add the ability to specify the dtype of a multi-source file ([#1542](../../pull/1542))
+- Handle bounds on openslide sources to handle sparse sources ([#1543](../../pull/1543))
+
+### Changes
+- Log more when saving annotations ([#1525](../../pull/1525))
+- Thumbnail generation jobs are less blocking ([#1528](../../pull/1528), [#1530](../../pull/1530))
+
+### Bug Fixes
+- Annotations are sometimes paged when they shouldn't be ([#1529](../../pull/1529))
+
+## 1.28.2
+
+### Improvements
+- Improve uint16 image scaling ([#1511](../../pull/1511))
+- Read some untiled tiffs using the tiff source ([#1512](../../pull/1512))
+- Speed up multi source compositing in tiled cases ([#1513](../../pull/1513))
+- Speed up some tifffile and multi source access cases ([#1515](../../pull/1515))
+- Allow specifying a minimum number of annotations elements when maxDetails is used ([#1521](../../pull/1521))
+- Improved import of GeoJSON annotations ([#1522](../../pull/1522))
+
+### Changes
+- Limit internal metadata on multi-source files with huge numbers of sources ([#1514](../../pull/1514))
+- Make DICOMweb assetstore imports compatible with Girder generics ([#1504](../../pull/1504))
+
+### Bug Fixes
+- Fix touch actions in the image viewer in some instances ([#1516](../../pull/1516))
+- Fix multisource dtype issues that resulted in float32 results ([#1520](../../pull/1520))
+
 ## 1.28.1
 
 ### Improvements

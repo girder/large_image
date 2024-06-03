@@ -1,0 +1,20 @@
+---
+dtype: uint8
+sources:
+  - sourceName: test
+    path: __none__
+    params:
+      tileWidth: 256
+      tileHeight: 256
+      sizeX: 1000
+      sizeY: 750
+      fractal: True
+      monochrome: False
+      bands: "red=0-4000"
+    style:
+      bands:
+      -
+        min: 0
+        max: 4000
+        color: #ffffff
+        band: 1
