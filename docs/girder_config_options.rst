@@ -45,8 +45,8 @@ The yaml file has the following structure:
 .large_image_config.yaml
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Items Lists
-...........
+Item Lists
+..........
 
 This is used to specify how items appear in item lists.  There are two settings, one for folders in the main Girder UI and one for folders in dialogs (such as when browsing in the file dialog).
 
