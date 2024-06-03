@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import threading
 import uuid
+import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from pathlib import Path
@@ -25,6 +26,9 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+
+warnings.filterwarnings('ignore', category=FutureWarning, module='zarr')
 
 
 class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
