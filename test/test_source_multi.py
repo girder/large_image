@@ -298,3 +298,21 @@ def testMultiAffineTransform():
         assert abs(np.average(thumbs[2048] - thumbs[256])) < 7
         assert abs(np.average(thumbs[1024] - thumbs[256])) < 7
         assert abs(np.average(thumbs[512] - thumbs[256])) < 7
+
+
+def testTilesWithStyleAndDtype():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_test_source_style.yml')
+    source = large_image_source_multi.open(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 1000
+    assert tileMetadata['sizeY'] == 750
+    assert tileMetadata['levels'] == 3
+    utilities.checkTilesZXY(source, tileMetadata)
+    region1, _ = source.getRegion(
+        output=dict(maxWidth=100),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert region1.shape == (75, 100, 1)
+    assert region1.dtype == np.uint8
