@@ -127,7 +127,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._channelColors = []
         self._imageDescription = None
         self._levels = []
-        self._associatedImages = []
+        self._associatedImages = {}
 
     def __del__(self):
         if not hasattr(self, '_derivedSource'):
@@ -327,8 +327,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             msg = 'Conflicting xy axis data.'
             raise TileSourceError(msg)
         self._channels = found['channels']
-        self._associatedImages = [
-            (g, a) for g, a in found['associated'] if not any(g is gb for gb, _ in self._series)]
+        self._associatedImages = {
+            g.name.replace('/', ''): (g, a)
+            for g, a in found['associated'] if not any(g is gb for gb, _ in self._series)
+        }
         self.sizeX = baseArray.shape[self._axes['x']]
         self.sizeY = baseArray.shape[self._axes['y']]
         self.tileWidth = (
@@ -450,7 +452,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         :return: the list of image keys.
         """
-        return [f'image_{idx}' for idx in range(len(self._associatedImages))]
+        return list(self._associatedImages.keys())
 
     def _getAssociatedImage(self, imageKey):
         """
@@ -459,15 +461,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param imageKey: the key of the associated image.
         :return: the image in PIL format or None.
         """
-        if not imageKey.startswith('image_'):
+        if imageKey not in self._associatedImages:
             return
-        try:
-            idx = int(imageKey[6:])
-        except Exception:
-            return
-        if idx < 0 or idx >= len(self._associatedImages):
-            return
-        group, arr = self._associatedImages[idx]
+        group, arr = self._associatedImages[imageKey]
         axes = self._getGeneralAxes(arr)
         trans = [idx for idx in range(len(arr.shape))
                  if idx not in axes.values()] + [axes['y'], axes['x']]
@@ -648,7 +644,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self.levels = int(max(1, math.ceil(math.log(max(
                     self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
 
-    def addAssociatedImage(self, image):
+    def addAssociatedImage(self, image, imageKey=None):
         """
         Add an associated image to this source.
 
@@ -657,15 +653,17 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         data, _ = _imageToNumpy(image)
         with self._addLock:
-            # Each associated image should be in its own group
-            num_existing = len(self.getAssociatedImagesList())
-            name = f'associated_{num_existing + 1}'
-            group = self._zarr.require_group(name)
+            if imageKey is None:
+                # Each associated image should be in its own group
+                num_existing = len(self.getAssociatedImagesList())
+                imageKey = f'image_{num_existing + 1}'
+            group = self._zarr.require_group(imageKey)
             arr = zarr.array(
                 data,
                 store=self._zarr_store,
-                path=f'{name}/image')
-            self._associatedImages.append((group, arr))
+                path=f'{imageKey}/image',
+            )
+            self._associatedImages[imageKey] = (group, arr)
 
     def _writeInternalMetadata(self):
         self._checkEditable()
