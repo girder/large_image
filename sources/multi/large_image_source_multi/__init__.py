@@ -333,6 +333,10 @@ MultiSourceSchema = {
                 'layout and size, assume all sources are so similar',
             'type': 'boolean',
         },
+        'dtype': {
+            'description': 'If present, a numpy dtype name to use for the data.',
+            'type': 'string',
+        },
         'singleBand': {
             'description':
                 'If true, output only the first band of compositied results',
@@ -759,7 +763,11 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self.tileWidth = self.tileWidth or ts.tileWidth
                 self.tileHeight = self.tileHeight or ts.tileHeight
                 if not hasattr(self, '_firstdtype'):
-                    self._firstdtype = ts.dtype
+                    self._firstdtype = (
+                        ts.dtype if not self._info.get('dtype') else
+                        np.dtype(self._info['dtype']))
+                    if self._info.get('dtype'):
+                        self._dtype = np.dtype(self._info['dtype'])
                 if not numChecked:
                     tsMag = ts.getNativeMagnification()
                     for key in self._nativeMagnification:
@@ -1157,7 +1165,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ts, transform, corners, scale, sourceEntry.get('frame', 0),
                 source.get('position', {}).get('crop'))
         if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
-            sourceTile = sourceTile.astype(ts.dtype)
+            sourceTile = sourceTile.astype(
+                ts.dtype if not self._info.get('dtype') else
+                np.dtype(self._info['dtype']))
             tile = self._mergeTiles(tile, sourceTile, x, y)
         return tile
 
