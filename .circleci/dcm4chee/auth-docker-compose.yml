@@ -1,5 +1,3 @@
-version: "3"
-
 volumes:
   db_data: {}
   arc_data: {}
