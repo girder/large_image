@@ -74,7 +74,7 @@ commands:
             docker-compose -f ./.circleci/dcm4chee/auth-docker-compose.yml up -d
             export DICOMWEB_TEST_URL=http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs
             echo "export DICOMWEB_TEST_URL=$DICOMWEB_TEST_URL" >> $BASH_ENV
-            pip install dicomweb_client python-keycloak
+            pip install dicomweb_client 'python-keycloak<4.1'
 
             # Wait up to 60 seconds for keycloak to be ready
             echo 'Waiting for keycloak to start...'
