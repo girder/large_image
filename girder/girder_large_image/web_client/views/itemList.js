@@ -1,22 +1,19 @@
-import $ from 'jquery';
-import _ from 'underscore';
-import Backbone from 'backbone';
-
-import {wrap} from '@girder/core/utilities/PluginUtils';
-import {getApiRoot} from '@girder/core/rest';
-import {getCurrentUser} from '@girder/core/auth';
-import {AccessType} from '@girder/core/constants';
-import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
-import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
-import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
-import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
-
 import largeImageConfig from './configView';
 import {addToRoute} from '../routes';
 
 import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
+
+const { $, _, Backbone } = girder;
+const { wrap } = girder.utilities.PluginUtils;
+const { getApiRoot } = girder.rest;
+const { getCurrentUser } = girder.auth;
+const { AccessType } = girder.constants;
+const { formatSize, parseQueryString, splitRoute } = girder.misc;
+const HierarchyWidget = girder.views.widgets.HierarchyWidget;
+const FolderListWidget = girder.views.widgets.FolderListWidget;
+const ItemListWidget = girder.views.widgets.ItemListWidget;
 
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);

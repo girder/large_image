@@ -1,30 +1,21 @@
-/* global BUILD_TIMESTAMP */
-
-import $ from 'jquery';
-import _ from 'underscore';
 // Import hammerjs for geojs touch events
 import Hammer from '@egjs/hammerjs';
-import d3 from 'd3';
-
-import {restRequest} from '@girder/core/rest';
 
 import ImageViewerWidget from './base';
 import setFrameQuad from './setFrameQuad.js';
 
+const $ = girder.$;
+const _ = girder._;
+const { restRequest } = girder.rest;
+
 window.hammerjs = Hammer;
 window.Hammer = Hammer;
-window.d3 = d3;
 
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
         this._scale = settings.scale;
         this._setFrames = settings.setFrames;
 
-        let root = '/static/built';
-        try {
-            root = __webpack_public_path__ || root; // eslint-disable-line
-        } catch (err) { }
-        root = root.replace(/\/$/, '');
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
                 if (this.metadata.geospatial) {
@@ -45,7 +36,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                 return this;
             }),
             $.ajax({ // like $.getScript, but allow caching
-                url: root + '/plugins/large_image/extra/geojs.js' + (BUILD_TIMESTAMP ? '?_=' + BUILD_TIMESTAMP : ''),
+                url: `/plugin_static/large_image/extra/geojs.js?_=${__BUILD_TIMESTAMP__}`,
                 dataType: 'script',
                 cache: true
             }))

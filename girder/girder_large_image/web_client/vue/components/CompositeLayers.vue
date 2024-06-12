@@ -1,5 +1,4 @@
 <script>
-import {restRequest} from '@girder/core/rest';
 import {Chrome} from 'vue-color';
 
 import {OTHER_COLORS, getChannelColor} from '../utils/colors';
@@ -189,7 +188,7 @@ export default {
             }
         },
         fetchCurrentFrameHistogram() {
-            restRequest({
+            girder.rest.restRequest({
                 type: 'GET',
                 url: 'item/' + this.itemId + '/tiles/histogram',
                 data: this.histogramParams
