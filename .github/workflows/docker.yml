@@ -32,7 +32,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       - name: Build and push the Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: slim.Dockerfile
@@ -69,7 +69,7 @@ jobs:
             latest=auto
             suffix=-${{ matrix.target }},onlatest=true
       - name: Build and push the geosptial Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: slim.Dockerfile
