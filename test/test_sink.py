@@ -1,11 +1,11 @@
 import math
+from multiprocessing.pool import Pool, ThreadPool
 
 import large_image_source_test
 import large_image_source_zarr
 import numpy as np
 import pytest
 from PIL import Image
-from multiprocessing.pool import Pool, ThreadPool
 
 import large_image
 from large_image.constants import NEW_IMAGE_PATH_FLAG
@@ -501,7 +501,7 @@ def testConcurrency(tmp_path):
                     'z': z,
                     'y': slice(y * tile_size[0], (y + 1) * tile_size[0]),
                     'x': slice(x * tile_size[1], (x + 1) * tile_size[1]),
-                    's': slice(0, target_shape[3])
+                    's': slice(0, target_shape[3]),
                 })
 
     for pool_class in [Pool, ThreadPool]:
