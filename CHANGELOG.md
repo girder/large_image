@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.29.1
+
+### Improvements
+- Improved zarr sink metadata handling ([#1508](../../pull/1508))
+
+### Changes
+- Work with newer python-mapnik ([#1550](../../pull/1550))
+
 ## 1.29.0
 
 ### Features
