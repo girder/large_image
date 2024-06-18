@@ -273,7 +273,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         sym = mapnik.RasterSymbolizer()
         if colorizer is not None:
             sym.colorizer = colorizer
-        rule.symbols.append(sym)
+        getattr(rule, 'symbols', getattr(rule, 'symbolizers', None)).append(sym)
         style = mapnik.Style()
         style.rules.append(rule)
         if composite is not None:
@@ -286,8 +286,9 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         if hasattr(self, '_netcdf') and isinstance(band, tuple):
             gdalband = band[1]
             gdalpath = self._netcdf['datasets'][band[0]]['name']
-        lyr.datasource = mapnik.Gdal(
-            base=None, file=gdalpath, band=gdalband, extent=extent, nodata=nodata)
+        params = dict(base=None, file=gdalpath, band=gdalband, extent=extent, nodata=nodata)
+        params = {k: v for k, v in params.items() if v is not None}
+        lyr.datasource = mapnik.Gdal(**params)
         lyr.styles.append(styleName)
         m.layers.append(lyr)
 
@@ -387,7 +388,9 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             m.zoom_to_box(mapnik.Box2d(xmin, ymin, xmax, ymax))
             img = mapnik.Image(self.tileWidth + overscan * 2, self.tileHeight + overscan * 2)
             mapnik.render(m, img)
-            pilimg = PIL.Image.frombytes('RGBA', (img.width(), img.height()), img.tostring())
+            pilimg = PIL.Image.frombytes(
+                'RGBA', (img.width(), img.height()),
+                getattr(img, 'tostring', getattr(img, 'to_string', None))())
         if overscan:
             pilimg = pilimg.crop((1, 1, pilimg.width - overscan, pilimg.height - overscan))
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs)
