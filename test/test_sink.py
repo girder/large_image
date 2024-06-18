@@ -5,6 +5,7 @@ import large_image_source_zarr
 import numpy as np
 import pytest
 from PIL import Image
+from multiprocessing.pool import Pool, ThreadPool
 
 import large_image
 from large_image.constants import NEW_IMAGE_PATH_FLAG
@@ -468,3 +469,55 @@ def testAddAssociatedImages(tmp_path):
             assert isinstance(retrieved, Image.Image)
             # PIL Image size doesn't include bands and swaps x & y
             assert retrieved.size == (expected_size[1], expected_size[0])
+
+
+def _add_tile_from_seed_data(sink, seed_data, position):
+    tile = seed_data[
+        position['z'],
+        position['y'],
+        position['x'],
+        position['s'],
+    ]
+    sink.addTile(
+        tile,
+        position['x'].start,
+        position['y'].start,
+        z=position['z'],
+    )
+
+
+def testConcurrency(tmp_path):
+    output_file = tmp_path / 'test.db'
+    max_workers = 5
+    tile_size = (100, 100)
+    target_shape = (4, 1000, 1000, 5)
+    tile_positions = []
+    seed_data = np.random.random(target_shape)
+
+    for z in range(target_shape[0]):
+        for y in range(int(target_shape[1] / tile_size[0])):
+            for x in range(int(target_shape[2] / tile_size[1])):
+                tile_positions.append({
+                    'z': z,
+                    'y': slice(y * tile_size[0], (y + 1) * tile_size[0]),
+                    'x': slice(x * tile_size[1], (x + 1) * tile_size[1]),
+                    's': slice(0, target_shape[3])
+                })
+
+    for pool_class in [Pool, ThreadPool]:
+        sink = large_image_source_zarr.new()
+        # allocate space by adding last tile first
+        _add_tile_from_seed_data(sink, seed_data, tile_positions[-1])
+        with pool_class(max_workers) as pool:
+            pool.starmap(_add_tile_from_seed_data, [
+                (sink, seed_data, position)
+                for position in tile_positions[:-1]
+            ])
+        sink.write(output_file)
+        written = large_image_source_zarr.open(output_file)
+        written_arrays = dict(written._zarr.arrays())
+        data = np.array(written_arrays.get('0'))
+        assert len(written_arrays) == written.levels
+        assert data is not None
+        assert data.shape == seed_data.shape
+        assert np.allclose(data, seed_data)

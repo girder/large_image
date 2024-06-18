@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 import threading
+import multiprocessing
 import uuid
 import warnings
 from importlib.metadata import PackageNotFoundError
@@ -110,11 +111,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Initialize the tile class for creating a new image.
         """
-        self._tempdir = tempfile.TemporaryDirectory(path)
-        self._zarr_store = zarr.DirectoryStore(self._tempdir.name)
-        self._zarr = zarr.open(self._zarr_store, mode='w')
-        # Make unpickleable
-        self._unpickleable = True
+        self._tempdir = Path(tempfile.gettempdir(), path)
+        self._zarr_store = zarr.DirectoryStore(str(self._tempdir))
+        self._zarr = zarr.open(self._zarr_store, mode='a')
         self._largeImagePath = None
         self._dims = {}
         self.sizeX = self.sizeY = self.levels = 0
@@ -123,7 +122,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._output = None
         self._editable = True
         self._bandRanges = None
-        self._addLock = threading.RLock()
+        self._threadLock = threading.RLock()
+        self._processLock = multiprocessing.Lock()
         self._framecount = 0
         self._mm_x = 0
         self._mm_y = 0
@@ -579,7 +579,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         }
         tile, mask, placement, axes = self._validateNewTile(tile, mask, placement, axes)
 
-        with self._addLock:
+        with self._threadLock and self._processLock:
             self._axes = {k: i for i, k in enumerate(axes)}
             new_dims = {
                 a: max(
@@ -656,7 +656,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             with an image.  The numpy array can have 2 or 3 dimensions.
         """
         data, _ = _imageToNumpy(image)
-        with self._addLock:
+        with self._threadLock and self._processLock:
             if imageKey is None:
                 # Each associated image should be in its own group
                 num_existing = len(self.getAssociatedImagesList())
@@ -671,7 +671,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _writeInternalMetadata(self):
         self._checkEditable()
-        with self._addLock:
+        with self._threadLock and self._processLock:
             name = str(self._tempdir.name).split('/')[-1]
             arrays = dict(self._zarr.arrays())
             channel_axis = self._axes.get('s') or self._axes.get('c')
