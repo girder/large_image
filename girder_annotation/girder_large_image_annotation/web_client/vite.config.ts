@@ -2,7 +2,6 @@ import { resolve } from 'path';
 
 import { defineConfig } from 'vite';
 import { compileClient } from 'pug';
-import vue from '@vitejs/plugin-vue2';
 
 function pugPlugin() {
   return {
@@ -22,18 +21,13 @@ function pugPlugin() {
 export default defineConfig({
   plugins: [
     pugPlugin(),
-    vue(),
   ],
   build: {
     sourcemap: true,
     lib: {
       entry: resolve(__dirname, 'main.js'),
-      name: 'GirderPluginLargeImage',
-      fileName: 'girder-plugin-large-image',
+      name: 'GirderPluginLargeImageAnnotation',
+      fileName: 'girder-plugin-large-image-annotation',
     },
-  },
-  define: {
-    __BUILD_TIMESTAMP__: `${+new Date()}`,
-    'process.env': {},  // for legacy Vue 2
   },
 });
