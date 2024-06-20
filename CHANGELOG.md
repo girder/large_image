@@ -8,6 +8,9 @@
 ### Changes
 - Work with newer python-mapnik ([#1550](../../pull/1550))
 
+### Bug Fixes
+- Fix an issue emitting rectangles in geojson ([#1552](../../pull/1552))
+
 ## 1.29.0
 
 ### Features
