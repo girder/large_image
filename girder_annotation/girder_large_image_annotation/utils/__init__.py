@@ -71,7 +71,7 @@ class AnnotationGeoJSON:
 
     def rotate(self, r, cx, cy, x, y, z):
         if not r:
-            return [x + cx, y + cy, z]
+            return [x, y, z]
         cosr = math.cos(r)
         sinr = math.sin(r)
         x -= cx
