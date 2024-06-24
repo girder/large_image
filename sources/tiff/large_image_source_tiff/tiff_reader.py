@@ -803,9 +803,18 @@ class TiledTiffDirectory:
             # Write JPEG End Of Image marker
             imageBuffer.write(b'\xff\xd9')
             return imageBuffer.getvalue()
-        # Get the whole frame, which is in a JPEG or JPEG 2000 format, and
+        # Get the whole frame, which is in a JPEG or JPEG 2000 format
+        frame = self._getJpegFrame(tileNum, True)
+        # For JP2K, see if we can convert it faster than PIL
+        if self._tiffInfo.get('compression') in {33003, 33005}:
+            try:
+                import openjpeg
+
+                return openjpeg.decode(frame)
+            except Exception:
+                pass
         # convert it to a PIL image
-        imageBuffer.write(self._getJpegFrame(tileNum, True))
+        imageBuffer.write(frame)
         image = PIL.Image.open(imageBuffer)
         # Converting the image mode ensures that it gets loaded once and is in
         # a form we expect.  If this isn't done, then PIL can load the image
