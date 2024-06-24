@@ -1,9 +1,9 @@
 import pickle
 
+import large_image_source_vips
 import pytest
 
 import large_image
-import large_image_source_vips
 
 from .datastore import datastore
 
