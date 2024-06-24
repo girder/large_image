@@ -3,6 +3,7 @@ import pickle
 import pytest
 
 import large_image
+import large_image_source_vips
 
 from .datastore import datastore
 
@@ -61,6 +62,9 @@ def testPickleTile():
 
 
 def testPickleNew():
-    ts = large_image.new()
+    ts_zarr = large_image.new()
+    pickle.dumps(ts_zarr)
+
+    ts_vips = large_image_source_vips.new()
     with pytest.raises(pickle.PicklingError):
-        pickle.dumps(ts)
+        pickle.dumps(ts_vips)
