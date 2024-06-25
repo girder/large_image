@@ -674,7 +674,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         with self._addLock:
             name = str(self._tempdir.name).split('/')[-1]
             arrays = dict(self._zarr.arrays())
-            channel_axis = self._axes.get('s') or self._axes.get('c')
+            channel_axis = self._axes.get('c', self._axes.get('s'))
             datasets = []
             axes = []
             channels = []
@@ -705,7 +705,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 elif a == 'z':
                     rdefs['defaultZ'] = 0
                 axes.append(axis_metadata)
-            if channel_axis and len(arrays) > 0:
+            if channel_axis is not None and len(arrays) > 0:
                 base_array = list(arrays.values())[0]
                 base_shape = base_array.shape
                 for c in range(base_shape[channel_axis]):
@@ -717,7 +717,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         'inverted': False,
                         'label': f'Band {c + 1}',
                     }
-                    channel_data = base_array[..., c]
+                    slicing = tuple(
+                        slice(None) 
+                        if k != ('C' if 'C' in self._axes else 'S') 
+                        else c
+                        for k, v in self._axes.items()
+                    )
+                    channel_data = base_array[slicing]
                     channel_min = np.min(channel_data)
                     channel_max = np.max(channel_data)
                     channel_metadata['window'] = {
