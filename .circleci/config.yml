@@ -26,7 +26,7 @@ commands:
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
           # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:
