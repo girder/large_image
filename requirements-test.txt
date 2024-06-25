@@ -13,7 +13,7 @@ sources/openslide
 sources/pil[all]
 sources/rasterio[all]
 sources/test
-sources/tiff
+sources/tiff[all]
 sources/tifffile
 sources/vips
 sources/zarr

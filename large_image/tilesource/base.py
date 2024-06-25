@@ -1501,6 +1501,7 @@ class TileSource(IPyLeafletMixin):
         :param z: original level.
         :returns: tile in PIL format.
         """
+        lastlog = time.time()
         basez = z
         scale = 1
         dirlist = self._nonemptyLevelsList(kwargs.get('frame'))
@@ -1514,11 +1515,16 @@ class TileSource(IPyLeafletMixin):
             min(self.sizeX, self.tileWidth * scale), min(self.sizeY, self.tileHeight * scale)))
         maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
         maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
-        for newX in range(scale):
-            for newY in range(scale):
+        for newY in range(scale):
+            for newX in range(scale):
                 if ((newX or newY) and ((x * scale + newX) >= maxX or
                                         (y * scale + newY) >= maxY)):
                     continue
+                if time.time() - lastlog > 10:
+                    self.logger.info(
+                        'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
+                        x * scale + newX, y * scale + newY, z)
+                    lastlog = time.time()
                 subtile = self.getTile(
                     x * scale + newX, y * scale + newY, z,
                     pilImageAllowed=True, numpyAllowed=False,
