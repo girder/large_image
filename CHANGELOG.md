@@ -4,6 +4,7 @@
 
 ### Improvements
 - Improved zarr sink metadata handling ([#1508](../../pull/1508))
+- Speed up decoding jp2k tiff with an optional library ([#1555](../../pull/1555))
 
 ### Changes
 - Work with newer python-mapnik ([#1550](../../pull/1550))
