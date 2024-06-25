@@ -718,8 +718,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         'label': f'Band {c + 1}',
                     }
                     slicing = tuple(
-                        slice(None) 
-                        if k != ('C' if 'C' in self._axes else 'S') 
+                        slice(None)
+                        if k != ('C' if 'C' in self._axes else 'S')
                         else c
                         for k, v in self._axes.items()
                     )

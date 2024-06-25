@@ -440,7 +440,7 @@ def testChannelNames(tmp_path):
     sink.channelNames = ['a', 'b', 'c', 'd', 'e']
     sink.write(output_file)
     written = large_image.open(output_file)
-    assert len(written.metadata['channels'] ) == 5
+    assert len(written.metadata['channels']) == 5
 
 
 def testAddAssociatedImages(tmp_path):
