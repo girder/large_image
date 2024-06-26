@@ -25,6 +25,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             root = __webpack_public_path__ || root; // eslint-disable-line
         } catch (err) { }
         root = root.replace(/\/$/, '');
+        $(this.el).parent().find('.image-viewer-loading').removeClass('hidden');
         $.when(
             ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
                 if (this.metadata.geospatial) {
@@ -81,6 +82,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             this.viewer = geo.map(params.map);
             params.layer.autoshareRenderer = false;
             this._layer = this.viewer.createLayer('osm', params.layer);
+            this._layer.onIdle(() => $(this.el).parent().find('.image-viewer-loading').addClass('hidden'));
             if (this.metadata.frames && this.metadata.frames.length > 1) {
                 const maxTextures = Math.max(1, Math.min(16, Math.ceil(
                     this.metadata.frames.length / 1024)));

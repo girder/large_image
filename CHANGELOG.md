@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.29.2
+
+### Improvements
+- Show a loading spinner on the image display in geojs in girder ([#1559](../../pull/1559))
+
 ## 1.29.1
 
 ### Improvements
