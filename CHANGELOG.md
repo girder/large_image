@@ -8,9 +8,11 @@
 
 ### Changes
 - Work with newer python-mapnik ([#1550](../../pull/1550))
+- Use the new official yaml mime-type of application/yaml ([#1558](../../pull/1558))
 
 ### Bug Fixes
 - Fix an issue emitting rectangles in geojson ([#1552](../../pull/1552))
+- Fix an issue writing zarr channel meatdata ([#1557](../../pull/1557))
 
 ## 1.29.0
 
