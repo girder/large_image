@@ -16,6 +16,7 @@
 
 import io
 import json
+import logging
 import pickle
 import threading
 
@@ -23,7 +24,6 @@ import pymongo
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
-from girder import logger
 from girder.constants import SortDir
 from girder.exceptions import FilePathException, GirderException, ValidationException
 from girder.models.assetstore import Assetstore
@@ -36,6 +36,8 @@ from large_image.constants import TileOutputMimeTypes
 from large_image.exceptions import TileGeneralError, TileSourceError
 
 from .. import constants, girder_tilesource
+
+logger = logging.getLogger(__name__)
 
 
 class ImageItem(Item):

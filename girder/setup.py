@@ -51,8 +51,8 @@ setup(
         'Programming Language :: Python :: 3.12',
     ],
     install_requires=[
-        'girder>=3.1.18',
-        'girder-jobs>=3.0.3',
+        'girder>=5',
+        'girder-jobs>=5',
         f'large_image{limit_version}',
     ],
     extras_require={

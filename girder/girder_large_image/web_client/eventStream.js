@@ -1,8 +1,8 @@
 /* This implements a polling fallback if event streams are disabled on the
  * server. */
 
-import eventStream from '@girder/core/utilities/EventStream';
-import {restRequest} from '@girder/core/rest';
+const eventStream = girder.utilities.eventStream;
+const { restRequest } = girder.rest;
 
 import largeImageConfig from './views/configView';
 

@@ -1,12 +1,11 @@
-import $ from 'jquery';
-import _ from 'underscore';
-import Backbone from 'backbone';
-
-import events from '@girder/core/events';
-import {wrap} from '@girder/core/utilities/PluginUtils';
-import {restRequest} from '@girder/core/rest';
-
 import convertAnnotation from '../../annotations/geojs/convert';
+
+const $ = girder.$;
+const _ = girder._;
+const Backbone = girder.Backbone;
+const events = girder.events;
+const {wrap} = girder.utilities.PluginUtils;
+const {restRequest} = girder.rest;
 
 /**
  * Generate a new "random" element id (24 random 16 digits).
