@@ -251,6 +251,8 @@ def handleFileSave(event):
             for mimeType, ext, std in [
                 ('text/yaml', '.yaml', True),
                 ('text/yaml', '.yml', True),
+                ('application/yaml', '.yaml', True),
+                ('application/yaml', '.yml', True),
                 ('application/vnd.geo+json', '.geojson', True),
             ]:
                 if ext not in mimetypes.types_map:
@@ -499,14 +501,14 @@ def yamlConfigFileWrite(folder, name, user, yaml_config):
     item = Item().createItem(name, user, folder, reuseExisting=True)
     existingFiles = list(Item().childFiles(item))
     if (len(existingFiles) == 1 and
-            existingFiles[0]['mimeType'] == 'text/yaml' and
+            existingFiles[0]['mimeType'] == 'application/yaml' and
             existingFiles[0]['name'] == name):
         upload = Upload().createUploadToFile(
             existingFiles[0], user, size=len(yaml_config))
     else:
         upload = Upload().createUpload(
             user, name, 'item', item, size=len(yaml_config),
-            mimeType='text/yaml', save=True)
+            mimeType='application/yaml', save=True)
     newfile = Upload().handleChunk(upload, yaml_config)
     with _configWriteLock:
         for entry in list(Item().childFiles(item)):
