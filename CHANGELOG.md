@@ -12,7 +12,7 @@
 
 ### Bug Fixes
 - Fix an issue emitting rectangles in geojson ([#1552](../../pull/1552))
-- Fix an issue writing zarr channel meatdata ([#1557](../../pull/1557))
+- Fix an issue writing zarr channel metadata ([#1557](../../pull/1557))
 
 ## 1.29.0
 
