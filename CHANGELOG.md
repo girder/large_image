@@ -4,7 +4,7 @@
 
 ### Improvements
 - Show a loading spinner on the image display in geojs in girder ([#1559](../../pull/1559))
--
+- Better handle images that are composed of a folder and an item ([#1561](../../pull/1561))
 
 ### Bug Fixes
 - Fix a compositing error in transformed multi source images ([#1560](../../pull/1560))
