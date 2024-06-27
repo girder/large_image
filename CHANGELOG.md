@@ -5,6 +5,9 @@
 ### Improvements
 - Show a loading spinner on the image display in geojs in girder ([#1559](../../pull/1559))
 
+### Bug Fixes
+- Fix a compositing error in transformed multi source images ([#1560](../../pull/1560))
+
 ## 1.29.1
 
 ### Improvements
