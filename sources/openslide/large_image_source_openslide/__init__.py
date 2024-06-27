@@ -48,6 +48,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.MEDIUM,
         'bif': SourcePriority.LOW,  # Ventana
         'dcm': SourcePriority.LOW,  # DICOM
+        'ini': SourcePriority.LOW,  # Part of mrxs
         'mrxs': SourcePriority.PREFERRED,  # MIRAX
         'ndpi': SourcePriority.PREFERRED,  # Hamamatsu
         'scn': SourcePriority.LOW,  # Leica
