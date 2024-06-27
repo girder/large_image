@@ -158,7 +158,7 @@ def _updateJob(event):
                      datetime.timedelta(seconds=30)))
 
 
-def checkForLargeImageFiles(event):
+def checkForLargeImageFiles(event):  # noqa
     file = event.info
     logger.info('Handling file %s (%s)', file['_id'], file['name'])
     possible = False
@@ -178,10 +178,51 @@ def checkForLargeImageFiles(event):
         return
     try:
         ImageItem().createImageItem(item, file, createJob=False)
+        return
     except Exception:
-        # We couldn't automatically set this as a large image
-        girder.logger.info(
-            'Saved file %s cannot be automatically used as a largeImage' % str(file['_id']))
+        pass
+    # Check for files that are from folder/image style images.  This is custom
+    # per folder/image format
+    imageFolderRecords = {
+        'mrxs': {
+            'match': r'^Slidedat.ini$',
+            'up': 1,
+            'folder': r'^(.*)$',
+            'image': '\\1.mrxs',
+        },
+        'vsi': {
+            'match': r'^.*\.ets$',
+            'up': 2,
+            'folder': r'^_(\.*)_$',
+            'image': '\\1.vsi',
+        },
+    }
+    for check in imageFolderRecords.values():
+        if re.match(check['match'], file['name']):
+            try:
+                folderId = item['folderId']
+                folder = None
+                for _ in range(check['up']):
+                    folder = Folder().load(folderId, force=True)
+                    if not folder:
+                        break
+                    folderId = folder['parentId']
+                if not folder or not re.match(check['folder'], folder['name']):
+                    continue
+                imageName = re.sub(check['folder'], check['image'], folder['name'])
+                parentItem = Item().findOne({'folderId': folder['parentId'], 'name': imageName})
+                if not parentItem:
+                    continue
+                files = list(Item().childFiles(item=parentItem, limit=2))
+                if len(files) == 1:
+                    parentFile = files[0]
+                    ImageItem().createImageItem(parentItem, parentFile, createJob=False)
+                    return
+            except Exception:
+                pass
+    # We couldn't automatically set this as a large image
+    girder.logger.info(
+        'Saved file %s cannot be automatically used as a largeImage' % str(file['_id']))
 
 
 def removeThumbnails(event):
