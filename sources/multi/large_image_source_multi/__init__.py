@@ -964,7 +964,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tileA = tile[:, :, -1].astype(float) / fullAlphaValue(tile.dtype)
             outA = tileA + baseA * (1 - tileA)
             base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] = (
-                np.where(tileA[..., np.newaxis], tile[:, :, :-1], 0) +
+                np.where(tileA[..., np.newaxis], tile[:, :, :-1] * tileA[..., np.newaxis], 0) +
                 base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] * baseA[..., np.newaxis] *
                 (1 - tileA[..., np.newaxis])
             ) / np.where(outA[..., np.newaxis], outA[..., np.newaxis], 1)
