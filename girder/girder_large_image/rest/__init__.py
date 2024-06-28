@@ -7,6 +7,8 @@ from girder.api.rest import boundHandler
 from girder.constants import AccessType, TokenScope
 from girder.models.folder import Folder
 from girder.models.item import Item
+from girder.models.file import File
+from girder_large_image.models.image_item import ImageItem
 
 
 def addSystemEndpoints(apiRoot):
@@ -17,6 +19,7 @@ def addSystemEndpoints(apiRoot):
     """
     apiRoot.folder.route('GET', (':id', 'yaml_config', ':name'), getYAMLConfigFile)
     apiRoot.folder.route('PUT', (':id', 'yaml_config', ':name'), putYAMLConfigFile)
+    apiRoot.folder.route('PUT', (':id', 'items'), createLargeImages)
 
     origItemFind = apiRoot.item._find
     origFolderFind = apiRoot.folder._find
@@ -101,6 +104,36 @@ def _itemFindRecursive(self, origItemFind, folderId, text, name, limit, offset, 
             return Item().findWithPermissions(filters, offset, limit, sort=sort, user=user)
     return origItemFind(folderId, text, name, limit, offset, sort, filters)
 
+@access.user(scope=TokenScope.DATA_WRITE)
+@autoDescribeRoute(
+    Description('Creates large images for all items within a folder, given they each only have one file.')
+    .responseClass('Folder')
+    .modelParam('id', model=Folder, level=AccessType.WRITE, required=True)
+    .errorResponse('ID was invalid.')
+    .errorResponse('Write access was denied for the folder.', 403)
+)
+@boundHandler
+def createLargeImages(self, folder, params):
+    user=self.getCurrentUser()
+    for item in Folder().childItems(folder=folder):
+        if item.get('largeImage'):
+            if item['largeImage'].get('expected'):
+                pass
+            else:
+                try:
+                    Item().getMetadata(item)
+                    continue 
+                except Exception:
+                    previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
+                    ImageItem().delete(item)
+                    ImageItem().createImageItem(item, File().load(user=user, id=previousFileId))
+        else:
+            largeImageFileId = params.get('fileId')
+            if largeImageFileId is None :
+                files = list(Item().childFiles(item=item, limit=0))
+                if len(files) == 1:
+                    largeImageFileId = str(files[0]['_id'])
+                    ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId))
 
 @access.public(scope=TokenScope.DATA_READ)
 @autoDescribeRoute(
