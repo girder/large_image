@@ -106,15 +106,19 @@ def _itemFindRecursive(self, origItemFind, folderId, text, name, limit, offset, 
 
 @access.user(scope=TokenScope.DATA_WRITE)
 @autoDescribeRoute(
-    Description('Creates large images for all items within a folder, given they each only have one file.')
+    Description('Create large images for all items within a folder.')
+    .notes('Does not work for items with multiple files.')
     .responseClass('Folder')
     .modelParam('id', model=Folder, level=AccessType.WRITE, required=True)
+    .param('localJobs', 'Whether a local job should be created for each large image', required=False, 
+           default=False, dataType='boolean')
     .errorResponse('ID was invalid.')
     .errorResponse('Write access was denied for the folder.', 403)
 )
 @boundHandler
 def createLargeImages(self, folder, params):
     user=self.getCurrentUser()
+    createJobs = 'always' or params.get('localJobs')
     for item in Folder().childItems(folder=folder):
         if item.get('largeImage'):
             if item['largeImage'].get('expected'):
@@ -126,14 +130,15 @@ def createLargeImages(self, folder, params):
                 except Exception:
                     previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
                     ImageItem().delete(item)
-                    ImageItem().createImageItem(item, File().load(user=user, id=previousFileId))
+                    ImageItem().createImageItem(item, File().load(user=user, id=previousFileId), createJob=createJobs, 
+                                                localJob=params.get('localJobs'))
         else:
-            largeImageFileId = params.get('fileId')
-            if largeImageFileId is None :
-                files = list(Item().childFiles(item=item, limit=0))
-                if len(files) == 1:
-                    largeImageFileId = str(files[0]['_id'])
-                    ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId))
+            largeImageFileId = None
+            files = list(Item().childFiles(item=item, limit=0))
+            if len(files) == 1:
+                largeImageFileId = str(files[0]['_id'])
+                ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId), createJob=createJobs, 
+                                            localJob=params.get('localJobs'))
 
 @access.public(scope=TokenScope.DATA_READ)
 @autoDescribeRoute(
