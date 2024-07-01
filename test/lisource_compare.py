@@ -139,7 +139,11 @@ def source_compare(sourcePath, opts):  # noqa
     else:
         sys.stdout.write('%s\n' % sourcePath)
     sys.stdout.flush()
-    canread = large_image.canReadList(sourcePath)
+    sublist = {
+        k: v for k, v in large_image.tilesource.AvailableTileSources.items()
+        if (getattr(opts, 'skipsource', None) is None or k not in opts.skipsource) and
+           (getattr(opts, 'usesource', None) is None or k in opts.usesource)}
+    canread = large_image.canReadList(sourcePath, availableSources=sublist)
     large_image.cache_util.cachesClear()
     slen = max([len(source) for source, _ in canread] + [10])
     sys.stdout.write('Source' + ' ' * (slen - 6))
