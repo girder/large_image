@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuration Options &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8db4d87e" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Image Conversion" href="image_conversion.html" />
+    <link rel="prev" title="Example Usage" href="example_usage.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_usage.html">Example Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration Options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-from-python">Configuration from Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-from-environment">Configuration from Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-within-the-girder-plugin">Configuration within the Girder Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#logging-from-python">Logging from Python</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formats.html">Image Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Previous Versions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image/modules.html">large_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_bioformats/modules.html">large_image_source_bioformats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_deepzoom/modules.html">large_image_source_deepzoom</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_dicom/modules.html">large_image_source_dicom</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dicomweb_assetstore.html">DICOMweb Assetstore</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_dummy/modules.html">large_image_source_dummy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_gdal/modules.html">large_image_source_gdal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_mapnik/modules.html">large_image_source_mapnik</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_multi/modules.html">large_image_source_multi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_nd2/modules.html">large_image_source_nd2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_ometiff/modules.html">large_image_source_ometiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_openjpeg/modules.html">large_image_source_openjpeg</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_openslide/modules.html">large_image_source_openslide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_pil/modules.html">large_image_source_pil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_rasterio/modules.html">large_image_source_rasterio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_test/modules.html">large_image_source_test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_tiff/modules.html">large_image_source_tiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_tifffile/modules.html">large_image_source_tifffile</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_vips/modules.html">large_image_source_vips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_zarr/modules.html">large_image_source_zarr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_converter/modules.html">large_image_converter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_tasks/modules.html">large_image_tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/girder_large_image/modules.html">girder_large_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="girder_config_options.html">Girder Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/girder_large_image_annotation/modules.html">girder_large_image_annotation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="girder_annotation_config_options.html">Girder Annotation Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caching.html">Caching in Large Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">Jupyter Notebook Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Configuration Options</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/config_options.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="configuration-options">
+<h1>Configuration Options<a class="headerlink" href="#configuration-options" title="Link to this heading">¶</a></h1>
+<p>Some functionality of large_image is controlled through configuration parameters.  These can be read or set via python using functions in the <code class="docutils literal notranslate"><span class="pre">large_image.config</span></code> module, <a class="reference external" href="./_build/large_image/large_image.html#large_image.config.getConfig">getConfig</a> and <a class="reference external" href="./_build/large_image/large_image.html#large_image.config.setConfig">setConfig</a>.</p>
+<p>Configuration parameters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">logger</span></code>: a Python logger.  Most log messages are sent here.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">logprint</span></code>: a Python logger.  Messages about available tilesources are sent here.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_backend</span></code>: either <code class="docutils literal notranslate"><span class="pre">python</span></code> (the default) or <code class="docutils literal notranslate"><span class="pre">memcached</span></code>, specifying where tiles are cached.  If memcached is not available for any reason, the python cache is used instead.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_python_memory_portion</span></code>: If tiles are cached in python, the cache is sized so that it is expected to use less than 1 / (<code class="docutils literal notranslate"><span class="pre">cache_python_memory_portion</span></code>) of the available memory.  This is an integer.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_memcached_url</span></code>: If tiles are cached in memcached, the url or list of urls where the memcached server is located.  Default ‘127.0.0.1’.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_memcached_username</span></code>: A username for the memcached server.  Default <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_memcached_password</span></code>: A password for the memcached server.  Default <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_redis_url</span></code>: If tiles are cached in redis, the url or list of urls where the redis server is located.  Default ‘127.0.0.1:6379’.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_redis_username</span></code>: A username for the redis server.  Default <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_redis_password</span></code>: A password for the redis server.  Default <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_tilesource_memory_portion</span></code>: Tilesources are cached on open so that subsequent accesses can be faster.  These use file handles and memory.  This limits the maximum based on a memory estimation and using no more than 1 / (<code class="docutils literal notranslate"><span class="pre">cache_tilesource_memory_portion</span></code>) of the available memory.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_tilesource_maximum</span></code>: If this is non-zero, this further limits the number of tilesources than can be cached to this value.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cache_sources</span></code>: If set to False, the default will be to not cache tile sources.  This has substantial performance penalties if sources are used multiple times, so should only be set in singular dynamic environments such as experimental notebooks.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_small_image_size</span></code>: The PIL tilesource is used for small images if they are no more than this many pixels along their maximum dimension.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">source_bioformats_ignored_names</span></code>, <code class="docutils literal notranslate"><span class="pre">source_pil_ignored_names</span></code>, <code class="docutils literal notranslate"><span class="pre">source_vips_ignored_names</span></code>: Some tile sources can read some files that are better read by other tilesources.  Since reading these files is suboptimal, these tile sources have a setting that, by default, ignores files without extensions or with particular extensions.  This setting is a Python regular expression.  For bioformats this defaults to <code class="docutils literal notranslate"><span class="pre">r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">all_sources_ignored_names</span></code>: If a file matches the regular expression in this setting, it will only be opened by sources that explicitly match the extension or mimetype.  Some formats are composed of multiple files that can be read as either a small image or as a large image depending on the source; this prohibits all sources that don’t explicitly support the format.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">icc_correction</span></code>: If this is True or undefined, ICC color correction will be applied for tile sources that have ICC profile information.  If False, correction will not be applied.  If the style used to open a tilesource specifies ICC correction explicitly (on or off), then this setting is not used.  This may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  <code class="docutils literal notranslate"><span class="pre">True</span></code> is the same as <code class="docutils literal notranslate"><span class="pre">perceptual</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_annotation_input_file_length</span></code>: When an annotation file is uploaded through Girder, it is loaded into memory, validated, and then added to the database.  This is the maximum number of bytes that will be read directly.  Files larger than this are ignored.  If unspecified, this defaults to the larger of 1 GByte and 1/16th of the system virtual memory.</p></li>
+</ul>
+<section id="configuration-from-python">
+<h2>Configuration from Python<a class="headerlink" href="#configuration-from-python" title="Link to this heading">¶</a></h2>
+<p>As an example, configuration parameters can be set via python code like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">large_image</span>
+
+<span class="n">large_image</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">setConfig</span><span class="p">(</span><span class="s1">&#39;max_small_image_size&#39;</span><span class="p">,</span> <span class="mi">8192</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="configuration-from-environment">
+<h2>Configuration from Environment<a class="headerlink" href="#configuration-from-environment" title="Link to this heading">¶</a></h2>
+<p>All configuration parameters can be specified as environment parameters by prefixing their uppercase names with <code class="docutils literal notranslate"><span class="pre">LARGE_IMAGE_</span></code>.  For instance, <code class="docutils literal notranslate"><span class="pre">LARGE_IMAGE_CACHE_BACKEND=python</span></code> specifies the cache backend.  If the values can be decoded as json, they will be parsed as such.  That is, numerical values will be parsed as numbers; to parse them as strings, surround them with double quotes.</p>
+<p>As another example, to use the least memory possible, set <code class="docutils literal notranslate"><span class="pre">LARGE_IMAGE_CACHE_BACKEND=python</span> <span class="pre">LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION=1000</span> <span class="pre">LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=2</span></code>.  The first setting specifies caching tiles in the main process and not in memcached or an external cache.  The second setting asks to use 1/1000th of the memory for a tile cache.  The third settings caches no more than 2 tile sources (2 is the minimum).</p>
+</section>
+<section id="configuration-within-the-girder-plugin">
+<h2>Configuration within the Girder Plugin<a class="headerlink" href="#configuration-within-the-girder-plugin" title="Link to this heading">¶</a></h2>
+<p>For the Girder plugin, these can also be set in the <code class="docutils literal notranslate"><span class="pre">girder.cfg</span></code> file in a <code class="docutils literal notranslate"><span class="pre">large_image</span></code> section.  For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">large_image</span><span class="p">]</span>
+<span class="c1"># cache_backend, used for caching tiles, is either &quot;memcached&quot; or &quot;python&quot;</span>
+<span class="n">cache_backend</span> <span class="o">=</span> <span class="s2">&quot;python&quot;</span>
+<span class="c1"># &#39;python&#39; cache can use 1/(val) of the available memory</span>
+<span class="n">cache_python_memory_portion</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="c1"># &#39;memcached&#39; cache backend can specify the memcached server.</span>
+<span class="c1"># cache_memcached_url may be a list</span>
+<span class="n">cache_memcached_url</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+<span class="n">cache_memcached_username</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">cache_memcached_password</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="c1"># The tilesource cache uses the lesser of a value based on available file</span>
+<span class="c1"># handles, the memory portion, and the maximum (if not 0)</span>
+<span class="n">cache_tilesource_memory_portion</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">cache_tilesource_maximum</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="c1"># The PIL tilesource won&#39;t read images larger than the max small images size</span>
+<span class="n">max_small_image_size</span> <span class="o">=</span> <span class="mi">4096</span>
+<span class="c1"># The bioformats tilesource won&#39;t read files that end in a comma-separated</span>
+<span class="c1"># list of extensions</span>
+<span class="n">source_bioformats_ignored_names</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$&#39;</span>
+<span class="c1"># The maximum size of an annotation file that will be ingested into girder</span>
+<span class="c1"># via direct load</span>
+<span class="n">max_annotation_input_file_length</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">**</span> <span class="mi">3</span>
+</pre></div>
+</div>
+</section>
+<section id="logging-from-python">
+<h2>Logging from Python<a class="headerlink" href="#logging-from-python" title="Link to this heading">¶</a></h2>
+<p>The log levels can be adjusted in the standard Python manner:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">large_image</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;large_image&#39;</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alternately, a different logger can be specified via <code class="docutils literal notranslate"><span class="pre">setConfig</span></code> in the <code class="docutils literal notranslate"><span class="pre">logger</span></code> and <code class="docutils literal notranslate"><span class="pre">logprint</span></code> settings:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">large_image</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">large_image</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">setConfig</span><span class="p">(</span><span class="s1">&#39;logger&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+<span class="n">large_image</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">setConfig</span><span class="p">(</span><span class="s1">&#39;logprint&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="example_usage.html" class="btn btn-neutral float-left" title="Example Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="image_conversion.html" class="btn btn-neutral float-right" title="Image Conversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
