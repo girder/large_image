@@ -1,3 +1,4 @@
+---
 name: Docker Package
 on:
   push:
@@ -5,11 +6,9 @@ on:
     branches:
       - master
   pull_request:
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-
 jobs:
   build-and-publish-base:
     runs-on: ubuntu-latest
@@ -40,14 +39,16 @@ jobs:
           push: ${{ github.actor != 'dependabot[bot]' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
   build-and-publish-targets:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository )
     strategy:
       fail-fast: false
       matrix:
-        target: ["geo", "jupyter", "jupyter-geo"]
+        target:
+          - "geo"
+          - "jupyter"
+          - "jupyter-geo"
     steps:
       - uses: actions/checkout@v4
         with:
