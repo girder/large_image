@@ -110,15 +110,29 @@ def _itemFindRecursive(self, origItemFind, folderId, text, name, limit, offset, 
     .notes('Does not work for items with multiple files.')
     .responseClass('Folder')
     .modelParam('id', model=Folder, level=AccessType.WRITE, required=True)
-    .param('localJobs', 'Whether a local job should be created for each large image', required=False, 
+    .param('createJobs','Whether a job should be created for each large image.', required=False, 
            default=False, dataType='boolean')
+    .param('localJobs', 'Whether a the jobs created should be local.', required=False, 
+           default=False, dataType='boolean')
+    .param('recurse', 'Whether child folders should be recursed', required=False, default=False, 
+           dataType='boolean')
     .errorResponse('ID was invalid.')
     .errorResponse('Write access was denied for the folder.', 403)
 )
 @boundHandler
 def createLargeImages(self, folder, params):
     user=self.getCurrentUser()
-    createJobs = 'always' or params.get('localJobs')
+    createJobs = params.get('createJobs')
+    if createJobs:
+        createJobs = 'always' or True
+    createImagesRecurseOption(self, folder=folder, createJobs=createJobs, user=user, 
+                              recurse=params.get('recurse'), localJobs=params.get('localJobs'))
+                
+def createImagesRecurseOption(self, folder, createJobs, user, recurse, localJobs):
+    if recurse:
+        for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
+            createImagesRecurseOption(self, folder=childFolder, createJobs=createJobs, user=user, 
+                                      recurse=recurse, localJobs=localJobs)
     for item in Folder().childItems(folder=folder):
         if item.get('largeImage'):
             if item['largeImage'].get('expected'):
@@ -130,15 +144,15 @@ def createLargeImages(self, folder, params):
                 except Exception:
                     previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
                     ImageItem().delete(item)
-                    ImageItem().createImageItem(item, File().load(user=user, id=previousFileId), createJob=createJobs, 
-                                                localJob=params.get('localJobs'))
+                    ImageItem().createImageItem(item, File().load(user=user, id=previousFileId), 
+                                                createJob=createJobs, localJob=localJobs)
         else:
             largeImageFileId = None
             files = list(Item().childFiles(item=item, limit=0))
             if len(files) == 1:
                 largeImageFileId = str(files[0]['_id'])
-                ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId), createJob=createJobs, 
-                                            localJob=params.get('localJobs'))
+                ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId), 
+                                            createJob=createJobs, localJob=localJobs)
 
 @access.public(scope=TokenScope.DATA_READ)
 @autoDescribeRoute(
