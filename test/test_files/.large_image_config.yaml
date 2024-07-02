@@ -1,3 +1,4 @@
+---
 access:
   # Show to user and higher
   user:
@@ -10,23 +11,18 @@ access:
         min-width: 200
       # Show these columns
       columns:
-        -
-          type: image
+        - type: image
           value: thumbnail
           title: Thumbnail
-        -
-          type: image
+        - type: image
           value: label
           title: Label
-        -
-          type: image
+        - type: image
           value: macro
           title: Macro
-        -
-          type: record
+        - type: record
           value: name
-        -
-          type: metadata
+        - type: metadata
           value: Stain
           format: text
           # Only show this record for entries that match a particular value
@@ -34,42 +30,32 @@ access:
             - type: record
               value: name
               match: "\\.svs$"
-        -
-          type: metadata
+        - type: metadata
           value: Classification
           format: number
-        -
-          type: metadata
+        - type: metadata
           value: gloms.length
-        -
-          type: record
+        - type: record
           value: size
-        -
-          type: record
+        - type: record
           value: controls
       defaultSort:
-        -
-          type: metadata
+        - type: metadata
           value: Classification
           dir: up
-        -
-          type: record
+        - type: record
           value: name
           dir: down
     itemListDialog:
       # Show these columns
       columns:
-        -
-          type: image
+        - type: image
           value: thumbnail
           title: Thumbnail
-        -
-          type: record
+        - type: record
           value: name
-        -
-          type: metadata
+        - type: metadata
           value: Stain
           format: text
-        -
-          type: record
+        - type: record
           value: size

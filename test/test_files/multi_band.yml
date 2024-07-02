@@ -9,9 +9,9 @@ sources:
       tileHeight: 256
       sizeX: 10000
       sizeY: 7500
-      fractal: True
+      fractal: true
       # c,z,t,xy OR frames
       frames: "4,5,1,1"
-      monochrome: False
+      monochrome: false
       # multiband
       bands: "red,green,blue,ir1,ir2,grey"

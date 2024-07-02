@@ -9,7 +9,7 @@ sources:
       tileHeight: 256
       sizeX: 100000
       sizeY: 75000
-      fractal: True
+      fractal: true
       # c,z,t,xy OR frames
       frames: "4,10,5,3"
-      monochrome: False
+      monochrome: false

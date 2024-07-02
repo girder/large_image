@@ -11,7 +11,7 @@ sources:
       tileHeight: 256
       sizeX: 10000
       sizeY: 6000
-      fractal: True
-      monochrome: False
+      fractal: true
+      monochrome: false
       # multiband
       bands: "red=400-12000,green=0-65535,blue=800-4000,alpha=0-65535"
