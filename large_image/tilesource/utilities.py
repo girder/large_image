@@ -650,7 +650,7 @@ def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]
                 palette = ['#0000', mpl.colors.to_hex(str(value))]
             else:
                 cmap = mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
-                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(  # type: ignore
+                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(
                         str(value))
                 palette = [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
         except (ImportError, ValueError, AttributeError):
