@@ -5,6 +5,7 @@
 ### Improvements
 
 - Improve plottable data endpoint to better fetch adjacent items and annotations ([#1573](../../pull/1573), [#1574](../../pull/1574))), [#1575](../../pull/1575)))
+- Support Girder flat-mount paths ([#1576](../../pull/1576))
 
 ## 1.29.2
 
