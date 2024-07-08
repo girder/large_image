@@ -15,9 +15,9 @@ events.on('g:appload.before', function () {
     for (var key in girder.plugins.large_image.views.imageViewerWidget) {
         viewers[key] = girder.plugins.large_image.views.imageViewerWidget[key];
 
-        _.extend(viewers[key], ImageViewerWidgetAnnotationExtension);
+        _.extend(viewers[key].prototype, ImageViewerWidgetAnnotationExtension);
         if (extensions[key]) {
-            const extension = extensions[key](viewers[key]);
+            const extension = extensions[key](viewers[key]).prototype;
             _.extend(viewers[key], extension);
         }
     }
