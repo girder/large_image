@@ -208,6 +208,7 @@ def canRead(*args, **kwargs) -> bool:
 
 def canReadList(
         pathOrUri: Union[str, PosixPath], mimeType: Optional[str] = None,
+        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None,
         *args, **kwargs) -> List[Tuple[str, bool]]:
     """
     Check if large_image can read a path or uri via each source.
@@ -218,16 +219,18 @@ def canReadList(
     :param pathOrUri: either a file path or a fixed source via
         large_image://<source>.
     :param mimeType: the mimetype of the file, if known.
+    :param availableSources: an ordered dictionary of sources to try.  If None,
+        use the primary list of sources.
     :returns: A list of tuples of (source name, canRead).
     """
-    if not len(AvailableTileSources):
+    if availableSources is None and not len(AvailableTileSources):
         loadTileSources()
     sourceList = getSortedSourceList(
-        AvailableTileSources, pathOrUri, mimeType, *args, **kwargs)
+        availableSources or AvailableTileSources, pathOrUri, mimeType, *args, **kwargs)
     result = []
     for entry in sorted(sourceList):
         sourceName = entry[-1]
-        result.append((sourceName, AvailableTileSources[sourceName].canRead(
+        result.append((sourceName, (availableSources or AvailableTileSources)[sourceName].canRead(
             pathOrUri, *args, **kwargs)))
     return result
 

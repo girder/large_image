@@ -7,5 +7,7 @@
       option(value=viewer.name) #{viewer.label}
 .image-controls
   #vue-container
+.image-viewer-loading.hidden
+  span.icon-spin1.animate-spin(title="Loading image")
 each viewer in viewers
   .image-viewer.hidden(id=viewer.name)

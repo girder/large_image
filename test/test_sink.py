@@ -431,6 +431,19 @@ def testMetadata(tmp_path):
     assert rdefs.get('defaultZ') == 0
 
 
+def testChannelNames(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+
+    for c in range(5):
+        sink.addTile(np.random.random((4, 4, 3)), c=c)
+
+    sink.channelNames = ['a', 'b', 'c', 'd', 'e']
+    sink.write(output_file)
+    written = large_image.open(output_file)
+    assert len(written.metadata['channels']) == 5
+
+
 def testAddAssociatedImages(tmp_path):
     output_file = tmp_path / 'test.db'
     sink = large_image_source_zarr.new()

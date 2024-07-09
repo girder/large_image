@@ -72,3 +72,8 @@ inline-quotes = "single"
 
 [tool.ruff.lint.mccabe]
 max-complexity = 14
+
+[tool.yamlfix]
+line_length = 200
+preserve_quotes = true
+sequence_style = "block_style"

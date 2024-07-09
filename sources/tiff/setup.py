@@ -56,6 +56,9 @@ setup(
         'tifftools>=1.2.0',
     ],
     extras_require={
+        'all': [
+            'pylibjpeg-openjpeg',
+        ],
         'girder': f'girder-large-image{limit_version}',
     },
     keywords='large_image, tile source',

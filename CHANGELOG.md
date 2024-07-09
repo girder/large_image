@@ -1,15 +1,28 @@
 # Change Log
 
+## 1.29.2
+
+### Improvements
+- Show a loading spinner on the image display in geojs in girder ([#1559](../../pull/1559))
+- Better handle images that are composed of a folder and an item ([#1561](../../pull/1561))
+- Allow specifying which sources are checked with canReadList ([#1562](../../pull/1562))
+
+### Bug Fixes
+- Fix a compositing error in transformed multi source images ([#1560](../../pull/1560))
+
 ## 1.29.1
 
 ### Improvements
 - Improved zarr sink metadata handling ([#1508](../../pull/1508))
+- Speed up decoding jp2k tiff with an optional library ([#1555](../../pull/1555))
 
 ### Changes
 - Work with newer python-mapnik ([#1550](../../pull/1550))
+- Use the new official yaml mime-type of application/yaml ([#1558](../../pull/1558))
 
 ### Bug Fixes
 - Fix an issue emitting rectangles in geojson ([#1552](../../pull/1552))
+- Fix an issue writing zarr channel metadata ([#1557](../../pull/1557))
 
 ## 1.29.0
 

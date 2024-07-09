@@ -1,3 +1,4 @@
+---
 volumes:
   db_data: {}
   arc_data: {}
@@ -5,7 +6,6 @@ volumes:
   ldap_config: {}
   mysql: {}
   keycloak: {}
-
 services:
   ldap:
     image: dcm4che/slapd-dcm4chee:2.6.5-31.2

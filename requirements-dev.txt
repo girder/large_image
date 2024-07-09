@@ -13,7 +13,7 @@ girder-jobs>=3.0.3
 -e sources/pil[all]
 -e sources/rasterio[all]
 -e sources/test
--e sources/tiff
+-e sources/tiff[all]
 -e sources/tifffile
 -e sources/vips
 -e sources/zarr

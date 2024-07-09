@@ -13,3 +13,5 @@
 23ab7f011abaa71d0a4904a9da599174c38f64c3
 # PR 1257: Use ruff for linting
 dcda95e659a4eaa73cae85ab02f1b89059e63c32
+# PR 1563: Use yamlfix for linting
+f517ecb2b7d8c454d1374156452be42b87ca3fd1
