@@ -35,7 +35,7 @@ from girder.models.user import User
 from girder.utility import JsonEncoder
 from girder.utility.progress import setResponseTimeLimit
 
-from .. import constants
+from .. import constants, utils
 from ..models.annotation import Annotation, AnnotationSchema
 from ..models.annotationelement import Annotationelement
 
@@ -65,6 +65,8 @@ class AnnotationResource(Resource):
         self.route('GET', ('item', ':id'), self.getItemAnnotations)
         self.route('POST', ('item', ':id'), self.createItemAnnotations)
         self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
+        self.route('POST', ('item', ':id', 'plot', 'list'), self.getItemPlottableElements)
+        self.route('POST', ('item', ':id', 'plot', 'data'), self.getItemPlottableData)
         self.route('GET', ('folder', ':id'), self.returnFolderAnnotations)
         self.route('GET', ('folder', ':id', 'present'), self.existFolderAnnotations)
         self.route('GET', ('folder', ':id', 'create'), self.canCreateFolderAnnotations)
@@ -616,6 +618,45 @@ class AnnotationResource(Resource):
                 Annotation().remove(annot)
                 count += 1
         return count
+
+    @autoDescribeRoute(
+        Description('Get a list of plottable data related to an item and its annotations.')
+        .modelParam('id', model=Item, level=AccessType.READ)
+        .jsonParam('annotations', 'A JSON list of annotation IDs that should '
+                   'be included.  An entry of __all__ will include all '
+                   'annotations.', paramType='formData', requireArray=True,
+                   required=False)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403),
+    )
+    @access.public(cookie=True, scope=TokenScope.DATA_READ)
+    def getItemPlottableElements(self, item, annotations):
+        user = self.getCurrentUser()
+        data = utils.PlottableItemData(user, item, annotations=annotations)
+        return data.columns
+
+    @autoDescribeRoute(
+        Description('Get plottable data related to an item and its annotations.')
+        .modelParam('id', model=Item, level=AccessType.READ)
+        .param('adjacentItems', 'Whether to include adjacent item data.',
+               required=False, default=True, dataType='boolean')
+        .param('keys', 'A comma separated list of data keys to retrieve (not json).',
+               required=True)
+        .param('requiredKeys', 'A comma separated list of data keys that must '
+               'be non null in all response rows (not json).', required=False)
+        .jsonParam('annotations', 'A JSON list of annotation IDs that should '
+                   'be included.  An entry of \\__all__ will include all '
+                   'annotations.', paramType='formData', requireArray=True,
+                   required=False)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403),
+    )
+    @access.public(cookie=True, scope=TokenScope.DATA_READ)
+    def getItemPlottableData(self, item, keys, adjacentItems, annotations, requiredKeys):
+        user = self.getCurrentUser()
+        data = utils.PlottableItemData(
+            user, item, annotations=annotations, adjacentItems=adjacentItems)
+        return data.data(keys, requiredKeys)
 
     def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
                              sortDir=False, count=False):
