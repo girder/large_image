@@ -7,8 +7,6 @@ from girder.api.rest import boundHandler
 from girder.constants import AccessType, TokenScope
 from girder.models.folder import Folder
 from girder.models.item import Item
-from girder.models.file import File
-from girder_large_image.models.image_item import ImageItem
 
 
 def addSystemEndpoints(apiRoot):
@@ -19,7 +17,6 @@ def addSystemEndpoints(apiRoot):
     """
     apiRoot.folder.route('GET', (':id', 'yaml_config', ':name'), getYAMLConfigFile)
     apiRoot.folder.route('PUT', (':id', 'yaml_config', ':name'), putYAMLConfigFile)
-    apiRoot.folder.route('PUT', (':id', 'items'), createLargeImages)
 
     origItemFind = apiRoot.item._find
     origFolderFind = apiRoot.folder._find
@@ -104,55 +101,6 @@ def _itemFindRecursive(self, origItemFind, folderId, text, name, limit, offset, 
             return Item().findWithPermissions(filters, offset, limit, sort=sort, user=user)
     return origItemFind(folderId, text, name, limit, offset, sort, filters)
 
-@access.user(scope=TokenScope.DATA_WRITE)
-@autoDescribeRoute(
-    Description('Create large images for all items within a folder.')
-    .notes('Does not work for items with multiple files.')
-    .responseClass('Folder')
-    .modelParam('id', model=Folder, level=AccessType.WRITE, required=True)
-    .param('createJobs','Whether a job should be created for each large image.', required=False, 
-           default=False, dataType='boolean')
-    .param('localJobs', 'Whether a the jobs created should be local.', required=False, 
-           default=False, dataType='boolean')
-    .param('recurse', 'Whether child folders should be recursed', required=False, default=False, 
-           dataType='boolean')
-    .errorResponse('ID was invalid.')
-    .errorResponse('Write access was denied for the folder.', 403)
-)
-@boundHandler
-def createLargeImages(self, folder, params):
-    user=self.getCurrentUser()
-    createJobs = params.get('createJobs')
-    if createJobs:
-        createJobs = 'always' or True
-    createImagesRecurseOption(self, folder=folder, createJobs=createJobs, user=user, 
-                              recurse=params.get('recurse'), localJobs=params.get('localJobs'))
-                
-def createImagesRecurseOption(self, folder, createJobs, user, recurse, localJobs):
-    if recurse:
-        for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
-            createImagesRecurseOption(self, folder=childFolder, createJobs=createJobs, user=user, 
-                                      recurse=recurse, localJobs=localJobs)
-    for item in Folder().childItems(folder=folder):
-        if item.get('largeImage'):
-            if item['largeImage'].get('expected'):
-                pass
-            else:
-                try:
-                    Item().getMetadata(item)
-                    continue 
-                except Exception:
-                    previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
-                    ImageItem().delete(item)
-                    ImageItem().createImageItem(item, File().load(user=user, id=previousFileId), 
-                                                createJob=createJobs, localJob=localJobs)
-        else:
-            largeImageFileId = None
-            files = list(Item().childFiles(item=item, limit=0))
-            if len(files) == 1:
-                largeImageFileId = str(files[0]['_id'])
-                ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId), 
-                                            createJob=createJobs, localJob=localJobs)
 
 @access.public(scope=TokenScope.DATA_READ)
 @autoDescribeRoute(
