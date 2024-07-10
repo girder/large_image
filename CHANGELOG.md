@@ -9,6 +9,7 @@
 
 ### Bug Fixes
 - Fix a compositing error in transformed multi source images ([#1560](../../pull/1560))
+- Prevent using vips input in image conversion if vips parses the image as a different size than large_image ([#1569](../../pull/1569))
 
 ## 1.29.1
 
