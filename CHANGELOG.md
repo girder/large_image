@@ -5,6 +5,9 @@
 ### Improvements
 - Show a loading spinner on the image display in geojs in girder ([#1559](../../pull/1559))
 - Better handle images that are composed of a folder and an item ([#1561](../../pull/1561))
+- Allow specifying which sources are checked with canReadList ([#1562](../../pull/1562))
+- Added endpoints to get plottable data related to annotations ([#1524](../../pull/1524))
+
 
 ### Bug Fixes
 - Fix a compositing error in transformed multi source images ([#1560](../../pull/1560))
