@@ -5,7 +5,7 @@ from girder.constants import AccessType
 from girder.exceptions import FilePathException, ValidationException
 from girder.models.file import File
 from girder.models.item import Item
-from large_image import tilesource
+from large_image import config, tilesource
 from large_image.constants import SourcePriority
 from large_image.exceptions import TileSourceAssetstoreError, TileSourceError
 
@@ -164,6 +164,9 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):  # noqa
     properties = {}
     if localPath:
         properties['_geospatial_source'] = tilesource.isGeospatial(localPath)
+    ignored_names = config.getConfig('all_sources_ignored_names')
+    ignoreName = (ignored_names and re.search(
+        ignored_names, baseName, flags=re.IGNORECASE))
     sourceList = []
     for sourceName in availableSources:
         if not getattr(availableSources[sourceName], 'girderSource', False):
@@ -183,7 +186,7 @@ def getGirderTileSourceName(item, file=None, *args, **kwargs):  # noqa
             if ext in sourceExtensions:
                 priority = min(priority, sourceExtensions[ext])
                 fallback = False
-        if priority >= SourcePriority.MANUAL:
+        if priority >= SourcePriority.MANUAL or (ignoreName and fallback):
             continue
         propertiesClash = any(
             getattr(availableSources[sourceName], k, False) != v

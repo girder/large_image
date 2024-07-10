@@ -1,3 +1,4 @@
+---
 version: 2.1
 executors:
   toxandnode:
@@ -26,7 +27,7 @@ commands:
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
           # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" tox -e << parameters.env >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:
@@ -74,7 +75,7 @@ commands:
             docker-compose -f ./.circleci/dcm4chee/auth-docker-compose.yml up -d
             export DICOMWEB_TEST_URL=http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs
             echo "export DICOMWEB_TEST_URL=$DICOMWEB_TEST_URL" >> $BASH_ENV
-            pip install dicomweb_client python-keycloak
+            pip install dicomweb_client 'python-keycloak<4.1'
 
             # Wait up to 60 seconds for keycloak to be ready
             echo 'Waiting for keycloak to start...'
@@ -82,7 +83,6 @@ commands:
             curl -k --retry 60 -f --retry-all-errors --retry-delay 1 -s -o /dev/null $KEYCLOAK_URL
             echo 'Updating keycloak token lifespan...'
             python -W ignore ./.circleci/dcm4chee/update_access_token_lifespan.py
-
             echo 'Creating keycloak access token...'
             # Now create the token
             export DICOMWEB_TEST_TOKEN=$(python -W ignore ./.circleci/dcm4chee/create_keycloak_token.py)
@@ -132,13 +132,12 @@ commands:
       - run:
           name: Install Codecov client
           command: |
-              curl -Os https://uploader.codecov.io/latest/linux/codecov
-              chmod +x codecov
+            curl -Os https://uploader.codecov.io/latest/linux/codecov
+            chmod +x codecov
       - run:
           name: Upload coverage
           command: |
-              ./codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml,build/test/coverage/cobertura-coverage.xml
-
+            ./codecov --disable search pycov gcov --file build/test/coverage/py_coverage.xml,build/test/coverage/cobertura-coverage.xml
 jobs:
   testdocker:
     machine:
@@ -151,8 +150,8 @@ jobs:
       - run:
           name: Publish the images to Docker Hub
           command: |
-              echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-              docker push girder/tox-and-node:latest
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push girder/tox-and-node:latest
   py38:
     machine:
       image: ubuntu-2204:current
@@ -308,7 +307,6 @@ jobs:
           command: |
             touch package.json
             gh-pages --dotfiles --message "Update documentation" --dist build/docs --no-history
-
 workflows:
   version: 2
   ci:

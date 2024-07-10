@@ -71,6 +71,7 @@ extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) |
     f'large-image-source-multi[all]{limit_version}',
     f'large-image-source-pil[all]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version}',
+    f'large-image-source-tiff[all]{limit_version}',
 })
 # The common packages are ones that will install on Ubuntu, OSX, and Windows
 # from pypi with all needed dependencies.

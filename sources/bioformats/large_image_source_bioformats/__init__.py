@@ -183,6 +183,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     extensions = {
         None: SourcePriority.FALLBACK,
         'czi': SourcePriority.PREFERRED,
+        'ets': SourcePriority.LOW,  # part of vsi
         'lif': SourcePriority.MEDIUM,
         'vsi': SourcePriority.PREFERRED,
     }

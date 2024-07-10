@@ -8,13 +8,12 @@ sources:
       tileHeight: 256
       sizeX: 1000
       sizeY: 750
-      fractal: True
-      monochrome: False
+      fractal: true
+      monochrome: false
       bands: "red=0-4000"
     style:
       bands:
-      -
-        min: 0
-        max: 4000
-        color: #ffffff
-        band: 1
+        - min: 0
+          max: 4000
+          color:  # ffffff
+          band: 1

@@ -927,7 +927,8 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
             lidata = _data_from_large_image(str(inputPath), tempPath, **kwargs)
             logger.log(logging.DEBUG - 1, 'large_image information for %s: %r',
                        inputPath, lidata)
-            if lidata and (not is_vips(inputPath) or (
+            if lidata and (not is_vips(
+                    inputPath, (lidata['metadata']['sizeX'], lidata['metadata']['sizeY'])) or (
                     len(lidata['metadata'].get('frames', [])) >= 2 and
                     not _is_multiframe(inputPath))):
                 _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
@@ -967,11 +968,13 @@ def is_geospatial(path):
     return False
 
 
-def is_vips(path):
+def is_vips(path, matchSize=None):
     """
     Check if a path is readable by vips.
 
     :param path: The path to the file
+    :param matchSize: if not None, the image read by vips must be the specified
+        (width, height) tuple in pixels.
     :returns: True if readable by vips.
     """
     _import_pyvips()
@@ -980,6 +983,8 @@ def is_vips(path):
             image = pyvips.Image.new_from_file(path)
         # image(0, 0) will throw if vips can't decode the image
         if not image.width or not image.height or image(0, 0) is None:
+            return False
+        if matchSize and (matchSize[0] != image.width or matchSize[1] != image.height):
             return False
     except Exception:
         return False

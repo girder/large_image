@@ -1,9 +1,13 @@
+import math
+
 import large_image_source_test
 import large_image_source_zarr
 import numpy as np
 import pytest
+from PIL import Image
 
 import large_image
+from large_image.constants import NEW_IMAGE_PATH_FLAG
 from large_image.tilesource.resample import ResampleMethod
 
 TMP_DIR = 'tmp/zarr_sink'
@@ -333,3 +337,147 @@ def testCropToTiff(tmp_path):
     source = large_image.open(output_file)
     assert source.sizeX == 1800
     assert source.sizeY == 1825
+
+
+def testMetadata(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+
+    description = 'random data image for testing internal metadata'
+    channel_names = ['red', 'green', 'blue', 'IR', 'UV']
+    channel_colors = ['FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF']
+    num_frames = 4
+    num_bands = 5
+    for z in range(num_frames):
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 900, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 900, z=z)
+
+    sink.imageDescription = description
+    sink.channelNames = channel_names
+    sink.channelColors = channel_colors
+    sink.mm_x = 5
+    sink.mm_y = 5
+
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    assert written._is_ome
+
+    int_metadata = written.getInternalMetadata()
+    base_metadata = int_metadata.get('zarr', {}).get('base')
+    assert base_metadata is not None
+    assert base_metadata['bioformats2raw.layout'] == 3
+
+    multiscales = base_metadata.get('multiscales')
+    assert multiscales is not None
+    assert len(multiscales) == 1
+    assert multiscales[0].get('version') == '0.5'
+    assert NEW_IMAGE_PATH_FLAG in multiscales[0].get('name')
+
+    axes = multiscales[0].get('axes')
+    assert axes is not None
+    assert len(axes) == 4
+    assert {'name': 'z'} in axes
+    assert {'name': 'y', 'type': 'space', 'unit': 'millimeter'} in axes
+    assert {'name': 'x', 'type': 'space', 'unit': 'millimeter'} in axes
+    assert {'name': 's', 'type': 'channel'} in axes
+
+    datasets = multiscales[0].get('datasets')
+    assert len(datasets) == 3
+    for i, d in enumerate(datasets):
+        assert d.get('path') == str(i)
+        coord_transforms = d.get('coordinateTransformations')
+        assert coord_transforms is not None
+        assert len(coord_transforms) == 1
+        assert coord_transforms[0].get('type') == 'scale'
+        assert coord_transforms[0].get('scale') == [
+            1.0, 5 * 2 ** i, 5 * 2 ** i, 1.0,
+        ]
+
+    nested_metadata = multiscales[0].get('metadata')
+    assert nested_metadata is not None
+    assert nested_metadata.get('description') == description
+    assert nested_metadata.get('kwargs', {}).get('multichannel')
+
+    omero = base_metadata.get('omero')
+    assert omero is not None
+    assert omero.get('id') == 1
+    assert omero.get('version') == '0.5'
+    assert NEW_IMAGE_PATH_FLAG in omero.get('name')
+
+    channels = omero.get('channels')
+    assert channels is not None
+    assert len(channels) == num_bands
+    for i, c in enumerate(channels):
+        assert c.get('active')
+        assert c.get('coefficient') == 1
+        assert c.get('color') == channel_colors[i]
+        assert c.get('family') == 'linear'
+        assert not c.get('inverted')
+        assert c.get('label') == channel_names[i]
+        window = c.get('window')
+        assert window is not None
+        # max should be nearly 1 and min should be nearly 0
+        assert math.ceil(window.get('end')) == 1
+        assert math.ceil(window.get('max')) == 1
+        assert math.floor(window.get('start')) == 0
+        assert math.floor(window.get('min')) == 0
+
+    rdefs = omero.get('rdefs')
+    assert rdefs is not None
+    assert rdefs.get('model') == 'color'
+    assert rdefs.get('defaultZ') == 0
+
+
+def testChannelNames(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+
+    for c in range(5):
+        sink.addTile(np.random.random((4, 4, 3)), c=c)
+
+    sink.channelNames = ['a', 'b', 'c', 'd', 'e']
+    sink.write(output_file)
+    written = large_image.open(output_file)
+    assert len(written.metadata['channels']) == 5
+
+
+def testAddAssociatedImages(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+
+    num_frames = 4
+    num_bands = 5
+    for z in range(num_frames):
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 0, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 0, 900, z=z)
+        sink.addTile(np.random.random((1000, 1000, num_bands)), 950, 900, z=z)
+
+    image_sizes = [
+        (200, 300, 3),
+        (400, 500, 3),
+        (600, 700, 3),
+    ]
+
+    for image_size in image_sizes:
+        image_data = (np.random.random(image_size) * 255).astype(np.uint8)
+        img = Image.fromarray(image_data)
+        sink.addAssociatedImage(img)
+
+    original_image_list = sink.getAssociatedImagesList()
+
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    written_image_list = written.getAssociatedImagesList()
+
+    for image_list in [original_image_list, written_image_list]:
+        assert len(image_list) == len(image_sizes)
+        for i, image_name in enumerate(image_list):
+            retrieved = sink._getAssociatedImage(image_name)
+            expected_size = image_sizes[i]
+            assert retrieved is not None
+            assert isinstance(retrieved, Image.Image)
+            # PIL Image size doesn't include bands and swaps x & y
+            assert retrieved.size == (expected_size[1], expected_size[0])
