@@ -2,7 +2,7 @@
 import Hammer from '@egjs/hammerjs';
 
 import ImageViewerWidget from './base';
-import setFrameQuad from './setFrameQuad.js';
+import { setFrameQuad } from '../../utils.js';
 
 const $ = girder.$;
 const _ = girder._;
@@ -16,34 +16,27 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
         this._scale = settings.scale;
         this._setFrames = settings.setFrames;
 
-        $.when(
-            ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
-                if (this.metadata.geospatial) {
-                    this.tileWidth = this.tileHeight = null;
-                    return restRequest({
-                        type: 'GET',
-                        url: 'item/' + this.itemId + '/tiles',
-                        data: {projection: 'EPSG:3857'}
-                    }).done((resp) => {
-                        this.levels = resp.levels;
-                        this.tileWidth = resp.tileWidth;
-                        this.tileHeight = resp.tileHeight;
-                        this.sizeX = resp.sizeX;
-                        this.sizeY = resp.sizeY;
-                        this.metadata = resp;
-                    });
-                }
-                return this;
-            }),
-            $.ajax({ // like $.getScript, but allow caching
-                url: `/plugin_static/large_image/extra/geojs.js?_=${__BUILD_TIMESTAMP__}`,
-                dataType: 'script',
-                cache: true
-            }))
-            .done(() => {
-                this.trigger('g:beforeFirstRender', this);
-                this.render();
-            });
+        ImageViewerWidget.prototype.initialize.call(this, settings).then(() => {
+            if (this.metadata.geospatial) {
+                this.tileWidth = this.tileHeight = null;
+                return restRequest({
+                    type: 'GET',
+                    url: 'item/' + this.itemId + '/tiles',
+                    data: {projection: 'EPSG:3857'}
+                }).done((resp) => {
+                    this.levels = resp.levels;
+                    this.tileWidth = resp.tileWidth;
+                    this.tileHeight = resp.tileHeight;
+                    this.sizeX = resp.sizeX;
+                    this.sizeY = resp.sizeY;
+                    this.metadata = resp;
+                });
+            }
+            return this;
+        }).then(() => {
+            this.trigger('g:beforeFirstRender', this);
+            this.render();
+        })
     },
 
     render: function () {

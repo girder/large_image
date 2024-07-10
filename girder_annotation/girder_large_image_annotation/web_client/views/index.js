@@ -6,22 +6,15 @@ import ItemListWidget from './itemList';
 import ImageViewerWidgetAnnotationExtension from './imageViewerWidget/base';
 import * as extensions from './imageViewerWidget';
 
-const events = girder.events;
 const viewers = {};
 
-events.on('g:appload.before', function () {
-    const _ = girder._;
+for (var key in girder.plugins.large_image.views.imageViewerWidget) {
+    viewers[key] = girder.plugins.large_image.views.imageViewerWidget[key].extend(ImageViewerWidgetAnnotationExtension);
 
-    for (var key in girder.plugins.large_image.views.imageViewerWidget) {
-        viewers[key] = girder.plugins.large_image.views.imageViewerWidget[key];
-
-        _.extend(viewers[key].prototype, ImageViewerWidgetAnnotationExtension);
-        if (extensions[key]) {
-            const extension = extensions[key](viewers[key]).prototype;
-            _.extend(viewers[key], extension);
-        }
+    if (extensions[key]) {
+        viewers[key] = extensions[key](viewers[key]);
     }
-});
+}
 
 export {
     ConfigView,
