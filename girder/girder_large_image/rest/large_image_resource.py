@@ -35,10 +35,11 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource
-from girder.constants import SortDir, TokenScope
+from girder.constants import SortDir, TokenScope, AccessType
 from girder.exceptions import RestException
 from girder.models.file import File
 from girder.models.item import Item
+from girder.models.folder import Folder
 from girder.models.setting import Setting
 from large_image import cache_util
 from large_image.exceptions import TileGeneralError
@@ -255,6 +256,7 @@ class LargeImageResource(Resource):
         self.route('GET', ('histograms',), self.countHistograms)
         self.route('DELETE', ('histograms',), self.deleteHistograms)
         self.route('DELETE', ('tiles', 'incomplete'), self.deleteIncompleteTiles)
+        self.route('PUT', ('folder', ':id', 'tiles'), self.createLargeImages)
 
     @describeRoute(
         Description('Clear tile source caches to release resources and file handles.'),
@@ -444,6 +446,55 @@ class LargeImageResource(Resource):
                 File().remove(file)
                 removed += 1
         return removed
+
+    @access.user(scope=TokenScope.DATA_WRITE)
+    @autoDescribeRoute(
+        Description('Create large images for all items within a folder.')
+        .notes('Does not work for items with multiple files.')
+        .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE, required=True)
+        .param('createJobs','Whether a job should be created for each large image.', required=False, 
+            default=False, dataType='boolean')
+        .param('localJobs', 'Whether a the jobs created should be local.', required=False, 
+            default=False, dataType='boolean')
+        .param('recurse', 'Whether child folders should be recursed', required=False, default=False, 
+            dataType='boolean')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Write access was denied for the folder.', 403)
+    )
+    def createLargeImages(self, folder, params):
+        user=self.getCurrentUser()
+        createJobs = params.get('createJobs')
+        if createJobs:
+            createJobs = 'always' or True
+        self.createImagesRecurseOption(folder=folder, createJobs=createJobs, user=user, 
+                                recurse=params.get('recurse'), localJobs=params.get('localJobs'))
+                    
+    def createImagesRecurseOption(self, folder, createJobs, user, recurse, localJobs):
+        count = {'large images created': 0}
+        if recurse:
+            for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
+                self.createImagesRecurseOption(folder=childFolder, createJobs=createJobs, user=user, 
+                                        recurse=recurse, localJobs=localJobs)
+        for item in Folder().childItems(folder=folder):
+            if item.get('largeImage'):
+                if item['largeImage'].get('expected'):
+                    pass
+                else:
+                    try:
+                        Item().getMetadata(item)
+                        continue 
+                    except Exception:
+                        previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
+                        ImageItem().delete(item)
+                        ImageItem().createImageItem(item, File().load(user=user, id=previousFileId), 
+                                                    createJob=createJobs, localJob=localJobs)
+            else:
+                largeImageFileId = None
+                files = list(Item().childFiles(item=item, limit=0))
+                if len(files) == 1:
+                    largeImageFileId = str(files[0]['_id'])
+                    ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId), 
+                                                createJob=createJobs, localJob=localJobs)
 
     @describeRoute(
         Description('Remove large images from items where the large image job '
