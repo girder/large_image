@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.3
+
+### Improvements
+
+- Improve plottable data endpoint to better fetch adjacent items ([#1573](../../pull/1573))
+
 ## 1.29.2
 
 ### Improvements
