@@ -1,6 +1,6 @@
 // Import hammerjs for geojs touch events
 import Hammer from '@egjs/hammerjs';
-import d3 from 'd3';
+import * as d3 from 'd3';
 
 import ImageViewerWidget from './base';
 import { setFrameQuad } from '../../utils.js';
