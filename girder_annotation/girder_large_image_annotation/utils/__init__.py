@@ -459,7 +459,7 @@ class PlottableItemData:
         self._columnKeyCache[hashkey] = fullkey, title
         return fullkey, title
 
-    def _scanColumnByKey(self, result, key, entry, where=0):
+    def _scanColumnByKey(self, result, key, entry, where=0, auxidx=0, item=None):
         if result['type'] == 'number':
             try:
                 [float(record[key]) for record in entry
@@ -481,9 +481,12 @@ class PlottableItemData:
                 result['min'] = min(result['min'], v)
                 result['max'] = max(result['max'], v)
             if self._datacolumns and result['key'] in self._datacolumns:
-                self._datacolumns[result['key']][(where, ridx)] = v
+                self._datacolumns[result['key']][(where, (auxidx, ridx))] = v
+                if item is not None:
+                    self._datacolumns['_0_item.name'][(where, (auxidx, ridx))] = item['name']
+                    self._datacolumns['_2_item.id'][(where, (auxidx, ridx))] = str(item['_id'])
 
-    def _scanColumn(self, meta, source, columns, auxmeta=None):
+    def _scanColumn(self, meta, source, columns, auxmeta=None, items=None):
         for root, entry in meta.items():
             if not isinstance(entry, list) or not len(entry) or not isinstance(entry[0], dict):
                 continue
@@ -491,16 +494,21 @@ class PlottableItemData:
                 if not isinstance(entry[0][key], self.allowedTypes):
                     continue
                 fullkey, title = self._columnKey(source, root, key)
-                where = self._addColumn(columns, fullkey, title, root, key, source)
+                where = self._addColumn(
+                    columns, fullkey, title, root, key, source)
                 result = columns[fullkey]
-                self._scanColumnByKey(result, key, entry, where)
+                self._scanColumnByKey(
+                    result, key, entry, where, 0,
+                    items[0] if items and len(items) > 0 else None)
                 if auxmeta:
-                    for aux in auxmeta:
+                    for auxidx, aux in enumerate(auxmeta):
                         if (isinstance(aux.get(root), list) and
                                 len(aux[root]) and
                                 isinstance(aux[root][0], dict) and
                                 key in aux[root][0]):
-                            self._scanColumnByKey(result, key, aux[root], where)
+                            self._scanColumnByKey(
+                                result, key, aux[root], where, auxidx + 1,
+                                items[auxidx + 1] if items and len(items) > auxidx + 1 else None)
 
     @property
     def columns(self):
@@ -533,7 +541,8 @@ class PlottableItemData:
             columns, '_2_item.id', 'Item ID', 'Item', '_id', 'base')
         self._scanColumn(self.folder.get('meta', {}), 'folder', columns)
         self._scanColumn(self.item.get('meta', {}), 'item', columns,
-                         [item.get('meta', {}) for item in self.items[1:]])
+                         [item.get('meta', {}) for item in self.items[1:]],
+                         self.items)
         for anidx, annot in enumerate(self.annotations[0] if self.annotations is not None else []):
             self._scanColumn(
                 annot.get('attributes', {}), 'annotation', columns,
@@ -615,6 +624,19 @@ class PlottableItemData:
             if len(data) < numrows:
                 logger.info(f'Reduced row count from {numrows} to {len(data)} '
                             f'because of None values in column {colkey}')
+        # Refresh our count, distinct, distinctcount, min, max for each column
+        for cidx, col in enumerate(colsout):
+            col['count'] = len([row[cidx] for row in data if row[cidx] is not None])
+            if col['type'] == 'number':
+                col['min'] = min(row[cidx] for row in data if row[cidx] is not None)
+                col['max'] = min(row[cidx] for row in data if row[cidx] is not None)
+            distinct = {str(row[cidx]) for row in data if row[cidx] is not None}
+            if len(distinct) <= self.maxDistinct:
+                col['distinct'] = sorted(distinct)
+                col['distinctcount'] = len(distinct)
+            else:
+                col.pop('distinct', None)
+                col.pop('distinctcount', None)
         return {
             'columns': colsout,
             'data': data}
