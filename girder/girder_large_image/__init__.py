@@ -648,8 +648,9 @@ class LargeImagePlugin(GirderPlugin):
             plugin='large_image',
             css=['/style.css'],
             js=[
-                '/extra/geojs.js',
                 '/girder-plugin-large-image.umd.cjs',
+                # geojs must be loaded after the plugin JS
+                '/extra/geojs.js',
             ],
             staticDir=Path(__file__).parent / 'web_client' / 'dist',
             tree=info['serverRoot'],
