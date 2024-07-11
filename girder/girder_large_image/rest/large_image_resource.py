@@ -449,12 +449,12 @@ class LargeImageResource(Resource):
 
     @access.user(scope=TokenScope.DATA_WRITE)
     @autoDescribeRoute(
-        Description('Create large images for all items within a folder.')
-        .notes('Does not work for items with multiple files.')
+        Description('Create new large images for all items within a folder.')
+        .notes('Does not work for items with multiple files and removes existing large images from items.')
         .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE, required=True)
-        .param('createJobs','Whether a job should be created for each large image.', required=False, 
+        .param('createJobs','Whether job(s) should be created for each large image.', required=False, 
             default=False, dataType='boolean')
-        .param('localJobs', 'Whether a the jobs created should be local.', required=False, 
+        .param('localJobs', 'Whether the job(s) created should be local.', required=False, 
             default=False, dataType='boolean')
         .param('recurse', 'Whether child folders should be recursed', required=False, default=False, 
             dataType='boolean')
@@ -466,16 +466,22 @@ class LargeImageResource(Resource):
         createJobs = params.get('createJobs')
         if createJobs:
             createJobs = 'always' or True
-        self.createImagesRecurseOption(folder=folder, createJobs=createJobs, user=user, 
+        return self.createImagesRecurseOption(folder=folder, createJobs=createJobs, user=user, 
                                 recurse=params.get('recurse'), localJobs=params.get('localJobs'))
                     
     def createImagesRecurseOption(self, folder, createJobs, user, recurse, localJobs):
-        count = {'large images created': 0}
+        result = {'childFoldersRecursed': 0,
+                  'largeImagesCreated': 0,
+                  'largeImagesRemovedAndRecreated': 0,
+                  'totalItems': 0}
         if recurse:
             for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
-                self.createImagesRecurseOption(folder=childFolder, createJobs=createJobs, user=user, 
+                result['childFoldersRecursed']+=1
+                childResult = self.createImagesRecurseOption(folder=childFolder, createJobs=createJobs, user=user, 
                                         recurse=recurse, localJobs=localJobs)
+                for key in childResult: result[key]+= childResult[key]
         for item in Folder().childItems(folder=folder):
+            result['totalItems'] +=1
             if item.get('largeImage'):
                 if item['largeImage'].get('expected'):
                     pass
@@ -488,13 +494,16 @@ class LargeImageResource(Resource):
                         ImageItem().delete(item)
                         ImageItem().createImageItem(item, File().load(user=user, id=previousFileId), 
                                                     createJob=createJobs, localJob=localJobs)
+                        result['largeImagesRemovedAndRecreated']+=1
             else:
                 largeImageFileId = None
-                files = list(Item().childFiles(item=item, limit=0))
+                files = list(Item().childFiles(item=item))
                 if len(files) == 1:
                     largeImageFileId = str(files[0]['_id'])
                     ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId), 
                                                 createJob=createJobs, localJob=localJobs)
+                    result['largeImagesCreated']+=1
+        return result
 
     @describeRoute(
         Description('Remove large images from items where the large image job '
