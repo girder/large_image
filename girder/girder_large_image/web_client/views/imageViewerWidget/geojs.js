@@ -1,5 +1,6 @@
 // Import hammerjs for geojs touch events
 import Hammer from '@egjs/hammerjs';
+import d3 from 'd3';
 
 import ImageViewerWidget from './base';
 import { setFrameQuad } from '../../utils.js';
@@ -10,6 +11,7 @@ const { restRequest } = girder.rest;
 
 window.hammerjs = Hammer;
 window.Hammer = Hammer;
+window.d3 = d3;
 
 var GeojsImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {
