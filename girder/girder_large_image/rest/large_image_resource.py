@@ -35,11 +35,11 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource
-from girder.constants import SortDir, TokenScope, AccessType
+from girder.constants import AccessType, SortDir, TokenScope
 from girder.exceptions import RestException
 from girder.models.file import File
-from girder.models.item import Item
 from girder.models.folder import Folder
+from girder.models.item import Item
 from girder.models.setting import Setting
 from large_image import cache_util
 from large_image.exceptions import TileGeneralError
@@ -450,25 +450,28 @@ class LargeImageResource(Resource):
     @access.user(scope=TokenScope.DATA_WRITE)
     @autoDescribeRoute(
         Description('Create new large images for all items within a folder.')
-        .notes('Does not work for items with multiple files and removes existing large images from items.')
-        .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE, required=True)
-        .param('createJobs','Whether job(s) should be created for each large image.', required=False, 
-            default=False, dataType='boolean')
-        .param('localJobs', 'Whether the job(s) created should be local.', required=False, 
-            default=False, dataType='boolean')
-        .param('recurse', 'Whether child folders should be recursed', required=False, default=False, 
-            dataType='boolean')
+        .notes('Does not work for items with multiple files and removes existing '
+               'large images from items.')
+        .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE,
+                    required=True)
+        .param('createJobs', 'Whether job(s) should be created for each large image.',
+               required=False, default=False, dataType='boolean')
+        .param('localJobs', 'Whether the job(s) created should be local.', required=False,
+               default=False, dataType='boolean')
+        .param('recurse', 'Whether child folders should be recursed.', required=False,
+               default=False, dataType='boolean')
         .errorResponse('ID was invalid.')
-        .errorResponse('Write access was denied for the folder.', 403)
+        .errorResponse('Write access was denied for the folder.', 403),
     )
     def createLargeImages(self, folder, params):
-        user=self.getCurrentUser()
+        user = self.getCurrentUser()
         createJobs = params.get('createJobs')
         if createJobs:
             createJobs = 'always' or True
-        return self.createImagesRecurseOption(folder=folder, createJobs=createJobs, user=user, 
-                                recurse=params.get('recurse'), localJobs=params.get('localJobs'))
-                    
+        return self.createImagesRecurseOption(folder=folder, createJobs=createJobs, user=user,
+                                              recurse=params.get('recurse'),
+                                              localJobs=params.get('localJobs'))
+
     def createImagesRecurseOption(self, folder, createJobs, user, recurse, localJobs):
         result = {'childFoldersRecursed': 0,
                   'largeImagesCreated': 0,
@@ -476,33 +479,36 @@ class LargeImageResource(Resource):
                   'totalItems': 0}
         if recurse:
             for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
-                result['childFoldersRecursed']+=1
-                childResult = self.createImagesRecurseOption(folder=childFolder, createJobs=createJobs, user=user, 
-                                        recurse=recurse, localJobs=localJobs)
-                for key in childResult: result[key]+= childResult[key]
+                result['childFoldersRecursed'] += 1
+                childResult = self.createImagesRecurseOption(folder=childFolder,
+                                                             createJobs=createJobs, user=user,
+                                                             recurse=recurse, localJobs=localJobs)
+                for key in childResult:
+                    result[key] += childResult[key]
         for item in Folder().childItems(folder=folder):
-            result['totalItems'] +=1
+            result['totalItems'] += 1
             if item.get('largeImage'):
                 if item['largeImage'].get('expected'):
                     pass
                 else:
                     try:
                         Item().getMetadata(item)
-                        continue 
+                        continue
                     except Exception:
-                        previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
+                        previousFileId = item['largeImage'].get(
+                            'originalId', item['largeImage']['fileId'])
                         ImageItem().delete(item)
-                        ImageItem().createImageItem(item, File().load(user=user, id=previousFileId), 
+                        ImageItem().createImageItem(item, File().load(user=user, id=previousFileId),
                                                     createJob=createJobs, localJob=localJobs)
-                        result['largeImagesRemovedAndRecreated']+=1
+                        result['largeImagesRemovedAndRecreated'] += 1
             else:
                 largeImageFileId = None
                 files = list(Item().childFiles(item=item))
                 if len(files) == 1:
                     largeImageFileId = str(files[0]['_id'])
-                    ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId), 
+                    ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId),
                                                 createJob=createJobs, localJob=localJobs)
-                    result['largeImagesCreated']+=1
+                    result['largeImagesCreated'] += 1
         return result
 
     @describeRoute(
