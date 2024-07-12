@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- Improve plottable data endpoint to better fetch adjacent items ([#1573](../../pull/1573))
+- Improve plottable data endpoint to better fetch adjacent items and annotations ([#1573](../../pull/1573), [#1574](../../pull/1574))), [#1575](../../pull/1575)))
 
 ## 1.29.2
 
