@@ -633,7 +633,7 @@ class AnnotationResource(Resource):
     def getItemPlottableElements(self, item, annotations):
         user = self.getCurrentUser()
         data = utils.PlottableItemData(user, item, annotations=annotations)
-        return data.columns
+        return [col for col in data.columns if col.get('count')]
 
     @autoDescribeRoute(
         Description('Get plottable data related to an item and its annotations.')

@@ -1,3 +1,4 @@
+import inspect
 import logging
 import os
 import shutil
@@ -128,7 +129,10 @@ def convert_image_job(job):
         inputPath = None
         if not fileObj.get('imported'):
             try:
-                inputPath = File().getGirderMountFilePath(fileObj)
+                inputPath = File().getGirderMountFilePath(
+                    fileObj,
+                    **({'preferFlat': True} if 'preferFlat' in inspect.signature(
+                        File.getGirderMountFilePath).parameters else {}))
             except Exception:
                 pass
         inputPath = inputPath or File().getLocalFilePath(fileObj)

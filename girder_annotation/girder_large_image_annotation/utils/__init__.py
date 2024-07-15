@@ -1,3 +1,4 @@
+import itertools
 import json
 import math
 import re
@@ -418,23 +419,25 @@ class PlottableItemData:
                 self.annotations.append(annotList)
 
     def _addColumn(self, columns, fullkey, title, root, key, source):
+        # Root should probably only be part of this at folder/csv level
+        distinct = [source] if source not in {'folder'} else [source, root]
         if fullkey not in columns:
             columns[fullkey] = {
                 'key': fullkey,
                 'type': 'number',
-                'where': [[root, key, source]], 'title': title,
+                'where': [[distinct, key]], 'title': title,
                 'count': 0, 'distinct': set(), 'min': None,
                 'max': None}
-            return (root, source, 0)
+            return (tuple(distinct), 0)
         elif [root, key, source] not in columns[fullkey]['where']:
-            columns[fullkey]['where'].append([root, key, source])
+            columns[fullkey]['where'].append([distinct, key])
         where = -1
         for colwhere in columns[fullkey]['where']:
-            if colwhere[0] == root and colwhere[2] == source:
+            if tuple(colwhere[0]) == tuple(distinct):
                 where += 1
-            if tuple(colwhere) == (root, key, source):
-                return (root, source, where)
-        return (root, source, where)
+                if colwhere[1] == key:
+                    return (tuple(distinct), where)
+        return (tuple(distinct), where)
 
     def _columnKey(self, source, root, key):
         if not hasattr(self, '_columnKeyCache'):
@@ -443,7 +446,7 @@ class PlottableItemData:
         if hashkey in self._columnKeyCache:
             return self._columnKeyCache[hashkey]
         fullkey = f'{root}.{key}.{source}'.lower()
-        title = f'{root} {key}'
+        title = f'{root} {key}' if root is not None and root != '' else f'{key}'
         keymap = {
             r'(?i)(item|image)_(id|name)$': {'key': '_0_item.name', 'title': 'Item Name'},
             r'(?i)(low|min)(_|)x': {'key': '_bbox.x0', 'title': 'Bounding Box Low X'},
@@ -459,7 +462,8 @@ class PlottableItemData:
         self._columnKeyCache[hashkey] = fullkey, title
         return fullkey, title
 
-    def _scanColumnByKey(self, result, key, entry, where=0, auxidx=0, item=None):
+    def _scanColumnByKey(self, result, key, entry, where=0, auxidx=0,
+                         auxidx2=0, item=None, annotation=None):
         if result['type'] == 'number':
             try:
                 [float(record[key]) for record in entry
@@ -481,13 +485,25 @@ class PlottableItemData:
                 result['min'] = min(result['min'], v)
                 result['max'] = max(result['max'], v)
             if self._datacolumns and result['key'] in self._datacolumns:
-                self._datacolumns[result['key']][(where, (auxidx, ridx))] = v
+                self._datacolumns[result['key']][(where, (auxidx, auxidx2, ridx))] = v
                 if item is not None:
-                    self._datacolumns['_0_item.name'][(where, (auxidx, ridx))] = item['name']
-                    self._datacolumns['_2_item.id'][(where, (auxidx, ridx))] = str(item['_id'])
+                    self._datacolumns.get('_0_item.name', {})[
+                        (where, (auxidx, auxidx2, ridx))] = item['name']
+                    self._datacolumns.get('_2_item.id', {})[
+                        (where, (auxidx, auxidx2, ridx))] = str(item['_id'])
+                if annotation is not None:
+                    self._datacolumns.get('_1_annotation.name', {})[
+                        (where, (auxidx, auxidx2, ridx))] = annotation.get(
+                            'annotation', {}).get('name')
+                    self._datacolumns.get('_3_annotation.id', {})[
+                        (where, (auxidx, auxidx2, ridx))] = str(annotation['_id'])
+                    self._datacolumns.get('_4_annotation.description', {})[
+                        (where, (auxidx, auxidx2, ridx))] = annotation.get(
+                            'annotation', {}).get('description')
 
-    def _scanColumn(self, meta, source, columns, auxmeta=None, items=None):
-        for root, entry in meta.items():
+    def _scanColumn(self, meta, source, columns, auxmeta=None, auxidx2=0,
+                    items=None, annotations=None):
+        for root, entry in (list(meta.items()) + [(None, [meta])]):
             if not isinstance(entry, list) or not len(entry) or not isinstance(entry[0], dict):
                 continue
             for key in entry[0]:
@@ -498,17 +514,113 @@ class PlottableItemData:
                     columns, fullkey, title, root, key, source)
                 result = columns[fullkey]
                 self._scanColumnByKey(
-                    result, key, entry, where, 0,
-                    items[0] if items and len(items) > 0 else None)
+                    result, key, entry, where, 0, auxidx2,
+                    items[0] if items and len(items) > 0 else None,
+                    annotations[0] if annotations and len(annotations) > 0 else None)
                 if auxmeta:
                     for auxidx, aux in enumerate(auxmeta):
-                        if (isinstance(aux.get(root), list) and
+                        if root is None:
+                            if isinstance(aux, dict) and key in aux:
+                                self._scanColumnByKey(
+                                    result, key, [aux], where, auxidx + 1, auxidx2,
+                                    items[auxidx + 1] if items and len(items) > auxidx + 1 else
+                                    None,
+                                    annotations[auxidx + 1]
+                                    if annotations and len(annotations) > auxidx + 1 else
+                                    None)
+                        elif (isinstance(aux.get(root), list) and
                                 len(aux[root]) and
                                 isinstance(aux[root][0], dict) and
                                 key in aux[root][0]):
                             self._scanColumnByKey(
-                                result, key, aux[root], where, auxidx + 1,
-                                items[auxidx + 1] if items and len(items) > auxidx + 1 else None)
+                                result, key, aux[root], where, auxidx + 1, auxidx2,
+                                items[auxidx + 1] if items and len(items) > auxidx + 1 else None,
+                                annotations[auxidx + 1] if annotations and
+                                len(annotations) > auxidx + 1 else None)
+
+    def _scanElementColumns(self, source, columns, elems, auxidx, items, annotations, keys):
+        rows = {}
+        for ridx, elem in enumerate(elems):
+            if auxidx < len(items) and items[auxidx]:
+                rows.setdefault('_0_item.name', []).append(items[auxidx]['name'])
+                rows.setdefault('_2_item.id', []).append(str(items[auxidx]['_id']))
+            if auxidx < len(annotations) and annotations[auxidx]:
+                rows.setdefault('_1_annotation.name', []).append(
+                    annotations[auxidx].get('annotation', {}).get('name'))
+                rows.setdefault('_3_annotation.id', []).append(str(annotations[auxidx]['_id']))
+                rows.setdefault('_4_annotation.description', []).append(
+                    annotations[auxidx].get('annotation', {}).get('description'))
+            if '_bbox' in elem:
+                rows.setdefault('_bbox.x0', []).append(elem['_bbox']['lowx'])
+                rows.setdefault('_bbox.y0', []).append(elem['_bbox']['lowy'])
+                rows.setdefault('_bbox.x1', []).append(elem['_bbox']['highx'])
+                rows.setdefault('_bbox.y1', []).append(elem['_bbox']['highy'])
+            # TODO: Add group and label
+            if not auxidx and not ridx and 'user' in elem:
+                for key, entry in elem['user'].items():
+                    if not isinstance(entry, self.allowedTypes):
+                        continue
+                    root = ''
+                    fullkey, title = self._columnKey(source, root, key)
+                    colwhere = self._addColumn(
+                        columns, fullkey, title, root, key, source)
+                    keys[key] = (fullkey, colwhere)
+            # TODO: Populate group and label
+            for key, (fullkey, _keywhere) in keys.items():
+                entry = elem.get('user', {}).get(key)
+                if not isinstance(entry, self.allowedTypes):
+                    entry = None
+                rows.setdefault(fullkey, []).append(entry)
+        return rows
+
+    def _scanElements(self, elements, source, columns, auxidx2, items, annotations):
+        where = self._addColumn(
+            columns, '_0_item.name', 'Item Name', '', 'name', 'annotationelement')
+        self._addColumn(
+            columns, '_2_item.id', 'Item ID', '', '_id', 'annotationelement')
+        self._addColumn(
+            columns, '_1_annotation.name', 'Annotation Name', '', 'name', 'annotationelement')
+        self._addColumn(
+            columns, '_3_annotation.id', 'Annotation ID', '', '_id', 'annotationelement')
+        self._addColumn(
+            columns, '_4_annotation.description', 'Annotation Description', '',
+            'description', 'annotationelement')
+        self._addColumn(
+            columns, '_bbox.x0', 'Bounding Box Low X', '', 'lowx', 'annotationelement')
+        self._addColumn(
+            columns, '_bbox.y0', 'Bounding Box Low Y', '', 'lowy', 'annotationelement')
+        self._addColumn(
+            columns, '_bbox.x1', 'Bounding Box High X', '', 'highx', 'annotationelement')
+        self._addColumn(
+            columns, '_bbox.y1', 'Bounding Box High Y', '', 'highy', 'annotationelement')
+        keys = {}
+        for auxidx, elems in enumerate(elements):
+            if not elems:
+                continue
+            rows = self._scanElementColumns(
+                source, columns, elems, auxidx, items, annotations, keys)
+            for fullkey, entry in rows.items():
+                result = columns[fullkey]
+                if result['type'] == 'number':
+                    try:
+                        [float(v) for v in entry if isinstance(v, self.allowedTypes)]
+                    except Exception:
+                        result['type'] = 'string'
+                        result['distinct'] = {str(v) for v in result['distinct']}
+                for ridx, v in enumerate(entry):
+                    if not isinstance(v, self.allowedTypes):
+                        continue
+                    result['count'] += 1
+                    v = float(v) if result['type'] == 'number' else str(v)
+                    if len(result['distinct']) <= self.maxDistinct:
+                        result['distinct'].add(v)
+                    if result['type'] == 'number':
+                        if result['min'] is None:
+                            result['min'] = result['max'] = v
+                        result['min'] = min(result['min'], v)
+                        result['max'] = max(result['max'], v)
+                    if self._datacolumns and fullkey in self._datacolumns:
+                        self._datacolumns[fullkey][(where, (auxidx, auxidx2, ridx))] = v
 
     @property
     def columns(self):
@@ -532,6 +644,8 @@ class PlottableItemData:
 
         :returns: a sorted list of data entries.
         """
+        from ..models.annotationelement import Annotationelement
+
         if self._columns is not None:
             return self._columns
         columns = {}
@@ -542,13 +656,16 @@ class PlottableItemData:
         self._scanColumn(self.folder.get('meta', {}), 'folder', columns)
         self._scanColumn(self.item.get('meta', {}), 'item', columns,
                          [item.get('meta', {}) for item in self.items[1:]],
-                         self.items)
+                         items=self.items)
         for anidx, annot in enumerate(self.annotations[0] if self.annotations is not None else []):
             self._scanColumn(
-                annot.get('attributes', {}), 'annotation', columns,
-                [itemannot[anidx].get('attributes', {})
+                annot.get('annotation', {}).get('attributes', {}),
+                'annotation', columns,
+                [itemannot[anidx].get('annotation').get('attributes', {})
                  for itemannot in self.annotations[1:]
-                 if itemannot[anidx] is not None])
+                 if itemannot[anidx] is not None],
+                anidx, items=self.items,
+                annotations=[a[anidx] for a in self.annotations])
             if not anidx:
                 self._addColumn(
                     columns, '_1_annotation.name', 'Annotation Name',
@@ -557,19 +674,20 @@ class PlottableItemData:
                     columns, '_3_annotation.id', 'Annotation ID',
                     'Annotation', '_id', 'base')
                 self._addColumn(
-                    columns, '_bbox.x0', 'Bounding Box Low X', 'bbox', 'lowx',
-                    'annotationelement')
-                self._addColumn(
-                    columns, '_bbox.y0', 'Bounding Box Low Y', 'bbox', 'lowy',
-                    'annotationelement')
-                self._addColumn(
-                    columns, '_bbox.x1', 'Bounding Box High X', 'bbox',
-                    'highx', 'annotationelement')
-                self._addColumn(
-                    columns, '_bbox.y1', 'Bounding Box High Y', 'bbox',
-                    'highy', 'annotationelement')
-        # TODO: add annotation elements
-        # TODO: bbox could be from min/max query
+                    columns, '_4_annotation.description', 'Annotation Description',
+                    'Annotation', 'description', 'base')
+            # add annotation elements
+            firstelem = next(Annotationelement().yieldElements(annot), None)
+            if firstelem is not None:
+                self._scanElements(
+                    [list(itertools.islice(
+                        Annotationelement().yieldElements(a[anidx], bbox=True), 10000))
+                        if a[anidx] else None for a in self.annotations],
+                    'annotationelement', columns,
+                    anidx,
+                    items=self.items,
+                    annotations=[a[anidx] for a in self.annotations],
+                )
         # TODO: Add csv
         for result in columns.values():
             if len(result['distinct']) <= self.maxDistinct:
@@ -597,14 +715,14 @@ class PlottableItemData:
             columns = columns.split(',')
         if not isinstance(requiredColumns, list):
             requiredColumns = requiredColumns.split(',') if requiredColumns is not None else []
-        # TODO: Always augment columns with item id, annotation id?
         self._datacolumns = {c: {} for c in columns}
         rows = set()
         # collects data as a side effect
         collist = self.columns
         for coldata in self._datacolumns.values():
             rows |= set(coldata.keys())
-        rows = sorted(rows)
+        rows = sorted(rows, key=lambda row: (
+            tuple(x if x is not None else '' for x in row[0]), row[1]))
         colsout = [col.copy() for col in collist if col['key'] in columns]
         for cidx, col in enumerate(colsout):
             col['index'] = cidx
@@ -627,9 +745,9 @@ class PlottableItemData:
         # Refresh our count, distinct, distinctcount, min, max for each column
         for cidx, col in enumerate(colsout):
             col['count'] = len([row[cidx] for row in data if row[cidx] is not None])
-            if col['type'] == 'number':
+            if col['type'] == 'number' and col['count']:
                 col['min'] = min(row[cidx] for row in data if row[cidx] is not None)
-                col['max'] = min(row[cidx] for row in data if row[cidx] is not None)
+                col['max'] = max(row[cidx] for row in data if row[cidx] is not None)
             distinct = {str(row[cidx]) for row in data if row[cidx] is not None}
             if len(distinct) <= self.maxDistinct:
                 col['distinct'] = sorted(distinct)

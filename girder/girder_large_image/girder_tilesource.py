@@ -1,3 +1,4 @@
+import inspect
 import os
 import re
 
@@ -99,7 +100,10 @@ class GirderTileSource(tilesource.FileTileSource):
                     pass
                 if not largeImagePath:
                     try:
-                        largeImagePath = File().getGirderMountFilePath(largeImageFile)
+                        largeImagePath = File().getGirderMountFilePath(
+                            largeImageFile,
+                            **({'preferFlat': True} if 'preferFlat' in inspect.signature(
+                                File.getGirderMountFilePath).parameters else {}))
                     except FilePathException:
                         pass
             if not largeImagePath:
