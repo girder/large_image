@@ -42,7 +42,7 @@ from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.setting import Setting
 from large_image import cache_util
-from large_image.exceptions import TileGeneralError
+from large_image.exceptions import TileGeneralError, TileSourceError
 
 from .. import constants, girder_tilesource
 from ..models.image_item import ImageItem
@@ -450,8 +450,8 @@ class LargeImageResource(Resource):
     @access.user(scope=TokenScope.DATA_WRITE)
     @autoDescribeRoute(
         Description('Create new large images for all items within a folder.')
-        .notes('Does not work for items with multiple files and removes existing '
-               'large images from items.')
+        .notes('Does not work for items with multiple files and skips over items with '
+               'existing or unfinished large images.')
         .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE,
                     required=True)
         .param('createJobs', 'Whether job(s) should be created for each large image.',
@@ -474,6 +474,7 @@ class LargeImageResource(Resource):
 
     def createImagesRecurseOption(self, folder, createJobs, user, recurse, localJobs):
         result = {'childFoldersRecursed': 0,
+                  'itemsSkipped': 0,
                   'largeImagesCreated': 0,
                   'largeImagesRemovedAndRecreated': 0,
                   'totalItems': 0}
@@ -489,14 +490,15 @@ class LargeImageResource(Resource):
             result['totalItems'] += 1
             if item.get('largeImage'):
                 if item['largeImage'].get('expected'):
-                    pass
+                    result['itemsSkipped'] += 1
                 else:
                     try:
-                        Item().getMetadata(item)
+                        ImageItem().getMetadata(item)
+                        result['itemsSkipped'] += 1
                         continue
-                    except Exception:
-                        previousFileId = item['largeImage'].get(
-                            'originalId', item['largeImage']['fileId'])
+                    except TileSourceError:
+                        previousFileId = item['largeImage'].get('originalId',
+                                                                item['largeImage']['fileId'])
                         ImageItem().delete(item)
                         ImageItem().createImageItem(item, File().load(user=user, id=previousFileId),
                                                     createJob=createJobs, localJob=localJobs)
@@ -507,6 +509,8 @@ class LargeImageResource(Resource):
                     ImageItem().createImageItem(item, files[0], createJob=createJobs,
                                                 localJob=localJobs)
                     result['largeImagesCreated'] += 1
+                else:
+                    result['itemsSkipped'] += 1
         return result
 
     @describeRoute(
