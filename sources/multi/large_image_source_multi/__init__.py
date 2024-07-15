@@ -10,7 +10,6 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from pathlib import Path
 
-import jsonschema
 import numpy as np
 import yaml
 
@@ -26,6 +25,26 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+jsonschema = None
+_validator = None
+
+
+def _lazyImport():
+    """
+    Import the jsonschema module.  This is done when needed rather than in the
+    module initialization because it is slow.
+    """
+    global jsonschema, _validator
+
+    if jsonschema is None:
+        try:
+            import jsonschema
+
+            _validator = jsonschema.Draft6Validator(MultiSourceSchema)
+        except ImportError:
+            msg = 'jsonschema module not found.'
+            raise TileSourceError(msg)
 
 
 SourceEntrySchema = {
@@ -387,8 +406,6 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _defaultTileSize = 256
     _maxOpenHandles = 6
 
-    _validator = jsonschema.Draft6Validator(MultiSourceSchema)
-
     def __init__(self, path, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
@@ -398,6 +415,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
+        _lazyImport()
+        self._validator = _validator
         self._largeImagePath = self._getLargeImagePath()
         self._lastOpenSourceLock = threading.RLock()
         # 'c' must be first as channels are special because they can have names

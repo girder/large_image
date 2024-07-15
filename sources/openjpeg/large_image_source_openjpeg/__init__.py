@@ -25,7 +25,6 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from xml.etree import ElementTree
 
-import glymur
 import PIL.Image
 
 import large_image
@@ -40,6 +39,23 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+glymur = None
+
+
+def _lazyImport():
+    """
+    Import the glymur module.  This is done when needed rather than in the module
+    initialization because it is slow.
+    """
+    global glymur
+
+    if glymur is None:
+        try:
+            import glymur
+        except ImportError:
+            msg = 'glymur module not found.'
+            raise TileSourceError(msg)
 
 
 warnings.filterwarnings('ignore', category=UserWarning, module='glymur')
@@ -88,6 +104,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
+        _lazyImport()
         self._largeImagePath = str(self._getLargeImagePath())
         self._pixelInfo = {}
         try:

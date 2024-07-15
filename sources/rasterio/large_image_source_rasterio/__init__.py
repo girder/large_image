@@ -26,11 +26,6 @@ from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import PIL.Image
-import rasterio as rio
-from affine import Affine
-from rasterio import warp
-from rasterio.enums import ColorInterp, Resampling
-from rasterio.errors import RasterioIOError
 
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -51,11 +46,37 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
-warnings.filterwarnings('ignore', category=rio.errors.NotGeoreferencedWarning, module='rasterio')
-rio._env.code_map.pop(1, None)
+rio = None
+Affine = None
+
+
+def _lazyImport():
+    """
+    Import the rasterio module.  This is done when needed rather than in the
+    module initialization because it is slow.
+    """
+    global Affine, rio
+
+    print('XXXXXXXXXXXX')
+    if rio is None:
+        try:
+            import affine
+            import rasterio as rio
+            import rasterio.warp
+
+            Affine = affine.Affine
+
+            warnings.filterwarnings(
+                'ignore', category=rio.errors.NotGeoreferencedWarning, module='rasterio')
+            rio._env.code_map.pop(1, None)
+        except ImportError:
+            msg = 'rasterio module not found.'
+            raise TileSourceError(msg)
 
 
 def make_crs(projection):
+    _lazyImport()
+
     if isinstance(projection, str):
         return rio.CRS.from_string(projection)
     if isinstance(projection, dict):
@@ -87,6 +108,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         """
         # init the object
         super().__init__(path, **kwargs)
+        _lazyImport()
         self.addKnownExtensions()
 
         # create a thread lock
@@ -109,7 +131,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     raise TileSourceFileNotFoundError(self._largeImagePath) from None
                 try:
                     self.dataset = rio.open(self._largeImagePath)
-                except RasterioIOError:
+                except rio.errors.RasterioIOError:
                     msg = 'File cannot be opened via rasterio.'
                     raise TileSourceError(msg)
                 if self.dataset.driver == 'netCDF':
@@ -246,8 +268,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 # If unitsPerPixel is not specified, the horizontal distance
                 # between -180,0 and +180,0 is used.  Some projections (such as
                 # stereographic) will fail in this case; they must have a unitsPerPixel specified.
-                east, _ = warp.transform(srcCrs, dstCrs, [-180], [0])
-                west, _ = warp.transform(srcCrs, dstCrs, [180], [0])
+                east, _ = rio.warp.transform(srcCrs, dstCrs, [-180], [0])
+                west, _ = rio.warp.transform(srcCrs, dstCrs, [180], [0])
                 self.unitsAcrossLevel0 = abs(east[0] - west[0])
                 if not self.unitsAcrossLevel0:
                     msg = 'unitsPerPixel must be specified for this projection'
@@ -385,7 +407,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             # set the vertical bounds
             # some projection system don't cover the poles so we need to adapt
             # the values of ybounds accordingly
-            has_poles = warp.transform(4326, dstCrs, [0], [90])[1][0] != float('inf')
+            has_poles = rio.warp.transform(4326, dstCrs, [0], [90])[1][0] != float('inf')
             yBounds = 90 if has_poles else 89.999999
 
             # for each corner fix the latitude within -yBounds yBounds
@@ -409,7 +431,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         needProjection = dstCrs and dstCrs != srcCrs
         if needProjection:
             for pt in bounds.values():
-                [pt['x']], [pt['y']] = warp.transform(srcCrs, dstCrs, [pt['x']], [pt['y']])
+                [pt['x']], [pt['y']] = rio.warp.transform(srcCrs, dstCrs, [pt['x']], [pt['y']])
 
         # extract min max coordinates from the corners
         ll = bounds['ll']['x'], bounds['ll']['y']
@@ -573,7 +595,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 tile = self.dataset.read(
                     window=window,
                     out_shape=(count, h, w),
-                    resampling=Resampling.nearest,
+                    resampling=rio.enums.Resampling.nearest,
                 )
 
         else:
@@ -600,7 +622,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             # It will result in surprisingly unmasked data.
             src_alpha_band = 0
             for i, interp in enumerate(self.dataset.colorinterp):
-                if interp == ColorInterp.alpha:
+                if interp == rio.enums.ColorInterp.alpha:
                     src_alpha_band = i
             add_alpha = not src_alpha_band
 
@@ -608,14 +630,14 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             with self._getDatasetLock:
                 with rio.vrt.WarpedVRT(
                     self.dataset,
-                    resampling=Resampling.nearest,
+                    resampling=rio.enums.Resampling.nearest,
                     crs=self.projection,
                     transform=dst_transform,
                     height=self.tileHeight,
                     width=self.tileWidth,
                     add_alpha=add_alpha,
                 ) as vrt:
-                    tile = vrt.read(resampling=Resampling.nearest)
+                    tile = vrt.read(resampling=rio.enums.Resampling.nearest)
 
         # necessary for multispectral images:
         # set the coordinates first and the bands at the end
@@ -686,12 +708,14 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 units = units.split(':', 1)[1]
             srcCrs = make_crs(units)
             dstCrs = self.projection  # instance projection -- do not use the CRS native to the file
-            [pleft], [ptop] = warp.transform(srcCrs, dstCrs,
-                                             [right if left is None else left],
-                                             [bottom if top is None else top])
-            [pright], [pbottom] = warp.transform(srcCrs, dstCrs,
-                                                 [left if right is None else right],
-                                                 [top if bottom is None else bottom])
+            [pleft], [ptop] = rio.warp.transform(
+                srcCrs, dstCrs,
+                [right if left is None else left],
+                [bottom if top is None else top])
+            [pright], [pbottom] = rio.warp.transform(
+                srcCrs, dstCrs,
+                [left if right is None else right],
+                [top if bottom is None else bottom])
             units = 'projection'
 
         # set the corner value in pixel coordinates if the coordinate was initially
@@ -837,7 +861,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         # convert to the native projection
         dstCrs = make_crs(self.getCrs())
-        [px], [py] = warp.transform(srcCrs, dstCrs, [x], [y])
+        [px], [py] = rio.warp.transform(srcCrs, dstCrs, [x], [y])
 
         # convert to native pixel coordinates
         af = self._getAffine()
@@ -884,7 +908,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                         window = rio.windows.Window(int(x), int(y), 1, 1)
                         try:
                             value = self.dataset.read(
-                                i, window=window, resampling=Resampling.nearest,
+                                i, window=window, resampling=rio.enums.Resampling.nearest,
                             )
                             value = value[0][0]  # there should be 1 single pixel
                             pixel.setdefault('bands', {})[i] = value.item()
@@ -950,13 +974,13 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
             with rio.vrt.WarpedVRT(
                 self.dataset,
-                resampling=Resampling.nearest,
+                resampling=rio.enums.Resampling.nearest,
                 crs=self.projection,
                 transform=dst_transform,
                 height=height,
                 width=width,
             ) as vrt:
-                data = vrt.read(resampling=Resampling.nearest)
+                data = vrt.read(resampling=rio.enums.Resampling.nearest)
 
             profile = self.dataset.meta.copy()
             profile.update(
@@ -1019,6 +1043,8 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         :param path: The path to the file
         :returns: True if geospatial.
         """
+        _lazyImport()
+
         if isinstance(path, rio.io.DatasetReaderBase):
             ds = path
         else:
