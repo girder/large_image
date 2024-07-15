@@ -673,6 +673,26 @@ def unbindGirderEventsByHandlerName(handlerName):
         events.unbind(eventName, handlerName)
 
 
+def patchMount():
+    try:
+        import girder.cli.mount
+
+        def _flatItemFile(self, item):
+            return next(File().collection.aggregate([
+                {'$match': {'itemId': item['_id']}},
+            ] + ([
+                {'$addFields': {'matchLI': {'$eq': ['$_id', item['largeImage']['fileId']]}}},
+            ] if 'largeImage' in item and 'expected' not in item['largeImage'] else []) + [
+                {'$addFields': {'matchName': {'$eq': ['$name', item['name']]}}},
+                {'$sort': {'matchLI': -1, 'matchName': -1, '_id': 1}},
+                {'$limit': 1},
+            ]), None)
+
+        girder.cli.mount.ServerFuse._flatItemFile = _flatItemFile
+    except Exception:
+        pass
+
+
 class LargeImagePlugin(GirderPlugin):
     DISPLAY_NAME = 'Large Image'
     CLIENT_SOURCE_PATH = 'web_client'
@@ -727,3 +747,5 @@ class LargeImagePlugin(GirderPlugin):
 
         search._allowedSearchMode.pop('li_metadata', None)
         search.addSearchMode('li_metadata', metadataSearchHandler)
+
+        patchMount()
