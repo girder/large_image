@@ -2,6 +2,7 @@ Example Usage
 =============
 
 The large_image library can be used to read and access different file formats.  There are several common usage patterns.  These examples use ``sample.tiff`` as an example -- any readable image can be used in this case.
+To read more about accepted file formats, visit the :doc:`formats` page.
 
 Image Metadata
 --------------
@@ -107,7 +108,10 @@ Tiles are always ``tileWidth`` by ``tileHeight`` in pixels.  At the maximum leve
 Iterating Across an Image
 -------------------------
 
-Since most images are too large to conveniently fit in memory, it is useful to iterate through the image.  This can take the same parameters as ``getRegion`` to pick an output size and scale, but can also specify a tile size and overlap.  You can also get a specific tile with those parameters.  This tiling doesn't have to have any correspondence to the tiling of the original file.
+Since most images are too large to conveniently fit in memory, it is useful to iterate through the image.
+The ``tileIterator`` function can take the same parameters as ``getRegion`` to pick an output size and scale, but can also specify a tile size and overlap.
+You can also get a specific tile with those parameters.  This tiling doesn't have to have any correspondence to the tiling of the original file.
+The data for each tile is computed lazily, only once `tile['tile']` is accessed.
 
 .. code-block:: python
 
@@ -313,4 +317,45 @@ The ``large-image-source-zarr`` can be used to store multiple frame data with ar
     for nparray, x, y, time, param1 in fancy_algorithm():
         source.addTile(nparray, x, y, time=time, p1=param1)
     # The writer supports a variety of formats
+    source.write('/tmp/sample.zarr.zip', lossy=False)
+
+You may also choose to read tiles from one source and write modified tiles to a new source:
+
+.. code-block:: python
+
+    import large_image
+    original_source = large_image.open('path/to/original/image.tiff')
+    new_source = large_image.new()
+    for frame in original_source.getMetadata().get('frames', []):
+        for tile in original_source.tileIterator(frame=frame['Frame'], format='numpy'):
+            t, x, y = tile['tile'], tile['x'], tile['y']
+            kwargs = {
+                'z': frame['IndexZ'],
+                'c': frame['IndexC'],
+            }
+            modified_tile = modify_tile(t)
+            new_source.addTile(modified_tile, x=x, y=y, **kwargs)
+    new_source.write('path/to/new/image.tiff', lossy=False)
+
+In some cases, it may be beneficial to write to a single image from multiple processes or threads:
+
+.. code-block:: python
+
+    import large_image
+    import multiprocessing
+    # Important: Must be a pickleable function
+    def add_tile_to_source(tilesource, nparray, position):
+        tilesource.addTile(
+            nparray,
+            **position
+        )
+    source = large_image.new()
+    # Important: Maximum size must be allocated before any concurrency
+    add_tile_to_source(source, np.zeros(1, 1, 3), dict(x=max_x, y=max_y, z=max_z))
+    # Also works with multiprocessing.ThreadPool
+    with multiprocessing.Pool(max_workers=5) as pool:
+        pool.starmap(
+            add_tile_to_source,
+            [(source, t, t_pos) for t, t_pos in tileset]
+        )
     source.write('/tmp/sample.zarr.zip', lossy=False)
