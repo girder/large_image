@@ -39,7 +39,7 @@ Highlights
 Installation
 ------------
 
-In addition to installing the ``large-image`` package, you'll need at least one tile source (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
+In addition to installing the base ``large-image`` package, you'll need at least one tile source which corresponds to your target file format(s) (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
 
 Pip
 ~~~
@@ -118,7 +118,7 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-deepzoom``: A tile source for reading Deepzoom tiles.
 
-  - ``large-image-source-dicom``: A tile source for reading DICOM WSI images.
+  - ``large-image-source-dicom``: A tile source for reading DICOM Whole Slide Images (WSI).
 
   - ``large-image-source-gdal``: A tile source for reading geotiff files via GDAL.  This handles source data with more complex transforms than the mapnik tile source.
 
@@ -140,20 +140,21 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-tifffile``: A tile source using the tifffile library that can handle a wide variety of tiff-like files.
 
-  - ``large-image-source-vips``: A tile source for reading any files handled by libvips.  This also can be used for writing tiled images from numpy arrays.
+  - ``large-image-source-vips``: A tile source for reading any files handled by libvips.  This also can be used for writing tiled images from numpy arrays (up to 4 dimensions).
 
-  - ``large-image-source-zarr``: A tile source using the zarr library that can handle OME-Zarr (OME-NGFF) files as well as some other zarr files.
+  - ``large-image-source-zarr``: A tile source using the zarr library that can handle OME-Zarr (OME-NGFF) files as well as some other zarr files. This can also be used for writing N-dimensional tiled images from numpy arrays. Written images can be saved as any supported format.
 
   - ``large-image-source-test``: A tile source that generates test tiles, including a simple fractal pattern.  Useful for testing extreme zoom levels.
 
   - ``large-image-source-dummy``: A tile source that does nothing.
 
-  Most tile sources can be used with girder-large-image.  You can specific an extras_require of ``girder`` to include ``girder-large-image`` with the source.
+  Most tile sources can be used with girder-large-image.  You can specify an extras_require of ``girder`` to include ``girder-large-image`` with the source.
+
 
 - As a Girder plugin:
 
   - ``girder-large-image``: Large Image as a Girder_ 3.x plugin.
-    You can specify extras_require of ``tasks`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
+    You can install ``large_image[tasks]`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
 
   - ``girder-large-image-annotation``: Annotations for large images as a Girder_ 3.x plugin.
 

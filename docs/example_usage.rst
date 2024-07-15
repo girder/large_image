@@ -174,7 +174,7 @@ You can get the thumbnail in other image formats and sizes:
 Associated Images
 -----------------
 
-Many digital pathology images (also called whole slide images or WSI) contain secondary images that have additional information.  This commonly includes label and macro images.  A label image is a separate image of just the label of a slide.  A macro image is a small image of these entire slide or the entire slide excluding the label.  There can be other associated images, too.
+Many digital pathology images (also called whole slide images or WSI) contain secondary images that have additional information.  This commonly includes label and macro images.  A label image is a separate image of just the label of a slide.  A macro image is a small image of the entire slide either including or excluding the label.  There can be other associated images, too.
 
 .. code-block:: python
 
@@ -247,7 +247,7 @@ Any of the frames of such an image are accessed by adding a ``frame=<integer>`` 
 Channels, Bands, Samples, and Axes
 ----------------------------------
 
-Various large image formats refer to channels, bands, and samples.  This isn't consistent across different libraries.  In an attempt to harmonize the geospatial and medical image terminology, large_image uses ``bands`` or ``samples`` to refer to image plane components, such as red, green, blue, and alpha.  For geospatial data this can often have additional bands, such as near infrared or panchromatic.  ``channels`` are stored as separate frames and can be interpreted as different imaging modalities.  For example, a fluorescence microscopy image might have DAPI, CY5, and A594 channels.  A common color photograph file has 3 bands and 1 channel.
+Various large image formats refer to channels, bands, and samples.  This isn't consistent across different libraries.  In an attempt to harmonize the geospatial and medical image terminology, large_image uses ``bands`` or ``samples`` to refer to image plane components, such as red, green, blue, and alpha.  For geospatial data this can often have additional bands, such as near infrared or panchromatic.  ``channels`` are stored as separate frames and can be interpreted as different imaging modalities.  For example, a fluorescence microscopy image might have DAPI, CY5, and A594 channels.  A common color photograph file has 3 bands/samples and 1 channel.
 
 At times, image ``axes`` are used to indicate the order of data, especially when interpreted as an n-dimensional array.  The ``x`` and ``y`` axes are the horizontal and vertical dimensions of the image.  The ``s`` axis is the ``bands`` or ``samples``, such as red, green, and blue.  The ``c`` axis is the ``channels`` with special support for channel names.  This corresponds to distinct frames.
 

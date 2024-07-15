@@ -11,11 +11,11 @@ Python tile functions can return tile data as images, numpy arrays, or PIL Image
 Encoding
 --------
 
+The ``encoding`` parameter only affects output when ``format`` is ``TILE_FORMAT_IMAGE``.
+
 The ``encoding`` parameter can be one of ``JPEG``, ``PNG``, ``TIFF``, ``JFIF``, or ``TILED``.  When the tile is output as an image, this is the preferred format.  Note that ``JFIF`` is a specific variant of ``JPEG`` that will always use either the Y or YCbCr color space as well as constraining other options.  ``TILED`` will output a tiled tiff file; this is slower than ``TIFF`` but can support images of arbitrary size.
 
 Additional options are available based on the PIL.Image registered encoders.
-
-The ``encoding`` only affects output when ``format`` is ``TILE_FORMAT_IMAGE``.
 
 Associated with ``encoding``, some image formats have additional parameters.
 
@@ -26,7 +26,7 @@ Associated with ``encoding``, some image formats have additional parameters.
 Edges
 -----
 
-When a tile is requested at the right or bottom edge of the image, the tile could extend past the boundary of the image.  If the image is not an even multiple of the tile size, the ``edge`` parameter determines how the tile is generated.  A value of ``None`` or ``False`` will generate a standard sized tile where the area outside of the image space could have pixels of any color.  An ``edge`` value of ``'crop'`` or ``True`` will return a tile that is smaller than the standard size.  A value if the form of a hexadecimal encoded 8-bit-per-channel color (e.g., ``#rrggbb``) will ensure that the area outside of the image space is all that color.
+When a tile is requested at the right or bottom edge of the image, the tile could extend past the boundary of the image.  If the image is not an even multiple of the tile size, the ``edge`` parameter determines how the tile is generated.  A value of ``None`` or ``False`` will generate a standard sized tile where the area outside of the image space could have pixels of any color.  An ``edge`` value of ``'crop'`` or ``True`` will return a tile that is smaller than the standard size.  An ``edge`` value in the form of a hexadecimal encoded 8-bit-per-channel color (e.g., ``#rrggbb``) will ensure that the area outside of the image space is all that color.
 
 Style
 -----
@@ -45,7 +45,7 @@ A band definition is an object which can contain the following keys:
 
 - ``min``: the value to map to the first palette value.  Defaults to 0.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported minimum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'min:0.02' would exclude at most the dimmest 2% of values by using an appropriate value for the minimum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported minimum would otherwise be used.  'full' is the same as specifying 0.
 
-- ``max``: the value to map to the last palette value.  Defaults to 255.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported maximum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'max:0.02' would exclude at most the brightest 2% of values by using an appropriate value for the maximum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported maximum would otherwise be used.  'full' uses a value based on the data type of the band.  This will be 1 for a float data type and 65535 for a uint16 datatype.
+- ``max``: the value to map to the last palette value.  Defaults to 255.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported maximum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'max:0.02' would exclude at most the brightest 2% of values by using an appropriate value for the maximum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported maximum would otherwise be used.  'full' uses a value based on the data type of the band.  This will be 1 for a float data type, 255 for a uint8 data type, and 65535 for a uint16 data type.
 
 - ``palette``: This is a single color string, a palette name, or a list of two or more colors. The values between min and max are interpolated using a piecewise linear algorithm or a nearest value algorithm (depending on the ``scheme``) to map to the specified palette values.  It can be specified in a variety of ways:
 
