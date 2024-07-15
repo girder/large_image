@@ -502,12 +502,10 @@ class LargeImageResource(Resource):
                                                     createJob=createJobs, localJob=localJobs)
                         result['largeImagesRemovedAndRecreated'] += 1
             else:
-                largeImageFileId = None
-                files = list(Item().childFiles(item=item))
+                files = list(Item().childFiles(item=item, limit=2))
                 if len(files) == 1:
-                    largeImageFileId = str(files[0]['_id'])
-                    ImageItem().createImageItem(item, File().load(user=user, id=largeImageFileId),
-                                                createJob=createJobs, localJob=localJobs)
+                    ImageItem().createImageItem(item, files[0], createJob=createJobs,
+                                                localJob=localJobs)
                     result['largeImagesCreated'] += 1
         return result
 
