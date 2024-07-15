@@ -159,7 +159,7 @@ class Annotationelement(Model):
         annotation['annotation']['elements'] = list(self.yieldElements(
             annotation, region, annotation['_elementQuery']))
 
-    def yieldElements(self, annotation, region=None, info=None):  # noqa
+    def yieldElements(self, annotation, region=None, info=None, bbox=False):  # noqa
         """
         Given an annotation, fetch the elements from the database.
 
@@ -202,6 +202,7 @@ class Annotationelement(Model):
             maxDetails (as specified by the region dictionary), details (sum of
             details returned), limit (as specified by region), centroids (a
             boolean based on the region specification).
+        :param bbox: if True, always return bounding box information.
         :returns: a list of elements.  If centroids were requested, each entry
             is a list with str(id), x, y, size.  Otherwise, each entry is the
             element record.
@@ -254,6 +255,9 @@ class Annotationelement(Model):
             info['propskeys'] = propskeys
         elif region.get('bbox'):
             fields.pop('bbox.details')
+            fields['bbox'] = True
+        if bbox:
+            fields.pop('bbox.details', None)
             fields['bbox'] = True
         elementCursor = self.find(
             query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
@@ -328,6 +332,8 @@ class Annotationelement(Model):
                                 info['bbox'].get(lkey, entry['bbox'][lkey]), entry['bbox'][lkey])
                             info['bbox'][hkey] = max(
                                 info['bbox'].get(hkey, entry['bbox'][hkey]), entry['bbox'][hkey])
+                elif bbox and 'bbox' in entry:
+                    element['_bbox'] = entry['bbox']
                 yield element
                 details += entry.get('bbox', {}).get('details', 1)
             count += 1
