@@ -3,43 +3,107 @@ Configuration Options
 
 Some functionality of large_image is controlled through configuration parameters.  These can be read or set via python using functions in the ``large_image.config`` module, `getConfig <./_build/large_image/large_image.html#large_image.config.getConfig>`_ and `setConfig <./_build/large_image/large_image.html#large_image.config.setConfig>`_.
 
-Configuration parameters:
+.. list-table:: Configuration Parameters
+   :widths: 30 50 30 20 20
+   :header-rows: 1
 
-- ``logger``: a Python logger.  Most log messages are sent here.
-
-- ``logprint``: a Python logger.  Messages about available tilesources are sent here.
-
-- ``cache_backend``: either ``python`` (the default) or ``memcached``, specifying where tiles are cached.  If memcached is not available for any reason, the python cache is used instead.
-
-- ``cache_python_memory_portion``: If tiles are cached in python, the cache is sized so that it is expected to use less than 1 / (``cache_python_memory_portion``) of the available memory.  This is an integer.
-
-- ``cache_memcached_url``: If tiles are cached in memcached, the url or list of urls where the memcached server is located.  Default '127.0.0.1'.
-
-- ``cache_memcached_username``: A username for the memcached server.  Default ``None``.
-
-- ``cache_memcached_password``: A password for the memcached server.  Default ``None``.
-
-- ``cache_redis_url``: If tiles are cached in redis, the url or list of urls where the redis server is located.  Default '127.0.0.1:6379'.
-
-- ``cache_redis_username``: A username for the redis server.  Default ``None``.
-
-- ``cache_redis_password``: A password for the redis server.  Default ``None``.
-
-- ``cache_tilesource_memory_portion``: Tilesources are cached on open so that subsequent accesses can be faster.  These use file handles and memory.  This limits the maximum based on a memory estimation and using no more than 1 / (``cache_tilesource_memory_portion``) of the available memory.
-
-- ``cache_tilesource_maximum``: If this is non-zero, this further limits the number of tilesources than can be cached to this value.
-
-- ``cache_sources``: If set to False, the default will be to not cache tile sources.  This has substantial performance penalties if sources are used multiple times, so should only be set in singular dynamic environments such as experimental notebooks.
-
-- ``max_small_image_size``: The PIL tilesource is used for small images if they are no more than this many pixels along their maximum dimension.
-
-- ``source_bioformats_ignored_names``, ``source_pil_ignored_names``, ``source_vips_ignored_names``: Some tile sources can read some files that are better read by other tilesources.  Since reading these files is suboptimal, these tile sources have a setting that, by default, ignores files without extensions or with particular extensions.  This setting is a Python regular expression.  For bioformats this defaults to ``r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'``.
-
-- ``all_sources_ignored_names``: If a file matches the regular expression in this setting, it will only be opened by sources that explicitly match the extension or mimetype.  Some formats are composed of multiple files that can be read as either a small image or as a large image depending on the source; this prohibits all sources that don't explicitly support the format.
-
-- ``icc_correction``: If this is True or undefined, ICC color correction will be applied for tile sources that have ICC profile information.  If False, correction will not be applied.  If the style used to open a tilesource specifies ICC correction explicitly (on or off), then this setting is not used.  This may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``True`` is the same as ``perceptual``.
-
-- ``max_annotation_input_file_length``: When an annotation file is uploaded through Girder, it is loaded into memory, validated, and then added to the database.  This is the maximum number of bytes that will be read directly.  Files larger than this are ignored.  If unspecified, this defaults to the larger of 1 GByte and 1/16th of the system virtual memory.
+   * - Key(s)
+     - Description
+     - Type
+     - Required
+     - Default
+   * - ``logger``
+     - Most log messages are sent here.
+     - ``logging.Logger``
+     -
+     -
+   * - ``logprint``
+     - Messages about available tilesources are sent here.
+     - ``logging.Logger``
+     -
+     -
+   * - ``cache_backend``
+     - String specifying how tiles are cached.  If memcached is not available for any reason, the python cache is used instead.
+     - ``str: "python" | "memcached"``  # What about redis?
+     - ``False``
+     - ``"python"``
+   * - ``cache_python_memory_portion``
+     - If tiles are cached with python, the cache is sized so that it is expected to use less than 1 / (``cache_python_memory_portion``) of the available memory.
+     - ``int``
+     -
+     -
+   * - ``cache_memcached_url``
+     - If tiles are cached in memcached, the url or list of urls where the memcached server is located.
+     - ``str | List[str]``
+     - ``False``
+     - ``"127.0.0.1"``
+   * - ``cache_memcached_username``
+     - A username for the memcached server.
+     -
+     -
+     - ``None``
+   * - ``cache_memcached_password``
+     - A password for the memcached server.
+     -
+     -
+     - ``None``
+   * - ``cache_redis_url``
+     - If tiles are cached in redis, the url or list of urls where the redis server is located.
+     - ``str | List[str]``
+     -
+     - ``"127.0.0.1:6379"``
+   * - ``cache_redis_username``
+     - A username for the redis server.
+     -
+     -
+     - ``None``
+   * - ``cache_redis_password``
+     - A password for the redis server.
+     -
+     -
+     - ``None``
+   * - ``cache_tilesource_memory_portion``
+     - Tilesources are cached on open so that subsequent accesses can be faster.  These use file handles and memory.  This limits the maximum based on a memory estimation and using no more than 1 / (``cache_tilesource_memory_portion``) of the available memory.
+     - ``int``
+     -
+     -
+   * - ``cache_tilesource_maximum``
+     - If this is non-zero, this further limits the number of tilesources than can be cached to this value.
+     -
+     -
+     -
+   * - ``cache_sources``
+     - If set to False, the default will be to not cache tile sources.  This has substantial performance penalties if sources are used multiple times, so should only be set in singular dynamic environments such as experimental notebooks.
+     -
+     -
+     -
+   * - ``max_small_image_size``
+     - The PIL tilesource is used for small images if they are no more than this many pixels along their maximum dimension.
+     - ``int``
+     -
+     -
+   * - ``source_bioformats_ignored_names``,
+       ``source_pil_ignored_names``,
+       ``source_vips_ignored_names``
+     - Some tile sources can read some files that are better read by other tilesources.  Since reading these files is suboptimal, these tile sources have a setting that, by default, ignores files without extensions or with particular extensions.
+     - ``str`` (regular expression)
+     -
+     - ``r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'`` (for bioformats)
+   * - ``all_sources_ignored_names``
+     - If a file matches the regular expression in this setting, it will only be opened by sources that explicitly match the extension or mimetype.  Some formats are composed of multiple files that can be read as either a small image or as a large image depending on the source; this prohibits all sources that don't explicitly support the format.
+     -
+     -
+     -
+   * - ``icc_correction``
+     -  If this is True or undefined, ICC color correction will be applied for tile sources that have ICC profile information.  If False, correction will not be applied.  If the style used to open a tilesource specifies ICC correction explicitly (on or off), then this setting is not used.  This may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``True`` is the same as ``perceptual``.
+     - ``bool | str``
+     -
+     -
+   * - ``max_annotation_input_file_length``
+     - When an annotation file is uploaded through Girder, it is loaded into memory, validated, and then added to the database.  This is the maximum number of bytes that will be read directly.  Files larger than this are ignored.
+     - ``int``
+     -
+     - The larger of 1 GByte and 1/16th of the system virtual memory
 
 
 Configuration from Python
@@ -55,6 +119,8 @@ Configuration from Environment
 ------------------------------
 
 All configuration parameters can be specified as environment parameters by prefixing their uppercase names with ``LARGE_IMAGE_``.  For instance, ``LARGE_IMAGE_CACHE_BACKEND=python`` specifies the cache backend.  If the values can be decoded as json, they will be parsed as such.  That is, numerical values will be parsed as numbers; to parse them as strings, surround them with double quotes.
+
+.. The mention of numbers needing quotes to be considered strings could be confusing. Do the above variables need numbers as strings?
 
 As another example, to use the least memory possible, set ``LARGE_IMAGE_CACHE_BACKEND=python LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION=1000 LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=2``.  The first setting specifies caching tiles in the main process and not in memcached or an external cache.  The second setting asks to use 1/1000th of the memory for a tile cache.  The third settings caches no more than 2 tile sources (2 is the minimum).
 

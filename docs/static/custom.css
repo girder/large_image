@@ -1,7 +1,7 @@
 .indextable.genindextable td {
   padding-right: 10px
 }
-.indextable.genindextable li {
+.indextable.genindextable li{
   word-break: break-word;
 }
 .indextable.genindextable a:before {
@@ -29,6 +29,9 @@
 }
 .wy-menu-vertical ul ul {
   padding-bottom: 0;
+}
+.wy-table-responsive table td,.wy-table-responsive table th{
+  white-space:normal
 }
 html.writer-html5 .rst-content dl.field-list dl.field-list {
     grid-template-columns: auto minmax(60%,95%);
