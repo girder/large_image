@@ -20,28 +20,11 @@ import pathlib
 import struct
 import tempfile
 import threading
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import PIL.Image
-from osgeo import gdal, gdal_array, gdalconst, osr
-
-try:
-    gdal.UseExceptions()
-except Exception:
-    pass
-
-# isort: off
-
-# pyproj stopped supporting older pythons, so on those versions its database is
-# aging; as such, if on those older versions of python if it is imported before
-# gdal, there can be a database version conflict; importing after gdal avoids
-# this.
-import pyproj
-
-# isort: on
-
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
@@ -61,6 +44,42 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+gdal = None
+gdal_array = None
+gdalconst = None
+osr = None
+pyproj = None
+
+
+def _lazyImport():
+    """
+    Import the gdal module.  This is done when needed rather than in the
+    module initialization because it is slow.
+    """
+    global gdal, gdal_array, gdalconst, osr, pyproj
+
+    if gdal is None:
+        try:
+            from osgeo import gdal, gdal_array, gdalconst, osr
+
+            try:
+                gdal.UseExceptions()
+            except Exception:
+                pass
+
+            # isort: off
+
+            # pyproj stopped supporting older pythons, so on those versions its
+            # database is aging; as such, if on those older versions of python
+            # if it is imported before gdal, there can be a database version
+            # conflict; importing after gdal avoids this.
+            import pyproj
+
+            # isort: on
+        except ImportError:
+            msg = 'gdal module not found.'
+            raise TileSourceError(msg)
 
 
 class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
@@ -91,6 +110,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             specify unitsPerPixel.
         """
         super().__init__(path, **kwargs)
+        _lazyImport()
+
         self.addKnownExtensions()
         self._bounds = {}
         self._largeImagePath = self._getLargeImagePath()
@@ -300,6 +321,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         :returns: a proj4 projection object.  None if the specified projection
             cannot be created.
         """
+        _lazyImport()
+
         if isinstance(proj, bytes):
             proj = proj.decode()
         if not isinstance(proj, str):
@@ -940,6 +963,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         :param path: The path to the file
         :returns: True if geospatial.
         """
+        _lazyImport()
+
         try:
             ds = gdal.Open(str(path), gdalconst.GA_ReadOnly)
         except Exception:
@@ -958,6 +983,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     @classmethod
     def addKnownExtensions(cls):
         if not hasattr(cls, '_addedExtensions'):
+            _lazyImport()
+
             cls._addedExtensions = True
             cls.extensions = cls.extensions.copy()
             cls.mimeTypes = cls.mimeTypes.copy()

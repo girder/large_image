@@ -11,7 +11,6 @@ from pathlib import Path
 
 import numpy as np
 import packaging.version
-import zarr
 
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -29,6 +28,23 @@ except PackageNotFoundError:
 
 
 warnings.filterwarnings('ignore', category=FutureWarning, module='zarr')
+
+zarr = None
+
+
+def _lazyImport():
+    """
+    Import the zarr module.  This is done when needed rather than in the module
+    initialization because it is slow.
+    """
+    global zarr
+
+    if zarr is None:
+        try:
+            import zarr
+        except ImportError:
+            msg = 'zarr module not found.'
+            raise TileSourceError(msg)
 
 
 class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -70,6 +86,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
+        _lazyImport()
         if str(path).startswith(NEW_IMAGE_PATH_FLAG):
             self._initNew(path, **kwargs)
         else:
