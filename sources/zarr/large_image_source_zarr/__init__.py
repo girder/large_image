@@ -1,4 +1,5 @@
 import math
+import multiprocessing
 import os
 import shutil
 import tempfile
@@ -127,11 +128,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Initialize the tile class for creating a new image.
         """
-        self._tempdir = tempfile.TemporaryDirectory(path)
-        self._zarr_store = zarr.DirectoryStore(self._tempdir.name)
-        self._zarr = zarr.open(self._zarr_store, mode='w')
-        # Make unpickleable
-        self._unpickleable = True
+        self._tempdir = Path(tempfile.gettempdir(), path)
+        self._created = False
+        if not self._tempdir.exists():
+            self._created = True
+        self._zarr_store = zarr.DirectoryStore(str(self._tempdir))
+        self._zarr = zarr.open(self._zarr_store, mode='a')
         self._largeImagePath = None
         self._dims = {}
         self.sizeX = self.sizeY = self.levels = 0
@@ -140,7 +142,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._output = None
         self._editable = True
         self._bandRanges = None
-        self._addLock = threading.RLock()
+        self._threadLock = threading.RLock()
+        self._processLock = multiprocessing.Lock()
         self._framecount = 0
         self._mm_x = 0
         self._mm_y = 0
@@ -157,7 +160,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except Exception:
                 pass
             try:
-                self._tempdir.cleanup()
+                if self._created:
+                    shutil.rmtree(self._tempdir)
             except Exception:
                 pass
 
@@ -334,7 +338,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         Validate that we can read tiles from the zarr parent group in
         self._zarr.  Set up the appropriate class variables.
         """
-        if self._editable:
+        if self._editable and hasattr(self, '_axes'):
             self._writeInternalMetadata()
         found = self._scanZarrGroup(self._zarr)
         if found['best'] is None:
@@ -596,7 +600,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         }
         tile, mask, placement, axes = self._validateNewTile(tile, mask, placement, axes)
 
-        with self._addLock:
+        with self._threadLock and self._processLock:
             self._axes = {k: i for i, k in enumerate(axes)}
             new_dims = {
                 a: max(
@@ -673,7 +677,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             with an image.  The numpy array can have 2 or 3 dimensions.
         """
         data, _ = _imageToNumpy(image)
-        with self._addLock:
+        with self._threadLock and self._processLock:
             if imageKey is None:
                 # Each associated image should be in its own group
                 num_existing = len(self.getAssociatedImagesList())
@@ -688,7 +692,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _writeInternalMetadata(self):
         self._checkEditable()
-        with self._addLock:
+        with self._threadLock and self._processLock:
             name = str(self._tempdir.name).split('/')[-1]
             arrays = dict(self._zarr.arrays())
             channel_axis = self._axes.get('c', self._axes.get('s'))
@@ -700,8 +704,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for arr_name in arrays:
                 level = int(arr_name)
                 scale = [1.0 for a in sorted_axes]
-                scale[self._axes.get('x')] = self._mm_x * (2 ** level)
-                scale[self._axes.get('y')] = self._mm_y * (2 ** level)
+                scale[self._axes.get('x')] = (self._mm_x or 0) * (2 ** level)
+                scale[self._axes.get('y')] = (self._mm_y or 0) * (2 ** level)
                 dataset_metadata = {
                     'path': arr_name,
                     'coordinateTransformations': [{
@@ -974,7 +978,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         **frame_position,
                     )
 
-        source._writeInternalMetadata()
+        source._validateZarr()
 
         if suffix in ['.zarr', '.db', '.sqlite', '.zip']:
             if resample is None:
@@ -987,7 +991,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             source._writeInternalMetadata()  # rewrite with new level datasets
 
             if suffix == '.zarr':
-                shutil.copytree(source._tempdir.name, path)
+                shutil.copytree(str(source._tempdir), path)
             elif suffix in ['.db', '.sqlite']:
                 sqlite_store = zarr.SQLiteStore(path)
                 zarr.copy_store(source._zarr_store, sqlite_store, if_exists='replace')
@@ -1000,7 +1004,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             from large_image_converter import convert
 
-            attrs_path = Path(source._tempdir.name) / '.zattrs'
+            attrs_path = source._tempdir / '.zattrs'
             params = {}
             if lossy and self.dtype == np.uint8:
                 params['compression'] = 'jpeg'
