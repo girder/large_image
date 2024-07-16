@@ -8,6 +8,7 @@
 - Support Girder flat-mount paths ([#1576](../../pull/1576))
 - Lazily import some modules to speed up large_image import speed ([#1577](../../pull/1577))
 - Create or check large images for each item in a folder ([#1572](../../pull/1572))
+- Support multiprocessing and pickling with a zarr sink ([#1551](../../pull/1551))
 
 ## 1.29.2
 
