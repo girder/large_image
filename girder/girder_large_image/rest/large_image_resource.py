@@ -35,13 +35,14 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource
-from girder.constants import SortDir, TokenScope
+from girder.constants import AccessType, SortDir, TokenScope
 from girder.exceptions import RestException
 from girder.models.file import File
+from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.setting import Setting
 from large_image import cache_util
-from large_image.exceptions import TileGeneralError
+from large_image.exceptions import TileGeneralError, TileSourceError
 
 from .. import constants, girder_tilesource
 from ..models.image_item import ImageItem
@@ -255,6 +256,7 @@ class LargeImageResource(Resource):
         self.route('GET', ('histograms',), self.countHistograms)
         self.route('DELETE', ('histograms',), self.deleteHistograms)
         self.route('DELETE', ('tiles', 'incomplete'), self.deleteIncompleteTiles)
+        self.route('PUT', ('folder', ':id', 'tiles'), self.createLargeImages)
 
     @describeRoute(
         Description('Clear tile source caches to release resources and file handles.'),
@@ -444,6 +446,70 @@ class LargeImageResource(Resource):
                 File().remove(file)
                 removed += 1
         return removed
+
+    @access.user(scope=TokenScope.DATA_WRITE)
+    @autoDescribeRoute(
+        Description('Create new large images for all items within a folder.')
+        .notes('Does not work for items with multiple files and skips over items with '
+               'existing or unfinished large images.')
+        .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE,
+                    required=True)
+        .param('force', 'Whether creation job(s) should be forced for each large image.',
+               required=False, default=False, dataType='boolean')
+        .param('localJobs', 'Whether the job(s) created should be local.', required=False,
+               default=False, dataType='boolean')
+        .param('recurse', 'Whether child folders should be recursed.', required=False,
+               default=False, dataType='boolean')
+        .errorResponse('ID was invalid.')
+        .errorResponse('Write access was denied for the folder.', 403),
+    )
+    def createLargeImages(self, folder, params):
+        user = self.getCurrentUser()
+        createJobs = 'always' if self.boolParam('force', params, default=False) else True
+        return self.createImagesRecurseOption(folder=folder, createJobs=createJobs, user=user,
+                                              recurse=params.get('recurse'),
+                                              localJobs=params.get('localJobs'))
+
+    def createImagesRecurseOption(self, folder, createJobs, user, recurse, localJobs):
+        result = {'childFoldersRecursed': 0,
+                  'itemsSkipped': 0,
+                  'largeImagesCreated': 0,
+                  'largeImagesRemovedAndRecreated': 0,
+                  'totalItems': 0}
+        if recurse:
+            for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
+                result['childFoldersRecursed'] += 1
+                childResult = self.createImagesRecurseOption(folder=childFolder,
+                                                             createJobs=createJobs, user=user,
+                                                             recurse=recurse, localJobs=localJobs)
+                for key in childResult:
+                    result[key] += childResult[key]
+        for item in Folder().childItems(folder=folder):
+            result['totalItems'] += 1
+            if item.get('largeImage'):
+                if item['largeImage'].get('expected'):
+                    result['itemsSkipped'] += 1
+                else:
+                    try:
+                        ImageItem().getMetadata(item)
+                        result['itemsSkipped'] += 1
+                        continue
+                    except (TileSourceError, KeyError):
+                        previousFileId = item['largeImage'].get('originalId',
+                                                                item['largeImage']['fileId'])
+                        ImageItem().delete(item)
+                        ImageItem().createImageItem(item, File().load(user=user, id=previousFileId),
+                                                    createJob=createJobs, localJob=localJobs)
+                        result['largeImagesRemovedAndRecreated'] += 1
+            else:
+                files = list(Item().childFiles(item=item, limit=2))
+                if len(files) == 1:
+                    ImageItem().createImageItem(item, files[0], createJob=createJobs,
+                                                localJob=localJobs)
+                    result['largeImagesCreated'] += 1
+                else:
+                    result['itemsSkipped'] += 1
+        return result
 
     @describeRoute(
         Description('Remove large images from items where the large image job '
