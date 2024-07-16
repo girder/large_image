@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- Improve plottable data endpoint to better fetch adjacent items and annotations ([#1573](../../pull/1573), [#1574](../../pull/1574))), [#1575](../../pull/1575)))
+- Improve plottable data endpoint to better fetch adjacent items and annotations ([#1573](../../pull/1573), [#1574](../../pull/1574), [#1575](../../pull/1575))
 - Support Girder flat-mount paths ([#1576](../../pull/1576))
 - Lazily import some modules to speed up large_image import speed ([#1577](../../pull/1577))
 - Create or check large images for each item in a folder ([#1572](../../pull/1572))
