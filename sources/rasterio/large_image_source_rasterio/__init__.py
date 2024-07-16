@@ -57,7 +57,6 @@ def _lazyImport():
     """
     global Affine, rio
 
-    print('XXXXXXXXXXXX')
     if rio is None:
         try:
             import affine
