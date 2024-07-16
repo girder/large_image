@@ -454,7 +454,7 @@ class LargeImageResource(Resource):
                'existing or unfinished large images.')
         .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE,
                     required=True)
-        .param('createJobs', 'Whether job(s) should be created for each large image.',
+        .param('force', 'Whether creation job(s) should be forced for each large image.',
                required=False, default=False, dataType='boolean')
         .param('localJobs', 'Whether the job(s) created should be local.', required=False,
                default=False, dataType='boolean')
@@ -465,9 +465,7 @@ class LargeImageResource(Resource):
     )
     def createLargeImages(self, folder, params):
         user = self.getCurrentUser()
-        createJobs = params.get('createJobs')
-        if createJobs:
-            createJobs = 'always' or True
+        createJobs = 'always' if self.boolParam('force', params, default=False) else True
         return self.createImagesRecurseOption(folder=folder, createJobs=createJobs, user=user,
                                               recurse=params.get('recurse'),
                                               localJobs=params.get('localJobs'))
@@ -496,7 +494,7 @@ class LargeImageResource(Resource):
                         ImageItem().getMetadata(item)
                         result['itemsSkipped'] += 1
                         continue
-                    except TileSourceError:
+                    except (TileSourceError, KeyError):
                         previousFileId = item['largeImage'].get('originalId',
                                                                 item['largeImage']['fileId'])
                         ImageItem().delete(item)

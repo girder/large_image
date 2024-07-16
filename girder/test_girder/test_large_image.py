@@ -254,6 +254,18 @@ def testFolderCreateImages(server, admin, user, fsAssetstore):
     item = Item().load(itemId, user=admin)
     # Check that this item became a large image again
     assert 'largeImage' in item
+    # Hitting the endpoint again should skip the item
+    resp = server.request(
+        method='PUT', path=f'/large_image/folder/{folderId}/tiles', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['itemsSkipped'] == 1
+    # If the item's source isn't working, it should be recreated.
+    item['largeImage']['sourceName'] = 'unknown'
+    Item().updateItem(item)
+    resp = server.request(
+        method='PUT', path=f'/large_image/folder/{folderId}/tiles', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['largeImagesRemovedAndRecreated'] == 1
 
 
 @pytest.mark.singular()
