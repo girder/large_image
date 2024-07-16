@@ -15,6 +15,7 @@
 #############################################################################
 
 import datetime
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -644,15 +645,20 @@ class LargeImagePlugin(GirderPlugin):
 
         unbindGirderEventsByHandlerName('large_image')
 
+        # Chrome doesn't respect cache headers when it comes to JavaScript, and in particular
+        # the geojs bundle is cached over-aggressively. We manually bust it using the file checksum.
+        static_dir = Path(__file__).parent / 'web_client' / 'dist'
+        checksum = hashlib.md5((static_dir / 'extra' / 'geojs.js').read_bytes()).hexdigest()
+
         registerPluginStaticContent(
             plugin='large_image',
             css=['/style.css'],
             js=[
                 '/girder-plugin-large-image.umd.cjs',
                 # geojs must be loaded after the plugin JS
-                '/extra/geojs.js',
+                f'/extra/geojs.js?h={checksum[:10]}',
             ],
-            staticDir=Path(__file__).parent / 'web_client' / 'dist',
+            staticDir=static_dir,
             tree=info['serverRoot'],
         )
 
