@@ -10,6 +10,9 @@
 - Create or check large images for each item in a folder ([#1572](../../pull/1572))
 - Support multiprocessing and pickling with a zarr sink ([#1551](../../pull/1551))
 
+### Bug Fixes
+- Harden marking S3 uploads as large images ([#1579](../../pull/1579))
+
 ## 1.29.2
 
 ### Improvements
