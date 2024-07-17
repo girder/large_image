@@ -16,8 +16,10 @@
 
 import datetime
 import json
+import os
 import re
 import threading
+import time
 import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
@@ -99,6 +101,20 @@ def _postUpload(event):
             job = Job().load(item['largeImage']['jobId'], force=True)
             if job and job['status'] == JobStatus.SUCCESS:
                 Job().save(job)
+    else:
+        if 's3FinalizeRequest' in fileObj and 'itemId' in fileObj:
+            logger.info(f'Checking if S3 upload of {fileObj["name"]} is a large image')
+
+            localPath = File().getLocalFilePath(fileObj)
+            for _ in range(300):
+                size = os.path.getsize(localPath)
+                if size == fileObj['size'] and len(
+                        open(localPath, 'rb').read(500)) == min(size, 500):
+                    break
+                logger.info(
+                    f'S3 upload not fully present ({size}/{fileObj["size"]} bytes reported)')
+                time.sleep(0.1)
+            checkForLargeImageFiles(girder.events.Event(event.name, fileObj))
 
 
 def _updateJob(event):
@@ -160,6 +176,8 @@ def _updateJob(event):
 
 def checkForLargeImageFiles(event):  # noqa
     file = event.info
+    if 'file.save' in event.name and 's3FinalizeRequest' in file:
+        return
     logger.info('Handling file %s (%s)', file['_id'], file['name'])
     possible = False
     mimeType = file.get('mimeType')
