@@ -54,7 +54,7 @@ setup(
         f'large-image{limit_version}',
         'gdal',
         'packaging',
-        'pyproj>=2.2.0',
+        'pyproj>=3.5.0',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',

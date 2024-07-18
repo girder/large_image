@@ -10,6 +10,9 @@
 - Create or check large images for each item in a folder ([#1572](../../pull/1572))
 - Support multiprocessing and pickling with a zarr sink ([#1551](../../pull/1551))
 
+### Changes
+- Remove old code that handled old pyproj packages ([#1581](../../pull/1581))
+
 ### Bug Fixes
 - Harden marking S3 uploads as large images ([#1579](../../pull/1579))
 
