@@ -19,17 +19,23 @@ from .base import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
 AvailableTileSources: Dict[str, Type[FileTileSource]] = {}
 
 
-def isGeospatial(path: Union[str, PosixPath]) -> bool:
+def isGeospatial(
+        path: Union[str, PosixPath],
+        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None) -> bool:
     """
     Check if a path is likely to be a geospatial file.
 
     :param path: The path to the file
+    :param availableSources: an optional ordered dictionary of sources to use
+        for potentially checking the path.
     :returns: True if geospatial.
     """
-    if not len(AvailableTileSources):
-        loadTileSources()
-    for sourceName in sorted(AvailableTileSources):
-        source = AvailableTileSources[sourceName]
+    if availableSources is None:
+        if not len(AvailableTileSources):
+            loadTileSources()
+        availableSources = AvailableTileSources
+    for sourceName in sorted(availableSources):
+        source = availableSources[sourceName]
         if hasattr(source, 'isGeospatial'):
             result = None
             try:
@@ -85,7 +91,7 @@ def getSortedSourceList(
     baseName = os.path.basename(uriWithoutProtocol)
     extensions = [ext.lower() for ext in baseName.split('.')[1:]]
     properties = {
-        '_geospatial_source': isGeospatial(pathOrUri),
+        '_geospatial_source': isGeospatial(pathOrUri, availableSources),
     }
     isNew = str(pathOrUri).startswith(NEW_IMAGE_PATH_FLAG)
     ignored_names = config.getConfig('all_sources_ignored_names')

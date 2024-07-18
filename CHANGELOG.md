@@ -9,6 +9,7 @@
 - Lazily import some modules to speed up large_image import speed ([#1577](../../pull/1577))
 - Create or check large images for each item in a folder ([#1572](../../pull/1572))
 - Support multiprocessing and pickling with a zarr sink ([#1551](../../pull/1551))
+- Allow checking for geospatial sources to use a specific source list ([#1582](../../pull/1582))
 
 ### Changes
 - Remove old code that handled old pyproj packages ([#1581](../../pull/1581))
