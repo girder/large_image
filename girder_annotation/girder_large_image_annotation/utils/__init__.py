@@ -549,7 +549,7 @@ class PlottableItemData:
                 rows.setdefault('_3_annotation.id', []).append(str(annotations[auxidx]['_id']))
                 rows.setdefault('_4_annotation.description', []).append(
                     annotations[auxidx].get('annotation', {}).get('description'))
-            rows.setdefault('_5_annotationelement.id', []).append(elem['id'])
+            rows.setdefault('_5_annotationelement.id', []).append(str(elem['id']))
             rows.setdefault('annotationelement.group', []).append(
                 elem.get('group') or None)
             rows.setdefault('annotationelement.label', []).append(
