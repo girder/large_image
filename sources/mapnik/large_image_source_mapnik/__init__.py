@@ -20,7 +20,7 @@ from importlib.metadata import version as _importlib_version
 
 import mapnik
 import PIL.Image
-from large_image_source_gdal import GDALFileTileSource, InitPrefix
+from large_image_source_gdal import GDALFileTileSource
 from osgeo import gdal, gdalconst
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -36,13 +36,6 @@ except PackageNotFoundError:
 
 
 mapnik.logger.set_severity(mapnik.severity_type.Debug)
-
-
-try:
-    mapnik.Projection('epsg:3857')
-    NeededInitPrefix = ''
-except RuntimeError:
-    NeededInitPrefix = InitPrefix
 
 
 class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
@@ -101,7 +94,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             specify unitsPerPixel.
         """
         if projection and projection.lower().startswith('epsg'):
-            projection = NeededInitPrefix + projection.lower()
+            projection = projection.lower()
         super().__init__(
             path, projection=projection, unitsPerPixel=unitsPerPixel, **kwargs)
 
@@ -138,7 +131,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             }
         if not len(datasets):
             try:
-                self.getBounds(NeededInitPrefix + 'epsg:3857')
+                self.getBounds('epsg:3857')
             except RuntimeError:
                 self._bounds.clear()
                 del self._netcdf
