@@ -382,7 +382,6 @@ class PlottableItemData:
                     # skip if item doesn't have appropriate metadata or
                     # annotations.  If skipping, add to list to check if
                     # dataframe
-                    # TODO:
                     self.items.append(entry)
         # TODO: find csv/xlsx/dataframe items in the folder, exclude them from
         # the item list but include them in general
@@ -550,6 +549,11 @@ class PlottableItemData:
                 rows.setdefault('_3_annotation.id', []).append(str(annotations[auxidx]['_id']))
                 rows.setdefault('_4_annotation.description', []).append(
                     annotations[auxidx].get('annotation', {}).get('description'))
+            rows.setdefault('_5_annotationelement.id', []).append(elem['id'])
+            rows.setdefault('annotationelement.group', []).append(
+                elem.get('group') or None)
+            rows.setdefault('annotationelement.label', []).append(
+                elem.get('label', {}).get('value') or None)
             if '_bbox' in elem:
                 rows.setdefault('_bbox.x0', []).append(elem['_bbox']['lowx'])
                 rows.setdefault('_bbox.y0', []).append(elem['_bbox']['lowy'])
@@ -586,6 +590,9 @@ class PlottableItemData:
             columns, '_4_annotation.description', 'Annotation Description', '',
             'description', 'annotationelement')
         self._addColumn(
+            columns, '_5_annotationelement.id', 'Annotation Element ID', '',
+            'element_id', 'annotationelement')
+        self._addColumn(
             columns, '_bbox.x0', 'Bounding Box Low X', '', 'lowx', 'annotationelement')
         self._addColumn(
             columns, '_bbox.y0', 'Bounding Box Low Y', '', 'lowy', 'annotationelement')
@@ -593,6 +600,12 @@ class PlottableItemData:
             columns, '_bbox.x1', 'Bounding Box High X', '', 'highx', 'annotationelement')
         self._addColumn(
             columns, '_bbox.y1', 'Bounding Box High Y', '', 'highy', 'annotationelement')
+        self._addColumn(
+            columns, 'annotationelement.group', 'Annotation Group', '',
+            'group', 'annotationelement')
+        self._addColumn(
+            columns, 'annotationelement.label', 'Annotation Label', '',
+            'group', 'annotationelement')
         keys = {}
         for auxidx, elems in enumerate(elements):
             if not elems:
