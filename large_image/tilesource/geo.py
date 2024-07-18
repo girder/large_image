@@ -11,13 +11,6 @@ from ..exceptions import TileSourceError
 from .base import FileTileSource
 from .utilities import ImageBytes, JSONDict, getPaletteColors
 
-try:
-    import pyproj
-    has_pyproj = True
-    _pyproj_under_6 = int(pyproj.proj_version_str.split('.')[0]) < 6
-except Exception:
-    has_pyproj = False
-
 # Inform the tile source cache about the potential size of this tile source
 CacheProperties['tilesource']['itemExpectedSize'] = max(
     CacheProperties['tilesource']['itemExpectedSize'],
@@ -26,9 +19,6 @@ CacheProperties['tilesource']['itemExpectedSize'] = max(
 # Used to cache pixel size for projections
 ProjUnitsAcrossLevel0: Dict[str, float] = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
-
-InitPrefix = ''
-NeededInitPrefix = '+init=' if has_pyproj and _pyproj_under_6 else InitPrefix
 
 
 def make_vsi(url: Union[str, pathlib.Path, Dict[Any, Any]], **options) -> str:
@@ -251,14 +241,16 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
 
         :returns: the pixel size in meters or None.
         """
-        bounds = self.getBounds(NeededInitPrefix + 'epsg:4326')
+        bounds = self.getBounds('epsg:4326')
         if not bounds:
             return None
-        if has_pyproj:
+        try:
+            import pyproj
+
             geod = pyproj.Geod(ellps='WGS84')
             computer = cast(Callable[[Any, Any, Any, Any], Tuple[Any, Any, float]], geod.inv)
-        else:
-            # Estimate based on great-cirlce distance
+        except Exception:
+            # Estimate based on great-circle distance
             def computer(lon1, lat1, lon2, lat2) -> Tuple[Any, Any, float]:
                 from math import acos, cos, radians, sin
                 lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])

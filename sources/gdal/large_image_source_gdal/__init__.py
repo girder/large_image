@@ -50,8 +50,7 @@ from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
-from large_image.tilesource.geo import (GDALBaseFileTileSource, InitPrefix,
-                                        NeededInitPrefix,
+from large_image.tilesource.geo import (GDALBaseFileTileSource,
                                         ProjUnitsAcrossLevel0,
                                         ProjUnitsAcrossLevel0_MaxSize)
 from large_image.tilesource.utilities import JSONDict, _gdalParameters, _vipsCast, _vipsParameters
@@ -106,7 +105,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
         if projection and projection.lower().startswith('epsg:'):
-            projection = NeededInitPrefix + projection.lower()
+            projection = projection.lower()
         if projection and not isinstance(projection, bytes):
             projection = projection.encode()
         self.projection = projection
@@ -209,7 +208,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         """
         Initialize aspects of the class when a projection is set.
         """
-        inProj = self._proj4Proj(NeededInitPrefix + 'epsg:4326')
+        inProj = self._proj4Proj('epsg:4326')
         # Since we already converted to bytes decoding is safe here
         outProj = self._proj4Proj(self.projection)
         if outProj.crs.is_geographic:
@@ -272,7 +271,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if not wkt:
             if (self.dataset.GetGeoTransform(can_return_null=True) or
                     hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}):
-                return NeededInitPrefix + 'epsg:4326'
+                return 'epsg:4326'
             return
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
@@ -307,12 +306,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if proj.lower().startswith('proj4:'):
             proj = proj.split(':', 1)[1]
         if proj.lower().startswith('epsg:'):
-            proj = NeededInitPrefix + proj.lower()
-        try:
-            if proj.startswith(InitPrefix) and int(pyproj.proj_version_str.split('.')[0]) >= 6:
-                proj = proj[len(InitPrefix):]
-        except Exception:
-            pass  # failed to parse version
+            proj = proj.lower()
         return pyproj.Proj(proj)
 
     def toNativePixelCoordinates(self, x, y, proj=None, roundResults=True):
@@ -711,9 +705,6 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             if not hasattr(self, '_warpSRS'):
                 self._warpSRS = (self.getProj4String(),
                                  self.projection.decode())
-                if self._warpSRS[1].startswith(InitPrefix) and tuple(
-                        int(p) for p in gdal.__version__.split('.')[:2]) >= (3, 1):
-                    self._warpSRS = (self._warpSRS[0], self._warpSRS[1][len(InitPrefix):])
             with self._getDatasetLock:
                 ds = gdal.Warp(
                     '', self.dataset, format='VRT',
