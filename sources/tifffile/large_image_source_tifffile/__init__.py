@@ -354,6 +354,63 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             pass
 
+    def _handle_ome(self):
+        """
+        For OME Tiff, if we didn't parse the mangification elsewhere, try to
+        parse it here.
+        """
+        import xml.etree.ElementTree
+
+        import large_image.tilesource.utilities
+
+        _omeUnitsToMeters = {
+            'Ym': 1e24,
+            'Zm': 1e21,
+            'Em': 1e18,
+            'Pm': 1e15,
+            'Tm': 1e12,
+            'Gm': 1e9,
+            'Mm': 1e6,
+            'km': 1e3,
+            'hm': 1e2,
+            'dam': 1e1,
+            'm': 1,
+            'dm': 1e-1,
+            'cm': 1e-2,
+            'mm': 1e-3,
+            '\u00b5m': 1e-6,
+            'nm': 1e-9,
+            'pm': 1e-12,
+            'fm': 1e-15,
+            'am': 1e-18,
+            'zm': 1e-21,
+            'ym': 1e-24,
+            '\u00c5': 1e-10,
+        }
+
+        try:
+            root = xml.etree.ElementTree.fromstring(self._tf.pages[0].description)
+            self._xml = large_image.tilesource.utilities.etreeToDict(root)
+        except Exception:
+            return
+        try:
+            try:
+                base = self._xml['OME']['Image'][0]['Pixels']
+            except Exception:
+                base = self._xml['OME']['Image']['Pixels']
+            if self._mm_x is None and 'PhysicalSizeX' in base:
+                self._mm_x = (
+                    float(base['PhysicalSizeX']) * 1e3 *
+                    _omeUnitsToMeters[base.get('PhysicalSizeXUnit', '\u00b5m')])
+            if self._mm_y is None and 'PhysicalSizeY' in base:
+                self._mm_y = (
+                    float(base['PhysicalSizeY']) * 1e3 *
+                    _omeUnitsToMeters[base.get('PhysicalSizeYUnit', '\u00b5m')])
+            self._mm_x = self._mm_x or self._mm_y
+            self._mm_y = self._mm_y or self._mm_x
+        except Exception:
+            pass
+
     def getNativeMagnification(self):
         """
         Get the magnification at a particular level.

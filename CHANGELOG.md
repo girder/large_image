@@ -4,12 +4,13 @@
 
 ### Improvements
 
-- Improve plottable data endpoint to better fetch adjacent items and annotations ([#1573](../../pull/1573), [#1574](../../pull/1574), [#1575](../../pull/1575), [#1580](../../pull/1580))
+- Improve plottable data endpoint to better fetch adjacent items and annotations ([#1573](../../pull/1573), [#1574](../../pull/1574), [#1575](../../pull/1575), [#1580](../../pull/1580), [#1583](../../pull/1583))
 - Support Girder flat-mount paths ([#1576](../../pull/1576))
 - Lazily import some modules to speed up large_image import speed ([#1577](../../pull/1577))
 - Create or check large images for each item in a folder ([#1572](../../pull/1572))
 - Support multiprocessing and pickling with a zarr sink ([#1551](../../pull/1551))
 - Allow checking for geospatial sources to use a specific source list ([#1582](../../pull/1582))
+- Read scales from some OME tiff files parsed with the tifffile source ([#1584](../../pull/1584))
 
 ### Changes
 - Remove old code that handled old pyproj packages ([#1581](../../pull/1581))
