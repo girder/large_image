@@ -28,8 +28,6 @@ except PackageNotFoundError:
     pass
 
 
-warnings.filterwarnings('ignore', category=FutureWarning, module='zarr')
-
 zarr = None
 
 
@@ -43,6 +41,8 @@ def _lazyImport():
     if zarr is None:
         try:
             import zarr
+
+            warnings.filterwarnings('ignore', category=FutureWarning, module='.*zarr.*')
         except ImportError:
             msg = 'zarr module not found.'
             raise TileSourceError(msg)
