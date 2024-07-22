@@ -73,6 +73,8 @@ pygments_style = 'sphinx'
 html_static_path = ['static']
 html_css_files = ['custom.css']
 html_favicon = 'static/K.png'
+html_permalinks = True
+html_permalinks_icon = '&#128279'
 
 autoclass_content = 'both'
 
