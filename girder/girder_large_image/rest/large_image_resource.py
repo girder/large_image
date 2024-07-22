@@ -453,8 +453,10 @@ class LargeImageResource(Resource):
         .notes('Does not work for items with multiple files.')
         .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE,
                     required=True)
-        .param('force', 'Whether creation job(s) should be forced for each large image.',
-               required=False, default=False, dataType='boolean')
+        .param('createJobs', 'Whether job(s) should be used to create each large image. '
+               'Select true to use a job if needed, false to never use a job, '
+               'and always to always use a job.', required=False, default='false',
+               dataType='string', enum=['true', 'false', 'always'])
         .param('localJobs', 'Whether the job(s) created should be local.',
                required=False, default=False, dataType='boolean')
         .param('recurse', 'Whether child folders should be recursed.', required=False,
@@ -468,13 +470,15 @@ class LargeImageResource(Resource):
     )
     def createLargeImages(self, folder, params):
         user = self.getCurrentUser()
-        createJobs = 'always' if self.boolParam('force', params, default=False) else True
-        return self.createLargeImagesRecurse(folder=folder, createJobs=createJobs, user=user,
-                                             recurse=params.get('recurse'),
+        createJobs = params.get('createJobs')
+        if createJobs in ['true', 'false']:
+            createJobs = self.boolParam('createJobs', params, default=False)
+        return self.createLargeImagesRecurse(folder=folder, user=user,
+                                             recurse=params.get('recurse'), createJobs=createJobs,
                                              localJobs=params.get('localJobs'),
                                              cancelJobs=params.get('cancelJobs'))
 
-    def createLargeImagesRecurse(self, folder, createJobs, user, recurse, localJobs, cancelJobs):
+    def createLargeImagesRecurse(self, folder, user, recurse, createJobs, localJobs, cancelJobs):
         result = {'childFoldersRecursed': 0,
                   'itemsSkipped': 0,
                   'jobsCanceled': 0,
@@ -485,9 +489,9 @@ class LargeImageResource(Resource):
         if recurse:
             for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
                 result['childFoldersRecursed'] += 1
-                childResult = self.createLargeImagesRecurse(folder=childFolder,
-                                                            createJobs=createJobs, user=user,
-                                                            recurse=recurse, localJobs=localJobs,
+                childResult = self.createLargeImagesRecurse(folder=childFolder, user=user,
+                                                            recurse=recurse, createJobs=createJobs,
+                                                            localJobs=localJobs,
                                                             cancelJobs=cancelJobs)
                 for key in childResult:
                     result[key] += childResult[key]
