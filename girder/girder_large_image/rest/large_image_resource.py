@@ -449,22 +449,26 @@ class LargeImageResource(Resource):
 
     @access.user(scope=TokenScope.DATA_WRITE)
     @autoDescribeRoute(
-        Description('Create new large images for all items within a folder.')
+        Description('Create large images for all items within a folder.')
         .notes('Does not work for items with multiple files.')
-        .modelParam('id', 'The ID of the folder.', model=Folder, level=AccessType.WRITE,
-                    required=True)
-        .param('createJobs', 'Whether job(s) should be used to create each large image. '
-               'Select true to use a job if needed, false to never use a job, '
-               'and always to always use a job.', required=False, default='false',
-               dataType='string', enum=['true', 'false', 'always'])
+        .modelParam('id', 'The ID of the folder.', model=Folder,
+                    level=AccessType.WRITE, required=True)
+        .param('createJobs', 'Whether job(s) should be used to create each '
+               'large image. Select true to use a job if needed, false to '
+               'never use a job, and always to always use a job.',
+               required=False, default='false', dataType='string',
+               enum=['true', 'false', 'always'])
         .param('localJobs', 'Whether the job(s) created should be local.',
                required=False, default=False, dataType='boolean')
-        .param('recurse', 'Whether child folders should be recursed.', required=False,
-               default=False, dataType='boolean')
-        .param('cancelJobs', 'Whether unfinished large image job(s) associated with '
-               'items in the folder should be canceled, then each large image '
-               'reattempted. If false, items with an unfinished large image will '
-               'be skipped.', required=False, default=False, dataType='boolean')
+        .param('recurse', 'Whether child folders should be recursed.',
+               required=False, default=False, dataType='boolean')
+        .param('cancelJobs', 'Whether unfinished large image job(s) associated '
+               'with items in the folder should be canceled, then a new large '
+               'image created. If false, items with an unfinished large image '
+               'will be skipped.', required=False, default=False,
+               dataType='boolean')
+        .param('redoExisting', 'Whether existing large images should be removed and '
+               'recreated.', required=False, default=False, dataType='boolean')
         .errorResponse('ID was invalid.')
         .errorResponse('Write access was denied for the folder.', 403),
     )
@@ -476,15 +480,17 @@ class LargeImageResource(Resource):
         return self.createLargeImagesRecurse(folder=folder, user=user,
                                              recurse=params.get('recurse'), createJobs=createJobs,
                                              localJobs=params.get('localJobs'),
-                                             cancelJobs=params.get('cancelJobs'))
+                                             cancelJobs=params.get('cancelJobs'),
+                                             redo=params.get('redoExisting'))
 
-    def createLargeImagesRecurse(self, folder, user, recurse, createJobs, localJobs, cancelJobs):
+    def createLargeImagesRecurse(
+            self, folder, user, recurse, createJobs, localJobs, cancelJobs, redo):
         result = {'childFoldersRecursed': 0,
                   'itemsSkipped': 0,
                   'jobsCanceled': 0,
                   'jobsFailedToCancel': 0,
                   'largeImagesCreated': 0,
-                  'largeImagesRemovedAndReattempted': 0,
+                  'largeImagesRemovedAndRecreated': 0,
                   'totalItems': 0}
         if recurse:
             for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
@@ -492,7 +498,7 @@ class LargeImageResource(Resource):
                 childResult = self.createLargeImagesRecurse(folder=childFolder, user=user,
                                                             recurse=recurse, createJobs=createJobs,
                                                             localJobs=localJobs,
-                                                            cancelJobs=cancelJobs)
+                                                            cancelJobs=cancelJobs, redo=redo)
                 for key in childResult:
                     result[key] += childResult[key]
         for item in Folder().childItems(folder=folder):
@@ -508,7 +514,6 @@ class LargeImageResource(Resource):
                                                          JobStatus.INACTIVE):
                             result['jobsFailedToCancel'] += 1
                             result['itemsSkipped'] += 1
-                            continue
                         else:
                             result['jobsCanceled'] += 1
                             previousFileId = item['largeImage'].get('originalId')
@@ -516,14 +521,22 @@ class LargeImageResource(Resource):
                             ImageItem().createImageItem(item,
                                                         File().load(user=user, id=previousFileId),
                                                         createJob=createJobs, localJob=localJobs)
-                            result['largeImagesRemovedAndReattempted'] += 1
+                            result['largeImagesRemovedAndRecreated'] += 1
                     else:
                         result['itemsSkipped'] += 1
                 else:
                     try:
                         ImageItem().getMetadata(item)
-                        result['itemsSkipped'] += 1
-                        continue
+                        if redo:
+                            previousFileId = item['largeImage'].get('originalId',
+                                                                    item['largeImage']['fileId'])
+                            ImageItem().delete(item)
+                            ImageItem().createImageItem(item,
+                                                        File().load(user=user, id=previousFileId),
+                                                        createJob=createJobs, localJob=localJobs)
+                            result['largeImagesRemovedAndRecreated'] += 1
+                        else:
+                            result['itemsSkipped'] += 1
                     except (TileSourceError, KeyError):
                         previousFileId = item['largeImage'].get('originalId',
                                                                 item['largeImage']['fileId'])
@@ -531,7 +544,7 @@ class LargeImageResource(Resource):
                         ImageItem().createImageItem(item,
                                                     File().load(user=user, id=previousFileId),
                                                     createJob=createJobs, localJob=localJobs)
-                        result['largeImagesRemovedAndReattempted'] += 1
+                        result['largeImagesRemovedAndRecreated'] += 1
             else:
                 files = list(Item().childFiles(item=item, limit=2))
                 if len(files) == 1:
