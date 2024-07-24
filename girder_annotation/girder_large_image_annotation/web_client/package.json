@@ -73,6 +73,7 @@
     },
     "scripts": {
         "build": "vite build",
+        "watch": "vite build --watch",
         "lint": "eslint --cache . && eslint --no-eslintrc -c ./package.json --cache ../../test_annotation/web_client_specs && pug-lint . && stylus-supremacy format --compare ./**/*.styl --options package.json",
         "format": "eslint --cache --fix . && eslint --no-eslintrc -c ./package.json --cache --fix ../../test_annotation/web_client_specs && stylus-supremacy format ./**/*.styl --replace --options package.json"
     }

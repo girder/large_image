@@ -98,6 +98,7 @@
     },
     "scripts": {
         "build": "vite build && mkdir -p dist/extra && cp node_modules/geojs/geo.lean.min.js dist/extra/geojs.js",
+        "watch": "vite build --watch",
         "lint": "eslint --cache . && eslint --no-eslintrc -c ./package.json --cache ../../test_girder/web_client_specs && pug-lint . && stylus-supremacy format --compare ./**/*.styl --options package.json",
         "format": "eslint --cache --fix . && eslint --no-eslintrc -c ./package.json --cache --fix ../../test_girder/web_client_specs && stylus-supremacy format ./**/*.styl --replace --options package.json"
     }
