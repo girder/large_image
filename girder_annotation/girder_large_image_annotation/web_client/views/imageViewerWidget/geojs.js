@@ -36,7 +36,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         return initialize.apply(this, _.rest(arguments));
     });
 
-    return viewer.extend({
+    return {
         _postRender: function () {
             // the feature layer is for annotations that are loaded
             this.featureLayer = this.viewer.createLayer('feature', {
@@ -978,7 +978,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         _guid: guid
-    });
+    };
 };
 
 export default GeojsImageViewerWidgetExtension;
