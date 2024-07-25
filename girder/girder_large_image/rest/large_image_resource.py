@@ -453,22 +453,22 @@ class LargeImageResource(Resource):
         .notes('Does not work for items with multiple files.')
         .modelParam('id', 'The ID of the folder.', model=Folder,
                     level=AccessType.WRITE, required=True)
-        .param('createJobs', 'Whether job(s) should be used to create each '
-               'large image. Select true to use a job if needed, false to '
-               'never use a job, and always to always use a job.',
-               required=False, default='false', dataType='string',
-               enum=['true', 'false', 'always'])
-        .param('localJobs', 'Whether the job(s) created should be local.',
-               required=False, default=False, dataType='boolean')
-        .param('recurse', 'Whether child folders should be recursed.',
-               required=False, default=False, dataType='boolean')
-        .param('cancelJobs', 'Whether unfinished large image job(s) associated '
-               'with items in the folder should be canceled, then a new large '
-               'image created. If false, items with an unfinished large image '
-               'will be skipped.', required=False, default=False,
-               dataType='boolean')
-        .param('redoExisting', 'Whether existing large images should be removed and '
-               'recreated.', required=False, default=False, dataType='boolean')
+        .param('createJobs', 'If true, a job will be used to create the image '
+               'when needed; if always, a job will always be used; if false, a '
+               'job will never be used.', dataType='string', default='false',
+               required=False, enum=['true', 'false', 'always'])
+        .param('localJobs', 'If true, run each creation job locally; if false, '
+               'run via the remote worker.', dataType='boolean', default='false',
+               required=False)
+        .param('recurse', 'If true, items in child folders will also be checked.',
+               dataType='boolean', default=False, required=False)
+        .param('cancelJobs', 'If true, unfinished large image job(s) associated '
+               'with items in the folder will be canceled, then a new large '
+               'image created; if false, items with an unfinished large image '
+               'will be skipped.', dataType='boolean', default=False, required=False)
+        .param('redoExisting', 'If true, existing large images should be removed and '
+               'recreated. Otherwise they will be skipped.', dataType='boolean',
+               default=False, required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Write access was denied for the folder.', 403),
     )
