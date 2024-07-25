@@ -94,10 +94,11 @@
         "pug": "^3.0.3",
         "pug-lint": "^2.6.0",
         "stylus-supremacy": "^2.17.5",
-        "vite": "^5.2.13"
+        "vite": "^5.2.13",
+        "vite-plugin-static-copy": "^1.0.6"
     },
     "scripts": {
-        "build": "vite build && mkdir -p dist/extra && cp node_modules/geojs/geo.lean.min.js dist/extra/geojs.js",
+        "build": "vite build",
         "watch": "vite build --watch",
         "lint": "eslint --cache . && eslint --no-eslintrc -c ./package.json --cache ../../test_girder/web_client_specs && pug-lint . && stylus-supremacy format --compare ./**/*.styl --options package.json",
         "format": "eslint --cache --fix . && eslint --no-eslintrc -c ./package.json --cache --fix ../../test_girder/web_client_specs && stylus-supremacy format ./**/*.styl --replace --options package.json"

@@ -1,6 +1,7 @@
 import { resolve } from 'path';
 
 import { defineConfig } from 'vite';
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { compileClient } from 'pug';
 import vue from '@vitejs/plugin-vue2';
 
@@ -23,6 +24,15 @@ export default defineConfig({
   plugins: [
     pugPlugin(),
     vue(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'node_modules/geojs/geo.lean.min.js',
+          dest: 'extra',
+          rename: () => 'geojs.js',
+        }
+      ]
+    })
   ],
   build: {
     sourcemap: true,
