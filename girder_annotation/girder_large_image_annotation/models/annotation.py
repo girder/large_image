@@ -988,7 +988,7 @@ class Annotation(AccessControlledModel):
                 len(annotation['annotation']['elements']))
         events.trigger('large_image.annotations.save_history', {
             'annotation': annotation,
-        }, asynchronous=True)
+        })
         return result
 
     def updateAnnotation(self, annotation, updateUser=None):
