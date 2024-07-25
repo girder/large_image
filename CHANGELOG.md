@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.4
+
+### Improvements
+
+- Improve plottable data endpoint to better fetch varied data.  Refactors some columns names ([#1587](../../pull/1587))
+
 ## 1.29.3
 
 ### Improvements

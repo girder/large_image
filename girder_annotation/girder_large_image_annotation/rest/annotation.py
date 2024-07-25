@@ -622,24 +622,33 @@ class AnnotationResource(Resource):
     @autoDescribeRoute(
         Description('Get a list of plottable data related to an item and its annotations.')
         .modelParam('id', model=Item, level=AccessType.READ)
+        .param('adjacentItems', 'Whether to include adjacent item data.',
+               required=False, default=False, enum=['false', 'true', '__all__'])
         .jsonParam('annotations', 'A JSON list of annotation IDs that should '
                    'be included.  An entry of __all__ will include all '
                    'annotations.', paramType='formData', requireArray=True,
                    required=False)
+        .param('sources', 'An optional comma separated list that can contain '
+               'folder, item, annotation, datafile.', required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
-    def getItemPlottableElements(self, item, annotations):
+    def getItemPlottableElements(self, item, annotations, adjacentItems, sources=None):
         user = self.getCurrentUser()
-        data = utils.PlottableItemData(user, item, annotations=annotations)
+        if adjacentItems != '__all__':
+            adjacentItems = str(adjacentItems).lower() == 'true'
+        sources = sources or None
+        data = utils.PlottableItemData(
+            user, item, annotations=annotations, adjacentItems=adjacentItems,
+            sources=sources)
         return [col for col in data.columns if col.get('count')]
 
     @autoDescribeRoute(
         Description('Get plottable data related to an item and its annotations.')
         .modelParam('id', model=Item, level=AccessType.READ)
         .param('adjacentItems', 'Whether to include adjacent item data.',
-               required=False, default=True, dataType='boolean')
+               required=False, default=False, enum=['false', 'true', '__all__'])
         .param('keys', 'A comma separated list of data keys to retrieve (not json).',
                required=True)
         .param('requiredKeys', 'A comma separated list of data keys that must '
@@ -648,14 +657,21 @@ class AnnotationResource(Resource):
                    'be included.  An entry of \\__all__ will include all '
                    'annotations.', paramType='formData', requireArray=True,
                    required=False)
+        .param('sources', 'An optional comma separated list that can contain '
+               'folder, item, annotation, datafile.', required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
-    def getItemPlottableData(self, item, keys, adjacentItems, annotations, requiredKeys):
+    def getItemPlottableData(
+            self, item, keys, adjacentItems, annotations, requiredKeys, sources=None):
         user = self.getCurrentUser()
+        if adjacentItems != '__all__':
+            adjacentItems = str(adjacentItems).lower() == 'true'
+        sources = sources or None
         data = utils.PlottableItemData(
-            user, item, annotations=annotations, adjacentItems=adjacentItems)
+            user, item, annotations=annotations, adjacentItems=adjacentItems,
+            sources=sources)
         return data.data(keys, requiredKeys)
 
     def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,

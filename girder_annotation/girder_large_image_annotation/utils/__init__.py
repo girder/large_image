@@ -6,7 +6,7 @@ import re
 from bson.objectid import ObjectId
 
 from girder import logger
-from girder.constants import AccessType
+from girder.constants import AccessType, SortDir
 from girder.models.folder import Folder
 
 
@@ -350,7 +350,7 @@ class PlottableItemData:
     maxDistinct = 20
     allowedTypes = (str, bool, int, float)
 
-    def __init__(self, user, item, annotations=None, adjacentItems=False):
+    def __init__(self, user, item, annotations=None, adjacentItems=False, sources=None):
         """
         Get plottable data associated with an item.
 
@@ -359,34 +359,67 @@ class PlottableItemData:
         :param annotations: None, a list of annotation ids, or __all__.  If
             adjacent items are included, the most recent annotation with the
             same name will also be included.
-        :param adjacentItems: if True, include data other items in the same
-            folder.
+        :param adjacentItems: if True, include data from other items in the
+            same folder.  If __all__, include data from other items even if the
+            data is not present in the current item.
+        :param sources: None for all, or a string with a comma-separated list
+            or a list of strings; when a list, the options are folder, item,
+            annotation, datafile.
         """
         self.user = user
         self._columns = None
         self._datacolumns = None
         self._data = None
+        if sources and not isinstance(sources, (list, tuple)):
+            sources = sources.split(',')
+        self._sources = tuple(sources) if sources else None
+        if self._sources and 'annotation' not in self._sources:
+            annotations = None
+        self._fullScan = adjacentItems == '__all__'
         self._findItems(item, adjacentItems)
         self._findAnnotations(annotations)
 
     def _findItems(self, item, adjacentItems=False):
+        """
+        Find all the large images in the folder.  This only retrieves the first
+        self.maxItems entries.  If there are at least this many items, a query
+        is stored in self._moreItems.  The items are listed in self.items.
+
+        :param item: the item to use as the base.  If adjacentItems is false,
+            this is the entire self.items data set.
+        :param adjacentItems: if truthy, find adjacent items.
+        """
         self._columns = None
         self.item = item
         self.folder = Folder().load(id=item['folderId'], user=self.user, level=AccessType.READ)
         self.items = [item]
         if adjacentItems:
-            for entry in Folder().childItems(self.folder):
-                if len(self.items) >= self.maxItems:
-                    break
-                if entry['_id'] != item['_id']:
-                    # skip if item doesn't have appropriate metadata or
-                    # annotations.  If skipping, add to list to check if
-                    # dataframe
-                    self.items.append(entry)
-        # TODO: find csv/xlsx/dataframe items in the folder, exclude them from
-        # the item list but include them in general
+            query = {
+                'filters': {
+                    '_id': {'$ne': item['_id']},
+                    'largeImage.fileId': {'$exists': True},
+                },
+                'sort': [('_id', SortDir.ASCENDING)],
+                'limit': self.maxItems - 1,
+            }
+            self.items.extend(list(Folder().childItems(self.folder, **query)))
+        self._moreItems = query if len(self.items) == self.maxItems else None
+        # TODO: find csv/xlsx/dataframe items in the folder
 
     def _findAnnotations(self, annotations):
+        """
+        Find annotations based on a list of annotations ids.  For the current
+        item, these are just the listed annotations.  For adjacent items,
+        annotations with the same names are located.  A maximum of maxItems
+        are examined, so if the number of items in the folder exceeds this,
+        some annotations will not be located.  Results are stored in
+        self.annotations, which is a list with one entry per item.  Each entry
+        is a list of annotations (without elements) or None if there is no
+        matching annotation for that item.
+
+        :param annotations: a list of annotation id strings or comma-separated
+            string of annotation ids.
+        """
         from ..models.annotation import Annotation
 
         self._columns = None
@@ -417,223 +450,405 @@ class PlottableItemData:
                         annotList[names[annot['annotation']['name']]] = annot
                 self.annotations.append(annotList)
 
-    def _addColumn(self, columns, fullkey, title, root, key, source):
-        # Root should probably only be part of this at folder/csv level
-        distinct = [source] if source not in {'folder'} else [source, root]
-        if fullkey not in columns:
-            columns[fullkey] = {
-                'key': fullkey,
-                'type': 'number',
-                'where': [[distinct, key]], 'title': title,
-                'count': 0, 'distinct': set(), 'min': None,
-                'max': None}
-            return (tuple(distinct), 0)
-        elif [root, key, source] not in columns[fullkey]['where']:
-            columns[fullkey]['where'].append([distinct, key])
-        where = -1
-        for colwhere in columns[fullkey]['where']:
-            if tuple(colwhere[0]) == tuple(distinct):
-                where += 1
-                if colwhere[1] == key:
-                    return (tuple(distinct), where)
-        return (tuple(distinct), where)
+    # Common column keys and titles
+    commonColumns = {
+        'item.id': 'Item ID',
+        'item.name': 'Item Name',
+        'item.description': 'Item Description',
+        'annotation.id': 'Annotation ID',
+        'annotation.name': 'Annotation Name',
+        'annotation.description': 'Annotation Description',
+        'annotationelement.id': 'Annotation Element ID',
+        'annotationelement.group': 'Annotation Element Group',
+        'annotationelement.label': 'Annotation Element Label',
+        'annotationelement.type': 'Annotation Element Type',
+        'bbox.x0': 'Bounding Box Low X',
+        'bbox.y0': 'Bounding Box Low Y',
+        'bbox.x1': 'Bounding Box High X',
+        'bbox.y1': 'Bounding Box High Y',
+    }
 
-    def _columnKey(self, source, root, key):
-        if not hasattr(self, '_columnKeyCache'):
-            self._columnKeyCache = {}
-        hashkey = (source, root, key)
-        if hashkey in self._columnKeyCache:
-            return self._columnKeyCache[hashkey]
-        fullkey = f'{root}.{key}.{source}'.lower()
-        title = f'{root} {key}' if root is not None and root != '' else f'{key}'
+    def itemNameIDSelector(self, isName, selector):
+        """
+        Given a data selector that returns something that is either an item id,
+        an item name, or an item name prefix, return the canonical item or
+        id string from the list of known items.
+
+        :param isName: True to return the canonical name, False for the
+            canonical id.
+        :param selector: the selector to get the initial value.
+        :returns: a function that can be used as an overall selector.
+        """
+
+        def itemNameSelector(record, data, row):
+            value = selector(record, data, row)
+            for item in self.items:
+                if str(item['_id']) == value:
+                    return item['name']
+                if item['name'].lower().startswith(value.lower() + '.'):
+                    return item['name']
+                if item['name'].lower() == value.lower():
+                    return item['name']
+            return value
+
+        def itemIDSelector(record, data, row):
+            value = selector(record, data, row)
+            for item in self.items:
+                if str(item['_id']) == value:
+                    return str(item['_id'])
+                if item['name'].lower().startswith(value.lower() + '.'):
+                    return str(item['_id'])
+                if item['name'].lower() == value.lower():
+                    return str(item['_id'])
+            return value
+
+        return itemNameSelector if isName else itemIDSelector
+
+    @staticmethod
+    def keySelector(mode, key, key2=None):
+        """
+        Given a pattern for getting data from a dictionary, return a selector
+        that gets that piece of data.
+
+        :param mode: one of key, key0, keykey, keykey0, key0key, representing
+            key lookups in dictionaries or array indices.
+        :param key: the first key.
+        :param key2: the second key, if needed.
+        :returns: a pair of functions that can be used to select the value from
+            the record and data structure.  This takes (record, data, row) and
+            returns a value.  The record is the base record used, the data is
+            the base dictionary, and the row is the location in the index.  The
+            second function takes (record, data) and returns either None or the
+            number of rows that are present.
+        """
+        if mode == 'key0key':
+
+            def key0keySelector(record, data, row):
+                return data[key][row][key2]
+
+            def key0keyLength(record, data):
+                return len(data[key])
+
+            return key0keySelector, key0keyLength
+        if mode == 'keykey0':
+
+            def keykey0Selector(record, data, row):
+                return data[key][key2][row]
+
+            def keykey0Length(record, data):
+                return len(data[key][key2])
+
+            return keykey0Selector, keykey0Length
+        if mode == 'keykey':
+
+            def keykeySelector(record, data, row):
+                return data[key][key2]
+
+            return keykeySelector, None
+        if mode == 'key0':
+
+            def key0Selector(record, data, row):
+                return data[key][row]
+
+            def key0Length(record, data):
+                return len(data[key])
+
+            return key0Selector, key0Length
+
+        def keySelector(record, data, row):
+            return data[key]
+
+        return keySelector, None
+
+    @staticmethod
+    def recordSelector(doctype):
+        """
+        Given a document type, return a function that returns the main data
+        dictionary.
+
+        :param doctype: one of folder, item, annotaiton, annotationelement.
+        :returns: a function that takes (record) and returns the data
+            dictionary, if any.
+        """
+        if doctype == 'annotation':
+
+            def annotationGetData(record):
+                return record.get('annotation', {}).get('attributes', {})
+
+            return annotationGetData
+        if doctype == 'annotationelement':
+
+            def annotationelementGetData(record):
+                return record.get('user', {})
+
+            return annotationelementGetData
+
+        def getData(record):
+            return record.get('meta', {})
+
+        return getData
+
+    def _keysToColumns(self, columns, parts, doctype, getData, selector, length):
+        """
+        Given a selector and appropriate access information, ensure that an
+        appropriate column or columns exist.
+
+        :param columns: the column dictionary to possibly modify.
+        :param parts: a tuple of values used to construct a key.
+        :param doctype: the base document type.
+        :param getData: a function that, given the document record, returns the
+            data dictionary.
+        :param selector: a function that, given the document record, data
+            dictionary, and row, returns a value.
+        :param length: None or a function that, given the document record and
+            data dictionary, returns the number of rows.
+        """
+        key = '.'.join(str(v) for v in parts).lower()
+        lastpart = parts[-1] if parts[-1] != '0' or len(parts) == 1 else parts[-2]
+        title = ' '.join(str(v) for v in parts[1:] if v != '0')
         keymap = {
-            r'(?i)(item|image)_(id|name)$': {'key': '_0_item.name', 'title': 'Item Name'},
-            r'(?i)(low|min)(_|)x': {'key': '_bbox.x0', 'title': 'Bounding Box Low X'},
-            r'(?i)(low|min)(_|)y': {'key': '_bbox.y0', 'title': 'Bounding Box Low Y'},
-            r'(?i)(high|max)(_|)x': {'key': '_bbox.x1', 'title': 'Bounding Box High X'},
-            r'(?i)(high|max)(_|)y': {'key': '_bbox.y1', 'title': 'Bounding Box High Y'},
+            r'(?i)(item|image)_(id|name)$': 'item.name',
+            r'(?i)(low|min)(_|)x': 'bbox.x0',
+            r'(?i)(low|min)(_|)y': 'bbox.y0',
+            r'(?i)(high|max)(_|)x': 'bbox.x1',
+            r'(?i)(high|max)(_|)y': 'bbox.y1',
         }
         for k, v in keymap.items():
-            if re.match(k, key):
-                fullkey = v['key']
-                title = v['title']
+            if re.match(k, lastpart):
+                key = v
+                title = self.commonColumns[key]
+                if key == 'item.name':
+                    self._ensureColumn(
+                        columns, key, title, doctype, getData,
+                        self.itemNameIDSelector(True, selector), length)
+                    self._ensureColumn(
+                        columns, 'item.id', title, doctype, getData,
+                        self.itemNameIDSelector(False, selector), length)
+                    return
                 break
-        self._columnKeyCache[hashkey] = fullkey, title
-        return fullkey, title
+        self._ensureColumn(
+            columns, key, title, doctype, getData, selector, length)
 
-    def _scanColumnByKey(self, result, key, entry, where=0, auxidx=0,
-                         auxidx2=0, item=None, annotation=None):
-        if result['type'] == 'number':
+    def _ensureColumn(self, columns, keyname, title, doctype, getData, selector, length):
+        """
+        Ensure that column exists and the selectors are recorded for the
+        doctype.
+
+        :param columns: the column dictionary to possibly modify.
+        :param keyname: the key to the column.
+        :param title: the title of the column.
+        :param doctype: the base document type.
+        :param getData: a function that, given the document record, returns the
+            data dictionary.
+        :param selector: a function that, given the document record, data
+            dictionary, and row, returns a value.
+        :param length: None or a function that, given the document record and
+            data dictionary, returns the number of rows.
+        """
+        if keyname not in columns:
+            columns[keyname] = {
+                'key': keyname,
+                'title': title,
+                'where': {},
+                'type': 'number',
+                'max': None,
+                'min': None,
+                'distinct': set(),
+                'count': 0,
+            }
+        if doctype not in columns[keyname]['where']:
+            columns[keyname]['where'][doctype] = (getData, selector, length)
+
+    def _columnsFromData(self, columns, doctype, getData, record):  # noqa
+        """
+        Given a sample record, determine what columns could be read.
+
+        :param columns: the column dictionary to possibly modify.
+        :param doctype: the base document type.
+        :param getData: a function that, given the document record, returns the
+            data dictionary.
+        :param record: a sample record.
+        """
+        data = getData(record)
+        for key, value in data.items():
             try:
-                [float(record[key]) for record in entry
-                 if isinstance(record.get(key), self.allowedTypes)]
+                if isinstance(value, list):
+                    if not len(value):
+                        continue
+                    if isinstance(value[0], dict):
+                        for key2, value2 in value[0].items():
+                            try:
+                                if isinstance(value2, (list, dict)):
+                                    continue
+                                selector, length = self.keySelector('key0key', key, key2)
+                                self._keysToColumns(
+                                    columns, ('data', key, '0', key2),
+                                    doctype, getData, selector, length)
+                            except Exception:
+                                continue
+                    else:
+                        selector, length = self.keySelector('key0', key)
+                        self._keysToColumns(
+                            columns, ('data', key, '0'),
+                            doctype, getData, selector, length)
+                elif isinstance(value, dict):
+                    for key2, value2 in value.items():
+                        try:
+                            if isinstance(value2, list):
+                                if not len(value2):
+                                    continue
+                                selector, length = self.keySelector('keykey0', key, key2)
+                                self._keysToColumns(
+                                    columns, ('data', key, key2, '0'),
+                                    doctype, getData, selector, length)
+                            else:
+                                selector, length = self.keySelector('keykey', key, key2)
+                                self._keysToColumns(
+                                    columns, ('data', key, key2),
+                                    doctype, getData, selector, length)
+                        except Exception:
+                            continue
+                else:
+                    selector, length = self.keySelector('key', key)
+                    self._keysToColumns(
+                        columns, ('data', key),
+                        doctype, getData, selector, length)
             except Exception:
-                result['type'] = 'string'
-                result['distinct'] = {str(v) for v in result['distinct']}
-        for ridx, record in enumerate(entry):
-            v = record.get(key)
-            if not isinstance(v, self.allowedTypes):
                 continue
-            result['count'] += 1
-            v = float(v) if result['type'] == 'number' else str(v)
-            if len(result['distinct']) <= self.maxDistinct:
-                result['distinct'].add(v)
-            if result['type'] == 'number':
-                if result['min'] is None:
-                    result['min'] = result['max'] = v
-                result['min'] = min(result['min'], v)
-                result['max'] = max(result['max'], v)
-            if self._datacolumns and result['key'] in self._datacolumns:
-                self._datacolumns[result['key']][(where, (auxidx, auxidx2, ridx))] = v
-                if item is not None:
-                    self._datacolumns.get('_0_item.name', {})[
-                        (where, (auxidx, auxidx2, ridx))] = item['name']
-                    self._datacolumns.get('_2_item.id', {})[
-                        (where, (auxidx, auxidx2, ridx))] = str(item['_id'])
-                if annotation is not None:
-                    self._datacolumns.get('_1_annotation.name', {})[
-                        (where, (auxidx, auxidx2, ridx))] = annotation.get(
-                            'annotation', {}).get('name')
-                    self._datacolumns.get('_3_annotation.id', {})[
-                        (where, (auxidx, auxidx2, ridx))] = str(annotation['_id'])
-                    self._datacolumns.get('_4_annotation.description', {})[
-                        (where, (auxidx, auxidx2, ridx))] = annotation.get(
-                            'annotation', {}).get('description')
 
-    def _scanColumn(self, meta, source, columns, auxmeta=None, auxidx2=0,
-                    items=None, annotations=None):
-        for root, entry in (list(meta.items()) + [(None, [meta])]):
-            if not isinstance(entry, list) or not len(entry) or not isinstance(entry[0], dict):
+    def _commonColumn(self, columns, keyname, doctype, getData, selector):
+        """
+        Ensure that column with a commonly used key exists.
+
+        :param columns: the column dictionary to possibly modify.
+        :param keyname: the key to the column.
+        :param doctype: the base document type.
+        :param getData: a function that, given the document record, returns the
+            data dictionary.
+        :param selector: a function that, given the document record, data
+            dictionary, and row, returns a value.
+        """
+        title = self.commonColumns[keyname]
+        self._ensureColumn(columns, keyname, title, doctype, getData, selector, None)
+
+    def _collectRecordRows(
+            self, record, data, selector, length, colkey, col, recidx, rows,
+            iid, aid, eid):
+        """
+        Collect statistics and possible data from one data set.  See
+        _collectRecords for parameter details.
+        """
+        for rowidx in range(rows):
+            try:
+                value = selector(record, data, rowidx)
+            except Exception:
                 continue
-            for key in entry[0]:
-                if not isinstance(entry[0][key], self.allowedTypes):
+            if not isinstance(value, self.allowedTypes) or value == '':
+                continue
+            if col['type'] == 'number':
+                try:
+                    float(value)
+                except Exception:
+                    col['type'] = 'string'
+                    col['distinct'] = {str(v) for v in col['distinct']}
+            col['count'] += 1
+            if col['type'] == 'number':
+                value = float(value)
+                if col['min'] is None:
+                    col['min'] = col['max'] = value
+                col['min'] = min(col['min'], value)
+                col['max'] = max(col['max'], value)
+            else:
+                value = str(value)
+            if len(col['distinct']) <= self.maxDistinct:
+                col['distinct'].add(value)
+            if self._datacolumns and colkey in self._datacolumns:
+                self._datacolumns[colkey][(
+                    iid[recidx] if isinstance(iid, list) else iid or '',
+                    aid or '', eid or '',
+                    rowidx if length is not None else -1)] = value
+
+    def _collectRecords(self, columns, recordlist, doctype, iid=None, aid=None):
+        """
+        Collect statistics and possibly row values from a list of records.
+
+        :param columns: the column dictionary to possibly modify.
+        :param recordList: a list of records to use.
+        :param doctype: the base document type.
+        :param iid: an optional item id to use for determining distinct rows.
+        :param aid: an optional annotation id to use for determining distinct
+            rows.
+        """
+        eid = None
+        for colkey, col in columns.items():
+            if doctype not in col['where']:
+                continue
+            getData, selector, length = col['where'][doctype]
+            for recidx, record in enumerate(recordlist):
+                if doctype == 'item':
+                    iid = str(record['_id'])
+                elif doctype == 'annotation':
+                    aid = str(record['_id'])
+                elif doctype == 'annotationelement':
+                    eid = str(record['id'])
+                data = getData(record)
+                try:
+                    rows = 1 if length is None else length(record, data)
+                except Exception:
                     continue
-                fullkey, title = self._columnKey(source, root, key)
-                where = self._addColumn(
-                    columns, fullkey, title, root, key, source)
-                result = columns[fullkey]
-                self._scanColumnByKey(
-                    result, key, entry, where, 0, auxidx2,
-                    items[0] if items and len(items) > 0 else None,
-                    annotations[0] if annotations and len(annotations) > 0 else None)
-                if auxmeta:
-                    for auxidx, aux in enumerate(auxmeta):
-                        if root is None:
-                            if isinstance(aux, dict) and key in aux:
-                                self._scanColumnByKey(
-                                    result, key, [aux], where, auxidx + 1, auxidx2,
-                                    items[auxidx + 1] if items and len(items) > auxidx + 1 else
-                                    None,
-                                    annotations[auxidx + 1]
-                                    if annotations and len(annotations) > auxidx + 1 else
-                                    None)
-                        elif (isinstance(aux.get(root), list) and
-                                len(aux[root]) and
-                                isinstance(aux[root][0], dict) and
-                                key in aux[root][0]):
-                            self._scanColumnByKey(
-                                result, key, aux[root], where, auxidx + 1, auxidx2,
-                                items[auxidx + 1] if items and len(items) > auxidx + 1 else None,
-                                annotations[auxidx + 1] if annotations and
-                                len(annotations) > auxidx + 1 else None)
+                self._collectRecordRows(
+                    record, data, selector, length, colkey, col, recidx, rows,
+                    iid, aid, eid)
 
-    def _scanElementColumns(self, source, columns, elems, auxidx, items, annotations, keys):
-        rows = {}
-        for ridx, elem in enumerate(elems):
-            if auxidx < len(items) and items[auxidx]:
-                rows.setdefault('_0_item.name', []).append(items[auxidx]['name'])
-                rows.setdefault('_2_item.id', []).append(str(items[auxidx]['_id']))
-            if auxidx < len(annotations) and annotations[auxidx]:
-                rows.setdefault('_1_annotation.name', []).append(
-                    annotations[auxidx].get('annotation', {}).get('name'))
-                rows.setdefault('_3_annotation.id', []).append(str(annotations[auxidx]['_id']))
-                rows.setdefault('_4_annotation.description', []).append(
-                    annotations[auxidx].get('annotation', {}).get('description'))
-            rows.setdefault('_5_annotationelement.id', []).append(str(elem['id']))
-            rows.setdefault('annotationelement.group', []).append(
-                elem.get('group') or None)
-            rows.setdefault('annotationelement.label', []).append(
-                elem.get('label', {}).get('value') or None)
-            if '_bbox' in elem:
-                rows.setdefault('_bbox.x0', []).append(elem['_bbox']['lowx'])
-                rows.setdefault('_bbox.y0', []).append(elem['_bbox']['lowy'])
-                rows.setdefault('_bbox.x1', []).append(elem['_bbox']['highx'])
-                rows.setdefault('_bbox.y1', []).append(elem['_bbox']['highy'])
-            # TODO: Add group and label
-            if not auxidx and not ridx and 'user' in elem:
-                for key, entry in elem['user'].items():
-                    if not isinstance(entry, self.allowedTypes):
-                        continue
-                    root = ''
-                    fullkey, title = self._columnKey(source, root, key)
-                    colwhere = self._addColumn(
-                        columns, fullkey, title, root, key, source)
-                    keys[key] = (fullkey, colwhere)
-            # TODO: Populate group and label
-            for key, (fullkey, _keywhere) in keys.items():
-                entry = elem.get('user', {}).get(key)
-                if not isinstance(entry, self.allowedTypes):
-                    entry = None
-                rows.setdefault(fullkey, []).append(entry)
-        return rows
+    def _collectColumns(self, columns, recordlist, doctype, first=True, iid=None, aid=None):
+        """
+        Collect the columns available for a set of records.
 
-    def _scanElements(self, elements, source, columns, auxidx2, items, annotations):
-        where = self._addColumn(
-            columns, '_0_item.name', 'Item Name', '', 'name', 'annotationelement')
-        self._addColumn(
-            columns, '_2_item.id', 'Item ID', '', '_id', 'annotationelement')
-        self._addColumn(
-            columns, '_1_annotation.name', 'Annotation Name', '', 'name', 'annotationelement')
-        self._addColumn(
-            columns, '_3_annotation.id', 'Annotation ID', '', '_id', 'annotationelement')
-        self._addColumn(
-            columns, '_4_annotation.description', 'Annotation Description', '',
-            'description', 'annotationelement')
-        self._addColumn(
-            columns, '_5_annotationelement.id', 'Annotation Element ID', '',
-            'element_id', 'annotationelement')
-        self._addColumn(
-            columns, '_bbox.x0', 'Bounding Box Low X', '', 'lowx', 'annotationelement')
-        self._addColumn(
-            columns, '_bbox.y0', 'Bounding Box Low Y', '', 'lowy', 'annotationelement')
-        self._addColumn(
-            columns, '_bbox.x1', 'Bounding Box High X', '', 'highx', 'annotationelement')
-        self._addColumn(
-            columns, '_bbox.y1', 'Bounding Box High Y', '', 'highy', 'annotationelement')
-        self._addColumn(
-            columns, 'annotationelement.group', 'Annotation Group', '',
-            'group', 'annotationelement')
-        self._addColumn(
-            columns, 'annotationelement.label', 'Annotation Label', '',
-            'group', 'annotationelement')
-        keys = {}
-        for auxidx, elems in enumerate(elements):
-            if not elems:
-                continue
-            rows = self._scanElementColumns(
-                source, columns, elems, auxidx, items, annotations, keys)
-            for fullkey, entry in rows.items():
-                result = columns[fullkey]
-                if result['type'] == 'number':
-                    try:
-                        [float(v) for v in entry if isinstance(v, self.allowedTypes)]
-                    except Exception:
-                        result['type'] = 'string'
-                        result['distinct'] = {str(v) for v in result['distinct']}
-                for ridx, v in enumerate(entry):
-                    if not isinstance(v, self.allowedTypes):
-                        continue
-                    result['count'] += 1
-                    v = float(v) if result['type'] == 'number' else str(v)
-                    if len(result['distinct']) <= self.maxDistinct:
-                        result['distinct'].add(v)
-                    if result['type'] == 'number':
-                        if result['min'] is None:
-                            result['min'] = result['max'] = v
-                        result['min'] = min(result['min'], v)
-                        result['max'] = max(result['max'], v)
-                    if self._datacolumns and fullkey in self._datacolumns:
-                        self._datacolumns[fullkey][(where, (auxidx, auxidx2, ridx))] = v
+        :param columns: the column dictionary to possibly modify.
+        :param recordList: a list of records to use.
+        :param doctype: the base document type.
+        :param first: False if this is not the first page of a multi-page list
+            of records,
+        :param iid: an optional item id to use for determining distinct rows.
+        :param aid: an optional annotation id to use for determining distinct
+            rows.
+        """
+        getData = self.recordSelector(doctype)
+        if doctype == 'item':
+            self._commonColumn(columns, 'item.id', doctype, getData,
+                               lambda record, data, row: str(record['_id']))
+            self._commonColumn(columns, 'item.name', doctype, getData,
+                               lambda record, data, row: record['name'])
+            self._commonColumn(columns, 'item.description', doctype, getData,
+                               lambda record, data, row: record['description'])
+        if doctype == 'annotation':
+            self._commonColumn(columns, 'annotation.id', doctype, getData,
+                               lambda record, data, row: str(record['_id']))
+            self._commonColumn(columns, 'annotation.name', doctype, getData,
+                               lambda record, data, row: record['annotation']['name'])
+            self._commonColumn(columns, 'annotation.description', doctype, getData,
+                               lambda record, data, row: record['annotation']['description'])
+        if doctype == 'annotationelement':
+            self._commonColumn(columns, 'annotationelement.id', doctype, getData,
+                               lambda record, data, row: str(record['id']))
+            self._commonColumn(columns, 'annotationelement.group', doctype, getData,
+                               lambda record, data, row: record['group'])
+            self._commonColumn(columns, 'annotationelement.label', doctype, getData,
+                               lambda record, data, row: record['label']['value'])
+            self._commonColumn(columns, 'annotationelement.type', doctype, getData,
+                               lambda record, data, row: record['type'])
+            self._commonColumn(columns, 'bbox.x0', doctype, getData,
+                               lambda record, data, row: record['_bbox']['lowx'])
+            self._commonColumn(columns, 'bbox.y0', doctype, getData,
+                               lambda record, data, row: record['_bbox']['lowy'])
+            self._commonColumn(columns, 'bbox.x1', doctype, getData,
+                               lambda record, data, row: record['_bbox']['highx'])
+            self._commonColumn(columns, 'bbox.y1', doctype, getData,
+                               lambda record, data, row: record['_bbox']['highy'])
+        if first or self._fullScan or doctype != 'item':
+            for record in recordlist[:None if self._fullScan else 1]:
+                self._columnsFromData(columns, doctype, getData, record)
+        self._collectRecords(columns, recordlist, doctype, iid, aid)
 
     @property
     def columns(self):
@@ -642,16 +857,18 @@ class PlottableItemData:
 
         Each data entry contains
 
-            :fullkey: a unique string.  This is a good first-order sort
-            :root: the root data array
-            :key: the specific data tag
-            :source: the source of the data (folder, item, annotation,
-                annotationelement, file)
-            :type: string or number
+            :key: the column key.  For database entries, this is (item|
+                annotation|annotationelement).(id|name|description|group|
+                label).  For bounding boxes this is bbox.(x0|y0|x1|y1).  For
+                data from meta / attributes / user, this is
+                data.(key)[.0][.(key2)][.0]
+            :type: 'string' or 'number'
             :title: a human readable title
+            :count: the number of non-null entries in the column
             :[distinct]: a list of distinct values if there are less than some
-                maximum number of distinct values.  This might not include i
+                maximum number of distinct values.  This might not include
                 values from adjacent items
+            :[distinctcount]: if distinct is populated, this is len(distinct)
             :[min]: for number data types, the lowest value present
             :[max]: for number data types, the highest value present
 
@@ -662,45 +879,32 @@ class PlottableItemData:
         if self._columns is not None:
             return self._columns
         columns = {}
-        self._addColumn(
-            columns, '_0_item.name', 'Item Name', 'Item', 'name', 'base')
-        self._addColumn(
-            columns, '_2_item.id', 'Item ID', 'Item', '_id', 'base')
-        self._scanColumn(self.folder.get('meta', {}), 'folder', columns)
-        self._scanColumn(self.item.get('meta', {}), 'item', columns,
-                         [item.get('meta', {}) for item in self.items[1:]],
-                         items=self.items)
-        for anidx, annot in enumerate(self.annotations[0] if self.annotations is not None else []):
-            self._scanColumn(
-                annot.get('annotation', {}).get('attributes', {}),
-                'annotation', columns,
-                [itemannot[anidx].get('annotation').get('attributes', {})
-                 for itemannot in self.annotations[1:]
-                 if itemannot[anidx] is not None],
-                anidx, items=self.items,
-                annotations=[a[anidx] for a in self.annotations])
-            if not anidx:
-                self._addColumn(
-                    columns, '_1_annotation.name', 'Annotation Name',
-                    'Annotation', 'name', 'base')
-                self._addColumn(
-                    columns, '_3_annotation.id', 'Annotation ID',
-                    'Annotation', '_id', 'base')
-                self._addColumn(
-                    columns, '_4_annotation.description', 'Annotation Description',
-                    'Annotation', 'description', 'base')
-            # add annotation elements
-            firstelem = next(Annotationelement().yieldElements(annot), None)
-            if firstelem is not None:
-                self._scanElements(
-                    [list(itertools.islice(
-                        Annotationelement().yieldElements(a[anidx], bbox=True), 10000))
-                        if a[anidx] else None for a in self.annotations],
-                    'annotationelement', columns,
-                    anidx,
-                    items=self.items,
-                    annotations=[a[anidx] for a in self.annotations],
-                )
+        if not self._sources or 'folder' in self._sources:
+            self._collectColumns(columns, [self.folder], 'folder')
+        if not self._sources or 'item' in self._sources:
+            self._collectColumns(columns, self.items, 'item')
+            if self._moreItems:
+                moreItems = self.items
+                offset = 0
+                while len(moreItems) >= self.maxItems - 1:
+                    offset += self.maxItems - 1
+                    moreItems = list(
+                        Folder().childItems(self.folder, offset=offset, **self._moreItems))
+                    self._collectColumns(columns, moreItems, 'item', first=False)
+
+        for anidx, annotList in enumerate(self.annotations or []):
+            iid = str(self.items[anidx]['_id'])
+            for annot in annotList:
+                if annot is None:
+                    continue
+                if not self._sources or 'annotation' in self._sources:
+                    self._collectColumns(columns, [annot], 'annotation', iid=iid)
+                # add annotation elements
+                if not self._sources or 'annotationelement' in self._sources:
+                    elements = list(itertools.islice(Annotationelement().yieldElements(
+                        annot, bbox=True), self.maxAnnotationElements))
+                    self._collectColumns(
+                        columns, elements, 'annotationelement', iid=iid, aid=str(annot['_id']))
         # TODO: Add csv
         for result in columns.values():
             if len(result['distinct']) <= self.maxDistinct:
@@ -711,8 +915,48 @@ class PlottableItemData:
             if result['type'] != 'number' or result['min'] is None:
                 result.pop('min', None)
                 result.pop('max', None)
-        self._columns = sorted(columns.values(), key=lambda x: x['key'])
-        return self._columns
+        prefixOrder = {'item': 0, 'annotation': 1, 'annotationelement': 2, 'data': 3, 'bbox': 4}
+        self._columns = sorted(columns.values(), key=lambda x: (
+            prefixOrder.get(x['key'].split('.', 1)[0], len(prefixOrder)), x['key']))
+        return [{k: v for k, v in c.items() if k != 'where'} for c in self._columns]
+
+    def _collectData(self, rows, colsout):
+        """
+        Get data rows and columns.
+
+        :param rows: a list of row id tuples.
+        :param colsout: a list of output columns.
+        :returns: a data array and an updated row list.
+        """
+        data = [[None] * len(self._datacolumns) for _ in range(len(rows))]
+        discard = set()
+        for cidx, col in enumerate(colsout):
+            colkey = col['key']
+            if colkey in self._datacolumns:
+                datacol = self._datacolumns[colkey]
+                for ridx, rowid in enumerate(rows):
+                    value = datacol.get(rowid, None)
+                    if value is None and rowid[3] != -1:
+                        value = datacol.get((rowid[0], rowid[1], rowid[2], -1), None)
+                        if value is not None:
+                            discard.add((rowid[0], rowid[1], rowid[2], -1))
+                    if value is None and (rowid[3] != -1 or rowid[2]):
+                        value = datacol.get((rowid[0], rowid[1], '', -1), None)
+                        if value is not None:
+                            discard.add((rowid[0], rowid[1], '', -1))
+                    if value is None and (rowid[3] != -1 or rowid[2] or rowid[1]):
+                        value = datacol.get((rowid[0], '', '', -1), None)
+                        if value is not None:
+                            discard.add((rowid[0], '', '', -1))
+                    if value is None and (rowid[3] != -1 or rowid[2] or rowid[1] or rowid[0]):
+                        value = datacol.get(('', '', '', -1), None)
+                        if value is not None:
+                            discard.add(('', '', '', -1))
+                    data[ridx][cidx] = value
+        if len(discard):
+            data = [row for ridx, row in enumerate(data) if rows[ridx] not in discard]
+            rows = [row for ridx, row in enumerate(rows) if rows[ridx] not in discard]
+        return data, rows
 
     def data(self, columns, requiredColumns=None):
         """
@@ -734,19 +978,12 @@ class PlottableItemData:
         collist = self.columns
         for coldata in self._datacolumns.values():
             rows |= set(coldata.keys())
-        rows = sorted(rows, key=lambda row: (
-            tuple(x if x is not None else '' for x in row[0]), row[1]))
+        rows = sorted(rows)
         colsout = [col.copy() for col in collist if col['key'] in columns]
         for cidx, col in enumerate(colsout):
             col['index'] = cidx
         logger.info(f'Gathering {len(self._datacolumns)} x {len(rows)} data')
-        data = [[None] * len(self._datacolumns) for _ in range(len(rows))]
-        for cidx, col in enumerate(colsout):
-            colkey = col['key']
-            if colkey in self._datacolumns:
-                datacol = self._datacolumns[colkey]
-                for ridx, rowid in enumerate(rows):
-                    data[ridx][cidx] = datacol.get(rowid, None)
+        data, rows = self._collectData(rows, colsout)
         for cidx, col in enumerate(colsout):
             colkey = col['key']
             numrows = len(data)

@@ -114,12 +114,8 @@ RUN for ver in $PYTHON_VERSIONS; do \
     rm -rf /tmp/* /var/tmp/* && \
     rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /.pyenv
 
-# Note: to actually run tox on python 3.6, you have to do
-#  pip install 'tox<4.5' 'virtualenv<20.22'
-# or switch to the pyenv local 3.6 before running
-
 # Use nvm to install node
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
 # Default node version
 RUN . ~/.bashrc && \
