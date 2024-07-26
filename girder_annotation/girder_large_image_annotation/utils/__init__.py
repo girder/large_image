@@ -402,9 +402,9 @@ class PlottableItemData:
                     'largeImage.fileId': {'$exists': True},
                 },
                 'sort': [('_id', SortDir.ASCENDING)],
-                'limit': self.maxItems - 1,
             }
-            self.items.extend(list(Folder().childItems(self.folder, **query)))
+            self.items.extend(list(Folder().childItems(
+                self.folder, limit=self.maxItems - 1, **query)))
         self._moreItems = query if len(self.items) == self.maxItems else None
         # TODO: find csv/xlsx/dataframe items in the folder
 
@@ -745,17 +745,16 @@ class PlottableItemData:
                 value = selector(record, data, rowidx)
             except Exception:
                 continue
-            if not isinstance(value, self.allowedTypes) or value == '':
+            if value is None or not isinstance(value, self.allowedTypes) or value == '':
                 continue
             if col['type'] == 'number':
                 try:
-                    float(value)
+                    value = float(value)
                 except Exception:
                     col['type'] = 'string'
                     col['distinct'] = {str(v) for v in col['distinct']}
             col['count'] += 1
             if col['type'] == 'number':
-                value = float(value)
                 if col['min'] is None:
                     col['min'] = col['max'] = value
                 col['min'] = min(col['min'], value)
@@ -766,10 +765,10 @@ class PlottableItemData:
                 col['distinct'].add(value)
             if self._datacolumns and colkey in self._datacolumns:
                 self._datacolumns[colkey][(
-                    iid or '', aid or '', eid or '',
+                    iid, aid, eid,
                     rowidx if length is not None else -1)] = value
 
-    def _collectRecords(self, columns, recordlist, doctype, iid=None, aid=None):
+    def _collectRecords(self, columns, recordlist, doctype, iid='', aid=''):
         """
         Collect statistics and possibly row values from a list of records.
 
@@ -780,7 +779,7 @@ class PlottableItemData:
         :param aid: an optional annotation id to use for determining distinct
             rows.
         """
-        eid = None
+        eid = ''
         for colkey, col in columns.items():
             if self._datacolumns and colkey not in self._datacolumns:
                 continue
@@ -803,7 +802,7 @@ class PlottableItemData:
                     record, data, selector, length, colkey, col, recidx, rows,
                     iid, aid, eid)
 
-    def _collectColumns(self, columns, recordlist, doctype, first=True, iid=None, aid=None):
+    def _collectColumns(self, columns, recordlist, doctype, first=True, iid='', aid=''):
         """
         Collect the columns available for a set of records.
 
@@ -867,13 +866,9 @@ class PlottableItemData:
         if not self._sources or 'item' in self._sources:
             self._collectColumns(columns, self.items, 'item')
             if self._moreItems:
-                moreItems = self.items
-                offset = 0
-                while len(moreItems) >= self.maxItems - 1:
-                    offset += self.maxItems - 1
-                    moreItems = list(
-                        Folder().childItems(self.folder, offset=offset, **self._moreItems))
-                    self._collectColumns(columns, moreItems, 'item', first=False)
+                for item in Folder().childItems(
+                        self.folder, offset=len(self.items), **self._moreItems):
+                    self._collectColumns(columns, [item], 'item', first=False)
 
         for anidx, annotList in enumerate(self.annotations or []):
             iid = str(self.items[anidx]['_id'])
