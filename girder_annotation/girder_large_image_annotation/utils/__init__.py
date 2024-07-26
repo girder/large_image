@@ -2,6 +2,7 @@ import itertools
 import json
 import math
 import re
+import threading
 
 from bson.objectid import ObjectId
 
@@ -378,6 +379,7 @@ class PlottableItemData:
         self._fullScan = adjacentItems == '__all__'
         self._findItems(item, adjacentItems)
         self._findAnnotations(annotations)
+        self._dataLock = threading.RLock()
 
     def _findItems(self, item, adjacentItems=False):
         """
@@ -764,8 +766,7 @@ class PlottableItemData:
                 col['distinct'].add(value)
             if self._datacolumns and colkey in self._datacolumns:
                 self._datacolumns[colkey][(
-                    iid[recidx] if isinstance(iid, list) else iid or '',
-                    aid or '', eid or '',
+                    iid or '', aid or '', eid or '',
                     rowidx if length is not None else -1)] = value
 
     def _collectRecords(self, columns, recordlist, doctype, iid=None, aid=None):
@@ -781,6 +782,8 @@ class PlottableItemData:
         """
         eid = None
         for colkey, col in columns.items():
+            if self._datacolumns and colkey not in self._datacolumns:
+                continue
             if doctype not in col['where']:
                 continue
             getData, selector, length = col['where'][doctype]
@@ -850,34 +853,14 @@ class PlottableItemData:
                 self._columnsFromData(columns, doctype, getData, record)
         self._collectRecords(columns, recordlist, doctype, iid, aid)
 
-    @property
-    def columns(self):
+    def _getColumns(self):
         """
         Get a sorted list of plottable columns with some metadata for each.
-
-        Each data entry contains
-
-            :key: the column key.  For database entries, this is (item|
-                annotation|annotationelement).(id|name|description|group|
-                label).  For bounding boxes this is bbox.(x0|y0|x1|y1).  For
-                data from meta / attributes / user, this is
-                data.(key)[.0][.(key2)][.0]
-            :type: 'string' or 'number'
-            :title: a human readable title
-            :count: the number of non-null entries in the column
-            :[distinct]: a list of distinct values if there are less than some
-                maximum number of distinct values.  This might not include
-                values from adjacent items
-            :[distinctcount]: if distinct is populated, this is len(distinct)
-            :[min]: for number data types, the lowest value present
-            :[max]: for number data types, the highest value present
 
         :returns: a sorted list of data entries.
         """
         from ..models.annotationelement import Annotationelement
 
-        if self._columns is not None:
-            return self._columns
         columns = {}
         if not self._sources or 'folder' in self._sources:
             self._collectColumns(columns, [self.folder], 'folder')
@@ -916,9 +899,39 @@ class PlottableItemData:
                 result.pop('min', None)
                 result.pop('max', None)
         prefixOrder = {'item': 0, 'annotation': 1, 'annotationelement': 2, 'data': 3, 'bbox': 4}
-        self._columns = sorted(columns.values(), key=lambda x: (
+        columns = sorted(columns.values(), key=lambda x: (
             prefixOrder.get(x['key'].split('.', 1)[0], len(prefixOrder)), x['key']))
-        return [{k: v for k, v in c.items() if k != 'where'} for c in self._columns]
+        return columns
+
+    @property
+    def columns(self):
+        """
+        Get a sorted list of plottable columns with some metadata for each.
+
+        Each data entry contains
+
+            :key: the column key.  For database entries, this is (item|
+                annotation|annotationelement).(id|name|description|group|
+                label).  For bounding boxes this is bbox.(x0|y0|x1|y1).  For
+                data from meta / attributes / user, this is
+                data.(key)[.0][.(key2)][.0]
+            :type: 'string' or 'number'
+            :title: a human readable title
+            :count: the number of non-null entries in the column
+            :[distinct]: a list of distinct values if there are less than some
+                maximum number of distinct values.  This might not include
+                values from adjacent items
+            :[distinctcount]: if distinct is populated, this is len(distinct)
+            :[min]: for number data types, the lowest value present
+            :[max]: for number data types, the highest value present
+
+        :returns: a sorted list of data entries.
+        """
+        if self._columns is not None:
+            return self._columns
+        columns = self._getColumns()
+        self._columns = columns
+        return [{k: v for k, v in c.items() if k != 'where'} for c in self._columns if c['count']]
 
     def _collectData(self, rows, colsout):
         """
@@ -972,18 +985,20 @@ class PlottableItemData:
             columns = columns.split(',')
         if not isinstance(requiredColumns, list):
             requiredColumns = requiredColumns.split(',') if requiredColumns is not None else []
-        self._datacolumns = {c: {} for c in columns}
-        rows = set()
-        # collects data as a side effect
-        collist = self.columns
-        for coldata in self._datacolumns.values():
-            rows |= set(coldata.keys())
-        rows = sorted(rows)
-        colsout = [col.copy() for col in collist if col['key'] in columns]
-        for cidx, col in enumerate(colsout):
-            col['index'] = cidx
-        logger.info(f'Gathering {len(self._datacolumns)} x {len(rows)} data')
-        data, rows = self._collectData(rows, colsout)
+        with self._dataLock:
+            self._datacolumns = {c: {} for c in columns}
+            rows = set()
+            # collects data as a side effect
+            collist = self._getColumns()
+            for coldata in self._datacolumns.values():
+                rows |= set(coldata.keys())
+            rows = sorted(rows)
+            colsout = [col.copy() for col in collist if col['key'] in columns]
+            for cidx, col in enumerate(colsout):
+                col['index'] = cidx
+            logger.info(f'Gathering {len(self._datacolumns)} x {len(rows)} data')
+            data, rows = self._collectData(rows, colsout)
+            self._datacolumns = None
         for cidx, col in enumerate(colsout):
             colkey = col['key']
             numrows = len(data)
@@ -1005,6 +1020,7 @@ class PlottableItemData:
             else:
                 col.pop('distinct', None)
                 col.pop('distinctcount', None)
+        colsout = [{k: v for k, v in c.items() if k != 'where'} for c in colsout]
         return {
             'columns': colsout,
             'data': data}

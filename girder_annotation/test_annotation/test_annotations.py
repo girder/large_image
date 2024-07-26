@@ -748,3 +748,42 @@ class TestLargeImageAnnotationAccessMigration:
             logger.debug.assert_called_once()
         annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot
+
+
+def testPlottableDataAccess(admin):
+    import girder_large_image_annotation
+
+    exampleData = {
+        'ex1_nucleus_radius': 4.5,
+        'ex1_nucleus_circularity': 0.9,
+        'ex2_nuclei_radii': [4.5, 5.5, 5.1],
+        'ex2_nuclei_circularity': [0.9, 0.86, 0.92],
+        'ex3_nucleus': {
+            'radius': 4.5,
+            'circularity': 0.9,
+        },
+        'ex4_nucleii': {
+            'radii': [4.5, 5.5, 5.1],
+            'circularity': [0.9, 0.86, 0.92],
+        },
+        'ex5_nucleus': [{
+            'radius': 4.5,
+            'circularity': 0.9,
+        }, {
+            'radius': 5.5,
+            'circularity': 0.86,
+        }, {
+            'radius': 5.1,
+            'circularity': 0.92,
+        }],
+    }
+    item = Item().createItem('sample', admin, utilities.namedFolder(admin, 'Public'))
+    item = Item().setMetadata(item, exampleData)
+    plottable = girder_large_image_annotation.utils.PlottableItemData(admin, item)
+    col = plottable.columns
+    # Also contains item id, name, and description
+    assert len(col) == 12
+
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 12
+    assert len(data['data']) == 3

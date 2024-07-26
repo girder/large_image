@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.5
+
+### Improvements
+
+- Make the plottable data class threadsafe ([#1588](../../pull/1588))
+
 ## 1.29.4
 
 ### Improvements
