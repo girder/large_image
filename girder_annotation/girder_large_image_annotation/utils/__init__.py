@@ -1,4 +1,3 @@
-import itertools
 import json
 import math
 import re
@@ -347,7 +346,7 @@ def isGeoJSON(annotation):
 
 class PlottableItemData:
     maxItems = 1000
-    maxAnnotationElements = 10000
+    maxAnnotationElements = 5000
     maxDistinct = 20
     allowedTypes = (str, bool, int, float)
 
@@ -878,11 +877,11 @@ class PlottableItemData:
                 if not self._sources or 'annotation' in self._sources:
                     self._collectColumns(columns, [annot], 'annotation', iid=iid)
                 # add annotation elements
-                if not self._sources or 'annotationelement' in self._sources:
-                    elements = list(itertools.islice(Annotationelement().yieldElements(
-                        annot, bbox=True), self.maxAnnotationElements))
-                    self._collectColumns(
-                        columns, elements, 'annotationelement', iid=iid, aid=str(annot['_id']))
+                if ((not self._sources or 'annotationelement' in self._sources) and
+                        Annotationelement().countElements(annot) <= self.maxAnnotationElements):
+                    for element in Annotationelement().yieldElements(annot, bbox=True):
+                        self._collectColumns(
+                            columns, [element], 'annotationelement', iid=iid, aid=str(annot['_id']))
         # TODO: Add csv
         for result in columns.values():
             if len(result['distinct']) <= self.maxDistinct:

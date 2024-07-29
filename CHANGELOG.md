@@ -6,6 +6,7 @@
 
 - Make the plottable data class threadsafe ([#1588](../../pull/1588))
 - Speed up getting plottable data from items ([#1589](../../pull/1589))
+- Add an index to speed up getting plottable data from annotation elements ([#1590](../../pull/1590))
 
 ## 1.29.4
 
