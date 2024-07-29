@@ -80,6 +80,13 @@ class Annotationelement(Model):
                 'name': 'annotationGroupIdx',
             }),
             ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('_id', SortDir.ASCENDING),
+            ], {
+                'name': 'annotationElementIdIdx',
+            }),
+            ([
                 ('created', SortDir.ASCENDING),
                 ('_version', SortDir.ASCENDING),
             ], {}),
@@ -158,6 +165,13 @@ class Annotationelement(Model):
         annotation['_elementQuery'] = {}
         annotation['annotation']['elements'] = list(self.yieldElements(
             annotation, region, annotation['_elementQuery']))
+
+    def countElements(self, annotation):
+        query = {
+            'annotationId': annotation.get('_annotationId', annotation['_id']),
+            '_version': annotation['_version'],
+        }
+        return self.collection.count_documents(query)
 
     def yieldElements(self, annotation, region=None, info=None, bbox=False):  # noqa
         """
