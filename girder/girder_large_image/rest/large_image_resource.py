@@ -81,7 +81,7 @@ def createThumbnailsJobTask(item, spec):
 
 def createThumbnailsJobLog(job, info, prefix='', status=None):
     """
-    Log information aboyt the create thumbnails job.
+    Log information about the create thumbnails job.
 
     :param job: the job object.
     :param info: a dictionary with the number of thumbnails checked, created,
