@@ -36,3 +36,9 @@
 html.writer-html5 .rst-content dl.field-list dl.field-list {
     grid-template-columns: auto minmax(60%,95%);
 }
+td > p > a.internal > span.std-ref {
+  display: none;
+}
+td > p:hover > a.internal > span.std-ref {
+  display: inline-block;
+}
