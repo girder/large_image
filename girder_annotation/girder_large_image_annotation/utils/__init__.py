@@ -398,10 +398,11 @@ class PlottableItemData:
             query = {
                 'filters': {
                     '_id': {'$ne': item['_id']},
-                    'largeImage.fileId': {'$exists': True},
                 },
                 'sort': [('_id', SortDir.ASCENDING)],
             }
+            if 'largeImage' in item:
+                query['filters']['largeImage.fileId'] = {'$exists': True}
             self.items.extend(list(Folder().childItems(
                 self.folder, limit=self.maxItems - 1, **query)))
         self._moreItems = query if len(self.items) == self.maxItems else None
@@ -623,7 +624,8 @@ class PlottableItemData:
                         columns, key, title, doctype, getData,
                         self.itemNameIDSelector(True, selector), length)
                     self._ensureColumn(
-                        columns, 'item.id', title, doctype, getData,
+                        columns, 'item.id', self.commonColumns['item.id'],
+                        doctype, getData,
                         self.itemNameIDSelector(False, selector), length)
                     return
                 break
