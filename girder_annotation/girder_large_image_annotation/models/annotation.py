@@ -645,9 +645,10 @@ class Annotation(AccessControlledModel):
                 ('_active', SortDir.ASCENDING),
             ], {}),
             ([
-                ('_annotationId', SortDir.ASCENDING),
+                ('_id', SortDir.ASCENDING),
                 ('_version', SortDir.DESCENDING),
             ], {}),
+            '_version',
             'updated',
         ])
         self.ensureTextIndex({
@@ -1338,63 +1339,96 @@ class Annotation(AccessControlledModel):
         if keepInactiveVersions < 0:
             msg = 'keepInactiveVersions mist be non-negative'
             raise ValidationException(msg)
-        report = {'fromDeletedItems': 0, 'oldVersions': 0, 'active': 0, 'recentVersions': 0}
-        if remove:
-            report['removedVersions'] = 0
-        itemIds = {}
-        processedIds = set()
-        annotVersions = set()
         logger.info('Checking old annotations')
         logtime = time.time()
-        for annot in self.collection.find().sort([('_id', SortDir.ASCENDING)]):
-            if time.time() - logtime > 10:
-                logger.info('Still checking old annotations, checked %d with %d versions, %r' % (
-                    len(processedIds), len(annotVersions), report))
-                logtime = time.time()
-            id = annot.get('_annotationId', annot['_id'])
-            version = annot.get('_version')
-            annotVersions.add(version)
-            if id in processedIds:
-                continue
-            itemId = annot.get('itemId')
-            if itemId not in itemIds:
-                if len(itemIds) > 10000:
-                    itemIds = {}
-                itemIds[itemId] = Item().findOne({'_id': itemId}) is not None
-            keep = keepInactiveVersions if itemIds[itemId] else 0
-            history = self.versionList(id, force=True)
-            for record in history:
-                if record.get('_active') is not False and itemIds[itemId]:
-                    report['active'] += 1
-                    continue
-                if keep:
-                    keep -= 1
-                    report['recentVersions'] += 1
-                    continue
-                if max(record['created'], record['updated']).timestamp() < age.timestamp():
-                    if remove:
-                        self.collection.delete_one({'_id': record['_id']})
-                        Annotationelement().removeWithQuery({'_version': record['_version']})
-                        report['removedVersions'] += 1
-                    if not itemIds[itemId]:
-                        report['fromDeletedItems'] += 1
-                    else:
-                        report['oldVersions'] += 1
-                else:
-                    report['recentVersions'] += 1
-            processedIds.add(id)
-        logger.info('Getting distinct element versions')
-        elemVersions = Annotationelement().collection.distinct(
-            '_version', filter={'created': {'$lt': age}})
-        logger.info('Got %d distinct element versions' % len(elemVersions))
-        logtime = time.time()
-        abandonedVersions = set(elemVersions) - set(annotVersions)
-        report['abandonedVersions'] = len(abandonedVersions)
+        report = {'fromDeletedItems': 0, 'oldVersions': 0, 'abandonedVersions': 0}
         if remove:
-            for version in abandonedVersions:
-                if time.time() - logtime > 10:
-                    logger.info('Removing abandoned versions, %r' % report)
-                    logtime = time.time()
+            report['removedVersions'] = 0
+        report['active'] = self.collection.count_documents({'_active': {'$ne': False}})
+        if time.time() - logtime > 10:
+            logger.info('Counting inactive annotations, %r' % report)
+            logtime = time.time()
+        report['recentVersions'] = self.collection.count_documents({'_active': False})
+        recentDateStep = {'$addFields': {'mostRecentDate': {'$max': [
+            '$created', {'$ifNull': ['$updated', '$created']}]}}}
+        itemLookupStep = {'$lookup': {
+            'from': 'item',
+            'localField': 'itemId',
+            'foreignField': '_id',
+            'as': 'item',
+        }}
+        oldDeletedPipeline = [recentDateStep, itemLookupStep, {
+            '$match': {'item': {'$size': 0}, 'mostRecentDate': {'$lt': age}},
+        }, {
+            '$project': {'item': 0},
+        }]
+        if time.time() - logtime > 10:
+            logger.info('Finding deleted annotations, %r' % report)
+            logtime = time.time()
+        for annot in self.collection.aggregate(oldDeletedPipeline):
+            if time.time() - logtime > 10:
+                logger.info('Checking deleted annotations, %r' % report)
+                logtime = time.time()
+            report['fromDeletedItems'] += 1
+            if annot.get('_active', True):
+                report['active'] -= 1
+            else:
+                report['recentVersions'] -= 1
+            if remove:
+                self.collection.delete_one({'_id': annot['_id']})
+                Annotationelement().removeWithQuery({'_version': annot['_version']})
+                report['removedVersions'] += 1
+        oldPipeline = [itemLookupStep, {
+            '$match': {'item': {'$ne': []}, '_active': False},
+        }, {
+            '$group': {'_id': '$itemId', 'annotations': {'$push': '$$ROOT'}},
+        }, {
+            '$project': {'annotations': {'$slice': [
+                '$annotations', keepInactiveVersions, {'$size': '$annotations'},
+            ]}},
+        }, {
+            '$unwind': '$annotations',
+        }, {
+            '$replaceRoot': {'newRoot': '$annotations'},
+        }, recentDateStep, {
+            '$match': {'mostRecentDate': {'$lt': age}},
+        }]
+        if time.time() - logtime > 10:
+            logger.info('Finding old annotations, %r' % report)
+            logtime = time.time()
+        for annot in self.collection.aggregate(oldPipeline):
+            if time.time() - logtime > 10:
+                logger.info('Checking old annotations, %r' % report)
+                logtime = time.time()
+            report['oldVersions'] += 1
+            report['recentVersions'] -= 1
+            if remove:
+                self.collection.delete_one({'_id': annot['_id']})
+                Annotationelement().removeWithQuery({'_version': annot['_version']})
+                report['removedVersions'] += 1
+        maxVersion = Annotationelement().getNextVersionValue()
+        oldElementPipeline = [{
+            '$group': {'_id': '$_version'},
+        }, {
+            '$lookup': {
+                'from': 'annotation',
+                'localField': '_id',
+                'foreignField': '_version',
+                'as': 'matchingAnnotations',
+            },
+        }, {
+            '$match': {'matchingAnnotations': {'$eq': []}, '_id': {'$lt': maxVersion}},
+        }]
+        if time.time() - logtime > 10:
+            logger.info('Finding abandoned versions, %r' % report)
+            logtime = time.time()
+        for row in Annotationelement().collection.aggregate(oldElementPipeline):
+            version = row['_id']
+            if time.time() - logtime > 10:
+                logger.info('Removing abandoned versions, %r' % report)
+                logtime = time.time()
+            report['abandonedVersions'] += 1
+            if remove:
                 Annotationelement().removeWithQuery({'_version': version})
                 report['removedVersions'] += 1
             logger.info('Compacting annotation collection')
