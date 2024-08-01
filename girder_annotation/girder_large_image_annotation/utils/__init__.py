@@ -617,6 +617,8 @@ class PlottableItemData:
         }
         for k, v in keymap.items():
             if re.match(k, lastpart):
+                if lastpart != parts[1]:
+                    doctype = f'{doctype}.{parts[1]}'
                 key = v
                 title = self.commonColumns[key]
                 if key == 'item.name':
@@ -784,24 +786,24 @@ class PlottableItemData:
         for colkey, col in columns.items():
             if self._datacolumns and colkey not in self._datacolumns:
                 continue
-            if doctype not in col['where']:
-                continue
-            getData, selector, length = col['where'][doctype]
-            for recidx, record in enumerate(recordlist):
-                if doctype == 'item':
-                    iid = str(record['_id'])
-                elif doctype == 'annotation':
-                    aid = str(record['_id'])
-                elif doctype == 'annotationelement':
-                    eid = str(record['id'])
-                data = getData(record)
-                try:
-                    rows = 1 if length is None else length(record, data)
-                except Exception:
+            for where, (getData, selector, length) in col['where'].items():
+                if doctype != where.split('.', 1)[0]:
                     continue
-                self._collectRecordRows(
-                    record, data, selector, length, colkey, col, recidx, rows,
-                    iid, aid, eid)
+                for recidx, record in enumerate(recordlist):
+                    if doctype == 'item':
+                        iid = str(record['_id'])
+                    elif doctype == 'annotation':
+                        aid = str(record['_id'])
+                    elif doctype == 'annotationelement':
+                        eid = str(record['id'])
+                    data = getData(record)
+                    try:
+                        rows = 1 if length is None else length(record, data)
+                    except Exception:
+                        continue
+                    self._collectRecordRows(
+                        record, data, selector, length, colkey, col, recidx, rows,
+                        iid, aid, eid)
 
     def _collectColumns(self, columns, recordlist, doctype, first=True, iid='', aid=''):
         """
@@ -937,7 +939,7 @@ class PlottableItemData:
         :param colsout: a list of output columns.
         :returns: a data array and an updated row list.
         """
-        data = [[None] * len(self._datacolumns) for _ in range(len(rows))]
+        data = [[None] * len(colsout) for _ in range(len(rows))]
         discard = set()
         for cidx, col in enumerate(colsout):
             colkey = col['key']
@@ -981,6 +983,7 @@ class PlottableItemData:
             columns = columns.split(',')
         if not isinstance(requiredColumns, list):
             requiredColumns = requiredColumns.split(',') if requiredColumns is not None else []
+        requiredColumns = set(requiredColumns)
         with self._dataLock:
             self._datacolumns = {c: {} for c in columns}
             rows = set()
@@ -992,7 +995,7 @@ class PlottableItemData:
             colsout = [col.copy() for col in collist if col['key'] in columns]
             for cidx, col in enumerate(colsout):
                 col['index'] = cidx
-            logger.info(f'Gathering {len(self._datacolumns)} x {len(rows)} data')
+            logger.info(f'Gathering {len(colsout)} x {len(rows)} data')
             data, rows = self._collectData(rows, colsout)
             self._datacolumns = None
         for cidx, col in enumerate(colsout):
@@ -1009,7 +1012,8 @@ class PlottableItemData:
             if col['type'] == 'number' and col['count']:
                 col['min'] = min(row[cidx] for row in data if row[cidx] is not None)
                 col['max'] = max(row[cidx] for row in data if row[cidx] is not None)
-            distinct = {str(row[cidx]) for row in data if row[cidx] is not None}
+            distinct = {str(row[cidx]) if col['type'] == 'string' else row[cidx]
+                        for row in data if row[cidx] is not None}
             if len(distinct) <= self.maxDistinct:
                 col['distinct'] = sorted(distinct)
                 col['distinctcount'] = len(distinct)
