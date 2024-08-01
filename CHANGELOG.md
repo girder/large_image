@@ -8,6 +8,7 @@
 - Speed up getting plottable data from items ([#1589](../../pull/1589))
 - Add an index to speed up getting plottable data from annotation elements ([#1590](../../pull/1590))
 - Speed up checks for old annotations ([#1591](../../pull/1591))
+- Improve plottable data endpoint to better fetch folder data ([#1594](../../pull/1594))
 
 ## 1.29.4
 
