@@ -309,7 +309,7 @@ class Map:
             else:
                 center = (metadata['sizeY'] / 2, metadata['sizeX'] / 2)
 
-        children = []
+        children: List[Any] = []
         frames = metadata.get('frames')
         if frames is not None:
             self._frame_slider = IntSlider(
@@ -318,8 +318,9 @@ class Map:
                 max=len(frames) - 1,
                 description='Frame:',
             )
-            self._frame_slider.observe(self.update_frame, names='value')
-            children.append(self._frame_slider)
+            if self._frame_slider:
+                self._frame_slider.observe(self.update_frame, names='value')
+                children.append(self._frame_slider)
 
         m = Map(
             crs=crs,
@@ -394,15 +395,16 @@ class Map:
 
     def update_frame(self, event, **kwargs):
         frame = int(event.get('new'))
-        if 'frame=' in self._layer.url:
-            self._layer.url = re.sub(r'frame=(\d+)', f'frame={frame}', self._layer.url)
-        else:
-            if '?' in self._layer.url:
-                self._layer.url = self._layer.url.replace('?', f'?frame={frame}&')
+        if self._layer:
+            if 'frame=' in self._layer.url:
+                self._layer.url = re.sub(r'frame=(\d+)', f'frame={frame}', self._layer.url)
             else:
-                self._layer.url += f'?frame={frame}'
+                if '?' in self._layer.url:
+                    self._layer.url = self._layer.url.replace('?', f'?frame={frame}&')
+                else:
+                    self._layer.url += f'?frame={frame}'
 
-        self._layer.redraw()
+            self._layer.redraw()
 
 
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
@@ -448,7 +450,7 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             x = int(self.get_argument('x'))
             y = int(self.get_argument('y'))
             z = int(self.get_argument('z'))
-            frame = int(self.get_argument('frame', default=0))
+            frame = int(self.get_argument('frame', default='0'))
             encoding = self.get_argument('encoding', 'PNG')
             try:
                 tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
