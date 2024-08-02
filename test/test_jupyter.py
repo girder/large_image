@@ -33,7 +33,7 @@ def testJupyterIpyleafletMultiFrame():
 
     # get display in same method as _ipython_display_
     display = source._map.make_map(
-        source.metadata, source.as_leaflet_layer(), source.getCenter(srs='EPSG:4326')
+        source.metadata, source.as_leaflet_layer(), source.getCenter(srs='EPSG:4326'),
     )
     # ensure first child is frame slider
     assert display.children[0].description == 'Frame:'
