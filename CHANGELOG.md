@@ -10,6 +10,10 @@
 - Speed up checks for old annotations ([#1591](../../pull/1591))
 - Improve plottable data endpoint to better fetch folder data ([#1594](../../pull/1594))
 
+### Bug Fixes
+
+- Don't redirect tile frame images via 303; they aren't rendered correctly ([#1596](../../pull/1596))
+
 ## 1.29.4
 
 ### Improvements
