@@ -9,6 +9,7 @@ TODO: Intro to Girder
 
    girder_config_options
    girder_annotation_config_options
+   plottable
    upgrade
    _build/girder_large_image/modules
    _build/girder_large_image_annotation/modules

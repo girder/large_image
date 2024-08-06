@@ -18,7 +18,6 @@
    dicomweb_assetstore
    multi_source_specification
    annotations
-   plottable
    caching
    notebooks
    development
