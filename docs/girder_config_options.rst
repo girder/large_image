@@ -225,7 +225,7 @@ Image Frame Presets
 
 This is used to specify a list of presets for viewing images in the folder.
 Presets can be customized and saved in the GeoJS Image Viewer.
-To retrieve saved presets, use http://[serverURL]/api/v1/item/[itemID]/internal_metadata/presets.
+To retrieve saved presets, use ``[serverURL]/api/v1/item/[itemID]/internal_metadata/presets``.
 You can convert the response to YAML and paste it into the ``imageFramePresets`` key in your config file.
 
 Each preset can specify a name, a view mode, an image frame, and style options.
