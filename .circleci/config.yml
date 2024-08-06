@@ -229,6 +229,9 @@ jobs:
       - run:
           name: Install dependencies
           command: apt-get update -yq && apt-get install -yq pandoc && pandoc --version
+      - run:
+          name: Permissions for link checker
+          command: find /root -type d -exec chmod 755 {} \+
       - tox:
           env: docs,lint,lintclient,notebook
       - store_artifacts:

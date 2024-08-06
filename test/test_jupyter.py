@@ -25,6 +25,20 @@ def testJupyterIpyleafletGeospatial():
     assert source._jupyter_server_manager.port == port
 
 
+def testJupyterIpyleafletMultiFrame():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_channels.yml')
+    source = large_image.open(imagePath, projection='EPSG:3857')
+    assert source.frames
+
+    # get display in same method as _ipython_display_
+    display = source._map.make_map(
+        source.metadata, source.as_leaflet_layer(), source.getCenter(srs='EPSG:4326'),
+    )
+    # ensure first child is frame slider
+    assert display.children[0].description == 'Frame:'
+
+
 def testJupyterIpyleaflet():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'test_orient0.tif')

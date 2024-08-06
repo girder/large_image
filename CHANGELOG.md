@@ -1,5 +1,26 @@
 # Change Log
 
+## 1.29.5
+
+### Improvements
+
+- Make the plottable data class threadsafe ([#1588](../../pull/1588))
+- Speed up getting plottable data from items ([#1589](../../pull/1589))
+- Add an index to speed up getting plottable data from annotation elements ([#1590](../../pull/1590))
+- Speed up checks for old annotations ([#1591](../../pull/1591))
+- Improve plottable data endpoint to better fetch folder data ([#1594](../../pull/1594))
+- Show a frame slider when appropriate in jupyter widgets ([#1595](../../pull/1595))
+
+### Bug Fixes
+
+- Don't redirect tile frame images via 303; they aren't rendered correctly ([#1596](../../pull/1596))
+
+## 1.29.4
+
+### Improvements
+
+- Improve plottable data endpoint to better fetch varied data.  Refactors some columns names ([#1587](../../pull/1587))
+
 ## 1.29.3
 
 ### Improvements

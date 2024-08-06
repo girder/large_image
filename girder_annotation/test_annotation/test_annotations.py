@@ -19,6 +19,7 @@ try:
 
     from girder.constants import AccessType
     from girder.exceptions import AccessException, ValidationException
+    from girder.models.folder import Folder
     from girder.models.group import Group
     from girder.models.item import Item
     from girder.models.setting import Setting
@@ -748,3 +749,259 @@ class TestLargeImageAnnotationAccessMigration:
             logger.debug.assert_called_once()
         annot = Annotation().load(annot['_id'], force=True)
         assert 'access' not in annot
+
+
+def testPlottableDataAccess(admin):
+    import girder_large_image_annotation
+
+    exampleData = {
+        'ex1_nucleus_radius': 4.5,
+        'ex1_nucleus_circularity': 0.9,
+        'ex2_nuclei_radii': [4.5, 5.5, 5.1],
+        'ex2_nuclei_circularity': [0.9, 0.86, 0.92],
+        'ex3_nucleus': {
+            'radius': 4.5,
+            'circularity': 0.9,
+        },
+        'ex4_nucleii': {
+            'radii': [4.5, 5.5, 5.1],
+            'circularity': [0.9, 0.86, 0.92],
+        },
+        'ex5_nucleus': [{
+            'radius': 4.5,
+            'circularity': 0.9,
+        }, {
+            'radius': 5.5,
+            'circularity': 0.86,
+        }, {
+            'radius': 5.1,
+            'circularity': 0.92,
+        }],
+    }
+    item = Item().createItem('sample', admin, utilities.namedFolder(admin, 'Public'))
+    item = Item().setMetadata(item, exampleData)
+    plottable = girder_large_image_annotation.utils.PlottableItemData(admin, item)
+    col = plottable.columns
+    # Also contains item id, name, and description
+    assert len(col) == 12
+
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 12
+    assert len(data['data']) == 3
+
+
+def testPlottableDataMultipleItems(admin):
+    import girder_large_image_annotation
+
+    folder = utilities.namedFolder(admin, 'Public')
+    item1 = Item().createItem('sample1', admin, folder)
+    item1 = Item().setMetadata(item1, {
+        'nucleii': {
+            'circularity': 0.9,
+        },
+    })
+    item2 = Item().createItem('sample2', admin, folder)
+    item2 = Item().setMetadata(item2, {
+        'nucleii': {
+            'circularity': 0.86,
+            'extra': True,
+        },
+    })
+    Folder().setMetadata(folder, {
+        'nucleii': {
+            'image_name': ['sample1', str(item2['_id'])],
+            'radii': [4.5, 5.5],
+        },
+    })
+    annot1a = Annotation().createAnnotation(item1, admin, {
+        'name': 'sampleA',
+        'attributes': {
+            'nuclei': {
+                'category': 'catA',
+            },
+        },
+        'elements': [{
+            'type': 'rectangle',
+            'center': [20.0, 25.0, 0],
+            'width': 14.0,
+            'height': 15.0,
+            'user': {'nuclei': {'quality': 1.1}},
+        }, {
+            'type': 'rectangle',
+            'center': [30.0, 25.0, 0],
+            'width': 11.0,
+            'height': 12.0,
+            'user': {'nuclei': {'quality': 1.2}},
+        }]})
+    Annotation().createAnnotation(item1, admin, {
+        'name': 'sampleB',
+        'attributes': {
+            'nuclei': {
+                'category': 'catB',
+            },
+        },
+        'elements': [{
+            'type': 'rectangle',
+            'center': [20.0, 35.0, 0],
+            'width': 13.0,
+            'height': 16.0,
+            'user': {'nuclei': {'quality': 1.3}},
+        }, {
+            'type': 'rectangle',
+            'center': [30.0, 35.0, 0],
+            'width': 17.0,
+            'height': 18.0,
+            'user': {'nuclei': {'quality': 1.4}},
+        }]})
+    annot1c = Annotation().createAnnotation(item1, admin, {
+        'name': 'sampleC',
+        'attributes': {
+            'nuclei': {
+                'category': 'catC',
+            },
+        },
+        'elements': [{
+            'type': 'rectangle',
+            'center': [20.0, 45.0, 0],
+            'width': 1.0,
+            'height': 2.0,
+            'user': {'nuclei': {'quality': 1.5}},
+        }, {
+            'type': 'rectangle',
+            'center': [30.0, 45.0, 0],
+            'width': 3.0,
+            'height': 4.0,
+            'user': {'nuclei': {'quality': 1.6}},
+        }]})
+    Annotation().createAnnotation(item2, admin, {
+        'name': 'sampleA',
+        'attributes': {
+            'nuclei': {
+                'category': 'catA',
+            },
+        },
+        'elements': [{
+            'type': 'rectangle',
+            'center': [21.0, 25.0, 0],
+            'width': 5.0,
+            'height': 6.0,
+            'user': {'nuclei': {'quality': 1.7}},
+        }, {
+            'type': 'rectangle',
+            'center': [31.0, 25.0, 0],
+            'width': 7.0,
+            'height': 8.0,
+            'user': {'nuclei': {'quality': 1.8}},
+        }]})
+    Annotation().createAnnotation(item2, admin, {
+        'name': 'sampleB',
+        'attributes': {
+            'nuclei': {
+                'category': 'catB',
+            },
+        },
+        'elements': [{
+            'type': 'rectangle',
+            'center': [21.0, 35.0, 0],
+            'width': 9.0,
+            'height': 10.0,
+            'user': {'nuclei': {'quality': 1.9}},
+        }, {
+            'type': 'rectangle',
+            'center': [31.0, 35.0, 0],
+            'width': 19.0,
+            'height': 20.0,
+            'user': {'nuclei': {'quality': 2.0}},
+        }]})
+    Annotation().createAnnotation(item2, admin, {
+        'name': 'sampleD',
+        'attributes': {
+            'nuclei': {
+                'category': 'catD',
+            },
+        },
+        'elements': [{
+            'type': 'rectangle',
+            'center': [21.0, 45.0, 0],
+            'width': 21.0,
+            'height': 22.0,
+            'user': {'nuclei': {'quality': 2.1}},
+        }, {
+            'type': 'rectangle',
+            'center': [31.0, 45.0, 0],
+            'width': 23.0,
+            'height': 24.0,
+            'user': {'nuclei': {'quality': 2.2}},
+        }]})
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1, sources='item')
+    col = plottable.columns
+    assert len(col) == 3
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 3
+    assert len(data['data']) == 1
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1, sources='item', adjacentItems=True)
+    col = plottable.columns
+    assert len(col) == 3
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 3
+    assert len(data['data']) == 2
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1, sources='item', adjacentItems='__all__')
+    col = plottable.columns
+    assert len(col) == 4
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 4
+    assert len(data['data']) == 2
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1)
+    col = plottable.columns
+    assert len(col) == 4
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 4
+    assert len(data['data']) == 3
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1, adjacentItems=True)
+    col = plottable.columns
+    assert len(col) == 4
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 4
+    assert len(data['data']) == 4
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1, annotations=[str(annot1a['_id']), str(annot1c['_id'])])
+    col = plottable.columns
+    assert len(col) == 14
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 14
+    assert len(data['data']) == 6
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1, annotations=[str(annot1a['_id']), str(annot1c['_id'])], adjacentItems=True)
+    col = plottable.columns
+    assert len(col) == 14
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 14
+    assert len(data['data']) == 8
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1, annotations='__all__')
+    col = plottable.columns
+    assert len(col) == 14
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 14
+    assert len(data['data']) == 8
+
+    plottable = girder_large_image_annotation.utils.PlottableItemData(
+        admin, item1, annotations='__all__', adjacentItems=True)
+    col = plottable.columns
+    assert len(col) == 14
+    data = plottable.data([c['key'] for c in col])
+    assert len(data['columns']) == 14
+    assert len(data['data']) == 12

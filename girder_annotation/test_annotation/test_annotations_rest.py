@@ -866,7 +866,7 @@ class TestLargeImageAnnotationElementGroups:
             },
         )
         assert utilities.respStatus(resp) == 200
-        assert len(resp.json) == 0
+        assert len(resp.json) == 2
 
         resp = server.request(
             path=f'/annotation/item/{itemSrc["_id"]}/plot/list',
@@ -885,8 +885,8 @@ class TestLargeImageAnnotationElementGroups:
             user=admin,
             params={
                 'annotations': json.dumps([]),
-                'keys': '_0_item.name',
-                'requiredKeys': '_0_item.name',
+                'keys': 'item.name',
+                'requiredKeys': 'item.name',
             },
         )
         assert utilities.respStatus(resp) == 200
@@ -898,8 +898,8 @@ class TestLargeImageAnnotationElementGroups:
             user=admin,
             params={
                 'annotations': json.dumps([str(annot['_id'])]),
-                'keys': '_0_item.name,_bbox.x0',
-                'requiredKeys': '_0_item.name',
+                'keys': 'item.name,bbox.x0',
+                'requiredKeys': 'item.name',
             },
         )
         assert utilities.respStatus(resp) == 200
