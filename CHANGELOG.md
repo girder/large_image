@@ -9,6 +9,7 @@
 - Add an index to speed up getting plottable data from annotation elements ([#1590](../../pull/1590))
 - Speed up checks for old annotations ([#1591](../../pull/1591))
 - Improve plottable data endpoint to better fetch folder data ([#1594](../../pull/1594))
+- Show a frame slider when appropriate in jupyter widgets ([#1595](../../pull/1595))
 
 ### Bug Fixes
 
