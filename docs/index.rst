@@ -10,8 +10,8 @@
    :maxdepth: 1
    :caption: Contents:
 
+   getting_started
    tilesource_options
-   example_usage
    config_options
    image_conversion
    formats

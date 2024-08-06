@@ -1,11 +1,44 @@
-Example Usage
-=============
-
-The large_image library can be used to read and access different file formats.  There are several common usage patterns.  These examples use ``sample.tiff`` as an example -- any readable image can be used in this case.
+Getting Started
+===============
+The ``large_image`` library can be used to read and access different file formats.  There are several common usage patterns.
 To read more about accepted file formats, visit the :doc:`formats` page.
 
-Image Metadata
---------------
+These examples use ``sample.tiff`` as an example -- any readable image can be used in this case. Visit `demo.kitware.com <https://demo.kitware.com/histomicstk/#folder/589e030a92ca9a00118a6166>`_ to download a sample image.
+
+Installation
+------------
+
+In addition to installing the base ``large-image`` package, you'll need at least one tile source which corresponds to your target file format(s) (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
+
+Pip
+~~~
+
+Install common tile sources on linux, OSX, or Windows::
+
+    pip install large-image[common]
+
+Install all tile sources on linux::
+
+    pip install large-image[all] --find-links https://girder.github.io/large_image_wheels
+
+When using large-image with an instance of `Girder`_, install all tile sources and all Girder plugins on linux::
+
+    pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://girder.github.io/large_image_wheels
+
+
+Conda
+~~~~~
+
+Conda makes dependency management a bit easier if not on Linux. The base module, converter module, and two of the source modules are available on conda-forge. You can install the following::
+
+    conda install -c conda-forge large-image
+    conda install -c conda-forge large-image-source-gdal
+    conda install -c conda-forge large-image-source-tiff
+    conda install -c conda-forge large-image-converter
+
+
+Reading Image Metadata
+----------------------
 
 All images have metadata that include the base image size, the base tile size, the number of conceptual levels, and information about the size of a pixel in the image if it is known.
 
@@ -201,6 +234,8 @@ Projections
 
 large_image handles geospatial images.  These can be handled as any other image in pixel-space by just opening them normally.  Alternately, these can be opened with a projection and then referenced using that projection.
 
+.. Can we reproject from one CRS to another?
+
 .. code-block:: python
 
     import large_image
@@ -359,3 +394,5 @@ In some cases, it may be beneficial to write to a single image from multiple pro
             [(source, t, t_pos) for t, t_pos in tileset]
         )
     source.write('/tmp/sample.zarr.zip', lossy=False)
+
+.. _Girder: https://girder.readthedocs.io/en/latest/
