@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>large_image.tilesource.jupyter &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=8db4d87e" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="https://unpkg.com/mermaid@10.6.0/dist/mermaid.min.js"></script>
+        <script>mermaid.initialize({startOnLoad:true});</script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../example_usage.html">Example Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config_options.html">Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../formats.html">Image Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../upgrade.html">Upgrading from Previous Versions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image/modules.html">large_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_bioformats/modules.html">large_image_source_bioformats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_deepzoom/modules.html">large_image_source_deepzoom</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_dicom/modules.html">large_image_source_dicom</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dicomweb_assetstore.html">DICOMweb Assetstore</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_dummy/modules.html">large_image_source_dummy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_gdal/modules.html">large_image_source_gdal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_mapnik/modules.html">large_image_source_mapnik</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_multi/modules.html">large_image_source_multi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_nd2/modules.html">large_image_source_nd2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_ometiff/modules.html">large_image_source_ometiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_openjpeg/modules.html">large_image_source_openjpeg</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_openslide/modules.html">large_image_source_openslide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_pil/modules.html">large_image_source_pil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_rasterio/modules.html">large_image_source_rasterio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_test/modules.html">large_image_source_test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_tiff/modules.html">large_image_source_tiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_tifffile/modules.html">large_image_source_tifffile</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_vips/modules.html">large_image_source_vips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_source_zarr/modules.html">large_image_source_zarr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_converter/modules.html">large_image_converter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/large_image_tasks/modules.html">large_image_tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/girder_large_image/modules.html">girder_large_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../girder_config_options.html">Girder Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_build/girder_large_image_annotation/modules.html">girder_large_image_annotation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../girder_annotation_config_options.html">Girder Annotation Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plottable.html">Plottable Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../caching.html">Caching in Large Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../notebooks.html">Jupyter Notebook Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../development.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../tilesource.html">large_image.tilesource</a></li>
+      <li class="breadcrumb-item active">large_image.tilesource.jupyter</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for large_image.tilesource.jupyter</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;A vanilla REST interface to a ``TileSource``.</span>
+
+<span class="sd">This is intended for use in JupyterLab and not intended to be used as a full</span>
+<span class="sd">fledged REST API. Only two endpoints are exposed with minimal options:</span>
+
+<span class="sd">* `/metadata`</span>
+<span class="sd">* `/tile?z={z}&amp;x={x}&amp;y={y}&amp;encoding=png`</span>
+
+<span class="sd">We use Tornado because it is Jupyter&#39;s web server and will not require Jupyter</span>
+<span class="sd">users to install any additional dependencies. Also, Tornado doesn&#39;t require us</span>
+<span class="sd">to manage a separate thread for the web server.</span>
+
+<span class="sd">Please note that this webserver will not work with Classic Notebook and will</span>
+<span class="sd">likely lead to crashes. This is only for use in JupyterLab.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">importlib.util</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">weakref</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">from</span> <span class="nn">large_image.exceptions</span> <span class="kn">import</span> <span class="n">TileSourceXYZRangeError</span>
+<span class="kn">from</span> <span class="nn">large_image.tilesource.utilities</span> <span class="kn">import</span> <span class="n">JSONDict</span>
+
+<span class="n">ipyleafletPresent</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s1">&#39;ipyleaflet&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="IPyLeafletMixin">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.IPyLeafletMixin">[docs]</a>
+<span class="k">class</span> <span class="nc">IPyLeafletMixin</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mixin class to support interactive visualization in JupyterLab.</span>
+
+<span class="sd">    This class implements ``_ipython_display_`` with ``ipyleaflet``</span>
+<span class="sd">    to display an interactive image visualizer for the tile source</span>
+<span class="sd">    in JupyterLab.</span>
+
+<span class="sd">    Install `ipyleaflet &lt;https://github.com/jupyter-widgets/ipyleaflet&gt;`_</span>
+<span class="sd">    to interactively visualize tile sources in JupyterLab.</span>
+
+<span class="sd">    For remote JupyterHub environments, you may need to configure</span>
+<span class="sd">    the class variables ``JUPYTER_HOST`` or ``JUPYTER_PROXY``.</span>
+
+<span class="sd">    If ``JUPYTER_PROXY`` is set, it overrides ``JUPYTER_HOST``.</span>
+
+<span class="sd">    Use ``JUPYTER_HOST`` to set the host name of the machine such</span>
+<span class="sd">    that the tile URL can be accessed at</span>
+<span class="sd">    ``&#39;http://{JUPYTER_HOST}:{port}&#39;``.</span>
+
+<span class="sd">    Use ``JUPYTER_PROXY`` to leverage ``jupyter-server-proxy`` to</span>
+<span class="sd">    proxy the tile serving port through Jupyter&#39;s authenticated web</span>
+<span class="sd">    interface. This is useful in Docker and cloud JupyterHub</span>
+<span class="sd">    environments. You can set the environment variable</span>
+<span class="sd">    ``LARGE_IMAGE_JUPYTER_PROXY`` to control the default value of</span>
+<span class="sd">    ``JUPYTER_PROXY``. If ``JUPYTER_PROXY`` is set to ``True``, the</span>
+<span class="sd">    default will be ``&#39;/proxy/`` which will work for most Docker</span>
+<span class="sd">    Jupyter configurations. If in a cloud JupyterHub environment,</span>
+<span class="sd">    this will get a bit more nuanced as the</span>
+<span class="sd">    ``JUPYTERHUB_SERVICE_PREFIX`` may need to prefix the</span>
+<span class="sd">    ``&#39;/proxy/&#39;``.</span>
+
+<span class="sd">    To programmatically set these values:</span>
+
+<span class="sd">    .. code::</span>
+
+<span class="sd">        from large_image.tilesource.jupyter import IPyLeafletMixin</span>
+
+<span class="sd">        # Only set one of these values</span>
+
+<span class="sd">        # Use a custom domain (avoids port proxying)</span>
+<span class="sd">        IPyLeafletMixin.JUPYTER_HOST = &#39;mydomain&#39;</span>
+
+<span class="sd">        # Proxy in a standard JupyterLab environment</span>
+<span class="sd">        IPyLeafletMixin.JUPYTER_PROXY = True  # defaults to `/proxy/`</span>
+
+<span class="sd">        # Proxy in a cloud JupyterHub environment</span>
+<span class="sd">        IPyLeafletMixin.JUPYTER_PROXY = &#39;/jupyter/user/username/proxy/&#39;</span>
+<span class="sd">        # See if ``JUPYTERHUB_SERVICE_PREFIX`` is in the environment</span>
+<span class="sd">        # variables to improve this</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">JUPYTER_HOST</span> <span class="o">=</span> <span class="s1">&#39;127.0.0.1&#39;</span>
+    <span class="n">JUPYTER_PROXY</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;LARGE_IMAGE_JUPYTER_PROXY&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">_jupyter_server_manager</span><span class="p">:</span> <span class="n">Any</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_jupyter_server_manager</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_map</span> <span class="o">=</span> <span class="n">Map</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ipyleafletPresent</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">to_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="o">.</span><span class="n">to_map</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">from_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="o">.</span><span class="n">from_map</span>
+
+<div class="viewcode-block" id="IPyLeafletMixin.as_leaflet_layer">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.IPyLeafletMixin.as_leaflet_layer">[docs]</a>
+    <span class="k">def</span> <span class="nf">as_leaflet_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="c1"># NOTE: `as_leaflet_layer` is supported by ipyleaflet.Map.add</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jupyter_server_manager</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Must relaunch to ensure style updates work</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_jupyter_server_manager</span> <span class="o">=</span> <span class="n">launch_tile_server</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Must update the source on the manager in case the previous reference is bad</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_jupyter_server_manager</span><span class="o">.</span><span class="n">tile_source</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jupyter_server_manager</span><span class="o">.</span><span class="n">port</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">JUPYTER_PROXY</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">JUPYTER_PROXY</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">base_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">JUPYTER_PROXY</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">base_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;/proxy/</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">base_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">JUPYTER_HOST</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span>
+
+        <span class="c1"># Use repr in URL params to prevent caching across sources/styles</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;tile?z=</span><span class="se">{{</span><span class="s1">z</span><span class="se">}}</span><span class="s1">&amp;x=</span><span class="se">{{</span><span class="s1">x</span><span class="se">}}</span><span class="s1">&amp;y=</span><span class="se">{{</span><span class="s1">y</span><span class="se">}}</span><span class="s1">&amp;encoding=png&amp;repr=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="o">.</span><span class="n">make_layer</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>  <span class="c1"># type: ignore[attr-defined]</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">endpoint</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+    <span class="c1"># Only make _ipython_display_ available if ipyleaflet is installed</span>
+    <span class="k">if</span> <span class="n">ipyleafletPresent</span><span class="p">:</span>
+
+        <span class="k">def</span> <span class="nf">_ipython_display_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span>
+
+            <span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_leaflet_layer</span><span class="p">()</span>
+
+            <span class="k">return</span> <span class="n">display</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="o">.</span><span class="n">make_map</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">getCenter</span><span class="p">(</span><span class="n">srs</span><span class="o">=</span><span class="s1">&#39;EPSG:4326&#39;</span><span class="p">)))</span>  <span class="c1"># type: ignore[attr-defined]</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">iplmap</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            If using ipyleaflets, get access to the map object.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="o">.</span><span class="n">map</span></div>
+
+
+
+<div class="viewcode-block" id="Map">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.Map">[docs]</a>
+<span class="k">class</span> <span class="nc">Map</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An IPyLeafletMap representation of a large image.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">ts</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">IPyLeafletMixin</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">gc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">resource</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Specify the large image to be used with the IPyLeaflet Map.  One of (a)</span>
+<span class="sd">        a tile source, (b) metadata dictionary and tile url, (c) girder client</span>
+<span class="sd">        and item or file id, or (d) girder client and resource path must be</span>
+<span class="sd">        specified.</span>
+
+<span class="sd">        :param ts: a TileSource.</span>
+<span class="sd">        :param metadata: a metadata dictionary as returned by a tile source or</span>
+<span class="sd">            a girder item/{id}/tiles endpoint.</span>
+<span class="sd">        :param url: a slippy map template url to fetch tiles (e.g.,</span>
+<span class="sd">            .../item/{id}/tiles/zxy/{z}/{x}/{y}?params=...)</span>
+<span class="sd">        :param gc: an authenticated girder client.</span>
+<span class="sd">        :param id: an item id that exists on the girder client.</span>
+<span class="sd">        :param resource: a girder resource path of an item or file that exists</span>
+<span class="sd">            on the girder client.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frame_slider</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ts</span> <span class="o">=</span> <span class="n">ts</span>
+        <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">url</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">metadata</span><span class="p">)</span> <span class="ow">and</span> <span class="n">gc</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">id</span> <span class="ow">or</span> <span class="n">resource</span><span class="p">):</span>
+            <span class="n">fileId</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">entry</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;resource/lookup&#39;</span><span class="p">,</span> <span class="n">parameters</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="n">resource</span><span class="p">})</span>
+                <span class="k">if</span> <span class="n">entry</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;_modelType&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;file&#39;</span><span class="p">:</span>
+                        <span class="n">fileId</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span>
+                    <span class="nb">id</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;itemId&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;_modelType&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;file&#39;</span> <span class="k">else</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">id</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">metadata</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;item/</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s1">/tiles&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
+                    <span class="n">url</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">urlBase</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;item/</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s1">/tiles&#39;</span> <span class="o">+</span> <span class="s1">&#39;/zxy/</span><span class="si">{z}</span><span class="s1">/</span><span class="si">{x}</span><span class="s1">/</span><span class="si">{y}</span><span class="s1">&#39;</span>
+                    <span class="k">if</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geospatial&#39;</span><span class="p">):</span>
+                        <span class="n">suffix</span> <span class="o">=</span> <span class="s1">&#39;?projection=EPSG:3857&amp;encoding=PNG&#39;</span>
+                        <span class="n">metadata</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;item/</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s1">/tiles&#39;</span> <span class="o">+</span> <span class="n">suffix</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="n">Dict</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geospatial&#39;</span><span class="p">)</span> <span class="ow">and</span>
+                                <span class="n">cast</span><span class="p">(</span><span class="n">Dict</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;projection&#39;</span><span class="p">)):</span>
+                            <span class="n">url</span> <span class="o">+=</span> <span class="n">suffix</span>  <span class="c1"># type: ignore[operator]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_id</span> <span class="o">=</span> <span class="nb">id</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_ts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_temp_source</span><span class="p">(</span><span class="n">gc</span><span class="p">,</span> <span class="n">cast</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">fileId</span> <span class="ow">or</span> <span class="nb">id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">url</span> <span class="ow">and</span> <span class="n">metadata</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_url</span> <span class="o">=</span> <span class="n">url</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_layer</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_map</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ipyleafletPresent</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">_ipython_display_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">display</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ts</span><span class="p">:</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ts</span><span class="o">.</span><span class="n">as_leaflet_layer</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">display</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ts</span><span class="o">.</span><span class="n">_map</span><span class="o">.</span><span class="n">make_map</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_ts</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>  <span class="c1"># type: ignore[attr-defined]</span>
+                    <span class="n">t</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_ts</span><span class="o">.</span><span class="n">getCenter</span><span class="p">(</span><span class="n">srs</span><span class="o">=</span><span class="s1">&#39;EPSG:4326&#39;</span><span class="p">)))</span>  <span class="c1"># type: ignore[attr-defined]</span>
+
+    <span class="k">def</span> <span class="nf">_get_temp_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gc</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IPyLeafletMixin</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If the server isn&#39;t large_image enabled, download the file to view it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">tempfile</span>
+
+        <span class="kn">import</span> <span class="nn">large_image</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;item/</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span><span class="p">:</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;file/</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;item/</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s1">/files&#39;</span><span class="p">,</span> <span class="n">parameters</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;limit&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tempfile</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="n">file</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">downloadFile</span><span class="p">(</span><span class="n">file</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tempfile</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">large_image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tempfile</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Map.make_layer">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.Map.make_layer">[docs]</a>
+    <span class="k">def</span> <span class="nf">make_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an ipyleaflet tile layer given large_image metadata and a tile</span>
+<span class="sd">        url.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">ipyleaflet</span> <span class="kn">import</span> <span class="n">TileLayer</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_geospatial</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geospatial&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;projection&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;bounds&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_geospatial</span><span class="p">:</span>
+            <span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;bounds&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">],</span> <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sizeX&#39;</span><span class="p">]]]</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">TileLayer</span><span class="p">(</span>
+            <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
+            <span class="c1"># attribution=&#39;Tiles served with large-image&#39;,</span>
+            <span class="n">min_zoom</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">max_native_zoom</span><span class="o">=</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;levels&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="n">max_zoom</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+            <span class="n">tile_size</span><span class="o">=</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;tileWidth&#39;</span><span class="p">],</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span> <span class="o">=</span> <span class="n">layer</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+        <span class="k">return</span> <span class="n">layer</span></div>
+
+
+<div class="viewcode-block" id="Map.make_map">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.Map.make_map">[docs]</a>
+    <span class="k">def</span> <span class="nf">make_map</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">layer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">center</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an ipyleaflet map given large_image metadata, an optional</span>
+<span class="sd">        ipyleaflet layer, and the center of the tile source.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">ipyleaflet</span> <span class="kn">import</span> <span class="n">Map</span><span class="p">,</span> <span class="n">basemaps</span><span class="p">,</span> <span class="n">projections</span>
+        <span class="kn">from</span> <span class="nn">ipywidgets</span> <span class="kn">import</span> <span class="n">IntSlider</span><span class="p">,</span> <span class="n">VBox</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">default_zoom</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;levels&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sourceLevels&#39;</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">default_zoom</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_geospatial</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geospatial&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;projection&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_geospatial</span><span class="p">:</span>
+            <span class="c1"># TODO: better handle other projections</span>
+            <span class="n">crs</span> <span class="o">=</span> <span class="n">projections</span><span class="o">.</span><span class="n">EPSG3857</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">crs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;PixelSpace&#39;</span><span class="p">,</span>
+                <span class="n">custom</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="c1"># Why does this need to be 256?</span>
+                <span class="n">resolutions</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;levels&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)],</span>
+
+                <span class="c1"># This works but has x and y reversed</span>
+                <span class="n">proj4def</span><span class="o">=</span><span class="s1">&#39;+proj=longlat +axis=esu&#39;</span><span class="p">,</span>
+                <span class="n">bounds</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">],</span> <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sizeX&#39;</span><span class="p">]]],</span>
+                <span class="c1"># Why is origin X, Y but bounds Y, X?</span>
+                <span class="n">origin</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">]],</span>
+
+                <span class="c1"># This almost works to fix the x, y reversal, but</span>
+                <span class="c1"># - bounds are weird and other issues occur</span>
+                <span class="c1"># proj4def=&#39;+proj=longlat +axis=seu&#39;,</span>
+                <span class="c1"># bounds=[[-metadata[&#39;sizeX&#39;],-metadata[&#39;sizeY&#39;]],</span>
+                <span class="c1">#         [metadata[&#39;sizeX&#39;],metadata[&#39;sizeY&#39;]]],</span>
+                <span class="c1"># origin=[0,0],</span>
+            <span class="p">)</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">layer</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span>
+
+        <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;bounds&#39;</span> <span class="ow">in</span> <span class="n">metadata</span> <span class="ow">and</span> <span class="s1">&#39;projection&#39;</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">pyproj</span>
+
+                <span class="n">bounds</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;bounds&#39;</span><span class="p">]</span>
+                <span class="n">center</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="s1">&#39;ymax&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">bounds</span><span class="p">[</span><span class="s1">&#39;ymin&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="s1">&#39;xmax&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">bounds</span><span class="p">[</span><span class="s1">&#39;xmin&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">transf</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span>
+                    <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;projection&#39;</span><span class="p">],</span> <span class="s1">&#39;EPSG:4326&#39;</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">center</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">transf</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sizeX&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">children</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">frames</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;frames&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">frames</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_frame_slider</span> <span class="o">=</span> <span class="n">IntSlider</span><span class="p">(</span>
+                <span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="nb">max</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Frame:&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frame_slider</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_frame_slider</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_frame</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>
+                <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_frame_slider</span><span class="p">)</span>
+
+        <span class="n">m</span> <span class="o">=</span> <span class="n">Map</span><span class="p">(</span>
+            <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">,</span>
+            <span class="n">basemap</span><span class="o">=</span><span class="n">basemaps</span><span class="o">.</span><span class="n">OpenStreetMap</span><span class="o">.</span><span class="n">Mapnik</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_geospatial</span> <span class="k">else</span> <span class="n">layer</span><span class="p">,</span>
+            <span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span>
+            <span class="n">zoom</span><span class="o">=</span><span class="n">default_zoom</span><span class="p">,</span>
+            <span class="n">max_zoom</span><span class="o">=</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;levels&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="n">min_zoom</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">scroll_wheel_zoom</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">dragging</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">attribution_control</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_geospatial</span><span class="p">:</span>
+            <span class="n">m</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_map</span> <span class="o">=</span> <span class="n">m</span>
+        <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">VBox</span><span class="p">(</span><span class="n">children</span><span class="p">)</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">map</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">JSONDict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JSONDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_id&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Map.to_map">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.Map.to_map">[docs]</a>
+    <span class="k">def</span> <span class="nf">to_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert a coordinate from the image or projected image space to the map</span>
+<span class="sd">        space.</span>
+
+<span class="sd">        :param coordinate: a two-tuple that is x, y in pixel space or x, y in</span>
+<span class="sd">            image projection space.</span>
+<span class="sd">        :returns: a two-tuple that is in the map space coordinates.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">coordinate</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_geospatial</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">pyproj</span>
+
+            <span class="n">transf</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">[</span><span class="s1">&#39;projection&#39;</span><span class="p">],</span> <span class="s1">&#39;EPSG:4326&#39;</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">transf</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span></div>
+
+
+<div class="viewcode-block" id="Map.from_map">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.Map.from_map">[docs]</a>
+    <span class="k">def</span> <span class="nf">from_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param coordinate: a two-tuple that is in the map space coordinates.</span>
+<span class="sd">        :returns: a two-tuple that is x, y in pixel space or x, y in image</span>
+<span class="sd">            projection space.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">coordinate</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_geospatial</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">pyproj</span>
+
+            <span class="n">transf</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span>
+                <span class="s1">&#39;EPSG:4326&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">[</span><span class="s1">&#39;projection&#39;</span><span class="p">],</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">transf</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span></div>
+
+
+<div class="viewcode-block" id="Map.update_frame">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.Map.update_frame">[docs]</a>
+    <span class="k">def</span> <span class="nf">update_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;new&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;frame=&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="o">.</span><span class="n">url</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;frame=(\d+)&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;frame=</span><span class="si">{</span><span class="n">frame</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;?&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="o">.</span><span class="n">url</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="o">.</span><span class="n">url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;?frame=</span><span class="si">{</span><span class="n">frame</span><span class="si">}</span><span class="s1">&amp;&#39;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="o">.</span><span class="n">url</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;?frame=</span><span class="si">{</span><span class="n">frame</span><span class="si">}</span><span class="s1">&#39;</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_layer</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="launch_tile_server">
+<a class="viewcode-back" href="../../../_build/large_image/large_image.tilesource.html#large_image.tilesource.jupyter.launch_tile_server">[docs]</a>
+<span class="k">def</span> <span class="nf">launch_tile_server</span><span class="p">(</span><span class="n">tile_source</span><span class="p">:</span> <span class="n">IPyLeafletMixin</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">tornado.httpserver</span>
+    <span class="kn">import</span> <span class="nn">tornado.netutil</span>
+    <span class="kn">import</span> <span class="nn">tornado.web</span>
+
+    <span class="k">class</span> <span class="nc">RequestManager</span><span class="p">:</span>
+        <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tile_source</span><span class="p">:</span> <span class="n">IPyLeafletMixin</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tile_source_</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">tile_source</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ports</span> <span class="o">=</span> <span class="p">()</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">tile_source</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IPyLeafletMixin</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">IPyLeafletMixin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tile_source_</span><span class="p">())</span>
+
+        <span class="nd">@tile_source</span><span class="o">.</span><span class="n">setter</span>
+        <span class="k">def</span> <span class="nf">tile_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">IPyLeafletMixin</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tile_source_</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">ports</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ports</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">port</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">manager</span> <span class="o">=</span> <span class="n">RequestManager</span><span class="p">(</span><span class="n">tile_source</span><span class="p">)</span>
+    <span class="c1"># NOTE: set `ports` manually after launching server</span>
+
+    <span class="k">class</span> <span class="nc">TileSourceMetadataHandler</span><span class="p">(</span><span class="n">tornado</span><span class="o">.</span><span class="n">web</span><span class="o">.</span><span class="n">RequestHandler</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;REST endpoint to get image metadata.&quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">manager</span><span class="o">.</span><span class="n">tile_source</span><span class="o">.</span><span class="n">metadata</span><span class="p">))</span>  <span class="c1"># type: ignore[attr-defined]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_header</span><span class="p">(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="s1">&#39;application/json&#39;</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">TileSourceTileHandler</span><span class="p">(</span><span class="n">tornado</span><span class="o">.</span><span class="n">web</span><span class="o">.</span><span class="n">RequestHandler</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;REST endpoint to serve tiles from image in slippy maps standard.&quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">))</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">))</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">))</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="s1">&#39;frame&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">))</span>
+            <span class="n">encoding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="s1">&#39;encoding&#39;</span><span class="p">,</span> <span class="s1">&#39;PNG&#39;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">tile_binary</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">tile_source</span><span class="o">.</span><span class="n">getTile</span><span class="p">(</span>  <span class="c1"># type: ignore[attr-defined]</span>
+                    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="n">frame</span><span class="o">=</span><span class="n">frame</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">TileSourceXYZRangeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">404</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&lt;html&gt;&lt;body&gt;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&lt;/body&gt;&lt;/html&gt;&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">tile_binary</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_header</span><span class="p">(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="s1">&#39;image/png&#39;</span><span class="p">)</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">tornado</span><span class="o">.</span><span class="n">web</span><span class="o">.</span><span class="n">Application</span><span class="p">([</span>
+        <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;/metadata&#39;</span><span class="p">,</span> <span class="n">TileSourceMetadataHandler</span><span class="p">),</span>
+        <span class="p">(</span><span class="sa">r</span><span class="s1">&#39;/tile&#39;</span><span class="p">,</span> <span class="n">TileSourceTileHandler</span><span class="p">),</span>
+    <span class="p">])</span>
+    <span class="n">sockets</span> <span class="o">=</span> <span class="n">tornado</span><span class="o">.</span><span class="n">netutil</span><span class="o">.</span><span class="n">bind_sockets</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">tornado</span><span class="o">.</span><span class="n">httpserver</span><span class="o">.</span><span class="n">HTTPServer</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">add_sockets</span><span class="p">(</span><span class="n">sockets</span><span class="p">)</span>
+
+    <span class="n">manager</span><span class="o">.</span><span class="n">_ports</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">getsockname</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sockets</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">manager</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

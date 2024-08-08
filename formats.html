@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Formats &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8db4d87e" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Upgrading from Previous Versions" href="upgrade.html" />
+    <link rel="prev" title="Image Conversion" href="image_conversion.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_usage.html">Example Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config_options.html">Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Image Formats</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#preferred-extensions-and-mime-types">Preferred Extensions and Mime Types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#extensions">Extensions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mime-types">Mime Types</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Previous Versions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image/modules.html">large_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_bioformats/modules.html">large_image_source_bioformats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_deepzoom/modules.html">large_image_source_deepzoom</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_dicom/modules.html">large_image_source_dicom</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dicomweb_assetstore.html">DICOMweb Assetstore</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_dummy/modules.html">large_image_source_dummy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_gdal/modules.html">large_image_source_gdal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_mapnik/modules.html">large_image_source_mapnik</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_multi/modules.html">large_image_source_multi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_nd2/modules.html">large_image_source_nd2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_ometiff/modules.html">large_image_source_ometiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_openjpeg/modules.html">large_image_source_openjpeg</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_openslide/modules.html">large_image_source_openslide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_pil/modules.html">large_image_source_pil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_rasterio/modules.html">large_image_source_rasterio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_test/modules.html">large_image_source_test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_tiff/modules.html">large_image_source_tiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_tifffile/modules.html">large_image_source_tifffile</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_vips/modules.html">large_image_source_vips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_source_zarr/modules.html">large_image_source_zarr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_converter/modules.html">large_image_converter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/large_image_tasks/modules.html">large_image_tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/girder_large_image/modules.html">girder_large_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="girder_config_options.html">Girder Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_build/girder_large_image_annotation/modules.html">girder_large_image_annotation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="girder_annotation_config_options.html">Girder Annotation Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plottable.html">Plottable Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caching.html">Caching in Large Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">Jupyter Notebook Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Image Formats</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/formats.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="image-formats">
+<h1>Image Formats<a class="headerlink" href="#image-formats" title="Link to this heading">¶</a></h1>
+<section id="preferred-extensions-and-mime-types">
+<h2>Preferred Extensions and Mime Types<a class="headerlink" href="#preferred-extensions-and-mime-types" title="Link to this heading">¶</a></h2>
+<p>Images can generally be read regardless of their name.  By default, when opening an image with <code class="docutils literal notranslate"><span class="pre">large_image.open()</span></code>, each tile source reader is tried in turn until one source can open the file.  Each source lists preferred file extensions and mime types with a priority level.  If the file ends with one of these extensions or has one of these mimetypes, the order that the source readers are tried is adjusted based on the specified priority.</p>
+<p>The file extensions and mime types that are listed by the core sources that can affect source processing order are listed below.  See <code class="docutils literal notranslate"><span class="pre">large_image.listSources()</span></code> for details about priority of the different source and the <code class="docutils literal notranslate"><span class="pre">large_image.constants.SourcePriority</span></code> for the priority meaning.</p>
+<section id="extensions">
+<h3>Extensions<a class="headerlink" href="#extensions" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span><span class="n">sc</span>
+<span class="mi">2</span><span class="n">fl</span>
+<span class="n">ace2</span>
+<span class="n">acff</span>
+<span class="n">afi</span>
+<span class="n">afm</span>
+<span class="n">aim</span>
+<span class="n">al3d</span>
+<span class="n">ali</span>
+<span class="n">am</span>
+<span class="n">amiramesh</span>
+<span class="n">apl</span>
+<span class="n">apng</span>
+<span class="n">arf</span>
+<span class="n">asc</span>
+<span class="n">avi</span>
+<span class="n">avif</span>
+<span class="n">avs</span>
+<span class="n">b</span>
+<span class="n">bag</span>
+<span class="n">bif</span>
+<span class="n">bil</span>
+<span class="nb">bin</span>
+<span class="n">bip</span>
+<span class="n">blp</span>
+<span class="n">blx</span>
+<span class="n">bmp</span>
+<span class="n">bt</span>
+<span class="n">btf</span>
+<span class="n">bufr</span>
+<span class="n">bw</span>
+<span class="n">byn</span>
+<span class="n">c01</span>
+<span class="n">cal</span>
+<span class="n">cfg</span>
+<span class="n">ch5</span>
+<span class="n">cif</span>
+<span class="n">cr2</span>
+<span class="n">crw</span>
+<span class="n">csv</span>
+<span class="n">ct1</span>
+<span class="n">cub</span>
+<span class="n">cur</span>
+<span class="n">cxd</span>
+<span class="n">czi</span>
+<span class="n">dat</span>
+<span class="n">db</span>
+<span class="n">dcm</span>
+<span class="n">dcx</span>
+<span class="n">ddf</span>
+<span class="n">dds</span>
+<span class="n">dem</span>
+<span class="n">dib</span>
+<span class="n">dic</span>
+<span class="n">dicom</span>
+<span class="n">dm2</span>
+<span class="n">dm3</span>
+<span class="n">dm4</span>
+<span class="n">dt0</span>
+<span class="n">dt1</span>
+<span class="n">dt2</span>
+<span class="n">dti</span>
+<span class="n">dv</span>
+<span class="n">dwg</span>
+<span class="n">dz</span>
+<span class="n">dzc</span>
+<span class="n">dzi</span>
+<span class="n">eer</span>
+<span class="n">emf</span>
+<span class="n">eps</span>
+<span class="n">epsi</span>
+<span class="n">err</span>
+<span class="n">ers</span>
+<span class="n">ets</span>
+<span class="n">exp</span>
+<span class="n">exr</span>
+<span class="n">fdf</span>
+<span class="n">fff</span>
+<span class="n">ffr</span>
+<span class="n">fit</span>
+<span class="n">fits</span>
+<span class="n">flc</span>
+<span class="n">flex</span>
+<span class="n">fli</span>
+<span class="n">frm</span>
+<span class="n">ftc</span>
+<span class="n">fts</span>
+<span class="n">ftu</span>
+<span class="n">gbr</span>
+<span class="n">gdb</span>
+<span class="n">gel</span>
+<span class="n">gen</span>
+<span class="n">geotiff</span>
+<span class="n">gff</span>
+<span class="n">gif</span>
+<span class="n">gpkg</span>
+<span class="n">gpkg</span><span class="o">.</span><span class="n">zip</span>
+<span class="n">grb</span>
+<span class="n">grb2</span>
+<span class="n">grc</span>
+<span class="n">grd</span>
+<span class="n">grey</span>
+<span class="n">grib</span>
+<span class="n">grib2</span>
+<span class="n">gsb</span>
+<span class="n">gta</span>
+<span class="n">gti</span>
+<span class="n">gti</span><span class="o">.</span><span class="n">fgb</span>
+<span class="n">gti</span><span class="o">.</span><span class="n">gpkg</span>
+<span class="n">gtx</span>
+<span class="n">gvb</span>
+<span class="n">gxf</span>
+<span class="n">h5</span>
+<span class="n">hdf</span>
+<span class="n">hdf5</span>
+<span class="n">hdr</span>
+<span class="n">hdr</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">hed</span>
+<span class="n">heic</span>
+<span class="n">heics</span>
+<span class="n">heif</span>
+<span class="n">heifs</span>
+<span class="n">hf2</span>
+<span class="n">hgt</span>
+<span class="n">hif</span>
+<span class="n">his</span>
+<span class="n">htd</span>
+<span class="n">html</span>
+<span class="n">hx</span>
+<span class="n">i2i</span>
+<span class="n">icb</span>
+<span class="n">icns</span>
+<span class="n">ico</span>
+<span class="n">ics</span>
+<span class="n">ids</span>
+<span class="n">iim</span>
+<span class="n">im</span>
+<span class="n">im3</span>
+<span class="n">img</span>
+<span class="n">img</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">ims</span>
+<span class="n">ini</span>
+<span class="n">inr</span>
+<span class="n">ipl</span>
+<span class="n">ipm</span>
+<span class="n">ipw</span>
+<span class="n">isg</span>
+<span class="n">j2c</span>
+<span class="n">j2k</span>
+<span class="n">jfif</span>
+<span class="n">jls</span>
+<span class="n">jp2</span>
+<span class="n">jpc</span>
+<span class="n">jpe</span>
+<span class="n">jpeg</span>
+<span class="n">jpf</span>
+<span class="n">jpg</span>
+<span class="n">jpk</span>
+<span class="n">jpls</span>
+<span class="n">jpt</span>
+<span class="n">jpx</span>
+<span class="n">json</span>
+<span class="n">jxl</span>
+<span class="n">kap</span>
+<span class="n">kea</span>
+<span class="n">klb</span>
+<span class="n">kml</span>
+<span class="n">kmz</span>
+<span class="n">kro</span>
+<span class="n">l2d</span>
+<span class="n">labels</span>
+<span class="n">lbl</span>
+<span class="n">lcp</span>
+<span class="n">lei</span>
+<span class="n">lif</span>
+<span class="n">liff</span>
+<span class="n">lim</span>
+<span class="n">lms</span>
+<span class="n">lsm</span>
+<span class="nb">map</span>
+<span class="n">mat</span>
+<span class="n">mbtiles</span>
+<span class="n">mdb</span>
+<span class="n">mea</span>
+<span class="n">mem</span>
+<span class="n">mnc</span>
+<span class="n">mng</span>
+<span class="n">mod</span>
+<span class="n">mov</span>
+<span class="n">mpeg</span>
+<span class="n">mpg</span>
+<span class="n">mpl</span>
+<span class="n">mpo</span>
+<span class="n">mpr</span>
+<span class="n">mrc</span>
+<span class="n">mrcs</span>
+<span class="n">mrf</span>
+<span class="n">mrw</span>
+<span class="n">mrxs</span>
+<span class="n">msp</span>
+<span class="n">msr</span>
+<span class="n">mtb</span>
+<span class="n">mvd2</span>
+<span class="n">n1</span>
+<span class="n">naf</span>
+<span class="n">nat</span>
+<span class="n">nc</span>
+<span class="n">nd</span>
+<span class="n">nd2</span>
+<span class="n">ndpi</span>
+<span class="n">ndpis</span>
+<span class="n">nef</span>
+<span class="n">nhdr</span>
+<span class="n">nia</span>
+<span class="n">nia</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">nii</span>
+<span class="n">nii</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">nitf</span>
+<span class="n">nrrd</span>
+<span class="n">ntf</span>
+<span class="n">obf</span>
+<span class="n">obsep</span>
+<span class="n">oib</span>
+<span class="n">oif</span>
+<span class="n">oir</span>
+<span class="n">ome</span>
+<span class="n">ome</span><span class="o">.</span><span class="n">btf</span>
+<span class="n">ome</span><span class="o">.</span><span class="n">tf2</span>
+<span class="n">ome</span><span class="o">.</span><span class="n">tf8</span>
+<span class="n">ome</span><span class="o">.</span><span class="n">tif</span>
+<span class="n">ome</span><span class="o">.</span><span class="n">tiff</span>
+<span class="n">ome</span><span class="o">.</span><span class="n">xml</span>
+<span class="n">palm</span>
+<span class="n">par</span>
+<span class="n">pbm</span>
+<span class="n">pcd</span>
+<span class="n">pcoraw</span>
+<span class="n">pcx</span>
+<span class="n">pdf</span>
+<span class="n">pds</span>
+<span class="n">pfm</span>
+<span class="n">pgm</span>
+<span class="n">pic</span>
+<span class="n">pict</span>
+<span class="n">pix</span>
+<span class="n">png</span>
+<span class="n">pnl</span>
+<span class="n">pnm</span>
+<span class="n">ppi</span>
+<span class="n">ppm</span>
+<span class="n">pr3</span>
+<span class="n">prf</span>
+<span class="n">ps</span>
+<span class="n">psd</span>
+<span class="n">ptif</span>
+<span class="n">ptiff</span>
+<span class="n">pxr</span>
+<span class="n">qoi</span>
+<span class="n">qpi</span>
+<span class="n">qptiff</span>
+<span class="n">r3d</span>
+<span class="n">ras</span>
+<span class="n">raw</span>
+<span class="n">rcpnl</span>
+<span class="n">rda</span>
+<span class="n">rec</span>
+<span class="n">res</span>
+<span class="n">rgb</span>
+<span class="n">rgba</span>
+<span class="n">rik</span>
+<span class="n">rst</span>
+<span class="n">rsw</span>
+<span class="n">scn</span>
+<span class="n">sdat</span>
+<span class="n">sdt</span>
+<span class="n">seq</span>
+<span class="n">sg</span><span class="o">-</span><span class="n">grd</span><span class="o">-</span><span class="n">z</span>
+<span class="n">sgi</span>
+<span class="n">sid</span>
+<span class="n">sif</span>
+<span class="n">sigdem</span>
+<span class="n">sld</span>
+<span class="n">sm2</span>
+<span class="n">sm3</span>
+<span class="n">spc</span>
+<span class="n">spe</span>
+<span class="n">spi</span>
+<span class="n">sqlite</span>
+<span class="n">st</span>
+<span class="n">stk</span>
+<span class="n">stp</span>
+<span class="n">svs</span>
+<span class="n">svslide</span>
+<span class="n">sxm</span>
+<span class="n">szi</span>
+<span class="n">tc</span>
+<span class="n">ter</span>
+<span class="n">tf2</span>
+<span class="n">tf8</span>
+<span class="n">tfr</span>
+<span class="n">tga</span>
+<span class="n">tif</span>
+<span class="n">tiff</span>
+<span class="n">tnb</span>
+<span class="n">toc</span>
+<span class="n">top</span>
+<span class="n">tpkx</span>
+<span class="n">txt</span>
+<span class="n">v</span>
+<span class="n">vda</span>
+<span class="n">vff</span>
+<span class="n">vips</span>
+<span class="n">vms</span>
+<span class="n">vmu</span>
+<span class="n">vrt</span>
+<span class="n">vsi</span>
+<span class="n">vst</span>
+<span class="n">vws</span>
+<span class="n">wat</span>
+<span class="n">webp</span>
+<span class="n">wlz</span>
+<span class="n">wmf</span>
+<span class="n">wpi</span>
+<span class="n">xbm</span>
+<span class="n">xdce</span>
+<span class="n">xml</span>
+<span class="n">xpm</span>
+<span class="n">xqd</span>
+<span class="n">xqf</span>
+<span class="n">xv</span>
+<span class="n">xys</span>
+<span class="n">xyz</span>
+<span class="n">yaml</span>
+<span class="n">yml</span>
+<span class="n">zarr</span>
+<span class="n">zarray</span>
+<span class="n">zattrs</span>
+<span class="n">zfp</span>
+<span class="n">zfr</span>
+<span class="n">zgroup</span>
+<span class="n">zif</span>
+<span class="nb">zip</span>
+<span class="n">zvi</span>
+
+<span class="mi">343</span> <span class="n">extensions</span>
+</pre></div>
+</div>
+</section>
+<section id="mime-types">
+<h3>Mime Types<a class="headerlink" href="#mime-types" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">application</span><span class="o">/</span><span class="n">dicom</span>
+<span class="n">application</span><span class="o">/</span><span class="n">json</span>
+<span class="n">application</span><span class="o">/</span><span class="n">pdf</span>
+<span class="n">application</span><span class="o">/</span><span class="n">postscript</span>
+<span class="n">application</span><span class="o">/</span><span class="n">vnd</span><span class="o">+</span><span class="n">zarr</span>
+<span class="n">application</span><span class="o">/</span><span class="n">x</span><span class="o">-</span><span class="n">zarr</span>
+<span class="n">application</span><span class="o">/</span><span class="n">yaml</span>
+<span class="n">application</span><span class="o">/</span><span class="nb">zip</span><span class="o">+</span><span class="n">zarr</span>
+<span class="n">image</span><span class="o">/</span><span class="n">avif</span>
+<span class="n">image</span><span class="o">/</span><span class="n">bmp</span>
+<span class="n">image</span><span class="o">/</span><span class="n">czi</span>
+<span class="n">image</span><span class="o">/</span><span class="n">geotiff</span>
+<span class="n">image</span><span class="o">/</span><span class="n">gif</span>
+<span class="n">image</span><span class="o">/</span><span class="n">heic</span>
+<span class="n">image</span><span class="o">/</span><span class="n">heif</span>
+<span class="n">image</span><span class="o">/</span><span class="n">icns</span>
+<span class="n">image</span><span class="o">/</span><span class="n">jls</span>
+<span class="n">image</span><span class="o">/</span><span class="n">jp2</span>
+<span class="n">image</span><span class="o">/</span><span class="n">jpeg</span>
+<span class="n">image</span><span class="o">/</span><span class="n">jpx</span>
+<span class="n">image</span><span class="o">/</span><span class="n">jxl</span>
+<span class="n">image</span><span class="o">/</span><span class="n">mirax</span>
+<span class="n">image</span><span class="o">/</span><span class="n">mpo</span>
+<span class="n">image</span><span class="o">/</span><span class="n">nd2</span>
+<span class="n">image</span><span class="o">/</span><span class="n">palm</span>
+<span class="n">image</span><span class="o">/</span><span class="n">png</span>
+<span class="n">image</span><span class="o">/</span><span class="n">rgb</span>
+<span class="n">image</span><span class="o">/</span><span class="n">scn</span>
+<span class="n">image</span><span class="o">/</span><span class="n">sgi</span>
+<span class="n">image</span><span class="o">/</span><span class="n">tiff</span>
+<span class="n">image</span><span class="o">/</span><span class="n">vnd</span><span class="o">.</span><span class="n">adobe</span><span class="o">.</span><span class="n">photoshop</span>
+<span class="n">image</span><span class="o">/</span><span class="n">vsi</span>
+<span class="n">image</span><span class="o">/</span><span class="n">webp</span>
+<span class="n">image</span><span class="o">/</span><span class="n">x</span><span class="o">-</span><span class="n">icon</span>
+<span class="n">image</span><span class="o">/</span><span class="n">x</span><span class="o">-</span><span class="n">pcx</span>
+<span class="n">image</span><span class="o">/</span><span class="n">x</span><span class="o">-</span><span class="n">portable</span><span class="o">-</span><span class="n">anymap</span>
+<span class="n">image</span><span class="o">/</span><span class="n">x</span><span class="o">-</span><span class="n">ptif</span>
+<span class="n">image</span><span class="o">/</span><span class="n">x</span><span class="o">-</span><span class="n">tga</span>
+<span class="n">image</span><span class="o">/</span><span class="n">x</span><span class="o">-</span><span class="n">tiff</span>
+<span class="n">image</span><span class="o">/</span><span class="n">x</span><span class="o">-</span><span class="n">xpixmap</span>
+<span class="n">image</span><span class="o">/</span><span class="n">xbm</span>
+<span class="n">image</span><span class="o">/</span><span class="n">xpm</span>
+<span class="n">video</span><span class="o">/</span><span class="n">mpeg</span>
+
+<span class="mi">43</span> <span class="n">mime</span> <span class="n">types</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="image_conversion.html" class="btn btn-neutral float-left" title="Image Conversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="upgrade.html" class="btn btn-neutral float-right" title="Upgrading from Previous Versions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
