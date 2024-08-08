@@ -72,6 +72,9 @@ pygments_style = 'sphinx'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['static']
 html_css_files = ['custom.css']
+html_favicon = 'static/K.png'
+html_permalinks = True
+html_permalinks_icon = '&#128279'
 
 autoclass_content = 'both'
 

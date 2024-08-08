@@ -1,8 +1,32 @@
 Developer Guide
 ===============
 
-Requirements
-------------
+Developer Installation
+----------------------
+To install all packages from source, clone the repository::
+
+    git clone https://github.com/girder/large_image.git
+    cd large_image
+
+Install all packages and dependencies::
+
+    pip install -e . -r requirements-dev.txt
+
+If you aren't developing with Girder 3, you can skip installing those components.  Use ``requirements-dev-core.txt`` instead of ``requirements-dev.txt``::
+
+    pip install -e . -r requirements-dev-core.txt
+
+
+Tile Source Requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Many tile sources have complex prerequisites.  These can be installed directly using your system's package manager or from some prebuilt Python wheels for Linux.  The prebuilt wheels are not official packages, but they can be used by instructing pip to use them by preference::
+
+    pip install -e . -r requirements-dev.txt --find-links https://girder.github.io/large_image_wheels
+
+
+Test Requirements
+~~~~~~~~~~~~~~~~~~
 
 Besides an appropriate version of Python, Large Image tests are run via `tox <https://tox.readthedocs.io/en/latest/>`_.  This is also a convenient way to setup a development environment.
 
