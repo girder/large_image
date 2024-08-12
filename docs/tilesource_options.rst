@@ -15,7 +15,7 @@ The ``encoding`` parameter only affects output when ``format`` is ``TILE_FORMAT_
 
 The ``encoding`` parameter can be one of ``JPEG``, ``PNG``, ``TIFF``, ``JFIF``, or ``TILED``.  When the tile is output as an image, this is the preferred format.  Note that ``JFIF`` is a specific variant of ``JPEG`` that will always use either the Y or YCbCr color space as well as constraining other options.  ``TILED`` will output a tiled tiff file; this is slower than ``TIFF`` but can support images of arbitrary size.
 
-Additional options are available based on the PIL.Image registered encoders. Refer to the `PIL documentation <pil_encoders_>`_ for supported formats.
+Additional encoding options are available based on the PIL.Image registered encoders. Refer to the `PIL documentation <pil_encoders_>`_ for supported formats.
 
 Associated with ``encoding``, some image formats have additional parameters.
 
@@ -67,7 +67,7 @@ A band definition is an object which can contain the following keys:
 
 - ``axis``: if specified, keep on the specified axis (channel) of the intermediate numpy array.  This is typically between 0 and 3 for the red, green, blue, and alpha channels.  Only the first such value is used, and this can be specified as a base key if ``bands`` is specified.
 
-- ``icc``: by default, sources that expose ICC color profiles (PIL, OpenJPEG, TIFF, TiffFile) will apply those profiles to the image data, converting the results to the sRGB profile.  To use the raw image data without ICC profile adjustments, specify an ``icc`` value of ``false``.  If the entire style is ``{"icc": false}``, the results will be the same as the default bands with only the adjustment being skipped.  Similarly, if the entire style is ``{"icc": true}``, this is the same as the default style with where the adjustment is applied.  Besides a boolean, this may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``true`` is the same as ``perceptual``.   Note that not all tile sources expose ICC color profile information, even if the base file format contains it.
+- ``icc``: by default, sources that expose ICC color profiles (PIL, OpenJPEG, OpenSlide, OMETiff, TIFF, TiffFile) will apply those profiles to the image data, converting the results to the sRGB profile.  To use the raw image data without ICC profile adjustments, specify an ``icc`` value of ``false``.  If the entire style is ``{"icc": false}``, the results will be the same as the default bands with only the adjustment being skipped.  Similarly, if the entire style is ``{"icc": true}``, this is the same as the default style with where the adjustment is applied.  Besides a boolean, this may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``true`` is the same as ``perceptual``.   Note that not all tile sources expose ICC color profile information, even if the base file format contains it.
 
 - ``function``: if specified, call a function to modify the resulting image.  This can be specified as a base key and as a band key.  Style functions can be called at multiple stages in the styling pipeline:
 
@@ -186,4 +186,4 @@ ________________________________________________
 .. _format_options: https://github.com/girder/large_image/blob/master/large_image/constants.py#L35
 .. _pil_encoders: https://pillow.readthedocs.io/en/latest/handbook/image-file-formats.html
 .. _libtiff_compression: https://github.com/pearu/pylibtiff/blob/master/libtiff/tiff_h_4_2_0.py#L19
-.. _blend_modes: https://blend-modes.readthedocs.io/en/latest/reference.html
+.. _blend_modes: https://developer.mozilla.org/en-US/docs/Web/CSS/blend-mode

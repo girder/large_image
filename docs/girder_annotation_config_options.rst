@@ -2,8 +2,8 @@ Girder Annotation Configuration Options
 =======================================
 
 The ``large_image`` annotation plugin adds models to the Girder database for supporting annotating large images.  These annotations can be rendered on images.
-Annotations can include polygons, points, and image data. Each annotation can have a label and metadata.
-Additional user interface libraries allow other libraries (like HistomicsUI) to let a user add annotations.
+Annotations can include polygons, points, image overlays, and other types (see :doc:`annotations`). Each annotation can have a label and metadata.
+Additional user interface libraries allow other libraries (like HistomicsUI) to let a user interactively add and modify annotations.
 
 General Plugin Settings
 -----------------------

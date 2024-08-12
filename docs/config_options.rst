@@ -102,7 +102,7 @@ Some functionality of large_image is controlled through configuration parameters
        ``source_vips_ignored_names`` :ref:`🔗 <config_source_ignored_names>`
      - Some tile sources can read some files that are better read by other tilesources.  Since reading these files is suboptimal, these tile sources have a setting that, by default, ignores files without extensions or with particular extensions.
      - ``str`` (regular expression)
-     - ``r'(^[!.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi))$'`` (some sources have differing default values; see each source for its default value).
+     - Sources have different default values; see each source for its default. For example, the vips source default is ``r'(^[^.]*|\.(yml|yaml|json|png|svs|mrxs))$'``
 
        .. _config_all_sources_ignored_names:
    * - ``all_sources_ignored_names`` :ref:`🔗 <config_all_sources_ignored_names>`
@@ -113,14 +113,14 @@ Some functionality of large_image is controlled through configuration parameters
        .. _config_icc_correction:
    * - ``icc_correction`` :ref:`🔗 <config_icc_correction>`
      -  If this is True or undefined, ICC color correction will be applied for tile sources that have ICC profile information.  If False, correction will not be applied.  If the style used to open a tilesource specifies ICC correction explicitly (on or off), then this setting is not used.  This may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``True`` is the same as ``perceptual``.
-     - ``bool``
+     - ``bool | str: one of PIL.ImageCms.Intents``
      - ``True``
 
        .. _config_max_annotation_input_file_length:
    * - ``max_annotation_input_file_length`` :ref:`🔗 <config_max_annotation_input_file_length>`
      - When an annotation file is uploaded through Girder, it is loaded into memory, validated, and then added to the database.  This is the maximum number of bytes that will be read directly.  Files larger than this are ignored.
      - ``int``
-     - The larger of 1 GByte and 1/16th of the system virtual memory
+     - The larger of 1 GiByte and 1/16th of the system virtual memory
 
 
 Configuration from Python
@@ -136,8 +136,6 @@ Configuration from Environment
 ------------------------------
 
 All configuration parameters can be specified as environment parameters by prefixing their uppercase names with ``LARGE_IMAGE_``.  For instance, ``LARGE_IMAGE_CACHE_BACKEND=python`` specifies the cache backend.  If the values can be decoded as json, they will be parsed as such.  That is, numerical values will be parsed as numbers; to parse them as strings, surround them with double quotes.
-
-.. The mention of numbers needing quotes to be considered strings could be confusing. Do the above variables need numbers as strings?
 
 As another example, to use the least memory possible, set ``LARGE_IMAGE_CACHE_BACKEND=python LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION=1000 LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=2``.  The first setting specifies caching tiles in the main process and not in memcached or an external cache.  The second setting asks to use 1/1000th of the memory for a tile cache.  The third settings caches no more than 2 tile sources (2 is the minimum).
 

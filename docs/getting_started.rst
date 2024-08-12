@@ -144,7 +144,7 @@ Iterating Across an Image
 Since most images are too large to conveniently fit in memory, it is useful to iterate through the image.
 The ``tileIterator`` function can take the same parameters as ``getRegion`` to pick an output size and scale, but can also specify a tile size and overlap.
 You can also get a specific tile with those parameters.  This tiling doesn't have to have any correspondence to the tiling of the original file.
-The data for each tile is computed lazily, only once `tile['tile']` is accessed.
+The data for each tile is loaded lazily, only once ``tile['tile']`` or ``tile['format']`` is accessed.
 
 .. code-block:: python
 
@@ -232,9 +232,7 @@ You can get associated images in different encodings and formats.  The entire im
 Projections
 -----------
 
-large_image handles geospatial images.  These can be handled as any other image in pixel-space by just opening them normally.  Alternately, these can be opened with a projection and then referenced using that projection.
-
-.. Can we reproject from one CRS to another?
+large_image handles geospatial images.  These can be handled as any other image in pixel-space by just opening them normally.  Alternately, these can be opened with a new projection and then referenced using that projection.
 
 .. code-block:: python
 
@@ -286,7 +284,7 @@ Any of the frames of such an image are accessed by adding a ``frame=<integer>`` 
 Channels, Bands, Samples, and Axes
 ----------------------------------
 
-Various large image formats refer to channels, bands, and samples.  This isn't consistent across different libraries.  In an attempt to harmonize the geospatial and medical image terminology, large_image uses ``bands`` or ``samples`` to refer to image plane components, such as red, green, blue, and alpha.  For geospatial data this can often have additional bands, such as near infrared or panchromatic.  ``channels`` are stored as separate frames and can be interpreted as different imaging modalities.  For example, a fluorescence microscopy image might have DAPI, CY5, and A594 channels.  A common color photograph file has 3 bands/samples and 1 channel.
+Various large image formats refer to channels, bands, and samples.  This isn't consistent across different libraries.  In an attempt to harmonize the geospatial and medical image terminology, large_image uses ``bands`` or ``samples`` to refer to image plane components, such as red, green, blue, and alpha.  For geospatial data this can often have additional bands, such as near infrared or panchromatic.  ``channels`` are stored as separate frames and can be interpreted as different imaging modalities.  For example, a fluorescence microscopy image might have DAPI, CY5, and A594 channels.  A common color photograph file has 3 bands (also called samples) and 1 channel.
 
 At times, image ``axes`` are used to indicate the order of data, especially when interpreted as an n-dimensional array.  The ``x`` and ``y`` axes are the horizontal and vertical dimensions of the image.  The ``s`` axis is the ``bands`` or ``samples``, such as red, green, and blue.  The ``c`` axis is the ``channels`` with special support for channel names.  This corresponds to distinct frames.
 
@@ -385,9 +383,9 @@ In some cases, it may be beneficial to write to a single image from multiple pro
             **position
         )
     source = large_image.new()
-    # Important: Maximum size must be allocated before any concurrency
+    # Important: Maximum size must be allocated before any multiprocess concurrency
     add_tile_to_source(source, np.zeros(1, 1, 3), dict(x=max_x, y=max_y, z=max_z))
-    # Also works with multiprocessing.ThreadPool
+    # Also works with multiprocessing.ThreadPool, which does not need maximum size allocated first
     with multiprocessing.Pool(max_workers=5) as pool:
         pool.starmap(
             add_tile_to_source,
