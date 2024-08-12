@@ -19,6 +19,7 @@ import datetime
 import io
 import math
 import pickle
+import threading
 import time
 
 import pymongo
@@ -588,7 +589,7 @@ class Annotationelement(Model):
                 entry['datafile']['userFileId'] = userFile['_id']
             logger.debug('Storing element as file (%r)', entry)
 
-    def updateElementChunk(self, elements, chunk, chunkSize, annotation, now):
+    def updateElementChunk(self, elements, chunk, chunkSize, annotation, now, insertLock):
         """
         Update the database for a chunk of elements.  See the updateElements
         method for details.
@@ -606,7 +607,8 @@ class Annotationelement(Model):
         if (len(entries) <= MAX_ELEMENT_CHECK and any(
                 self._entryIsLarge(entry) for entry in entries[:MAX_ELEMENT_CHECK])):
             self.saveElementAsFile(annotation, entries)
-        res = self.collection.insert_many(entries, ordered=False)
+        with insertLock:
+            res = self.collection.insert_many(entries, ordered=False)
         for pos, entry in enumerate(entries):
             if 'id' not in entry['element']:
                 entry['element']['id'] = str(res.inserted_ids[pos])
@@ -631,9 +633,11 @@ class Annotationelement(Model):
         now = datetime.datetime.now(datetime.timezone.utc)
         threads = large_image.config.cpu_count()
         chunkSize = int(max(100000 // threads, 10000))
+        insertLock = threading.Lock()
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
             for chunk in range(0, len(elements), chunkSize):
-                pool.submit(self.updateElementChunk, elements, chunk, chunkSize, annotation, now)
+                pool.submit(self.updateElementChunk, elements, chunk,
+                            chunkSize, annotation, now, insertLock)
         if time.time() - startTime > 10:
             logger.info('inserted %d elements in %4.2fs' % (
                 len(elements), time.time() - startTime))
