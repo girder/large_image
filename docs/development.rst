@@ -57,11 +57,15 @@ You can run specific tests using pytest's options, e.g., to try one specific tes
 Development Environment
 -----------------------
 
-To set up a development environment, you can use tox.  Use the ``core`` environment instead of the ``test`` environment if you aren't using Girder.  This is not required to run tests:
+To set up a development environment, you can use tox.  This is not required to run tests.  The ``dev`` environment allows for complete use.  The ``test`` environment will also install pytest and other tools needed for testing.  Use the ``core`` environment instead of the ``dev`` environment if you aren't using Girder.
+
+For OSX users, specify the ``dev-osx`` environment instead; it will install only the cross-platform common sources.
+
+You can add a suffix to the environment to get a specific version of python (e.g., ``dev-py311`` or ``dev-osx-py310``.
 
 .. code-block:: bash
 
-   tox --devenv /my/env/path -e test
+   tox --devenv /my/env/path -e dev
 
 and then switch to that environment:
 
