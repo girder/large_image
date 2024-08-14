@@ -625,11 +625,12 @@ class AnnotationResource(Resource):
         .param('adjacentItems', 'Whether to include adjacent item data.',
                required=False, default=False, enum=['false', 'true', '__all__'])
         .jsonParam('annotations', 'A JSON list of annotation IDs that should '
-                   'be included.  An entry of __all__ will include all '
+                   'be included.  An entry of \\__all__ will include all '
                    'annotations.', paramType='formData', requireArray=True,
                    required=False)
         .param('sources', 'An optional comma separated list that can contain '
-               'folder, item, annotation, datafile.', required=False)
+               'folder, item, annotation, annotationelement, datafile.',
+               required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
@@ -658,7 +659,8 @@ class AnnotationResource(Resource):
                    'annotations.', paramType='formData', requireArray=True,
                    required=False)
         .param('sources', 'An optional comma separated list that can contain '
-               'folder, item, annotation, datafile.', required=False)
+               'folder, item, annotation, annotationelement, datafile.',
+               required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
