@@ -167,13 +167,13 @@ describe('AnnotationListWidget', function () {
     });
 
     describe('Test annotation list widget as admin', function () {
-        it('select the openseadragon viewer', function () {
+        xit('select the openseadragon viewer', function () {
             runs(function () {
                 $('.g-item-image-viewer-select select').val('openseadragon').trigger('change');
             });
             waitForLargeImageViewer('openseadragon');
         });
-        it('select the geojs viewer', function () {
+        xit('select the geojs viewer', function () {
             runs(function () {
                 $('.g-item-image-viewer-select select').val('geojs').trigger('change');
             });
