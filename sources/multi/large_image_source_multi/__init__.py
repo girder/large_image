@@ -684,9 +684,15 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             aKey = tuple(self._axisKey(source, frame.get(f'Index{axis.upper()}') or 0, axis)
                          for axis in self._axesList)
             channel = channels[cIdx] if cIdx < len(channels) else None
+            # We add the channel name to our channel list if the individual
+            # source lists the channel name or a set of channels OR the source
+            # appends channels to an existing set.
             if channel and channel not in self._channels and (
-                    'channel' in source or 'channels' in source):
+                    'channel' in source or 'channels' in source or
+                    len(self._channels) == aKey[0]):
                 self._channels.append(channel)
+            # Adjust the channel number if the source named the channel; do not
+            # do so in other cases
             if (channel and channel in self._channels and
                     'c' not in source and 'cValues' not in source):
                 aKey = tuple([self._channels.index(channel)] + list(aKey[1:]))
