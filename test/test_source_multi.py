@@ -13,7 +13,7 @@ from . import utilities
 from .datastore import datastore
 
 
-@pytest.fixture()
+@pytest.fixture
 def multiSourceImagePath():
     """
     Make sure we have the components for the multi_source.yml test.

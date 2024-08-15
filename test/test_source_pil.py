@@ -12,7 +12,7 @@ from .datastore import datastore
 
 
 # Singular because we adjust config
-@pytest.mark.singular()
+@pytest.mark.singular
 def testTilesFromPIL():
     # Ensure this test can run in any order
     cachesClear()
