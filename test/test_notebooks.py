@@ -3,7 +3,7 @@ import os
 import pytest
 
 
-@pytest.mark.notebook()
+@pytest.mark.notebook
 @pytest.mark.parametrize('notebook', ['docs/large_image_examples.ipynb'])
 def test_notebook_exec(notebook, tmp_path):
     import nbformat
