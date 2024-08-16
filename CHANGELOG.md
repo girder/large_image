@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.6
+
+### Bug Fixes
+
+- Use math.prod in preference to np.prod ([#1606](../../pull/1606))
+
 ## 1.29.5
 
 ### Improvements

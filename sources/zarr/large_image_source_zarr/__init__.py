@@ -659,7 +659,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
                 self.sizeX = new_dims.get('x')
                 self.sizeY = new_dims.get('y')
-                self._framecount = np.prod([
+                self._framecount = math.prod([
                     length
                     for axis, length in new_dims.items()
                     if axis in axes[:-3]

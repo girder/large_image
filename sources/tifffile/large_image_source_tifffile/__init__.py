@@ -183,7 +183,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         ex = 'no maximum series'
         try:
             for idx, s in enumerate(self._tf.series):
-                samples = np.prod(s.shape)
+                samples = math.prod(s.shape)
                 if samples > maxsamples and 'X' in s.axes and 'Y' in s.axes:
                     maxseries = idx
                     maxsamples = samples
@@ -232,7 +232,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'sizeX': s.shape[s.axes.index('X')], 'sizeY': s.shape[s.axes.index('Y')]})
             self.sizeX = max(self.sizeX, s.shape[s.axes.index('X')])
             self.sizeY = max(self.sizeY, s.shape[s.axes.index('Y')])
-        self._framecount = len(self._series) * np.prod(tuple(
+        self._framecount = len(self._series) * math.prod(tuple(
             1 if base.axes[sidx] in 'YXS' else v for sidx, v in enumerate(base.shape)))
         self._basis = {}
         basis = 1
