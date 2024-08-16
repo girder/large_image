@@ -15,7 +15,6 @@
    config_options
    image_conversion
    formats
-   dicomweb_assetstore
    multi_source_specification
    annotations
    caching
