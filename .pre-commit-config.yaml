@@ -52,6 +52,7 @@ repos:
         args:
           - --ignore-words-list
           - "hist,indext,pixelx,thex,subtile,slippy,fram"
+        exclude: '.*\.ipynb$'
   - repo: https://github.com/syntaqx/git-hooks
     rev: v0.0.18
     hooks:
