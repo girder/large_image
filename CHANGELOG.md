@@ -12,6 +12,7 @@
 - Show a frame slider when appropriate in jupyter widgets ([#1595](../../pull/1595))
 - Improve options for creating or check large images for each item in a folder ([#1586](../../pull/1586))
 - Add a lock to avoid mongo excessively computing random numbers ([#1601](../../pull/1601))
+- Better merge source channel names in multi source ([#1605](../../pull/1605))
 
 ### Bug Fixes
 

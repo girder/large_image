@@ -3,7 +3,7 @@ import os
 import pytest
 
 
-@pytest.mark.notebook()
+@pytest.mark.notebook
 @pytest.mark.parametrize('notebook', [
     'docs/notebooks/large_image_examples.ipynb',
     'docs/notebooks/zarr_sink_example.ipynb',

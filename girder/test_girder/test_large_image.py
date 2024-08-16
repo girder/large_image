@@ -66,7 +66,7 @@ def _createThumbnails(server, admin, spec, cancel=False):
         time.sleep(0.1)
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testSettings(server):
@@ -268,7 +268,7 @@ def testFolderCreateImages(server, admin, user, fsAssetstore):
     assert resp.json['largeImagesRemovedAndRecreated'] == 1
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):
@@ -439,7 +439,7 @@ def testHistogramCaching(server, admin, user, fsAssetstore):
     assert resp.json == 0
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testHistogramConcurrentCaching(server, admin, user, fsAssetstore):
@@ -649,7 +649,7 @@ def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
     assert resp.json['keyE'] == 'value7'
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testConfigFileEndpoints(server, admin, fsAssetstore):
