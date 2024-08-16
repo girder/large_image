@@ -4,7 +4,10 @@ import pytest
 
 
 @pytest.mark.notebook()
-@pytest.mark.parametrize('notebook', ['docs/large_image_examples.ipynb'])
+@pytest.mark.parametrize('notebook', [
+    'docs/notebooks/large_image_examples.ipynb',
+    'docs/notebooks/zarr_sink_example.ipynb',
+])
 def test_notebook_exec(notebook, tmp_path):
     import nbformat
     from nbconvert.preprocessors import ExecutePreprocessor
