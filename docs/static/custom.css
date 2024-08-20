@@ -1,14 +1,14 @@
 .indextable.genindextable td {
   padding-right: 10px
 }
-.indextable.genindextable li {
+.indextable.genindextable li{
   word-break: break-word;
 }
 .indextable.genindextable a:before {
   content: "\2022\00A0";
 }
 .wy-nav-content {
-  max-width: 1000px;
+  max-width: 1200px;
 }
 .wy-nav-side {
   padding-bottom: 0;
@@ -30,6 +30,15 @@
 .wy-menu-vertical ul ul {
   padding-bottom: 0;
 }
+.wy-table-responsive table td,.wy-table-responsive table th{
+  white-space:normal
+}
 html.writer-html5 .rst-content dl.field-list dl.field-list {
     grid-template-columns: auto minmax(60%,95%);
+}
+td > p > a.internal > span.std-ref {
+  display: none;
+}
+td > p:hover > a.internal > span.std-ref {
+  display: inline-block;
 }

@@ -39,7 +39,7 @@ Highlights
 Installation
 ------------
 
-In addition to installing the ``large-image`` package, you'll need at least one tile source (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
+In addition to installing the base ``large-image`` package, you'll need at least one tile source which corresponds to your target file format(s) (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
 
 Pip
 ~~~
@@ -52,7 +52,7 @@ Install all tile sources on linux::
 
     pip install large-image[all] --find-links https://girder.github.io/large_image_wheels
 
-Install all tile sources and all Girder plugins on linux::
+When using large-image with an instance of `Girder`_, install all tile sources and all Girder plugins on linux::
 
     pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://girder.github.io/large_image_wheels
 
@@ -60,8 +60,9 @@ Install all tile sources and all Girder plugins on linux::
 Conda
 ~~~~~
 
-Conda makes dependency management a bit easier if not on Linux. Some of the source modules are available on conda-forge. You can install the following::
+Conda makes dependency management a bit easier if not on Linux. The base module, converter module, and two of the source modules are available on conda-forge. You can install the following::
 
+    conda install -c conda-forge large-image
     conda install -c conda-forge large-image-source-gdal
     conda install -c conda-forge large-image-source-tiff
     conda install -c conda-forge large-image-converter
@@ -118,7 +119,7 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-deepzoom``: A tile source for reading Deepzoom tiles.
 
-  - ``large-image-source-dicom``: A tile source for reading DICOM WSI images.
+  - ``large-image-source-dicom``: A tile source for reading DICOM Whole Slide Images (WSI).
 
   - ``large-image-source-gdal``: A tile source for reading geotiff files via GDAL.  This handles source data with more complex transforms than the mapnik tile source.
 
@@ -128,62 +129,41 @@ Large Image consists of several Python modules designed to work together.  These
 
   - ``large-image-source-nd2``: A tile source for reading nd2 (NIS Element) images.
 
-  - ``large-image-source-ometiff``: A tile source using the tiff library that can handle some multi-frame OMETiff files.
+  - ``large-image-source-ometiff``: A tile source using the tiff library that can handle most multi-frame OMETiff files that are compliant with the specification.
 
   - ``large-image-source-openjpeg``: A tile source using the Glymur library to read jp2 (JPEG 2000) files.
 
   - ``large-image-source-openslide``: A tile source using the OpenSlide library.  This works with svs, ndpi, Mirax, tiff, vms, and other file formats.
 
-  - ``large-image-source-pil``: A tile source for small images via the Python Imaging Library (Pillow).
+  - ``large-image-source-pil``: A tile source for small images via the Python Imaging Library (Pillow). By default, the maximum size is 4096, but the maximum size can be configured (see :ref:`Configuration Options<config_max_small_image_size>`).
 
   - ``large-image-source-tiff``: A tile source for reading pyramidal tiff files in common compression formats.
 
   - ``large-image-source-tifffile``: A tile source using the tifffile library that can handle a wide variety of tiff-like files.
 
-  - ``large-image-source-vips``: A tile source for reading any files handled by libvips.  This also can be used for writing tiled images from numpy arrays.
+  - ``large-image-source-vips``: A tile source for reading any files handled by libvips.  This also can be used for writing tiled images from numpy arrays (up to 4 dimensions).
 
-  - ``large-image-source-zarr``: A tile source using the zarr library that can handle OME-Zarr (OME-NGFF) files as well as some other zarr files.
+  - ``large-image-source-zarr``: A tile source using the zarr library that can handle OME-Zarr (OME-NGFF) files as well as some other zarr files. This can also be used for writing N-dimensional tiled images from numpy arrays. Written images can be saved as any supported format.
 
   - ``large-image-source-test``: A tile source that generates test tiles, including a simple fractal pattern.  Useful for testing extreme zoom levels.
 
-  - ``large-image-source-dummy``: A tile source that does nothing.
+  - ``large-image-source-dummy``: A tile source that does nothing. This is an absolutely minimal implementation of a tile source used for testing. If you want to create a custom tile source, start with this implementation.
 
-  Most tile sources can be used with girder-large-image.  You can specific an extras_require of ``girder`` to include ``girder-large-image`` with the source.
 
-- As a Girder plugin:
+As a `Girder`_ plugin, ``large-image`` adds end points to access all of the image formats it can read both to get metadata and to act as a tile server.
+In the Girder UI, ``large-image`` shows images on item pages, and can show thumbnails in item lists when browsing folders.
+There is also cache management to balance memory use and speed of response in Girder when ``large-image`` is used as a tile server.
 
-  - ``girder-large-image``: Large Image as a Girder_ 3.x plugin.
-    You can specify extras_require of ``tasks`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
+Most tile sources can be used with Girder Large Image.  You can specify an extras_require of ``girder`` to install the following packages:
 
-  - ``girder-large-image-annotation``: Annotations for large images as a Girder_ 3.x plugin.
+  - ``girder-large-image``: Large Image as a Girder 3.x plugin.
+    You can install ``large-image[tasks]`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
+
+  - ``girder-large-image-annotation``: Adds models to the Girder database for supporting annotating large images.  These annotations can be rendered on images. Annotations can include polygons, points, image overlays, and other types (see :doc:`annotations`). Each annotation can have a label and metadata.
 
   - ``large-image-tasks``: A utility for running the converter via Girder Worker.
     You can specify an extras_require of ``girder`` to include modules needed to work with the Girder remote worker or ``worker`` to include modules needed on the remote side of the Girder remote worker.  If neither is specified, some conversion tasks can be run using Girder local jobs.
 
 
-Developer Installation
-----------------------
 
-To install all packages from source, clone the repository::
-
-    git clone https://github.com/girder/large_image.git
-    cd large_image
-
-Install all packages and dependencies::
-
-    pip install -e . -r requirements-dev.txt
-
-If you aren't developing with Girder 3, you can skip installing those components.  Use ``requirements-dev-core.txt`` instead of ``requirements-dev.txt``::
-
-    pip install -e . -r requirements-dev-core.txt
-
-
-Tile source prerequisites
-=========================
-
-Many tile sources have complex prerequisites.  These can be installed directly using your system's package manager or from some prebuilt Python wheels for Linux.  The prebuilt wheels are not official packages, but they can be used by instructing pip to use them by preference::
-
-    pip install -e . -r requirements-dev.txt --find-links https://girder.github.io/large_image_wheels
-
-
-.. _Girder: https://github.com/girder/girder
+.. _Girder: https://girder.readthedocs.io/en/latest/

@@ -73,7 +73,7 @@ docs/source/*
 docs/_build
 
 *.ipynb
-!docs/*.ipynb
+!docs/notebooks/*.ipynb
 NOTES.md
 
 monkeytype.sqlite3
