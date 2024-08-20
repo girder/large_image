@@ -269,6 +269,22 @@ jobs:
           command: python ./.circleci/make_index.py ~/wheels
       - store_artifacts:
           path: ~/wheels
+  check_release:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - run:
+          name: Setup virtual environment
+          command: |
+            if [ ! -d env ]; then python -m virtualenv env || python -m venv env; fi
+            echo ". $CIRCLE_WORKING_DIRECTORY/env/bin/activate" >> $BASH_ENV
+      - run:
+          name: Install python packages
+          command: pip install setuptools_scm twine
+      - run:
+          name: Check release to PyPi
+          command: ./.circleci/release_pypi.sh check
   release:
     docker:
       - image: cimg/python:3.10
@@ -284,7 +300,7 @@ jobs:
           command: pip install setuptools_scm twine
       - run:
           name: Release to PyPi
-          command: ./.circleci/release_pypi.sh
+          command: ./.circleci/release_pypi.sh upload
   docs-deploy:
     working_directory: ~/project
     docker:
@@ -384,8 +400,16 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      - check_release:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - release:
           requires:
+            - check_release
             - py38
             - py39
             - py310
