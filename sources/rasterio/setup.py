@@ -40,6 +40,7 @@ setup(
     },
     description=description,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
