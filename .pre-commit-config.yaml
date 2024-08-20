@@ -106,3 +106,5 @@ repos:
         args:
           - -c
           - pyproject.toml
+        additional_dependencies:
+          - 'maison<2.0.0'
