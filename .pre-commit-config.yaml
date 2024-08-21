@@ -72,7 +72,7 @@ repos:
           - --py38-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.0
+    rev: v0.6.1
     hooks:
       - id: ruff
         args:
@@ -100,11 +100,9 @@ repos:
     hooks:
       - id: yesqa
   - repo: https://github.com/lyz-code/yamlfix
-    rev: 1.16.0
+    rev: 1.17.0
     hooks:
       - id: yamlfix
         args:
           - -c
           - pyproject.toml
-        additional_dependencies:
-          - 'maison<2.0.0'
