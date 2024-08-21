@@ -743,6 +743,7 @@ class PlottableItemData:
         Collect statistics and possible data from one data set.  See
         _collectRecords for parameter details.
         """
+        count = 0
         for rowidx in range(rows):
             try:
                 value = selector(record, data, rowidx)
@@ -770,6 +771,9 @@ class PlottableItemData:
                 self._datacolumns[colkey][(
                     iid, aid, eid,
                     rowidx if length is not None else -1)] = value
+                if not self._requiredColumns or colkey in self._requiredColumns:
+                    count += 1
+        return count
 
     def _collectRecords(self, columns, recordlist, doctype, iid='', aid=''):
         """
@@ -781,7 +785,12 @@ class PlottableItemData:
         :param iid: an optional item id to use for determining distinct rows.
         :param aid: an optional annotation id to use for determining distinct
             rows.
+        :return: the number of required data entries added to the data
+            collection process.  This will be zero when just listing columns.
+            If no required fields were specified, this will be the count of all
+            added data entries.
         """
+        count = 0
         eid = ''
         for colkey, col in columns.items():
             if self._datacolumns and colkey not in self._datacolumns:
@@ -801,9 +810,10 @@ class PlottableItemData:
                         rows = 1 if length is None else length(record, data)
                     except Exception:
                         continue
-                    self._collectRecordRows(
-                        record, data, selector, length, colkey, col, recidx, rows,
-                        iid, aid, eid)
+                    count += self._collectRecordRows(
+                        record, data, selector, length, colkey, col, recidx,
+                        rows, iid, aid, eid)
+        return count
 
     def _collectColumns(self, columns, recordlist, doctype, first=True, iid='', aid=''):
         """
@@ -817,6 +827,10 @@ class PlottableItemData:
         :param iid: an optional item id to use for determining distinct rows.
         :param aid: an optional annotation id to use for determining distinct
             rows.
+        :return: the number of required data entries added to the data
+            collection process.  This will be zero when just listing columns.
+            If no required fields were specified, this will be the count of all
+            added data entries.
         """
         getData = self.recordSelector(doctype)
         if doctype == 'item':
@@ -853,7 +867,38 @@ class PlottableItemData:
         if first or self._fullScan or doctype != 'item':
             for record in recordlist[:None if self._fullScan else 1]:
                 self._columnsFromData(columns, doctype, getData, record)
-        self._collectRecords(columns, recordlist, doctype, iid, aid)
+        return self._collectRecords(columns, recordlist, doctype, iid, aid)
+
+    def _getColumnsFromAnnotations(self, columns):
+        """
+        Collect columns and data from annotations.
+        """
+        from ..models.annotationelement import Annotationelement
+
+        count = 0
+        countsPerAnnotation = {}
+        for iidx, annotList in enumerate(self.annotations or []):
+            iid = str(self.items[iidx]['_id'])
+            for anidx, annot in enumerate(annotList):
+                # If the first item's annotation didn't contribute any required
+                # data to the data set, skip subsequent item's annotations;
+                # they are likely to be discarded.
+                if iidx and not countsPerAnnotation.get(anidx, 0) and not self._fullScan:
+                    continue
+                startcount = count
+                if annot is None:
+                    continue
+                if not self._sources or 'annotation' in self._sources:
+                    count += self._collectColumns(columns, [annot], 'annotation', iid=iid)
+                # add annotation elements
+                if ((not self._sources or 'annotationelement' in self._sources) and
+                        Annotationelement().countElements(annot) <= self.maxAnnotationElements):
+                    for element in Annotationelement().yieldElements(annot, bbox=True):
+                        count += self._collectColumns(
+                            columns, [element], 'annotationelement', iid=iid, aid=str(annot['_id']))
+                if not iidx:
+                    countsPerAnnotation[anidx] = count - startcount
+        return count
 
     def _getColumns(self):
         """
@@ -861,31 +906,17 @@ class PlottableItemData:
 
         :returns: a sorted list of data entries.
         """
-        from ..models.annotationelement import Annotationelement
-
+        count = 0
         columns = {}
         if not self._sources or 'folder' in self._sources:
-            self._collectColumns(columns, [self.folder], 'folder')
+            count += self._collectColumns(columns, [self.folder], 'folder')
         if not self._sources or 'item' in self._sources:
-            self._collectColumns(columns, self.items, 'item')
+            count += self._collectColumns(columns, self.items, 'item')
             if self._moreItems:
                 for item in Folder().childItems(
                         self.folder, offset=len(self.items), **self._moreItems):
-                    self._collectColumns(columns, [item], 'item', first=False)
-
-        for anidx, annotList in enumerate(self.annotations or []):
-            iid = str(self.items[anidx]['_id'])
-            for annot in annotList:
-                if annot is None:
-                    continue
-                if not self._sources or 'annotation' in self._sources:
-                    self._collectColumns(columns, [annot], 'annotation', iid=iid)
-                # add annotation elements
-                if ((not self._sources or 'annotationelement' in self._sources) and
-                        Annotationelement().countElements(annot) <= self.maxAnnotationElements):
-                    for element in Annotationelement().yieldElements(annot, bbox=True):
-                        self._collectColumns(
-                            columns, [element], 'annotationelement', iid=iid, aid=str(annot['_id']))
+                    count += self._collectColumns(columns, [item], 'item', first=False)
+        count += self._getColumnsFromAnnotations(columns)
         # TODO: Add csv
         for result in columns.values():
             if len(result['distinct']) <= self.maxDistinct:
@@ -984,6 +1015,7 @@ class PlottableItemData:
         if not isinstance(requiredColumns, list):
             requiredColumns = requiredColumns.split(',') if requiredColumns is not None else []
         requiredColumns = set(requiredColumns)
+        self._requiredColumns = requiredColumns
         with self._dataLock:
             self._datacolumns = {c: {} for c in columns}
             rows = set()
