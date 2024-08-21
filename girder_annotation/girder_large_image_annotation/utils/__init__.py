@@ -1,5 +1,7 @@
+import functools
 import json
 import math
+import os
 import re
 import threading
 
@@ -7,7 +9,48 @@ from bson.objectid import ObjectId
 
 from girder import logger
 from girder.constants import AccessType, SortDir
+from girder.models.file import File
 from girder.models.folder import Folder
+from girder.models.item import Item
+
+dataFileExtReaders = {
+    '.csv': 'read_csv',
+    'text/csv': 'read_csv',
+    '.xls': 'read_excel',
+    '.xlsx': 'read_excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'read_excel',
+    'application/vnd.ms-excel ': 'read_excel',
+    'application/msexcel': 'read_excel',
+    'application/x-msexcel': 'read_excel',
+    'application/x-ms-excel': 'read_excel',
+    'application/x-excel': 'read_excel',
+    'application/x-dos_ms_excel': 'read_excel',
+    'application/xls': 'read_excel',
+    'application/x-xls': 'read_excel',
+}
+scanDatafileRecords = 50
+
+
+@functools.lru_cache(maxsize=100)
+def _dfFromFile(fileid, full=False):
+    import pandas as pd
+
+    file = File().load(fileid, force=True)
+    ext = os.path.splitext(file['name'])[1]
+    reader = dataFileExtReaders.get(
+        ext, dataFileExtReaders.get(file.get('mimeType'), None))
+    if reader == 'read_excel':
+        df = getattr(pd, reader)(File().open(file), sheet_name=None)
+    else:
+        df = {'entry': getattr(pd, reader)(File().open(file))}
+    df = {
+        k: sheet.iloc[:None if full else scanDatafileRecords].to_dict('records')
+        for k, sheet in df.items()}
+    logger.info(f'Read {len(df)} x {len(next(iter(df.values())))} values from '
+                f'{file["name"]} {file["size"]}')
+    if len(df) == 1:
+        df = next(iter(df.values()))
+    return df
 
 
 class AnnotationGeoJSON:
@@ -378,6 +421,7 @@ class PlottableItemData:
         self._fullScan = adjacentItems == '__all__'
         self._findItems(item, adjacentItems)
         self._findAnnotations(annotations)
+        self._findDataFiles()
         self._dataLock = threading.RLock()
 
     def _findItems(self, item, adjacentItems=False):
@@ -452,6 +496,53 @@ class PlottableItemData:
                         annotList[names[annot['annotation']['name']]] = annot
                 self.annotations.append(annotList)
 
+    def _findDataFiles(self):  # noqa
+        """
+        Find data files inside the current item.  For adjacent items, the data
+        file must have the same name or, if the found file is prefixed with
+        the item name excluding the extension, then the adjancant file should
+        be similarly prefixed.  Data files must have a known suffix or a known
+        mimetype that can be read by pandas (and pandas must be installed).
+        """
+        self._itemfilelist = [[]] * len(self.items)
+        try:
+            import pandas as pd  # noqa
+        except Exception:
+            return
+        if self._sources and 'filedata' not in self._sources:
+            return
+        names0 = {}
+        for iidx, item in enumerate(self.items):
+            if iidx:
+                self._itemfilelist[iidx] = [None] * len(self._itemfilelist[0])
+            names = {}
+            for file in Item().childFiles(item):
+                try:
+                    if (file['_id'] == self.item['largeImage']['fileId'] or
+                            file['_id'] == self.item['largeImage'].get('originalId')):
+                        continue
+                except Exception:
+                    continue
+                ext = os.path.splitext(file['name'])[1]
+                if (ext not in dataFileExtReaders and
+                        file.get('mimeType') not in dataFileExtReaders):
+                    continue
+                if file['name'].startswith(item['name'].rsplit('.')[0]):
+                    base, name = True, file['name'][len(item['name'].rsplit('.')[0]):]
+                else:
+                    base, name = False, file['name']
+                if (base, name) in names:
+                    continue
+                if iidx and (base, name) not in names0:
+                    continue
+                names[(base, name)] = len(names)
+                if not iidx:
+                    self._itemfilelist[0].append(file)
+                else:
+                    self._itemfilelist[iidx][names0[(base, name)]] = file
+            if not iidx:
+                names0 = names
+
     # Common column keys and titles
     commonColumns = {
         'item.id': 'Item ID',
@@ -505,6 +596,23 @@ class PlottableItemData:
             return value
 
         return itemNameSelector if isName else itemIDSelector
+
+    def datafileAnnotationElementSelector(self, key, cols):
+
+        def annotationElementSelector(record, data, row):
+            bbox = [col[1](record, data, row) for col in cols]
+            if key in self._datacolumns:
+                for row in self._datacolumns[key]:
+                    if self._datacolumns[key][row] is not None:
+                        for bidx, bkey in enumerate(['bbox.x0', 'bbox.y0', 'bbox.x1', 'bbox.y1']):
+                            val = self._datacolumns[bkey].get(row)
+                            if val is None or abs(val - bbox[bidx]) > 2:
+                                break
+                        else:
+                            return self._datacolumns[key][row]
+            return None
+
+        return annotationElementSelector
 
     @staticmethod
     def keySelector(mode, key, key2=None):
@@ -585,6 +693,13 @@ class PlottableItemData:
 
             return annotationelementGetData
 
+        if doctype == 'datafile':
+
+            def datafileGetData(record):
+                return record
+
+            return datafileGetData
+
         def getData(record):
             return record.get('meta', {})
 
@@ -610,11 +725,12 @@ class PlottableItemData:
         title = ' '.join(str(v) for v in parts[1:] if v != '0')
         keymap = {
             r'(?i)(item|image)_(id|name)$': 'item.name',
-            r'(?i)(low|min)(_|)x': 'bbox.x0',
-            r'(?i)(low|min)(_|)y': 'bbox.y0',
-            r'(?i)(high|max)(_|)x': 'bbox.x1',
-            r'(?i)(high|max)(_|)y': 'bbox.y1',
+            r'(?i)((low|min)(_|)x|^x1$)': 'bbox.x0',
+            r'(?i)((low|min)(_|)y|^y1$)': 'bbox.y0',
+            r'(?i)((high|max)(_|)x|^x2$)': 'bbox.x1',
+            r'(?i)((high|max)(_|)y|^y2$)': 'bbox.y1',
         }
+        match = False
         for k, v in keymap.items():
             if re.match(k, lastpart):
                 if lastpart != parts[1]:
@@ -630,9 +746,25 @@ class PlottableItemData:
                         doctype, getData,
                         self.itemNameIDSelector(False, selector), length)
                     return
+                match = True
                 break
-        self._ensureColumn(
+        added = self._ensureColumn(
             columns, key, title, doctype, getData, selector, length)
+        if match and added and key.startswith('bbox'):
+            cols = [columns[bkey]['where'][doctype] for bkey in [
+                'bbox.x0', 'bbox.y0', 'bbox.x1', 'bbox.y1']
+                if bkey in columns and doctype in columns[bkey]['where']]
+            if len(cols) == 4:
+                # If we load all of these from annotation elements, use all
+                # three keys:
+                # for akey in {'annotation.id', 'annotation.name', 'annotationelement.id'}:
+                for akey in {'annotationelement.id'}:
+                    if self._datacolumns and akey in self._datacolumns:
+                        self._requiredColumns.add(akey)
+                    self._ensureColumn(
+                        columns, akey, self.commonColumns[akey], doctype,
+                        getData, self.datafileAnnotationElementSelector(akey, cols),
+                        length)
 
     def _ensureColumn(self, columns, keyname, title, doctype, getData, selector, length):
         """
@@ -649,6 +781,7 @@ class PlottableItemData:
             dictionary, and row, returns a value.
         :param length: None or a function that, given the document record and
             data dictionary, returns the number of rows.
+        :returns: True if the column where record was added.
         """
         if keyname not in columns:
             columns[keyname] = {
@@ -663,6 +796,8 @@ class PlottableItemData:
             }
         if doctype not in columns[keyname]['where']:
             columns[keyname]['where'][doctype] = (getData, selector, length)
+            return True
+        return False
 
     def _columnsFromData(self, columns, doctype, getData, record):  # noqa
         """
@@ -780,7 +915,7 @@ class PlottableItemData:
         Collect statistics and possibly row values from a list of records.
 
         :param columns: the column dictionary to possibly modify.
-        :param recordList: a list of records to use.
+        :param recordlist: a list of records to use.
         :param doctype: the base document type.
         :param iid: an optional item id to use for determining distinct rows.
         :param aid: an optional annotation id to use for determining distinct
@@ -796,7 +931,7 @@ class PlottableItemData:
             if self._datacolumns and colkey not in self._datacolumns:
                 continue
             for where, (getData, selector, length) in col['where'].items():
-                if doctype != where.split('.', 1)[0]:
+                if doctype != where and not where.startswith(doctype + '.'):
                     continue
                 for recidx, record in enumerate(recordlist):
                     if doctype == 'item':
@@ -820,7 +955,7 @@ class PlottableItemData:
         Collect the columns available for a set of records.
 
         :param columns: the column dictionary to possibly modify.
-        :param recordList: a list of records to use.
+        :param recordlist: a list of records to use.
         :param doctype: the base document type.
         :param first: False if this is not the first page of a multi-page list
             of records,
@@ -832,7 +967,7 @@ class PlottableItemData:
             If no required fields were specified, this will be the count of all
             added data entries.
         """
-        getData = self.recordSelector(doctype)
+        getData = self.recordSelector(doctype.split('.', 1)[0])
         if doctype == 'item':
             self._commonColumn(columns, 'item.id', doctype, getData,
                                lambda record, data, row: str(record['_id']))
@@ -881,7 +1016,7 @@ class PlottableItemData:
             iid = str(self.items[iidx]['_id'])
             for anidx, annot in enumerate(annotList):
                 # If the first item's annotation didn't contribute any required
-                # data to the data set, skip subsequent item's annotations;
+                # data to the data set, skip subsequent items' annotations;
                 # they are likely to be discarded.
                 if iidx and not countsPerAnnotation.get(anidx, 0) and not self._fullScan:
                     continue
@@ -898,6 +1033,39 @@ class PlottableItemData:
                             columns, [element], 'annotationelement', iid=iid, aid=str(annot['_id']))
                 if not iidx:
                     countsPerAnnotation[anidx] = count - startcount
+        return count
+
+    def _getColumnsFromDataFiles(self, columns):
+        """
+        Collect columns and data from data files in items.
+        """
+        if not len(self._itemfilelist) or not len(self._itemfilelist[0]):
+            return 0
+        count = 0
+        countsPerDataFile = {}
+        for iidx, dfList in enumerate(self._itemfilelist or []):
+            iid = str(self.items[iidx]['_id'])
+            for dfidx, file in enumerate(dfList):
+                # If the first item's data file didn't contribute any required
+                # data to the data set, skip subsequent items' data files;
+                # they are likely to be discarded.
+                if iidx and not countsPerDataFile.get(dfidx, 0) and not self._fullScan:
+                    continue
+                startcount = count
+                if file is None:
+                    continue
+                if not self._sources or 'datafile' in self._sources:
+                    try:
+                        df = _dfFromFile(file['_id'], bool(self._datacolumns or self._fullScan))
+                        count += self._collectColumns(
+                            columns, [df] if isinstance(df, dict) else df,
+                            f'datafile.{dfidx}', iid=iid)
+                    except Exception:
+                        logger.info(
+                            f'Cannot process file {file["_id"]}: {file["name"]} as a dataframe')
+                        raise
+                if not iidx:
+                    countsPerDataFile[dfidx] = count - startcount
         return count
 
     def _getColumns(self):
@@ -917,7 +1085,7 @@ class PlottableItemData:
                         self.folder, offset=len(self.items), **self._moreItems):
                     count += self._collectColumns(columns, [item], 'item', first=False)
         count += self._getColumnsFromAnnotations(columns)
-        # TODO: Add csv
+        count += self._getColumnsFromDataFiles(columns)
         for result in columns.values():
             if len(result['distinct']) <= self.maxDistinct:
                 result['distinct'] = sorted(result['distinct'])
@@ -1015,7 +1183,7 @@ class PlottableItemData:
         if not isinstance(requiredColumns, list):
             requiredColumns = requiredColumns.split(',') if requiredColumns is not None else []
         requiredColumns = set(requiredColumns)
-        self._requiredColumns = requiredColumns
+        self._requiredColumns = set(requiredColumns)
         with self._dataLock:
             self._datacolumns = {c: {} for c in columns}
             rows = set()
@@ -1038,6 +1206,16 @@ class PlottableItemData:
             if len(data) < numrows:
                 logger.info(f'Reduced row count from {numrows} to {len(data)} '
                             f'because of None values in column {colkey}')
+        subdata = data
+        for cidx, col in enumerate(colsout):
+            colkey = col['key']
+            numrows = len(data)
+            if colkey in self._requiredColumns and colkey not in requiredColumns:
+                subdata = [row for row in subdata if row[cidx] is not None]
+        if len(subdata) and len(subdata) < len(data):
+            logger.info(f'Reduced row count from {len(data)} to {len(subdata)} '
+                        f'because of None values in implied columns')
+            data = subdata
         # Refresh our count, distinct, distinctcount, min, max for each column
         for cidx, col in enumerate(colsout):
             col['count'] = len([row[cidx] for row in data if row[cidx] is not None])
