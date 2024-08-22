@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.7
+
+### Improvements
+
+- Speed up getting plottable data from adjacent items; plot more data ([#1613](../../pull/1613), [#1614](../../pull/1614))
+
 ## 1.29.6
 
 ### Bug Fixes
