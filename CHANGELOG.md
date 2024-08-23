@@ -6,6 +6,10 @@
 
 - Speed up getting plottable data from adjacent items; plot more data ([#1613](../../pull/1613), [#1614](../../pull/1614))
 
+### Bug Fixes
+
+- Harden converting sources that report varied tile bands ([#1615](../../pull/1615))
+
 ## 1.29.6
 
 ### Bug Fixes

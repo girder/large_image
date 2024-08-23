@@ -530,6 +530,10 @@ def _convert_large_image_frame(frame, numFrames, ts, frameOutputPath, tempPath, 
     for tile in ts.tileIterator(tile_size=dict(width=_iterTileSize), frame=frame):
         _pool_add(tasks, (pool.submit(_convert_large_image_tile, tilelock, strips, tile), ))
     _drain_pool(pool, tasks)
+    minbands = min(strip.bands for strip in strips)
+    maxbands = max(strip.bands for strip in strips)
+    if minbands != maxbands:
+        strips = [strip[:minbands] for strip in strips]
     img = strips[0]
     for stripidx in range(1, len(strips)):
         img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)
