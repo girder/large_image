@@ -288,6 +288,18 @@ SourceEntrySchema = {
             'type': 'array',
             'items': {'type': 'integer'},
         },
+        'sampleScale': {
+            'description':
+                'Each pixel sample values is divided by this scale after any '
+                'sampleOffset has been applied',
+            'type': 'number',
+        },
+        'sampleOffset': {
+            'description':
+                'This is added to each pixel sample value before any '
+                'sampleScale is applied',
+            'type': 'number',
+        },
         'style': {'type': 'object'},
         'params': {
             'description':
@@ -806,7 +818,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         self._bands = {}
                     self._bands.update(tsMeta['bands'])
                 lastSource = source
-            self._bandcount = 1 if self._info.get('singleBand') else (
+            self._bandCount = 1 if self._info.get('singleBand') else (
                 len(self._bands) if hasattr(self, '_bands') else (bandCount or None))
             bbox = self._sourceBoundingBox(source, tsMeta['sizeX'], tsMeta['sizeY'])
             computedWidth = max(computedWidth, int(math.ceil(bbox['right'])))
@@ -875,6 +887,20 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if params is None:
             params = source.get('params', {})
         ts = openFunc(source['path'], **params)
+        if (self._dtype and np.dtype(ts.dtype).kind == 'f' and self._dtype.kind != 'f' and
+                'sampleScale' not in source and 'sampleOffset' not in source):
+            minval = maxval = 0
+            for f in range(ts.frames):
+                ftile = ts.getTile(x=0, y=0, z=0, frame=f, numpyAllowed='always')
+                minval = min(minval, np.amin(ftile))
+                maxval = max(maxval, np.amax(ftile))
+            if minval >= 0 and maxval <= 1:
+                source['sampleScale'] = None
+            elif minval >= 0:
+                source['sampleScale'] = 2 ** math.ceil(math.log2(maxval))
+            else:
+                source['sampleScale'] = 2 ** math.ceil(math.log2(max(-minval, maxval)) + 1)
+                source['sampleOffset'] = source['sampleScale'] / 2
         source['sourceName'] = ts.name
         with self._lastOpenSourceLock:
             self._lastOpenSource = {
@@ -1190,9 +1216,20 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ts, transform, corners, scale, sourceEntry.get('frame', 0),
                 source.get('position', {}).get('crop'))
         if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
-            sourceTile = sourceTile.astype(
-                ts.dtype if not self._info.get('dtype') else
-                np.dtype(self._info['dtype']))
+            targetDtype = np.dtype(self._info.get('dtype', ts.dtype))
+            changeDtype = sourceTile.dtype != targetDtype
+            if source.get('sampleScale') or source.get('sampleOffset'):
+                sourceTile = sourceTile.astype(float)
+                if source.get('sampleOffset'):
+                    sourceTile[:, :, :-1] += source['sampleOffset']
+                if source.get('sampleScale') and source.get('sampleScale') != 1:
+                    sourceTile[:, :, :-1] /= source['sampleScale']
+            if sourceTile.dtype != targetDtype:
+                if changeDtype:
+                    sourceTile = (
+                        sourceTile.astype(float) * fullAlphaValue(targetDtype) /
+                        fullAlphaValue(sourceTile))
+                sourceTile = sourceTile.astype(targetDtype)
             tile = self._mergeTiles(tile, sourceTile, x, y)
         return tile
 

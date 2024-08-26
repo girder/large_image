@@ -5,6 +5,7 @@
 ### Improvements
 
 - Speed up getting plottable data from adjacent items; plot more data ([#1613](../../pull/1613), [#1614](../../pull/1614))
+- Better handle mixed dtype sources in the multi source ([#1616](../../pull/1616))
 
 ### Bug Fixes
 

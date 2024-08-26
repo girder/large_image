@@ -316,3 +316,13 @@ def testTilesWithStyleAndDtype():
         format=large_image.constants.TILE_FORMAT_NUMPY)
     assert region1.shape == (75, 100, 1)
     assert region1.dtype == np.uint8
+
+
+def testTilesWithSampleScaling():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_test_source_scaling.yml')
+    source = large_image_source_multi.open(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['sizeX'] == 2000
+    assert tileMetadata['sizeY'] == 1250
+    utilities.checkTilesZXY(source, tileMetadata)
