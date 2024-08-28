@@ -23,6 +23,7 @@
 #   IFormatReader.html for interface details.
 
 import atexit
+import builtins
 import logging
 import math
 import os
@@ -212,6 +213,17 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         largeImagePath = str(self._getLargeImagePath())
         config._ignoreSourceNames('bioformats', largeImagePath)
 
+        header = b''
+        if os.path.isfile(largeImagePath):
+            try:
+                header = builtins.open(largeImagePath, 'rb').read(5)
+            except Exception:
+                msg = 'File cannot be opened via Bioformats'
+                raise TileSourceError(msg)
+        # Never allow pdfs; they crash the JVM
+        if header[:5] == b'%PDF-':
+            msg = 'File cannot be opened via Bioformats'
+            raise TileSourceError(msg)
         if not _startJavabridge(self.logger):
             msg = 'File cannot be opened by bioformats reader because javabridge failed to start'
             raise TileSourceError(msg)

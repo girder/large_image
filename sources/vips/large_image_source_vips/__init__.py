@@ -89,7 +89,10 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for page in range(1, pages):
             subInputPath = self._largeImagePath + '[page=%d]' % page
             with _newFromFileLock:
-                subImage = pyvips.Image.new_from_file(subInputPath)
+                try:
+                    subImage = pyvips.Image.new_from_file(subInputPath)
+                except Exception:
+                    continue
             if subImage.width == self.sizeX and subImage.height == self.sizeY:
                 self._frames.append(page)
                 continue
@@ -215,12 +218,16 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         img = self._getFrameImage(frame)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         tileimg = img.crop(x0, y0, x1 - x0, y1 - y0)
-        if step != 1:
-            tileimg = tileimg.resize(1.0 / step, kernel=pyvips.enums.Kernel.NEAREST, gap=0)
-        tile = np.ndarray(
-            buffer=tileimg.write_to_memory(),
-            dtype=GValueToDtype[tileimg.format],
-            shape=[tileimg.height, tileimg.width, tileimg.bands])
+        try:
+            if step != 1:
+                tileimg = tileimg.resize(1.0 / step, kernel=pyvips.enums.Kernel.NEAREST, gap=0)
+            tile = np.ndarray(
+                buffer=tileimg.write_to_memory(),
+                dtype=GValueToDtype[tileimg.format],
+                shape=[tileimg.height, tileimg.width, tileimg.bands])
+        except Exception:
+            self.logger.exception('Failed to getTile')
+            tile = np.zeros((1, 1))
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

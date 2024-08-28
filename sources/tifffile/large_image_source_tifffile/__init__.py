@@ -259,14 +259,17 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for p in self._tf.pages:
             if (p not in pagesInSeries and getattr(p, 'keyframe', None) is not None and
                     p.hash not in hashes and not len(set(p.axes) - set('YXS'))):
-                id = 'image_%s' % p.index
-                entry = {'page': p.index}
-                entry['width'] = p.shape[p.axes.index('X')]
-                entry['height'] = p.shape[p.axes.index('Y')]
-                if (id not in self._associatedImages and
-                        max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
-                        max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
-                    self._associatedImages[id] = entry
+                try:
+                    id = 'image_%s' % p.index
+                    entry = {'page': p.index}
+                    entry['width'] = p.shape[p.axes.index('X')]
+                    entry['height'] = p.shape[p.axes.index('Y')]
+                    if (id not in self._associatedImages and
+                            max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
+                            max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
+                        self._associatedImages[id] = entry
+                except Exception:
+                    pass
         for sidx, s in enumerate(self._tf.series):
             if sidx not in self._series and not len(set(s.axes) - set('YXS')):
                 id = 'series_%d' % sidx
