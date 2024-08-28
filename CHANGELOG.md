@@ -9,6 +9,7 @@
 - Add a utility function to minimize caching ([#1617](../../pull/1617))
 - Allow passing through converter options when writing a zarr sink to a non-zarr format ([#1618](../../pull/1618))
 - Do less calculations when applying affine transforms in the multi-source ([#1619](../../pull/1619))
+- Improve logging in the image converter ([#1621](../../pull/1621))
 
 ### Bug Fixes
 
