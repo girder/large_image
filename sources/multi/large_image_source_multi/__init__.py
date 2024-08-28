@@ -1028,8 +1028,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Determine where the target tile's corners are located on the source.
         Fetch that so that we have at least sqrt(2) more resolution, then use
-        scikit-image warp to transform it.  scikit-image does a better job than
-        scipy.ndimage.affine_transform.
+        scikit-image warp to transform it.  scikit-image does a better and
+        faster job than scipy.ndimage.affine_transform.
 
         :param ts: the source of the image to transform.
         :param transform: a 3x3 affine 2d matrix for transforming the source
@@ -1118,28 +1118,35 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x, y = int(math.floor(x)), int(math.floor(y))
         # Recompute where the source corners will land
         destcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        destsize = (max(math.ceil(c[0]) for c in destcorners),
-                    max(math.ceil(c[1]) for c in destcorners))
+        destShape = [
+            max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
+            max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
+        ]
+        if max(0, -x) or max(0, -y):
+            transform[0][2] -= max(0, -x)
+            transform[1][2] -= max(0, -y)
+            destShape[0] -= max(0, -y)
+            destShape[1] -= max(0, -x)
+            x += max(0, -x)
+            y += max(0, -y)
+        destShape = [min(destShape[0], outh - y), min(destShape[1], outw - x)]
+        if destShape[0] <= 0 or destShape[1] <= 0:
+            return None, None, None
         # Add an alpha band if needed
         if srcImage.shape[2] in {1, 3}:
             _, srcImage = _makeSameChannelDepth(np.zeros((1, 1, srcImage.shape[2] + 1)), srcImage)
-        # Add enough space to warp the source image in place
-        srcImage = np.pad(srcImage, (
-            (0, max(0, destsize[1] - srcImage.shape[0])),
-            (0, max(0, destsize[0] - srcImage.shape[1])),
-            (0, 0)), mode='constant')
+        # skimage.transform.warp is faster and has less artifacts than
+        # scipy.ndimage.affine_transform.  It is faster than using cupy's
+        # version of scipy's affine_transform when the source and destination
+        # images are converted from numpy to cupy and back in this method.
         destImage = skimage.transform.warp(
+            # Although using np.float32 could reduce memory use, it doesn't
+            # provide any speed improvement
             srcImage.astype(float),
-            skimage.transform.AffineTransform(np.linalg.inv(
-                transform))).astype(srcImage.dtype)
-        # Trim to target size and location
-        destImage = destImage[max(0, -y):, max(0, -x):, :]
-        x += max(0, -x)
-        y += max(0, -y)
-        if x >= outw or y >= outh:
-            return None, None, None
-        destImage = destImage[:min(destImage.shape[0], outh - y),
-                              :min(destImage.shape[1], outw - x), :]
+            skimage.transform.AffineTransform(np.linalg.inv(transform)),
+            order=3,
+            output_shape=(destShape[0], destShape[1], srcImage.shape[2]),
+        ).astype(srcImage.dtype)
         return destImage, x, y
 
     def _addSourceToTile(self, tile, sourceEntry, corners, scale):
