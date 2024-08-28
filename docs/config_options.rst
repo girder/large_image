@@ -132,6 +132,10 @@ As an example, configuration parameters can be set via python code like::
 
   large_image.config.setConfig('max_small_image_size', 8192)
 
+If reading many different images but never revisiting them, it can be useful to reduce caching to a minimum.  There is a utility function to make this easier::
+
+  large_image.config.minimizeCaching()
+
 Configuration from Environment
 ------------------------------
 
