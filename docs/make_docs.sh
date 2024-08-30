@@ -5,6 +5,9 @@ set -e
 cd "$(dirname $0)"
 stat make_docs.sh
 
+# generate file format table
+python -c "import generate_format_table;generate_format_table.generate()"
+
 # git clean -fxd .
 
 mkdir -p ../build/docs-work
