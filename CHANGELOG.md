@@ -14,6 +14,7 @@
 ### Bug Fixes
 
 - Harden converting sources that report varied tile bands ([#1615](../../pull/1615))
+- Harden many of the sources from reading bad files ([#1623](../../pull/1623))
 
 ## 1.29.6
 

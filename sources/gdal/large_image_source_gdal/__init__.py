@@ -116,7 +116,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self._largeImagePath = self._getLargeImagePath()
         try:
             self.dataset = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
-        except RuntimeError:
+        except (RuntimeError, UnicodeDecodeError):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = 'File cannot be opened via GDAL'
@@ -143,6 +143,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             scale = self.getPixelSizeInMeters()
         except RuntimeError as exc:
             raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
+        if not self.sizeX or not self.sizeY:
+            msg = 'File cannot be opened via GDAL (no size)'
+            raise TileSourceError(msg)
         if (self.projection or self._getDriver() in {
             'PNG',
         }) and not scale and not is_netcdf:
@@ -459,7 +462,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if srs not in self._bounds:
             gt = self._getGeoTransform()
             nativeSrs = self.getProj4String()
-            if not nativeSrs:
+            if not nativeSrs or not gt:
                 self._bounds[srs] = None
                 return
             bounds = {
@@ -547,7 +550,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                         # The statistics provide a min and max, so we don't
                         # fetch those separately
                         info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
-                    except RuntimeError:
+                    except (RuntimeError, TypeError):
                         self.logger.info('Failed to get statistics for band %d', i + 1)
                     info['nodata'] = band.GetNoDataValue()
                     info['scale'] = band.GetScale()
@@ -714,8 +717,12 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             w = int(max(1, round((x1 - x0) / factor)))
             h = int(max(1, round((y1 - y0) / factor)))
             with self._getDatasetLock:
-                tile = self.dataset.ReadAsArray(
-                    xoff=x0, yoff=y0, xsize=x1 - x0, ysize=y1 - y0, buf_xsize=w, buf_ysize=h)
+                try:
+                    tile = self.dataset.ReadAsArray(
+                        xoff=x0, yoff=y0, xsize=x1 - x0, ysize=y1 - y0, buf_xsize=w, buf_ysize=h)
+                except Exception:
+                    self.logger.exception('Failed to getTile')
+                    tile = np.zeros((1, 1))
         else:
             xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
             bounds = self.getBounds(self.projection)
@@ -745,7 +752,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     # around the outputBounds.
                     polynomialOrder=1,
                     xRes=res, yRes=res, outputBounds=[xmin, ymin, xmax, ymax])
-                tile = ds.ReadAsArray()
+                try:
+                    tile = ds.ReadAsArray()
+                except Exception:
+                    self.logger.exception('Failed to getTile')
+                    tile = np.zeros((1, 1))
         if len(tile.shape) == 3:
             tile = np.rollaxis(tile, 0, 3)
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,

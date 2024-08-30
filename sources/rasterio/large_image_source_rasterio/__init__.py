@@ -153,28 +153,32 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # use the mapnik source if needed. This variable is always ignored
         # is_netcdf = False
 
-        # get the different scales and projections from the image
-        scale = self.getPixelSizeInMeters()
+        try:
+            # get the different scales and projections from the image
+            scale = self.getPixelSizeInMeters()
 
-        # raise an error if we are missing some information about the projection
-        # i.e. we don't know where to place it on a map
-        isProjected = self.projection or self.dataset.driver.lower() in {'png'}
-        if isProjected and not scale:
-            msg = ('File does not have a projected scale, so will not be '
-                   'opened via rasterio with a projection.')
+            # raise an error if we are missing some information about the projection
+            # i.e. we don't know where to place it on a map
+            isProjected = self.projection or self.dataset.driver.lower() in {'png'}
+            if isProjected and not scale:
+                msg = ('File does not have a projected scale, so will not be '
+                       'opened via rasterio with a projection.')
+                raise TileSourceError(msg)
+
+            # set the levels of the tiles
+            logX = math.log(float(self.sizeX) / self.tileWidth)
+            logY = math.log(float(self.sizeY) / self.tileHeight)
+            computedLevel = math.ceil(max(logX, logY) / math.log(2))
+            self.sourceLevels = self.levels = int(max(0, computedLevel) + 1)
+
+            self._unitsPerPixel = unitsPerPixel
+            self.projection is None or self._initWithProjection(unitsPerPixel)
+            self._getPopulatedLevels()
+            self._getTileLock = threading.Lock()
+            self._setDefaultStyle()
+        except Exception as exc:
+            msg = f'File cannot be opened via rasterio {exc}.'
             raise TileSourceError(msg)
-
-        # set the levels of the tiles
-        logX = math.log(float(self.sizeX) / self.tileWidth)
-        logY = math.log(float(self.sizeY) / self.tileHeight)
-        computedLevel = math.ceil(max(logX, logY) / math.log(2))
-        self.sourceLevels = self.levels = int(max(0, computedLevel) + 1)
-
-        self._unitsPerPixel = unitsPerPixel
-        self.projection is None or self._initWithProjection(unitsPerPixel)
-        self._getPopulatedLevels()
-        self._getTileLock = threading.Lock()
-        self._setDefaultStyle()
 
     def _getPopulatedLevels(self):
         try:
