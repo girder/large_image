@@ -59,7 +59,6 @@ format_examples = [
             dict(
                 filename='albania.jpg',
                 url='https://github.com/OSGeo/gdal/blob/master/autotest/gdrivers/data/jpeg/albania.jpg',
-                hash='c454c477056b26cceb5461648f825efdf9362c7b7998a4a0ca41050629e692de',
             ),
             dict(
                 filename='clouds.jpeg',

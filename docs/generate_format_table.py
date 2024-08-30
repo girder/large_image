@@ -4,6 +4,7 @@ from format_examples_datastore import EXAMPLES_FOLDER, format_examples, fetch_al
 
 
 TABLE_FILE = Path('./format_table.rst')
+NO_MULTIFRAME_SOURCES = ['deepzoom', 'openjpeg', 'openslide']
 
 
 def evaluate_examples():
@@ -33,15 +34,15 @@ def evaluate_examples():
                                 url=url,
                                 tilesource=tilesource_name,
                                 multiframe=(
-                                    False if tilesource_name in ['deepzoom', 'openjpeg', 'openslide'] else
+                                    False if tilesource_name in NO_MULTIFRAME_SOURCES else
                                     True if s.getMetadata().get('frames') is not None else
                                     'Maybe; no multiframe sample found.'
                                 ),
                                 geospatial=hasattr(s, 'projection'),
                                 write=hasattr(s, 'addTile'),
                                 associated=(
-                                    s.getAssociatedImagesList
-                                    is not large_image.tilesource.FileTileSource.getAssociatedImagesList
+                                    s.getAssociatedImagesList is not
+                                    large_image.tilesource.FileTileSource.getAssociatedImagesList
                                 ),
                             ),
                         )
