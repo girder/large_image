@@ -32,13 +32,16 @@ def evaluate_examples():
                                 filename=filename,
                                 url=url,
                                 tilesource=tilesource_name,
-                                # TODO: find a way to determine if multiframe is allowed
-                                multiframe=True,
+                                multiframe=(
+                                    False if tilesource_name in ['deepzoom', 'openjpeg', 'openslide'] else
+                                    True if s.getMetadata().get('frames') is not None else
+                                    'Maybe; no multiframe sample found.'
+                                ),
                                 geospatial=hasattr(s, 'projection'),
                                 write=hasattr(s, 'addTile'),
                                 associated=(
-                                    s.getAssociatedImagesList is not
-                                    large_image.tilesource.FileTileSource.getAssociatedImagesList
+                                    s.getAssociatedImagesList
+                                    is not large_image.tilesource.FileTileSource.getAssociatedImagesList
                                 ),
                             ),
                         )
@@ -121,7 +124,7 @@ def generate():
             elif col_key == 'url':
                 # reformat example download link
                 col_value = (
-                    f'`Download example {row.get("extension")} file <{col_value}>`_'
+                    f'`Download example {row.get("extension")} file <{col_value}>`__'
                 )
             elif col_key == 'tilesource':
                 # join tilesource lists with commas
