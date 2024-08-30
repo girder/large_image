@@ -6,11 +6,9 @@ from format_examples_datastore import EXAMPLES_FOLDER, format_examples, fetch_al
 TABLE_FILE = Path('./format_table.rst')
 
 
-def generate():
-    fetch_all()
+def evaluate_examples():
     large_image.tilesource.loadTileSources()
     available_tilesources = large_image.tilesource.AvailableTileSources
-
     results = []
     for format_data in format_examples:
         name = format_data.get('name')
@@ -35,18 +33,21 @@ def generate():
                                 url=url,
                                 tilesource=tilesource_name,
                                 # TODO: find a way to determine if multiframe is allowed
-                                multiframe=True, 
+                                multiframe=True,
                                 geospatial=hasattr(s, 'projection'),
                                 write=hasattr(s, 'addTile'),
                                 associated=(
-                                    s.getAssociatedImagesList
-                                    is not large_image.tilesource.FileTileSource.getAssociatedImagesList
+                                    s.getAssociatedImagesList is not
+                                    large_image.tilesource.FileTileSource.getAssociatedImagesList
                                 ),
-                            )
+                            ),
                         )
                     except large_image.exceptions.TileSourceError:
                         pass
+    return results
 
+
+def combine_rows(results):
     # combine rows that only differ on tilesource
     table_rows = {}
     for result in results:
@@ -55,11 +56,9 @@ def generate():
         row_key = f'{row_base_key}_{row_key_index}'
         while row_key in table_rows:
             if all(
-                [
-                    value == table_rows[row_key][key]
-                    for key, value in result.items()
-                    if key != 'tilesource'
-                ]
+                value == table_rows[row_key][key]
+                for key, value in result.items()
+                if key != 'tilesource'
             ):
                 if not isinstance(table_rows[row_key]['tilesource'], list):
                     table_rows[row_key]['tilesource'] = [
@@ -75,7 +74,15 @@ def generate():
                 row_key = f'{row_base_key}_{row_key_index}'
         if row_key not in table_rows:
             table_rows[row_key] = result
+    return table_rows
 
+
+def generate():
+    fetch_all()
+    results = evaluate_examples()
+    table_rows = combine_rows(results)
+
+    # generate RST-formatted table
     columns = [
         dict(label='Format', key='name'),
         dict(label='Extension', key='extension'),
