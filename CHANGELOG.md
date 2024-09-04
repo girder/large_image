@@ -15,6 +15,7 @@
 
 - Harden converting sources that report varied tile bands ([#1615](../../pull/1615))
 - Harden many of the sources from reading bad files ([#1623](../../pull/1623))
+- Some projected bounds in the rasterio source could be off ([#1624](../../pull/1624))
 
 ## 1.29.6
 

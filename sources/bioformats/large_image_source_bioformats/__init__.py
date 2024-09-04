@@ -106,7 +106,7 @@ def _reduceLogging():
             'org/slf4j/LoggerFactory', 'getLogger',
             '(Ljava/lang/String;)Lorg/slf4j/Logger;', rootLoggerName)
         logLevel = javabridge.get_static_field(
-            'ch/qos/logback/classic/Level', 'ERROR', 'Lch/qos/logback/classic/Level;')
+            'ch/qos/logback/classic/Level', 'OFF', 'Lch/qos/logback/classic/Level;')
         javabridge.call(rootLogger, 'setLevel', '(Lch/qos/logback/classic/Level;)V', logLevel)
     except Exception:
         pass
