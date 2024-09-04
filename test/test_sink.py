@@ -537,6 +537,39 @@ def testConcurrency(tmp_path):
         assert np.allclose(data, seed_data)
 
 
+def get_expected_metadata(axis_spec, frame_shape):
+    return dict(
+        levels=1,
+        sizeY=frame_shape[0],
+        sizeX=frame_shape[1],
+        bandCount=frame_shape[2],
+        frames=[],
+        tileWidth=512,
+        tileHeight=512,
+        magnification=None,
+        mm_x=0,
+        mm_y=0,
+        dtype='float64',
+        channels=[f'Band {c + 1}' for c in range(len(axis_spec['c']['values']))],
+        channelmap={f'Band {c + 1}': c for c in range(len(axis_spec['c']['values']))},
+        IndexRange={
+            f'Index{k.upper()}': len(v['values']) for k, v in axis_spec.items()
+        },
+        IndexStride={
+            f'Index{k.upper()}': v['stride'] for k, v in axis_spec.items()
+        },
+        **{
+            f'Value{k.upper()}': dict(
+                values=v['values'],
+                units=v['units'],
+                uniform=v['uniform'],
+                min=min(v['values']),
+                max=max(v['values']),
+                datatype=v['dtype'],
+            ) for k, v in axis_spec.items()
+        }
+    )
+
 def compare_metadata(actual, expected):
     assert type(actual) is type(expected)
     if isinstance(actual, list):
@@ -551,65 +584,87 @@ def compare_metadata(actual, expected):
 
 
 @pytest.mark.parametrize('use_add_tile_args', [True, False])
-def testFrameValuesAddTile(use_add_tile_args, tmp_path):
+def testFrameValuesSmall(use_add_tile_args, tmp_path):
     output_file = tmp_path / 'test.db'
     sink = large_image_source_zarr.new()
 
     frame_shape = (300, 400, 3)
-    expected = dict(
-        z=dict(values=[2, 4, 6, 8], uniform=True, units='meter', stride=9, dtype='int64'),
-        t=dict(values=[10.0, 20.0, 30.0], uniform=False, units='millisecond', stride=3, dtype='float64'),
+    axis_spec = dict(
         c=dict(values=['r', 'g', 'b'], uniform=True, units='channel', stride=1, dtype='str32'),
     )
-    expected_metadata = dict(
-        levels=1,
-        sizeY=frame_shape[0],
-        sizeX=frame_shape[1],
-        bandCount=frame_shape[2],
-        frames=[],
-        tileWidth=512,
-        tileHeight=512,
-        magnification=None,
-        mm_x=0,
-        mm_y=0,
-        dtype='float64',
-        channels=[f'Band {c + 1}' for c in range(len(expected['c']['values']))],
-        channelmap={f'Band {c + 1}': c for c in range(len(expected['c']['values']))},
-        IndexRange={
-            f'Index{k.upper()}': len(v['values']) for k, v in expected.items()
-        },
-        IndexStride={
-            f'Index{k.upper()}': v['stride'] for k, v in expected.items()
-        },
-        **{
-            f'Value{k.upper()}': dict(
-                values=v['values'],
-                units=v['units'],
-                uniform=v['uniform'],
-                min=min(v['values']),
-                max=max(v['values']),
-                datatype=v['dtype'],
-            ) for k, v in expected.items()
-        }
-    )
+    expected_metadata = get_expected_metadata(axis_spec, frame_shape)
 
-    sink.frameAxes = list(expected.keys())
+    sink.frameAxes = list(axis_spec.keys())
     sink.frameUnits = {
-        k: v['units'] for k, v in expected.items()
+        k: v['units'] for k, v in axis_spec.items()
     }
     frame_values_shape = [
-        *[len(v['values']) for v in expected.values()],
-        len(expected)
+        *[len(v['values']) for v in axis_spec.values()],
+        len(axis_spec)
     ]
     frame_values = np.empty(frame_values_shape, dtype=object)
 
     frame = 0
     index = 0
-    for z, z_value in enumerate(expected['z']['values']):
-        for t, t_value in enumerate(expected['t']['values']):
-            if not expected['t']['uniform']:
+    for c, c_value in enumerate(axis_spec['c']['values']):
+            add_tile_args = dict(c=c, axes=['c', 'y', 'x', 's'])
+            if use_add_tile_args:
+                add_tile_args.update(c_value=c_value)
+            else:
+                frame_values[c] = [c_value]
+            random_tile = np.random.random(frame_shape)
+            sink.addTile(random_tile, 0, 0, **add_tile_args)
+            expected_metadata['frames'].append(
+                dict(
+                    Frame=frame,
+                    Index=index,
+                    IndexC=c,
+                    ValueC=c_value,
+                    Channel=f'Band {c + 1}',
+                )
+            )
+            frame += 1
+    index += 1
+
+    if not use_add_tile_args:
+        sink.frameValues = frame_values
+    compare_metadata(dict(sink.getMetadata()), expected_metadata)
+
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    compare_metadata(dict(written.getMetadata()), expected_metadata)
+
+
+@pytest.mark.parametrize('use_add_tile_args', [True, False])
+def testFrameValues(use_add_tile_args, tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+
+    frame_shape = (300, 400, 3)
+    axis_spec = dict(
+        z=dict(values=[2, 4, 6, 8], uniform=True, units='meter', stride=9, dtype='int64'),
+        t=dict(values=[10.0, 20.0, 30.0], uniform=False, units='millisecond', stride=3, dtype='float64'),
+        c=dict(values=['r', 'g', 'b'], uniform=True, units='channel', stride=1, dtype='str32'),
+    )
+    expected_metadata = get_expected_metadata(axis_spec, frame_shape)
+
+    sink.frameAxes = list(axis_spec.keys())
+    sink.frameUnits = {
+        k: v['units'] for k, v in axis_spec.items()
+    }
+    frame_values_shape = [
+        *[len(v['values']) for v in axis_spec.values()],
+        len(axis_spec)
+    ]
+    frame_values = np.empty(frame_values_shape, dtype=object)
+
+    frame = 0
+    index = 0
+    for z, z_value in enumerate(axis_spec['z']['values']):
+        for t, t_value in enumerate(axis_spec['t']['values']):
+            if not axis_spec['t']['uniform']:
                 t_value += 0.01 * z
-            for c, c_value in enumerate(expected['c']['values']):
+            for c, c_value in enumerate(axis_spec['c']['values']):
                     add_tile_args = dict(z=z, t=t, c=c, axes=['z', 't', 'c', 'y', 'x', 's'])
                     if use_add_tile_args:
                         add_tile_args.update(z_value=z_value, t_value=t_value, c_value=c_value)
