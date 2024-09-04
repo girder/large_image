@@ -224,10 +224,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tuple that is used to find the maximum size array, preferring ome
             arrays, then total pixels, then channels.  'is_ome' is a boolean.
             'series' is a list of the found groups and arrays that match the
-            best criteria.  'axes', 'axes_values', 'axes_units', and 'channels' are from the best array.
-            'associated' is a list of all groups and arrays that might be
-            associated images.  These have to be culled for the actual groups
-            used in the series.
+            best criteria.  'axes', 'axes_values', 'axes_units', and 'channels'
+            are from the best array. 'associated' is a list of all groups and 
+            arrays that might be associated images.  These have to be culled 
+            for the actual groups used in the series.
         """
         attrs = group.attrs.asdict() if group is not None else {}
         min_version = packaging.version.Version('0.4')
@@ -244,8 +244,14 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if is_ome:
             axes = {axis['name']: idx for idx, axis in enumerate(
                 attrs['multiscales'][0]['axes'])}
-            axes_values = {axis['name']: axis.get('values') for axis in attrs['multiscales'][0]['axes']}
-            axes_units = {axis['name']: axis.get('unit') for axis in attrs['multiscales'][0]['axes']}
+            axes_values = {
+                axis['name']: axis.get('values') 
+                for axis in attrs['multiscales'][0]['axes']
+            }
+            axes_units = {
+                axis['name']: axis.get('unit') 
+                for axis in attrs['multiscales'][0]['axes']
+            }
             if isinstance(attrs['omero'].get('channels'), list):
                 channels = [channel['label'] for channel in attrs['omero']['channels']]
                 if all(channel.startswith('Channel ') for channel in channels):
@@ -345,6 +351,43 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             pass
 
+    def _readFrameValues(self, found, baseArray):
+        axes_values = found.get('axes_values')
+        axes_units = found.get('axes_units')
+        if isinstance(axes_values, dict):
+            self._frameAxes = [
+                a for a, i in sorted(self._axes.items(), key=lambda x: x[1])
+                if axes_values.get(a) is not None
+            ]
+            self._frameUnits = {k: axes_units.get(k) for k in self.frameAxes if k in axes_units}
+            frame_values_shape = [baseArray.shape[self._axes[a]] for a in self.frameAxes]
+            frame_values_shape.append(len(frame_values_shape))
+            frame_values = np.empty(frame_values_shape, dtype=object)
+            for axis, values in axes_values.items():
+                if axis in self.frameAxes:
+                    slicing = [slice(None) for i in range(len(frame_values_shape))]
+                    axis_index = self.frameAxes.index(axis)
+                    slicing[-1] = axis_index
+                    if isinstance(values, list):
+                        # uniform values are written as lists
+                        for i, value in enumerate(values):
+                            slicing[axis_index] = i
+                            frame_values[tuple(slicing)] = value
+                    elif isinstance(values, dict):
+                        # non-uniform values are written as dicts 
+                        # mapping values to index permutations
+                        for value, frame_specs in values.items():
+                            if isinstance(value, str):
+                                try:
+                                    value = float(value) if '.' in value else int(value)
+                                except Exception:
+                                    pass
+                            for frame_spec in frame_specs:
+                                for a, i in frame_spec.items():
+                                    slicing[self.frameAxes.index(a)] = i
+                                frame_values[tuple(slicing)] = value
+            self._frameValues = frame_values
+    
     def _validateZarr(self):
         """
         Validate that we can read tiles from the zarr parent group in
@@ -410,40 +453,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._axisCounts['xy'] = len(self._series)
             stride *= len(self._series)
         self._framecount = stride
-        axes_values = found.get('axes_values')
-        axes_units = found.get('axes_units')
-        if isinstance(axes_values, dict):
-            self._frameAxes = [
-                a for a, i in sorted(self._axes.items(), key=lambda x: x[1]) 
-                if axes_values.get(a) is not None
-            ]
-            self._frameUnits = {k: axes_units.get(k) for k in self.frameAxes if k in axes_units}
-            frame_values_shape = [baseArray.shape[self._axes[a]] for a in self.frameAxes]
-            frame_values_shape.append(len(frame_values_shape))
-            frame_values = np.empty(frame_values_shape, dtype=object)
-            for axis, values in axes_values.items():
-                if axis in self.frameAxes:
-                    slicing = [slice(None) for i in range(len(frame_values_shape))]
-                    axis_index = self.frameAxes.index(axis)
-                    slicing[-1] = axis_index
-                    if isinstance(values, list):
-                        # uniform values are written as lists
-                        for i, value in enumerate(values):
-                            slicing[axis_index] = i
-                            frame_values[tuple(slicing)] = value
-                    elif isinstance(values, dict):
-                        # non-uniform values are written as dicts mapping values to index permutations
-                        for value, frame_specs in values.items():
-                            if isinstance(value, str):
-                                try:
-                                    value = float(value) if '.' in value else int(value)
-                                except:
-                                    pass
-                            for frame_spec in frame_specs:
-                                for a, i in frame_spec.items():
-                                    slicing[self.frameAxes.index(a)] = i
-                                frame_values[tuple(slicing)] = value
-            self._frameValues = frame_values
+        self._readFrameValues(found, baseArray)
 
     def _nonemptyLevelsList(self, frame=0):
         """
@@ -502,7 +512,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         units=self.frameUnits.get(axis) if self.frameUnits is not None else None,
                         min=min(values),
                         max=max(values),
-                        datatype=np.array(values).dtype.name
+                        datatype=np.array(values).dtype.name,
                     )
             for idx in range(self._framecount):
                 frame = {'Frame': idx}
@@ -697,7 +707,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 elif self.frameValues.shape != frames_shape:
                     self.frameValues = np.pad(
                         self.frameValues,
-                        [(0, s - self.frameValues.shape[i]) for i, s in enumerate(frames_shape)]
+                        [(0, s - self.frameValues.shape[i]) for i, s in enumerate(frames_shape)],
                     )
                 current_frame_slice = tuple(placement.get(a) for a in self.frameAxes)
                 for i, k in enumerate(self.frameAxes):
@@ -778,6 +788,39 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             )
             self._associatedImages[imageKey] = (group, arr)
 
+    def _getAxisInternalMetadata(self, axis_name):
+        axis_metadata = {'name': axis_name}
+        if axis_name in ['x', 'y']:
+            axis_metadata['type'] = 'space'
+            axis_metadata['unit'] = 'millimeter'
+        elif axis_name in ['s', 'c']:
+            axis_metadata['type'] = 'channel'
+        if self.frameAxes is not None:
+            frame_axis_index = self.frameAxes.index(axis_name) if axis_name in self.frameAxes else None
+            if frame_axis_index is not None and self.frameValues is not None:
+                all_frame_values = self.frameValues[..., frame_axis_index]
+                split = np.split(
+                    all_frame_values,
+                    all_frame_values.shape[frame_axis_index],
+                    axis=frame_axis_index,
+                )
+                uniform = all(len(np.unique(a)) == 1 for a in split)
+                if uniform:
+                    values = [a.flat[0] for a in split]
+                else:
+                    values = {}
+                    for index, value in np.ndenumerate(all_frame_values):
+                        if value not in values:
+                            values[value] = []
+                        values[value].append({
+                            axis: index[i] for i, axis in enumerate(self.frameAxes)
+                        })
+                axis_metadata['values'] = values
+            unit = self.frameUnits.get(axis_name) if self.frameUnits is not None else None
+            if unit is not None:
+                axis_metadata['unit'] = unit
+            return axis_metadata
+    
     def _writeInternalMetadata(self):
         self._checkEditable()
         with self._threadLock and self._processLock:
@@ -803,37 +846,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 }
                 datasets.append(dataset_metadata)
             for a in sorted_axes:
-                axis_metadata = {'name': a}
-                if a in ['x', 'y']:
-                    axis_metadata['type'] = 'space'
-                    axis_metadata['unit'] = 'millimeter'
-                elif a in ['s', 'c']:
-                    axis_metadata['type'] = 'channel'
-                elif a == 't':
+                if a == 't':
                     rdefs['defaultT'] = 0
                 elif a == 'z':
                     rdefs['defaultZ'] = 0
-                if self.frameAxes is not None:
-                    frame_axis_index = self.frameAxes.index(a) if a in self.frameAxes else None
-                    if frame_axis_index is not None and self.frameValues is not None:
-                        all_frame_values = self.frameValues[..., frame_axis_index]
-                        split = np.split(all_frame_values, all_frame_values.shape[frame_axis_index], axis=frame_axis_index)
-                        uniform = all(len(np.unique(a)) == 1 for a in split)
-                        if uniform:
-                            values = [a.flat[0] for a in split]
-                        else:
-                            values = {}
-                            for index, value in np.ndenumerate(all_frame_values):
-                                if value not in values:
-                                    values[value] = []
-                                values[value].append({
-                                    axis: index[i] for i, axis in enumerate(self.frameAxes)
-                                })
-                        axis_metadata['values'] = values
-                    unit = self.frameUnits.get(a) if self.frameUnits is not None else None
-                    if unit is not None:
-                        axis_metadata['unit'] = unit
-                axes.append(axis_metadata)
+                axes.append(self._getAxisInternalMetadata(a))
             if channel_axis is not None and len(arrays) > 0:
                 base_array = list(arrays.values())[0]
                 base_shape = base_array.shape
@@ -986,11 +1003,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkEditable()
         if self.frameAxes is None:
             err = 'frameAxes must be set first with a list of frame axis names.'
-            raise ValueError
+            raise ValueError(err)
         if not isinstance(units, dict) or not all(
             k in self.frameAxes for k in units.keys()
         ):
             err = 'frameUnits must be a dictionary with keys that exist in frameAxes.'
+            raise ValueError(err)
         self._frameUnits = units
 
     @property
@@ -1002,7 +1020,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkEditable()
         if self.frameAxes is None:
             err = 'frameAxes must be set first with a list of frame axis names.'
-            raise ValueError
+            raise ValueError(err)
         if len(a.shape) != len(self.frameAxes) + 1:
             err = f'frameValues must have {len(self.frameAxes) + 1} dimensions.'
             raise ValueError(err)

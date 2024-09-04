@@ -567,7 +567,7 @@ def get_expected_metadata(axis_spec, frame_shape):
                 max=max(v['values']),
                 datatype=v['dtype'],
             ) for k, v in axis_spec.items()
-        }
+        },
     )
 
 def compare_metadata(actual, expected):
@@ -589,9 +589,13 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
     sink = large_image_source_zarr.new()
 
     frame_shape = (300, 400, 3)
-    axis_spec = dict(
-        c=dict(values=['r', 'g', 'b'], uniform=True, units='channel', stride=1, dtype='str32'),
-    )
+    axis_spec = dict(c=dict(
+        values=['r', 'g', 'b'],
+        uniform=True,
+        units='channel',
+        stride=1,
+        dtype='str32',
+    ))
     expected_metadata = get_expected_metadata(axis_spec, frame_shape)
 
     sink.frameAxes = list(axis_spec.keys())
@@ -600,7 +604,7 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
     }
     frame_values_shape = [
         *[len(v['values']) for v in axis_spec.values()],
-        len(axis_spec)
+        len(axis_spec),
     ]
     frame_values = np.empty(frame_values_shape, dtype=object)
 
@@ -621,7 +625,7 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
                     IndexC=c,
                     ValueC=c_value,
                     Channel=f'Band {c + 1}',
-                )
+                ),
             )
             frame += 1
     index += 1
@@ -642,9 +646,27 @@ def testFrameValues(use_add_tile_args, tmp_path):
 
     frame_shape = (300, 400, 3)
     axis_spec = dict(
-        z=dict(values=[2, 4, 6, 8], uniform=True, units='meter', stride=9, dtype='int64'),
-        t=dict(values=[10.0, 20.0, 30.0], uniform=False, units='millisecond', stride=3, dtype='float64'),
-        c=dict(values=['r', 'g', 'b'], uniform=True, units='channel', stride=1, dtype='str32'),
+        z=dict(
+            values=[2, 4, 6, 8],
+            uniform=True,
+            units='meter',
+            stride=9,
+            dtype='int64',
+        ),
+        t=dict(
+            values=[10.0, 20.0, 30.0],
+            uniform=False,
+            units='millisecond',
+            stride=3,
+            dtype='float64',
+        ),
+        c=dict(
+            values=['r', 'g', 'b'],
+            uniform=True,
+            units='channel',
+            stride=1,
+            dtype='str32',
+        ),
     )
     expected_metadata = get_expected_metadata(axis_spec, frame_shape)
 
