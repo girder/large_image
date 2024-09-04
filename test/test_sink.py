@@ -557,8 +557,8 @@ def testFrameValuesAddTile(use_add_tile_args, tmp_path):
 
     frame_shape = (300, 400, 3)
     expected = dict(
-        z=dict(values=[2, 4, 6, 8], uniform=True, units='m', stride=9, dtype='int64'),
-        t=dict(values=[10.0, 20.0, 30.0], uniform=False, units='ms', stride=3, dtype='float64'),
+        z=dict(values=[2, 4, 6, 8], uniform=True, units='meter', stride=9, dtype='int64'),
+        t=dict(values=[10.0, 20.0, 30.0], uniform=False, units='millisecond', stride=3, dtype='float64'),
         c=dict(values=['r', 'g', 'b'], uniform=True, units='channel', stride=1, dtype='str32'),
     )
     expected_metadata = dict(
@@ -635,9 +635,8 @@ def testFrameValuesAddTile(use_add_tile_args, tmp_path):
 
     if not use_add_tile_args:
         sink.frameValues = frame_values
-
     compare_metadata(dict(sink.getMetadata()), expected_metadata)
 
-    # sink.write(output_file)
-    # written = large_image_source_zarr.open(output_file)
-    # compare_metadata(dict(written.getMetadata()), expected_metadata)
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    compare_metadata(dict(written.getMetadata()), expected_metadata)
