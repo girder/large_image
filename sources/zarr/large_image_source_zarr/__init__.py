@@ -98,6 +98,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._largeImagePath = str(self._getLargeImagePath())
         self._zarr = None
         self._editable = False
+        self._frameValues = None
+        self._frameAxes = None
+        self._frameUnits = None
         if not os.path.isfile(self._largeImagePath) and '//:' not in self._largeImagePath:
             raise TileSourceFileNotFoundError(self._largeImagePath) from None
         try:
@@ -152,6 +155,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._imageDescription = None
         self._levels = []
         self._associatedImages = {}
+        self._frameValues = None
+        self._frameAxes = None
+        self._frameUnits = None
 
     def __del__(self):
         if not hasattr(self, '_derivedSource'):
@@ -386,8 +392,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         stride = 1
         self._strides = {}
         self._axisCounts = {}
-        for _, k in sorted((-'tzc'.index(k) if k in 'tzc' else 1, k)
-                           for k in self._axes if k not in 'xys'):
+        for _, k in sorted(
+            (-self._axes.get(k, 'tzc'.index(k) if k in 'tzc' else -1), k)
+            for k in self._axes if k not in 'xys'
+        ):
             self._strides[k] = stride
             self._axisCounts[k] = baseArray.shape[self._axes[k]]
             stride *= baseArray.shape[self._axes[k]]
@@ -442,11 +450,32 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         result = super().getMetadata()
         if self._framecount > 1:
             result['frames'] = frames = []
+            if self.frameValues is not None and self.frameAxes is not None:
+                for i, axis in enumerate(self.frameAxes):
+                    all_frame_values = self.frameValues[..., i]
+                    split = np.split(all_frame_values, all_frame_values.shape[i], axis=i)
+                    values = [a.flat[0] for a in split]
+                    uniform = all(len(np.unique(a)) == 1 for a in split)
+                    result['Value' + axis.upper()] = dict(
+                        values=values,
+                        uniform=uniform,
+                        units=self.frameUnits.get(axis) if self.frameUnits is not None else None,
+                        min=min(values),
+                        max=max(values),
+                        datatype=np.array(values).dtype.name
+                    )
             for idx in range(self._framecount):
                 frame = {'Frame': idx}
                 for axis in self._strides:
                     frame['Index' + axis.upper()] = (
                         idx // self._strides[axis]) % self._axisCounts[axis]
+                if self.frameValues is not None and self.frameAxes is not None:
+                    current_frame_slice = tuple(
+                        frame['Index' + axis.upper()] for axis in self.frameAxes
+                    )
+                    current_frame_values = self.frameValues[current_frame_slice]
+                    for i, axis in enumerate(self.frameAxes):
+                        frame['Value' + axis.upper()] = current_frame_values[i]
                 frames.append(frame)
             self._addMetadataFrameInformation(result, getattr(self, '_channels', None))
         return result
@@ -596,7 +625,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         placement = {
             'x': x,
             'y': y,
-            **kwargs,
+            **{k: v for k, v in kwargs.items() if not k.endswith('_value')},
+        }
+        frame_values = {
+            k.replace('_value', ''): v for k, v in kwargs.items()
+            if k not in placement
         }
         tile, mask, placement, axes = self._validateNewTile(tile, mask, placement, axes)
 
@@ -614,6 +647,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 slice(placement.get(a, 0), placement.get(a, 0) + tile.shape[i], 1)
                 for i, a in enumerate(axes)
             ])
+
+            if len(frame_values.keys()) > 0:
+                self.frameAxes = [a for a in axes if a in frame_values]
+                frames_shape = [new_dims[a] for a in self.frameAxes]
+                frames_shape.append(len(frames_shape))
+                if self.frameValues is None:
+                    self.frameValues = np.empty(frames_shape, dtype=object)
+                elif self.frameValues.shape != frames_shape:
+                    self.frameValues = np.pad(
+                        self.frameValues,
+                        [(0, s - self.frameValues.shape[i]) for i, s in enumerate(frames_shape)]
+                    )
+                current_frame_slice = tuple(placement.get(a) for a in self.frameAxes)
+                for i, k in enumerate(self.frameAxes):
+                    self.frameValues[(*current_frame_slice, i)] = frame_values.get(k)
 
             current_arrays = dict(self._zarr.arrays())
             if store_path == '0':
@@ -725,6 +773,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     rdefs['defaultT'] = 0
                 elif a == 'z':
                     rdefs['defaultZ'] = 0
+                unit = self.frameUnits.get(a) if self.frameUnits is not None else None
+                if unit is not None:
+                    axis_metadata['unit'] = unit
                 axes.append(axis_metadata)
             if channel_axis is not None and len(arrays) > 0:
                 base_array = list(arrays.values())[0]
@@ -860,6 +911,46 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkEditable()
         self._channelColors = colors
 
+    @property
+    def frameAxes(self):
+        return self._frameAxes
+
+    @frameAxes.setter
+    def frameAxes(self, axes):
+        self._checkEditable()
+        self._frameAxes = axes
+    
+    @property
+    def frameUnits(self):
+        return self._frameUnits
+
+    @frameUnits.setter
+    def frameUnits(self, units):
+        self._checkEditable()
+        if self.frameAxes is None:
+            err = 'frameAxes must be set first with a list of frame axis names.'
+            raise ValueError
+        if not isinstance(units, dict) or not all(
+            k in self.frameAxes for k in units.keys()
+        ):
+            err = 'frameUnits must be a dictionary with keys that exist in frameAxes.'
+        self._frameUnits = units
+
+    @property
+    def frameValues(self):
+        return self._frameValues
+
+    @frameValues.setter
+    def frameValues(self, a):
+        self._checkEditable()
+        if self.frameAxes is None:
+            err = 'frameAxes must be set first with a list of frame axis names.'
+            raise ValueError
+        if len(a.shape) != len(self.frameAxes) + 1:
+            err = f'frameValues must have {len(self.frameAxes) + 1} dimensions.'
+            raise ValueError(err)
+        self._frameValues = a
+    
     def _generateDownsampledLevels(self, resample_method):
         self._checkEditable()
         current_arrays = dict(self._zarr.arrays())
