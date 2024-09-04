@@ -494,12 +494,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 keys = ('ll', 'ul', 'lr', 'ur')
                 for key in keys:
                     bounds[key]['y'] = max(min(bounds[key]['y'], yBound), -yBound)
-                while any(bounds[key]['x'] > 180 for key in keys):
+                dx = min(bounds[key]['x'] for key in keys)
+                if dx < -180 or dx >= 180:
+                    dx = ((dx + 180) % 360 - 180) - dx
                     for key in keys:
-                        bounds[key]['x'] -= 360
-                while any(bounds[key]['x'] < -180 for key in keys):
-                    for key in keys:
-                        bounds[key]['x'] += 360
+                        bounds[key]['x'] += dx
                 if any(bounds[key]['x'] >= 180 for key in keys):
                     bounds['ul']['x'] = bounds['ll']['x'] = -180
                     bounds['ur']['x'] = bounds['lr']['x'] = 180

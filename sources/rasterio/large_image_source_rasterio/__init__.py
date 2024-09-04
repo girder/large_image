@@ -417,15 +417,14 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             for k in bounds:
                 bounds[k]['y'] = max(min(bounds[k]['y'], yBounds), -yBounds)
 
-            # for each corner rotate longitude until it's within -180, 180
-            while any(v['x'] > 180 for v in bounds.values()):
+            # rotate longitude so the western-most corner is within [-180, 180)
+            dx = min(v['x'] for v in bounds.values())
+            if dx < -180 or dx >= 180:
+                dx = ((dx + 180) % 360 - 180) - dx
                 for k in bounds:
-                    bounds[k]['x'] -= 180
-            while any(v['x'] < -180 for v in bounds.values()):
-                for k in bounds:
-                    bounds[k]['x'] += 360
+                    bounds[k]['x'] += dx
 
-            # if one of the corner is > 180 set all the corner to world width
+            # if one of the corner is >= 180 set all the corners to world width
             if any(v['x'] >= 180 for v in bounds.values()):
                 bounds['ul']['x'] = bounds['ll']['x'] = -180
                 bounds['ur']['x'] = bounds['lr']['x'] = 180
