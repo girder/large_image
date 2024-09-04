@@ -225,8 +225,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             arrays, then total pixels, then channels.  'is_ome' is a boolean.
             'series' is a list of the found groups and arrays that match the
             best criteria.  'axes', 'axes_values', 'axes_units', and 'channels'
-            are from the best array. 'associated' is a list of all groups and 
-            arrays that might be associated images.  These have to be culled 
+            are from the best array. 'associated' is a list of all groups and
+            arrays that might be associated images.  These have to be culled
             for the actual groups used in the series.
         """
         attrs = group.attrs.asdict() if group is not None else {}
@@ -245,11 +245,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             axes = {axis['name']: idx for idx, axis in enumerate(
                 attrs['multiscales'][0]['axes'])}
             axes_values = {
-                axis['name']: axis.get('values') 
+                axis['name']: axis.get('values')
                 for axis in attrs['multiscales'][0]['axes']
             }
             axes_units = {
-                axis['name']: axis.get('unit') 
+                axis['name']: axis.get('unit')
                 for axis in attrs['multiscales'][0]['axes']
             }
             if isinstance(attrs['omero'].get('channels'), list):
@@ -374,7 +374,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                             slicing[axis_index] = i
                             frame_values[tuple(slicing)] = value
                     elif isinstance(values, dict):
-                        # non-uniform values are written as dicts 
+                        # non-uniform values are written as dicts
                         # mapping values to index permutations
                         for value, frame_specs in values.items():
                             if isinstance(value, str):
@@ -387,7 +387,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                     slicing[self.frameAxes.index(a)] = i
                                 frame_values[tuple(slicing)] = value
             self._frameValues = frame_values
-    
+
     def _validateZarr(self):
         """
         Validate that we can read tiles from the zarr parent group in
@@ -796,13 +796,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         elif axis_name in ['s', 'c']:
             axis_metadata['type'] = 'channel'
         if self.frameAxes is not None:
-            frame_axis_index = self.frameAxes.index(axis_name) if axis_name in self.frameAxes else None
-            if frame_axis_index is not None and self.frameValues is not None:
-                all_frame_values = self.frameValues[..., frame_axis_index]
+            axis_index = self.frameAxes.index(axis_name) if axis_name in self.frameAxes else None
+            if axis_index is not None and self.frameValues is not None:
+                all_frame_values = self.frameValues[..., axis_index]
                 split = np.split(
                     all_frame_values,
-                    all_frame_values.shape[frame_axis_index],
-                    axis=frame_axis_index,
+                    all_frame_values.shape[axis_index],
+                    axis=axis_index,
                 )
                 uniform = all(len(np.unique(a)) == 1 for a in split)
                 if uniform:
@@ -819,8 +819,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             unit = self.frameUnits.get(axis_name) if self.frameUnits is not None else None
             if unit is not None:
                 axis_metadata['unit'] = unit
-            return axis_metadata
-    
+        return axis_metadata
+
     def _writeInternalMetadata(self):
         self._checkEditable()
         with self._threadLock and self._processLock:

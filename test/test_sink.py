@@ -570,6 +570,7 @@ def get_expected_metadata(axis_spec, frame_shape):
         },
     )
 
+
 def compare_metadata(actual, expected):
     assert type(actual) is type(expected)
     if isinstance(actual, list):
@@ -611,23 +612,23 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
     frame = 0
     index = 0
     for c, c_value in enumerate(axis_spec['c']['values']):
-            add_tile_args = dict(c=c, axes=['c', 'y', 'x', 's'])
-            if use_add_tile_args:
-                add_tile_args.update(c_value=c_value)
-            else:
-                frame_values[c] = [c_value]
-            random_tile = np.random.random(frame_shape)
-            sink.addTile(random_tile, 0, 0, **add_tile_args)
-            expected_metadata['frames'].append(
-                dict(
-                    Frame=frame,
-                    Index=index,
-                    IndexC=c,
-                    ValueC=c_value,
-                    Channel=f'Band {c + 1}',
-                ),
-            )
-            frame += 1
+        add_tile_args = dict(c=c, axes=['c', 'y', 'x', 's'])
+        if use_add_tile_args:
+            add_tile_args.update(c_value=c_value)
+        else:
+            frame_values[c] = [c_value]
+        random_tile = np.random.random(frame_shape)
+        sink.addTile(random_tile, 0, 0, **add_tile_args)
+        expected_metadata['frames'].append(
+            dict(
+                Frame=frame,
+                Index=index,
+                IndexC=c,
+                ValueC=c_value,
+                Channel=f'Band {c + 1}',
+            ),
+        )
+        frame += 1
     index += 1
 
     if not use_add_tile_args:
@@ -676,7 +677,7 @@ def testFrameValues(use_add_tile_args, tmp_path):
     }
     frame_values_shape = [
         *[len(v['values']) for v in axis_spec.values()],
-        len(axis_spec)
+        len(axis_spec),
     ]
     frame_values = np.empty(frame_values_shape, dtype=object)
 
@@ -687,27 +688,27 @@ def testFrameValues(use_add_tile_args, tmp_path):
             if not axis_spec['t']['uniform']:
                 t_value += 0.01 * z
             for c, c_value in enumerate(axis_spec['c']['values']):
-                    add_tile_args = dict(z=z, t=t, c=c, axes=['z', 't', 'c', 'y', 'x', 's'])
-                    if use_add_tile_args:
-                        add_tile_args.update(z_value=z_value, t_value=t_value, c_value=c_value)
-                    else:
-                        frame_values[z, t, c] = [z_value, t_value, c_value]
-                    random_tile = np.random.random(frame_shape)
-                    sink.addTile(random_tile, 0, 0, **add_tile_args)
-                    expected_metadata['frames'].append(
-                        dict(
-                            Frame=frame,
-                            Index=index,
-                            IndexZ=z,
-                            ValueZ=z_value,
-                            IndexT=t,
-                            ValueT=t_value,
-                            IndexC=c,
-                            ValueC=c_value,
-                            Channel=f'Band {c + 1}',
-                        )
-                    )
-                    frame += 1
+                add_tile_args = dict(z=z, t=t, c=c, axes=['z', 't', 'c', 'y', 'x', 's'])
+                if use_add_tile_args:
+                    add_tile_args.update(z_value=z_value, t_value=t_value, c_value=c_value)
+                else:
+                    frame_values[z, t, c] = [z_value, t_value, c_value]
+                random_tile = np.random.random(frame_shape)
+                sink.addTile(random_tile, 0, 0, **add_tile_args)
+                expected_metadata['frames'].append(
+                    dict(
+                        Frame=frame,
+                        Index=index,
+                        IndexZ=z,
+                        ValueZ=z_value,
+                        IndexT=t,
+                        ValueT=t_value,
+                        IndexC=c,
+                        ValueC=c_value,
+                        Channel=f'Band {c + 1}',
+                    ),
+                )
+                frame += 1
             index += 1
 
     if not use_add_tile_args:
