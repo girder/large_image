@@ -2,6 +2,10 @@
 
 ## 1.29.8
 
+### Improvements
+
+- Add the option to compute additional columns for plottable data ([#1626](../../pull/1626))
+
 ### Bug Fixes
 
 - Fix scaling small images in the multi source with bicubic smoothing ([#1627](../../pull/1627))

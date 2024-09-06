@@ -783,7 +783,7 @@ def testPlottableDataAccess(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(admin, item)
     col = plottable.columns
     # Also contains item id, name, and description
-    assert len(col) == 12
+    assert len(col) == 15
 
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 12
@@ -937,7 +937,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1, sources='item')
     col = plottable.columns
-    assert len(col) == 3
+    assert len(col) == 6
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 3
     assert len(data['data']) == 1
@@ -945,7 +945,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1, sources='item', adjacentItems=True)
     col = plottable.columns
-    assert len(col) == 3
+    assert len(col) == 6
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 3
     assert len(data['data']) == 2
@@ -953,7 +953,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1, sources='item', adjacentItems='__all__')
     col = plottable.columns
-    assert len(col) == 4
+    assert len(col) == 7
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 4
     assert len(data['data']) == 2
@@ -961,7 +961,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1)
     col = plottable.columns
-    assert len(col) == 4
+    assert len(col) == 7
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 4
     assert len(data['data']) == 3
@@ -969,7 +969,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1, adjacentItems=True)
     col = plottable.columns
-    assert len(col) == 4
+    assert len(col) == 7
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 4
     assert len(data['data']) == 4
@@ -977,7 +977,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1, annotations=[str(annot1a['_id']), str(annot1c['_id'])])
     col = plottable.columns
-    assert len(col) == 14
+    assert len(col) == 17
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 14
     assert len(data['data']) == 6
@@ -985,7 +985,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1, annotations=[str(annot1a['_id']), str(annot1c['_id'])], adjacentItems=True)
     col = plottable.columns
-    assert len(col) == 14
+    assert len(col) == 17
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 14
     assert len(data['data']) == 8
@@ -993,7 +993,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1, annotations='__all__')
     col = plottable.columns
-    assert len(col) == 14
+    assert len(col) == 17
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 14
     assert len(data['data']) == 8
@@ -1001,7 +1001,7 @@ def testPlottableDataMultipleItems(admin):
     plottable = girder_large_image_annotation.utils.PlottableItemData(
         admin, item1, annotations='__all__', adjacentItems=True)
     col = plottable.columns
-    assert len(col) == 14
+    assert len(col) == 17
     data = plottable.data([c['key'] for c in col])
     assert len(data['columns']) == 14
     assert len(data['data']) == 12
