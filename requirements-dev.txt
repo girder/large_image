@@ -26,7 +26,7 @@ girder-jobs>=3.0.3
 # Girder and worker dependencies are already installed above
 -e utilities/tasks[girder]
 -e girder/.
--e girder_annotation/.
+-e girder_annotation/.[compute]
 
 # Extras from main setup.py
 pylibmc>=1.5.1
