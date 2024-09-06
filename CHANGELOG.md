@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.8
+
+### Bug Fixes
+
+- Fix scaling small images in the multi source with bicubic smoothing ([#1627](../../pull/1627))
+
 ## 1.29.7
 
 ### Improvements

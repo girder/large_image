@@ -1071,7 +1071,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # we only need every 1/srcscale pixel.
         srcscale = int(2 ** math.log2(max(1, srcscale)))
         # Pad to reduce edge effects at tile boundaries
-        border = int(math.ceil(2 * srcscale))
+        border = int(math.ceil(4 * srcscale))
         region = {
             'left': int(max(0, minx - border) // srcscale) * srcscale,
             'top': int(max(0, miny - border) // srcscale) * srcscale,
@@ -1119,8 +1119,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Recompute where the source corners will land
         destcorners = (np.dot(transform, regioncorners.T).T).tolist()
         destShape = [
-            max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
             max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
+            max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
         ]
         if max(0, -x) or max(0, -y):
             transform[0][2] -= max(0, -x)
