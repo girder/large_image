@@ -625,14 +625,14 @@ class PlottableItemData:
         def annotationElementSelector(record, data, row):
             bbox = [col[1](record, data, row) for col in cols]
             if key in self._datacolumns:
-                for row in self._datacolumns[key]:
-                    if self._datacolumns[key][row] is not None:
+                for srow in self._datacolumns[key]:
+                    if self._datacolumns[key][srow] is not None:
                         for bidx, bkey in enumerate(['bbox.x0', 'bbox.y0', 'bbox.x1', 'bbox.y1']):
-                            val = self._datacolumns[bkey].get(row)
+                            val = self._datacolumns[bkey].get(srow)
                             if val is None or abs(val - bbox[bidx]) > 2:
                                 break
                         else:
-                            return self._datacolumns[key][row]
+                            return self._datacolumns[key][srow]
             return None
 
         return annotationElementSelector
@@ -1038,11 +1038,13 @@ class PlottableItemData:
         for iidx, annotList in enumerate(self.annotations or []):
             iid = str(self.items[iidx]['_id'])
             for anidx, annot in enumerate(annotList):
-                # If the first item's annotation didn't contribute any required
-                # data to the data set, skip subsequent items' annotations;
-                # they are likely to be discarded.
-                if iidx and not countsPerAnnotation.get(anidx, 0) and not self._fullScan:
-                    continue
+                # This had been checking if the first item's annotation didn't
+                # contribute any required data to the data set, skip subsequent
+                # items' annotations; they are likely to be discarded.  This
+                # is untrue ui datafiles or folder level data augments the
+                # element records
+                # if iidx and not countsPerAnnotation.get(anidx, 0) and not self._fullScan:
+                #     continue
                 startcount = count
                 if annot is None:
                     continue
