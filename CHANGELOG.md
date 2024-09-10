@@ -9,7 +9,7 @@
 ### Bug Fixes
 
 - Fix scaling small images in the multi source with bicubic smoothing ([#1627](../../pull/1627))
-- Fix correlating annotation bounding boxes on adjacent items for plottable data ([#1628](../../pull/1628))
+- Fix correlating annotation bounding boxes on adjacent items for plottable data ([#1628](../../pull/1628), ([#1632](../../pull/1632))
 
 ## 1.29.7
 
