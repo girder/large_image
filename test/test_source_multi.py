@@ -274,13 +274,13 @@ def testMultiAffineTransform():
     source = large_image_source_multi.open(imagePath)
     frameval = [
         [243, 243, 49065],
-        [3924, 3924, 47676],
-        [13, 13, 49148],
-        [2592, 2592, 48093],
-        [235, 235, 49062],
-        [942, 942, 48785],
-        [1014, 1014, 48872],
-        [198, 198, 49063],
+        [3920, 3920, 47672],
+        [13, 13, 49149],
+        [3943, 3943, 47695],
+        [246, 246, 49063],
+        [972, 972, 48785],
+        [1455, 1455, 48597],
+        [204, 204, 49059],
     ]
     for frame in range(8):
         thumbs = {}
@@ -292,9 +292,9 @@ def testMultiAffineTransform():
             r = np.sum(img[:, :, 0] >= 128)
             g = np.sum(img[:, :, 1] >= 128)
             b = np.sum(img[:, :, 2] >= 128)
-            assert abs(r - frameval[frame][0]) < 250
-            assert abs(g - frameval[frame][1]) < 250
-            assert abs(b - frameval[frame][2]) < 250
+            assert abs(r - frameval[frame][0]) < 200
+            assert abs(g - frameval[frame][1]) < 200
+            assert abs(b - frameval[frame][2]) < 200
         assert abs(np.average(thumbs[2048] - thumbs[256])) < 7
         assert abs(np.average(thumbs[1024] - thumbs[256])) < 7
         assert abs(np.average(thumbs[512] - thumbs[256])) < 7

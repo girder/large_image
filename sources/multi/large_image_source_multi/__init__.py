@@ -1119,8 +1119,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Recompute where the source corners will land
         destcorners = (np.dot(transform, regioncorners.T).T).tolist()
         destShape = [
-            max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
             max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
+            max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
         ]
         if max(0, -x) or max(0, -y):
             transform[0][2] -= max(0, -x)
