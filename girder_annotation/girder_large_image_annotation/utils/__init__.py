@@ -780,8 +780,7 @@ class PlottableItemData:
             if len(cols) == 4:
                 # If we load all of these from annotation elements, use all
                 # three keys:
-                # for akey in {'annotation.id', 'annotation.name', 'annotationelement.id'}:
-                for akey in {'annotationelement.id'}:
+                for akey in {'annotation.id', 'annotation.name', 'annotationelement.id'}:
                     if self._datacolumns and akey in self._datacolumns:
                         self._requiredColumns.add(akey)
                     self._ensureColumn(
@@ -1014,6 +1013,10 @@ class PlottableItemData:
                                lambda record, data, row: record['label']['value'])
             self._commonColumn(columns, 'annotationelement.type', doctype, getData,
                                lambda record, data, row: record['type'])
+            self._commonColumn(columns, 'annotation.id', doctype, getData,
+                               lambda record, data, row: str(record['_aid']))
+            self._commonColumn(columns, 'annotation.name', doctype, getData,
+                               lambda record, data, row: str(record['_aname']))
             self._commonColumn(columns, 'bbox.x0', doctype, getData,
                                lambda record, data, row: record['_bbox']['lowx'])
             self._commonColumn(columns, 'bbox.y0', doctype, getData,
@@ -1054,6 +1057,8 @@ class PlottableItemData:
                 if ((not self._sources or 'annotationelement' in self._sources) and
                         Annotationelement().countElements(annot) <= self.maxAnnotationElements):
                     for element in Annotationelement().yieldElements(annot, bbox=True):
+                        element['_aid'] = annot['_id']
+                        element['_aname'] = annot['annotation']['name']
                         count += self._collectColumns(
                             columns, [element], 'annotationelement', iid=iid, aid=str(annot['_id']))
                 if not iidx:
@@ -1141,15 +1146,18 @@ class PlottableItemData:
             return 0
         rows = {}
         cols = sorted({col for col in self._compute['columns'] if col in self._datacolumns})
-        for kidx, key in enumerate(cols):
+        lencols = len(cols)
+        needcols = cols + sorted(set(self._requiredColumns) - set(cols) - self.computeColumns)
+        for kidx, key in enumerate(needcols):
             for row, value in self._datacolumns[key].items():
                 if not kidx:
                     rows[row] = [value]
                 elif row in rows and len(rows[row]) == kidx:
                     rows[row].append(value)
-        rows = {k: row for k, row in rows.items() if len(row) == len(cols)}
+        rows = {k: row for k, row in rows.items() if len(row) == len(needcols)}
         if not len(rows):
             return 0
+        rows = {k: row[:lencols] for k, row in rows.items()}
         if not self._computeFunction(rows):
             return 0
         for key in self.computeColumns:
