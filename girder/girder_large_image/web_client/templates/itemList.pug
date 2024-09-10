@@ -43,7 +43,7 @@ ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '', meta
                 skip = true;
               }
             });
-          #{divtype}.li-item-list-cell(class=classes.join(' '), g-item-cid=item.cid, href=`#item/${item.id}`, title=colNames[colidx])
+          #{divtype}.li-item-list-cell(class=classes.join(' '), g-item-cid=item.cid, href=item._href ? item._href : `#item/${item.id}`, title=colNames[colidx])
             if !skip && column.label
               span.g-item-list-label
                 = column.label

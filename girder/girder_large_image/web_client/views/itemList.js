@@ -6,6 +6,7 @@ import {wrap} from '@girder/core/utilities/PluginUtils';
 import {getApiRoot} from '@girder/core/rest';
 import {AccessType} from '@girder/core/constants';
 import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
+import router from '@girder/core/router';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
 import ItemCollection from '@girder/core/collections/ItemCollection';
 import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
@@ -20,10 +21,22 @@ import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
 
 ItemCollection.prototype.pageLimit = Math.max(250, ItemCollection.prototype.pageLimit);
 
+function onItemClick(item) {
+    if (this.itemListView && this.itemListView.onItemClick) {
+        if (this.itemListView.onItemClick(item)) {
+            return;
+        }
+    }
+    router.navigate('item/' + item.get('_id'), {trigger: true});
+}
+
 wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
     settings = settings || {};
     if (settings.paginated === undefined) {
         settings.paginated = true;
+    }
+    if (settings.onItemClick === undefined) {
+        settings.onItemClick = onItemClick;
     }
     return initialize.call(this, settings);
 });
@@ -232,6 +245,60 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     };
 
+    /**
+     * Return true if we handle the click
+     */
+    this.onItemClick = (item) => {
+        const list = this._confList();
+        const nav = (list || {}).navigate;
+        if (!nav || (!nav.type && !nav.name) || nav.type === 'item') {
+            return false;
+        }
+        if (nav.type === 'itemList') {
+            if ((nav.name || '') === (self._namedList || '')) {
+                return false;
+            }
+            if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
+                return false;
+            }
+            this._updateNamedList(nav.name, false);
+            if (list.group) {
+                this._generalFilter = '';
+                list.group.keys.forEach((key) => {
+                    const cell = this.$el.find(`[g-item-cid="${item.cid}"] [column-value="${key}"]`);
+                    if (cell.length) {
+                        addCellToFilter.call(this, cell, false);
+                    }
+                });
+            }
+            this._setFilter(false);
+            this._setSort();
+            addToRoute({namedList: this._namedList, filter: this._generalFilter});
+            return true;
+        }
+        if (nav.type === 'open') {
+            // TODO: handle open type
+            // we probably need to get all the grouped items to pass them to
+            // the .open-in-volview button via that _getCheckedResourceParam
+            // call OR modify the volview plugin to have an open item with less
+            // context.  The current folder context would ideally be the
+            // deepest common parent rather than our current folder.  Where
+            // does volview store its zip file?
+        }
+        return false;
+    };
+
+    this._updateNamedList = (name, update) => {
+        name = name || '';
+        if ((this._namedList || '') !== name) {
+            this._namedList = name;
+            if (update !== false) {
+                addToRoute({namedList: this._namedList});
+                this._setSort();
+            }
+        }
+    };
+
     this._updateFilter = (evt) => {
         this._generalFilter = $(evt.target).val().trim();
         this._setFilter();
@@ -380,6 +447,53 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     };
 
+    /**
+     * For each item in the collection, if we are navigating to something other
+     * than the item, set an href property.
+     */
+    function adjustItemHref() {
+        this.collection.forEach((item) => {
+            item._href = undefined;
+        });
+        const list = this._confList();
+        const nav = (list || {}).navigate;
+        if (!nav || (!nav.type && !nav.name) || nav.type === 'item') {
+            return;
+        }
+        if (nav.type === 'itemList') {
+            if ((nav.name || '') === (self._namedList || '')) {
+                return;
+            }
+            if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
+                return;
+            }
+            this.collection.forEach((item) => {
+                item._href = `#folder/${this.parentView.parentModel.id}?namedList=` + (nav.name ? encodeURIComponent(nav.name) : '');
+                let filter = '';
+                if (list.group) {
+                    list.group.keys.forEach((col) => {
+                        let val = item.get('meta') || {};
+                        col.split('.').forEach((part) => {
+                            val = (val || {})[part];
+                        });
+                        if (/[ '\\]/.exec(col)) {
+                            col = "'" + col.replace('\\', '\\\\').replace("'", "\\'") + "'";
+                        }
+                        if (val) {
+                            val = val.replace('\\', '\\\\').replace('"', '\\"');
+                            filter += ` ${col}:"${val}"`;
+                        }
+                    });
+                }
+                filter = filter.trim();
+                if (filter !== '') {
+                    item._href += '&filter=' + encodeURIComponent(filter);
+                }
+            });
+        }
+        // TODO: handle nav.type open
+    }
+
     function itemListRender() {
         if (this._inInit || this._inFetch) {
             return;
@@ -422,6 +536,7 @@ wrap(ItemListWidget, 'render', function (render) {
             this._setSort();
             return;
         }
+        adjustItemHref.call(this);
         this.$el.html(ItemListTemplate({
             items: this.collection.toArray(),
             isParentPublic: this.public,
