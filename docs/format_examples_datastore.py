@@ -9,14 +9,9 @@ format_examples = [
         reference='https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf',
         examples=[
             dict(
-                filename='utmsmall.tif',
-                url='https://github.com/OSGeo/gdal/raw/master/autotest/gcore/data/utmsmall.tif',
-                hash='f40dae6e8b5e18f3648e9f095e22a0d7027014bb463418d32f732c3756d8c54f',
-            ),
-            dict(
-                filename='tcgaextract_rgb.tiff',
-                url='https://data.kitware.com/api/v1/file/649d939c5121da8eb1a81454/download',
-                hash='3cd5e1ebde5127bafebd9432e10b2c47d9035fb4242bd6e5e941389d2b23ec1e',
+                filename='A5.pattern3.tif',
+                url='http://parakon.khq:8088/api/v1/item/650203a2cb6c25723b2b5361/download',
+                hash='c6d198c3e0a1c46bd44f2a1c2c594db9c91a013e98a127d7eed727cd1b0d8d1e',
             ),
             dict(
                 filename='sample_image.ptif',
@@ -46,9 +41,9 @@ format_examples = [
         reference='http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html',
         examples=[
             dict(
-                filename='test.png',
-                url='https://github.com/OSGeo/gdal/raw/master/autotest/gdrivers/data/png/test.png',
-                hash='16cd80a28a70e0f71a6316fd8e3c679da2a2bf62bec913718c8063aff0e4a625',
+                filename='Animated_PNG_example_bouncing_beach_ball.png',
+                url='https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
+                hash='3b28e2462f1b31d0d15d795e6e58baf397899c3f864be7034bf47939b5bbbc3b',
             ),
         ],
     ),
@@ -68,7 +63,7 @@ format_examples = [
         ],
     ),
     dict(
-        name='JPEG (Joint Photgraphic Experts Group) 2000',
+        name='JPEG (Joint Photographic Experts Group) 2000',
         reference='https://jpeg.org/jpeg2000/index.html',
         examples=[
             dict(
@@ -83,9 +78,9 @@ format_examples = [
         reference='https://www.adobe.com/creativecloud/file-types/image/raster/gif-file.html',
         examples=[
             dict(
-                filename='sample_640×426.gif',
-                url='https://filesamples.com/samples/image/gif/sample_640%C3%97426.gif',
-                hash='eb04e3ff38fc7ecba1f7715ca7dae26b24e03766dc7c43ddeec75d5f1af74acd',
+                filename='SampleGIFImage_40kbmb.gif',
+                url='https://sample-videos.com/gif/3.gif',
+                hash='0ff064ba36e4f493f6a1b3d9d29c8eee1b719e39fc6768c5a6129534869c380b',
             ),
         ],
     ),
@@ -116,9 +111,9 @@ format_examples = [
         reference='https://www.zeiss.com/microscopy/en/products/software/zeiss-zen/czi-image-file-format.html',
         examples=[
             dict(
-                filename='2014_07_01__0017_pt2.czi',
-                url='https://data.kitware.com/api/v1/file/56993f1f8d777f429eac914d/download',
-                hash='37b71c49dd0f0cf9ed3cf36c526db9c66b4c31032f42f8c31239f1a560c02741',
+                filename='Plate1-Blue-A-02-Scene-1-P2-E1-01.czi',
+                url='http://parakon.khq:8088/api/v1/item/650203d4cb6c25723b2b5511/download',
+                hash='494936fa5a8c2e53b73672980986e2c44f3779e9b709ebfd406ffda723336376',
             ),
         ],
     ),
@@ -138,9 +133,27 @@ format_examples = [
         reference='https://openslide.org/formats/hamamatsu/',
         examples=[
             dict(
-                filename='small2.ndpi',
-                url='https://data.kitware.com/api/v1/file/5afd931e8d777f15ebe1b0f5/download',
-                hash='4d66b72328b383dab7981e199f0251da01097d226cbe6023cfd7ee3c3cf5fec0',
+                filename='test3.ndpis',
+                url='http://parakon.khq:8088/api/v1/item/6501efdee53b012280515c00/download',
+                hash='35542dff44d7844f1fac04c1703bdb1476f90f484457907ead132203e6de066e',
+            ),
+            dict(
+                filename='test3-TRITC 2 (560).ndpi',
+                url='http://parakon.khq:8088/api/v1/item/6501efdee53b012280515bfe/download',
+                skip=True,
+                hash='f02985d30aa38060e83c9477a4435cb81b2a0a234d3d664195dfc5a4e2657be8',
+            ),
+            dict(
+                filename='test3-FITC 2 (485).ndpi',
+                url='http://parakon.khq:8088/api/v1/item/6501efdee53b012280515bfc/download',
+                skip=True,
+                hash='455069a02a761ecfedb93492f103dec8c5b23b7c46fd47e9d8d22191ea803018',
+            ),
+            dict(
+                filename='test3-DAPI 2 (387) .ndpi',
+                url='http://parakon.khq:8088/api/v1/item/6501efdee53b012280515bfa/download',
+                skip=True,
+                hash='9294d31f304f20ef1df1e08650d3f225b8ed44db8b2dc0d52f584449f85bdca2',
             ),
         ],
     ),
@@ -153,6 +166,26 @@ format_examples = [
                 url='https://data.kitware.com/api/v1/file/5fa1cbe750a41e3d192e18eb/download',
                 hash='5dabb19081db4893d58b6680e54b566fc6246ccbde10d41413201afd96499482',
             ),
+        ],
+    ),
+    dict(
+        name='ND2 (Nikon NIS Elements)',
+        reference='https://docs.openmicroscopy.org/bio-formats/5.9.2/formats/nikon-nis-elements-nd2.html',
+        examples=[
+            dict(
+                filename='sample_image.nd2',
+                url='https://downloads.openmicroscopy.org/images/ND2/aryeh/MeOh_high_fluo_003.nd2',
+            )
+        ],
+    ),
+   dict(
+        name='DICOM (Digital Imaging and Communications in Medicine)',
+        reference='https://www.dicomstandard.org/about',
+        examples=[
+            dict(
+                filename='US-MONO2-8-8x-execho.dcm',
+                url='https://downloads.openmicroscopy.org/images/DICOM/samples/US-MONO2-8-8x-execho.dcm',
+            )
         ],
     ),
 ]

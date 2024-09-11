@@ -15,39 +15,41 @@ def evaluate_examples():
         name = format_data.get('name')
         reference = format_data.get('reference')
         for example in format_data.get('examples', []):
-            filename = example.get('filename')
-            url = example.get('url')
-            extension = filename.split('.')[-1]
-            filepath = Path(EXAMPLES_FOLDER, filename)
-            print(f'Evaluating {filename}. ')
-            for tilesource_name, readable in large_image.canReadList(filepath):
-                tilesource = available_tilesources.get(tilesource_name)
-                if readable and tilesource:
-                    try:
-                        s = tilesource(filepath)
-                        results.append(
-                            dict(
-                                name=name,
-                                reference=reference,
-                                extension=extension,
-                                filename=filename,
-                                url=url,
-                                tilesource=tilesource_name,
-                                multiframe=(
-                                    False if tilesource_name in NO_MULTIFRAME_SOURCES else
-                                    True if s.getMetadata().get('frames') is not None else
-                                    'Maybe; no multiframe sample found.'
+            skip = example.get('skip')
+            if not skip:
+                filename = example.get('filename')
+                url = example.get('url')
+                extension = filename.split('.')[-1]
+                filepath = Path(EXAMPLES_FOLDER, filename)
+                print(f'Evaluating {filename}. ')
+                for tilesource_name, readable in large_image.canReadList(filepath):
+                    tilesource = available_tilesources.get(tilesource_name)
+                    if readable and tilesource:
+                        try:
+                            s = tilesource(filepath)
+                            results.append(
+                                dict(
+                                    name=name,
+                                    reference=reference,
+                                    extension=extension,
+                                    filename=filename,
+                                    url=url,
+                                    tilesource=tilesource_name,
+                                    multiframe=(
+                                        False if tilesource_name in NO_MULTIFRAME_SOURCES else
+                                        True if s.getMetadata().get('frames') is not None else
+                                        'Maybe; no multiframe sample found.'
+                                    ),
+                                    geospatial=hasattr(s, 'projection'),
+                                    write=hasattr(s, 'addTile'),
+                                    associated=(
+                                        s.getAssociatedImagesList is not
+                                        large_image.tilesource.FileTileSource.getAssociatedImagesList
+                                    ),
                                 ),
-                                geospatial=hasattr(s, 'projection'),
-                                write=hasattr(s, 'addTile'),
-                                associated=(
-                                    s.getAssociatedImagesList is not
-                                    large_image.tilesource.FileTileSource.getAssociatedImagesList
-                                ),
-                            ),
-                        )
-                    except large_image.exceptions.TileSourceError:
-                        pass
+                            )
+                        except large_image.exceptions.TileSourceError:
+                            pass
     return results
 
 
@@ -58,6 +60,17 @@ def combine_rows(results):
         row_base_key = result.get('extension')
         row_key_index = 0
         row_key = f'{row_base_key}_{row_key_index}'
+        # if this source has "maybe" for multiframe
+        # and another source has True, change multiframe value to False
+        if (
+            isinstance(result['multiframe'], str) and
+            any(
+                r['extension'] == result['extension'] and
+                r['multiframe'] == True
+                for r in results
+            )
+        ):
+            result['multiframe'] = False
         while row_key in table_rows:
             if all(
                 value == table_rows[row_key][key]
@@ -140,3 +153,7 @@ def generate():
     with open(TABLE_FILE, 'w') as f:
         f.write('\n'.join(lines))
     print('Wrote format table at', str(TABLE_FILE))
+
+
+if __name__ == '__main__':
+    generate()
