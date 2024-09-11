@@ -1128,13 +1128,14 @@ class PlottableItemData:
             return computeSelectorAxis
 
         if not self._datacolumns:
-            for key in self.computeColumns:
-                title = self.commonColumns[key]
-                self._ensureColumn(
-                    columns, key, title, 'compute', computeGetData,
-                    computeSelector(key), computeLength)
-                columns[key]['count'] = 1
-                columns[key]['min'] = columns[key]['max'] = 0
+            if len([col for col in columns.values() if col['type'] == 'number']) >= 2:
+                for key in self.computeColumns:
+                    title = self.commonColumns[key]
+                    self._ensureColumn(
+                        columns, key, title, 'compute', computeGetData,
+                        computeSelector(key), computeLength)
+                    columns[key]['count'] = 1
+                    columns[key]['min'] = columns[key]['max'] = 0
             return 0
         if self._compute is None or not len(self._requiredColumns & self.computeColumns):
             return 0
