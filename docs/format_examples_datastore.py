@@ -175,7 +175,8 @@ format_examples = [
             dict(
                 filename='sample_image.nd2',
                 url='https://downloads.openmicroscopy.org/images/ND2/aryeh/MeOh_high_fluo_003.nd2',
-            )
+                hash='8e23bb594cd18314f9c18e70d736088ae46f8bc696ab7dc047784be416d7a706',
+            ),
         ],
     ),
    dict(
@@ -185,7 +186,8 @@ format_examples = [
             dict(
                 filename='US-MONO2-8-8x-execho.dcm',
                 url='https://downloads.openmicroscopy.org/images/DICOM/samples/US-MONO2-8-8x-execho.dcm',
-            )
+                hash='7d3f54806d0315c6cfc8b7371649a242b5ef8f31e0d20221971dd8087f2ff1ea',
+            ),
         ],
     ),
 ]

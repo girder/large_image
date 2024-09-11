@@ -66,7 +66,7 @@ def combine_rows(results):
             isinstance(result['multiframe'], str) and
             any(
                 r['extension'] == result['extension'] and
-                r['multiframe'] == True
+                r['multiframe'] and isinstance(r['multiframe'], bool)
                 for r in results
             )
         ):
