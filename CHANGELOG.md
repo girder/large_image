@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.10
+
+### Improvements
+
+- Only list computable plot columns if there are other numeric columns ([#1634](../../pull/1634))
+
 ## 1.29.9
 
 ### Bug Fixes
