@@ -10,7 +10,7 @@ format_examples = [
         examples=[
             dict(
                 filename='A5.pattern3.tif',
-                url='http://parakon.khq:8088/api/v1/item/650203a2cb6c25723b2b5361/download',
+                url='https://data.kitware.com/api/v1/item/66e1af78560e61279679128a/download',
                 hash='c6d198c3e0a1c46bd44f2a1c2c594db9c91a013e98a127d7eed727cd1b0d8d1e',
             ),
             dict(
@@ -112,7 +112,7 @@ format_examples = [
         examples=[
             dict(
                 filename='Plate1-Blue-A-02-Scene-1-P2-E1-01.czi',
-                url='http://parakon.khq:8088/api/v1/item/650203d4cb6c25723b2b5511/download',
+                url='https://data.kitware.com/api/v1/item/66e1af4d560e61279679127b/download',
                 hash='494936fa5a8c2e53b73672980986e2c44f3779e9b709ebfd406ffda723336376',
             ),
         ],
@@ -134,24 +134,24 @@ format_examples = [
         examples=[
             dict(
                 filename='test3.ndpis',
-                url='http://parakon.khq:8088/api/v1/item/6501efdee53b012280515c00/download',
+                url='https://data.kitware.com/api/v1/item/66e1af68560e612796791287/download',
                 hash='35542dff44d7844f1fac04c1703bdb1476f90f484457907ead132203e6de066e',
             ),
             dict(
                 filename='test3-TRITC 2 (560).ndpi',
-                url='http://parakon.khq:8088/api/v1/item/6501efdee53b012280515bfe/download',
+                url='https://data.kitware.com/api/v1/item/66e1af63560e61279679127e/download',
                 skip=True,
                 hash='f02985d30aa38060e83c9477a4435cb81b2a0a234d3d664195dfc5a4e2657be8',
             ),
             dict(
                 filename='test3-FITC 2 (485).ndpi',
-                url='http://parakon.khq:8088/api/v1/item/6501efdee53b012280515bfc/download',
+                url='https://data.kitware.com/api/v1/item/66e1af65560e612796791281/download',
                 skip=True,
                 hash='455069a02a761ecfedb93492f103dec8c5b23b7c46fd47e9d8d22191ea803018',
             ),
             dict(
-                filename='test3-DAPI 2 (387) .ndpi',
-                url='http://parakon.khq:8088/api/v1/item/6501efdee53b012280515bfa/download',
+                filename='test3-DAPI 2 (387).ndpi',
+                url='https://data.kitware.com/api/v1/item/66e1af68560e612796791284/download',
                 skip=True,
                 hash='9294d31f304f20ef1df1e08650d3f225b8ed44db8b2dc0d52f584449f85bdca2',
             ),
