@@ -647,7 +647,7 @@ class TileSource(IPyLeafletMixin):
                     tile = np.array(tile, dtype=np.uint16) * 257
                 else:
                     continue
-            for idx in range(len(results['min'])):
+            for idx in range(min(len(results['min']), tile.shape[-1])):
                 entry = results['histogram'][idx]
                 hist, bin_edges = np.histogram(
                     tile[:, :, idx], entry['bins'], entry['range'], density=False)

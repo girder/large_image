@@ -1071,7 +1071,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # we only need every 1/srcscale pixel.
         srcscale = int(2 ** math.log2(max(1, srcscale)))
         # Pad to reduce edge effects at tile boundaries
-        border = int(math.ceil(2 * srcscale))
+        border = int(math.ceil(4 * srcscale))
         region = {
             'left': int(max(0, minx - border) // srcscale) * srcscale,
             'top': int(max(0, miny - border) // srcscale) * srcscale,

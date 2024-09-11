@@ -73,6 +73,8 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'wsidicom>=0.9.0',
+        # Pinned until wsidicom is updated
+        'pydicom<3',
     ],
     extras_require={
         'girder': girder_extras,

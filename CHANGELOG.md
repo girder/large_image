@@ -1,5 +1,28 @@
 # Change Log
 
+## 1.29.10
+
+### Improvements
+
+- Only list computable plot columns if there are other numeric columns ([#1634](../../pull/1634))
+
+## 1.29.9
+
+### Bug Fixes
+
+- Fix scaling small images in the multi source ([#1633](../../pull/1633))
+
+## 1.29.8
+
+### Improvements
+
+- Add the option to compute additional columns for plottable data ([#1626](../../pull/1626))
+
+### Bug Fixes
+
+- Fix scaling small images in the multi source with bicubic smoothing ([#1627](../../pull/1627))
+- Fix correlating annotation bounding boxes on adjacent items for plottable data ([#1628](../../pull/1628), ([#1632](../../pull/1632))
+
 ## 1.29.7
 
 ### Improvements
@@ -14,6 +37,8 @@
 ### Bug Fixes
 
 - Harden converting sources that report varied tile bands ([#1615](../../pull/1615))
+- Harden many of the sources from reading bad files ([#1623](../../pull/1623))
+- Some projected bounds in the rasterio source could be off ([#1624](../../pull/1624))
 
 ## 1.29.6
 

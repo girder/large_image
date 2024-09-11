@@ -317,7 +317,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 m, layerSrs, colorizer, styleBand['band'], extent, composite, nodata)
 
     @methodcache()
-    def getTile(self, x, y, z, **kwargs):
+    def getTile(self, x, y, z, **kwargs):  # noqa
         if self.projection:
             mapSrs = self.projection
             layerSrs = self.getProj4String()
@@ -380,12 +380,17 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 m = self._mapnikMap
             m.zoom_to_box(mapnik.Box2d(xmin, ymin, xmax, ymax))
             img = mapnik.Image(self.tileWidth + overscan * 2, self.tileHeight + overscan * 2)
-            mapnik.render(m, img)
-            pilimg = PIL.Image.frombytes(
-                'RGBA', (img.width(), img.height()),
-                getattr(img, 'tostring', getattr(img, 'to_string', None))())
+            try:
+                mapnik.render(m, img)
+                pilimg = PIL.Image.frombytes(
+                    'RGBA', (img.width(), img.height()),
+                    getattr(img, 'tostring', getattr(img, 'to_string', None))())
+            except Exception:
+                self.logger.exception('Failed to getTile')
+                pilimg = PIL.Image.new('RGBA', (1, 1))
         if overscan:
-            pilimg = pilimg.crop((1, 1, pilimg.width - overscan, pilimg.height - overscan))
+            pilimg = pilimg.crop((1, 1, max(1, pilimg.width - overscan),
+                                  max(1, pilimg.height - overscan)))
         return self._outputTile(pilimg, TILE_FORMAT_PIL, x, y, z, applyStyle=False, **kwargs)
 
 

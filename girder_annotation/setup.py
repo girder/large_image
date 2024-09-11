@@ -57,6 +57,9 @@ setup(
         'orjson',
     ],
     extras_require={
+        'compute': [
+            'umap-learn',
+        ],
         'tasks': [
             f'girder-large-image[tasks]{limit_version}',
         ],
