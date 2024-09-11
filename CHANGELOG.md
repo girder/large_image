@@ -2,6 +2,8 @@
 
 ## 1.29.9
 
+### Bug Fixes
+
 - Fix scaling small images in the multi source ([#1633](../../pull/1633))
 
 ## 1.29.8
