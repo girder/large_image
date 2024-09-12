@@ -434,7 +434,16 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._lastOpenSourceLock = threading.RLock()
         # 'c' must be first as channels are special because they can have names
         self._axesList = ['c', 'z', 't', 'xy']
-        if not os.path.isfile(self._largeImagePath):
+        if isinstance(path, dict):
+            self._info = path.copy()
+            self._basePath = "."
+            self._largeImagePath = "."
+            try:
+                self._validator.validate(self._info)
+            except jsonschema.ValidationError:
+                msg = 'File cannot be validated via multi-source reader.'
+                raise TileSourceError(msg)
+        elif not os.path.isfile(self._largeImagePath):
             try:
                 possibleYaml = self._largeImagePath.split('multi://', 1)[-1]
                 self._info = yaml.safe_load(possibleYaml)
