@@ -183,7 +183,8 @@ def generate():
 
     # Extensions and Mime Types
     lines = [
-        'For a list of known mime types, see :ref:`mime_types_list`. For a list of known extensions, see :ref:`extensions_list`.',
+        'For a list of known mime types, see :ref:`mime_types_list`.',
+        'For a list of known extensions, see :ref:`extensions_list`.',
         '',
         *lines,
         '',
