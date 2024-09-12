@@ -19,8 +19,6 @@ ln -s ../build/docs-work _build
 large_image_converter --help > _build/large_image_converter.txt
 python -c 'from girder_large_image_annotation.models import annotation;import json;print(json.dumps(annotation.AnnotationSchema.annotationSchema, indent=2))' > _build/annotation_schema.json
 python -c 'import large_image_source_multi, json;print(json.dumps(large_image_source_multi.MultiSourceSchema, indent=2))' > _build/multi_source_schema.json
-python -c 'import large_image, yaml;print("\n".join(large_image.listExtensions()) + "\n\n" + str(len(large_image.listExtensions())) + " extensions")' > _build/known_extensions.txt
-python -c 'import large_image, yaml;print("\n".join(large_image.listMimeTypes()) + "\n\n" + str(len(large_image.listMimeTypes())) + " mime types")' > _build/known_mimetypes.txt
 
 sphinx-apidoc -f -o _build/large_image ../large_image
 sphinx-apidoc -f -o _build/large_image_source_bioformats ../sources/bioformats/large_image_source_bioformats

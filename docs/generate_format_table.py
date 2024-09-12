@@ -96,6 +96,32 @@ def combine_rows(results):
     return table_rows
 
 
+def get_mimetypes_list():
+    mime_types = large_image.listMimeTypes()
+    return [
+        '.. _mime_types_list:',
+        '',
+        f'Mime Types ({len(mime_types)})',
+        '~~~~~~~~~~~~~~~~~~',
+        ', '.join([
+            f'``{m}``' for m in mime_types
+        ]),
+    ]
+
+
+def get_extensions_list():
+    extensions = large_image.listExtensions()
+    return [
+        '.. _extensions_list:',
+        '',
+        f'Extensions ({len(extensions)})',
+        '~~~~~~~~~~~~~~~~~~',
+        ', '.join([
+            f'``{e}``' for e in extensions
+        ]),
+    ]
+
+
 def generate():
     fetch_all()
     results = evaluate_examples()
@@ -154,7 +180,19 @@ def generate():
                 lines.append(f'   * - {col_value} :ref:`🔗 <{row_key}>`')
             else:
                 lines.append(f'     - {col_value}')
-    lines.append('')
+
+    # Extensions and Mime Types
+    lines = [
+        'For a list of known mime types, see :ref:`mime_types_list`. For a list of known extensions, see :ref:`extensions_list`.',
+        '',
+        *lines,
+        '',
+        *get_mimetypes_list(),
+        '',
+        *get_extensions_list(),
+        '',
+    ]
+
     with open(TABLE_FILE, 'w') as f:
         f.write('\n'.join(lines))
     print('Wrote format table at', str(TABLE_FILE))

@@ -10,20 +10,4 @@ The file extensions and mime types that are listed by the core sources that can 
 
 The following table describes the some of the formats supported by ``large-image`` and the common extensions for each format. This table also describes the ``large-image-source-*`` modules that can be used to read each format.
 
-For a list of known extensions, see :ref:`extensions`.
-
 .. include:: format_table.rst
-
-.. _extensions:
-
-Extensions
-~~~~~~~~~~
-
-.. include:: ../build/docs-work/known_extensions.txt
-   :literal:
-
-Mime Types
-~~~~~~~~~~
-
-.. include:: ../build/docs-work/known_mimetypes.txt
-   :literal:
