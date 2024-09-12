@@ -58,6 +58,8 @@ setup(
     ],
     extras_require={
         'compute': [
+            'openpyxl',
+            'pandas',
             'umap-learn',
         ],
         'tasks': [
