@@ -10,9 +10,9 @@ format_examples = [
         reference='https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf',
         examples=[
             dict(
-                filename='A5.pattern3.tif',
-                url='https://data.kitware.com/api/v1/item/66e1af78560e61279679128a/download',
-                hash='c6d198c3e0a1c46bd44f2a1c2c594db9c91a013e98a127d7eed727cd1b0d8d1e',
+                filename='tcgaextract_ihergb_labeled.tiff',
+                url='https://data.kitware.com/api/v1/item/66e30827560e6127967912cf/download',
+                hash='8a03ae4370a35517e2ab2249177d903c1ea52869e30dc558750c626d9edbae6f',
             ),
             dict(
                 filename='sample_image.ptif',
