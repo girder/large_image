@@ -5,6 +5,7 @@
 ### Improvements
 
 - Only list computable plot columns if there are other numeric columns ([#1634](../../pull/1634))
+- List official yaml mime type for the multi source ([#1636](../../pull/1636))
 
 ## 1.29.9
 

@@ -411,6 +411,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.FALLBACK,
         'application/json': SourcePriority.PREFERRED,
         'application/yaml': SourcePriority.PREFERRED,
+        'text/yaml': SourcePriority.PREFERRED,
     }
 
     _minTileSize = 64
