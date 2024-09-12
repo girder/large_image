@@ -40,7 +40,7 @@ def evaluate_examples():
                                     multiframe=(
                                         False if tilesource_name in NO_MULTIFRAME_SOURCES else
                                         True if s.getMetadata().get('frames') is not None else
-                                        'Maybe; no multiframe sample found.'
+                                        'Unknown'
                                     ),
                                     geospatial=hasattr(s, 'projection'),
                                     write=hasattr(s, 'addTile'),
@@ -106,14 +106,14 @@ def generate():
         dict(label='Format', key='name'),
         dict(label='Extension', key='extension'),
         dict(label='Tile Source', key='tilesource'),
-        dict(label='Multiframe Allowed', key='multiframe'),
-        dict(label='Geospatial Allowed', key='geospatial'),
-        dict(label='Write Allowed', key='write'),
-        dict(label='Associated Images Allowed', key='associated'),
+        dict(label='Multiframe', key='multiframe'),
+        dict(label='Geospatial', key='geospatial'),
+        dict(label='Writeable', key='write'),
+        dict(label='Associated Images', key='associated'),
         dict(label='Example File', key='url'),
     ]
     lines = [
-        '.. list-table:: Primary Formats',
+        '.. list-table:: Common Formats',
         '   :header-rows: 1',
         '',
     ]
@@ -143,7 +143,7 @@ def generate():
             elif col_key == 'url':
                 # reformat example download link
                 col_value = (
-                    f'`Download example {row.get("extension")} file <{col_value}>`__'
+                    f'`Download <{col_value}>`__'
                 )
             elif col_key == 'tilesource':
                 # join tilesource lists with commas
