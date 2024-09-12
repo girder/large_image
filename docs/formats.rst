@@ -8,9 +8,9 @@ Images can generally be read regardless of their name.  By default, when opening
 
 The file extensions and mime types that are listed by the core sources that can affect source processing order are listed below.  See ``large_image.listSources()`` for details about priority of the different sources and the ``large_image.constants.SourcePriority`` for the priority meaning.
 
-The following table describes the primary formats supported by ``large-image`` and the acceptable extensions for each format. This table also describes the ``large-image-source-*`` modules that can be used to read each format.
+The following table describes the some of the formats supported by ``large-image`` and the common extensions for each format. This table also describes the ``large-image-source-*`` modules that can be used to read each format.
 
-For a full list of all accepted extensions, see :ref:`extensions`.
+For a list of known extensions, see :ref:`extensions`.
 
 .. include:: format_table.rst
 
