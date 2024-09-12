@@ -45,7 +45,7 @@ def evaluate_examples():
                                     geospatial=hasattr(s, 'projection'),
                                     write=hasattr(s, 'addTile'),
                                     associated=(
-                                        s.getAssociatedImagesList is not
+                                        tilesource.getAssociatedImagesList is not
                                         large_image.tilesource.FileTileSource.getAssociatedImagesList
                                     ),
                                 ),
