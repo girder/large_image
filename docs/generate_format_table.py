@@ -15,12 +15,12 @@ def evaluate_examples():
         name = format_data.get('name')
         long_name = format_data.get('long_name')
         reference = format_data.get('reference')
+        extensions = format_data.get('extensions')
         for example in format_data.get('examples', []):
             skip = example.get('skip')
             if not skip:
                 filename = example.get('filename')
                 url = example.get('url')
-                extension = filename.split('.')[-1]
                 filepath = Path(EXAMPLES_FOLDER, filename)
                 print(f'Evaluating {filename}. ')
                 for tilesource_name, readable in large_image.canReadList(filepath):
@@ -33,7 +33,7 @@ def evaluate_examples():
                                     name=name,
                                     long_name=long_name,
                                     reference=reference,
-                                    extension=extension,
+                                    extensions=extensions,
                                     filename=filename,
                                     url=url,
                                     tilesource=tilesource_name,
@@ -59,7 +59,7 @@ def combine_rows(results):
     # combine rows that only differ on tilesource
     table_rows = {}
     for result in results:
-        row_base_key = result.get('extension')
+        row_base_key = result.get('filename')
         row_key_index = 0
         row_key = f'{row_base_key}_{row_key_index}'
         # if this source has "maybe" for multiframe
@@ -67,7 +67,7 @@ def combine_rows(results):
         if (
             isinstance(result['multiframe'], str) and
             any(
-                r['extension'] == result['extension'] and
+                r['filename'] == result['filename'] and
                 r['multiframe'] and isinstance(r['multiframe'], bool)
                 for r in results
             )
@@ -130,7 +130,7 @@ def generate():
     # generate RST-formatted table
     columns = [
         dict(label='Format', key='name'),
-        dict(label='Extension', key='extension'),
+        dict(label='Extension(s)', key='extensions'),
         dict(label='Tile Source', key='tilesource'),
         dict(label='Multiframe', key='multiframe'),
         dict(label='Geospatial', key='geospatial'),
@@ -155,9 +155,9 @@ def generate():
         for index, col in enumerate(columns):
             col_key = col.get('key')
             col_value = row.get(col_key)
-            if col_key == 'extension':
+            if col_key == 'extensions':
                 # format extensions with monospace font
-                col_value = f'``{col_value}``'
+                col_value = ', '.join([f'``{e}``' for e in col_value])
             elif col_key == 'name':
                 # include reference as link and long name as tooltip
                 reference_link = row.get('reference')

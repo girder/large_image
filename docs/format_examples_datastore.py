@@ -6,6 +6,7 @@ EXAMPLES_FOLDER = Path('format_examples')
 format_examples = [
     dict(
         name='TIFF',
+        extensions=['tiff', 'tif', 'ptif', 'ptiff', 'qptiff'],
         long_name='Tagged Image File Format',
         reference='https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf',
         examples=[
@@ -14,15 +15,11 @@ format_examples = [
                 url='https://data.kitware.com/api/v1/item/66e30827560e6127967912cf/download',
                 hash='8a03ae4370a35517e2ab2249177d903c1ea52869e30dc558750c626d9edbae6f',
             ),
-            dict(
-                filename='sample_image.ptif',
-                url='https://data.kitware.com/api/v1/file/5be43e398d777f217991e21f/download',
-                hash='d73cbf87aac8f9cd9544b20d6c42537f4c609da15817928c8824d57049a2749a',
-            ),
         ],
     ),
     dict(
         name='SVS',
+        extensions=['svs', 'svslide'],
         long_name='Aperio ScanScope Virtual Slide',
         reference='https://paulbourke.net/dataformats/svs/',
         examples=[
@@ -35,6 +32,7 @@ format_examples = [
     ),
     dict(
         name='OME-TIFF',
+        extensions=['ome.tiff', 'ome.tif', 'ome'],
         long_name='Open Microscopy Environment Tagged Image File Format',
         reference='https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/',
         examples=[
@@ -47,6 +45,7 @@ format_examples = [
     ),
     dict(
         name='NDPI',
+        extensions=['ndpi', 'ndpis'],
         long_name='Hamamatsu NanoZoomer Digital Pathology Image',
         reference='https://openslide.org/formats/hamamatsu/',
         examples=[
@@ -77,6 +76,7 @@ format_examples = [
     ),
     dict(
         name='Zarr',
+        extensions=['zarr', 'zarray', 'zattrs', 'zgroup', 'zip', 'db', 'sqlite'],
         reference='https://wiki.earthdata.nasa.gov/display/ESO/Zarr+Format',
         examples=[
             dict(
@@ -93,6 +93,7 @@ format_examples = [
     ),
     dict(
         name='ND2',
+        extensions=['nd2'],
         long_name='Nikon NIS Elements',
         reference='https://docs.openmicroscopy.org/bio-formats/5.9.2/formats/nikon-nis-elements-nd2.html',
         examples=[
@@ -105,6 +106,7 @@ format_examples = [
     ),
     dict(
         name='CZI',
+        extensions=['czi'],
         long_name='Carl Zeiss Image',
         reference='https://www.zeiss.com/microscopy/en/products/software/zeiss-zen/czi-image-file-format.html',
         examples=[
@@ -117,6 +119,7 @@ format_examples = [
     ),
     dict(
         name='DICOM',
+        extensions=['dcm', 'dic', 'dicom'],
         long_name='Digital Imaging and Communications in Medicine',
         reference='https://www.dicomstandard.org/about',
         examples=[
@@ -129,6 +132,7 @@ format_examples = [
     ),
     dict(
         name='LIF',
+        extensions=['lif', 'liff'],
         long_name='Leica Image Format',
         reference='https://svi.nl/LeicaLif',
         examples=[
@@ -141,6 +145,7 @@ format_examples = [
     ),
     dict(
         name='PNG',
+        extensions=['png'],
         long_name='Portable Network Graphics',
         reference='http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html',
         examples=[
@@ -153,6 +158,7 @@ format_examples = [
     ),
     dict(
         name='JPEG',
+        extensions=['jpeg', 'jpe', 'jpg'],
         long_name='Joint Photographic Experts Group',
         reference='https://jpeg.org/jpeg/',
         examples=[
@@ -169,6 +175,7 @@ format_examples = [
     ),
     dict(
         name='JPEG 2000',
+        extensions=['j2c', 'j2k', 'jp2', 'jpf', 'jpx'],
         long_name='Joint Photographic Experts Group 2000',
         reference='https://jpeg.org/jpeg2000/index.html',
         examples=[
@@ -181,6 +188,7 @@ format_examples = [
     ),
     dict(
         name='GIF',
+        extensions=['gif'],
         long_name='Graphics Interchange Format',
         reference='https://www.adobe.com/creativecloud/file-types/image/raster/gif-file.html',
         examples=[
@@ -193,6 +201,7 @@ format_examples = [
     ),
     dict(
         name='Bitmap',
+        extensions=['bmp'],
         reference='https://www.ece.ualberta.ca/~elliott/ee552/studentAppNotes/2003_w/misc/bmp_file_format/bmp_file_format.htm',
         examples=[
             dict(
