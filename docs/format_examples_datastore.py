@@ -5,7 +5,8 @@ EXAMPLES_FOLDER = Path('format_examples')
 
 format_examples = [
     dict(
-        name='TIFF (Tagged Image File Format)',
+        name='TIFF',
+        long_name='Tagged Image File Format',
         reference='https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf',
         examples=[
             dict(
@@ -21,7 +22,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='SVS (Aperio ScanScope Virtual Slide)',
+        name='SVS',
+        long_name='Aperio ScanScope Virtual Slide',
         reference='https://paulbourke.net/dataformats/svs/',
         examples=[
             dict(
@@ -32,7 +34,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='OME-TIFF (Open Microscopy Environment Tagged Image File Format)',
+        name='OME-TIFF',
+        long_name='Open Microscopy Environment Tagged Image File Format',
         reference='https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/',
         examples=[
             dict(
@@ -43,7 +46,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='NDPI (Hamamatsu NanoZoomer Digital Pathology Image)',
+        name='NDPI',
+        long_name='Hamamatsu NanoZoomer Digital Pathology Image',
         reference='https://openslide.org/formats/hamamatsu/',
         examples=[
             dict(
@@ -88,7 +92,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='ND2 (Nikon NIS Elements)',
+        name='ND2',
+        long_name='Nikon NIS Elements',
         reference='https://docs.openmicroscopy.org/bio-formats/5.9.2/formats/nikon-nis-elements-nd2.html',
         examples=[
             dict(
@@ -99,7 +104,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='CZI (Carl Zeiss Image)',
+        name='CZI',
+        long_name='Carl Zeiss Image',
         reference='https://www.zeiss.com/microscopy/en/products/software/zeiss-zen/czi-image-file-format.html',
         examples=[
             dict(
@@ -110,7 +116,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='DICOM (Digital Imaging and Communications in Medicine)',
+        name='DICOM',
+        long_name='Digital Imaging and Communications in Medicine',
         reference='https://www.dicomstandard.org/about',
         examples=[
             dict(
@@ -121,7 +128,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='LIF (Leica Image Format)',
+        name='LIF',
+        long_name='Leica Image Format',
         reference='https://svi.nl/LeicaLif',
         examples=[
             dict(
@@ -132,7 +140,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='PNG (Portable Network Graphics)',
+        name='PNG',
+        long_name='Portable Network Graphics',
         reference='http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html',
         examples=[
             dict(
@@ -143,7 +152,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='JPEG (Joint Photographic Experts Group)',
+        name='JPEG',
+        long_name='Joint Photographic Experts Group',
         reference='https://jpeg.org/jpeg/',
         examples=[
             dict(
@@ -158,7 +168,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='JPEG (Joint Photographic Experts Group) 2000',
+        name='JPEG 2000',
+        long_name='Joint Photographic Experts Group 2000',
         reference='https://jpeg.org/jpeg2000/index.html',
         examples=[
             dict(
@@ -169,7 +180,8 @@ format_examples = [
         ],
     ),
     dict(
-        name='GIF (Graphics Interchange Format)',
+        name='GIF',
+        long_name='Graphics Interchange Format',
         reference='https://www.adobe.com/creativecloud/file-types/image/raster/gif-file.html',
         examples=[
             dict(

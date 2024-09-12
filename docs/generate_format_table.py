@@ -13,6 +13,7 @@ def evaluate_examples():
     results = []
     for format_data in format_examples:
         name = format_data.get('name')
+        long_name = format_data.get('long_name')
         reference = format_data.get('reference')
         for example in format_data.get('examples', []):
             skip = example.get('skip')
@@ -30,6 +31,7 @@ def evaluate_examples():
                             results.append(
                                 dict(
                                     name=name,
+                                    long_name=long_name,
                                     reference=reference,
                                     extension=extension,
                                     filename=filename,
@@ -131,10 +133,13 @@ def generate():
                 # format extensions with monospace font
                 col_value = f'``{col_value}``'
             elif col_key == 'name':
-                # include reference as link on format name
+                # include reference as link and long name as tooltip
                 reference_link = row.get('reference')
+                long_name = row.get('long_name')
+                if long_name:
+                    col_value = f':abbr:`{col_value} ({long_name})`'
                 if reference_link:
-                    col_value = f'`{col_value} <{reference_link}>`_'
+                    col_value = f'{col_value} (`spec <{reference_link}>`__)'
             elif col_key == 'url':
                 # reformat example download link
                 col_value = (
