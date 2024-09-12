@@ -21,6 +21,57 @@ format_examples = [
         ],
     ),
     dict(
+        name='SVS (Aperio ScanScope Virtual Slide)',
+        reference='https://paulbourke.net/dataformats/svs/',
+        examples=[
+            dict(
+                filename='CMU-1.svs',
+                url='https://data.kitware.com/api/v1/file/57b5d6558d777f10f2694486/download',
+                hash='00a3d54482cd707abf254fe69dccc8d06b8ff757a1663f1290c23418c480eb30',
+            ),
+        ],
+    ),
+    dict(
+        name='OME-TIFF (Open Microscopy Environment Tagged Image File Format)',
+        reference='https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/',
+        examples=[
+            dict(
+                filename='DDX58_AXL_EGFR_well2_XY04.ome.tif',
+                url='https://data.kitware.com/api/v1/file/5fa1cbe750a41e3d192e18eb/download',
+                hash='5dabb19081db4893d58b6680e54b566fc6246ccbde10d41413201afd96499482',
+            ),
+        ],
+    ),
+    dict(
+        name='NDPI (Hamamatsu NanoZoomer Digital Pathology Image)',
+        reference='https://openslide.org/formats/hamamatsu/',
+        examples=[
+            dict(
+                filename='test3.ndpis',
+                url='https://data.kitware.com/api/v1/item/66e1af68560e612796791287/download',
+                hash='35542dff44d7844f1fac04c1703bdb1476f90f484457907ead132203e6de066e',
+            ),
+            dict(
+                filename='test3-TRITC 2 (560).ndpi',
+                url='https://data.kitware.com/api/v1/item/66e1af63560e61279679127e/download',
+                skip=True,
+                hash='f02985d30aa38060e83c9477a4435cb81b2a0a234d3d664195dfc5a4e2657be8',
+            ),
+            dict(
+                filename='test3-FITC 2 (485).ndpi',
+                url='https://data.kitware.com/api/v1/item/66e1af65560e612796791281/download',
+                skip=True,
+                hash='455069a02a761ecfedb93492f103dec8c5b23b7c46fd47e9d8d22191ea803018',
+            ),
+            dict(
+                filename='test3-DAPI 2 (387).ndpi',
+                url='https://data.kitware.com/api/v1/item/66e1af68560e612796791284/download',
+                skip=True,
+                hash='9294d31f304f20ef1df1e08650d3f225b8ed44db8b2dc0d52f584449f85bdca2',
+            ),
+        ],
+    ),
+    dict(
         name='Zarr',
         reference='https://wiki.earthdata.nasa.gov/display/ESO/Zarr+Format',
         examples=[
@@ -33,6 +84,50 @@ format_examples = [
                 filename='normmedia_8well_col2_livecellgfp.db',
                 url='https://data.kitware.com/api/v1/file/6544e9f5fdc1508d8bec1860/download',
                 hash='7d6cfb6967f79eb5201eebbe93418e26445676d9ea95a3bf49ff4ffbf0993e39',
+            ),
+        ],
+    ),
+    dict(
+        name='ND2 (Nikon NIS Elements)',
+        reference='https://docs.openmicroscopy.org/bio-formats/5.9.2/formats/nikon-nis-elements-nd2.html',
+        examples=[
+            dict(
+                filename='sample_image.nd2',
+                url='https://downloads.openmicroscopy.org/images/ND2/aryeh/MeOh_high_fluo_003.nd2',
+                hash='8e23bb594cd18314f9c18e70d736088ae46f8bc696ab7dc047784be416d7a706',
+            ),
+        ],
+    ),
+    dict(
+        name='CZI (Carl Zeiss Image)',
+        reference='https://www.zeiss.com/microscopy/en/products/software/zeiss-zen/czi-image-file-format.html',
+        examples=[
+            dict(
+                filename='Plate1-Blue-A-02-Scene-1-P2-E1-01.czi',
+                url='https://data.kitware.com/api/v1/item/66e1af4d560e61279679127b/download',
+                hash='494936fa5a8c2e53b73672980986e2c44f3779e9b709ebfd406ffda723336376',
+            ),
+        ],
+    ),
+    dict(
+        name='DICOM (Digital Imaging and Communications in Medicine)',
+        reference='https://www.dicomstandard.org/about',
+        examples=[
+            dict(
+                filename='US-MONO2-8-8x-execho.dcm',
+                url='https://downloads.openmicroscopy.org/images/DICOM/samples/US-MONO2-8-8x-execho.dcm',
+                hash='7d3f54806d0315c6cfc8b7371649a242b5ef8f31e0d20221971dd8087f2ff1ea',
+            ),
+        ],
+    ),
+    dict(
+        name='LIF (Leica Image Format)',
+        reference='https://svi.nl/LeicaLif',
+        examples=[
+            dict(
+                filename='20191025 Test FRET 585. 423, 426.lif',
+                url='https://downloads.openmicroscopy.org/images/Leica-LIF/imagesc-30856/20191025%20Test%20FRET%20585.%20423,%20426.lif',
+                hash='8d4ee62868b9616b832c2eb28e7d62ec050fb032e0bc11ea0a392f5c84390c71',
             ),
         ],
     ),
@@ -92,101 +187,6 @@ format_examples = [
                 filename='1bit.bmp',
                 url='https://github.com/OSGeo/gdal/raw/master/autotest/gcore/data/1bit.bmp',
                 hash='b0c201bee1e5a36ee698ab098aa3480e20772869d8f5c788280e532fa3620667',
-            ),
-        ],
-    ),
-    dict(
-        name='LIF (Leica Image Format)',
-        reference='https://svi.nl/LeicaLif',
-        examples=[
-            dict(
-                filename='20191025 Test FRET 585. 423, 426.lif',
-                url='https://downloads.openmicroscopy.org/images/Leica-LIF/imagesc-30856/20191025%20Test%20FRET%20585.%20423,%20426.lif',
-                hash='8d4ee62868b9616b832c2eb28e7d62ec050fb032e0bc11ea0a392f5c84390c71',
-            ),
-        ],
-    ),
-    dict(
-        name='CZI (Carl Zeiss Image)',
-        reference='https://www.zeiss.com/microscopy/en/products/software/zeiss-zen/czi-image-file-format.html',
-        examples=[
-            dict(
-                filename='Plate1-Blue-A-02-Scene-1-P2-E1-01.czi',
-                url='https://data.kitware.com/api/v1/item/66e1af4d560e61279679127b/download',
-                hash='494936fa5a8c2e53b73672980986e2c44f3779e9b709ebfd406ffda723336376',
-            ),
-        ],
-    ),
-    dict(
-        name='SVS (Aperio ScanScope Virtual Slide)',
-        reference='https://paulbourke.net/dataformats/svs/',
-        examples=[
-            dict(
-                filename='CMU-1.svs',
-                url='https://data.kitware.com/api/v1/file/57b5d6558d777f10f2694486/download',
-                hash='00a3d54482cd707abf254fe69dccc8d06b8ff757a1663f1290c23418c480eb30',
-            ),
-        ],
-    ),
-    dict(
-        name='NDPI (Hamamatsu NanoZoomer Digital Pathology Image)',
-        reference='https://openslide.org/formats/hamamatsu/',
-        examples=[
-            dict(
-                filename='test3.ndpis',
-                url='https://data.kitware.com/api/v1/item/66e1af68560e612796791287/download',
-                hash='35542dff44d7844f1fac04c1703bdb1476f90f484457907ead132203e6de066e',
-            ),
-            dict(
-                filename='test3-TRITC 2 (560).ndpi',
-                url='https://data.kitware.com/api/v1/item/66e1af63560e61279679127e/download',
-                skip=True,
-                hash='f02985d30aa38060e83c9477a4435cb81b2a0a234d3d664195dfc5a4e2657be8',
-            ),
-            dict(
-                filename='test3-FITC 2 (485).ndpi',
-                url='https://data.kitware.com/api/v1/item/66e1af65560e612796791281/download',
-                skip=True,
-                hash='455069a02a761ecfedb93492f103dec8c5b23b7c46fd47e9d8d22191ea803018',
-            ),
-            dict(
-                filename='test3-DAPI 2 (387).ndpi',
-                url='https://data.kitware.com/api/v1/item/66e1af68560e612796791284/download',
-                skip=True,
-                hash='9294d31f304f20ef1df1e08650d3f225b8ed44db8b2dc0d52f584449f85bdca2',
-            ),
-        ],
-    ),
-    dict(
-        name='OME-TIFF (Open Microscopy Environment Tagged Image File Format)',
-        reference='https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/',
-        examples=[
-            dict(
-                filename='DDX58_AXL_EGFR_well2_XY04.ome.tif',
-                url='https://data.kitware.com/api/v1/file/5fa1cbe750a41e3d192e18eb/download',
-                hash='5dabb19081db4893d58b6680e54b566fc6246ccbde10d41413201afd96499482',
-            ),
-        ],
-    ),
-    dict(
-        name='ND2 (Nikon NIS Elements)',
-        reference='https://docs.openmicroscopy.org/bio-formats/5.9.2/formats/nikon-nis-elements-nd2.html',
-        examples=[
-            dict(
-                filename='sample_image.nd2',
-                url='https://downloads.openmicroscopy.org/images/ND2/aryeh/MeOh_high_fluo_003.nd2',
-                hash='8e23bb594cd18314f9c18e70d736088ae46f8bc696ab7dc047784be416d7a706',
-            ),
-        ],
-    ),
-   dict(
-        name='DICOM (Digital Imaging and Communications in Medicine)',
-        reference='https://www.dicomstandard.org/about',
-        examples=[
-            dict(
-                filename='US-MONO2-8-8x-execho.dcm',
-                url='https://downloads.openmicroscopy.org/images/DICOM/samples/US-MONO2-8-8x-execho.dcm',
-                hash='7d3f54806d0315c6cfc8b7371649a242b5ef8f31e0d20221971dd8087f2ff1ea',
             ),
         ],
     ),
