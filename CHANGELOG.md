@@ -7,7 +7,8 @@
 - Only list computable plot columns if there are other numeric columns ([#1634](../../pull/1634))
 - List official yaml mime type for the multi source ([#1636](../../pull/1636))
 - Speed up correlating data files with annotations ([#1642](../../pull/1642))
-
+- Support dict with MultiFileTileSource ([#1641](../../pull/1641))
+- The PIL source reads more multi-frame images ([#1643](../../pull/1643))
 
 ### Bug Fixes
 
