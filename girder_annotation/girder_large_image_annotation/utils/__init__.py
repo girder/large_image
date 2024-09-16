@@ -41,7 +41,24 @@ def _dfFromFile(fileid, full=False):
     reader = dataFileExtReaders.get(
         ext, dataFileExtReaders.get(file.get('mimeType'), None))
     if reader == 'read_excel':
-        df = getattr(pd, reader)(File().open(file), sheet_name=None)
+        params = {
+            'sheet_name': None,
+            'usecols': lambda x: 'Unnamed: ' not in str(x),
+        }
+        try:
+            import python_calamine  # noqa
+
+            params['engine'] = 'calamine'
+        except Exception:
+            pass
+        try:
+            df = getattr(pd, reader)(File().open(file), **params)
+        except Exception:
+            if 'engine' in params:
+                params.pop('engine')
+                df = getattr(pd, reader)(File().open(file), **params)
+            else:
+                raise
     else:
         df = {'entry': getattr(pd, reader)(File().open(file))}
     df = {
@@ -620,19 +637,45 @@ class PlottableItemData:
 
         return itemNameSelector if isName else itemIDSelector
 
+    def _bboxLookupTable(self):
+        self._bboxLookup = {}
+        for srow, x0val in self._datacolumns['bbox.x0'].items():
+            x0val = int(x0val)
+            y0val = self._datacolumns['bbox.y0'].get(srow)
+            if y0val is None:
+                continue
+            if x0val not in self._bboxLookup:
+                self._bboxLookup[x0val] = {}
+            if y0val not in self._bboxLookup[x0val]:
+                self._bboxLookup[x0val][y0val] = set()
+            self._bboxLookup[x0val][y0val].add(srow)
+
     def datafileAnnotationElementSelector(self, key, cols):
+        # Max pixel difference for bounding box
+        epsilon = 2
 
         def annotationElementSelector(record, data, row):
             bbox = [col[1](record, data, row) for col in cols]
+            if 'bbox.x0' not in self._datacolumns or 'bbox.y0' not in self._datacolumns:
+                return None
+            if not hasattr(self, '_bboxLookup'):
+                self._bboxLookupTable()
             if key in self._datacolumns:
-                for srow in self._datacolumns[key]:
-                    if self._datacolumns[key][srow] is not None:
-                        for bidx, bkey in enumerate(['bbox.x0', 'bbox.y0', 'bbox.x1', 'bbox.y1']):
-                            val = self._datacolumns[bkey].get(srow)
-                            if val is None or abs(val - bbox[bidx]) > 2:
-                                break
-                        else:
-                            return self._datacolumns[key][srow]
+                for x0val in range(int(math.floor(bbox[0] - epsilon)),
+                                   int(math.ceil(bbox[0] + epsilon)) + 1):
+                    if x0val in self._bboxLookup:
+                        for y0val in range(int(math.floor(bbox[1] - epsilon)),
+                                           int(math.ceil(bbox[1] + epsilon)) + 1):
+                            if y0val in self._bboxLookup[x0val]:
+                                for srow in self._bboxLookup[x0val][y0val]:
+                                    if self._datacolumns[key][srow] is not None:
+                                        for bidx, bkey in enumerate([
+                                                'bbox.x0', 'bbox.y0', 'bbox.x1', 'bbox.y1']):
+                                            val = self._datacolumns[bkey].get(srow)
+                                            if val is None or abs(val - bbox[bidx]) > epsilon:
+                                                break
+                                        else:
+                                            return self._datacolumns[key][srow]
             return None
 
         return annotationElementSelector
@@ -779,8 +822,8 @@ class PlottableItemData:
                 if bkey in columns and doctype in columns[bkey]['where']]
             if len(cols) == 4:
                 # If we load all of these from annotation elements, use all
-                # three keys:
-                for akey in {'annotation.id', 'annotation.name', 'annotationelement.id'}:
+                # available keys:
+                for akey in [col for col in self.commonColumns if col.startswith('annotation')]:
                     if self._datacolumns and akey in self._datacolumns:
                         self._requiredColumns.add(akey)
                     self._ensureColumn(
@@ -947,7 +990,7 @@ class PlottableItemData:
             If no required fields were specified, this will be the count of all
             added data entries.
         """
-        count = 0
+        count = None
         eid = ''
         for colkey, col in columns.items():
             if self._datacolumns and colkey not in self._datacolumns:
@@ -967,10 +1010,15 @@ class PlottableItemData:
                         rows = 1 if length is None else length(record, data)
                     except Exception:
                         continue
-                    count += self._collectRecordRows(
+                    subcount = self._collectRecordRows(
                         record, data, selector, length, colkey, col, recidx,
                         rows, iid, aid, eid)
-        return count
+                    if self._datacolumns:
+                        if colkey in self._requiredColumns:
+                            count = min(count, subcount) if count is not None else subcount
+                    else:
+                        count = (count or 0) + subcount
+        return count if count is not None else 0
 
     def _collectColumns(self, columns, recordlist, doctype, first=True, iid='', aid=''):
         """
@@ -1044,7 +1092,7 @@ class PlottableItemData:
                 # This had been checking if the first item's annotation didn't
                 # contribute any required data to the data set, skip subsequent
                 # items' annotations; they are likely to be discarded.  This
-                # is untrue ui datafiles or folder level data augments the
+                # is untrue if datafiles or folder level data augments the
                 # element records
                 # if iidx and not countsPerAnnotation.get(anidx, 0) and not self._fullScan:
                 #     continue
@@ -1206,7 +1254,10 @@ class PlottableItemData:
             'item': 0, 'annotation': 1, 'annotationelement': 2, 'data': 3,
             'bbox': 4, 'compute': 5}
         columns = sorted(columns.values(), key=lambda x: (
-            prefixOrder.get(x['key'].split('.', 1)[0], len(prefixOrder)), x['key']))
+            prefixOrder.get(x['key'].split('.', 1)[0], len(prefixOrder)),
+            x['count'] <= 1,
+            x['title'].lower(),
+            x['key']))
         return columns
 
     @property
