@@ -6,6 +6,8 @@
 
 - Only list computable plot columns if there are other numeric columns ([#1634](../../pull/1634))
 - List official yaml mime type for the multi source ([#1636](../../pull/1636))
+- Speed up correlating data files with annotations ([#1642](../../pull/1642))
+
 
 ### Bug Fixes
 

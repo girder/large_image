@@ -59,7 +59,9 @@ setup(
     extras_require={
         'compute': [
             'openpyxl',
-            'pandas',
+            'pandas ; python_version < "3.9"',
+            'pandas>=2.2 ; python_version >= "3.9"',
+            'python-calamine ; python_version >= "3.9"',
             'umap-learn',
         ],
         'tasks': [
