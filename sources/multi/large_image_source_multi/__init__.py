@@ -419,7 +419,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _defaultTileSize = 256
     _maxOpenHandles = 6
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -434,10 +434,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._lastOpenSourceLock = threading.RLock()
         # 'c' must be first as channels are special because they can have names
         self._axesList = ['c', 'z', 't', 'xy']
-        if isinstance(path, dict):
+        if isinstance(path, dict) and 'sources' in path:
             self._info = path.copy()
-            self._basePath = "."
-            self._largeImagePath = "."
+            self._basePath = '.'
+            self._largeImagePath = '.'
             try:
                 self._validator.validate(self._info)
             except jsonschema.ValidationError:
