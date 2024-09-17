@@ -162,10 +162,18 @@ def generate():
                 # include reference as link and long name as tooltip
                 reference_link = row.get('reference')
                 long_name = row.get('long_name')
+                raw_html = [
+                    '.. raw:: html\n\n\t\t\t\t<p>',
+                ]
+                raw_html.append(f'<a href="{reference_link}"')
                 if long_name:
-                    col_value = f':abbr:`{col_value} ({long_name})`'
-                if reference_link:
-                    col_value = f'{col_value} (`spec <{reference_link}>`__)'
+                    raw_html.append(f' title="{long_name}">{col_value}</a>')
+                else:
+                    raw_html.append(f'>{col_value}</a>')
+                raw_html.append(f'\n\t\t\t\t<a class="reference internal" href="#{row_key}">')
+                raw_html.append('<span class="std std-ref">🔗</span></a>')
+                raw_html.append('</p>\n')
+                col_value = ''.join(raw_html)
             elif col_key == 'url':
                 # reformat example download link
                 col_value = (
@@ -177,7 +185,7 @@ def generate():
                     col_value = ', '.join(col_value)
 
             if index == 0:
-                lines.append(f'   * - {col_value} :ref:`🔗 <{row_key}>`')
+                lines.append(f'   * - {col_value}')
             else:
                 lines.append(f'     - {col_value}')
 
