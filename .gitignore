@@ -68,6 +68,8 @@ node_modules/
 test/externaldata
 
 docs/source/*
+docs/format_examples
+docs/format_table.rst
 !docs/source/*.py
 !docs/source/*.rst
 docs/_build
