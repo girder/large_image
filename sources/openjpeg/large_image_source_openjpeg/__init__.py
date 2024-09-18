@@ -73,11 +73,13 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.MEDIUM,
         'jp2': SourcePriority.PREFERRED,
         'jpf': SourcePriority.PREFERRED,
+        'j2c': SourcePriority.PREFERRED,
         'j2k': SourcePriority.PREFERRED,
         'jpx': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
+        'image/j2c': SourcePriority.PREFERRED,
         'image/jp2': SourcePriority.PREFERRED,
         'image/jpx': SourcePriority.PREFERRED,
     }

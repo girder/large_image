@@ -10,6 +10,10 @@
 - Support dict with MultiFileTileSource ([#1641](../../pull/1641))
 - The PIL source reads more multi-frame images ([#1643](../../pull/1643))
 
+### Changes
+
+- Add an extension and mimetype to the listed openjpeg handlers ([#1644](../../pull/1644))
+
 ### Bug Fixes
 
 - Fix an issue when asking not to resample a GDAL tile iterator ([#1640](../../pull/1640))
