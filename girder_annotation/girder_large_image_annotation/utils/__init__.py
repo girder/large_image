@@ -4,6 +4,7 @@ import math
 import os
 import re
 import threading
+import weakref
 
 from bson.objectid import ObjectId
 
@@ -31,8 +32,11 @@ dataFileExtReaders = {
 scanDatafileRecords = 50
 scanAnnotationElements = 5000
 
+_recentPlottableItemDataLock = threading.RLock()
+_recentPlottableItemData = {}
 
-@functools.lru_cache(maxsize=100)
+
+@functools.lru_cache(maxsize=250)
 def _dfFromFile(fileid, full=False):
     import pandas as pd
 
@@ -405,6 +409,21 @@ def isGeoJSON(annotation):
         'MultiPolygon'}
 
 
+def _cancelPlottableItemData(uuid, newRecord):
+    if uuid is None:
+        return
+    with _recentPlottableItemDataLock:
+        if uuid in _recentPlottableItemData:
+            old = _recentPlottableItemData.pop(uuid)
+            try:
+                old().cancel = True
+            except Exception:
+                pass
+        if len(_recentPlottableItemData) > 7:
+            _recentPlottableItemData.pop(next(iter(_recentPlottableItemData)))
+        _recentPlottableItemData[uuid] = weakref.ref(newRecord)
+
+
 class PlottableItemData:
     maxItems = 1000
     maxAnnotationElements = 5000
@@ -412,7 +431,7 @@ class PlottableItemData:
     allowedTypes = (str, bool, int, float)
 
     def __init__(self, user, item, annotations=None, adjacentItems=False,
-                 sources=None, compute=None):
+                 sources=None, compute=None, uuid=None):
         """
         Get plottable data associated with an item.
 
@@ -435,12 +454,17 @@ class PlottableItemData:
             compute.(x|y|z), the computation will not be performed.  Only rows
             which have all selected columns present will be included in the
             computation.
+        :param uuid: An optional uuid to allow cancelling a previous request.
+            If specified and there are any outstanding requests with the same
+            uuid, they may be cancelled to save resources.
         """
+        _cancelPlottableItemData(uuid, self)
         self.user = user
         self._columns = None
         self._datacolumns = None
         self._data = None
         self._compute = None
+        self.cancel = False
         try:
             if len(compute['columns']):
                 self._compute = {'function': 'umap', 'params': {
@@ -524,9 +548,13 @@ class PlottableItemData:
                 if annot['annotation']['name'] not in names:
                     names[annot['annotation']['name']] = idx
             for adjitem in self.items[1:]:
+                if self.cancel:
+                    return
                 query = {'_active': {'$ne': False}, 'itemId': adjitem['_id']}
                 annotList = [None] * len(self.annotations[0])
                 for annot in Annotation().find(query, limit=0, sort=[('_version', -1)]):
+                    if self.cancel:
+                        return
                     if annot['annotation']['name'] in names and annotList[
                             names[annot['annotation']['name']]] is None:
                         annotList[names[annot['annotation']['name']]] = annot
@@ -553,6 +581,8 @@ class PlottableItemData:
                 self._itemfilelist[iidx] = [None] * len(self._itemfilelist[0])
             names = {}
             for file in Item().childFiles(item):
+                if self.cancel:
+                    return
                 try:
                     if (file['_id'] == self.item['largeImage']['fileId'] or
                             file['_id'] == self.item['largeImage'].get('originalId')):
@@ -945,6 +975,8 @@ class PlottableItemData:
         """
         count = 0
         for rowidx in range(rows):
+            if self.cancel:
+                return 0
             try:
                 value = selector(record, data, rowidx)
             except Exception:
@@ -996,6 +1028,8 @@ class PlottableItemData:
             if self._datacolumns and colkey not in self._datacolumns:
                 continue
             for where, (getData, selector, length) in col['where'].items():
+                if self.cancel:
+                    return 0
                 if doctype != where and not where.startswith(doctype + '.'):
                     continue
                 for recidx, record in enumerate(recordlist):
@@ -1089,6 +1123,8 @@ class PlottableItemData:
         for iidx, annotList in enumerate(self.annotations or []):
             iid = str(self.items[iidx]['_id'])
             for anidx, annot in enumerate(annotList):
+                if self.cancel:
+                    return 0
                 # This had been checking if the first item's annotation didn't
                 # contribute any required data to the data set, skip subsequent
                 # items' annotations; they are likely to be discarded.  This
@@ -1124,6 +1160,8 @@ class PlottableItemData:
         for iidx, dfList in enumerate(self._itemfilelist or []):
             iid = str(self.items[iidx]['_id'])
             for dfidx, file in enumerate(dfList):
+                if self.cancel:
+                    return 0
                 # If the first item's data file didn't contribute any required
                 # data to the data set, skip subsequent items' data files;
                 # they are likely to be discarded.
@@ -1207,6 +1245,8 @@ class PlottableItemData:
         if not len(rows):
             return 0
         rows = {k: row[:lencols] for k, row in rows.items()}
+        if self.cancel:
+            return 0
         if not self._computeFunction(rows):
             return 0
         for key in self.computeColumns:
@@ -1355,6 +1395,8 @@ class PlottableItemData:
             rows = set()
             # collects data as a side effect
             collist = self._getColumns()
+            if self.cancel:
+                return
             for coldata in self._datacolumns.values():
                 rows |= set(coldata.keys())
             rows = sorted(rows)
@@ -1382,6 +1424,8 @@ class PlottableItemData:
             logger.info(f'Reduced row count from {len(data)} to {len(subdata)} '
                         f'because of None values in implied columns')
             data = subdata
+        if self.cancel:
+            return
         # Refresh our count, distinct, distinctcount, min, max for each column
         for cidx, col in enumerate(colsout):
             col['count'] = len([row[cidx] for row in data if row[cidx] is not None])
