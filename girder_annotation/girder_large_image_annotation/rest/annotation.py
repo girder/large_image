@@ -631,18 +631,22 @@ class AnnotationResource(Resource):
         .param('sources', 'An optional comma separated list that can contain '
                'folder, item, annotation, annotationelement, datafile.',
                required=False)
+        .param('uuid', 'An optional uuid to allow cancelling a previous '
+               'request.  If specified and there are any outstanding requests '
+               'with the same uuid, they may be cancelled to save resources.',
+               required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
-    def getItemPlottableElements(self, item, annotations, adjacentItems, sources=None):
+    def getItemPlottableElements(self, item, annotations, adjacentItems, sources=None, uuid=None):
         user = self.getCurrentUser()
         if adjacentItems != '__all__':
             adjacentItems = str(adjacentItems).lower() == 'true'
         sources = sources or None
         data = utils.PlottableItemData(
             user, item, annotations=annotations, adjacentItems=adjacentItems,
-            sources=sources)
+            sources=sources, uuid=uuid)
         return [col for col in data.columns if col.get('count')]
 
     @autoDescribeRoute(
@@ -671,19 +675,24 @@ class AnnotationResource(Resource):
             'rows which have all selected columns present will be included in '
             'the computation.',
             paramType='formData', requireObject=True, required=False)
+        .param('uuid', 'An optional uuid to allow cancelling a previous '
+               'request.  If specified and there are any outstanding requests '
+               'with the same uuid, they may be cancelled to save resources.',
+               required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     def getItemPlottableData(
-            self, item, keys, adjacentItems, annotations, requiredKeys, sources=None, compute=None):
+            self, item, keys, adjacentItems, annotations, requiredKeys,
+            sources=None, compute=None, uuid=None):
         user = self.getCurrentUser()
         if adjacentItems != '__all__':
             adjacentItems = str(adjacentItems).lower() == 'true'
         sources = sources or None
         data = utils.PlottableItemData(
             user, item, annotations=annotations, adjacentItems=adjacentItems,
-            sources=sources, compute=compute)
+            sources=sources, compute=compute, uuid=uuid)
         return data.data(keys, requiredKeys)
 
     def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,

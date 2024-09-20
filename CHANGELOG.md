@@ -5,6 +5,7 @@
 ### Improvements
 
 - Only list computable plot columns if there are other numeric columns ([#1634](../../pull/1634))
+- Allow canceling plottable data requests ([#1645](../../pull/1645))
 - List official yaml mime type for the multi source ([#1636](../../pull/1636))
 - Speed up correlating data files with annotations ([#1642](../../pull/1642))
 - Support dict with MultiFileTileSource ([#1641](../../pull/1641))
