@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.11
+
+### Changes
+
+- Update zarr dependencies ([#1646](../../pull/1646))
+
 ## 1.29.10
 
 ### Improvements
