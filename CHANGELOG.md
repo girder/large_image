@@ -6,6 +6,10 @@
 
 - Update zarr dependencies ([#1646](../../pull/1646))
 
+### Bug Fixes
+
+- Fixed an issue correlating bounding boxes across multiple annotations ([#1647](../../pull/1647))
+
 ## 1.29.10
 
 ### Improvements
