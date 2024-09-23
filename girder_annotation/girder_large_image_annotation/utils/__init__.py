@@ -857,8 +857,9 @@ class PlottableItemData:
                     if self._datacolumns and akey in self._datacolumns:
                         self._requiredColumns.add(akey)
                     self._ensureColumn(
-                        columns, akey, self.commonColumns[akey], doctype,
-                        getData, self.datafileAnnotationElementSelector(akey, cols),
+                        columns, akey, self.commonColumns[akey],
+                        '.'.join(doctype.split('.')[:2]), getData,
+                        self.datafileAnnotationElementSelector(akey, cols),
                         length)
 
     def _ensureColumn(self, columns, keyname, title, doctype, getData, selector, length):
@@ -966,13 +967,15 @@ class PlottableItemData:
         title = self.commonColumns[keyname]
         self._ensureColumn(columns, keyname, title, doctype, getData, selector, None)
 
-    def _collectRecordRows(
+    def _collectRecordRows(  # noqa
             self, record, data, selector, length, colkey, col, recidx, rows,
-            iid, aid, eid):
+            iid, aid, eid, doctype, columns):
         """
         Collect statistics and possible data from one data set.  See
         _collectRecords for parameter details.
         """
+        getAid = (aid == '' and (doctype.startswith(('folder', 'datafile.'))))
+        getEid = (eid == '' and (doctype.startswith(('folder', 'datafile.'))))
         count = 0
         for rowidx in range(rows):
             if self.cancel:
@@ -1000,6 +1003,22 @@ class PlottableItemData:
             if len(col['distinct']) <= self.maxDistinct:
                 col['distinct'].add(value)
             if self._datacolumns and colkey in self._datacolumns:
+
+                if getAid:
+                    try:
+                        aid = columns['annotation.id']['where'][doctype][1](record, data, rowidx)
+                        if aid is None:
+                            aid = ''
+                    except Exception:
+                        pass
+                if getEid:
+                    try:
+                        eid = columns['annotationelement.id']['where'][doctype][1](
+                            record, data, rowidx)
+                        if eid is None:
+                            eid = ''
+                    except Exception:
+                        pass
                 self._datacolumns[colkey][(
                     iid, aid, eid,
                     rowidx if length is not None else -1)] = value
@@ -1046,7 +1065,7 @@ class PlottableItemData:
                         continue
                     subcount = self._collectRecordRows(
                         record, data, selector, length, colkey, col, recidx,
-                        rows, iid, aid, eid)
+                        rows, iid, aid, eid, doctype, columns)
                     if self._datacolumns:
                         if colkey in self._requiredColumns:
                             count = min(count, subcount) if count is not None else subcount
@@ -1406,6 +1425,8 @@ class PlottableItemData:
             logger.info(f'Gathering {len(colsout)} x {len(rows)} data')
             data, rows = self._collectData(rows, colsout)
             self._datacolumns = None
+        if hasattr(self, '_bboxLookup'):
+            logger.info(f'Bounding boxes: {sum(len(x) for x in self._bboxLookup.values())}')
         for cidx, col in enumerate(colsout):
             colkey = col['key']
             numrows = len(data)
@@ -1417,12 +1438,13 @@ class PlottableItemData:
         subdata = data
         for cidx, col in enumerate(colsout):
             colkey = col['key']
-            numrows = len(data)
+            numrows = len(subdata)
             if colkey in self._requiredColumns and colkey not in specifiedReqColumns:
                 subdata = [row for row in subdata if row[cidx] is not None]
+            if len(subdata) < numrows:
+                logger.info(f'Reduced row count from {numrows} to {len(subdata)} '
+                            f'because of None values in implied column {colkey}')
         if len(subdata) and len(subdata) < len(data):
-            logger.info(f'Reduced row count from {len(data)} to {len(subdata)} '
-                        f'because of None values in implied columns')
             data = subdata
         if self.cancel:
             return
