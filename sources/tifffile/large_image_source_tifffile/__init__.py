@@ -553,6 +553,17 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._nonempty_levels_list[frame] = nonempty
         return nonempty
 
+    def getPreferredLevel(self, level):
+        """
+        Given a desired level (0 is minimum resolution, self.levels - 1 is max
+        resolution), return the level that contains actual data that is no
+        lower resolution.
+
+        :param level: desired level
+        :returns level: a level with actual data that is no lower resolution.
+        """
+        return max(0, min(level, self.levels - 1))
+
     def _getZarrArray(self, series, sidx):
         with self._zarrlock:
             if sidx not in self._zarrcache:
@@ -596,7 +607,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             bza = za
         if step > 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
         else:
             sel = []

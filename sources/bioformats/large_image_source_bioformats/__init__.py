@@ -644,7 +644,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         height = min(height, sizeYAtScale - offsety)
 
         if scale >= 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
             format = TILE_FORMAT_NUMPY
         else:

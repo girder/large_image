@@ -520,7 +520,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         y1 //= scale
         step //= scale
         if step > 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
         else:
             idx = [slice(None) for _ in arr.shape]

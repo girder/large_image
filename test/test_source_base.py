@@ -637,7 +637,7 @@ def testStyleFunctions():
     region2, _ = sourceFunc2.getRegion(
         output=dict(maxWidth=50),
         format=large_image.constants.TILE_FORMAT_NUMPY)
-    assert np.any(region2 != region1)
+    assert np.any(region2[:, :, :3] != region1)
     sourceFunc3 = large_image.open(imagePath, style={
         'function': {
             'name': 'large_image.tilesource.stylefuncs.maskPixelValues',

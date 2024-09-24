@@ -668,7 +668,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if dir is None:
                 try:
                     if not kwargs.get('inSparseFallback'):
-                        tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+                        tile, format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
                     else:
                         raise IOTiffError('Missing z level %d' % z)
                 except Exception:
@@ -677,7 +677,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     else:
                         raise
                 allowStyle = False
-                format = TILE_FORMAT_PIL
             else:
                 tile = dir.getTile(x, y, asarray=numpyAllowed == 'always')
                 format = 'JPEG'

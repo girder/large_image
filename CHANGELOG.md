@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.29.12
+
+### Improvements
+
+- Better handle images without enough tile layers ([#1648](../../pull/1648))
+
 ## 1.29.11
 
 ### Changes
