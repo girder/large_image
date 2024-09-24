@@ -234,18 +234,18 @@ class TileIterator:
         # If we are scaling the result, pick the tile level that is at least
         # the resolution we need and is preferred by the tile source.
         if outWidth != regionWidth or outHeight != regionHeight:
-            newLevel = source.getPreferredLevel(preferredLevel + int(
-                math.ceil(round(math.log(max(float(outWidth) / regionWidth,
+            newLevel = source.getPreferredLevel(max(0, preferredLevel + int(
+                math.ceil(round(math.log(min(float(outWidth) / regionWidth,
                                              float(outHeight) / regionHeight)) /
-                                math.log(2), 4))))
+                                math.log(2), 4)))))
             if newLevel < preferredLevel:
                 # scale the bounds to the level we will use
                 factor = 2 ** (preferredLevel - newLevel)
                 left = int(left / factor)
-                right = int(right / factor)
+                right = max(int(right / factor), left + 1)
                 regionWidth = right - left
                 top = int(top / factor)
-                bottom = int(bottom / factor)
+                bottom = max(int(bottom / factor), top + 1)
                 regionHeight = bottom - top
                 preferredLevel = newLevel
                 requestedScale /= factor

@@ -279,7 +279,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         scale = None
         if self._minlevel - z > self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = _imageToNumpy(tile)[0]
         else:
             if z < self._minlevel:
