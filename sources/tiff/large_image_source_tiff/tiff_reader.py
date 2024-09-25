@@ -121,7 +121,12 @@ class TiledTiffDirectory:
         self._tileLock = threading.RLock()
 
         self._open(filePath, directoryNum, subDirectoryNum)
-        self._loadMetadata()
+        try:
+            self._loadMetadata()
+        except Exception:
+            self.logger.exception('Could not parse tiff metadata')
+            raise IOOpenTiffError(
+                'Could not open TIFF file: %s' % filePath)
         self.logger.debug(
             'TiffDirectory %d:%d Information %r',
             directoryNum, subDirectoryNum or 0, self._tiffInfo)

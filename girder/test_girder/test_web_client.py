@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 @pytest.mark.parametrize('spec', [
@@ -33,7 +33,7 @@ def testWebClientNoWorker(boundServer, fsAssetstore, db, spec):
     runWebClientTest(boundServer, spec, 15000)
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 @pytest.mark.parametrize('spec', [

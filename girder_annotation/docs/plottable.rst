@@ -1,7 +1,7 @@
 Plottable Data
 ==============
 
-There is a python utility class and some REST endpoints to obtain plottable data related to a large image item optionally along with other items in the same Girder folder.  This plottable data can be drawn from item metadata, folder metadata, annotation attributes, and annotation element user properties, plus a few core properties of items, annotations, and annotation elements.
+There is a python utility class and some REST endpoints to obtain plottable data related to a large image item optionally along with other items in the same Girder_ folder.  This plottable data can be drawn from item metadata, folder metadata, annotation attributes, and annotation element user properties, plus a few core properties of items, annotations, and annotation elements.
 
 See the `PlottableItemData <_build/girder_large_image_annotation/girder_large_image_annotation.utils.html#girder_large_image_annotation.utils.PlottableItemData>`_ for the Python API, or ``POST`` ``annotation/item/{id}/plot/list`` and ``POST`` ``annotation/item/{id}/plot/data`` for the endpoints.
 
@@ -80,3 +80,5 @@ After plottable data is gathered, columns of available data are summarized.  Eac
 * ``max``: for number data columns, the highest value present.
 
 Data rows are populated with more general data when possible.  For example, if data is selected from annotations, metadata from the parent item is present in each row.
+
+.. _Girder: https://girder.readthedocs.io/en/latest/

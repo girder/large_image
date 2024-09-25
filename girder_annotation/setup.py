@@ -37,6 +37,7 @@ setup(
                      'fallback_version': '0.0.0'},
     description=description,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -56,6 +57,13 @@ setup(
         'orjson',
     ],
     extras_require={
+        'compute': [
+            'openpyxl',
+            'pandas ; python_version < "3.9"',
+            'pandas>=2.2 ; python_version >= "3.9"',
+            'python-calamine ; python_version >= "3.9"',
+            'umap-learn',
+        ],
         'tasks': [
             f'girder-large-image[tasks]{limit_version}',
         ],

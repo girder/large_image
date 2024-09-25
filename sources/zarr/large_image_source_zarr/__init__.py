@@ -520,7 +520,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         y1 //= scale
         step //= scale
         if step > 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
         else:
             idx = [slice(None) for _ in arr.shape]
@@ -659,7 +659,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
                 self.sizeX = new_dims.get('x')
                 self.sizeY = new_dims.get('y')
-                self._framecount = np.prod([
+                self._framecount = math.prod([
                     length
                     for axis, length in new_dims.items()
                     if axis in axes[:-3]
@@ -930,6 +930,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         alpha=True,
         overwriteAllowed=True,
         resample=None,
+        **converterParams,
     ):
         """
         Output the current image to a file.
@@ -942,6 +943,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param resample: one of the ``ResampleMethod`` enum values.  Defaults
             to ``NP_NEAREST`` for lossless and non-uint8 data and to
             ``PIL_LANCZOS`` for lossy uint8 data.
+        :param converterParams: options to pass to the large_image_converter if
+            the output is not a zarr variant.
         """
         if os.path.exists(path):
             if overwriteAllowed:
@@ -1008,6 +1011,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             params = {}
             if lossy and self.dtype == np.uint8:
                 params['compression'] = 'jpeg'
+            params.update(converterParams)
             convert(str(attrs_path), path, overwrite=overwriteAllowed, **params)
 
 

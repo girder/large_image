@@ -37,6 +37,7 @@ setup(
                      'fallback_version': '0.0.0'},
     description=description,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -53,9 +54,10 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'zarr',
-        # I am uncertain why this is required, since numcodecs is required by
-        # zarr; but without it some jpeg encoded data cannot be read
-        'imagecodecs-numcodecs',
+        # numcodecs had been required by zarr, but now needs to be asked for
+        'numcodecs',
+        # Without imagecodecs-numcodecs, some jpeg encoded data cannot be read
+        'imagecodecs-numcodecs!=2024.9.22',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',

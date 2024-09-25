@@ -1,10 +1,44 @@
-Example Usage
-=============
+Getting Started
+===============
+The ``large_image`` library can be used to read and access different file formats.  There are several common usage patterns.
+To read more about accepted file formats, visit the :doc:`formats` page.
 
-The large_image library can be used to read and access different file formats.  There are several common usage patterns.  These examples use ``sample.tiff`` as an example -- any readable image can be used in this case.
+These examples use ``sample.tiff`` as an example -- any readable image can be used in this case. Visit `demo.kitware.com <https://demo.kitware.com/histomicstk/#folder/589e030a92ca9a00118a6166>`_ to download a sample image.
 
-Image Metadata
---------------
+Installation
+------------
+
+In addition to installing the base ``large-image`` package, you'll need at least one tile source which corresponds to your target file format(s) (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
+
+Pip
+~~~
+
+Install common tile sources on linux, OSX, or Windows::
+
+    pip install large-image[common]
+
+Install all tile sources on linux::
+
+    pip install large-image[all] --find-links https://girder.github.io/large_image_wheels
+
+When using large-image with an instance of `Girder`_, install all tile sources and all Girder plugins on linux::
+
+    pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://girder.github.io/large_image_wheels
+
+
+Conda
+~~~~~
+
+Conda makes dependency management a bit easier if not on Linux. The base module, converter module, and two of the source modules are available on conda-forge. You can install the following::
+
+    conda install -c conda-forge large-image
+    conda install -c conda-forge large-image-source-gdal
+    conda install -c conda-forge large-image-source-tiff
+    conda install -c conda-forge large-image-converter
+
+
+Reading Image Metadata
+----------------------
 
 All images have metadata that include the base image size, the base tile size, the number of conceptual levels, and information about the size of a pixel in the image if it is known.
 
@@ -107,7 +141,10 @@ Tiles are always ``tileWidth`` by ``tileHeight`` in pixels.  At the maximum leve
 Iterating Across an Image
 -------------------------
 
-Since most images are too large to conveniently fit in memory, it is useful to iterate through the image.  This can take the same parameters as ``getRegion`` to pick an output size and scale, but can also specify a tile size and overlap.  You can also get a specific tile with those parameters.  This tiling doesn't have to have any correspondence to the tiling of the original file.
+Since most images are too large to conveniently fit in memory, it is useful to iterate through the image.
+The ``tileIterator`` function can take the same parameters as ``getRegion`` to pick an output size and scale, but can also specify a tile size and overlap.
+You can also get a specific tile with those parameters.  This tiling doesn't have to have any correspondence to the tiling of the original file.
+The data for each tile is loaded lazily, only once ``tile['tile']`` or ``tile['format']`` is accessed.
 
 .. code-block:: python
 
@@ -174,7 +211,7 @@ You can get the thumbnail in other image formats and sizes:
 Associated Images
 -----------------
 
-Many digital pathology images (also called whole slide images or WSI) contain secondary images that have additional information.  This commonly includes label and macro images.  A label image is a separate image of just the label of a slide.  A macro image is a small image of these entire slide or the entire slide excluding the label.  There can be other associated images, too.
+Many digital pathology images (also called whole slide images or WSI) contain secondary images that have additional information.  This commonly includes label and macro images.  A label image is a separate image of just the label of a slide.  A macro image is a small image of the entire slide either including or excluding the label.  There can be other associated images, too.
 
 .. code-block:: python
 
@@ -195,7 +232,7 @@ You can get associated images in different encodings and formats.  The entire im
 Projections
 -----------
 
-large_image handles geospatial images.  These can be handled as any other image in pixel-space by just opening them normally.  Alternately, these can be opened with a projection and then referenced using that projection.
+large_image handles geospatial images.  These can be handled as any other image in pixel-space by just opening them normally.  Alternately, these can be opened with a new projection and then referenced using that projection.
 
 .. code-block:: python
 
@@ -247,7 +284,7 @@ Any of the frames of such an image are accessed by adding a ``frame=<integer>`` 
 Channels, Bands, Samples, and Axes
 ----------------------------------
 
-Various large image formats refer to channels, bands, and samples.  This isn't consistent across different libraries.  In an attempt to harmonize the geospatial and medical image terminology, large_image uses ``bands`` or ``samples`` to refer to image plane components, such as red, green, blue, and alpha.  For geospatial data this can often have additional bands, such as near infrared or panchromatic.  ``channels`` are stored as separate frames and can be interpreted as different imaging modalities.  For example, a fluorescence microscopy image might have DAPI, CY5, and A594 channels.  A common color photograph file has 3 bands and 1 channel.
+Various large image formats refer to channels, bands, and samples.  This isn't consistent across different libraries.  In an attempt to harmonize the geospatial and medical image terminology, large_image uses ``bands`` or ``samples`` to refer to image plane components, such as red, green, blue, and alpha.  For geospatial data this can often have additional bands, such as near infrared or panchromatic.  ``channels`` are stored as separate frames and can be interpreted as different imaging modalities.  For example, a fluorescence microscopy image might have DAPI, CY5, and A594 channels.  A common color photograph file has 3 bands (also called samples) and 1 channel.
 
 At times, image ``axes`` are used to indicate the order of data, especially when interpreted as an n-dimensional array.  The ``x`` and ``y`` axes are the horizontal and vertical dimensions of the image.  The ``s`` axis is the ``bands`` or ``samples``, such as red, green, and blue.  The ``c`` axis is the ``channels`` with special support for channel names.  This corresponds to distinct frames.
 
@@ -314,3 +351,46 @@ The ``large-image-source-zarr`` can be used to store multiple frame data with ar
         source.addTile(nparray, x, y, time=time, p1=param1)
     # The writer supports a variety of formats
     source.write('/tmp/sample.zarr.zip', lossy=False)
+
+You may also choose to read tiles from one source and write modified tiles to a new source:
+
+.. code-block:: python
+
+    import large_image
+    original_source = large_image.open('path/to/original/image.tiff')
+    new_source = large_image.new()
+    for frame in original_source.getMetadata().get('frames', []):
+        for tile in original_source.tileIterator(frame=frame['Frame'], format='numpy'):
+            t, x, y = tile['tile'], tile['x'], tile['y']
+            kwargs = {
+                'z': frame['IndexZ'],
+                'c': frame['IndexC'],
+            }
+            modified_tile = modify_tile(t)
+            new_source.addTile(modified_tile, x=x, y=y, **kwargs)
+    new_source.write('path/to/new/image.tiff', lossy=False)
+
+In some cases, it may be beneficial to write to a single image from multiple processes or threads:
+
+.. code-block:: python
+
+    import large_image
+    import multiprocessing
+    # Important: Must be a pickleable function
+    def add_tile_to_source(tilesource, nparray, position):
+        tilesource.addTile(
+            nparray,
+            **position
+        )
+    source = large_image.new()
+    # Important: Maximum size must be allocated before any multiprocess concurrency
+    add_tile_to_source(source, np.zeros(1, 1, 3), dict(x=max_x, y=max_y, z=max_z))
+    # Also works with multiprocessing.ThreadPool, which does not need maximum size allocated first
+    with multiprocessing.Pool(max_workers=5) as pool:
+        pool.starmap(
+            add_tile_to_source,
+            [(source, t, t_pos) for t, t_pos in tileset]
+        )
+    source.write('/tmp/sample.zarr.zip', lossy=False)
+
+.. _Girder: https://girder.readthedocs.io/en/latest/

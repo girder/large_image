@@ -651,7 +651,7 @@ def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]
             else:
                 cmap = (mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
                     mpl, 'colormaps', None), 'get_cmap') else
-                    mpl.cm.get_cmap(str(value)))  # type: ignore
+                    mpl.cm.get_cmap(str(value)))
                 palette = [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
         except (ImportError, ValueError, AttributeError):
             pass
@@ -755,7 +755,7 @@ def fullAlphaValue(arr: Union[np.ndarray, npt.DTypeLike]) -> int:
 def _makeSameChannelDepth(arr1: np.ndarray, arr2: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given two numpy arrays that are either two or three dimensions, make the
-    third dimension the same for both of them.  Specifically, if they are two
+    third dimension the same for both of them.  Specifically, if there are two
     dimensions, first convert to three dimensions with a single final value.
     Otherwise, the dimensions are assumed to be channels of L, LA, RGB, RGBA,
     or <all colors>.  If L is needed to change to RGB, it is repeated (LLL).

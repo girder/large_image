@@ -15,3 +15,5 @@
 dcda95e659a4eaa73cae85ab02f1b89059e63c32
 # PR 1563: Use yamlfix for linting
 f517ecb2b7d8c454d1374156452be42b87ca3fd1
+# PR 1604: Handle ruff linting rule changes
+e62083dab9a190d94841b3f4089850f43e2c9932

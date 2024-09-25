@@ -185,3 +185,17 @@ def total_memory() -> int:
     if mem:
         return mem
     return 8 * 1024 ** 3
+
+
+def minimizeCaching(mode=None):
+    """
+    Set python cache sizes to very low values.
+
+    :param mode: None for all caching, 'tile' for the tile cache, 'source' for
+        the source cache.
+    """
+    if not mode or str(mode).lower().startswith('source'):
+        setConfig('cache_tilesource_maximum', 1)
+    if not mode or str(mode).lower().startswith('tile'):
+        setConfig('cache_backend', 'python')
+        setConfig('cache_python_memory_portion', 256)

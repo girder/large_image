@@ -183,7 +183,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         ex = 'no maximum series'
         try:
             for idx, s in enumerate(self._tf.series):
-                samples = np.prod(s.shape)
+                samples = math.prod(s.shape)
                 if samples > maxsamples and 'X' in s.axes and 'Y' in s.axes:
                     maxseries = idx
                     maxsamples = samples
@@ -232,7 +232,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'sizeX': s.shape[s.axes.index('X')], 'sizeY': s.shape[s.axes.index('Y')]})
             self.sizeX = max(self.sizeX, s.shape[s.axes.index('X')])
             self.sizeY = max(self.sizeY, s.shape[s.axes.index('Y')])
-        self._framecount = len(self._series) * np.prod(tuple(
+        self._framecount = len(self._series) * math.prod(tuple(
             1 if base.axes[sidx] in 'YXS' else v for sidx, v in enumerate(base.shape)))
         self._basis = {}
         basis = 1
@@ -259,14 +259,17 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for p in self._tf.pages:
             if (p not in pagesInSeries and getattr(p, 'keyframe', None) is not None and
                     p.hash not in hashes and not len(set(p.axes) - set('YXS'))):
-                id = 'image_%s' % p.index
-                entry = {'page': p.index}
-                entry['width'] = p.shape[p.axes.index('X')]
-                entry['height'] = p.shape[p.axes.index('Y')]
-                if (id not in self._associatedImages and
-                        max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
-                        max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
-                    self._associatedImages[id] = entry
+                try:
+                    id = 'image_%s' % p.index
+                    entry = {'page': p.index}
+                    entry['width'] = p.shape[p.axes.index('X')]
+                    entry['height'] = p.shape[p.axes.index('Y')]
+                    if (id not in self._associatedImages and
+                            max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
+                            max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
+                        self._associatedImages[id] = entry
+                except Exception:
+                    pass
         for sidx, s in enumerate(self._tf.series):
             if sidx not in self._series and not len(set(s.axes) - set('YXS')):
                 id = 'series_%d' % sidx
@@ -550,6 +553,17 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._nonempty_levels_list[frame] = nonempty
         return nonempty
 
+    def getPreferredLevel(self, level):
+        """
+        Given a desired level (0 is minimum resolution, self.levels - 1 is max
+        resolution), return the level that contains actual data that is no
+        lower resolution.
+
+        :param level: desired level
+        :returns level: a level with actual data that is no lower resolution.
+        """
+        return max(0, min(level, self.levels - 1))
+
     def _getZarrArray(self, series, sidx):
         with self._zarrlock:
             if sidx not in self._zarrcache:
@@ -593,7 +607,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             bza = za
         if step > 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
         else:
             sel = []

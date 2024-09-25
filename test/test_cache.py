@@ -35,12 +35,12 @@ def testLRUCacheTools():
     cache_test(cachetools.Cache(1000))
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testCacheMemcached():
     cache_test(MemCache())
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testCheckCacheMemcached():
     cache = MemCache()
 
@@ -52,14 +52,14 @@ def testCheckCacheMemcached():
     assert val == 354224848179261915075
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
 def testCacheRedis():
     config.setConfig('cache_redis_url', os.getenv('REDIS_TEST_URL'))
     cache_test(RedisCache())
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
 def testCheckCacheRedis():
     config.setConfig('cache_redis_url', os.getenv('REDIS_TEST_URL'))
@@ -83,7 +83,7 @@ def testBadMemcachedUrl():
         cache['(2,)']
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testGetTileCachePython():
     large_image.cache_util.cache._tileCache = None
     large_image.cache_util.cache._tileLock = None
@@ -93,7 +93,7 @@ def testGetTileCachePython():
     assert 'tileCache' in cachesInfo()
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testGetTileCacheMemcached():
     large_image.cache_util.cache._tileCache = None
     large_image.cache_util.cache._tileLock = None
@@ -103,7 +103,7 @@ def testGetTileCacheMemcached():
     assert 'tileCache' in cachesInfo()
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
 def testGetTileCacheRedis():
     large_image.cache_util.cache._tileCache = None
@@ -172,7 +172,7 @@ class TestClass:
             if isinstance(arg, (int, float)):
                 time.sleep(arg)
 
-    @pytest.mark.singular()
+    @pytest.mark.singular
     def testCachesInfo(self):
         cachesClear()
         large_image.cache_util.cache._tileCache = None
@@ -191,7 +191,7 @@ class TestClass:
         # memcached shows an items record as well
         assert 'items' in cachesInfo()['tileCache']
 
-    @pytest.mark.singular()
+    @pytest.mark.singular
     def testCachesKeyLock(self):
         cachesClear()
         assert cachesInfo()['test']['used'] == 0
@@ -203,7 +203,7 @@ class TestClass:
         assert endtime - starttime < 6
         assert cachesInfo()['test']['used'] == 2
 
-    @pytest.mark.singular()
+    @pytest.mark.singular
     def testCachesClear(self):
         cachesClear()
         large_image.cache_util.cache._tileCache = None

@@ -53,7 +53,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build/**.ipynb', '**.ipynb_checkpoints']
+exclude_patterns = ['_build/**.ipynb', '**.ipynb_checkpoints', 'format_table.rst']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -72,6 +72,9 @@ pygments_style = 'sphinx'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['static']
 html_css_files = ['custom.css']
+html_favicon = 'static/K.png'
+html_permalinks = True
+html_permalinks_icon = '&#128279'
 
 autoclass_content = 'both'
 

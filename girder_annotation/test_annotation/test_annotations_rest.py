@@ -498,7 +498,7 @@ class TestLargeImageAnnotationRest:
         resp = server.request('/annotation/%s/access' % annot['_id'], user=user)
         assert utilities.respStatus(resp) == 200
 
-    @pytest.mark.singular()
+    @pytest.mark.singular
     def testAnnotationHistoryEndpoints(self, server, user, admin):
         privateFolder = utilities.namedFolder(admin, 'Private')
         Setting().set(constants.PluginSettings.LARGE_IMAGE_ANNOTATION_HISTORY, True)
@@ -877,7 +877,7 @@ class TestLargeImageAnnotationElementGroups:
             },
         )
         assert utilities.respStatus(resp) == 200
-        assert len(resp.json) >= 8
+        assert len(resp.json) >= 5
 
         resp = server.request(
             path=f'/annotation/item/{itemSrc["_id"]}/plot/data',

@@ -647,7 +647,7 @@ class TileSource(IPyLeafletMixin):
                     tile = np.array(tile, dtype=np.uint16) * 257
                 else:
                     continue
-            for idx in range(len(results['min'])):
+            for idx in range(min(len(results['min']), tile.shape[-1])):
                 entry = results['histogram'][idx]
                 hist, bin_edges = np.histogram(
                     tile[:, :, idx], entry['bins'], entry['range'], density=False)
@@ -1491,7 +1491,8 @@ class TileSource(IPyLeafletMixin):
         """
         return [True] * self.levels
 
-    def _getTileFromEmptyLevel(self, x: int, y: int, z: int, **kwargs) -> PIL.Image.Image:
+    def _getTileFromEmptyLevel(self, x: int, y: int, z: int, **kwargs) -> Tuple[
+            Union[PIL.Image.Image, np.ndarray], str]:
         """
         Given the x, y, z tile location in an unpopulated level, get tiles from
         higher resolution levels to make the lower-res tile.
@@ -1508,6 +1509,39 @@ class TileSource(IPyLeafletMixin):
         while dirlist[z] is None:
             scale *= 2
             z += 1
+        # if scale >= max(tileWidth, tileHeight), we can just get one tile per
+        # pixel at this point.  If dtype is not uint8 or the number of bands is
+        # greater than 4, also just use nearest neighbor.
+        if (scale >= max(self.tileWidth, self.tileHeight) or
+                (self.dtype and self.dtype != np.uint8) or
+                (self.bandCount and self.bandCount > 4)):
+            nptile = np.zeros((self.tileHeight, self.tileWidth, cast(int, self.bandCount)))
+            maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
+            maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
+            for newY in range(scale):
+                sty = (y * scale + newY) * self.tileHeight
+                dy = sty % scale
+                ty = (newY * self.tileHeight) // scale
+                if (newY and y * scale + newY >= maxY) or dy >= self.tileHeight:
+                    continue
+                for newX in range(scale):
+                    stx = (x * scale + newX) * self.tileWidth
+                    dx = stx % scale
+                    if (newX and x * scale + newX >= maxX) or dx >= self.tileWidth:
+                        continue
+                    tx = (newX * self.tileWidth) // scale
+                    if time.time() - lastlog > 10:
+                        self.logger.info(
+                            'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
+                            x * scale + newX, y * scale + newY, z)
+                        lastlog = time.time()
+                    subtile = self.getTile(
+                        x * scale + newX, y * scale + newY, z,
+                        pilImageAllowed=False, numpyAllowed='always',
+                        sparseFallback=True, edge=False, frame=kwargs.get('frame'))
+                    subtile = subtile[dx::scale, dy::scale]
+                    nptile[ty:ty + subtile.shape[0], tx:tx + subtile.shape[1]] = subtile
+            return nptile, TILE_FORMAT_NUMPY
         while z - basez > self._maxSkippedLevels:
             z -= self._maxSkippedLevels
             scale = int(scale / 2 ** self._maxSkippedLevels)
@@ -1530,10 +1564,12 @@ class TileSource(IPyLeafletMixin):
                     pilImageAllowed=True, numpyAllowed=False,
                     sparseFallback=True, edge=False, frame=kwargs.get('frame'))
                 subtile = _imageToPIL(subtile)
+                mode = subtile.mode
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
-        return tile.resize((self.tileWidth, self.tileHeight),
-                           getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        return tile.resize(
+            (self.tileWidth, self.tileHeight),
+            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS).convert(mode), TILE_FORMAT_PIL
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,

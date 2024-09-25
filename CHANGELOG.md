@@ -1,5 +1,80 @@
 # Change Log
 
+## 1.29.12
+
+### Improvements
+
+- Better handle images without enough tile layers ([#1648](../../pull/1648))
+
+## 1.29.11
+
+### Changes
+
+- Update zarr dependencies ([#1646](../../pull/1646))
+
+### Bug Fixes
+
+- Fixed an issue correlating bounding boxes across multiple annotations ([#1647](../../pull/1647))
+
+## 1.29.10
+
+### Improvements
+
+- Only list computable plot columns if there are other numeric columns ([#1634](../../pull/1634))
+- Allow canceling plottable data requests ([#1645](../../pull/1645))
+- List official yaml mime type for the multi source ([#1636](../../pull/1636))
+- Speed up correlating data files with annotations ([#1642](../../pull/1642))
+- Support dict with MultiFileTileSource ([#1641](../../pull/1641))
+- The PIL source reads more multi-frame images ([#1643](../../pull/1643))
+
+### Changes
+
+- Add an extension and mimetype to the listed openjpeg handlers ([#1644](../../pull/1644))
+
+### Bug Fixes
+
+- Fix an issue when asking not to resample a GDAL tile iterator ([#1640](../../pull/1640))
+
+## 1.29.9
+
+### Bug Fixes
+
+- Fix scaling small images in the multi source ([#1633](../../pull/1633))
+
+## 1.29.8
+
+### Improvements
+
+- Add the option to compute additional columns for plottable data ([#1626](../../pull/1626))
+
+### Bug Fixes
+
+- Fix scaling small images in the multi source with bicubic smoothing ([#1627](../../pull/1627))
+- Fix correlating annotation bounding boxes on adjacent items for plottable data ([#1628](../../pull/1628), ([#1632](../../pull/1632))
+
+## 1.29.7
+
+### Improvements
+
+- Speed up getting plottable data from adjacent items; plot more data ([#1613](../../pull/1613), [#1614](../../pull/1614))
+- Better handle mixed dtype sources in the multi source ([#1616](../../pull/1616))
+- Add a utility function to minimize caching ([#1617](../../pull/1617))
+- Allow passing through converter options when writing a zarr sink to a non-zarr format ([#1618](../../pull/1618))
+- Do less calculations when applying affine transforms in the multi-source ([#1619](../../pull/1619))
+- Improve logging in the image converter ([#1621](../../pull/1621))
+
+### Bug Fixes
+
+- Harden converting sources that report varied tile bands ([#1615](../../pull/1615))
+- Harden many of the sources from reading bad files ([#1623](../../pull/1623))
+- Some projected bounds in the rasterio source could be off ([#1624](../../pull/1624))
+
+## 1.29.6
+
+### Bug Fixes
+
+- Use math.prod in preference to np.prod ([#1606](../../pull/1606))
+
 ## 1.29.5
 
 ### Improvements
@@ -10,6 +85,9 @@
 - Speed up checks for old annotations ([#1591](../../pull/1591))
 - Improve plottable data endpoint to better fetch folder data ([#1594](../../pull/1594))
 - Show a frame slider when appropriate in jupyter widgets ([#1595](../../pull/1595))
+- Improve options for creating or check large images for each item in a folder ([#1586](../../pull/1586))
+- Add a lock to avoid mongo excessively computing random numbers ([#1601](../../pull/1601))
+- Better merge source channel names in multi source ([#1605](../../pull/1605))
 
 ### Bug Fixes
 

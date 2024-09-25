@@ -40,6 +40,7 @@ setup(
     },
     description=description,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -55,7 +56,9 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'rasterio>=1.3',  # to get the statistics attribute (<=> gdalinfo)
+        'rasterio>=1.3,<1.3.11 ; python_version < "3.9"',
+        # We need rasterio > 1.3 to get the statistics attribute (<=> gdalinfo)
+        'rasterio>=1.3 ; python_version >= "3.9"',
         'packaging',
     ],
     extras_require={

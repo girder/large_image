@@ -52,6 +52,7 @@ repos:
         args:
           - --ignore-words-list
           - "hist,indext,pixelx,thex,subtile,slippy,fram"
+        exclude: '.*\.ipynb$'
   - repo: https://github.com/syntaqx/git-hooks
     rev: v0.0.18
     hooks:
@@ -64,14 +65,14 @@ repos:
           - '--options'
           - './girder/girder_large_image/web_client/package.json'
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.16.0
+    rev: v3.17.0
     hooks:
       - id: pyupgrade
         args:
           - --py38-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.0
+    rev: v0.6.1
     hooks:
       - id: ruff
         args:
@@ -86,7 +87,7 @@ repos:
     hooks:
       - id: autopep8
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.0
+    rev: 7.1.1
     hooks:
       - id: flake8
   - repo: https://github.com/pycqa/isort
@@ -99,7 +100,7 @@ repos:
     hooks:
       - id: yesqa
   - repo: https://github.com/lyz-code/yamlfix
-    rev: 1.16.0
+    rev: 1.17.0
     hooks:
       - id: yamlfix
         args:

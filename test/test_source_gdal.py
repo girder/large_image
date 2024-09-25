@@ -128,3 +128,17 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
         source = self.basemodule.open(
             imagePath)
         assert np.count_nonzero(source.getThumbnail(format='numpy')[0][:, :, 3] == 255) > 30000
+
+    def testGetTiledRegionWithoutResample(self):
+        imagePath = datastore.fetch('landcover_sample_1000.tif')
+        ts = self.basemodule.open(imagePath)
+        region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
+                                 encoding='TILED', resample=None)
+        result = self.basemodule.open(str(region))
+        tileMetadata = result.getMetadata()
+        assert tileMetadata['bounds']['xmax'] == pytest.approx(2006547, 1)
+        assert tileMetadata['bounds']['xmin'] == pytest.approx(1319547, 1)
+        assert tileMetadata['bounds']['ymax'] == pytest.approx(2658548, 1)
+        assert tileMetadata['bounds']['ymin'] == pytest.approx(2149548, 1)
+        assert '+proj=aea' in tileMetadata['bounds']['srs']
+        region.unlink()

@@ -153,28 +153,32 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # use the mapnik source if needed. This variable is always ignored
         # is_netcdf = False
 
-        # get the different scales and projections from the image
-        scale = self.getPixelSizeInMeters()
+        try:
+            # get the different scales and projections from the image
+            scale = self.getPixelSizeInMeters()
 
-        # raise an error if we are missing some information about the projection
-        # i.e. we don't know where to place it on a map
-        isProjected = self.projection or self.dataset.driver.lower() in {'png'}
-        if isProjected and not scale:
-            msg = ('File does not have a projected scale, so will not be '
-                   'opened via rasterio with a projection.')
+            # raise an error if we are missing some information about the projection
+            # i.e. we don't know where to place it on a map
+            isProjected = self.projection or self.dataset.driver.lower() in {'png'}
+            if isProjected and not scale:
+                msg = ('File does not have a projected scale, so will not be '
+                       'opened via rasterio with a projection.')
+                raise TileSourceError(msg)
+
+            # set the levels of the tiles
+            logX = math.log(float(self.sizeX) / self.tileWidth)
+            logY = math.log(float(self.sizeY) / self.tileHeight)
+            computedLevel = math.ceil(max(logX, logY) / math.log(2))
+            self.sourceLevels = self.levels = int(max(0, computedLevel) + 1)
+
+            self._unitsPerPixel = unitsPerPixel
+            self.projection is None or self._initWithProjection(unitsPerPixel)
+            self._getPopulatedLevels()
+            self._getTileLock = threading.Lock()
+            self._setDefaultStyle()
+        except Exception as exc:
+            msg = f'File cannot be opened via rasterio {exc}.'
             raise TileSourceError(msg)
-
-        # set the levels of the tiles
-        logX = math.log(float(self.sizeX) / self.tileWidth)
-        logY = math.log(float(self.sizeY) / self.tileHeight)
-        computedLevel = math.ceil(max(logX, logY) / math.log(2))
-        self.sourceLevels = self.levels = int(max(0, computedLevel) + 1)
-
-        self._unitsPerPixel = unitsPerPixel
-        self.projection is None or self._initWithProjection(unitsPerPixel)
-        self._getPopulatedLevels()
-        self._getTileLock = threading.Lock()
-        self._setDefaultStyle()
 
     def _getPopulatedLevels(self):
         try:
@@ -413,15 +417,14 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             for k in bounds:
                 bounds[k]['y'] = max(min(bounds[k]['y'], yBounds), -yBounds)
 
-            # for each corner rotate longitude until it's within -180, 180
-            while any(v['x'] > 180 for v in bounds.values()):
+            # rotate longitude so the western-most corner is within [-180, 180)
+            dx = min(v['x'] for v in bounds.values())
+            if dx < -180 or dx >= 180:
+                dx = ((dx + 180) % 360 - 180) - dx
                 for k in bounds:
-                    bounds[k]['x'] -= 180
-            while any(v['x'] < -180 for v in bounds.values()):
-                for k in bounds:
-                    bounds[k]['x'] += 360
+                    bounds[k]['x'] += dx
 
-            # if one of the corner is > 180 set all the corner to world width
+            # if one of the corner is >= 180 set all the corners to world width
             if any(v['x'] >= 180 for v in bounds.values()):
                 bounds['ul']['x'] = bounds['ll']['x'] = -180
                 bounds['ur']['x'] = bounds['lr']['x'] = 180

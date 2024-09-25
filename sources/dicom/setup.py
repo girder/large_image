@@ -56,6 +56,7 @@ setup(
                      'fallback_version': '0.0.0'},
     description=description,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -72,6 +73,8 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'wsidicom>=0.9.0',
+        # Pinned until wsidicom is updated
+        'pydicom<3',
     ],
     extras_require={
         'girder': girder_extras,
