@@ -141,7 +141,8 @@ def getYAMLConfigFile(self, folder, name):
         'file may be permanently deleted.')
     .modelParam('id', model=Folder, level=AccessType.WRITE)
     .param('name', 'The name of the file.', paramType='path')
-    .param('user_context', 'Whether these settings should only apply to the current user.', paramType='query', dataType='boolean', default=False)
+    .param('user_context', 'Whether these settings should only apply to the '
+           'current user.', paramType='query', dataType='boolean', default=False)
     .param('config', 'The contents of yaml config file to validate.',
            paramType='body'),
 )
