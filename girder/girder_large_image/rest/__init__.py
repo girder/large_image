@@ -131,7 +131,7 @@ def getYAMLConfigFile(self, folder, name):
     return yamlConfigFile(folder, name, user)
 
 
-@access.public(scope=TokenScope.DATA_WRITE)
+@access.public(scope=TokenScope.DATA_READ)
 @autoDescribeRoute(
     Description('Get a config file.')
     .notes(
@@ -139,7 +139,7 @@ def getYAMLConfigFile(self, folder, name):
         'specified name containing a single file also of the specified '
         'name.  The file is added to the default assetstore, and any existing '
         'file may be permanently deleted.')
-    .modelParam('id', model=Folder, level=AccessType.WRITE)
+    .modelParam('id', model=Folder, level=AccessType.READ)
     .param('name', 'The name of the file.', paramType='path')
     .param('user_context', 'Whether these settings should only apply to the '
            'current user.', paramType='query', dataType='boolean', default=False)
@@ -151,5 +151,7 @@ def putYAMLConfigFile(self, folder, name, config, user_context):
     from .. import yamlConfigFileWrite
 
     user = self.getCurrentUser()
+    if not user_context:
+        Folder().requireAccess(folder, user, AccessType.WRITE)
     config = config.read().decode('utf8')
     return yamlConfigFileWrite(folder, name, user, config, user_context)

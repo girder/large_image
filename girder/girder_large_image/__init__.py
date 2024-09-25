@@ -613,7 +613,7 @@ def yamlConfigFileWrite(folder, name, user, yaml_config, user_context):
     :param user_context: whether these settings should only apply to the current user.
     """
     yaml_parsed = yaml.safe_load(yaml_config)
-    item = Item().createItem(name, user, folder, reuseExisting=True, force=bool(user_context))
+    item = Item().createItem(name, user, folder, reuseExisting=True)
     existingFiles = list(Item().childFiles(item))
     if (len(existingFiles) == 1 and
             existingFiles[0]['mimeType'] == 'application/yaml' and
