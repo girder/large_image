@@ -1535,7 +1535,7 @@ class TileSource(IPyLeafletMixin):
                             'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                             x * scale + newX, y * scale + newY, z)
                         lastlog = time.time()
-                    subtile = self.getTile(
+                    subtile = getattr(self, '_unstyledInstance', self).getTile(
                         x * scale + newX, y * scale + newY, z,
                         pilImageAllowed=False, numpyAllowed='always',
                         sparseFallback=True, edge=False, frame=kwargs.get('frame'))
@@ -1559,7 +1559,7 @@ class TileSource(IPyLeafletMixin):
                         'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                         x * scale + newX, y * scale + newY, z)
                     lastlog = time.time()
-                subtile = self.getTile(
+                subtile = getattr(self, '_unstyledInstance', self).getTile(
                     x * scale + newX, y * scale + newY, z,
                     pilImageAllowed=True, numpyAllowed=False,
                     sparseFallback=True, edge=False, frame=kwargs.get('frame'))
@@ -1815,7 +1815,8 @@ class TileSource(IPyLeafletMixin):
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
             dtype = cast(np.ndarray, image).dtype
-            if dtype == np.uint8 or resample is not None:
+            if dtype == np.uint8 or (resample is not None and (
+                    dtype != np.uint16 or cast(np.ndarray, image).shape[-1] != 1)):
                 image = _imageToPIL(cast(np.ndarray, image), mode).resize(
                     (outWidth, outHeight),
                     getattr(PIL.Image, 'Resampling', PIL.Image).NEAREST
@@ -1828,7 +1829,7 @@ class TileSource(IPyLeafletMixin):
             else:
                 cols = [int(idx * regionWidth / outWidth) for idx in range(outWidth)]
                 rows = [int(idx * regionHeight / outHeight) for idx in range(outHeight)]
-                image = np.take(np.take(image, rows, axis=0), cols, axis=1)
+                image = np.take(np.take(cast(np.ndarray, image), rows, axis=0), cols, axis=1)
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:

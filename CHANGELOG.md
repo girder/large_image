@@ -7,6 +7,10 @@
 - Better handle images without enough tile layers ([#1648](../../pull/1648))
 - Add users option to config files; have a default config file ([#1649](../../pull/1649))
 
+### Bug Fixes
+
+- Fix styling images with empty tile layers ([#1650](../../pull/1650))
+
 ## 1.29.11
 
 ### Changes
