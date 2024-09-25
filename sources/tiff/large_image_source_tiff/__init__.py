@@ -664,7 +664,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             dir = self._tiffDirectories[z]
         try:
-            allowStyle = True
             if dir is None:
                 try:
                     if not kwargs.get('inSparseFallback'):
@@ -676,7 +675,6 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         raise IOTiffError('Missing z level %d' % z)
                     else:
                         raise
-                allowStyle = False
             else:
                 tile = dir.getTile(x, y, asarray=numpyAllowed == 'always')
                 format = 'JPEG'
@@ -685,7 +683,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if isinstance(tile, np.ndarray):
                 format = TILE_FORMAT_NUMPY
             return self._outputTile(tile, format, x, y, z, pilImageAllowed,
-                                    numpyAllowed, applyStyle=allowStyle, **kwargs)
+                                    numpyAllowed, **kwargs)
         except InvalidOperationTiffError as e:
             raise TileSourceError(e.args[0])
         except IOTiffError as e:
@@ -734,7 +732,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 image = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
             return self._outputTile(image, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
-                                    numpyAllowed, applyStyle=False, **kwargs)
+                                    numpyAllowed, **kwargs)
         raise TileSourceError('Internal I/O failure: %s' % exception.args[0])
 
     def _nonemptyLevelsList(self, frame=0):
