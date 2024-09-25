@@ -207,7 +207,7 @@ $(function () {
         });
         it('test the metadata columns are not shown', function () {
             runs(function () {
-                expect($('.large_image_container').length).toBeGreaterThan(0);
+                expect($('.large_image_container').length).toBe(0);
                 expect($('.large_image_thumbnail').length).toBeGreaterThan(0);
                 expect($('.li-column-metadata').length).toBe(0);
             });

@@ -482,7 +482,7 @@ def testYAMLConfigFile(server, admin, user, fsAssetstore):
         path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']),
         method='GET')
     assert utilities.respStatus(resp) == 200
-    assert resp.json is None
+    assert resp.json['itemList'] is not None
 
     colFolderConfig = Folder().createFolder(
         collection, '.config', parentType='collection',
