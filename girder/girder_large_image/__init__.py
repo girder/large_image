@@ -476,12 +476,6 @@ def adjustConfigForUser(config, user):
     """
     if not isinstance(config, dict):
         return config
-    if isinstance(config.get('access'), dict):
-        accessList = config.pop('access')
-        if user and isinstance(accessList.get('user'), dict):
-            config = _mergeDictionaries(config, accessList['user'])
-        if user and user.get('admin') and isinstance(accessList.get('admin'), dict):
-            config = _mergeDictionaries(config, accessList['admin'])
     if isinstance(config.get('groups'), dict):
         groups = config.pop('groups')
         if user:
@@ -489,13 +483,31 @@ def adjustConfigForUser(config, user):
                     {'_id': {'$in': user['groups']}}, sort=[('name', SortDir.ASCENDING)]):
                 if isinstance(groups.get(group['name']), dict):
                     config = _mergeDictionaries(config, groups[group['name']])
+    # Do this after merging groups, because the group access-level values can
+    # override the base access-level options.  For instance, if the base has
+    # an admin option, and the group has a user option, then doing this before
+    # group application can end up with user options for an admin.
+    if isinstance(config.get('access'), dict):
+        accessList = config.pop('access')
+        if user and isinstance(accessList.get('user'), dict):
+            config = _mergeDictionaries(config, accessList['user'])
+        if user and user.get('admin') and isinstance(accessList.get('admin'), dict):
+            config = _mergeDictionaries(config, accessList['admin'])
     if isinstance(config.get('users'), dict):
         users = config.pop('users')
         if user and user['login'] in users:
             config = _mergeDictionaries(config, users[user['login']])
     return config
 
+
 def addSettingsToConfig(config, user):
+    """
+    Add the settings for showing thumbnails and images in item lists to a
+    config file if the itemList or itemListDialog options are not set.
+
+    :param config: the config dictionary to modify.
+    :param user: the current user.
+    """
     columns = []
 
     showThumbnails = Setting().get(constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS)
@@ -514,7 +526,8 @@ def addSettingsToConfig(config, user):
         showExtra = json.loads(Setting().get(extraSetting))
     except Exception:
         pass
-    if isinstance(showExtra, dict) and 'images' in showExtra and isinstance(showExtra['images'], list):
+    if (isinstance(showExtra, dict) and 'images' in showExtra and
+            isinstance(showExtra['images'], list)):
         for value in showExtra['images']:
             if value != '*':
                 columns.append({'type': 'image', 'value': value, 'title': value.title()})
@@ -552,7 +565,8 @@ def yamlConfigFile(folder, name, user):
                     if isinstance(config, list) and len(config) == 1:
                         config = config[0]
                     # combine and adjust config values based on current user
-                    if isinstance(config, dict) and ('access' in config or 'groups' in config or 'users' in config):
+                    if isinstance(config, dict) and (
+                            'access' in config or 'groups' in config or 'users' in config):
                         config = adjustConfigForUser(config, user)
                     if addConfig and isinstance(config, dict):
                         config = _mergeDictionaries(config, addConfig)
@@ -581,11 +595,8 @@ def yamlConfigFile(folder, name, user):
         else:
             folder = Folder().load(folder['parentId'], user=user, level=AccessType.READ)
 
-    if addConfig is None:
-        addConfig = {}
-
+    addConfig = {} if addConfig is None else addConfig
     addSettingsToConfig(addConfig, user)
-
     return addConfig
 
 

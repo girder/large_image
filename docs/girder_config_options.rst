@@ -38,6 +38,10 @@ The yaml file has the following structure:
         <key>: <value>
         # groups can specify access based on user or admin, too.
         access: ...
+    # The users key specifies that a specific user has distinct settings
+    users:
+      <user login>:
+        <key>: <value>
     # If __inherit__ is true, then merge this config file with the next config
     # file in the parent folder hierarchy.
     __inherit__: true

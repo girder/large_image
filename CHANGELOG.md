@@ -5,6 +5,7 @@
 ### Improvements
 
 - Better handle images without enough tile layers ([#1648](../../pull/1648))
+- Add users option to config files; have a default config file ([#1649](../../pull/1649))
 
 ## 1.29.11
 
