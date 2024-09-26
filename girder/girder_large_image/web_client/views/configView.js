@@ -302,7 +302,7 @@ var ConfigView = View.extend({
             method: 'PUT',
             url: `folder/${folderId}/yaml_config/.large_image_config.yaml?user_context=true`,
             data: JSON.stringify(userContent, null, 2),
-            contentType: 'application/json',
+            contentType: 'application/json'
         }).done(() => {
             if (callback) {
                 callback();

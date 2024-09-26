@@ -1,6 +1,7 @@
 import $ from 'jquery';
 import _ from 'underscore';
 import Backbone from 'backbone';
+import Vue from 'vue';
 
 import {wrap} from '@girder/core/utilities/PluginUtils';
 import {getApiRoot} from '@girder/core/rest';
@@ -18,7 +19,6 @@ import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
 
-import Vue from "vue";
 import TableConfigDialog from './TableConfigDialog.vue';
 import TableViewSelect from './TableViewSelect.vue';
 
@@ -221,7 +221,7 @@ wrap(ItemListWidget, 'render', function (render) {
             }
             this._liconfig.namedItemLists[name] = {columns: config, edit: true};
         } else {
-            let foundView  = this._liconfig.namedItemLists[originalName];
+            const foundView  = this._liconfig.namedItemLists[originalName];
             if (foundView) {
                 if (originalName !== name) {
                     // Need to make the view name unique
@@ -477,7 +477,7 @@ wrap(ItemListWidget, 'render', function (render) {
             itemList.columns = [
                 {type: 'record', value: 'name', title: 'Name'},
                 {type: 'record', value: 'size', title: 'Size'},
-                {type: 'record', value: 'controls', title: 'Controls'},
+                {type: 'record', value: 'controls', title: 'Controls'}
             ];
         }
         this.$el.html(ItemListTemplate({
@@ -508,11 +508,11 @@ wrap(ItemListWidget, 'render', function (render) {
             {type: 'image', value: 'label', title: 'Label'},
             {type: 'record', value: 'controls', title: 'Controls'},
             {type: 'record', value: 'name', title: 'Name'},
-            {type: 'record', value: 'size', title: 'Size'},
+            {type: 'record', value: 'size', title: 'Size'}
         ];
         const allColumnsMap = {};
         this.collection.toArray().forEach((item) => {
-            let value = item.get('meta') || {};
+            const value = item.get('meta') || {};
             for (const key in value) {
                 if (!allColumnsMap[key]) {
                     allColumnsMap[key] = true;
@@ -521,11 +521,11 @@ wrap(ItemListWidget, 'render', function (render) {
                         value: key,
                         title: key.replace(/[^a-zA-Z0-9]+/g, ' ')
                             .split(' ')
-                            .filter(word => word.length > 0)
-                            .map(word =>
+                            .filter((word) => word.length > 0)
+                            .map((word) =>
                                 word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
                             )
-                            .join(' '),
+                            .join(' ')
                     });
                 }
             }
@@ -537,7 +537,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 config: (this._confList() || {}).columns || [],
                 allColumns,
                 name: ((this._liconfig || {}).itemList || {}).fromName || '',
-                newView: false,
+                newView: false
             }
         });
         this._tableConfigVue.$on('save', (config, name) => {
@@ -557,7 +557,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 propsData: {
                     value: currentName,
                     views,
-                    loggedIn: !!getCurrentUser(),
+                    loggedIn: !!getCurrentUser()
                 }
             });
 
@@ -605,7 +605,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 const columns = [
                     {type: 'record', value: 'name'},
                     {type: 'record', value: 'size'},
-                    {type: 'record', value: 'controls'},
+                    {type: 'record', value: 'controls'}
                 ];
                 this._liconfig.namedItemLists[name] = {columns, edit: true};
 
@@ -622,7 +622,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 if (this._liconfig.namedItemLists === undefined) {
                     this._liconfig.namedItemLists = {};
                 }
-                let foundView = this._liconfig.namedItemLists[name];
+                const foundView = this._liconfig.namedItemLists[name];
                 this._saveTableConfig({columns: foundView.columns, name, newView: true});
             });
 
