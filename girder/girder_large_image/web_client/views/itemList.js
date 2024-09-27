@@ -264,6 +264,40 @@ wrap(ItemListWidget, 'render', function (render) {
         largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
     };
 
+    this._allColumns = () => {
+        if (this._liconfig && this._liconfig.allColumns) {
+            return this._liconfig.allColumns;
+        }
+        const allColumns = [
+            {type: 'image', value: 'thumbnail', title: 'Thumbnail'},
+            {type: 'image', value: 'label', title: 'Label'},
+            {type: 'record', value: 'controls', title: 'Controls'},
+            {type: 'record', value: 'name', title: 'Name'},
+            {type: 'record', value: 'size', title: 'Size'}
+        ];
+        const allColumnsMap = {};
+        this.collection.toArray().forEach((item) => {
+            const value = item.get('meta') || {};
+            for (const key in value) {
+                if (!allColumnsMap[key]) {
+                    allColumnsMap[key] = true;
+                    allColumns.push({
+                        type: 'metadata',
+                        value: key,
+                        title: key.replace(/[^a-zA-Z0-9]+/g, ' ')
+                            .split(' ')
+                            .filter((word) => word.length > 0)
+                            .map((word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                            )
+                            .join(' ')
+                    });
+                }
+            }
+        });
+        return allColumns;
+    };
+
     /**
      * Set sort on the collection and perform a debounced re-fetch.
      */
@@ -502,40 +536,11 @@ wrap(ItemListWidget, 'render', function (render) {
             AccessType: AccessType
         }));
 
-        // Poor man's metadata field list until we get an endpoint for it
-        const allColumns = [
-            {type: 'image', value: 'thumbnail', title: 'Thumbnail'},
-            {type: 'image', value: 'label', title: 'Label'},
-            {type: 'record', value: 'controls', title: 'Controls'},
-            {type: 'record', value: 'name', title: 'Name'},
-            {type: 'record', value: 'size', title: 'Size'}
-        ];
-        const allColumnsMap = {};
-        this.collection.toArray().forEach((item) => {
-            const value = item.get('meta') || {};
-            for (const key in value) {
-                if (!allColumnsMap[key]) {
-                    allColumnsMap[key] = true;
-                    allColumns.push({
-                        type: 'metadata',
-                        value: key,
-                        title: key.replace(/[^a-zA-Z0-9]+/g, ' ')
-                            .split(' ')
-                            .filter((word) => word.length > 0)
-                            .map((word) =>
-                                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                            )
-                            .join(' ')
-                    });
-                }
-            }
-        });
-
         const TableConfigDialogConstructor = Vue.extend(TableConfigDialog);
         this._tableConfigVue = new TableConfigDialogConstructor({
             propsData: {
                 config: (this._confList() || {}).columns || [],
-                allColumns,
+                allColumns: this._allColumns(),
                 name: ((this._liconfig || {}).itemList || {}).fromName || '',
                 newView: false
             }

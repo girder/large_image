@@ -297,6 +297,8 @@ var ConfigView = View.extend({
                 userContent.namedItemLists[view] = content.namedItemLists[view];
             }
         }
+        // User should not set the columns that can be used
+        delete userContent.allColumns;
 
         restRequest({
             method: 'PUT',
