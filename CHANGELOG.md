@@ -7,6 +7,7 @@
 - Better handle images without enough tile layers ([#1648](../../pull/1648))
 - Add users option to config files; have a default config file ([#1649](../../pull/1649))
 - Remove no longer used code; adjust item list slightly ([#1651](../../pull/1651))
+- Reduce updates when showing item lists; add a waiting spinner ([#1653](../../pull/1653))
 
 ### Bug Fixes
 
