@@ -46,6 +46,7 @@ wrap(FolderListWidget, 'checkAll', function (checkAll, checked) {
 });
 
 wrap(ItemListWidget, 'initialize', function (initialize, settings) {
+    this._inInit = true;
     const result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
 
@@ -54,6 +55,8 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             this._liconfig = val;
         }
         if (_.isEqual(val, this._liconfig) && !this._recurse) {
+            this._inInit = false;
+            this.render();
             return;
         }
         delete this._lastSort;
@@ -74,12 +77,14 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             update = true;
         } else if (this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
             this._lastSort = this._confList().defaultSort;
+            update = true;
         }
         if (query.filter || this._recurse) {
             this._generalFilter = query.filter;
             this._setFilter(false);
             update = true;
         }
+        this._inInit = false;
         if (update) {
             this._setSort();
         } else {
@@ -104,6 +109,9 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
 
 wrap(ItemListWidget, 'render', function (render) {
     this.$el.closest('.modal-dialog').addClass('li-item-list-dialog');
+    if (!this.$el.children().length) {
+        this.$el.html('<span class="icon-spin1 animate-spin" title="Loading item list"/>');
+    }
 
     /* Chrome limits the number of connections to a single domain, which means
      * that time-consuming requests for thumbnails can bind-up the web browser.
@@ -155,12 +163,16 @@ wrap(ItemListWidget, 'render', function (render) {
                 const pages = Math.ceil(this.collection.getTotalCount() / this.collection.pageLimit);
                 this._totalPages = pages;
                 this._inFetch = false;
-                if (this._needsFetch) {
-                    this._setSort();
-                }
-                if (oldPages !== pages) {
+                itemListRender.apply(this, _.rest(arguments));
+                if (oldPages !== pages || this.collection.offset !== this.collection.size()) {
+                    this.collection.offset = this.collection.size();
                     this.trigger('g:paginated');
                     this.collection.trigger('g:changed');
+                } else {
+                    itemListRender.apply(this, _.rest(arguments));
+                }
+                if (this._needsFetch) {
+                    this._setSort();
                 }
             });
         } else {
@@ -300,6 +312,9 @@ wrap(ItemListWidget, 'render', function (render) {
     };
 
     function itemListRender() {
+        if (this._inInit || this._inFetch) {
+            return;
+        }
         const root = this.$el.closest('.g-hierarchy-widget');
         if (!root.find('.li-item-list-filter').length) {
             let base = root.find('.g-hierarchy-actions-header .g-folder-header-buttons').eq(0);
