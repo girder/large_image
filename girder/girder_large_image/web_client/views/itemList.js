@@ -162,6 +162,10 @@ wrap(ItemListWidget, 'render', function (render) {
                 const oldPages = this._totalPages;
                 const pages = Math.ceil(this.collection.getTotalCount() / this.collection.pageLimit);
                 this._totalPages = pages;
+                // recheck if this has large images
+                this._hasAnyLargeImage = !!_.some(this.collection.toArray(), function (item) {
+                    return item.has('largeImage');
+                });
                 this._inFetch = false;
                 itemListRender.apply(this, _.rest(arguments));
                 if (oldPages !== pages || this.collection.offset !== this.collection.size()) {

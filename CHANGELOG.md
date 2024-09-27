@@ -8,6 +8,7 @@
 - Add users option to config files; have a default config file ([#1649](../../pull/1649))
 - Remove no longer used code; adjust item list slightly ([#1651](../../pull/1651))
 - Reduce updates when showing item lists; add a waiting spinner ([#1653](../../pull/1653))
+- Update item lists check for large images when toggling recurse ([#1654](../../pull/1654))
 
 ### Bug Fixes
 
