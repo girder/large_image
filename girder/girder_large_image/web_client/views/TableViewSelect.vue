@@ -1,8 +1,11 @@
 <template>
   <div
     ref="dropdown"
-    class="relative flex h-8"
+    class="group relative flex h-8"
   >
+    <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 z-100 bottom-full whitespace-nowrap rounded-md mb-[2px] text-sm htk-hidden group-hover:block">
+      Select view
+    </div>
     <i class="ri-article-line absolute top-1/2 -translate-y-1/2 left-0 pl-2" />
 
     <div

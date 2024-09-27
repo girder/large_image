@@ -473,13 +473,20 @@ wrap(ItemListWidget, 'render', function (render) {
                 base[func](`
                     <div class="g-table-view-select"></div>
 
-                    <div class="li-item-list-filter relative flex h-8">
+                    <div class="li-item-list-filter group relative flex h-8">
+                        <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 z-100 w-72 top-full rounded-md mb-[2px] text-sm htk-hidden group-hover:block">
+                            <p>Matches items where all specified terms match.</p>
+                            <p>Surround with single quotes to include spaces, double quotes for exact value match.</p>
+                            <p>Prefix with - to exclude that value.</p>
+                            <p>By default, all columns are searched. Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values. Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).</p>
+                            <p>If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.</p>
+                            <p>Non-exact matches without a column specifier will also match columns that start with the specified value.</p>
+                        </div>
                         <i class="ri-search-line absolute top-1/2 -translate-y-1/2 left-0 pl-3"></i>
                         <input
                           type="text"
                           class="li-item-list-filter-input bg-white border border-zinc-300 rounded-md px-1 pl-8 text-sm focus:outline-none min-w-52"
                           placeholder="Search items"
-                          title="All specified terms must be included. Surround with single quotes to include spaces, double quotes for exact value match. Prefix with - to exclude that value. By default, all columns are searched. Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values. Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match). If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values. Non-exact matches without a column specifier will also match columns that start with the specified value."
                         >
                         <button class="li-item-list-filter-clear absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
                             <i class="ri-close-line"></i>
