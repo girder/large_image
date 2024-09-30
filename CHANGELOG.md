@@ -1,6 +1,10 @@
 # Change Log
 
-## 1.29.12
+## 1.30.0
+
+### Features
+
+- Add support for Python 3.13 ([#1675](../../pull/1675))
 
 ### Improvements
 
