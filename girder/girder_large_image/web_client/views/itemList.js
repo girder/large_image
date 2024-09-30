@@ -1,6 +1,7 @@
 import $ from 'jquery';
 import _ from 'underscore';
 import Backbone from 'backbone';
+import Vue from 'vue';
 
 import {wrap} from '@girder/core/utilities/PluginUtils';
 import {getApiRoot} from '@girder/core/rest';
@@ -18,11 +19,20 @@ import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
 
+import TableConfigDialog from './TableConfigDialog.vue';
+import TableViewSelect from './TableViewSelect.vue';
+
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);
     if (!this.$('#flattenitemlist').length && this.$('.g-item-list-container').length && this.itemListView && this.itemListView.setFlatten) {
-        $('button.g-checked-actions-button').parent().after(
-            '<div class="li-flatten-item-list" title="Check to show items in all subfolders in this list"><input type="checkbox" id="flattenitemlist"></input><label for="flattenitemlist">Flatten</label></div>'
+        $('.g-checked-actions').after(`
+            <div class="group relative inline-block flex items-center">
+                <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 bottom-full rounded-md mb-[2px] text-sm whitespace-nowrap htk-hidden group-hover:block">
+                    Show items in this folder and all subfolders
+                </div>
+                <input type="checkbox" id="flattenitemlist" style="margin:0 !important">
+                <span class="mx-1 text-sm">Flatten</span>
+            </div>`
         );
         if ((this.itemListView || {})._recurse) {
             this.$('#flattenitemlist').prop('checked', true);
@@ -33,9 +43,9 @@ wrap(HierarchyWidget, 'render', function (render) {
         this.delegateEvents();
     }
     if (this.$('#flattenitemlist').length && this.parentModel.get('_modelType') !== 'folder') {
-        this.$('.li-flatten-item-list').addClass('hidden');
+        this.$('.li-flatten-item-list').addClass('htk-hidden');
     } else {
-        this.$('.li-flatten-item-list').removeClass('hidden');
+        this.$('.li-flatten-item-list').removeClass('htk-hidden');
     }
 });
 
@@ -84,7 +94,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         }
         this.render();
     });
-    this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
+    this.events['click .sortable'] = (evt) => sortColumn.call(this, evt);
     this.events['click .li-item-list-cell-filter'] = (evt) => itemListCellFilter.call(this, evt);
     this.events['click .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
     this.events['change .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
@@ -179,7 +189,113 @@ wrap(ItemListWidget, 'render', function (render) {
     }
 
     this._confList = () => {
-        return this._liconfig ? (this.$el.closest('.modal-dialog').length ? this._liconfig.itemListDialog : this._liconfig.itemList) : undefined;
+        if (!this._liconfig) {
+            return undefined;
+        }
+        if (this.$el.closest('.modal-dialog').length) {
+            return this._liconfig.itemListDialog;
+        }
+        if (this._liconfig.itemList && this._liconfig.itemList.fromName) {
+            const foundView  = (this._liconfig.namedItemLists || {})[this._liconfig.itemList.fromName];
+            if (foundView) {
+                return foundView;
+            }
+        }
+        return this._liconfig.itemList;
+    };
+
+    this._saveTableConfig = ({columns: config, name, newView, originalName}) => {
+        // Update or add the named view
+        if (!this._liconfig) {
+            this._liconfig = {};
+        }
+        if (!this._liconfig.namedItemLists) {
+            this._liconfig.namedItemLists = {};
+        }
+        if (newView) {
+            // Need to make the view name unique
+            let foundView = this._liconfig.namedItemLists[name];
+            while (foundView) {
+                name += ' Copy';
+                foundView = this._liconfig.namedItemLists[name];
+            }
+            this._liconfig.namedItemLists[name] = {columns: config, edit: true};
+        } else {
+            const foundView  = this._liconfig.namedItemLists[originalName];
+            if (foundView) {
+                if (originalName !== name) {
+                    // Need to make the view name unique
+                    let duplicate = this._liconfig.namedItemLists[name];
+                    while (duplicate) {
+                        name += ' Copy';
+                        duplicate = this._liconfig.namedItemLists[name];
+                    }
+                    delete this._liconfig.namedItemLists[originalName];
+                    this._liconfig.namedItemLists[name] = foundView;
+                }
+                foundView.columns = config;
+            } else {
+                // This may occur if we are moving an old existing default view to a named view
+                this._liconfig.namedItemLists[name] = {columns: config, edit: true};
+            }
+        }
+
+        // Make sure the named view is the current view
+        if (!this._liconfig.itemList) {
+            this._liconfig.itemList = {};
+        }
+        this._liconfig.itemList.fromName = name;
+        delete this._liconfig.itemList.columns;
+
+        // Save the new configuration to the yaml file
+        largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
+        itemListRender.apply(this);
+    };
+
+    this._deleteTableConfig = (name) => {
+        if (!this._liconfig) {
+            return;
+        }
+        delete this._liconfig.namedItemLists[name];
+        if (this._liconfig.itemList.fromName === name) {
+            this._liconfig.itemList.fromName = Object.keys(this._liconfig.namedItemLists)[0] || '';
+        }
+        itemListRender.apply(this);
+        largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
+    };
+
+    this._allColumns = () => {
+        if (this._liconfig && this._liconfig.allColumns) {
+            return this._liconfig.allColumns;
+        }
+        const allColumns = [
+            {type: 'image', value: 'thumbnail', title: 'Thumbnail'},
+            {type: 'image', value: 'label', title: 'Label'},
+            {type: 'record', value: 'controls', title: 'Controls'},
+            {type: 'record', value: 'name', title: 'Name'},
+            {type: 'record', value: 'size', title: 'Size'}
+        ];
+        const allColumnsMap = {};
+        this.collection.toArray().forEach((item) => {
+            const value = item.get('meta') || {};
+            for (const key in value) {
+                if (!allColumnsMap[key]) {
+                    allColumnsMap[key] = true;
+                    allColumns.push({
+                        type: 'metadata',
+                        value: key,
+                        title: key.replace(/[^a-zA-Z0-9]+/g, ' ')
+                            .split(' ')
+                            .filter((word) => word.length > 0)
+                            .map((word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                            )
+                            .join(' ')
+                    });
+                }
+            }
+        });
+        return allColumns;
     };
 
     /**
@@ -347,25 +463,38 @@ wrap(ItemListWidget, 'render', function (render) {
     function itemListRender() {
         const root = this.$el.closest('.g-hierarchy-widget');
         if (!root.find('.li-item-list-filter').length) {
-            let base = root.find('.g-hierarchy-actions-header .g-folder-header-buttons').eq(0);
+            let base = root.find('.g-checked-actions').eq(0);
             let func = 'after';
             if (!base.length) {
                 base = root.find('.g-hierarchy-breadcrumb-bar>.breadcrumb>div').eq(0);
                 func = 'before';
             }
             if (base.length) {
-                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input" title="' +
-                    'All specified terms must be included.  ' +
-                    'Surround with single quotes to include spaces, double quotes for exact value match.  ' +
-                    'Prefix with - to exclude that value.  ' +
-                    'By default, all columns are searched.  ' +
-                    'Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values.  ' +
-                    'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' +
-                    'If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.  ' +
-                    'Non-exact matches without a column specifier will also match columns that start with the specified value.  ' +
-                    '"></input>' +
-                    '<span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>' +
-                    '</span>');
+                base[func](`
+                    <div class="g-table-view-select"></div>
+
+                    <div class="li-item-list-filter group relative flex h-8">
+                        <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 z-100 w-72 top-full rounded-md mb-[2px] text-sm htk-hidden group-hover:block">
+                            <p>Matches items where all specified terms match.</p>
+                            <p>Surround with single quotes to include spaces, double quotes for exact value match.</p>
+                            <p>Prefix with - to exclude that value.</p>
+                            <p>By default, all columns are searched. Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values. Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).</p>
+                            <p>If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.</p>
+                            <p>Non-exact matches without a column specifier will also match columns that start with the specified value.</p>
+                        </div>
+                        <i class="ri-search-line absolute top-1/2 -translate-y-1/2 left-0 pl-3"></i>
+                        <input
+                          type="text"
+                          class="li-item-list-filter-input bg-white border border-zinc-300 rounded-md px-1 pl-8 text-sm focus:outline-none min-w-52"
+                          placeholder="Search items"
+                        >
+                        <button class="li-item-list-filter-clear absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    </div>
+                `);
+                this._tableViewSelectVue = null; // We'll need to recreate this
+
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(this._generalFilter);
                 }
@@ -383,6 +512,14 @@ wrap(ItemListWidget, 'render', function (render) {
             this._lastSort = this._confList().defaultSort;
             this._setSort();
             return;
+        }
+        const itemList = this._confList();
+        if (!itemList.columns || itemList.columns.length === 0) {
+            itemList.columns = [
+                {type: 'record', value: 'name', title: 'Name'},
+                {type: 'record', value: 'size', title: 'Size'},
+                {type: 'record', value: 'controls', title: 'Controls'}
+            ];
         }
         this.$el.html(ItemListTemplate({
             items: this.collection.toArray(),
@@ -405,6 +542,104 @@ wrap(ItemListWidget, 'render', function (render) {
             parentView: this,
             AccessType: AccessType
         }));
+
+        const TableConfigDialogConstructor = Vue.extend(TableConfigDialog);
+        this._tableConfigVue = new TableConfigDialogConstructor({
+            propsData: {
+                config: (this._confList() || {}).columns || [],
+                allColumns: this._allColumns(),
+                name: ((this._liconfig || {}).itemList || {}).fromName || '',
+                newView: false
+            }
+        });
+        this._tableConfigVue.$on('save', (config, name) => {
+            this._saveTableConfig({columns: config, name, newView: false, originalName: this._tableConfigVue.name});
+        });
+        this._tableConfigVue.$mount(this.parentView.$el.find('.g-edit-table-view-dialog-container')[0]);
+
+        const currentName = (this._liconfig || {}).itemList ? this._liconfig.itemList.fromName : undefined;
+        const views = (this._liconfig || {}).namedItemLists || {};
+        if (this._tableViewSelectVue) {
+            this._tableViewSelectVue.value = currentName;
+            this._tableViewSelectVue.views = views;
+            this._tableViewSelectVue.loggedIn = !!getCurrentUser();
+        } else {
+            const TableViewSelectConstructor = Vue.extend(TableViewSelect);
+            this._tableViewSelectVue = new TableViewSelectConstructor({
+                propsData: {
+                    value: currentName,
+                    views,
+                    loggedIn: !!getCurrentUser()
+                }
+            });
+
+            this._tableViewSelectVue.$on('change', (name) => {
+                if (!this._liconfig) {
+                    this._liconfig = {};
+                }
+                if (!this._liconfig.itemList) {
+                    this._liconfig.itemList = {};
+                }
+                this._liconfig.itemList.fromName = name;
+                delete this._liconfig.itemList.columns;
+                itemListRender.apply(this);
+                if (getCurrentUser()) {
+                    largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
+                }
+            });
+
+            this._tableViewSelectVue.$on('edit', (name) => {
+                this._tableConfigVue.config = (this._liconfig.namedItemLists || {})[name].columns;
+                this._tableConfigVue.name = name;
+                this._tableConfigVue.newView = false;
+                this._tableConfigVue.$refs.dialog.show();
+            });
+
+            this._tableViewSelectVue.$on('delete', (name) => {
+                this._deleteTableConfig(name);
+            });
+
+            this._tableViewSelectVue.$on('new', () => {
+                if (this._liconfig === undefined) {
+                    this._liconfig = {};
+                }
+                if (this._liconfig.namedItemLists === undefined) {
+                    this._liconfig.namedItemLists = {};
+                }
+                let name = 'View';
+                let num = 1;
+                let foundView = this._liconfig.namedItemLists[name];
+                while (foundView) {
+                    num += 1;
+                    name = `View ${num}`;
+                    foundView = this._liconfig.namedItemLists[name];
+                }
+                const columns = [
+                    {type: 'record', value: 'name'},
+                    {type: 'record', value: 'size'},
+                    {type: 'record', value: 'controls'}
+                ];
+                this._liconfig.namedItemLists[name] = {columns, edit: true};
+
+                this._tableConfigVue.config = columns;
+                this._tableConfigVue.name = name;
+                this._tableConfigVue.newView = true;
+                this._tableConfigVue.$refs.dialog.show();
+            });
+
+            this._tableViewSelectVue.$on('copy', (name) => {
+                if (this._liconfig === undefined) {
+                    this._liconfig = {};
+                }
+                if (this._liconfig.namedItemLists === undefined) {
+                    this._liconfig.namedItemLists = {};
+                }
+                const foundView = this._liconfig.namedItemLists[name];
+                this._saveTableConfig({columns: foundView.columns, name, newView: true});
+            });
+
+            this._tableViewSelectVue.$mount(this.parentView.$el.find('.g-table-view-select')[0]);
+        }
 
         const parent = this.$el;
         this.$el.find('.large_image_thumbnail').each(function () {
@@ -481,14 +716,20 @@ wrap(ItemListWidget, 'remove', function (remove) {
 });
 
 function sortColumn(evt) {
-    const header = $(evt.target);
+    const icon = {
+        up: 'ri-arrow-up-line',
+        down: 'ri-arrow-down-line',
+        none: 'ri-arrow-up-down-line'
+    };
+    const header = $(evt.currentTarget);
     const entry = {
         type: header.attr('column_type'),
         value: header.attr('column_value')
     };
-    const curDir = header.hasClass('down') ? 'down' : header.hasClass('up') ? 'up' : null;
+    const sortIndicator = header.find('.sort-indicator');
+    const curDir = sortIndicator.hasClass(icon.down) ? 'down' : sortIndicator.hasClass(icon.up) ? 'up' : 'none';
     const nextDir = curDir === 'down' ? 'up' : 'down';
-    header.toggleClass('down', nextDir === 'down').toggleClass('up', nextDir === 'up');
+    sortIndicator.toggleClass(icon.down, nextDir === 'down').toggleClass(icon.up, nextDir === 'up').toggleClass(icon.none, nextDir === 'none');
     entry.dir = nextDir;
     const oldSort = this._lastSort;
     if (!this._lastSort) {
