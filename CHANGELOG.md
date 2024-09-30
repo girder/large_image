@@ -13,6 +13,7 @@
 ### Changes
 
 - Handle a rasterio deprecation ([#1655](../../pull/1655))
+- Handle a variation in a bioformats exception ([#1656](../../pull/1656))
 
 ### Bug Fixes
 
