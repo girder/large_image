@@ -94,7 +94,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         }
         this.render();
     });
-    this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
+    this.events['click .sortable'] = (evt) => sortColumn.call(this, evt);
     this.events['click .li-item-list-cell-filter'] = (evt) => itemListCellFilter.call(this, evt);
     this.events['click .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
     this.events['change .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
@@ -716,14 +716,20 @@ wrap(ItemListWidget, 'remove', function (remove) {
 });
 
 function sortColumn(evt) {
-    const header = $(evt.target);
+    const icon = {
+        up: 'ri-arrow-up-line',
+        down: 'ri-arrow-down-line',
+        none: 'ri-arrow-up-down-line',
+    };
+    const header = $(evt.currentTarget);
     const entry = {
         type: header.attr('column_type'),
         value: header.attr('column_value')
     };
-    const curDir = header.hasClass('down') ? 'down' : header.hasClass('up') ? 'up' : null;
+    const sortIndicator = header.find('.sort-indicator');
+    const curDir = sortIndicator.hasClass(icon['down']) ? 'down' : sortIndicator.hasClass(icon['up']) ? 'up' : 'none';
     const nextDir = curDir === 'down' ? 'up' : 'down';
-    header.toggleClass('down', nextDir === 'down').toggleClass('up', nextDir === 'up');
+    sortIndicator.toggleClass(icon['down'], nextDir === 'down').toggleClass(icon['up'], nextDir === 'up').toggleClass(icon['none'], nextDir === 'none');
     entry.dir = nextDir;
     const oldSort = this._lastSort;
     if (!this._lastSort) {
