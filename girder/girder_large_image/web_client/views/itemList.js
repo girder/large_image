@@ -719,7 +719,7 @@ function sortColumn(evt) {
     const icon = {
         up: 'ri-arrow-up-line',
         down: 'ri-arrow-down-line',
-        none: 'ri-arrow-up-down-line',
+        none: 'ri-arrow-up-down-line'
     };
     const header = $(evt.currentTarget);
     const entry = {
@@ -727,9 +727,9 @@ function sortColumn(evt) {
         value: header.attr('column_value')
     };
     const sortIndicator = header.find('.sort-indicator');
-    const curDir = sortIndicator.hasClass(icon['down']) ? 'down' : sortIndicator.hasClass(icon['up']) ? 'up' : 'none';
+    const curDir = sortIndicator.hasClass(icon.down) ? 'down' : sortIndicator.hasClass(icon.up) ? 'up' : 'none';
     const nextDir = curDir === 'down' ? 'up' : 'down';
-    sortIndicator.toggleClass(icon['down'], nextDir === 'down').toggleClass(icon['up'], nextDir === 'up').toggleClass(icon['none'], nextDir === 'none');
+    sortIndicator.toggleClass(icon.down, nextDir === 'down').toggleClass(icon.up, nextDir === 'up').toggleClass(icon.none, nextDir === 'none');
     entry.dir = nextDir;
     const oldSort = this._lastSort;
     if (!this._lastSort) {
