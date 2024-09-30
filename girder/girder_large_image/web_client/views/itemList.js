@@ -28,7 +28,7 @@ wrap(HierarchyWidget, 'render', function (render) {
         $('.g-checked-actions').after(`
             <div class="group relative inline-block flex items-center">
                 <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 bottom-full rounded-md mb-[2px] text-sm whitespace-nowrap htk-hidden group-hover:block">
-                    Flatten
+                    Show items in this folder and all subfolders
                 </div>
                 <input type="checkbox" id="flattenitemlist" style="margin:0 !important">
                 <span class="mx-1 text-sm">Flatten</span>
