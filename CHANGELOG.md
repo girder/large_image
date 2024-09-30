@@ -10,6 +10,10 @@
 - Reduce updates when showing item lists; add a waiting spinner ([#1653](../../pull/1653))
 - Update item lists check for large images when toggling recurse ([#1654](../../pull/1654))
 
+### Changes
+
+- Handle a rasterio deprecation ([#1655](../../pull/1655))
+
 ### Bug Fixes
 
 - Fix styling images with empty tile layers ([#1650](../../pull/1650))
