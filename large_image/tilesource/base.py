@@ -572,7 +572,8 @@ class TileSource(IPyLeafletMixin):
         for itile in self.tileIterator(format=TILE_FORMAT_NUMPY, **kwargs):
             if time.time() - lastlog > 10:
                 self.logger.info(
-                    'Calculating histogram min/max %d/%d',
+                    'Calculating histogram min/max for frame %d, tile %d/%d',
+                    kwargs.get('frame', 0),
                     itile['tile_position']['position'], itile['iterator_range']['position'])
                 lastlog = time.time()
             tile = itile['tile']
