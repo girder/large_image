@@ -154,7 +154,8 @@ format_examples = [
         examples=[
             dict(
                 filename='Animated_PNG_example_bouncing_beach_ball.png',
-                url='https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
+                # originally from 'https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
+                url='https://data.kitware.com/api/v1/item/66fea4692480d44510d0ca6b/download',
                 hash='3b28e2462f1b31d0d15d795e6e58baf397899c3f864be7034bf47939b5bbbc3b',
             ),
         ],
