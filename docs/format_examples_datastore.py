@@ -197,7 +197,8 @@ format_examples = [
         examples=[
             dict(
                 filename='SampleGIFImage_40kbmb.gif',
-                url='https://sample-videos.com/gif/3.gif',
+                # originally from 'https://sample-videos.com/gif/3.gif',
+                url='https://data.kitware.com/api/v1/item/66fde6b52480d44510d0ca2d/download',
                 hash='0ff064ba36e4f493f6a1b3d9d29c8eee1b719e39fc6768c5a6129534869c380b',
             ),
         ],
