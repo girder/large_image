@@ -75,7 +75,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
                 };
             });
             update = true;
-        } else if (this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
+        } else if (this._confList && this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
             this._lastSort = this._confList().defaultSort;
             update = true;
         }
