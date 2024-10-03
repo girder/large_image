@@ -877,7 +877,7 @@ class TestLargeImageAnnotationElementGroups:
             },
         )
         assert utilities.respStatus(resp) == 200
-        assert len(resp.json) >= 8
+        assert len(resp.json) >= 5
 
         resp = server.request(
             path=f'/annotation/item/{itemSrc["_id"]}/plot/data',

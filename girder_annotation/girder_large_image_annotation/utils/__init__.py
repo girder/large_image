@@ -4,6 +4,7 @@ import math
 import os
 import re
 import threading
+import weakref
 
 from bson.objectid import ObjectId
 
@@ -29,9 +30,13 @@ dataFileExtReaders = {
     'application/x-xls': 'read_excel',
 }
 scanDatafileRecords = 50
+scanAnnotationElements = 5000
+
+_recentPlottableItemDataLock = threading.RLock()
+_recentPlottableItemData = {}
 
 
-@functools.lru_cache(maxsize=100)
+@functools.lru_cache(maxsize=250)
 def _dfFromFile(fileid, full=False):
     import pandas as pd
 
@@ -40,7 +45,24 @@ def _dfFromFile(fileid, full=False):
     reader = dataFileExtReaders.get(
         ext, dataFileExtReaders.get(file.get('mimeType'), None))
     if reader == 'read_excel':
-        df = getattr(pd, reader)(File().open(file), sheet_name=None)
+        params = {
+            'sheet_name': None,
+            'usecols': lambda x: 'Unnamed: ' not in str(x),
+        }
+        try:
+            import python_calamine  # noqa
+
+            params['engine'] = 'calamine'
+        except Exception:
+            pass
+        try:
+            df = getattr(pd, reader)(File().open(file), **params)
+        except Exception:
+            if 'engine' in params:
+                params.pop('engine')
+                df = getattr(pd, reader)(File().open(file), **params)
+            else:
+                raise
     else:
         df = {'entry': getattr(pd, reader)(File().open(file))}
     df = {
@@ -387,13 +409,29 @@ def isGeoJSON(annotation):
         'MultiPolygon'}
 
 
+def _cancelPlottableItemData(uuid, newRecord):
+    if uuid is None:
+        return
+    with _recentPlottableItemDataLock:
+        if uuid in _recentPlottableItemData:
+            old = _recentPlottableItemData.pop(uuid)
+            try:
+                old().cancel = True
+            except Exception:
+                pass
+        if len(_recentPlottableItemData) > 7:
+            _recentPlottableItemData.pop(next(iter(_recentPlottableItemData)))
+        _recentPlottableItemData[uuid] = weakref.ref(newRecord)
+
+
 class PlottableItemData:
     maxItems = 1000
     maxAnnotationElements = 5000
     maxDistinct = 20
     allowedTypes = (str, bool, int, float)
 
-    def __init__(self, user, item, annotations=None, adjacentItems=False, sources=None):
+    def __init__(self, user, item, annotations=None, adjacentItems=False,
+                 sources=None, compute=None, uuid=None):
         """
         Get plottable data associated with an item.
 
@@ -408,15 +446,37 @@ class PlottableItemData:
         :param sources: None for all, or a string with a comma-separated list
             or a list of strings; when a list, the options are folder, item,
             annotation, datafile.
+        :param compute: None for none, or a dictionary with keys "columns": a
+            list of columns to include in the computation; if unspecified or an
+            empty list, no computation is done, "function": a string with the
+            name of the function, such as umap, "params": additional parameters
+            to pass to the function.  If none of the requiredKeys are
+            compute.(x|y|z), the computation will not be performed.  Only rows
+            which have all selected columns present will be included in the
+            computation.
+        :param uuid: An optional uuid to allow cancelling a previous request.
+            If specified and there are any outstanding requests with the same
+            uuid, they may be cancelled to save resources.
         """
+        _cancelPlottableItemData(uuid, self)
         self.user = user
         self._columns = None
         self._datacolumns = None
         self._data = None
+        self._compute = None
+        self.cancel = False
+        try:
+            if len(compute['columns']):
+                self._compute = {'function': 'umap', 'params': {
+                    'random_state': 1, 'n_jobs': 1}}
+                self._compute.update(compute)
+        except Exception:
+            pass
         if sources and not isinstance(sources, (list, tuple)):
             sources = sources.split(',')
         self._sources = tuple(sources) if sources else None
-        if self._sources and 'annotation' not in self._sources:
+        if (self._sources and 'annotation' not in self._sources and
+                'annotationelement' not in self._sources):
             annotations = None
         self._fullScan = adjacentItems == '__all__'
         self._findItems(item, adjacentItems)
@@ -488,9 +548,13 @@ class PlottableItemData:
                 if annot['annotation']['name'] not in names:
                     names[annot['annotation']['name']] = idx
             for adjitem in self.items[1:]:
+                if self.cancel:
+                    return
                 query = {'_active': {'$ne': False}, 'itemId': adjitem['_id']}
                 annotList = [None] * len(self.annotations[0])
                 for annot in Annotation().find(query, limit=0, sort=[('_version', -1)]):
+                    if self.cancel:
+                        return
                     if annot['annotation']['name'] in names and annotList[
                             names[annot['annotation']['name']]] is None:
                         annotList[names[annot['annotation']['name']]] = annot
@@ -517,6 +581,8 @@ class PlottableItemData:
                 self._itemfilelist[iidx] = [None] * len(self._itemfilelist[0])
             names = {}
             for file in Item().childFiles(item):
+                if self.cancel:
+                    return
                 try:
                     if (file['_id'] == self.item['largeImage']['fileId'] or
                             file['_id'] == self.item['largeImage'].get('originalId')):
@@ -559,7 +625,11 @@ class PlottableItemData:
         'bbox.y0': 'Bounding Box Low Y',
         'bbox.x1': 'Bounding Box High X',
         'bbox.y1': 'Bounding Box High Y',
+        'compute.x': 'Dimension Reduction X',
+        'compute.y': 'Dimension Reduction Y',
+        'compute.z': 'Dimension Reduction Z',
     }
+    computeColumns = {'compute.x', 'compute.y', 'compute.z'}
 
     def itemNameIDSelector(self, isName, selector):
         """
@@ -597,19 +667,45 @@ class PlottableItemData:
 
         return itemNameSelector if isName else itemIDSelector
 
+    def _bboxLookupTable(self):
+        self._bboxLookup = {}
+        for srow, x0val in self._datacolumns['bbox.x0'].items():
+            x0val = int(x0val)
+            y0val = self._datacolumns['bbox.y0'].get(srow)
+            if y0val is None:
+                continue
+            if x0val not in self._bboxLookup:
+                self._bboxLookup[x0val] = {}
+            if y0val not in self._bboxLookup[x0val]:
+                self._bboxLookup[x0val][y0val] = set()
+            self._bboxLookup[x0val][y0val].add(srow)
+
     def datafileAnnotationElementSelector(self, key, cols):
+        # Max pixel difference for bounding box
+        epsilon = 2
 
         def annotationElementSelector(record, data, row):
             bbox = [col[1](record, data, row) for col in cols]
+            if 'bbox.x0' not in self._datacolumns or 'bbox.y0' not in self._datacolumns:
+                return None
+            if not hasattr(self, '_bboxLookup'):
+                self._bboxLookupTable()
             if key in self._datacolumns:
-                for row in self._datacolumns[key]:
-                    if self._datacolumns[key][row] is not None:
-                        for bidx, bkey in enumerate(['bbox.x0', 'bbox.y0', 'bbox.x1', 'bbox.y1']):
-                            val = self._datacolumns[bkey].get(row)
-                            if val is None or abs(val - bbox[bidx]) > 2:
-                                break
-                        else:
-                            return self._datacolumns[key][row]
+                for x0val in range(int(math.floor(bbox[0] - epsilon)),
+                                   int(math.ceil(bbox[0] + epsilon)) + 1):
+                    if x0val in self._bboxLookup:
+                        for y0val in range(int(math.floor(bbox[1] - epsilon)),
+                                           int(math.ceil(bbox[1] + epsilon)) + 1):
+                            if y0val in self._bboxLookup[x0val]:
+                                for srow in self._bboxLookup[x0val][y0val]:
+                                    if self._datacolumns[key][srow] is not None:
+                                        for bidx, bkey in enumerate([
+                                                'bbox.x0', 'bbox.y0', 'bbox.x1', 'bbox.y1']):
+                                            val = self._datacolumns[bkey].get(srow)
+                                            if val is None or abs(val - bbox[bidx]) > epsilon:
+                                                break
+                                        else:
+                                            return self._datacolumns[key][srow]
             return None
 
         return annotationElementSelector
@@ -756,14 +852,14 @@ class PlottableItemData:
                 if bkey in columns and doctype in columns[bkey]['where']]
             if len(cols) == 4:
                 # If we load all of these from annotation elements, use all
-                # three keys:
-                # for akey in {'annotation.id', 'annotation.name', 'annotationelement.id'}:
-                for akey in {'annotationelement.id'}:
+                # available keys:
+                for akey in [col for col in self.commonColumns if col.startswith('annotation')]:
                     if self._datacolumns and akey in self._datacolumns:
                         self._requiredColumns.add(akey)
                     self._ensureColumn(
-                        columns, akey, self.commonColumns[akey], doctype,
-                        getData, self.datafileAnnotationElementSelector(akey, cols),
+                        columns, akey, self.commonColumns[akey],
+                        '.'.join(doctype.split('.')[:2]), getData,
+                        self.datafileAnnotationElementSelector(akey, cols),
                         length)
 
     def _ensureColumn(self, columns, keyname, title, doctype, getData, selector, length):
@@ -871,15 +967,19 @@ class PlottableItemData:
         title = self.commonColumns[keyname]
         self._ensureColumn(columns, keyname, title, doctype, getData, selector, None)
 
-    def _collectRecordRows(
+    def _collectRecordRows(  # noqa
             self, record, data, selector, length, colkey, col, recidx, rows,
-            iid, aid, eid):
+            iid, aid, eid, doctype, columns):
         """
         Collect statistics and possible data from one data set.  See
         _collectRecords for parameter details.
         """
+        getAid = (aid == '' and (doctype.startswith(('folder', 'datafile.'))))
+        getEid = (eid == '' and (doctype.startswith(('folder', 'datafile.'))))
         count = 0
         for rowidx in range(rows):
+            if self.cancel:
+                return 0
             try:
                 value = selector(record, data, rowidx)
             except Exception:
@@ -903,6 +1003,22 @@ class PlottableItemData:
             if len(col['distinct']) <= self.maxDistinct:
                 col['distinct'].add(value)
             if self._datacolumns and colkey in self._datacolumns:
+
+                if getAid:
+                    try:
+                        aid = columns['annotation.id']['where'][doctype][1](record, data, rowidx)
+                        if aid is None:
+                            aid = ''
+                    except Exception:
+                        pass
+                if getEid:
+                    try:
+                        eid = columns['annotationelement.id']['where'][doctype][1](
+                            record, data, rowidx)
+                        if eid is None:
+                            eid = ''
+                    except Exception:
+                        pass
                 self._datacolumns[colkey][(
                     iid, aid, eid,
                     rowidx if length is not None else -1)] = value
@@ -925,12 +1041,14 @@ class PlottableItemData:
             If no required fields were specified, this will be the count of all
             added data entries.
         """
-        count = 0
+        count = None
         eid = ''
         for colkey, col in columns.items():
             if self._datacolumns and colkey not in self._datacolumns:
                 continue
             for where, (getData, selector, length) in col['where'].items():
+                if self.cancel:
+                    return 0
                 if doctype != where and not where.startswith(doctype + '.'):
                     continue
                 for recidx, record in enumerate(recordlist):
@@ -945,10 +1063,15 @@ class PlottableItemData:
                         rows = 1 if length is None else length(record, data)
                     except Exception:
                         continue
-                    count += self._collectRecordRows(
+                    subcount = self._collectRecordRows(
                         record, data, selector, length, colkey, col, recidx,
-                        rows, iid, aid, eid)
-        return count
+                        rows, iid, aid, eid, doctype, columns)
+                    if self._datacolumns:
+                        if colkey in self._requiredColumns:
+                            count = min(count, subcount) if count is not None else subcount
+                    else:
+                        count = (count or 0) + subcount
+        return count if count is not None else 0
 
     def _collectColumns(self, columns, recordlist, doctype, first=True, iid='', aid=''):
         """
@@ -991,6 +1114,10 @@ class PlottableItemData:
                                lambda record, data, row: record['label']['value'])
             self._commonColumn(columns, 'annotationelement.type', doctype, getData,
                                lambda record, data, row: record['type'])
+            self._commonColumn(columns, 'annotation.id', doctype, getData,
+                               lambda record, data, row: str(record['_aid']))
+            self._commonColumn(columns, 'annotation.name', doctype, getData,
+                               lambda record, data, row: str(record['_aname']))
             self._commonColumn(columns, 'bbox.x0', doctype, getData,
                                lambda record, data, row: record['_bbox']['lowx'])
             self._commonColumn(columns, 'bbox.y0', doctype, getData,
@@ -1015,11 +1142,15 @@ class PlottableItemData:
         for iidx, annotList in enumerate(self.annotations or []):
             iid = str(self.items[iidx]['_id'])
             for anidx, annot in enumerate(annotList):
-                # If the first item's annotation didn't contribute any required
-                # data to the data set, skip subsequent items' annotations;
-                # they are likely to be discarded.
-                if iidx and not countsPerAnnotation.get(anidx, 0) and not self._fullScan:
-                    continue
+                if self.cancel:
+                    return 0
+                # This had been checking if the first item's annotation didn't
+                # contribute any required data to the data set, skip subsequent
+                # items' annotations; they are likely to be discarded.  This
+                # is untrue if datafiles or folder level data augments the
+                # element records
+                # if iidx and not countsPerAnnotation.get(anidx, 0) and not self._fullScan:
+                #     continue
                 startcount = count
                 if annot is None:
                     continue
@@ -1029,6 +1160,8 @@ class PlottableItemData:
                 if ((not self._sources or 'annotationelement' in self._sources) and
                         Annotationelement().countElements(annot) <= self.maxAnnotationElements):
                     for element in Annotationelement().yieldElements(annot, bbox=True):
+                        element['_aid'] = annot['_id']
+                        element['_aname'] = annot['annotation']['name']
                         count += self._collectColumns(
                             columns, [element], 'annotationelement', iid=iid, aid=str(annot['_id']))
                 if not iidx:
@@ -1046,6 +1179,8 @@ class PlottableItemData:
         for iidx, dfList in enumerate(self._itemfilelist or []):
             iid = str(self.items[iidx]['_id'])
             for dfidx, file in enumerate(dfList):
+                if self.cancel:
+                    return 0
                 # If the first item's data file didn't contribute any required
                 # data to the data set, skip subsequent items' data files;
                 # they are likely to be discarded.
@@ -1068,6 +1203,84 @@ class PlottableItemData:
                     countsPerDataFile[dfidx] = count - startcount
         return count
 
+    def _computeFunction(self, rows):
+        if self._compute['function'] == 'umap':
+            import umap
+
+            logger.info(f'Calling umap on {len(rows)} rows')
+            reducer = umap.UMAP(**self._compute['params'])
+            self._computed = reducer.fit_transform(list(rows.values()))
+            logger.info('Called umap')
+            return True
+
+    def _getColumnsFromCompute(self, columns):  # noqa
+        """
+        Collect columns and data from compute actions.
+        """
+
+        def computeGetData(record):
+            return {}
+
+        def computeLength(record, data):
+            return len(self._computed)
+
+        def computeSelector(key):
+            axis = ord(key[-1:]) - ord('x')
+
+            def computeSelectorAxis(record, data, row):
+                return self._computed[row][axis]
+
+            return computeSelectorAxis
+
+        if not self._datacolumns:
+            if len([col for col in columns.values() if col['type'] == 'number']) >= 2:
+                for key in self.computeColumns:
+                    title = self.commonColumns[key]
+                    self._ensureColumn(
+                        columns, key, title, 'compute', computeGetData,
+                        computeSelector(key), computeLength)
+                    columns[key]['count'] = 1
+                    columns[key]['min'] = columns[key]['max'] = 0
+            return 0
+        if self._compute is None or not len(self._requiredColumns & self.computeColumns):
+            return 0
+        compcol = {
+            key for key, col in columns.items()
+            if col['type'] == 'number' and col.get('min') is not None
+        } & set(self._compute['columns'])
+        if not len(compcol):
+            return 0
+        rows = {}
+        cols = sorted({col for col in self._compute['columns'] if col in self._datacolumns})
+        lencols = len(cols)
+        needcols = cols + sorted(set(self._requiredColumns) - set(cols) - self.computeColumns)
+        for kidx, key in enumerate(needcols):
+            for row, value in self._datacolumns[key].items():
+                if not kidx:
+                    rows[row] = [value]
+                elif row in rows and len(rows[row]) == kidx:
+                    rows[row].append(value)
+        rows = {k: row for k, row in rows.items() if len(row) == len(needcols)}
+        if not len(rows):
+            return 0
+        rows = {k: row[:lencols] for k, row in rows.items()}
+        if self.cancel:
+            return 0
+        if not self._computeFunction(rows):
+            return 0
+        for key in self.computeColumns:
+            if key in self._requiredColumns and key in self._datacolumns:
+                title = self.commonColumns[key]
+                self._ensureColumn(
+                    columns, key, title, 'compute', computeGetData,
+                    computeSelector(key), computeLength)
+                cidx = ord(key[-1:]) - ord('x')
+                for ridx, row in enumerate(rows):
+                    self._datacolumns[key][row] = float(self._computed[ridx][cidx])
+                columns[key]['count'] = len(rows)
+                columns[key]['min'] = columns[key]['max'] = 0
+        return len(rows)
+
     def _getColumns(self):
         """
         Get a sorted list of plottable columns with some metadata for each.
@@ -1086,6 +1299,7 @@ class PlottableItemData:
                     count += self._collectColumns(columns, [item], 'item', first=False)
         count += self._getColumnsFromAnnotations(columns)
         count += self._getColumnsFromDataFiles(columns)
+        count += self._getColumnsFromCompute(columns)
         for result in columns.values():
             if len(result['distinct']) <= self.maxDistinct:
                 result['distinct'] = sorted(result['distinct'])
@@ -1095,9 +1309,14 @@ class PlottableItemData:
             if result['type'] != 'number' or result['min'] is None:
                 result.pop('min', None)
                 result.pop('max', None)
-        prefixOrder = {'item': 0, 'annotation': 1, 'annotationelement': 2, 'data': 3, 'bbox': 4}
+        prefixOrder = {
+            'item': 0, 'annotation': 1, 'annotationelement': 2, 'data': 3,
+            'bbox': 4, 'compute': 5}
         columns = sorted(columns.values(), key=lambda x: (
-            prefixOrder.get(x['key'].split('.', 1)[0], len(prefixOrder)), x['key']))
+            prefixOrder.get(x['key'].split('.', 1)[0], len(prefixOrder)),
+            x['count'] <= 1,
+            x['title'].lower(),
+            x['key']))
         return columns
 
     @property
@@ -1168,7 +1387,7 @@ class PlottableItemData:
             rows = [row for ridx, row in enumerate(rows) if rows[ridx] not in discard]
         return data, rows
 
-    def data(self, columns, requiredColumns=None):
+    def data(self, columns, requiredColumns=None):  # noqa
         """
         Get plottable data.
 
@@ -1182,13 +1401,21 @@ class PlottableItemData:
             columns = columns.split(',')
         if not isinstance(requiredColumns, list):
             requiredColumns = requiredColumns.split(',') if requiredColumns is not None else []
-        requiredColumns = set(requiredColumns)
+        specifiedReqColumns = set(requiredColumns)
         self._requiredColumns = set(requiredColumns)
+        if self._compute:
+            if ('compute.z' in specifiedReqColumns and
+                    self._compute['function'] == 'umap' and
+                    'n_components' not in self._compute['params']):
+                self._compute['params']['n_components'] = 3
+            self._requiredColumns.update(self._compute['columns'])
         with self._dataLock:
             self._datacolumns = {c: {} for c in columns}
             rows = set()
             # collects data as a side effect
             collist = self._getColumns()
+            if self.cancel:
+                return
             for coldata in self._datacolumns.values():
                 rows |= set(coldata.keys())
             rows = sorted(rows)
@@ -1198,10 +1425,12 @@ class PlottableItemData:
             logger.info(f'Gathering {len(colsout)} x {len(rows)} data')
             data, rows = self._collectData(rows, colsout)
             self._datacolumns = None
+        if hasattr(self, '_bboxLookup'):
+            logger.info(f'Bounding boxes: {sum(len(x) for x in self._bboxLookup.values())}')
         for cidx, col in enumerate(colsout):
             colkey = col['key']
             numrows = len(data)
-            if colkey in requiredColumns:
+            if colkey in specifiedReqColumns:
                 data = [row for row in data if row[cidx] is not None]
             if len(data) < numrows:
                 logger.info(f'Reduced row count from {numrows} to {len(data)} '
@@ -1209,13 +1438,16 @@ class PlottableItemData:
         subdata = data
         for cidx, col in enumerate(colsout):
             colkey = col['key']
-            numrows = len(data)
-            if colkey in self._requiredColumns and colkey not in requiredColumns:
+            numrows = len(subdata)
+            if colkey in self._requiredColumns and colkey not in specifiedReqColumns:
                 subdata = [row for row in subdata if row[cidx] is not None]
+            if len(subdata) < numrows:
+                logger.info(f'Reduced row count from {numrows} to {len(subdata)} '
+                            f'because of None values in implied column {colkey}')
         if len(subdata) and len(subdata) < len(data):
-            logger.info(f'Reduced row count from {len(data)} to {len(subdata)} '
-                        f'because of None values in implied columns')
             data = subdata
+        if self.cancel:
+            return
         # Refresh our count, distinct, distinctcount, min, max for each column
         for cidx, col in enumerate(colsout):
             col['count'] = len([row[cidx] for row in data if row[cidx] is not None])

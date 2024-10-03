@@ -1,5 +1,71 @@
 # Change Log
 
+## 1.29.12
+
+### Improvements
+
+- Better handle images without enough tile layers ([#1648](../../pull/1648))
+- Add users option to config files; have a default config file ([#1649](../../pull/1649))
+- Remove no longer used code; adjust item list slightly ([#1651](../../pull/1651))
+- Reduce updates when showing item lists; add a waiting spinner ([#1653](../../pull/1653))
+- Update item lists check for large images when toggling recurse ([#1654](../../pull/1654))
+
+### Changes
+
+- Handle a rasterio deprecation ([#1655](../../pull/1655))
+- Handle a variation in a bioformats exception ([#1656](../../pull/1656))
+- Increase logging slow histograms ([#1658](../../pull/1658))
+
+### Bug Fixes
+
+- Fix styling images with empty tile layers ([#1650](../../pull/1650))
+
+## 1.29.11
+
+### Changes
+
+- Update zarr dependencies ([#1646](../../pull/1646))
+
+### Bug Fixes
+
+- Fixed an issue correlating bounding boxes across multiple annotations ([#1647](../../pull/1647))
+
+## 1.29.10
+
+### Improvements
+
+- Only list computable plot columns if there are other numeric columns ([#1634](../../pull/1634))
+- Allow canceling plottable data requests ([#1645](../../pull/1645))
+- List official yaml mime type for the multi source ([#1636](../../pull/1636))
+- Speed up correlating data files with annotations ([#1642](../../pull/1642))
+- Support dict with MultiFileTileSource ([#1641](../../pull/1641))
+- The PIL source reads more multi-frame images ([#1643](../../pull/1643))
+
+### Changes
+
+- Add an extension and mimetype to the listed openjpeg handlers ([#1644](../../pull/1644))
+
+### Bug Fixes
+
+- Fix an issue when asking not to resample a GDAL tile iterator ([#1640](../../pull/1640))
+
+## 1.29.9
+
+### Bug Fixes
+
+- Fix scaling small images in the multi source ([#1633](../../pull/1633))
+
+## 1.29.8
+
+### Improvements
+
+- Add the option to compute additional columns for plottable data ([#1626](../../pull/1626))
+
+### Bug Fixes
+
+- Fix scaling small images in the multi source with bicubic smoothing ([#1627](../../pull/1627))
+- Fix correlating annotation bounding boxes on adjacent items for plottable data ([#1628](../../pull/1628), ([#1632](../../pull/1632))
+
 ## 1.29.7
 
 ### Improvements
@@ -15,6 +81,7 @@
 
 - Harden converting sources that report varied tile bands ([#1615](../../pull/1615))
 - Harden many of the sources from reading bad files ([#1623](../../pull/1623))
+- Some projected bounds in the rasterio source could be off ([#1624](../../pull/1624))
 
 ## 1.29.6
 

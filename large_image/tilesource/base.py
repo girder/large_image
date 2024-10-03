@@ -572,7 +572,8 @@ class TileSource(IPyLeafletMixin):
         for itile in self.tileIterator(format=TILE_FORMAT_NUMPY, **kwargs):
             if time.time() - lastlog > 10:
                 self.logger.info(
-                    'Calculating histogram min/max %d/%d',
+                    'Calculating histogram min/max for frame %d, tile %d/%d',
+                    kwargs.get('frame', 0),
                     itile['tile_position']['position'], itile['iterator_range']['position'])
                 lastlog = time.time()
             tile = itile['tile']
@@ -1491,7 +1492,8 @@ class TileSource(IPyLeafletMixin):
         """
         return [True] * self.levels
 
-    def _getTileFromEmptyLevel(self, x: int, y: int, z: int, **kwargs) -> PIL.Image.Image:
+    def _getTileFromEmptyLevel(self, x: int, y: int, z: int, **kwargs) -> Tuple[
+            Union[PIL.Image.Image, np.ndarray], str]:
         """
         Given the x, y, z tile location in an unpopulated level, get tiles from
         higher resolution levels to make the lower-res tile.
@@ -1508,6 +1510,39 @@ class TileSource(IPyLeafletMixin):
         while dirlist[z] is None:
             scale *= 2
             z += 1
+        # if scale >= max(tileWidth, tileHeight), we can just get one tile per
+        # pixel at this point.  If dtype is not uint8 or the number of bands is
+        # greater than 4, also just use nearest neighbor.
+        if (scale >= max(self.tileWidth, self.tileHeight) or
+                (self.dtype and self.dtype != np.uint8) or
+                (self.bandCount and self.bandCount > 4)):
+            nptile = np.zeros((self.tileHeight, self.tileWidth, cast(int, self.bandCount)))
+            maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
+            maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
+            for newY in range(scale):
+                sty = (y * scale + newY) * self.tileHeight
+                dy = sty % scale
+                ty = (newY * self.tileHeight) // scale
+                if (newY and y * scale + newY >= maxY) or dy >= self.tileHeight:
+                    continue
+                for newX in range(scale):
+                    stx = (x * scale + newX) * self.tileWidth
+                    dx = stx % scale
+                    if (newX and x * scale + newX >= maxX) or dx >= self.tileWidth:
+                        continue
+                    tx = (newX * self.tileWidth) // scale
+                    if time.time() - lastlog > 10:
+                        self.logger.info(
+                            'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
+                            x * scale + newX, y * scale + newY, z)
+                        lastlog = time.time()
+                    subtile = getattr(self, '_unstyledInstance', self).getTile(
+                        x * scale + newX, y * scale + newY, z,
+                        pilImageAllowed=False, numpyAllowed='always',
+                        sparseFallback=True, edge=False, frame=kwargs.get('frame'))
+                    subtile = subtile[dx::scale, dy::scale]
+                    nptile[ty:ty + subtile.shape[0], tx:tx + subtile.shape[1]] = subtile
+            return nptile, TILE_FORMAT_NUMPY
         while z - basez > self._maxSkippedLevels:
             z -= self._maxSkippedLevels
             scale = int(scale / 2 ** self._maxSkippedLevels)
@@ -1525,15 +1560,17 @@ class TileSource(IPyLeafletMixin):
                         'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                         x * scale + newX, y * scale + newY, z)
                     lastlog = time.time()
-                subtile = self.getTile(
+                subtile = getattr(self, '_unstyledInstance', self).getTile(
                     x * scale + newX, y * scale + newY, z,
                     pilImageAllowed=True, numpyAllowed=False,
                     sparseFallback=True, edge=False, frame=kwargs.get('frame'))
                 subtile = _imageToPIL(subtile)
+                mode = subtile.mode
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
-        return tile.resize((self.tileWidth, self.tileHeight),
-                           getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        return tile.resize(
+            (self.tileWidth, self.tileHeight),
+            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS).convert(mode), TILE_FORMAT_PIL
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
@@ -1779,7 +1816,8 @@ class TileSource(IPyLeafletMixin):
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
             dtype = cast(np.ndarray, image).dtype
-            if dtype == np.uint8 or resample is not None:
+            if dtype == np.uint8 or (resample is not None and (
+                    dtype != np.uint16 or cast(np.ndarray, image).shape[-1] != 1)):
                 image = _imageToPIL(cast(np.ndarray, image), mode).resize(
                     (outWidth, outHeight),
                     getattr(PIL.Image, 'Resampling', PIL.Image).NEAREST
@@ -1792,7 +1830,7 @@ class TileSource(IPyLeafletMixin):
             else:
                 cols = [int(idx * regionWidth / outWidth) for idx in range(outWidth)]
                 rows = [int(idx * regionHeight / outHeight) for idx in range(outHeight)]
-                image = np.take(np.take(image, rows, axis=0), cols, axis=1)
+                image = np.take(np.take(cast(np.ndarray, image), rows, axis=0), cols, axis=1)
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:

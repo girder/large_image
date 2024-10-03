@@ -483,13 +483,63 @@ def adjustConfigForUser(config, user):
                     {'_id': {'$in': user['groups']}}, sort=[('name', SortDir.ASCENDING)]):
                 if isinstance(groups.get(group['name']), dict):
                     config = _mergeDictionaries(config, groups[group['name']])
+    # Do this after merging groups, because the group access-level values can
+    # override the base access-level options.  For instance, if the base has
+    # an admin option, and the group has a user option, then doing this before
+    # group application can end up with user options for an admin.
     if isinstance(config.get('access'), dict):
         accessList = config.pop('access')
         if user and isinstance(accessList.get('user'), dict):
             config = _mergeDictionaries(config, accessList['user'])
         if user and user.get('admin') and isinstance(accessList.get('admin'), dict):
             config = _mergeDictionaries(config, accessList['admin'])
+    if isinstance(config.get('users'), dict):
+        users = config.pop('users')
+        if user and user['login'] in users:
+            config = _mergeDictionaries(config, users[user['login']])
     return config
+
+
+def addSettingsToConfig(config, user):
+    """
+    Add the settings for showing thumbnails and images in item lists to a
+    config file if the itemList or itemListDialog options are not set.
+
+    :param config: the config dictionary to modify.
+    :param user: the current user.
+    """
+    columns = []
+
+    showThumbnails = Setting().get(constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS)
+    if showThumbnails:
+        columns.append({'type': 'image', 'value': 'thumbnail', 'title': 'Thumbnail'})
+
+    extraSetting = constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC
+    if user is not None:
+        if user['admin']:
+            extraSetting = constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN
+        else:
+            extraSetting = constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA
+
+    showExtra = None
+    try:
+        showExtra = json.loads(Setting().get(extraSetting))
+    except Exception:
+        pass
+    if (isinstance(showExtra, dict) and 'images' in showExtra and
+            isinstance(showExtra['images'], list)):
+        for value in showExtra['images']:
+            if value != '*':
+                columns.append({'type': 'image', 'value': value, 'title': value.title()})
+
+    columns.append({'type': 'record', 'value': 'name', 'title': 'Name'})
+    columns.append({'type': 'record', 'value': 'controls', 'title': 'Contols'})
+    columns.append({'type': 'record', 'value': 'size', 'title': 'Size'})
+
+    if 'itemList' not in config:
+        config['itemList'] = {'columns': columns}
+    if 'itemListDialog' not in config:
+        config['itemListDialog'] = {'columns': columns}
 
 
 def yamlConfigFile(folder, name, user):
@@ -515,12 +565,15 @@ def yamlConfigFile(folder, name, user):
                     if isinstance(config, list) and len(config) == 1:
                         config = config[0]
                     # combine and adjust config values based on current user
-                    if isinstance(config, dict) and 'access' in config or 'group' in config:
+                    if isinstance(config, dict) and (
+                            'access' in config or 'groups' in config or 'users' in config):
                         config = adjustConfigForUser(config, user)
                     if addConfig and isinstance(config, dict):
                         config = _mergeDictionaries(config, addConfig)
                     if not isinstance(config, dict) or config.get('__inherit__') is not True:
-                        return config
+                        addConfig = config
+                        last = True
+                        break
                     config.pop('__inherit__')
                     addConfig = config
         if last:
@@ -541,10 +594,13 @@ def yamlConfigFile(folder, name, user):
                 last = True
         else:
             folder = Folder().load(folder['parentId'], user=user, level=AccessType.READ)
+
+    addConfig = {} if addConfig is None else addConfig
+    addSettingsToConfig(addConfig, user)
     return addConfig
 
 
-def yamlConfigFileWrite(folder, name, user, yaml_config):
+def yamlConfigFileWrite(folder, name, user, yaml_config, user_context):
     """
     If the user has appropriate permissions, create or modify an item in the
     specified folder with the specified name, storing the config value as a
@@ -554,24 +610,32 @@ def yamlConfigFileWrite(folder, name, user, yaml_config):
     :param name: the name of the config file.
     :param user: the user that the response if adjusted for.
     :param yaml_config: a yaml config string.
+    :param user_context: whether these settings should only apply to the current user.
     """
-    # Check that we have valid yaml
-    yaml.safe_load(yaml_config)
+    yaml_parsed = yaml.safe_load(yaml_config)
     item = Item().createItem(name, user, folder, reuseExisting=True)
     existingFiles = list(Item().childFiles(item))
     if (len(existingFiles) == 1 and
             existingFiles[0]['mimeType'] == 'application/yaml' and
             existingFiles[0]['name'] == name):
+        if user_context:
+            file = yaml.safe_load(File().open(existingFiles[0]).read())
+            file.setdefault('users', {})
+            file['users'].setdefault(user['login'], {})
+            file['users'][user['login']].update(yaml_parsed)
+            yaml_config = yaml.safe_dump(file)
         upload = Upload().createUploadToFile(
             existingFiles[0], user, size=len(yaml_config))
     else:
+        if user_context:
+            yaml_config = yaml.safe_dump({'users': {user['login']: yaml_parsed}})
         upload = Upload().createUpload(
             user, name, 'item', item, size=len(yaml_config),
             mimeType='application/yaml', save=True)
     newfile = Upload().handleChunk(upload, yaml_config)
     with _configWriteLock:
         for entry in list(Item().childFiles(item)):
-            if entry['_id'] != newfile['_id'] and len(Item().childFiles(item)) > 1:
+            if entry['_id'] != newfile['_id'] and len(list(Item().childFiles(item))) > 1:
                 File().remove(entry)
 
 

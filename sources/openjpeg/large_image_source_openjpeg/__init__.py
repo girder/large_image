@@ -73,11 +73,13 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.MEDIUM,
         'jp2': SourcePriority.PREFERRED,
         'jpf': SourcePriority.PREFERRED,
+        'j2c': SourcePriority.PREFERRED,
         'j2k': SourcePriority.PREFERRED,
         'jpx': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
+        'image/j2c': SourcePriority.PREFERRED,
         'image/jp2': SourcePriority.PREFERRED,
         'image/jpx': SourcePriority.PREFERRED,
     }
@@ -277,7 +279,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         scale = None
         if self._minlevel - z > self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = _imageToNumpy(tile)[0]
         else:
             if z < self._minlevel:

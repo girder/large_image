@@ -411,6 +411,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.FALLBACK,
         'application/json': SourcePriority.PREFERRED,
         'application/yaml': SourcePriority.PREFERRED,
+        'text/yaml': SourcePriority.PREFERRED,
     }
 
     _minTileSize = 64
@@ -418,7 +419,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _defaultTileSize = 256
     _maxOpenHandles = 6
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -433,7 +434,16 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._lastOpenSourceLock = threading.RLock()
         # 'c' must be first as channels are special because they can have names
         self._axesList = ['c', 'z', 't', 'xy']
-        if not os.path.isfile(self._largeImagePath):
+        if isinstance(path, dict) and 'sources' in path:
+            self._info = path.copy()
+            self._basePath = '.'
+            self._largeImagePath = '.'
+            try:
+                self._validator.validate(self._info)
+            except jsonschema.ValidationError:
+                msg = 'File cannot be validated via multi-source reader.'
+                raise TileSourceError(msg)
+        elif not os.path.isfile(self._largeImagePath):
             try:
                 possibleYaml = self._largeImagePath.split('multi://', 1)[-1]
                 self._info = yaml.safe_load(possibleYaml)
@@ -1071,7 +1081,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # we only need every 1/srcscale pixel.
         srcscale = int(2 ** math.log2(max(1, srcscale)))
         # Pad to reduce edge effects at tile boundaries
-        border = int(math.ceil(2 * srcscale))
+        border = int(math.ceil(4 * srcscale))
         region = {
             'left': int(max(0, minx - border) // srcscale) * srcscale,
             'top': int(max(0, miny - border) // srcscale) * srcscale,

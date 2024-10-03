@@ -324,7 +324,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # scale we computed in the __init__ process for this svs level tells
         # how much larger a region we need to read.
         if svslevel['scale'] > 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
         else:
             retries = 3
             while retries > 0:
@@ -333,6 +333,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         (offsetx, offsety), svslevel['svslevel'],
                         (self.tileWidth * svslevel['scale'],
                          self.tileHeight * svslevel['scale']))
+                    format = TILE_FORMAT_PIL
                     break
                 except openslide.lowlevel.OpenSlideError as exc:
                     self._largeImagePath = str(self._getLargeImagePath())
@@ -352,7 +353,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if svslevel['scale'] != 1:
                 tile = tile.resize((self.tileWidth, self.tileHeight),
                                    getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
-        return self._outputTile(tile, TILE_FORMAT_PIL, x, y, z, pilImageAllowed,
+        return self._outputTile(tile, format, x, y, z, pilImageAllowed,
                                 numpyAllowed, **kwargs)
 
     def getPreferredLevel(self, level):

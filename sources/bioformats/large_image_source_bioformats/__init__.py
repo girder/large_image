@@ -82,7 +82,7 @@ def _monitor_thread():
                     source._bioimage = None
                 except Exception:
                     pass
-        except AssertionError:
+        except Exception:
             pass
         finally:
             if javabridge.get_env():
@@ -106,7 +106,7 @@ def _reduceLogging():
             'org/slf4j/LoggerFactory', 'getLogger',
             '(Ljava/lang/String;)Lorg/slf4j/Logger;', rootLoggerName)
         logLevel = javabridge.get_static_field(
-            'ch/qos/logback/classic/Level', 'ERROR', 'Lch/qos/logback/classic/Level;')
+            'ch/qos/logback/classic/Level', 'OFF', 'Lch/qos/logback/classic/Level;')
         javabridge.call(rootLogger, 'setLevel', '(Lch/qos/logback/classic/Level;)V', logLevel)
     except Exception:
         pass
@@ -644,7 +644,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         height = min(height, sizeYAtScale - offsety)
 
         if scale >= 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
             format = TILE_FORMAT_NUMPY
         else:

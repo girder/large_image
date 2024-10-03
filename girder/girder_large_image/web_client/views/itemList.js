@@ -4,7 +4,6 @@ import Backbone from 'backbone';
 
 import {wrap} from '@girder/core/utilities/PluginUtils';
 import {getApiRoot} from '@girder/core/rest';
-import {getCurrentUser} from '@girder/core/auth';
 import {AccessType} from '@girder/core/constants';
 import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
@@ -47,6 +46,7 @@ wrap(FolderListWidget, 'checkAll', function (checkAll, checked) {
 });
 
 wrap(ItemListWidget, 'initialize', function (initialize, settings) {
+    this._inInit = true;
     const result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
 
@@ -55,6 +55,8 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             this._liconfig = val;
         }
         if (_.isEqual(val, this._liconfig) && !this._recurse) {
+            this._inInit = false;
+            this.render();
             return;
         }
         delete this._lastSort;
@@ -73,16 +75,21 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
                 };
             });
             update = true;
+        } else if (this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
+            this._lastSort = this._confList().defaultSort;
+            update = true;
         }
         if (query.filter || this._recurse) {
             this._generalFilter = query.filter;
-            this._setFilter();
+            this._setFilter(false);
             update = true;
         }
+        this._inInit = false;
         if (update) {
             this._setSort();
+        } else {
+            this.render();
         }
-        this.render();
     });
     this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
     this.events['click .li-item-list-cell-filter'] = (evt) => itemListCellFilter.call(this, evt);
@@ -102,6 +109,9 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
 
 wrap(ItemListWidget, 'render', function (render) {
     this.$el.closest('.modal-dialog').addClass('li-item-list-dialog');
+    if (!this.$el.children().length) {
+        this.$el.html('<span class="icon-spin1 animate-spin" title="Loading item list"/>');
+    }
 
     /* Chrome limits the number of connections to a single domain, which means
      * that time-consuming requests for thumbnails can bind-up the web browser.
@@ -129,55 +139,6 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     }
 
-    function addLargeImageDetails(item, container, parent, extraInfo) {
-        var elem;
-        elem = $('<div class="large_image_thumbnail"/>');
-        elem.attr('g-item-cid', item.cid);
-        container.append(elem);
-        /* We store the desired src attribute in deferred-src until we actually
-         * load the image. */
-        elem.append($('<img class="waiting"/>').attr(
-            'deferred-src', getApiRoot() + '/item/' +
-                item.id + '/tiles/thumbnail?width=160&height=100'));
-        var access = item.getAccessLevel();
-        var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
-        if (!getCurrentUser()) {
-            extra = extraInfo.null || {};
-        }
-
-        /* Set the maximum number of columns we have so that we can let css
-         * perform alignment. */
-        var numColumns = Math.max((extra.images || []).length + 1, parent.attr('large_image_columns') || 0);
-        parent.attr('large_image_columns', numColumns);
-
-        _.each(extra.images || [], function (imageName) {
-            elem = $('<div class="large_image_thumbnail"/>');
-            container.append(elem);
-            elem.append($('<img class="waiting"/>').attr(
-                'deferred-src', getApiRoot() + '/item/' + item.id +
-                '/tiles/images/' + imageName + '?width=160&height=100&_=' + item.get('updated')
-            ));
-            elem.attr('extra-image', imageName);
-        });
-
-        $('.large_image_thumbnail', container).each(function () {
-            var elem = $(this);
-            /* Handle images loading or failing. */
-            $('img', elem).one('error', function () {
-                $('img', elem).addClass('failed-to-load');
-                $('img', elem).removeClass('loading waiting');
-                elem.addClass('failed-to-load');
-                _loadMoreImages(parent);
-            });
-            $('img', elem).one('load', function () {
-                $('img', elem).addClass('loaded');
-                $('img', elem).removeClass('loading waiting');
-                _loadMoreImages(parent);
-            });
-        });
-        _loadMoreImages(parent);
-    }
-
     this._confList = () => {
         return this._liconfig ? (this.$el.closest('.modal-dialog').length ? this._liconfig.itemListDialog : this._liconfig.itemList) : undefined;
     };
@@ -201,13 +162,21 @@ wrap(ItemListWidget, 'render', function (render) {
                 const oldPages = this._totalPages;
                 const pages = Math.ceil(this.collection.getTotalCount() / this.collection.pageLimit);
                 this._totalPages = pages;
+                // recheck if this has large images
+                this._hasAnyLargeImage = !!_.some(this.collection.toArray(), function (item) {
+                    return item.has('largeImage');
+                });
                 this._inFetch = false;
-                if (this._needsFetch) {
-                    this._setSort();
-                }
-                if (oldPages !== pages) {
+                itemListRender.apply(this, _.rest(arguments));
+                if (oldPages !== pages || this.collection.offset !== this.collection.size()) {
+                    this.collection.offset = this.collection.size();
                     this.trigger('g:paginated');
                     this.collection.trigger('g:changed');
+                } else {
+                    itemListRender.apply(this, _.rest(arguments));
+                }
+                if (this._needsFetch) {
+                    this._setSort();
                 }
             });
         } else {
@@ -234,7 +203,7 @@ wrap(ItemListWidget, 'render', function (render) {
         return val;
     };
 
-    this._setFilter = () => {
+    this._setFilter = (update) => {
         const val = this._generalFilter;
         let filter;
         const usedPhrases = {};
@@ -340,11 +309,16 @@ wrap(ItemListWidget, 'render', function (render) {
             this._filter = filter;
             this.collection.params = this.collection.params || {};
             this.collection.params.text = this._filter;
-            this._setSort();
+            if (update !== false) {
+                this._setSort();
+            }
         }
     };
 
     function itemListRender() {
+        if (this._inInit || this._inFetch) {
+            return;
+        }
         const root = this.$el.closest('.g-hierarchy-widget');
         if (!root.find('.li-item-list-filter').length) {
             let base = root.find('.g-hierarchy-actions-header .g-folder-header-buttons').eq(0);
@@ -431,7 +405,6 @@ wrap(ItemListWidget, 'render', function (render) {
 
     largeImageConfig.getSettings((settings) => {
         var items = this.collection.toArray();
-        var parent = this.$el;
         this._hasAnyLargeImage = !!_.some(items, function (item) {
             return item.has('largeImage');
         });
@@ -442,29 +415,6 @@ wrap(ItemListWidget, 'render', function (render) {
         if (this._recurse && !((this.collection || {}).params || {}).text) {
             this._setFilter();
             this.render();
-            return;
-        }
-        render.call(this);
-        if (settings['large_image.show_thumbnails'] === false ||
-                this.$('.large_image_container').length > 0) {
-            return this;
-        }
-        if (this._hasAnyLargeImage) {
-            if (!this._confList()) {
-                _.each(items, (item) => {
-                    var elem = $('<div class="large_image_container"/>');
-                    if (item.get('largeImage')) {
-                        item.getAccessLevel(() => {
-                            if (!this._confList()) {
-                                addLargeImageDetails(item, elem, parent, settings.extraInfo);
-                            }
-                        });
-                    }
-                    var inner = $('<span>').html($('a[g-item-cid="' + item.cid + '"]').html());
-                    $('a[g-item-cid="' + item.cid + '"]', parent).first().empty().append(elem, inner);
-                    _loadMoreImages(parent);
-                });
-            }
         }
         return this;
     });

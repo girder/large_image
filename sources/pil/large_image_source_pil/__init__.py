@@ -196,14 +196,19 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if hasattr(self._pilImage, 'seek'):
             try:
                 baseSize, baseMode = self._pilImage.size, self._pilImage.mode
+                baseMode = {baseMode}
+                if 'P' in baseMode:
+                    baseMode |= {'RGB', 'RGBA'}
                 self._frames = [
                     idx for idx, frame in enumerate(PIL.ImageSequence.Iterator(self._pilImage))
-                    if frame.size == baseSize and frame.mode == baseMode]
+                    if frame.size == baseSize and frame.mode in baseMode]
                 self._pilImage.seek(0)
                 self._frameImage = self._pilImage
                 self._frameCount = len(self._frames)
                 self._tileLock = threading.RLock()
             except Exception:
+                self._frames = None
+                self._frameCount = 1
                 self._pilImage.seek(0)
 
     def _fromRawpy(self, largeImagePath):
