@@ -9,6 +9,7 @@
 - Remove no longer used code; adjust item list slightly ([#1651](../../pull/1651))
 - Reduce updates when showing item lists; add a waiting spinner ([#1653](../../pull/1653))
 - Update item lists check for large images when toggling recurse ([#1654](../../pull/1654))
+- Support named item lists ([#1665](../../pull/1665))
 
 ### Changes
 

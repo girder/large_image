@@ -183,6 +183,45 @@ This is used to specify how items appear in item lists.  There are two settings,
 
 If there are no large images in a folder, none of the image columns will appear.
 
+Named Item Lists
+................
+
+Multiple item lists can be stored with specific names.  A default item list can be specified.
+
+::
+
+    ---
+    # If present and the value is a key in the namedItemLists section, that
+    # list will be shown unless the URL routes to a different list.
+    defaultItemList: images
+    # Any number of items can be in the namedItemLists section.  Each name
+    # must be distinct.  The system can show the specific list by routing to
+    # ?namedList=<name> as part of the url after the folder id.
+    namedItemLists:
+      image:
+        layout:
+          mode: list
+        columns:
+          -
+            type: image
+            value: thumbnail
+            title: Thumbnail
+          -
+            type: image
+            value: label
+            title: Slide Label
+          -
+            # The "record" type is from the default item record.  The value is
+            # one of "name", "size", or "controls".
+            type: record
+            value: name
+          -
+            type: record
+            value: size
+          -
+            type: record
+            value: controls
+
 Item Metadata
 .............
 
