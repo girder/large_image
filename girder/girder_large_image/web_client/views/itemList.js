@@ -7,6 +7,7 @@ import {getApiRoot} from '@girder/core/rest';
 import {AccessType} from '@girder/core/constants';
 import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
+import ItemCollection from '@girder/core/collections/ItemCollection';
 import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
@@ -16,6 +17,16 @@ import {addToRoute} from '../routes';
 import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
+
+ItemCollection.prototype.pageLimit = Math.max(250, ItemCollection.prototype.pageLimit);
+
+wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
+    settings = settings || {};
+    if (settings.paginated === undefined) {
+        settings.paginated = true;
+    }
+    return initialize.call(this, settings);
+});
 
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);
