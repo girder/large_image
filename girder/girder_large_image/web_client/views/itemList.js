@@ -61,6 +61,32 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     const result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
 
+    this._confList = () => {
+        let list;
+        if (!this._liconfig) {
+            return undefined;
+        }
+        const namedList = this._namedList || this._liconfig.defaultItemList;
+        if (this.$el.closest('.modal-dialog').length) {
+            list = this._liconfig.itemListDialog;
+        } else if (namedList && this._liconfig.namedItemLists && this._liconfig.namedItemLists[namedList]) {
+            list = this._liconfig.namedItemLists[namedList];
+        } else {
+            list = this._liconfig.itemList;
+        }
+        if (list.group) {
+            let group = list.group;
+            group = !group.keys ? {keys: group} : group;
+            group.keys = Array.isArray(group.keys) ? group.keys : [group.keys];
+            group.keys = group.keys.filter((g) => !g.includes(',') && !g.includes(':'));
+            if (!group.keys.length) {
+                group = undefined;
+            }
+            list.group = group;
+        }
+        return list;
+    };
+
     largeImageConfig.getConfigFile(settings.folderId, true, (val) => {
         if (!settings.folderId) {
             this._liconfig = val;
@@ -75,6 +101,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         const curRoute = Backbone.history.fragment;
         const routeParts = splitRoute(curRoute);
         const query = parseQueryString(routeParts.name);
+        this._namedList = query.namedList || undefined;
         let update = false;
         if (query.sort) {
             this._lastSort = query.sort.split(',').map((chunk) => {
@@ -150,10 +177,6 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     }
 
-    this._confList = () => {
-        return this._liconfig ? (this.$el.closest('.modal-dialog').length ? this._liconfig.itemListDialog : this._liconfig.itemList) : undefined;
-    };
-
     /**
      * Set sort on the collection and perform a debounced re-fetch.
      */
@@ -178,7 +201,6 @@ wrap(ItemListWidget, 'render', function (render) {
                     return item.has('largeImage');
                 });
                 this._inFetch = false;
-                itemListRender.apply(this, _.rest(arguments));
                 if (oldPages !== pages || this.collection.offset !== this.collection.size()) {
                     this.collection.offset = this.collection.size();
                     this.trigger('g:paginated');
