@@ -1,4 +1,5 @@
-ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '')
+- var metadataCount = itemList.columns.filter((col) => col.type === 'metadata').length
+ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '', metadata-columns=metadataCount)
   - var colNames = [];
   if items.length
     li.li-item-list-header
