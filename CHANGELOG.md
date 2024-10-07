@@ -18,6 +18,7 @@
 - Handle a variation in a bioformats exception ([#1656](../../pull/1656))
 - Increase logging slow histograms ([#1658](../../pull/1658))
 - Use paginated item lists ([#1664](../../pull/1664))
+- When in-line editing yaml and other files, the tab key now uses spaces ([#1667](../../pull/1667))
 
 ### Bug Fixes
 
