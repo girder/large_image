@@ -6,7 +6,7 @@
 
 - Better handle images without enough tile layers ([#1648](../../pull/1648))
 - Add users option to config files; have a default config file ([#1649](../../pull/1649))
-- Remove no longer used code; adjust item list slightly ([#1651](../../pull/1651))
+- Remove no longer used code; adjust item list slightly ([#1651](../../pull/1651), [#1668](../../pull/1668))
 - Reduce updates when showing item lists; add a waiting spinner ([#1653](../../pull/1653))
 - Update item lists check for large images when toggling recurse ([#1654](../../pull/1654))
 - Support named item lists ([#1665](../../pull/1665))
