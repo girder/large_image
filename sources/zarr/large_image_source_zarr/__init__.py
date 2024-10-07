@@ -363,29 +363,26 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             frame_values_shape = [baseArray.shape[self._axes[a]] for a in self.frameAxes]
             frame_values_shape.append(len(frame_values_shape))
             frame_values = np.empty(frame_values_shape, dtype=object)
+            all_frame_specs = self.getMetadata()['frames']
             for axis, values in axes_values.items():
                 if axis in self.frameAxes:
                     slicing = [slice(None) for i in range(len(frame_values_shape))]
                     axis_index = self.frameAxes.index(axis)
                     slicing[-1] = axis_index
-                    if isinstance(values, list):
-                        # uniform values are written as lists
+                    if len(values) == frame_values_shape[axis_index]:
+                        # uniform values have same length as axis
                         for i, value in enumerate(values):
                             slicing[axis_index] = i
                             frame_values[tuple(slicing)] = value
-                    elif isinstance(values, dict):
-                        # non-uniform values are written as dicts
-                        # mapping values to index permutations
-                        for value, frame_specs in values.items():
-                            if isinstance(value, str):
-                                try:
-                                    value = float(value) if '.' in value else int(value)
-                                except Exception:
-                                    pass
-                            for frame_spec in frame_specs:
-                                for a, i in frame_spec.items():
-                                    slicing[self.frameAxes.index(a)] = i
-                                frame_values[tuple(slicing)] = value
+                    elif len(values) == self._framecount:
+                        # non-uniform values have a value for every frame
+                        for i, value in enumerate(values):
+                            for k, j in all_frame_specs[i].items():
+                                if 'Index' in k:
+                                    name = k.replace('Index', '').lower()
+                                    if name:
+                                        slicing[self._frameAxes.index(name)] = j
+                            frame_values[tuple(slicing)] = value
             self._frameValues = frame_values
 
     def _validateZarr(self):
@@ -808,13 +805,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if uniform:
                     values = [a.flat[0] for a in split]
                 else:
-                    values = {}
-                    for index, value in np.ndenumerate(all_frame_values):
-                        if value not in values:
-                            values[value] = []
-                        values[value].append({
-                            axis: index[i] for i, axis in enumerate(self.frameAxes)
-                        })
+                    values = all_frame_values.flatten().tolist()
                 axis_metadata['values'] = values
             unit = self.frameUnits.get(axis_name) if self.frameUnits is not None else None
             if unit is not None:
