@@ -1,4 +1,5 @@
-ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '')
+- var metadataCount = itemList.columns.filter((col) => col.type === 'metadata').length
+ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '', metadata-columns=metadataCount)
   - var colNames = [];
   if items.length
     li.li-item-list-header
@@ -42,7 +43,7 @@ ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '')
                 skip = true;
               }
             });
-          #{divtype}.li-item-list-cell(class=classes.join(' '), g-item-cid=item.cid, href=`#item/${item.id}`, title=colNames[colidx])
+          #{divtype}.li-item-list-cell(class=classes.join(' '), g-item-cid=item.cid, href=item._href ? item._href : `#item/${item.id}`, title=colNames[colidx])
             if !skip && column.label
               span.g-item-list-label
                 = column.label
@@ -92,7 +93,7 @@ ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '')
                     != String(value).replace(/&/g, '&amp;').replace(/</, '&lt;').replace(/>/, '&gt;').replace(/"/, '&quot').replace(/'/, '&#39;').replace(/\./g, '.&shy;').replace(/_/g, '_&shy;')
                   else
                     = value
-                if value
+                if value && column.format !== 'count'
                   span.li-item-list-cell-filter(title="Only show items that match this metadata value exactly", filter-value=value, column-value=column.value)
                     i.icon-filter
   if (hasMore && !paginated)

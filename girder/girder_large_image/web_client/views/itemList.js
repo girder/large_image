@@ -6,7 +6,9 @@ import {wrap} from '@girder/core/utilities/PluginUtils';
 import {getApiRoot} from '@girder/core/rest';
 import {AccessType} from '@girder/core/constants';
 import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
+import router from '@girder/core/router';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
+import ItemCollection from '@girder/core/collections/ItemCollection';
 import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
@@ -17,14 +19,40 @@ import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
 
+ItemCollection.prototype.pageLimit = Math.max(250, ItemCollection.prototype.pageLimit);
+
+function onItemClick(item) {
+    if (this.itemListView && this.itemListView.onItemClick) {
+        if (this.itemListView.onItemClick(item)) {
+            return;
+        }
+    }
+    router.navigate('item/' + item.get('_id'), {trigger: true});
+}
+
+wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
+    settings = settings || {};
+    if (settings.paginated === undefined) {
+        settings.paginated = true;
+    }
+    if (settings.onItemClick === undefined) {
+        settings.onItemClick = onItemClick;
+    }
+    return initialize.call(this, settings);
+});
+
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);
+    if (this.parentModel.resourceName !== 'folder') {
+        this.$('.g-folder-list-container').toggleClass('hidden', false);
+    }
     if (!this.$('#flattenitemlist').length && this.$('.g-item-list-container').length && this.itemListView && this.itemListView.setFlatten) {
         $('button.g-checked-actions-button').parent().after(
             '<div class="li-flatten-item-list" title="Check to show items in all subfolders in this list"><input type="checkbox" id="flattenitemlist"></input><label for="flattenitemlist">Flatten</label></div>'
         );
-        if ((this.itemListView || {})._recurse) {
+        if ((this.itemListView || {})._recurse && this.parentModel.resourceName === 'folder') {
             this.$('#flattenitemlist').prop('checked', true);
+            this.$('.g-folder-list-container').toggleClass('hidden', this.itemListView._hideFoldersOnFlatten);
         }
         this.events['click #flattenitemlist'] = (evt) => {
             this.itemListView.setFlatten(this.$('#flattenitemlist').is(':checked'));
@@ -50,6 +78,32 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     const result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
 
+    this._confList = () => {
+        let list;
+        if (!this._liconfig) {
+            return undefined;
+        }
+        const namedList = this._namedList || this._liconfig.defaultItemList;
+        if (this.$el.closest('.modal-dialog').length) {
+            list = this._liconfig.itemListDialog;
+        } else if (namedList && this._liconfig.namedItemLists && this._liconfig.namedItemLists[namedList]) {
+            list = this._liconfig.namedItemLists[namedList];
+        } else {
+            list = this._liconfig.itemList;
+        }
+        if (list.group) {
+            let group = list.group;
+            group = !group.keys ? {keys: group} : group;
+            group.keys = Array.isArray(group.keys) ? group.keys : [group.keys];
+            group.keys = group.keys.filter((g) => !g.includes(',') && !g.includes(':'));
+            if (!group.keys.length) {
+                group = undefined;
+            }
+            list.group = group;
+        }
+        return list;
+    };
+
     largeImageConfig.getConfigFile(settings.folderId, true, (val) => {
         if (!settings.folderId) {
             this._liconfig = val;
@@ -59,11 +113,22 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             this.render();
             return;
         }
+        if (!_.isEqual(val, this._liconfig) && !this.$el.closest('.modal-dialog').length && val) {
+            this._liconfig = val;
+            const list = this._confList();
+            if (list.layout && list.layout.flatten !== undefined) {
+                this._recurse = !!list.layout.flatten;
+                this.parentView.$('#flattenitemlist').prop('checked', this._recurse);
+            }
+            this._hideFoldersOnFlatten = !!(list.layout && list.layout.flatten === 'only');
+            this.parentView.$('.g-folder-list-container').toggleClass('hidden', this._hideFoldersOnFlatten);
+        }
         delete this._lastSort;
         this._liconfig = val;
         const curRoute = Backbone.history.fragment;
         const routeParts = splitRoute(curRoute);
         const query = parseQueryString(routeParts.name);
+        this._namedList = query.namedList || undefined;
         let update = false;
         if (query.sort) {
             this._lastSort = query.sort.split(',').map((chunk) => {
@@ -75,7 +140,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
                 };
             });
             update = true;
-        } else if (this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
+        } else if (this._confList && this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
             this._lastSort = this._confList().defaultSort;
             update = true;
         }
@@ -100,6 +165,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     this.setFlatten = (flatten) => {
         if (!!flatten !== !!this._recurse) {
             this._recurse = !!flatten;
+            this.parentView.$('.g-folder-list-container').toggleClass('hidden', this._hideFoldersOnFlatten && this._recurse);
             this._setFilter();
             this.render();
         }
@@ -139,10 +205,6 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     }
 
-    this._confList = () => {
-        return this._liconfig ? (this.$el.closest('.modal-dialog').length ? this._liconfig.itemListDialog : this._liconfig.itemList) : undefined;
-    };
-
     /**
      * Set sort on the collection and perform a debounced re-fetch.
      */
@@ -167,7 +229,6 @@ wrap(ItemListWidget, 'render', function (render) {
                     return item.has('largeImage');
                 });
                 this._inFetch = false;
-                itemListRender.apply(this, _.rest(arguments));
                 if (oldPages !== pages || this.collection.offset !== this.collection.size()) {
                     this.collection.offset = this.collection.size();
                     this.trigger('g:paginated');
@@ -181,6 +242,60 @@ wrap(ItemListWidget, 'render', function (render) {
             });
         } else {
             this._needsFetch = true;
+        }
+    };
+
+    /**
+     * Return true if we handle the click
+     */
+    this.onItemClick = (item) => {
+        const list = this._confList();
+        const nav = (list || {}).navigate;
+        if (!nav || (!nav.type && !nav.name) || nav.type === 'item') {
+            return false;
+        }
+        if (nav.type === 'itemList') {
+            if ((nav.name || '') === (self._namedList || '')) {
+                return false;
+            }
+            if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
+                return false;
+            }
+            this._updateNamedList(nav.name, false);
+            if (list.group) {
+                this._generalFilter = '';
+                list.group.keys.forEach((key) => {
+                    const cell = this.$el.find(`[g-item-cid="${item.cid}"] [column-value="${key}"]`);
+                    if (cell.length) {
+                        addCellToFilter.call(this, cell, false);
+                    }
+                });
+            }
+            this._setFilter(false);
+            this._setSort();
+            addToRoute({namedList: this._namedList, filter: this._generalFilter});
+            return true;
+        }
+        if (nav.type === 'open') {
+            // TODO: handle open type
+            // we probably need to get all the grouped items to pass them to
+            // the .open-in-volview button via that _getCheckedResourceParam
+            // call OR modify the volview plugin to have an open item with less
+            // context.  The current folder context would ideally be the
+            // deepest common parent rather than our current folder.  Where
+            // does volview store its zip file?
+        }
+        return false;
+    };
+
+    this._updateNamedList = (name, update) => {
+        name = name || '';
+        if ((this._namedList || '') !== name) {
+            this._namedList = name;
+            if (update !== false) {
+                addToRoute({namedList: this._namedList});
+                this._setSort();
+            }
         }
     };
 
@@ -302,6 +417,23 @@ wrap(ItemListWidget, 'render', function (render) {
                 filter = '_filter_:' + JSON.stringify(filter);
             }
         }
+        const group = (this._confList() || {}).group || undefined;
+        if (group) {
+            if (group.keys.length) {
+                let grouping = '_group_:meta.' + group.keys.join(',meta.');
+                if (group.counts) {
+                    for (let [gkey, gval] of Object.entries(group.counts)) {
+                        if (!gkey.includes(',') && !gkey.includes(':') && !gval.includes(',') && !gval.includes(':')) {
+                            if (gkey !== '_id') {
+                                gkey = `meta.${gkey}`;
+                            }
+                            grouping += `,_count_,${gkey},meta.${gval}`;
+                        }
+                    }
+                }
+                filter = grouping + ':' + (filter || '');
+            }
+        }
         if (this._recurse) {
             filter = '_recurse_:' + (filter || '');
         }
@@ -315,6 +447,53 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     };
 
+    /**
+     * For each item in the collection, if we are navigating to something other
+     * than the item, set an href property.
+     */
+    function adjustItemHref() {
+        this.collection.forEach((item) => {
+            item._href = undefined;
+        });
+        const list = this._confList();
+        const nav = (list || {}).navigate;
+        if (!nav || (!nav.type && !nav.name) || nav.type === 'item') {
+            return;
+        }
+        if (nav.type === 'itemList') {
+            if ((nav.name || '') === (self._namedList || '')) {
+                return;
+            }
+            if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
+                return;
+            }
+            this.collection.forEach((item) => {
+                item._href = `#folder/${this.parentView.parentModel.id}?namedList=` + (nav.name ? encodeURIComponent(nav.name) : '');
+                let filter = '';
+                if (list.group) {
+                    list.group.keys.forEach((col) => {
+                        let val = item.get('meta') || {};
+                        col.split('.').forEach((part) => {
+                            val = (val || {})[part];
+                        });
+                        if (/[ '\\]/.exec(col)) {
+                            col = "'" + col.replace('\\', '\\\\').replace("'", "\\'") + "'";
+                        }
+                        if (val) {
+                            val = val.replace('\\', '\\\\').replace('"', '\\"');
+                            filter += ` ${col}:"${val}"`;
+                        }
+                    });
+                }
+                filter = filter.trim();
+                if (filter !== '') {
+                    item._href += '&filter=' + encodeURIComponent(filter);
+                }
+            });
+        }
+        // TODO: handle nav.type open
+    }
+
     function itemListRender() {
         if (this._inInit || this._inFetch) {
             return;
@@ -322,13 +501,12 @@ wrap(ItemListWidget, 'render', function (render) {
         const root = this.$el.closest('.g-hierarchy-widget');
         if (!root.find('.li-item-list-filter').length) {
             let base = root.find('.g-hierarchy-actions-header .g-folder-header-buttons').eq(0);
-            let func = 'after';
+            const func = 'before';
             if (!base.length) {
                 base = root.find('.g-hierarchy-breadcrumb-bar>.breadcrumb>div').eq(0);
-                func = 'before';
             }
             if (base.length) {
-                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input" title="' +
+                base[func]('<span class="li-item-list-filter">Filter:&nbsp;<input class="li-item-list-filter-input" title="' +
                     'All specified terms must be included.  ' +
                     'Surround with single quotes to include spaces, double quotes for exact value match.  ' +
                     'Prefix with - to exclude that value.  ' +
@@ -358,6 +536,7 @@ wrap(ItemListWidget, 'render', function (render) {
             this._setSort();
             return;
         }
+        adjustItemHref.call(this);
         this.$el.html(ItemListTemplate({
             items: this.collection.toArray(),
             isParentPublic: this.public,
@@ -452,9 +631,7 @@ function sortColumn(evt) {
     }
 }
 
-function itemListCellFilter(evt) {
-    evt.preventDefault();
-    const cell = $(evt.target).closest('.li-item-list-cell-filter');
+function addCellToFilter(cell, update) {
     let filter = this._generalFilter || '';
     let val = cell.attr('filter-value');
     let col = cell.attr('column-value');
@@ -466,7 +643,15 @@ function itemListCellFilter(evt) {
     filter = filter.trim();
     this.$el.closest('.g-hierarchy-widget').find('.li-item-list-filter-input').val(filter);
     this._generalFilter = filter;
-    this._setFilter();
+    if (update !== false) {
+        this._setFilter();
+    }
+}
+
+function itemListCellFilter(evt) {
+    evt.preventDefault();
+    const cell = $(evt.target).closest('.li-item-list-cell-filter');
+    addCellToFilter.call(this, cell);
     addToRoute({filter: this._generalFilter});
     this._setSort();
     return false;
