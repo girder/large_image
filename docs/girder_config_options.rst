@@ -90,6 +90,15 @@ This is used to specify how items appear in item lists.  There are two settings,
         counts:
           dicom.StudyInstanceUID: _count.studiescount
           dicom.SeriesInstanceUID: _count.seriescount
+      # navigate does nto need to be specified.  It changes the behavior of
+      # clicking on an item from showing the item page to another action.
+      navigate:
+        # type can be "item": the default, open the item page, "itemList": go
+        # to the named item page
+        type: itemList
+        # if the type is "itemList", the name is the name of the itemList to
+        # display.
+        name: studyList
       # show these columns in order from left to right.  Each column has a
       # "type" and "value".  It optionally has a "title" used for the column
       # header, and a "format" used for searching and filtering.  The "label",
