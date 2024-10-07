@@ -387,13 +387,12 @@ wrap(ItemListWidget, 'render', function (render) {
         const root = this.$el.closest('.g-hierarchy-widget');
         if (!root.find('.li-item-list-filter').length) {
             let base = root.find('.g-hierarchy-actions-header .g-folder-header-buttons').eq(0);
-            let func = 'after';
+            const func = 'before';
             if (!base.length) {
                 base = root.find('.g-hierarchy-breadcrumb-bar>.breadcrumb>div').eq(0);
-                func = 'before';
             }
             if (base.length) {
-                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input" title="' +
+                base[func]('<span class="li-item-list-filter">Filter:&nbsp;<input class="li-item-list-filter-input" title="' +
                     'All specified terms must be included.  ' +
                     'Surround with single quotes to include spaces, double quotes for exact value match.  ' +
                     'Prefix with - to exclude that value.  ' +
