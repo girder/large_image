@@ -10,6 +10,7 @@
 - Reduce updates when showing item lists; add a waiting spinner ([#1653](../../pull/1653))
 - Update item lists check for large images when toggling recurse ([#1654](../../pull/1654))
 - Support named item lists ([#1665](../../pull/1665))
+- Add options to group within item lists ([#1666](../../pull/1666))
 
 ### Changes
 

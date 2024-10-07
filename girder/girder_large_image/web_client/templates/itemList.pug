@@ -92,7 +92,7 @@ ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '')
                     != String(value).replace(/&/g, '&amp;').replace(/</, '&lt;').replace(/>/, '&gt;').replace(/"/, '&quot').replace(/'/, '&#39;').replace(/\./g, '.&shy;').replace(/_/g, '_&shy;')
                   else
                     = value
-                if value
+                if value && column.format !== 'count'
                   span.li-item-list-cell-filter(title="Only show items that match this metadata value exactly", filter-value=value, column-value=column.value)
                     i.icon-filter
   if (hasMore && !paginated)

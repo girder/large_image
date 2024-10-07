@@ -30,12 +30,16 @@ wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
 
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);
+    if (this.parentModel.resourceName !== 'folder') {
+        this.$('.g-folder-list-container').toggleClass('hidden', false);
+    }
     if (!this.$('#flattenitemlist').length && this.$('.g-item-list-container').length && this.itemListView && this.itemListView.setFlatten) {
         $('button.g-checked-actions-button').parent().after(
             '<div class="li-flatten-item-list" title="Check to show items in all subfolders in this list"><input type="checkbox" id="flattenitemlist"></input><label for="flattenitemlist">Flatten</label></div>'
         );
-        if ((this.itemListView || {})._recurse) {
+        if ((this.itemListView || {})._recurse && this.parentModel.resourceName === 'folder') {
             this.$('#flattenitemlist').prop('checked', true);
+            this.$('.g-folder-list-container').toggleClass('hidden', this.itemListView._hideFoldersOnFlatten);
         }
         this.events['click #flattenitemlist'] = (evt) => {
             this.itemListView.setFlatten(this.$('#flattenitemlist').is(':checked'));
@@ -96,6 +100,16 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             this.render();
             return;
         }
+        if (!_.isEqual(val, this._liconfig) && !this.$el.closest('.modal-dialog').length && val) {
+            this._liconfig = val;
+            const list = this._confList();
+            if (list.layout && list.layout.flatten !== undefined) {
+                this._recurse = !!list.layout.flatten;
+                this.parentView.$('#flattenitemlist').prop('checked', this._recurse);
+            }
+            this._hideFoldersOnFlatten = !!(list.layout && list.layout.flatten === 'only');
+            this.parentView.$('.g-folder-list-container').toggleClass('hidden', this._hideFoldersOnFlatten);
+        }
         delete this._lastSort;
         this._liconfig = val;
         const curRoute = Backbone.history.fragment;
@@ -138,6 +152,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     this.setFlatten = (flatten) => {
         if (!!flatten !== !!this._recurse) {
             this._recurse = !!flatten;
+            this.parentView.$('.g-folder-list-container').toggleClass('hidden', this._hideFoldersOnFlatten && this._recurse);
             this._setFilter();
             this.render();
         }
@@ -335,6 +350,23 @@ wrap(ItemListWidget, 'render', function (render) {
                 filter = '_filter_:' + JSON.stringify(filter);
             }
         }
+        const group = (this._confList() || {}).group || undefined;
+        if (group) {
+            if (group.keys.length) {
+                let grouping = '_group_:meta.' + group.keys.join(',meta.');
+                if (group.counts) {
+                    for (let [gkey, gval] of Object.entries(group.counts)) {
+                        if (!gkey.includes(',') && !gkey.includes(':') && !gval.includes(',') && !gval.includes(':')) {
+                            if (gkey !== '_id') {
+                                gkey = `meta.${gkey}`;
+                            }
+                            grouping += `,_count_,${gkey},meta.${gval}`;
+                        }
+                    }
+                }
+                filter = grouping + ':' + (filter || '');
+            }
+        }
         if (this._recurse) {
             filter = '_recurse_:' + (filter || '');
         }
@@ -485,9 +517,7 @@ function sortColumn(evt) {
     }
 }
 
-function itemListCellFilter(evt) {
-    evt.preventDefault();
-    const cell = $(evt.target).closest('.li-item-list-cell-filter');
+function addCellToFilter(cell, update) {
     let filter = this._generalFilter || '';
     let val = cell.attr('filter-value');
     let col = cell.attr('column-value');
@@ -499,7 +529,15 @@ function itemListCellFilter(evt) {
     filter = filter.trim();
     this.$el.closest('.g-hierarchy-widget').find('.li-item-list-filter-input').val(filter);
     this._generalFilter = filter;
-    this._setFilter();
+    if (update !== false) {
+        this._setFilter();
+    }
+}
+
+function itemListCellFilter(evt) {
+    evt.preventDefault();
+    const cell = $(evt.target).closest('.li-item-list-cell-filter');
+    addCellToFilter.call(this, cell);
     addToRoute({filter: this._generalFilter});
     this._setSort();
     return false;
