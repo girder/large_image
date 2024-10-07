@@ -1,6 +1,7 @@
 <script>
 import Vue from 'vue';
 
+import {restRequest} from '@girder/core/rest';
 import {getChannelColor, OTHER_COLORS} from '../utils/colors';
 
 import CompositeLayers from './CompositeLayers.vue';
@@ -21,7 +22,8 @@ export default Vue.extend({
             indexInfo: {},
             style: {},
             modesShown: {1: true},
-            histogramParamStyles: {}
+            histogramParamStyles: {},
+            internalMetadata: undefined,
         };
     },
     computed: {
@@ -36,6 +38,36 @@ export default Vue.extend({
         currentStyle() {
             const curStyle = this.style[this.currentModeId];
             return curStyle ? JSON.stringify(curStyle, null, null) : '';
+        },
+        sliderLabels() {
+            const labels = {};
+            labels['IndexC'] = this.imageMetadata.channels;
+            if (
+                this.internalMetadata &&
+                this.internalMetadata.zarr &&
+                this.internalMetadata.zarr.main &&
+                this.internalMetadata.zarr.main.multiscales &&
+                this.internalMetadata.zarr.main.multiscales[0] &&
+                this.internalMetadata.zarr.main.multiscales[0].axes
+            ) {
+                this.internalMetadata.zarr.main.multiscales[0].axes.forEach((axis) => {
+                    if (axis.values) {
+                        const key = 'Index'+ axis.name.toUpperCase();
+                        const expectedLength = this.indexInfo[key].range + 1
+                        if (axis.values.length === expectedLength) {
+                            // uniform values have same length as axis
+                            labels[key] = axis.values
+                        } else if (axis.values.length === this.maxFrame + 1) {
+                            // non-uniform values have a value for every frame
+                            // labels will change with currentFrame, so only populate current label
+                            labels[key] = new Array(expectedLength).fill('')
+                            labels[key][this.indexInfo[key].current] = axis.values[this.currentFrame]
+                        }
+                    }
+                })
+
+            }
+            return labels;
         }
     },
     watch: {
@@ -47,12 +79,21 @@ export default Vue.extend({
     mounted() {
         this.metadata = Object.assign({}, this.imageMetadata);
         this.fillMetadata();
+        this.fetchInternalMetadata();
         this.maxFrame = this.metadata.frames.length - 1;
         this.populateIndices();
         this.populateModes();
         this.loaded = true;
     },
     methods: {
+        fetchInternalMetadata() {
+            restRequest({
+                type: 'GET',
+                url: 'item/' + this.itemId + '/tiles/internal_metadata/'
+            }).then((internal) => {
+                this.internalMetadata = internal;
+            })
+        },
         setCurrentMode(mode) {
             this.currentModeId = mode.id;
         },
@@ -328,7 +369,7 @@ export default Vue.extend({
         :current-value="indexInfo[index].current"
         :value-max="indexInfo[index].range"
         :label="index.replace('Index', '')"
-        :slider-labels="index === 'IndexC' ? imageMetadata.channels : []"
+        :slider-labels="sliderLabels[index]"
         :max-merge="indexInfo[index].maxMerge || false"
         @updateMaxMerge="(v) => updateMaxMergeAxis({index, maxMerge: v})"
         @updateValue="(v) => updateAxisSlider({index, frame: v})"
