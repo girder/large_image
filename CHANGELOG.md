@@ -11,7 +11,7 @@
 - Update item lists check for large images when toggling recurse ([#1654](../../pull/1654))
 - Support named item lists ([#1665](../../pull/1665))
 - Add options to group within item lists ([#1666](../../pull/1666))
-- Make the filter field in item lists wider ([#1669](../../pull/1669))
+- Make the filter field in item lists wider ([#1669](../../pull/1669), [#1671](../../pull/1671))
 - Add a navigate option to item lists ([#1659](../../pull/1659))
 
 ### Changes
