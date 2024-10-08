@@ -26,6 +26,7 @@
 
 - Fix styling images with empty tile layers ([#1650](../../pull/1650))
 - Add a guard around sorting item lists ([#1663](../../pull/1663))
+- Fix some issues with possible numpy 2.x overflows ([#1672](../../pull/1672))
 
 ## 1.29.11
 
