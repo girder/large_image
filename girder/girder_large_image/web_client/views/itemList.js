@@ -506,6 +506,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 base = root.find('.g-hierarchy-breadcrumb-bar>.breadcrumb>div').eq(0);
             }
             if (base.length) {
+                base.parent().addClass('li-item-list-filter-parent');
                 base[func]('<span class="li-item-list-filter">Filter:&nbsp;<input class="li-item-list-filter-input" title="' +
                     'All specified terms must be included.  ' +
                     'Surround with single quotes to include spaces, double quotes for exact value match.  ' +
