@@ -400,7 +400,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._series = found['series']
         baseGroup, baseArray = self._series[0]
         self._is_ome = found['is_ome']
-        self._axes = {k.lower(): v for k, v in found['axes'].items() if baseArray.shape[v] > 1}
+        self._axes = {
+            k.lower(): v
+            for k, v in found['axes'].items()
+            if baseArray.shape[v] > 1 or k in found.get('axes_values', {})
+        }
         if len(self._series) > 1 and 'xy' in self._axes:
             msg = 'Conflicting xy axis data.'
             raise TileSourceError(msg)
@@ -697,7 +701,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ])
 
             if len(frame_values.keys()) > 0:
-                self.frameAxes = [a for a in axes if a in frame_values]
+                self.frameAxes = [
+                    a for a in axes
+                    if a in frame_values or
+                    (self.frameAxes is not None and a in self.frameAxes)
+                ]
                 frames_shape = [new_dims[a] for a in self.frameAxes]
                 frames_shape.append(len(frames_shape))
                 if self.frameValues is None:

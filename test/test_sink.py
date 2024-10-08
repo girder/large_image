@@ -718,3 +718,28 @@ def testFrameValues(use_add_tile_args, tmp_path):
     sink.write(output_file)
     written = large_image_source_zarr.open(output_file)
     compare_metadata(dict(written.getMetadata()), expected_metadata)
+
+
+def testFrameValuesEdgeCases(tmp_path):
+    # case 1
+    ts = large_image.new()
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=0, z_value=1, c_value='DAPI')
+    assert ts.metadata.get('bandCount') == 3
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=0, z_value=1, c_value='CD4')
+
+    # case 2
+    ts = large_image.new()
+    ts.addTile(np.zeros((100, 100, 1)), x=0, y=0, c=0, z=0, z_value=1, c_value='DAPI')
+    ts.addTile(np.zeros((100, 100, 1)), x=0, y=0, c=1, z=0, z_value=1, c_value='CD4')
+    metadata = ts.getMetadata()
+    assert metadata.get('frames') is not None
+    assert len(metadata.get('frames')) == 2
+
+    # case 3
+    ts = large_image.new()
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=0, z_value=1, c_value='DAPI')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=1, z_value=3.2, c_value='DAPI')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=2, z_value=6.3, c_value='DAPI')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=2, z_value=6.4, c_value='CD4')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=1, z_value=3.1, c_value='CD4')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=1, z_value=1.1)
