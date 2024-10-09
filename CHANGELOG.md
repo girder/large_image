@@ -21,6 +21,7 @@
 - Increase logging slow histograms ([#1658](../../pull/1658))
 - Use paginated item lists ([#1664](../../pull/1664))
 - When in-line editing yaml and other files, the tab key now uses spaces ([#1667](../../pull/1667))
+- Changed the parsing of the open parameter in the algorithm progression example ([#1677](../../pull/1677))
 
 ### Bug Fixes
 
