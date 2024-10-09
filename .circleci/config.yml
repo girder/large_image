@@ -38,7 +38,8 @@ commands:
           name: Upgrade pyenv
           command: |
             sudo rm -rf /opt/circleci/.pyenv
-            curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+            sudo bash -c 'curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | PYENV_ROOT=/opt/circleci/.pyenv bash'
+            sudo chmod -R 777 /opt/circleci/.pyenv/
             pyenv install --list list
       - run:
           name: Use pyenv to install python
