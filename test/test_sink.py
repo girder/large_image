@@ -743,3 +743,12 @@ def testFrameValuesEdgeCases(tmp_path):
     ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=2, z_value=6.4, c_value='CD4')
     ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=1, z_value=3.1, c_value='CD4')
     ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=1, z_value=1.1)
+
+    ts = large_image.new()
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=0, z_value=1, c_value='DAPI')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=1, z_value=3.2, c_value='DAPI')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=2, z_value=6.3, c_value='DAPI')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=2, z_value=6.4, c_value='CD4')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=1, z_value=3.1, c_value='CD4')
+    ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=1, z_value=1.1)
+    assert len(ts.metadata.get('frames', [])) == 6
