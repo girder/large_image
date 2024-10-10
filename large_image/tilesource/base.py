@@ -1355,7 +1355,6 @@ class TileSource(IPyLeafletMixin):
             )
         return frame_value_info
 
-
     def _addMetadataFrameInformation(
             self, metadata: JSONDict, channels: Optional[List[str]] = None) -> None:
         """
