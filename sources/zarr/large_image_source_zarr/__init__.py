@@ -502,29 +502,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         result = super().getMetadata()
         if self._framecount > 1:
             result['frames'] = frames = []
-            if self.frameValues is not None and self.frameAxes is not None:
-                for i, axis in enumerate(self.frameAxes):
-                    all_frame_values = self.frameValues[..., i]
-                    split = np.split(all_frame_values, all_frame_values.shape[i], axis=i)
-                    values = [a.flat[0] for a in split]
-                    uniform = all(len(np.unique(
-                        # convert all values to strings for mixed type comparison with np.unique
-                        (a[np.not_equal(a, None)]).astype(str),
-                    )) == 1 for a in split)
-                    try:
-                        min_val = min(values)
-                        max_val = max(values)
-                    except TypeError:
-                        min_val = None
-                        max_val = None
-                    result['Value' + axis.upper()] = dict(
-                        values=values,
-                        uniform=uniform,
-                        units=self.frameUnits.get(axis) if self.frameUnits is not None else None,
-                        min=min_val,
-                        max=max_val,
-                        datatype=np.array(values).dtype.name,
-                    )
             for idx in range(self._framecount):
                 frame = {'Frame': idx}
                 for axis in self._strides:
