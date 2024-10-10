@@ -1315,6 +1315,46 @@ class TileSource(IPyLeafletMixin):
     def metadata(self) -> JSONDict:
         return self.getMetadata()
 
+    def _getFrameValueInformation(self, frames: List[Dict]):
+        refvalues: Dict[str, Dict[str, List]] = {}
+        for frame in frames:
+            for key, value in frame.items():
+                if 'Value' in key:
+                    if key not in refvalues:
+                        refvalues[key] = {}
+                    value_index = str(frame.get(key.replace('Value', 'Index')))
+                    if value_index not in refvalues[key]:
+                        refvalues[key][value_index] = [value]
+                    else:
+                        refvalues[key][value_index].append(value)
+        frame_value_info = {}
+        for key, value_mapping in refvalues.items():
+            axis_name = key.replace('Value', '').lower()
+            units = None
+            if hasattr(self, 'frameUnits') and self.frameUnits is not None:
+                units = self.frameUnits.get(axis_name)
+            uniform = all(len(set(value_list)) <= 1 for value_list in value_mapping.values())
+            # after evaluating uniform, continue with only
+            # the first value for each index along this axis
+            first_values = [
+                value_list[0] for value_list in value_mapping.values() if len(value_list)
+            ]
+            try:
+                min_val = min(first_values)
+                max_val = max(first_values)
+            except TypeError:
+                min_val = None
+                max_val = None
+            frame_value_info[key] = dict(
+                values=first_values,
+                uniform=uniform,
+                units=units,
+                min=min_val,
+                max=max_val,
+                datatype=np.array(first_values).dtype.name,
+            )
+        return frame_value_info
+
     def _addMetadataFrameInformation(
             self, metadata: JSONDict, channels: Optional[List[str]] = None) -> None:
         """
@@ -1346,6 +1386,7 @@ class TileSource(IPyLeafletMixin):
                     metadata['frames'][idx].get(key) for key in refkeys)):
                 index += 1
             frame['Index'] = index
+        metadata.update(self._getFrameValueInformation(metadata['frames']))
         if any(val > 1 for val in maxref.values()):
             metadata['IndexRange'] = {key: value for key, value in maxref.items() if value > 1}
             metadata['IndexStride'] = {
