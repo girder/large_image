@@ -1317,12 +1317,12 @@ class TileSource(IPyLeafletMixin):
 
     def _getFrameValueInformation(self, frames: List[Dict]):
         refvalues: Dict[str, Dict[str, List]] = {}
-        for idx, frame in enumerate(frames):
+        for frame in frames:
             for key, value in frame.items():
                 if 'Value' in key:
                     if key not in refvalues:
                         refvalues[key] = {}
-                    value_index = frame.get(key.replace('Value', 'Index'))
+                    value_index = str(frame.get(key.replace('Value', 'Index')))
                     if value_index not in refvalues[key]:
                         refvalues[key][value_index] = [value]
                     else:
