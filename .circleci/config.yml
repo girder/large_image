@@ -237,7 +237,7 @@ jobs:
           node: v14
       - tox:
           toxenv: test-py313
-          environ: TOX_VERBOSE=4
+          environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
       - coverage
       - store_artifacts:
           path: build/test/artifacts
