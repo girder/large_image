@@ -514,7 +514,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     current_frame_values = self.frameValues[current_frame_slice]
                     for i, axis in enumerate(self.frameAxes):
                         value = current_frame_values[i]
-                        native_value = getattr(value, 'tolist', lambda: value)()
+                        native_value = getattr(value, 'tolist', lambda v=value: v)()
                         frame['Value' + axis.upper()] = native_value
                 frames.append(frame)
             self._addMetadataFrameInformation(result, getattr(self, '_channels', None))

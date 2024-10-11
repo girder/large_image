@@ -756,5 +756,6 @@ def testFrameValuesEdgeCases(tmp_path):
     assert len(frame_metadata) == 6
 
     for frame in frame_metadata:
-        for key, value in frame.items():
+        for value in frame.values():
+            # ensure that values are cast to native python types
             assert not isinstance(value, np.generic)
