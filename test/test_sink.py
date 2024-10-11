@@ -752,4 +752,9 @@ def testFrameValuesEdgeCases(tmp_path):
     ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=2, z_value=6.4, c_value='CD4')
     ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=1, z=1, z_value=3.1, c_value='CD4')
     ts.addTile(np.zeros((100, 100, 3)), x=0, y=0, c=0, z=1, z_value=1.1)
-    assert len(ts.metadata.get('frames', [])) == 6
+    frame_metadata = ts.metadata.get('frames', [])
+    assert len(frame_metadata) == 6
+
+    for frame in frame_metadata:
+        for key, value in frame.items():
+            assert not isinstance(value, np.generic)
