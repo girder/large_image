@@ -2,6 +2,10 @@
 
 ## 1.30.1
 
+### Improvements
+
+- Support generalized application buttons ([#1692](../../pull/1692))
+
 ### Bug Fixes
 
 - Don't use a default for yaml config files except .large_image_config.yaml ([#1685](../../pull/1685))

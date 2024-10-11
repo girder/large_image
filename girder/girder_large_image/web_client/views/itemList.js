@@ -64,6 +64,14 @@ wrap(HierarchyWidget, 'render', function (render) {
     } else {
         this.$('.li-flatten-item-list').removeClass('hidden');
     }
+
+    const updateChecked = () => {
+        // const resources = this._getCheckedResourceParam();
+        // TODO: handle checked resources for apps
+    };
+
+    this.listenTo(this.itemListView, 'g:checkboxesChanged', updateChecked);
+    this.listenTo(this.folderListView, 'g:checkboxesChanged', updateChecked);
 });
 
 wrap(FolderListWidget, 'checkAll', function (checkAll, checked) {
@@ -277,13 +285,10 @@ wrap(ItemListWidget, 'render', function (render) {
             return true;
         }
         if (nav.type === 'open') {
-            // TODO: handle open type
-            // we probably need to get all the grouped items to pass them to
-            // the .open-in-volview button via that _getCheckedResourceParam
-            // call OR modify the volview plugin to have an open item with less
-            // context.  The current folder context would ideally be the
-            // deepest common parent rather than our current folder.  Where
-            // does volview store its zip file?
+            if (item._href) {
+                window.open(item._href, '_blank');
+                return true;
+            }
         }
         return false;
     };
@@ -447,13 +452,38 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     };
 
+    this.checkApps = (resources) => {
+        const items = this.collection.models;
+        const folders = [this.parentView.parentModel];
+        const canHandle = {items: {}, folders: {}};
+        // TODO: handle checked resources
+        Object.entries(ItemListWidget.registeredApplications).forEach(([appname, app]) => {
+            items.forEach((item) => {
+                const check = app.check('item', item, this.parentView.parentModel);
+                if (check) {
+                    canHandle.items[item.id] = canHandle.items[item.id] || {};
+                    canHandle.items[item.id][appname] = check;
+                }
+            });
+            folders.forEach((folder) => {
+                const check = app.check('item', folder, this.parentView.parentModel);
+                if (check) {
+                    canHandle.folders[folder.id] = canHandle.folders[folder.id] || {};
+                    canHandle.folders[folder.id][appname] = check;
+                }
+            });
+        });
+        return canHandle;
+    };
+
     /**
      * For each item in the collection, if we are navigating to something other
      * than the item, set an href property.
      */
-    function adjustItemHref() {
+    function adjustItemHref(availableApps) {
         this.collection.forEach((item) => {
             item._href = undefined;
+            item._hrefTarget = undefined;
         });
         const list = this._confList();
         const nav = (list || {}).navigate;
@@ -490,8 +520,23 @@ wrap(ItemListWidget, 'render', function (render) {
                     item._href += '&filter=' + encodeURIComponent(filter);
                 }
             });
+        } else if (nav.type === 'open') {
+            this.collection.forEach((item) => {
+                let apps = availableApps.items[item.id];
+                let app;
+                if (nav.name && apps[nav.name]) {
+                    app = apps[nav.name];
+                }
+                if (!app) {
+                    apps = Object.entries(apps).sort(([name1, app1], [name2, app2]) => { const diff = (app1.priority || 0) - (app2.priority || 0); return diff || (ItemListWidget.registeredApplications[name1].name.toLowerCase() > ItemListWidget.registeredApplications[name2].name.toLowerCase() ? 1 : -1); });
+                    app = apps[0][1];
+                }
+                if (app.url && app.url !== true) {
+                    item._href = app.url;
+                    item._hrefTarget = '_blank';
+                }
+            });
         }
-        // TODO: handle nav.type open
     }
 
     function itemListRender() {
@@ -537,7 +582,8 @@ wrap(ItemListWidget, 'render', function (render) {
             this._setSort();
             return;
         }
-        adjustItemHref.call(this);
+        const availableApps = this.checkApps();
+        adjustItemHref.call(this, availableApps);
         this.$el.html(ItemListTemplate({
             items: this.collection.toArray(),
             isParentPublic: this.public,
@@ -556,6 +602,8 @@ wrap(ItemListWidget, 'render', function (render) {
             sort: this._lastSort,
             MetadatumWidget: MetadatumWidget,
             accessLevel: this.accessLevel,
+            registeredApps: ItemListWidget.registeredApplications,
+            availableApps: availableApps,
             parentView: this,
             AccessType: AccessType
         }));
@@ -693,5 +741,21 @@ function itemListMetadataEdit(evt) {
     item._sendMetadata(item.get('meta'));
     return false;
 }
+
+/**
+ * This is a dictionary where the key is the unique application identified.
+ * Each dictionary contains
+ *  name: the display name
+ *  icon: an optional url to an icon to display
+ *  check: a method that takes (modelType, model, currentFolder) where
+ *      modelType is either 'item', 'folder', or 'resource' and model is a
+ *      bootstrap model or a resource dictionary of models.  The function
+ *      returns an object with {url: <url>, priority: <integer>, open:
+ *      <function>} where url is the url to open if possible, the open function
+ *      is a method to call to open the model.  Priority affects the order that
+ *      the open calls are listed in (lower is earlier).  Return undefined or
+ *      false if the application cannot open this model.
+ */
+ItemListWidget.registeredApplications = {};
 
 export default ItemListWidget;
