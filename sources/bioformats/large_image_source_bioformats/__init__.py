@@ -82,7 +82,7 @@ def _monitor_thread():
                     source._bioimage = None
                 except Exception:
                     pass
-        except AssertionError:
+        except Exception:
             pass
         finally:
             if javabridge.get_env():

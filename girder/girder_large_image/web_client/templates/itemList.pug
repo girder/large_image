@@ -1,20 +1,22 @@
+- var metadataCount = itemList.columns.filter((col) => col.type === 'metadata').length
 <div class="bg-white rounded-lg">
   - var colNames = [];
   - var layoutMode = (itemList.layout || {}).mode || 'table';
   - var layoutWidth = parseInt((itemList.layout || {})['max-width']) || 250
   <div class="g-edit-table-view-dialog-container"></div>
-  <div class="#{layoutMode == 'grid' ? 'block' : 'table'} border-collapse g-item-list li-item-list max-w-full text-sm text-gray-700 text-center" width="100%">
-    <div class="table-header-group border-b-2 border-zinc-200 tracking-wider text-zinc-500">
-      <div class="table-row">
-        if checkboxes
-          <div class="table-cell text-center w-8">
-          </div>
-        for column, colidx in itemList.columns
-          if column.type !== 'image' || hasAnyLargeImage
-            if column.title !== undefined
-              - colNames[colidx] = column.title
-            else
-              - colNames[colidx] = `${column.value.substr(0, 1).toUpperCase()}${column.value.substr(1)}`
+  <div class="#{layoutMode == 'grid' ? 'block' : 'table'} border-collapse g-item-list li-item-list max-w-full text-sm text-gray-700 text-center" width="100%" metadata-columns="#{metadataCount}">
+    if items.length
+      <div class="table-header-group border-b-2 border-zinc-200 tracking-wider text-zinc-500">
+        <div class="table-row">
+          if checkboxes
+            <div class="table-cell text-center w-8">
+            </div>
+          for column, colidx in itemList.columns
+            if column.type !== 'image' || hasAnyLargeImage
+              if column.title !== undefined
+                - colNames[colidx] = column.title
+              else
+                - colNames[colidx] = `${column.value.substr(0, 1).toUpperCase()}${column.value.substr(1)}`
             - var sortable = (column.type === 'record' && column.value !== 'controls') || column.type === 'metadata'
             <div class="table-cell li-item-list-header #{sortable ? 'sortable' : ''}" column_type="#{column.type}", column_value="#{column.value}" scope="col">
               <div class="flex items-left my-2 mx-4">
@@ -31,8 +33,8 @@
                     <span class="ml-2 ri-arrow-up-down-line cursor-pointer sort-indicator"></span>
               </div>
             </div>
+        </div>
       </div>
-    </div>
     <div class="#{layoutMode == 'grid' ? '' : 'table-row-group'}">
       each item in items
         <div class="#{layoutMode == 'grid' ? 'inline-block' : 'table-row'} g-item-list-entry border-b border-zinc-200 hover:bg-zinc-100 #{(highlightItem && item.id === selectedItemId ? 'g-selected' : '')}" public="#{(isParentPublic ? 'true' : 'false')}" style="#{layoutMode == 'grid' ? ('max-width: ' + layoutWidth + 'px') : ''}">
@@ -66,7 +68,7 @@
                   }
                 });
               <div class="#{layoutMode == 'grid' ? 'inline-block' : 'table-cell'} align-middle">
-                <#{divtype} class="li-item-list-cell #{classes.join(' ')} flex items-left mx-4" g-item-cid="#{item.cid}" href="#item/#{item.id}" title="#{colNames[colidx]}">
+                <#{divtype} class="li-item-list-cell #{classes.join(' ')} flex items-left mx-4" g-item-cid="#{item.cid}" href="#{item._href ? item._href : `#item/${item.id}`}" title="#{colNames[colidx]}">
                   if !skip && column.label
                     = column.label
                   if skip
@@ -115,8 +117,12 @@
                           input.input-sm.form-control.g-widget-metadata-value-input.g-widget-metadata-column(placeholder=column.description || "Value", value=value, title=column.description)
                     else
                       span.large_image_metadata
-                        = value
-                      if value
+                        if column.format === 'text' && value
+                          //- allow long strings to be hyphenated at periods and underscores
+                          != String(value).replace(/&/g, '&amp;').replace(/</, '&lt;').replace(/>/, '&gt;').replace(/"/, '&quot').replace(/'/, '&#39;').replace(/\./g, '.&shy;').replace(/_/g, '_&shy;')
+                        else
+                          = value
+                      if value && column.format !== 'count'
                         span.li-item-list-cell-filter(title="Only show items that match this metadata value exactly", filter-value=value, column-value=column.value)
                           i.icon-filter
                 </#{divtype}>

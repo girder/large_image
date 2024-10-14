@@ -38,6 +38,16 @@ div.large_image_container+span
     &>li>.li-item-list-cell
       display inline-block
 
+ul.g-item-list[metadata-columns="0"]
+  .li-column-record-size
+    text-wrap no-wrap
+
+  .li-column-record-name
+    width 100%
+
+.li-item-list-filter
+  padding-left 12px
+
 @media (min-width 768px)
   .modal-dialog.li-item-list-dialog
     width inherit
@@ -49,3 +59,39 @@ div.large_image_container+span
 
 .li-item-list-filter-clear
   cursor pointer
+
+/* Has some new stuff but REMOVE once things look ok on merge
+.li-flatten-item-list
+  font-size 14px
+  display inline-block
+  margin-left 20px
+
+  label
+    padding-left 5px
+    font-weight normal
+
+.g-hierarchy-widget .g-hierarchy-actions-header.li-item-list-filter-parent
+  display flex
+  align-items baseline
+
+  button.g-checked-actions-button
+    float unset
+
+  .li-item-list-filter
+    flex 1
+    display flex
+    align-items baseline
+
+    input
+      flex 1
+
+    .li-item-list-filter-clear
+      cursor pointer
+      margin-right 20px
+
+.g-hierarchy-widget .g-hierarchy-breadcrumb-bar ol.breadcrumb.li-item-list-filter-parent
+  white-space wrap
+
+  .li-item-list-filter
+    white-space nowrap
+*/
