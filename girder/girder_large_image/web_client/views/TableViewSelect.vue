@@ -23,7 +23,7 @@
         <li
           v-for="name in Object.keys(views).sort((a, b) => (views[a].edit ? 1 : 0) - (views[b].edit ? 1 : 0))"
           :key="name"
-          class="px-2 py-1 hover:bg-gray-100 cursor-pointer flex items-center"
+          class="px-2 py-1 hover:bg-neutral-100 cursor-pointer flex items-center"
           @click="selectView(name)"
         >
           <span class="text-sm grow">{{ name }}</span>
@@ -55,7 +55,7 @@
         />
         <li
           v-if="loggedIn"
-          class="px-2 py-1 hover:bg-gray-100 cursor-pointer flex items-center"
+          class="px-2 py-1 hover:bg-neutral-100 cursor-pointer flex items-center"
           @click="newView()"
         >
           <span class="text-sm grow">New View</span>

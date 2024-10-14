@@ -1,7 +1,9 @@
 <div class="bg-white rounded-lg">
   - var colNames = [];
+  - var layoutMode = (itemList.layout || {}).mode || 'table';
+  - var layoutWidth = parseInt((itemList.layout || {})['max-width']) || 250
   <div class="g-edit-table-view-dialog-container"></div>
-  <div class="table border-collapse g-item-list li-item-list max-w-full text-sm text-gray-700 text-center" width="100%">
+  <div class="#{layoutMode == 'grid' ? 'block' : 'table'} border-collapse g-item-list li-item-list max-w-full text-sm text-gray-700 text-center" width="100%">
     <div class="table-header-group border-b-2 border-zinc-200 tracking-wider text-zinc-500">
       <div class="table-row">
         if checkboxes
@@ -31,11 +33,11 @@
             </div>
       </div>
     </div>
-    <div class="table-row-group">
+    <div class="#{layoutMode == 'grid' ? '' : 'table-row-group'}">
       each item in items
-        <div class="table-row g-item-list-entry border-b border-zinc-200 hover:bg-zinc-100 #{(highlightItem && item.id === selectedItemId ? 'g-selected' : '')}" public="#{(isParentPublic ? 'true' : 'false')}" style="#{(itemList.layout || {}).mode == 'grid' ? ('max-width: ' + parseInt((itemList.layout || {})['max-width'] || 250) + 'px') : ''}">
+        <div class="#{layoutMode == 'grid' ? 'inline-block' : 'table-row'} g-item-list-entry border-b border-zinc-200 hover:bg-zinc-100 #{(highlightItem && item.id === selectedItemId ? 'g-selected' : '')}" public="#{(isParentPublic ? 'true' : 'false')}" style="#{layoutMode == 'grid' ? ('max-width: ' + layoutWidth + 'px') : ''}">
           if checkboxes
-            <div class="table-cell align-middle li-item-list-cell w-8">
+            <div class="#{layoutMode == 'grid' ? 'inline-block' : 'table-cell'} align-middle li-item-list-cell w-8">
               <label class="custom-checkbox -m-1">
                 <input type="checkbox" class="g-list-checkbox" g-item-cid="#{item.cid}">
               </label>
@@ -63,9 +65,8 @@
                     skip = true;
                   }
                 });
-              <div class="table-cell align-middle">
+              <div class="#{layoutMode == 'grid' ? 'inline-block' : 'table-cell'} align-middle">
                 <#{divtype} class="li-item-list-cell #{classes.join(' ')} flex items-left mx-4" g-item-cid="#{item.cid}" href="#item/#{item.id}" title="#{colNames[colidx]}">
-                  //- <div class="li-item-list-cell #{classes.join(' ')} flex items-left mx-4" g-item-cid="#{item.cid}" title="#{colNames[colidx]}">
                   if !skip && column.label
                     = column.label
                   if skip

@@ -5,9 +5,9 @@
         class="bg-white flex flex-col h-full max-h-[calc(100vh-100px)] max-w-3xl overflow-hidden rounded-lg shadow-lg w-full"
       >
 
-        <div class="flex items-center px-3 py-2 bg-gray-200">
+        <div class="flex items-center px-3 py-2 bg-neutral-200">
           <h4 class="flex-1">
-            Edit Columns
+            Edit View
           </h4>
         </div>
 
@@ -22,6 +22,23 @@
                 placeholder="Name"
               >
             </div>
+            <div class="flex items-center mb-2 space-x-2">
+              <label class="flex items-center space-x-2 ml-1 mr-8 font-normal">
+                <input
+                  type="checkbox"
+                  v-model="isGrid"
+                >
+                <span>Display in grid</span>
+              </label>
+              <input
+                v-model.number="gridWidth"
+                type="text"
+                class="border border-neutral-200 rounded-md w-16 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-secondary focus:ring-offset-1 text-right"
+                style="color: #333333"
+                placeholder="Width"
+              >
+              <span>px</span>
+            </div>
             <div class="flex items-center relative">
               <input
                 v-model="searchInput"
@@ -32,7 +49,7 @@
               >
               <button
                 v-if="searchInput"
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-500 hover:text-neutral-700 focus:outline-none"
                 @click="searchInput = ''"
               >
                 <i class="ri-close-line" />
@@ -67,12 +84,12 @@
           >
             <ul class="space-y-1">
               <draggable
-                v-model="editableConfig"
+                v-model="editableConfig.columns"
                 handle=".ri-draggable"
               >
                 <transition-group class="space-y-1">
                   <li
-                    v-for="column in config ? editableConfig : []"
+                    v-for="column in editableConfig.columns ? editableConfig.columns : []"
                     :key="column.title || column.value"
                     class="bg-white border border-neutral-200 flex flex-col items-stretch rounded-md"
                   >
@@ -125,7 +142,7 @@ module.exports = {
     },
     props: {
         name: String,
-        config: Array,
+        config: Object,
         allColumns: Array,
         newView: Boolean
     },
@@ -133,13 +150,15 @@ module.exports = {
         return {
             editableConfig: {},
             searchInput: '',
-            editableName: ''
+            editableName: '',
+            gridWidth: 250,
+            isGrid: false,
         };
     },
     computed: {
         searchResults() {
             return this.allColumns.filter((column) => {
-                if (this.editableConfig.some((col) => col.type === column.type && col.value === column.value)) {
+                if (this.editableConfig.columns.some((col) => col.type === column.type && col.value === column.value)) {
                     return false;
                 }
                 const lower = this.searchInput.toLowerCase();
@@ -152,14 +171,33 @@ module.exports = {
             this.editableName = newName;
         },
         config(newConfig) {
-            this.editableConfig = JSON.parse(JSON.stringify(newConfig));
-        }
+            this.updateConfig(newConfig);
+        },
+        isGrid(newIsGrid) {
+            if (!this.editableConfig.layout) {
+                this.editableConfig.layout = {};
+            }
+            this.editableConfig.layout.mode = newIsGrid ? 'grid' : 'table';
+        },
+        gridWidth(newWidth) {
+            if (!this.editableConfig.layout) {
+                this.editableConfig.layout = {};
+            }
+            this.editableConfig.layout['max-width'] = newWidth;
+        },
     },
     created() {
-        this.editableConfig = JSON.parse(JSON.stringify(this.config));
+        this.updateConfig(this.config);
         this.editableName = this.name;
     },
     methods: {
+        updateConfig(newConfig) {
+            this.editableConfig = JSON.parse(JSON.stringify(newConfig));
+            if (this.editableConfig.layout) {
+                this.isGrid = this.editableConfig.layout.mode === 'grid';
+                this.gridWidth = this.editableConfig.layout['max-width'] || 250;
+            }
+        },
         save() {
             this.$emit('save', this.editableConfig, this.editableName);
             this.$refs.dialog.close();
@@ -168,7 +206,7 @@ module.exports = {
             this.$refs.dialog.close();
         },
         removeColumn(column) {
-            this.editableConfig = this.editableConfig.filter((col) => col !== column);
+            this.editableConfig.columns = this.editableConfig.columns.filter((col) => col !== column);
         },
         uniqueKey(column) {
             return column.type + '~' + column.value;
@@ -177,7 +215,7 @@ module.exports = {
             const key = this.uniqueKey(column);
             const col = this.allColumns.find((col) => this.uniqueKey(col) === key);
             if (col) {
-                this.editableConfig.push(col);
+                this.editableConfig.columns.push(col);
             }
         }
     }

@@ -31,7 +31,7 @@ wrap(HierarchyWidget, 'render', function (render) {
                     Show items in this folder and all subfolders
                 </div>
                 <input type="checkbox" id="flattenitemlist" style="margin:0 !important">
-                <span class="mx-1 text-sm">Flatten</span>
+                <span class="mx-1 text-sm">Subfolders</span>
             </div>`
         );
         if ((this.itemListView || {})._recurse) {
@@ -204,7 +204,7 @@ wrap(ItemListWidget, 'render', function (render) {
         return this._liconfig.itemList;
     };
 
-    this._saveTableConfig = ({columns: config, name, newView, originalName}) => {
+    this._saveTableConfig = ({columns, layout, name, newView, originalName}) => {
         // Update or add the named view
         if (!this._liconfig) {
             this._liconfig = {};
@@ -219,7 +219,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 name += ' Copy';
                 foundView = this._liconfig.namedItemLists[name];
             }
-            this._liconfig.namedItemLists[name] = {columns: config, edit: true};
+            this._liconfig.namedItemLists[name] = {columns, layout, edit: true};
         } else {
             const foundView  = this._liconfig.namedItemLists[originalName];
             if (foundView) {
@@ -233,10 +233,11 @@ wrap(ItemListWidget, 'render', function (render) {
                     delete this._liconfig.namedItemLists[originalName];
                     this._liconfig.namedItemLists[name] = foundView;
                 }
-                foundView.columns = config;
+                foundView.columns = columns;
+                foundView.layout = layout;
             } else {
                 // This may occur if we are moving an old existing default view to a named view
-                this._liconfig.namedItemLists[name] = {columns: config, edit: true};
+                this._liconfig.namedItemLists[name] = {columns, layout, edit: true};
             }
         }
 
@@ -246,6 +247,7 @@ wrap(ItemListWidget, 'render', function (render) {
         }
         this._liconfig.itemList.fromName = name;
         delete this._liconfig.itemList.columns;
+        delete this._liconfig.itemList.layout;
 
         // Save the new configuration to the yaml file
         largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
@@ -473,7 +475,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 base[func](`
                     <div class="g-table-view-select"></div>
 
-                    <div class="li-item-list-filter group relative flex h-8">
+                    <div class="li-item-list-filter group relative flex h-8 grow">
                         <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 z-100 w-72 top-full rounded-md mb-[2px] text-sm htk-hidden group-hover:block">
                             <p>Matches items where all specified terms match.</p>
                             <p>Surround with single quotes to include spaces, double quotes for exact value match.</p>
@@ -485,7 +487,7 @@ wrap(ItemListWidget, 'render', function (render) {
                         <i class="ri-search-line absolute top-1/2 -translate-y-1/2 left-0 pl-3"></i>
                         <input
                           type="text"
-                          class="li-item-list-filter-input bg-white border border-zinc-300 rounded-md px-1 pl-8 text-sm focus:outline-none min-w-52"
+                          class="li-item-list-filter-input bg-white border border-zinc-300 rounded-md px-1 pl-8 text-sm focus:outline-none min-w-52 w-full"
                           placeholder="Search items"
                         >
                         <button class="li-item-list-filter-clear absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
@@ -546,14 +548,14 @@ wrap(ItemListWidget, 'render', function (render) {
         const TableConfigDialogConstructor = Vue.extend(TableConfigDialog);
         this._tableConfigVue = new TableConfigDialogConstructor({
             propsData: {
-                config: (this._confList() || {}).columns || [],
+                config: (this._confList() || {}) || {},
                 allColumns: this._allColumns(),
                 name: ((this._liconfig || {}).itemList || {}).fromName || '',
                 newView: false
             }
         });
         this._tableConfigVue.$on('save', (config, name) => {
-            this._saveTableConfig({columns: config, name, newView: false, originalName: this._tableConfigVue.name});
+            this._saveTableConfig({columns: config.columns, layout: config.layout, name, newView: false, originalName: this._tableConfigVue.name});
         });
         this._tableConfigVue.$mount(this.parentView.$el.find('.g-edit-table-view-dialog-container')[0]);
 
@@ -589,7 +591,7 @@ wrap(ItemListWidget, 'render', function (render) {
             });
 
             this._tableViewSelectVue.$on('edit', (name) => {
-                this._tableConfigVue.config = (this._liconfig.namedItemLists || {})[name].columns;
+                this._tableConfigVue.config = (this._liconfig.namedItemLists || {})[name];
                 this._tableConfigVue.name = name;
                 this._tableConfigVue.newView = false;
                 this._tableConfigVue.$refs.dialog.show();
@@ -621,7 +623,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 ];
                 this._liconfig.namedItemLists[name] = {columns, edit: true};
 
-                this._tableConfigVue.config = columns;
+                this._tableConfigVue.config = this._liconfig.namedItemLists[name];
                 this._tableConfigVue.name = name;
                 this._tableConfigVue.newView = true;
                 this._tableConfigVue.$refs.dialog.show();
@@ -635,7 +637,7 @@ wrap(ItemListWidget, 'render', function (render) {
                     this._liconfig.namedItemLists = {};
                 }
                 const foundView = this._liconfig.namedItemLists[name];
-                this._saveTableConfig({columns: foundView.columns, name, newView: true});
+                this._saveTableConfig({columns: foundView.columns, layout: foundView.layout, name, newView: true});
             });
 
             this._tableViewSelectVue.$mount(this.parentView.$el.find('.g-table-view-select')[0]);
