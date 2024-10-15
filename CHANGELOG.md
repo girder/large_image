@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.30.1
+
+### Bug Fixes
+
+- Don't use a default for yaml config files except .large_image_config.yaml ([#1685](../../pull/1685))
+
 ## 1.30.0
 
 ### Features

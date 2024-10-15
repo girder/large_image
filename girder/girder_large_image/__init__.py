@@ -500,14 +500,17 @@ def adjustConfigForUser(config, user):
     return config
 
 
-def addSettingsToConfig(config, user):
+def addSettingsToConfig(config, user, name=None):
     """
     Add the settings for showing thumbnails and images in item lists to a
     config file if the itemList or itemListDialog options are not set.
 
     :param config: the config dictionary to modify.
     :param user: the current user.
+    :param name: the name of the config file.
     """
+    if name and name != '.large_image_config.yaml':
+        return
     columns = []
 
     showThumbnails = Setting().get(constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS)
@@ -596,7 +599,7 @@ def yamlConfigFile(folder, name, user):
             folder = Folder().load(folder['parentId'], user=user, level=AccessType.READ)
 
     addConfig = {} if addConfig is None else addConfig
-    addSettingsToConfig(addConfig, user)
+    addSettingsToConfig(addConfig, user, name)
     return addConfig
 
 
