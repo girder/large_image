@@ -392,8 +392,8 @@ def main(argv):
                 (defaultAxes[0] if len(defaultAxes) else parts[0])
                 if parts[1].isdigit() else parts[1]),
             'range': np.linspace(
-                float(rangevals[0]), float(rangevals[1]),
-                int(rangevals[2]), endpoint=bool(rangevals[3])),
+                float(rangevals[0]), float(rangevals[1]), int(rangevals[2]),
+                endpoint=rangevals[3].lower() not in {'open', 'true', 'on', 'yes', 't'}),
         }
         axesUsed.add(input_params[parts[0]]['axis'].lower())
         if input_params[parts[0]]['axis'].lower() in defaultAxes:

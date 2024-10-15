@@ -1,15 +1,37 @@
 # Change Log
 
-## 1.29.12
+## 1.30.0
+
+### Features
+
+- Add support for Python 3.13 ([#1675](../../pull/1675))
 
 ### Improvements
 
 - Better handle images without enough tile layers ([#1648](../../pull/1648))
 - Add users option to config files; have a default config file ([#1649](../../pull/1649))
+- Remove no longer used code; adjust item list slightly ([#1651](../../pull/1651), [#1668](../../pull/1668))
+- Reduce updates when showing item lists; add a waiting spinner ([#1653](../../pull/1653))
+- Update item lists check for large images when toggling recurse ([#1654](../../pull/1654))
+- Support named item lists ([#1665](../../pull/1665))
+- Add options to group within item lists ([#1666](../../pull/1666))
+- Make the filter field in item lists wider ([#1669](../../pull/1669), [#1671](../../pull/1671))
+- Add a navigate option to item lists ([#1659](../../pull/1659))
+
+### Changes
+
+- Handle a rasterio deprecation ([#1655](../../pull/1655))
+- Handle a variation in a bioformats exception ([#1656](../../pull/1656))
+- Increase logging slow histograms ([#1658](../../pull/1658))
+- Use paginated item lists ([#1664](../../pull/1664))
+- When in-line editing yaml and other files, the tab key now uses spaces ([#1667](../../pull/1667))
+- Changed the parsing of the open parameter in the algorithm progression example ([#1677](../../pull/1677))
 
 ### Bug Fixes
 
 - Fix styling images with empty tile layers ([#1650](../../pull/1650))
+- Add a guard around sorting item lists ([#1663](../../pull/1663))
+- Fix some issues with possible numpy 2.x overflows ([#1672](../../pull/1672))
 
 ## 1.29.11
 

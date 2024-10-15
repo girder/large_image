@@ -99,7 +99,8 @@ format_examples = [
         examples=[
             dict(
                 filename='sample_image.nd2',
-                url='https://downloads.openmicroscopy.org/images/ND2/aryeh/MeOh_high_fluo_003.nd2',
+                # originally from 'https://downloads.openmicroscopy.org/images/ND2/aryeh/MeOh_high_fluo_003.nd2',
+                url='https://data.kitware.com/api/v1/item/66fde0be2480d44510d0ca24/download',
                 hash='8e23bb594cd18314f9c18e70d736088ae46f8bc696ab7dc047784be416d7a706',
             ),
         ],
@@ -125,7 +126,8 @@ format_examples = [
         examples=[
             dict(
                 filename='US-MONO2-8-8x-execho.dcm',
-                url='https://downloads.openmicroscopy.org/images/DICOM/samples/US-MONO2-8-8x-execho.dcm',
+                # originally from 'https://downloads.openmicroscopy.org/images/DICOM/samples/US-MONO2-8-8x-execho.dcm',
+                url='https://data.kitware.com/api/v1/item/66fde1732480d44510d0ca27/download',
                 hash='7d3f54806d0315c6cfc8b7371649a242b5ef8f31e0d20221971dd8087f2ff1ea',
             ),
         ],
@@ -138,7 +140,8 @@ format_examples = [
         examples=[
             dict(
                 filename='20191025 Test FRET 585. 423, 426.lif',
-                url='https://downloads.openmicroscopy.org/images/Leica-LIF/imagesc-30856/20191025%20Test%20FRET%20585.%20423,%20426.lif',
+                # originally from 'https://downloads.openmicroscopy.org/images/Leica-LIF/imagesc-30856/20191025%20Test%20FRET%20585.%20423,%20426.lif',
+                url='https://data.kitware.com/api/v1/item/66fde1b82480d44510d0ca2a/download',
                 hash='8d4ee62868b9616b832c2eb28e7d62ec050fb032e0bc11ea0a392f5c84390c71',
             ),
         ],
@@ -151,7 +154,8 @@ format_examples = [
         examples=[
             dict(
                 filename='Animated_PNG_example_bouncing_beach_ball.png',
-                url='https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
+                # originally from 'https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
+                url='https://data.kitware.com/api/v1/item/66fea4692480d44510d0ca6b/download',
                 hash='3b28e2462f1b31d0d15d795e6e58baf397899c3f864be7034bf47939b5bbbc3b',
             ),
         ],
@@ -194,7 +198,8 @@ format_examples = [
         examples=[
             dict(
                 filename='SampleGIFImage_40kbmb.gif',
-                url='https://sample-videos.com/gif/3.gif',
+                # originally from 'https://sample-videos.com/gif/3.gif',
+                url='https://data.kitware.com/api/v1/item/66fde6b52480d44510d0ca2d/download',
                 hash='0ff064ba36e4f493f6a1b3d9d29c8eee1b719e39fc6768c5a6129534869c380b',
             ),
         ],

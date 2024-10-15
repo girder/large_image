@@ -1,13 +1,16 @@
 import $ from 'jquery';
 import _ from 'underscore';
 import Backbone from 'backbone';
+import Vue from 'vue';
 
+import {getCurrentUser} from '@girder/core/auth';
 import {wrap} from '@girder/core/utilities/PluginUtils';
 import {getApiRoot} from '@girder/core/rest';
-import {getCurrentUser} from '@girder/core/auth';
 import {AccessType} from '@girder/core/constants';
 import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
+import router from '@girder/core/router';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
+import ItemCollection from '@girder/core/collections/ItemCollection';
 import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
@@ -18,14 +21,49 @@ import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
 
+import TableConfigDialog from './TableConfigDialog.vue';
+import TableViewSelect from './TableViewSelect.vue';
+
+ItemCollection.prototype.pageLimit = Math.max(250, ItemCollection.prototype.pageLimit);
+
+function onItemClick(item) {
+    if (this.itemListView && this.itemListView.onItemClick) {
+        if (this.itemListView.onItemClick(item)) {
+            return;
+        }
+    }
+    router.navigate('item/' + item.get('_id'), {trigger: true});
+}
+
+wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
+    settings = settings || {};
+    if (settings.paginated === undefined) {
+        settings.paginated = true;
+    }
+    if (settings.onItemClick === undefined) {
+        settings.onItemClick = onItemClick;
+    }
+    return initialize.call(this, settings);
+});
+
 wrap(HierarchyWidget, 'render', function (render) {
     render.call(this);
+    if (this.parentModel.resourceName !== 'folder') {
+        this.$('.g-folder-list-container').toggleClass('hidden', false);
+    }
     if (!this.$('#flattenitemlist').length && this.$('.g-item-list-container').length && this.itemListView && this.itemListView.setFlatten) {
-        $('button.g-checked-actions-button').parent().after(
-            '<div class="li-flatten-item-list" title="Check to show items in all subfolders in this list"><input type="checkbox" id="flattenitemlist"></input><label for="flattenitemlist">Flatten</label></div>'
+        $('.g-checked-actions').after(`
+            <div class="group relative inline-block flex items-center">
+                <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 bottom-full rounded-md mb-[2px] text-sm whitespace-nowrap htk-hidden group-hover:block">
+                    Show items in this folder and all subfolders
+                </div>
+                <input type="checkbox" id="flattenitemlist" style="margin:0 !important">
+                <span class="mx-1 text-sm">Subfolders</span>
+            </div>`
         );
-        if ((this.itemListView || {})._recurse) {
+        if ((this.itemListView || {})._recurse && this.parentModel.resourceName === 'folder') {
             this.$('#flattenitemlist').prop('checked', true);
+            this.$('.g-folder-list-container').toggleClass('hidden', this.itemListView._hideFoldersOnFlatten);
         }
         this.events['click #flattenitemlist'] = (evt) => {
             this.itemListView.setFlatten(this.$('#flattenitemlist').is(':checked'));
@@ -33,9 +71,9 @@ wrap(HierarchyWidget, 'render', function (render) {
         this.delegateEvents();
     }
     if (this.$('#flattenitemlist').length && this.parentModel.get('_modelType') !== 'folder') {
-        this.$('.li-flatten-item-list').addClass('hidden');
+        this.$('.li-flatten-item-list').addClass('htk-hidden');
     } else {
-        this.$('.li-flatten-item-list').removeClass('hidden');
+        this.$('.li-flatten-item-list').removeClass('htk-hidden');
     }
 });
 
@@ -47,21 +85,62 @@ wrap(FolderListWidget, 'checkAll', function (checkAll, checked) {
 });
 
 wrap(ItemListWidget, 'initialize', function (initialize, settings) {
+    this._inInit = true;
     const result = initialize.call(this, settings);
     delete this._hasAnyLargeImage;
+
+    this._confList = () => {
+        let list;
+        if (!this._liconfig) {
+            return undefined;
+        }
+        const namedList = this._namedList || this._liconfig.defaultItemList;
+        this._namedList = namedList;
+        if (this.$el.closest('.modal-dialog').length) {
+            list = this._liconfig.itemListDialog;
+        } else if (namedList && this._liconfig.namedItemLists && this._liconfig.namedItemLists[namedList]) {
+            list = this._liconfig.namedItemLists[namedList];
+        } else {
+            list = this._liconfig.itemList;
+        }
+        if (list.group) {
+            let group = list.group;
+            group = !group.keys ? {keys: group} : group;
+            group.keys = Array.isArray(group.keys) ? group.keys : [group.keys];
+            group.keys = group.keys.filter((g) => !g.includes(',') && !g.includes(':'));
+            if (!group.keys.length) {
+                group = undefined;
+            }
+            list.group = group;
+        }
+        return list;
+    };
 
     largeImageConfig.getConfigFile(settings.folderId, true, (val) => {
         if (!settings.folderId) {
             this._liconfig = val;
         }
         if (_.isEqual(val, this._liconfig) && !this._recurse) {
+            this._inInit = false;
+            this.render();
             return;
+        }
+        if (!_.isEqual(val, this._liconfig) && !this.$el.closest('.modal-dialog').length && val) {
+            this._liconfig = val;
+            const list = this._confList();
+            if (list.layout && list.layout.flatten !== undefined) {
+                this._recurse = !!list.layout.flatten;
+                this.parentView.$('#flattenitemlist').prop('checked', this._recurse);
+            }
+            this._hideFoldersOnFlatten = !!(list.layout && list.layout.flatten === 'only');
+            this.parentView.$('.g-folder-list-container').toggleClass('hidden', this._hideFoldersOnFlatten);
         }
         delete this._lastSort;
         this._liconfig = val;
         const curRoute = Backbone.history.fragment;
         const routeParts = splitRoute(curRoute);
         const query = parseQueryString(routeParts.name);
+        this._namedList = query.namedList || undefined;
         let update = false;
         if (query.sort) {
             this._lastSort = query.sort.split(',').map((chunk) => {
@@ -73,18 +152,23 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
                 };
             });
             update = true;
+        } else if (this._confList && this._confList() && this._confList().defaultSort && this._confList().defaultSort.length) {
+            this._lastSort = this._confList().defaultSort;
+            update = true;
         }
         if (query.filter || this._recurse) {
             this._generalFilter = query.filter;
-            this._setFilter();
+            this._setFilter(false);
             update = true;
         }
+        this._inInit = false;
         if (update) {
             this._setSort();
+        } else {
+            this.render();
         }
-        this.render();
     });
-    this.events['click .li-item-list-header.sortable'] = (evt) => sortColumn.call(this, evt);
+    this.events['click .sortable'] = (evt) => sortColumn.call(this, evt);
     this.events['click .li-item-list-cell-filter'] = (evt) => itemListCellFilter.call(this, evt);
     this.events['click .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
     this.events['change .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
@@ -93,6 +177,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
     this.setFlatten = (flatten) => {
         if (!!flatten !== !!this._recurse) {
             this._recurse = !!flatten;
+            this.parentView.$('.g-folder-list-container').toggleClass('hidden', this._hideFoldersOnFlatten && this._recurse);
             this._setFilter();
             this.render();
         }
@@ -102,6 +187,9 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
 
 wrap(ItemListWidget, 'render', function (render) {
     this.$el.closest('.modal-dialog').addClass('li-item-list-dialog');
+    if (!this.$el.children().length) {
+        this.$el.html('<span class="icon-spin1 animate-spin" title="Loading item list"/>');
+    }
 
     /* Chrome limits the number of connections to a single domain, which means
      * that time-consuming requests for thumbnails can bind-up the web browser.
@@ -129,57 +217,94 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     }
 
-    function addLargeImageDetails(item, container, parent, extraInfo) {
-        var elem;
-        elem = $('<div class="large_image_thumbnail"/>');
-        elem.attr('g-item-cid', item.cid);
-        container.append(elem);
-        /* We store the desired src attribute in deferred-src until we actually
-         * load the image. */
-        elem.append($('<img class="waiting"/>').attr(
-            'deferred-src', getApiRoot() + '/item/' +
-                item.id + '/tiles/thumbnail?width=160&height=100'));
-        var access = item.getAccessLevel();
-        var extra = extraInfo[access] || extraInfo[AccessType.READ] || {};
-        if (!getCurrentUser()) {
-            extra = extraInfo.null || {};
+    this._saveTableConfig = ({config, name, newView, originalName}) => {
+        // Update or add the named view
+        if (!this._liconfig) {
+            this._liconfig = {};
         }
+        if (!this._liconfig.namedItemLists) {
+            this._liconfig.namedItemLists = {};
+        }
+        if (newView) {
+            // Need to make the view name unique
+            let foundView = this._liconfig.namedItemLists[name];
+            while (foundView) {
+                name += ' Copy';
+                foundView = this._liconfig.namedItemLists[name];
+            }
+            const configCopy = JSON.parse(JSON.stringify(config));
+            configCopy.edit = true;
+            this._liconfig.namedItemLists[name] = configCopy;
+        } else {
+            const foundView  = this._liconfig.namedItemLists[originalName];
+            if (foundView) {
+                if (originalName !== name) {
+                    // Need to make the view name unique
+                    let duplicate = this._liconfig.namedItemLists[name];
+                    while (duplicate) {
+                        name += ' Copy';
+                        duplicate = this._liconfig.namedItemLists[name];
+                    }
+                    delete this._liconfig.namedItemLists[originalName];
+                    this._liconfig.namedItemLists[name] = foundView;
+                }
+                foundView.columns = config.columns;
+                foundView.layout = config.layout;
+                foundView.edit = true;
+            } else {
+                // This may occur if we are moving an old existing default view to a named view
+                const configCopy = JSON.parse(JSON.stringify(config));
+                configCopy.edit = true;
+                this._liconfig.namedItemLists[name] = configCopy;
+            }
+        }
+        this._updateNamedList(name, true);
+        // Save the new configuration to the yaml file
+        largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
+        itemListRender.apply(this);
+    };
 
-        /* Set the maximum number of columns we have so that we can let css
-         * perform alignment. */
-        var numColumns = Math.max((extra.images || []).length + 1, parent.attr('large_image_columns') || 0);
-        parent.attr('large_image_columns', numColumns);
+    this._deleteTableConfig = (name) => {
+        if (!this._liconfig) {
+            return;
+        }
+        delete this._liconfig.namedItemLists[name];
+        itemListRender.apply(this);
+        largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
+    };
 
-        _.each(extra.images || [], function (imageName) {
-            elem = $('<div class="large_image_thumbnail"/>');
-            container.append(elem);
-            elem.append($('<img class="waiting"/>').attr(
-                'deferred-src', getApiRoot() + '/item/' + item.id +
-                '/tiles/images/' + imageName + '?width=160&height=100&_=' + item.get('updated')
-            ));
-            elem.attr('extra-image', imageName);
+    this._allColumns = () => {
+        if (this._liconfig && this._liconfig.allColumns) {
+            return this._liconfig.allColumns;
+        }
+        const allColumns = [
+            {type: 'image', value: 'thumbnail', title: 'Thumbnail'},
+            {type: 'image', value: 'label', title: 'Label'},
+            {type: 'record', value: 'controls', title: 'Controls'},
+            {type: 'record', value: 'name', title: 'Name'},
+            {type: 'record', value: 'size', title: 'Size'}
+        ];
+        const allColumnsMap = {};
+        this.collection.toArray().forEach((item) => {
+            const value = item.get('meta') || {};
+            for (const key in value) {
+                if (!allColumnsMap[key]) {
+                    allColumnsMap[key] = true;
+                    allColumns.push({
+                        type: 'metadata',
+                        value: key,
+                        title: key.replace(/[^a-zA-Z0-9]+/g, ' ')
+                            .split(' ')
+                            .filter((word) => word.length > 0)
+                            .map((word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                            )
+                            .join(' ')
+                    });
+                }
+            }
         });
-
-        $('.large_image_thumbnail', container).each(function () {
-            var elem = $(this);
-            /* Handle images loading or failing. */
-            $('img', elem).one('error', function () {
-                $('img', elem).addClass('failed-to-load');
-                $('img', elem).removeClass('loading waiting');
-                elem.addClass('failed-to-load');
-                _loadMoreImages(parent);
-            });
-            $('img', elem).one('load', function () {
-                $('img', elem).addClass('loaded');
-                $('img', elem).removeClass('loading waiting');
-                _loadMoreImages(parent);
-            });
-        });
-        _loadMoreImages(parent);
-    }
-
-    this._confList = () => {
-        return this._liconfig ? (this.$el.closest('.modal-dialog').length ? this._liconfig.itemListDialog : this._liconfig.itemList) : undefined;
+        return allColumns;
     };
 
     /**
@@ -201,17 +326,78 @@ wrap(ItemListWidget, 'render', function (render) {
                 const oldPages = this._totalPages;
                 const pages = Math.ceil(this.collection.getTotalCount() / this.collection.pageLimit);
                 this._totalPages = pages;
+                // recheck if this has large images
+                this._hasAnyLargeImage = !!_.some(this.collection.toArray(), function (item) {
+                    return item.has('largeImage');
+                });
                 this._inFetch = false;
-                if (this._needsFetch) {
-                    this._setSort();
-                }
-                if (oldPages !== pages) {
+                if (oldPages !== pages || this.collection.offset !== this.collection.size()) {
+                    this.collection.offset = this.collection.size();
                     this.trigger('g:paginated');
                     this.collection.trigger('g:changed');
+                } else {
+                    itemListRender.apply(this, _.rest(arguments));
+                }
+                if (this._needsFetch) {
+                    this._setSort();
                 }
             });
         } else {
             this._needsFetch = true;
+        }
+    };
+
+    /**
+     * Return true if we handle the click
+     */
+    this.onItemClick = (item) => {
+        const list = this._confList();
+        const nav = (list || {}).navigate;
+        if (!nav || (!nav.type && !nav.name) || nav.type === 'item') {
+            return false;
+        }
+        if (nav.type === 'itemList') {
+            if ((nav.name || '') === (self._namedList || '')) {
+                return false;
+            }
+            if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
+                return false;
+            }
+            this._updateNamedList(nav.name, false);
+            if (list.group) {
+                this._generalFilter = '';
+                list.group.keys.forEach((key) => {
+                    const cell = this.$el.find(`[g-item-cid="${item.cid}"] [column-value="${key}"]`);
+                    if (cell.length) {
+                        addCellToFilter.call(this, cell, false);
+                    }
+                });
+            }
+            this._setFilter(false);
+            this._setSort();
+            addToRoute({namedList: this._namedList, filter: this._generalFilter});
+            return true;
+        }
+        if (nav.type === 'open') {
+            // TODO: handle open type
+            // we probably need to get all the grouped items to pass them to
+            // the .open-in-volview button via that _getCheckedResourceParam
+            // call OR modify the volview plugin to have an open item with less
+            // context.  The current folder context would ideally be the
+            // deepest common parent rather than our current folder.  Where
+            // does volview store its zip file?
+        }
+        return false;
+    };
+
+    this._updateNamedList = (name, update) => {
+        name = name || '';
+        if ((this._namedList || '') !== name) {
+            this._namedList = name;
+            if (update !== false) {
+                addToRoute({namedList: this._namedList});
+                this._setSort();
+            }
         }
     };
 
@@ -234,7 +420,7 @@ wrap(ItemListWidget, 'render', function (render) {
         return val;
     };
 
-    this._setFilter = () => {
+    this._setFilter = (update) => {
         const val = this._generalFilter;
         let filter;
         const usedPhrases = {};
@@ -333,6 +519,23 @@ wrap(ItemListWidget, 'render', function (render) {
                 filter = '_filter_:' + JSON.stringify(filter);
             }
         }
+        const group = (this._confList() || {}).group || undefined;
+        if (group) {
+            if (group.keys.length) {
+                let grouping = '_group_:meta.' + group.keys.join(',meta.');
+                if (group.counts) {
+                    for (let [gkey, gval] of Object.entries(group.counts)) {
+                        if (!gkey.includes(',') && !gkey.includes(':') && !gval.includes(',') && !gval.includes(':')) {
+                            if (gkey !== '_id') {
+                                gkey = `meta.${gkey}`;
+                            }
+                            grouping += `,_count_,${gkey},meta.${gval}`;
+                        }
+                    }
+                }
+                filter = grouping + ':' + (filter || '');
+            }
+        }
         if (this._recurse) {
             filter = '_recurse_:' + (filter || '');
         }
@@ -340,32 +543,96 @@ wrap(ItemListWidget, 'render', function (render) {
             this._filter = filter;
             this.collection.params = this.collection.params || {};
             this.collection.params.text = this._filter;
-            this._setSort();
+            if (update !== false) {
+                this._setSort();
+            }
         }
     };
 
+    /**
+     * For each item in the collection, if we are navigating to something other
+     * than the item, set an href property.
+     */
+    function adjustItemHref() {
+        this.collection.forEach((item) => {
+            item._href = undefined;
+        });
+        const list = this._confList();
+        const nav = (list || {}).navigate;
+        if (!nav || (!nav.type && !nav.name) || nav.type === 'item') {
+            return;
+        }
+        if (nav.type === 'itemList') {
+            if ((nav.name || '') === (self._namedList || '')) {
+                return;
+            }
+            if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
+                return;
+            }
+            this.collection.forEach((item) => {
+                item._href = `#folder/${this.parentView.parentModel.id}?namedList=` + (nav.name ? encodeURIComponent(nav.name) : '');
+                let filter = '';
+                if (list.group) {
+                    list.group.keys.forEach((col) => {
+                        let val = item.get('meta') || {};
+                        col.split('.').forEach((part) => {
+                            val = (val || {})[part];
+                        });
+                        if (/[ '\\]/.exec(col)) {
+                            col = "'" + col.replace('\\', '\\\\').replace("'", "\\'") + "'";
+                        }
+                        if (val) {
+                            val = val.replace('\\', '\\\\').replace('"', '\\"');
+                            filter += ` ${col}:"${val}"`;
+                        }
+                    });
+                }
+                filter = filter.trim();
+                if (filter !== '') {
+                    item._href += '&filter=' + encodeURIComponent(filter);
+                }
+            });
+        }
+        // TODO: handle nav.type open
+    }
+
     function itemListRender() {
+        if (this._inInit || this._inFetch) {
+            return;
+        }
         const root = this.$el.closest('.g-hierarchy-widget');
         if (!root.find('.li-item-list-filter').length) {
-            let base = root.find('.g-hierarchy-actions-header .g-folder-header-buttons').eq(0);
+            let base = root.find('.g-checked-actions').eq(0);
             let func = 'after';
             if (!base.length) {
                 base = root.find('.g-hierarchy-breadcrumb-bar>.breadcrumb>div').eq(0);
-                func = 'before';
             }
             if (base.length) {
-                base[func]('<span class="li-item-list-filter">Filter: <input class="li-item-list-filter-input" title="' +
-                    'All specified terms must be included.  ' +
-                    'Surround with single quotes to include spaces, double quotes for exact value match.  ' +
-                    'Prefix with - to exclude that value.  ' +
-                    'By default, all columns are searched.  ' +
-                    'Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values.  ' +
-                    'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' +
-                    'If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.  ' +
-                    'Non-exact matches without a column specifier will also match columns that start with the specified value.  ' +
-                    '"></input>' +
-                    '<span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>' +
-                    '</span>');
+                base[func](`
+                    <div class="g-table-view-select"></div>
+
+                    <div class="li-item-list-filter group relative flex h-8 grow">
+                        <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 z-100 w-72 top-full rounded-md mb-[2px] text-sm htk-hidden group-hover:block">
+                            <p>Matches items where all specified terms match.</p>
+                            <p>Surround with single quotes to include spaces, double quotes for exact value match.</p>
+                            <p>Prefix with - to exclude that value.</p>
+                            <p>By default, all columns are searched. Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values. Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).</p>
+                            <p>If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.</p>
+                            <p>Non-exact matches without a column specifier will also match columns that start with the specified value.</p>
+                        </div>
+                        <i class="ri-search-line absolute top-1/2 -translate-y-1/2 left-0 pl-3"></i>
+                        <input
+                          type="text"
+                          class="li-item-list-filter-input bg-white border border-zinc-300 rounded-md px-1 pl-8 text-sm focus:outline-none min-w-52 w-full"
+                          placeholder="Search items"
+                        >
+                        <button class="li-item-list-filter-clear absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    </div>
+                `);
+                this._tableViewSelectVue = null; // We'll need to recreate this
+
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(this._generalFilter);
                 }
@@ -384,6 +651,15 @@ wrap(ItemListWidget, 'render', function (render) {
             this._setSort();
             return;
         }
+        const itemList = this._confList();
+        if (!itemList.columns || itemList.columns.length === 0) {
+            itemList.columns = [
+                {type: 'record', value: 'name', title: 'Name'},
+                {type: 'record', value: 'size', title: 'Size'},
+                {type: 'record', value: 'controls', title: 'Controls'}
+            ];
+        }
+        adjustItemHref.call(this);
         this.$el.html(ItemListTemplate({
             items: this.collection.toArray(),
             isParentPublic: this.public,
@@ -405,6 +681,101 @@ wrap(ItemListWidget, 'render', function (render) {
             parentView: this,
             AccessType: AccessType
         }));
+
+        const TableConfigDialogConstructor = Vue.extend(TableConfigDialog);
+        this._tableConfigVue = new TableConfigDialogConstructor({
+            propsData: {
+                config: (this._confList() || {}) || {},
+                allColumns: this._allColumns(),
+                name: this._namedList,
+                newView: false
+            }
+        });
+        this._tableConfigVue.$on('save', (config, name) => {
+            this._saveTableConfig({config, name, newView: false, originalName: this._tableConfigVue.name});
+        });
+        this._tableConfigVue.$mount(this.parentView.$el.find('.g-edit-table-view-dialog-container')[0]);
+
+        const currentName = this._namedList;
+        const views = (this._liconfig || {}).namedItemLists || {};
+        if (this._tableViewSelectVue) {
+            this._tableViewSelectVue.value = currentName;
+            this._tableViewSelectVue.views = views;
+            this._tableViewSelectVue.loggedIn = !!getCurrentUser();
+        } else {
+            const TableViewSelectConstructor = Vue.extend(TableViewSelect);
+            this._tableViewSelectVue = new TableViewSelectConstructor({
+                propsData: {
+                    value: currentName,
+                    views,
+                    loggedIn: !!getCurrentUser()
+                }
+            });
+
+            this._tableViewSelectVue.$on('change', (name) => {
+                if (!this._liconfig) {
+                    this._liconfig = {};
+                }
+                if (!this._liconfig.itemList) {
+                    this._liconfig.itemList = {};
+                }
+                this._updateNamedList(name, true);
+                this._setFilter(false);
+                this._setSort();
+            });
+
+            this._tableViewSelectVue.$on('edit', (name) => {
+                this._tableConfigVue.config = (this._liconfig.namedItemLists || {})[name];
+                this._tableConfigVue.name = name;
+                this._tableConfigVue.newView = false;
+                this._tableConfigVue.$refs.dialog.show();
+            });
+
+            this._tableViewSelectVue.$on('delete', (name) => {
+                this._deleteTableConfig(name);
+            });
+
+            this._tableViewSelectVue.$on('new', () => {
+                if (this._liconfig === undefined) {
+                    this._liconfig = {};
+                }
+                if (this._liconfig.namedItemLists === undefined) {
+                    this._liconfig.namedItemLists = {};
+                }
+                let name = 'View';
+                let num = 1;
+                let foundView = this._liconfig.namedItemLists[name];
+                while (foundView) {
+                    num += 1;
+                    name = `View ${num}`;
+                    foundView = this._liconfig.namedItemLists[name];
+                }
+                const columns = [
+                    {type: 'record', value: 'name'},
+                    {type: 'record', value: 'size'},
+                    {type: 'record', value: 'controls'}
+                ];
+                this._liconfig.namedItemLists[name] = {columns, edit: true};
+
+                this._tableConfigVue.config = this._liconfig.namedItemLists[name];
+                this._tableConfigVue.name = name;
+                this._tableConfigVue.newView = true;
+                this._tableConfigVue.$refs.dialog.show();
+            });
+
+            this._tableViewSelectVue.$on('copy', (name) => {
+                if (this._liconfig === undefined) {
+                    this._liconfig = {};
+                }
+                if (this._liconfig.namedItemLists === undefined) {
+                    this._liconfig.namedItemLists = {};
+                }
+                const foundView = this._liconfig.namedItemLists[name];
+                this._saveTableConfig({config: foundView, name, newView: true});
+            });
+
+            this._tableViewSelectVue.$mount(this.parentView.$el.find('.g-table-view-select')[0]);
+        }
 
         const parent = this.$el;
         this.$el.find('.large_image_thumbnail').each(function () {
@@ -431,7 +802,6 @@ wrap(ItemListWidget, 'render', function (render) {
 
     largeImageConfig.getSettings((settings) => {
         var items = this.collection.toArray();
-        var parent = this.$el;
         this._hasAnyLargeImage = !!_.some(items, function (item) {
             return item.has('largeImage');
         });
@@ -442,29 +812,6 @@ wrap(ItemListWidget, 'render', function (render) {
         if (this._recurse && !((this.collection || {}).params || {}).text) {
             this._setFilter();
             this.render();
-            return;
-        }
-        render.call(this);
-        if (settings['large_image.show_thumbnails'] === false ||
-                this.$('.large_image_container').length > 0) {
-            return this;
-        }
-        if (this._hasAnyLargeImage) {
-            if (!this._confList()) {
-                _.each(items, (item) => {
-                    var elem = $('<div class="large_image_container"/>');
-                    if (item.get('largeImage')) {
-                        item.getAccessLevel(() => {
-                            if (!this._confList()) {
-                                addLargeImageDetails(item, elem, parent, settings.extraInfo);
-                            }
-                        });
-                    }
-                    var inner = $('<span>').html($('a[g-item-cid="' + item.cid + '"]').html());
-                    $('a[g-item-cid="' + item.cid + '"]', parent).first().empty().append(elem, inner);
-                    _loadMoreImages(parent);
-                });
-            }
         }
         return this;
     });
@@ -481,14 +828,20 @@ wrap(ItemListWidget, 'remove', function (remove) {
 });
 
 function sortColumn(evt) {
-    const header = $(evt.target);
+    const icon = {
+        up: 'ri-arrow-up-line',
+        down: 'ri-arrow-down-line',
+        none: 'ri-arrow-up-down-line'
+    };
+    const header = $(evt.currentTarget);
     const entry = {
         type: header.attr('column_type'),
         value: header.attr('column_value')
     };
-    const curDir = header.hasClass('down') ? 'down' : header.hasClass('up') ? 'up' : null;
+    const sortIndicator = header.find('.sort-indicator');
+    const curDir = sortIndicator.hasClass(icon.down) ? 'down' : sortIndicator.hasClass(icon.up) ? 'up' : 'none';
     const nextDir = curDir === 'down' ? 'up' : 'down';
-    header.toggleClass('down', nextDir === 'down').toggleClass('up', nextDir === 'up');
+    sortIndicator.toggleClass(icon.down, nextDir === 'down').toggleClass(icon.up, nextDir === 'up').toggleClass(icon.none, nextDir === 'none');
     entry.dir = nextDir;
     const oldSort = this._lastSort;
     if (!this._lastSort) {
@@ -502,9 +855,7 @@ function sortColumn(evt) {
     }
 }
 
-function itemListCellFilter(evt) {
-    evt.preventDefault();
-    const cell = $(evt.target).closest('.li-item-list-cell-filter');
+function addCellToFilter(cell, update) {
     let filter = this._generalFilter || '';
     let val = cell.attr('filter-value');
     let col = cell.attr('column-value');
@@ -516,7 +867,15 @@ function itemListCellFilter(evt) {
     filter = filter.trim();
     this.$el.closest('.g-hierarchy-widget').find('.li-item-list-filter-input').val(filter);
     this._generalFilter = filter;
-    this._setFilter();
+    if (update !== false) {
+        this._setFilter();
+    }
+}
+
+function itemListCellFilter(evt) {
+    evt.preventDefault();
+    const cell = $(evt.target).closest('.li-item-list-cell-filter');
+    addCellToFilter.call(this, cell);
     addToRoute({filter: this._generalFilter});
     this._setSort();
     return false;

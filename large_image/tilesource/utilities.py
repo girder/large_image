@@ -747,7 +747,9 @@ def fullAlphaValue(arr: Union[np.ndarray, npt.DTypeLike]) -> int:
     :returns: the value for the alpha channel.
     """
     dtype = arr.dtype if isinstance(arr, np.ndarray) else arr
-    if dtype.kind == 'u':
+    if not hasattr(dtype, 'kind'):
+        dtype = np.dtype(dtype)
+    if cast(np.dtype, dtype).kind == 'u':
         return np.iinfo(dtype).max
     return 1
 

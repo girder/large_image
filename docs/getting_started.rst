@@ -281,8 +281,8 @@ Any of the frames of such an image are accessed by adding a ``frame=<integer>`` 
         format=large_image.constants.TILE_FORMAT_NUMPY)
     # nparray will contain data from the middle channel image
 
-Channels, Bands, Samples, and Axes
-----------------------------------
+Channels, Bands, Samples, Axes, and Frames
+------------------------------------------
 
 Various large image formats refer to channels, bands, and samples.  This isn't consistent across different libraries.  In an attempt to harmonize the geospatial and medical image terminology, large_image uses ``bands`` or ``samples`` to refer to image plane components, such as red, green, blue, and alpha.  For geospatial data this can often have additional bands, such as near infrared or panchromatic.  ``channels`` are stored as separate frames and can be interpreted as different imaging modalities.  For example, a fluorescence microscopy image might have DAPI, CY5, and A594 channels.  A common color photograph file has 3 bands (also called samples) and 1 channel.
 
@@ -291,6 +291,10 @@ At times, image ``axes`` are used to indicate the order of data, especially when
 The ``z`` and ``t`` are common enough that they are sometimes considered as primary axes.  ``z`` corresponds to the direction orthogonal to ``x`` and ``y`` and is usually associated with altitude or microscope stage height.  ``t`` is time.
 
 Other axes are supported provided their names are case-insensitively unique.
+
+Many image formats (such as TIFF) can contain multiple images within a single file.  A single image within the file can have multiple bands.  Channels, time series, and other axes are stored as separate images.
+
+By default, the ``getTile``, ``getRegion``, and ``tileIterator`` methods will return all of the bands of a single frame.  The specific bands returned can be modified using the ``style`` parameter.  The specific frame, including any channel or other axes, is specified with the ``frame`` parameter.
 
 Styles - Changing colors, scales, and other properties
 ------------------------------------------------------
