@@ -95,7 +95,6 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             return undefined;
         }
         const namedList = this._namedList || this._liconfig.defaultItemList;
-        // TODO: Check with manthey, is this correct?
         this._namedList = namedList;
         if (this.$el.closest('.modal-dialog').length) {
             list = this._liconfig.itemListDialog;
@@ -721,10 +720,8 @@ wrap(ItemListWidget, 'render', function (render) {
                     this._liconfig.itemList = {};
                 }
                 this._updateNamedList(name, true);
-                // TODO: Ask manthey which of these calls is necessary
                 this._setFilter(false);
                 this._setSort();
-                itemListRender.apply(this);
             });
 
             this._tableViewSelectVue.$on('edit', (name) => {
