@@ -255,7 +255,7 @@ wrap(ItemListWidget, 'render', function (render) {
             return false;
         }
         if (nav.type === 'itemList') {
-            if ((nav.name || '') === (self._namedList || '')) {
+            if ((nav.name || '') === (this._namedList || '')) {
                 return false;
             }
             if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
@@ -461,7 +461,7 @@ wrap(ItemListWidget, 'render', function (render) {
             return;
         }
         if (nav.type === 'itemList') {
-            if ((nav.name || '') === (self._namedList || '')) {
+            if ((nav.name || '') === (this._namedList || '')) {
                 return;
             }
             if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
@@ -668,15 +668,15 @@ function itemListMetadataEdit(evt) {
     const column = columns[+ctrl.attr('column-idx')];
     let tempValue = ctrl.find('.g-widget-metadata-value-input').val();
     tempValue = tempValue.trim();
-    let valResult = validateMetadataValue(column, tempValue, self._lastValidationError || (tempValue === '' && !column.required));
+    let valResult = validateMetadataValue(column, tempValue, this._lastValidationError || (tempValue === '' && !column.required));
     if (tempValue === '' && !column.required) {
         valResult = {value: tempValue};
     }
     if (!valResult) {
-        self._lastValidationError = true;
+        this._lastValidationError = true;
         return false;
     }
-    self._lastValidationError = false;
+    this._lastValidationError = false;
     const item = this.collection.get(ctrl.closest('[g-item-cid]').attr('g-item-cid'));
     let value = item.get('meta') || {};
     let meta;
