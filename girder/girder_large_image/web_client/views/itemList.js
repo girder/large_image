@@ -95,6 +95,8 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             return undefined;
         }
         const namedList = this._namedList || this._liconfig.defaultItemList;
+        // TODO: Check with manthey, is this correct?
+        this._namedList = namedList;
         if (this.$el.closest('.modal-dialog').length) {
             list = this._liconfig.itemListDialog;
         } else if (namedList && this._liconfig.namedItemLists && this._liconfig.namedItemLists[namedList]) {
@@ -216,7 +218,7 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     }
 
-    this._saveTableConfig = ({columns, layout, name, newView, originalName}) => {
+    this._saveTableConfig = ({config, name, newView, originalName}) => {
         // Update or add the named view
         if (!this._liconfig) {
             this._liconfig = {};
@@ -231,7 +233,9 @@ wrap(ItemListWidget, 'render', function (render) {
                 name += ' Copy';
                 foundView = this._liconfig.namedItemLists[name];
             }
-            this._liconfig.namedItemLists[name] = {columns, layout, edit: true};
+            const configCopy = JSON.parse(JSON.stringify(config));
+            configCopy.edit = true;
+            this._liconfig.namedItemLists[name] = configCopy;
         } else {
             const foundView  = this._liconfig.namedItemLists[originalName];
             if (foundView) {
@@ -245,22 +249,17 @@ wrap(ItemListWidget, 'render', function (render) {
                     delete this._liconfig.namedItemLists[originalName];
                     this._liconfig.namedItemLists[name] = foundView;
                 }
-                foundView.columns = columns;
-                foundView.layout = layout;
+                foundView.columns = config.columns;
+                foundView.layout = config.layout;
+                foundView.edit = true;
             } else {
                 // This may occur if we are moving an old existing default view to a named view
-                this._liconfig.namedItemLists[name] = {columns, layout, edit: true};
+                const configCopy = JSON.parse(JSON.stringify(config));
+                configCopy.edit = true;
+                this._liconfig.namedItemLists[name] = configCopy;
             }
         }
-
-        // Make sure the named view is the current view
-        if (!this._liconfig.itemList) {
-            this._liconfig.itemList = {};
-        }
-        this._liconfig.defaultItemList = name;
-        delete this._liconfig.itemList.columns;
-        delete this._liconfig.itemList.layout;
-
+        this._updateNamedList(name, true);
         // Save the new configuration to the yaml file
         largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
         itemListRender.apply(this);
@@ -271,9 +270,6 @@ wrap(ItemListWidget, 'render', function (render) {
             return;
         }
         delete this._liconfig.namedItemLists[name];
-        if (this._liconfig.defaultItemList === name) {
-            this._liconfig.defaultItemList = Object.keys(this._liconfig.namedItemLists)[0] || '';
-        }
         itemListRender.apply(this);
         largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
     };
@@ -692,16 +688,16 @@ wrap(ItemListWidget, 'render', function (render) {
             propsData: {
                 config: (this._confList() || {}) || {},
                 allColumns: this._allColumns(),
-                name: ((this._liconfig || {}).defaultItemList) || '',
+                name: this._namedList,
                 newView: false
             }
         });
         this._tableConfigVue.$on('save', (config, name) => {
-            this._saveTableConfig({columns: config.columns, layout: config.layout, name, newView: false, originalName: this._tableConfigVue.name});
+            this._saveTableConfig({config, name, newView: false, originalName: this._tableConfigVue.name});
         });
         this._tableConfigVue.$mount(this.parentView.$el.find('.g-edit-table-view-dialog-container')[0]);
 
-        const currentName = (this._liconfig || {}).defaultItemList;
+        const currentName = this._namedList;
         const views = (this._liconfig || {}).namedItemLists || {};
         if (this._tableViewSelectVue) {
             this._tableViewSelectVue.value = currentName;
@@ -724,12 +720,11 @@ wrap(ItemListWidget, 'render', function (render) {
                 if (!this._liconfig.itemList) {
                     this._liconfig.itemList = {};
                 }
-                this._liconfig.defaultItemList = name;
-                delete this._liconfig.itemList.columns;
+                this._updateNamedList(name, true);
+                // TODO: Ask manthey which of these calls is necessary
+                this._setFilter(false);
+                this._setSort();
                 itemListRender.apply(this);
-                if (getCurrentUser()) {
-                    largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
-                }
             });
 
             this._tableViewSelectVue.$on('edit', (name) => {
@@ -779,7 +774,7 @@ wrap(ItemListWidget, 'render', function (render) {
                     this._liconfig.namedItemLists = {};
                 }
                 const foundView = this._liconfig.namedItemLists[name];
-                this._saveTableConfig({columns: foundView.columns, layout: foundView.layout, name, newView: true});
+                this._saveTableConfig({config: foundView, name, newView: true});
             });
 
             this._tableViewSelectVue.$mount(this.parentView.$el.find('.g-table-view-select')[0]);
