@@ -1,5 +1,7 @@
 import math
+import subprocess
 from multiprocessing.pool import Pool, ThreadPool
+from os import sys
 
 import large_image_source_test
 import large_image_source_zarr
@@ -773,3 +775,27 @@ def testFrameValuesEdgeCases(tmp_path):
         for value in frame.values():
             # ensure that values are cast to native python types
             assert not isinstance(value, np.generic)
+
+
+def testSubprocess(tmp_path):
+    sink = large_image_source_zarr.new()
+    path = sink.largeImagePath
+    subprocess.run([sys.executable, '-c', """import large_image_source_zarr
+import numpy as np
+sink = large_image_source_zarr.open('%s')
+sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2)
+""" % path], capture_output=True, text=True, check=True)
+    sink.addTile(np.ones((1, 1, 1)), x=5000, y=4095, t=0, z=4)
+
+    assert sink.metadata['IndexRange']['IndexZ'] == 5
+    assert sink.getRegion(
+        region=dict(left=2047, top=2047, width=1, height=1),
+        format='numpy',
+        frame=27,
+    )[0] == 1
+    assert sink.getRegion(
+        region=dict(left=5000, top=4095, width=1, height=1),
+        format='numpy',
+        frame=4,
+    )[0] == 1
+    assert sink.sizeX == 5001
