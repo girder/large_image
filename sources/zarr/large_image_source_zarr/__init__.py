@@ -352,6 +352,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             pass
 
     def _readFrameValues(self, found, baseArray):
+        """
+        Populate frame values and frame units from image metadata.
+        """
         axes_values = found.get('axes_values')
         axes_units = found.get('axes_units')
         if isinstance(axes_values, dict):
@@ -514,6 +517,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     current_frame_values = self.frameValues[current_frame_slice]
                     for i, axis in enumerate(self.frameAxes):
                         value = current_frame_values[i]
+                        # ensure that values are returned as native python types
                         native_value = getattr(value, 'tolist', lambda v=value: v)()
                         frame['Value' + axis.upper()] = native_value
                 frames.append(frame)
@@ -689,6 +693,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ])
 
             if len(frame_values.keys()) > 0:
+                # update self.frameValues
                 self.frameAxes = [
                     a for a in axes
                     if a in frame_values or
@@ -783,6 +788,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._associatedImages[imageKey] = (group, arr)
 
     def _getAxisInternalMetadata(self, axis_name):
+        """
+        Get the metadata structure describing an axis in the image.
+        This will be written to the image metadata.
+
+        :param axis_name: a string corresponding to an axis in the image
+        :returns: a dictionary describing the target axis
+        """
         axis_metadata = {'name': axis_name}
         if axis_name in ['x', 'y']:
             axis_metadata['type'] = 'space'
@@ -813,6 +825,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return axis_metadata
 
     def _writeInternalMetadata(self):
+        """
+        Write metadata to Zarr attributes.
+        Metadata structure adheres to OME schema from https://ngff.openmicroscopy.org/latest/
+        """
         self._checkEditable()
         with self._threadLock and self._processLock:
             name = str(self._tempdir.name).split('/')[-1]

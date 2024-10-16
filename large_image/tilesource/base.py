@@ -1316,6 +1316,15 @@ class TileSource(IPyLeafletMixin):
         return self.getMetadata()
 
     def _getFrameValueInformation(self, frames: List[Dict]):
+        """
+        Given a `frames` list from a metadata response, return a dictionary describing
+        the value info for any frame axes. Keys in this dictionary follow the pattern "Value[AXIS]"
+        and each maps to a dictionary describing the axis, including a list of values, whether the
+        axis is uniform, the units, minimum value, maximum value, and data type.
+
+        :param frames: A list of dictionaries describing each frame in the image
+        :returns: A dictionary describing the values of frame axes
+        """
         refvalues: Dict[str, Dict[str, List]] = {}
         for frame in frames:
             for key, value in frame.items():
