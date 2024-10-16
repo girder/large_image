@@ -41,21 +41,20 @@ export default Vue.extend({
             const labels = {};
             labels.IndexC = this.imageMetadata.channels;
             Object.entries(this.metadata).forEach(([key, info]) => {
-                if (key.includes("Value")) {
-                    const labelKey = key.replace('Value', 'Index')
+                if (key.includes('Value')) {
+                    const labelKey = key.replace('Value', 'Index');
                     if (info.values) {
                         if (info.uniform) {
-                            labels[labelKey] = info.values
-                        } else  {
+                            labels[labelKey] = info.values;
+                        } else {
                             // non-uniform values have a value for every frame
                             // labels will change with currentFrame, so only populate current label
                             labels[labelKey] = new Array(this.indexInfo[labelKey].range + 1).fill('');
                             labels[labelKey][this.indexInfo[labelKey].current] = info.values[this.currentFrame];
-
                         }
                     }
                 }
-            })
+            });
             return labels;
         }
     },
