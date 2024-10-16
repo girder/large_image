@@ -660,16 +660,16 @@ def testFrameValues(use_add_tile_args, tmp_path):
             values=[10.0, 20.0, 30.0],
             all_values=(
                 [10.00] * 3 +
-                [10.01] * 3 +
-                [10.02] * 3 +
-                [10.03] * 3 +
                 [20.00] * 3 +
-                [20.01] * 3 +
-                [20.02] * 3 +
-                [20.03] * 3 +
                 [30.00] * 3 +
+                [10.01] * 3 +
+                [20.01] * 3 +
                 [30.01] * 3 +
+                [10.02] * 3 +
+                [20.02] * 3 +
                 [30.02] * 3 +
+                [10.03] * 3 +
+                [20.03] * 3 +
                 [30.03] * 3
             ),
             uniform=False,
@@ -791,11 +791,11 @@ sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2)
     assert sink.getRegion(
         region=dict(left=2047, top=2047, width=1, height=1),
         format='numpy',
-        frame=27,
+        frame=17,
     )[0] == 1
     assert sink.getRegion(
         region=dict(left=5000, top=4095, width=1, height=1),
         format='numpy',
-        frame=4,
+        frame=24,
     )[0] == 1
     assert sink.sizeX == 5001
