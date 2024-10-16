@@ -118,6 +118,9 @@ commands:
           command: |
             echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
             echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+      - restore_cache:
+          name: Restore nvm cache
+          key: v1-nvm-cache-<< parameters.node >>
       - run:
           name: Switch node versions
           command: |
@@ -125,6 +128,11 @@ commands:
             nvm alias default << parameters.node >>
             NODE_DIR=$(dirname $(which node))
             echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
+      - save_cache:
+          name: Save nvm cache
+          key: v1-nvm-cache-<< parameters.node >>
+          paths:
+            - /opt/circleci/.nvm/.cache
       - run:
           name: Check node versions
           command: |
