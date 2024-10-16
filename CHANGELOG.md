@@ -6,6 +6,7 @@
 
 - Don't use a default for yaml config files except .large_image_config.yaml ([#1685](../../pull/1685))
 - Some checks for repeated values in the item lists were wrong ([#1686](../../pull/1686))
+- Better support creating zarr sinks from multiple processes ([#1687](../../pull/1687))
 
 ## 1.30.0
 
