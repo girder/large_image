@@ -560,11 +560,11 @@ def get_expected_metadata(axis_spec, frame_shape):
         },
         **{
             f'Value{k.upper()}': dict(
-                values=v['values'],
+                values=v.get('all_values', v['values']),
                 units=v['units'],
                 uniform=v['uniform'],
-                min=min(v['values']),
-                max=max(v['values']),
+                min=min(v.get('all_values', v['values'])),
+                max=max(v.get('all_values', v['values'])),
                 datatype=v['dtype'],
             ) for k, v in axis_spec.items()
         },
@@ -656,6 +656,20 @@ def testFrameValues(use_add_tile_args, tmp_path):
         ),
         t=dict(
             values=[10.0, 20.0, 30.0],
+            all_values=(
+                [10.00] * 3 +
+                [10.01] * 3 +
+                [10.02] * 3 +
+                [10.03] * 3 +
+                [20.00] * 3 +
+                [20.01] * 3 +
+                [20.02] * 3 +
+                [20.03] * 3 +
+                [30.00] * 3 +
+                [30.01] * 3 +
+                [30.02] * 3 +
+                [30.03] * 3
+            ),
             uniform=False,
             units='millisecond',
             stride=3,
