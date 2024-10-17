@@ -107,6 +107,10 @@ def _groupingPipeline(initialPipeline, cbase, grouping, sort=None):
                 initialPipeline.append({'$set': {'firstOrder': {
                     '$mergeObjects': ['$firstOrder', centry]}}})
         initialPipeline.append({'$replaceRoot': {'newRoot': '$firstOrder'}})
+    initialPipeline.append({'$set': {'meta._grouping': {
+        'keys': grouping['keys'],
+        'values': [f'${key}' for key in grouping['keys']],
+    }}})
 
 
 def _itemFindRecursive(  # noqa
