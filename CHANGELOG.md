@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.30.2
+
+### Improvements
+
+- Speed up recursive item lists ([#1694](../../pull/1694))
+
 ## 1.30.1
 
 ### Improvements
