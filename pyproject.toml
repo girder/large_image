@@ -65,7 +65,8 @@ lint.select = [
 # allow "useless expressions" as it shows output
 # allow non-top level imports
 # allow long lines
-"docs/large_image_examples.ipynb" = ["B018", "E402", "E501"]
+"docs/*.ipynb" = ["B018", "E402", "E501"]
+"docs/*.py" = ["E501"]
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"
