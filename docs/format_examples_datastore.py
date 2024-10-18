@@ -1,5 +1,6 @@
-import pooch
 from pathlib import Path
+
+import pooch
 
 EXAMPLES_FOLDER = Path('format_examples')
 
