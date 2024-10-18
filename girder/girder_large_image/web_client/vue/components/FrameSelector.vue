@@ -36,6 +36,26 @@ export default Vue.extend({
         currentStyle() {
             const curStyle = this.style[this.currentModeId];
             return curStyle ? JSON.stringify(curStyle, null, null) : '';
+        },
+        sliderLabels() {
+            const labels = {};
+            labels.IndexC = this.imageMetadata.channels;
+            Object.entries(this.metadata).forEach(([key, info]) => {
+                if (key.includes('Value')) {
+                    const labelKey = key.replace('Value', 'Index');
+                    if (info.values) {
+                        if (info.uniform) {
+                            labels[labelKey] = info.values;
+                        } else {
+                            // non-uniform values have a value for every frame
+                            // labels will change with currentFrame, so only populate current label
+                            labels[labelKey] = new Array(this.indexInfo[labelKey].range + 1).fill('');
+                            labels[labelKey][this.indexInfo[labelKey].current] = info.values[this.currentFrame];
+                        }
+                    }
+                }
+            });
+            return labels;
         }
     },
     watch: {
@@ -328,7 +348,7 @@ export default Vue.extend({
         :current-value="indexInfo[index].current"
         :value-max="indexInfo[index].range"
         :label="index.replace('Index', '')"
-        :slider-labels="index === 'IndexC' ? imageMetadata.channels : []"
+        :slider-labels="sliderLabels[index]"
         :max-merge="indexInfo[index].maxMerge || false"
         @updateMaxMerge="(v) => updateMaxMergeAxis({index, maxMerge: v})"
         @updateValue="(v) => updateAxisSlider({index, frame: v})"
