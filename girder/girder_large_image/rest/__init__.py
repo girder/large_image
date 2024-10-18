@@ -193,7 +193,6 @@ def _itemFindRecursive(  # noqa
             if offset:
                 fullPipeline.append({'$skip': offset})
 
-            print(fullPipeline)
             logger.debug('Find item pipeline %r', fullPipeline)
 
             options = {
