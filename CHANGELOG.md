@@ -2,6 +2,10 @@
 
 ## 1.30.2
 
+### Features
+
+- Support setting axis actual values in the zarr sink.  Display these in the frame selector ([#1625](../../pull/1625))
+
 ### Improvements
 
 - Speed up recursive item lists ([#1694](../../pull/1694))

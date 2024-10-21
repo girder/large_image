@@ -94,10 +94,14 @@ This is used to specify how items appear in item lists.  There are two settings,
       # clicking on an item from showing the item page to another action.
       navigate:
         # type can be "item": the default, open the item page, "itemList": go
-        # to the named item page
+        # to the named item page, or "open" to open an application
         type: itemList
         # if the type is "itemList", the name is the name of the itemList to
-        # display.
+        # display.  If the type is "open", the name is the name of the
+        # registered  application that should be opened by preference (e.g.,
+        # "histomicsui" or "volview").  If that application does not report it
+        # can open the item or no name is specified, the highest priority
+        # application that can open the item will be used.
         name: studyList
       # show these columns in order from left to right.  Each column has a
       # "type" and "value".  It optionally has a "title" used for the column
