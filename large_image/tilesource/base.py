@@ -1315,6 +1315,58 @@ class TileSource(IPyLeafletMixin):
     def metadata(self) -> JSONDict:
         return self.getMetadata()
 
+    def _getFrameValueInformation(self, frames: List[Dict]):
+        """
+        Given a `frames` list from a metadata response, return a dictionary describing
+        the value info for any frame axes. Keys in this dictionary follow the pattern "Value[AXIS]"
+        and each maps to a dictionary describing the axis, including a list of values, whether the
+        axis is uniform, the units, minimum value, maximum value, and data type.
+
+        :param frames: A list of dictionaries describing each frame in the image
+        :returns: A dictionary describing the values of frame axes
+        """
+        refvalues: Dict[str, Dict[str, List]] = {}
+        for frame in frames:
+            for key, value in frame.items():
+                if 'Value' in key:
+                    if key not in refvalues:
+                        refvalues[key] = {}
+                    value_index = str(frame.get(key.replace('Value', 'Index')))
+                    if value_index not in refvalues[key]:
+                        refvalues[key][value_index] = [value]
+                    else:
+                        refvalues[key][value_index].append(value)
+        frame_value_info = {}
+        for key, value_mapping in refvalues.items():
+            axis_name = key.replace('Value', '').lower()
+            units = None
+            if hasattr(self, 'frameUnits') and self.frameUnits is not None:
+                units = self.frameUnits.get(axis_name)
+            uniform = all(len(set(value_list)) <= 1 for value_list in value_mapping.values())
+            if uniform:
+                # for uniform values, only record values at each axis index
+                values = [
+                    value_list[0] for value_list in value_mapping.values() if len(value_list)
+                ]
+            else:
+                # for non-uniform axes, record values at every frame
+                values = [frame.get(key) for frame in frames]
+            try:
+                min_val = min(values)
+                max_val = max(values)
+            except TypeError:
+                min_val = None
+                max_val = None
+            frame_value_info[key] = dict(
+                values=values,
+                uniform=uniform,
+                units=units,
+                min=min_val,
+                max=max_val,
+                datatype=np.array(values).dtype.name,
+            )
+        return frame_value_info
+
     def _addMetadataFrameInformation(
             self, metadata: JSONDict, channels: Optional[List[str]] = None) -> None:
         """
@@ -1346,6 +1398,7 @@ class TileSource(IPyLeafletMixin):
                     metadata['frames'][idx].get(key) for key in refkeys)):
                 index += 1
             frame['Index'] = index
+        metadata.update(self._getFrameValueInformation(metadata['frames']))
         if any(val > 1 for val in maxref.values()):
             metadata['IndexRange'] = {key: value for key, value in maxref.items() if value > 1}
             metadata['IndexStride'] = {
