@@ -45,12 +45,17 @@ export default Vue.extend({
                     const labelKey = key.replace('Value', 'Index');
                     if (info.values) {
                         if (info.uniform) {
-                            labels[labelKey] = info.values;
+                            labels[labelKey] = info.values.map((v) => {
+                                if (typeof v === 'number') return Number(v.toPrecision(5));
+                                return v;
+                            });
                         } else {
                             // non-uniform values have a value for every frame
                             // labels will change with currentFrame, so only populate current label
+                            let currentLabel = info.values[this.currentFrame];
+                            if (typeof currentLabel === 'number') currentLabel = Number(currentLabel.toPrecision(5));
                             labels[labelKey] = new Array(this.indexInfo[labelKey].range + 1).fill('');
-                            labels[labelKey][this.indexInfo[labelKey].current] = info.values[this.currentFrame];
+                            labels[labelKey][this.indexInfo[labelKey].current] = currentLabel;
                         }
                     }
                 }
