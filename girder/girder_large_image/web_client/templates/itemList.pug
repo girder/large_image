@@ -43,7 +43,7 @@ ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '', meta
                 skip = true;
               }
             });
-          #{divtype}.li-item-list-cell(class=classes.join(' '), g-item-cid=item.cid, href=item._href ? item._href : `#item/${item.id}`, title=colNames[colidx])
+          #{divtype}.li-item-list-cell(class=classes.join(' '), g-item-cid=item.cid, href=item._href ? item._href : `#item/${item.id}`, title=colNames[colidx], target=item._href && item._hrefTarget ? item._hrefTarget : undefined)
             if !skip && column.label
               span.g-item-list-label
                 = column.label
@@ -62,6 +62,11 @@ ul.g-item-list.li-item-list(layout_mode=(itemList.layout || {}).mode || '', meta
                   a.g-view-inline(title="View in browser", target="_blank", rel="noopener noreferrer",
                       href=item.downloadUrl({contentDisposition: 'inline'}))
                     i.icon-eye
+                if availableApps && availableApps.items[item.id]
+                  - const apps = Object.entries(availableApps.items[item.id]).sort(([name1, app1], [name2, app2]) => { let diff = (app1.priority || 0) - (app2.priority || 0); return diff ? diff : (registeredApps[name1].name.toLowerCase() > registeredApps[name2].name.toLowerCase() ? 1 : -1); })
+                  for app in apps
+                    a.g-hui-open-link(title="Open in " + registeredApps[app[0]].name, href=app[1].url, target="_blank")
+                      i.icon-link-ext
               else if column.value === 'size'
                 .g-item-size= formatSize(item.get('size'))
               else if column.value === 'description'

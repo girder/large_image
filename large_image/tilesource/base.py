@@ -1569,7 +1569,8 @@ class TileSource(IPyLeafletMixin):
         if (scale >= max(self.tileWidth, self.tileHeight) or
                 (self.dtype and self.dtype != np.uint8) or
                 (self.bandCount and self.bandCount > 4)):
-            nptile = np.zeros((self.tileHeight, self.tileWidth, cast(int, self.bandCount)))
+            nptile = np.zeros((self.tileHeight, self.tileWidth, cast(int, self.bandCount)),
+                              dtype=self.dtype)
             maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
             maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
             for newY in range(scale):
