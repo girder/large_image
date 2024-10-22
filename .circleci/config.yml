@@ -38,21 +38,26 @@ commands:
         type: string
     steps:
       - run:
-          name: Upgrade pyenv
+          name: Install uv
           command: |
-            sudo rm -rf /opt/circleci/.pyenv
-            sudo bash -c 'curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | PYENV_ROOT=/opt/circleci/.pyenv bash'
-            sudo chmod -R 777 /opt/circleci/.pyenv/
-            pyenv install --list list
+            curl -LsSf https://astral.sh/uv/install.sh | sh
       - run:
-          name: Use pyenv to install python
+          name: Install python
           command: |
-            pyenv install -s << parameters.version >>
+            $HOME/.cargo/bin/uv python install << parameters.version >>
+            $HOME/.cargo/bin/uv venv $HOME/.venv
       - run:
-          name: Use pyenv to set python version
+          name: Add to path
           command: |
-            pyenv versions
-            pyenv global << parameters.version >>
+            cd /
+            echo "export PATH=$HOME/.venv/bin:\$PATH" >> $BASH_ENV
+      - run:
+          name: Check python version
+          command: |
+            echo $PATH
+            python -m ensurepip --default-pip
+            python --version
+            pip --version
   allservices:
     description: "Switch to a python version and start other services"
     parameters:
@@ -79,7 +84,10 @@ commands:
             docker-compose -f ./.circleci/dcm4chee/auth-docker-compose.yml up -d
             export DICOMWEB_TEST_URL=http://localhost:8008/dcm4chee-arc/aets/DCM4CHEE/rs
             echo "export DICOMWEB_TEST_URL=$DICOMWEB_TEST_URL" >> $BASH_ENV
-            pip install dicomweb_client tenacity 'python-keycloak<4.1'
+            which python
+            which pip
+            ls /home/circleci/.venv/bin
+            python -m pip install dicomweb_client tenacity 'python-keycloak<4.1'
 
             # Wait up to 60 seconds for keycloak to be ready
             echo 'Waiting for keycloak to start...'

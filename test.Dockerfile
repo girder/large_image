@@ -13,7 +13,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.11 3.8 3.9 3.10 3.12 3.13"
+    PYTHON_VERSIONS="3.11 3.8 3.9 3.10 3.12 3.13" \
+    PYTHON_CONFIGURE_OPTS="--enable-optimizations --with-lto"
 
 # Consumers of this package aren't expecting an existing ubuntu user (there
 # wasn't one in the ubuntu:22.04 base)
@@ -69,6 +70,8 @@ RUN apt-get update && \
       dnsutils \
       automake \
       rsync \
+      # To speed up builds \
+      # ccache \
       && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
@@ -87,11 +90,10 @@ RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
 
 RUN pyenv update && \
     pyenv install --list && \
+    # git clone https://github.com/pyenv/pyenv-ccache.git $(pyenv root)/plugins/pyenv-ccache && \
     echo $PYTHON_VERSIONS | xargs -P `nproc` -n 1 pyenv install && \
-    # Install older pythons that require help \
-    export CPPFLAGS=-I/opt/openssl11/include && \
-    export LDFLAGS="-L/opt/openssl11/lib -Wl,-rpath,/opt/openssl11/lib" && \
-    export CONFIGURE_OPTS="--with-openssl=/opt/openssl11" && \
+    # rm -rf /.pyenv/ccache && \
+    find /.pyenv/versions -name '*.so*' -o -name '*.a' -exec strip {} --strip-unneeded -p -D \; && \
     # ensure newest pip and setuptools for all python versions \
     echo $PYTHON_VERSIONS | xargs -n 1 bash -c 'pyenv global "${0}" && pip install -U setuptools pip' && \
     pyenv global $(pyenv versions --bare) && \

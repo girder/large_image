@@ -60,7 +60,7 @@ setup(
             'rawpy ; python_version < "3.13"',
             'pillow-heif',
             'pillow-jxl-plugin ; python_version < "3.13"',
-            'pillow-jpls',
+            'pillow-jpls ; python_version < "3.13"',
         ],
         'girder': f'girder-large-image{limit_version}',
     },
