@@ -10,6 +10,7 @@
 
 - Speed up recursive item lists ([#1694](../../pull/1694))
 - Better handle images with signed pixel data ([#1695](../../pull/1695))
+- Reduce loading geojs when switching views in Girder ([#1699](../../pull/1699))
 
 ## 1.30.1
 
