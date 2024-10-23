@@ -88,10 +88,6 @@ RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
 RUN pyenv update && \
     pyenv install --list && \
     echo $PYTHON_VERSIONS | xargs -P `nproc` -n 1 pyenv install && \
-    # Install older pythons that require help \
-    export CPPFLAGS=-I/opt/openssl11/include && \
-    export LDFLAGS="-L/opt/openssl11/lib -Wl,-rpath,/opt/openssl11/lib" && \
-    export CONFIGURE_OPTS="--with-openssl=/opt/openssl11" && \
     # ensure newest pip and setuptools for all python versions \
     echo $PYTHON_VERSIONS | xargs -n 1 bash -c 'pyenv global "${0}" && pip install -U setuptools pip' && \
     pyenv global $(pyenv versions --bare) && \
