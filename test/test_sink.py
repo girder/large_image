@@ -777,6 +777,7 @@ def testFrameValuesEdgeCases(tmp_path):
             assert not isinstance(value, np.generic)
 
 
+@pytest.mark.singular
 def testSubprocess(tmp_path):
     sink = large_image_source_zarr.new()
     path = sink.largeImagePath
