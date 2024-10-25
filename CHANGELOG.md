@@ -12,6 +12,10 @@
 - Better handle images with signed pixel data ([#1695](../../pull/1695))
 - Reduce loading geojs when switching views in Girder ([#1699](../../pull/1699))
 
+### Changes
+
+- Ensure reading non-editable zarr files the c axis, if present, has a stride of 1 ([#1703](../../pull/1703))
+
 ## 1.30.1
 
 ### Improvements
