@@ -12,6 +12,10 @@
 - Better handle images with signed pixel data ([#1695](../../pull/1695))
 - Reduce loading geojs when switching views in Girder ([#1699](../../pull/1699))
 
+### Bug Fixes
+
+- Don't compute channel window in zarr sinks ([#1705](../../pull/1705))
+
 ## 1.30.1
 
 ### Improvements
