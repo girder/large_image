@@ -73,7 +73,7 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'wsidicom>=0.9.0',
+        'wsidicom>=0.9.0,!=0.21.3',
         'pydicom<3; python_version < "3.10"',
         'pydicom; python_version >= "3.10"',
     ],
