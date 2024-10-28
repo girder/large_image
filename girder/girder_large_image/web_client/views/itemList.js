@@ -3,11 +3,11 @@ import _ from 'underscore';
 import Backbone from 'backbone';
 import Vue from 'vue';
 
-import {getCurrentUser} from '@girder/core/auth';
-import {wrap} from '@girder/core/utilities/PluginUtils';
-import {getApiRoot} from '@girder/core/rest';
-import {AccessType} from '@girder/core/constants';
-import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
+import { getCurrentUser } from '@girder/core/auth';
+import { wrap } from '@girder/core/utilities/PluginUtils';
+import { getApiRoot } from '@girder/core/rest';
+import { AccessType } from '@girder/core/constants';
+import { formatSize, parseQueryString, splitRoute } from '@girder/core/misc';
 import router from '@girder/core/router';
 import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
 import ItemCollection from '@girder/core/collections/ItemCollection';
@@ -15,11 +15,11 @@ import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
 import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
 
 import largeImageConfig from './configView';
-import {addToRoute} from '../routes';
+import { addToRoute } from '../routes';
 
 import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
-import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
+import { MetadatumWidget, validateMetadataValue } from './metadataWidget';
 
 import TableConfigDialog from './TableConfigDialog.vue';
 import TableViewSelect from './TableViewSelect.vue';
@@ -32,7 +32,7 @@ function onItemClick(item) {
             return;
         }
     }
-    router.navigate('item/' + item.get('_id'), {trigger: true});
+    router.navigate('item/' + item.get('_id'), { trigger: true });
 }
 
 wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
@@ -75,6 +75,14 @@ wrap(HierarchyWidget, 'render', function (render) {
     } else {
         this.$('.li-flatten-item-list').removeClass('htk-hidden');
     }
+
+    const updateChecked = () => {
+        // const resources = this._getCheckedResourceParam();
+        // TODO: handle checked resources for apps
+    };
+
+    this.listenTo(this.itemListView, 'g:checkboxesChanged', updateChecked);
+    this.listenTo(this.folderListView, 'g:checkboxesChanged', updateChecked);
 });
 
 wrap(FolderListWidget, 'checkAll', function (checkAll, checked) {
@@ -105,7 +113,7 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         }
         if (list.group) {
             let group = list.group;
-            group = !group.keys ? {keys: group} : group;
+            group = !group.keys ? { keys: group } : group;
             group.keys = Array.isArray(group.keys) ? group.keys : [group.keys];
             group.keys = group.keys.filter((g) => !g.includes(',') && !g.includes(':'));
             if (!group.keys.length) {
@@ -217,7 +225,7 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     }
 
-    this._saveTableConfig = ({config, name, newView, originalName}) => {
+    this._saveTableConfig = ({ config, name, newView, originalName }) => {
         // Update or add the named view
         if (!this._liconfig) {
             this._liconfig = {};
@@ -236,7 +244,7 @@ wrap(ItemListWidget, 'render', function (render) {
             configCopy.edit = true;
             this._liconfig.namedItemLists[name] = configCopy;
         } else {
-            const foundView  = this._liconfig.namedItemLists[originalName];
+            const foundView = this._liconfig.namedItemLists[originalName];
             if (foundView) {
                 if (originalName !== name) {
                     // Need to make the view name unique
@@ -278,11 +286,11 @@ wrap(ItemListWidget, 'render', function (render) {
             return this._liconfig.allColumns;
         }
         const allColumns = [
-            {type: 'image', value: 'thumbnail', title: 'Thumbnail'},
-            {type: 'image', value: 'label', title: 'Label'},
-            {type: 'record', value: 'controls', title: 'Controls'},
-            {type: 'record', value: 'name', title: 'Name'},
-            {type: 'record', value: 'size', title: 'Size'}
+            { type: 'image', value: 'thumbnail', title: 'Thumbnail' },
+            { type: 'image', value: 'label', title: 'Label' },
+            { type: 'record', value: 'controls', title: 'Controls' },
+            { type: 'record', value: 'name', title: 'Name' },
+            { type: 'record', value: 'size', title: 'Size' }
         ];
         const allColumnsMap = {};
         this.collection.toArray().forEach((item) => {
@@ -322,7 +330,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 ]));
             }
             this.collection._totalCount = 0;
-            this.collection.fetch(_.extend({}, {folderId: this.parentView.parentModel.id}, this.collection.params), true).done(() => {
+            this.collection.fetch(_.extend({}, { folderId: this.parentView.parentModel.id }, this.collection.params), true).done(() => {
                 const oldPages = this._totalPages;
                 const pages = Math.ceil(this.collection.getTotalCount() / this.collection.pageLimit);
                 this._totalPages = pages;
@@ -357,7 +365,7 @@ wrap(ItemListWidget, 'render', function (render) {
             return false;
         }
         if (nav.type === 'itemList') {
-            if ((nav.name || '') === (self._namedList || '')) {
+            if ((nav.name || '') === (this._namedList || '')) {
                 return false;
             }
             if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
@@ -375,17 +383,14 @@ wrap(ItemListWidget, 'render', function (render) {
             }
             this._setFilter(false);
             this._setSort();
-            addToRoute({namedList: this._namedList, filter: this._generalFilter});
+            addToRoute({ namedList: this._namedList, filter: this._generalFilter });
             return true;
         }
         if (nav.type === 'open') {
-            // TODO: handle open type
-            // we probably need to get all the grouped items to pass them to
-            // the .open-in-volview button via that _getCheckedResourceParam
-            // call OR modify the volview plugin to have an open item with less
-            // context.  The current folder context would ideally be the
-            // deepest common parent rather than our current folder.  Where
-            // does volview store its zip file?
+            if (item._href) {
+                window.open(item._href, '_blank');
+                return true;
+            }
         }
         return false;
     };
@@ -395,7 +400,7 @@ wrap(ItemListWidget, 'render', function (render) {
         if ((this._namedList || '') !== name) {
             this._namedList = name;
             if (update !== false) {
-                addToRoute({namedList: this._namedList});
+                addToRoute({ namedList: this._namedList });
                 this._setSort();
             }
         }
@@ -404,13 +409,13 @@ wrap(ItemListWidget, 'render', function (render) {
     this._updateFilter = (evt) => {
         this._generalFilter = $(evt.target).val().trim();
         this._setFilter();
-        addToRoute({filter: this._generalFilter});
+        addToRoute({ filter: this._generalFilter });
     };
 
     this._clearFilter = (evt) => {
         this._generalFilter = '';
         this._setFilter();
-        addToRoute({filter: this._generalFilter});
+        addToRoute({ filter: this._generalFilter });
     };
 
     this._unescapePhrase = (val) => {
@@ -439,13 +444,13 @@ wrap(ItemListWidget, 'render', function (render) {
                 const coltag = this._unescapePhrase(match[5] || match[4] || match[3]);
                 const phrase = this._unescapePhrase(match[10] || match[9] || match[8]);
                 const negation = match[6] === '-';
-                var phrases = [{phrase: phrase, exact: match[8] !== undefined}];
+                var phrases = [{ phrase: phrase, exact: match[8] !== undefined }];
                 if (match[11]) {
                     [...match[11].matchAll(quotedValue)].forEach((submatch) => {
                         const subphrase = this._unescapePhrase(submatch[4] || submatch[3] || submatch[2]);
                         // remove dupes?
                         if (subphrase && subphrase.length) {
-                            phrases.push({phrase: subphrase, exact: submatch[2] !== undefined});
+                            phrases.push({ phrase: subphrase, exact: submatch[2] !== undefined });
                         }
                     });
                 }
@@ -455,7 +460,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 }
                 usedPhrases[key] = true;
                 const clause = [];
-                phrases.forEach(({phrase, exact}) => {
+                phrases.forEach(({ phrase, exact }) => {
                     const numval = +phrase;
                     /* If numval is a non-zero number not in exponential
                      * notation, delta is the value of one for the least
@@ -468,8 +473,8 @@ wrap(ItemListWidget, 'render', function (render) {
                     columns.forEach((col) => {
                         let key;
                         if (coltag &&
-                            coltag.localeCompare(col.title || col.value, undefined, {sensitivity: 'accent'}) &&
-                            coltag.localeCompare(col.value, undefined, {sensitivity: 'accent'})
+                            coltag.localeCompare(col.title || col.value, undefined, { sensitivity: 'accent' }) &&
+                            coltag.localeCompare(col.value, undefined, { sensitivity: 'accent' })
                         ) {
                             return;
                         }
@@ -481,31 +486,31 @@ wrap(ItemListWidget, 'render', function (render) {
                         if (!coltag && !exact) {
                             const r = new RegExp('^' + (phrase.substr(phrase.length - 1) === ':' ? phrase.substr(0, phrase.length - 1) : phrase), 'i');
                             if (r.exec(col.value) || r.exec(col.title || col.value)) {
-                                clause.push({[key]: {$exists: true}});
+                                clause.push({ [key]: { $exists: true } });
                             }
                         }
                         if (key && exact) {
-                            clause.push({[key]: {$regex: '^' + phrase + '$', $options: 'i'}});
+                            clause.push({ [key]: { $regex: '^' + phrase + '$', $options: 'i' } });
                             if (!_.isNaN(numval)) {
-                                clause.push({[key]: numval});
+                                clause.push({ [key]: numval });
                             }
                         } else if (key) {
-                            clause.push({[key]: {$regex: phrase, $options: 'i'}});
+                            clause.push({ [key]: { $regex: phrase, $options: 'i' } });
                             if (!_.isNaN(numval)) {
-                                clause.push({[key]: numval});
+                                clause.push({ [key]: numval });
                                 if (numval > 0 && delta) {
-                                    clause.push({[key]: {$gte: numval, $lt: numval + delta}});
+                                    clause.push({ [key]: { $gte: numval, $lt: numval + delta } });
                                 } else if (numval < 0 && delta) {
-                                    clause.push({[key]: {$lte: numval, $gt: numval + delta}});
+                                    clause.push({ [key]: { $lte: numval, $gt: numval + delta } });
                                 }
                             }
                         }
                     });
                 });
                 if (clause.length > 0) {
-                    filter.push(!negation ? {$or: clause} : {$nor: clause});
+                    filter.push(!negation ? { $or: clause } : { $nor: clause });
                 } else if (!negation) {
-                    filter.push({$or: [{_no_such_value_: '_no_such_value_'}]});
+                    filter.push({ $or: [{ _no_such_value_: '_no_such_value_' }] });
                 }
             });
             if (filter.length === 0) {
@@ -514,7 +519,7 @@ wrap(ItemListWidget, 'render', function (render) {
                 if (filter.length === 1) {
                     filter = filter[0];
                 } else {
-                    filter = {$and: filter};
+                    filter = { $and: filter };
                 }
                 filter = '_filter_:' + JSON.stringify(filter);
             }
@@ -549,13 +554,38 @@ wrap(ItemListWidget, 'render', function (render) {
         }
     };
 
+    this.checkApps = (resources) => {
+        const items = this.collection.models;
+        const folders = [this.parentView.parentModel];
+        const canHandle = { items: {}, folders: {} };
+        // TODO: handle checked resources
+        Object.entries(ItemListWidget.registeredApplications).forEach(([appname, app]) => {
+            items.forEach((item) => {
+                const check = app.check('item', item, this.parentView.parentModel);
+                if (check) {
+                    canHandle.items[item.id] = canHandle.items[item.id] || {};
+                    canHandle.items[item.id][appname] = check;
+                }
+            });
+            folders.forEach((folder) => {
+                const check = app.check('item', folder, this.parentView.parentModel);
+                if (check) {
+                    canHandle.folders[folder.id] = canHandle.folders[folder.id] || {};
+                    canHandle.folders[folder.id][appname] = check;
+                }
+            });
+        });
+        return canHandle;
+    };
+
     /**
      * For each item in the collection, if we are navigating to something other
      * than the item, set an href property.
      */
-    function adjustItemHref() {
+    function adjustItemHref(availableApps) {
         this.collection.forEach((item) => {
             item._href = undefined;
+            item._hrefTarget = undefined;
         });
         const list = this._confList();
         const nav = (list || {}).navigate;
@@ -563,7 +593,7 @@ wrap(ItemListWidget, 'render', function (render) {
             return;
         }
         if (nav.type === 'itemList') {
-            if ((nav.name || '') === (self._namedList || '')) {
+            if ((nav.name || '') === (this._namedList || '')) {
                 return;
             }
             if (!this._liconfig || !this._liconfig.namedItemLists || (nav.name && !this._liconfig.namedItemLists[nav.name])) {
@@ -592,8 +622,23 @@ wrap(ItemListWidget, 'render', function (render) {
                     item._href += '&filter=' + encodeURIComponent(filter);
                 }
             });
+        } else if (nav.type === 'open') {
+            this.collection.forEach((item) => {
+                let apps = availableApps.items[item.id];
+                let app;
+                if (nav.name && apps[nav.name]) {
+                    app = apps[nav.name];
+                }
+                if (!app) {
+                    apps = Object.entries(apps).sort(([name1, app1], [name2, app2]) => { const diff = (app1.priority || 0) - (app2.priority || 0); return diff || (ItemListWidget.registeredApplications[name1].name.toLowerCase() > ItemListWidget.registeredApplications[name2].name.toLowerCase() ? 1 : -1); });
+                    app = apps[0][1];
+                }
+                if (app.url && app.url !== true) {
+                    item._href = app.url;
+                    item._hrefTarget = '_blank';
+                }
+            });
         }
-        // TODO: handle nav.type open
     }
 
     function itemListRender() {
@@ -654,12 +699,13 @@ wrap(ItemListWidget, 'render', function (render) {
         const itemList = this._confList();
         if (!itemList.columns || itemList.columns.length === 0) {
             itemList.columns = [
-                {type: 'record', value: 'name', title: 'Name'},
-                {type: 'record', value: 'size', title: 'Size'},
-                {type: 'record', value: 'controls', title: 'Controls'}
+                { type: 'record', value: 'name', title: 'Name' },
+                { type: 'record', value: 'size', title: 'Size' },
+                { type: 'record', value: 'controls', title: 'Controls' }
             ];
         }
-        adjustItemHref.call(this);
+        const availableApps = this.checkApps();
+        adjustItemHref.call(this, availableApps);
         this.$el.html(ItemListTemplate({
             items: this.collection.toArray(),
             isParentPublic: this.public,
@@ -678,6 +724,8 @@ wrap(ItemListWidget, 'render', function (render) {
             sort: this._lastSort,
             MetadatumWidget: MetadatumWidget,
             accessLevel: this.accessLevel,
+            registeredApps: ItemListWidget.registeredApplications,
+            availableApps: availableApps,
             parentView: this,
             AccessType: AccessType
         }));
@@ -692,7 +740,7 @@ wrap(ItemListWidget, 'render', function (render) {
             }
         });
         this._tableConfigVue.$on('save', (config, name) => {
-            this._saveTableConfig({config, name, newView: false, originalName: this._tableConfigVue.name});
+            this._saveTableConfig({ config, name, newView: false, originalName: this._tableConfigVue.name });
         });
         this._tableConfigVue.$mount(this.parentView.$el.find('.g-edit-table-view-dialog-container')[0]);
 
@@ -751,11 +799,11 @@ wrap(ItemListWidget, 'render', function (render) {
                     foundView = this._liconfig.namedItemLists[name];
                 }
                 const columns = [
-                    {type: 'record', value: 'name'},
-                    {type: 'record', value: 'size'},
-                    {type: 'record', value: 'controls'}
+                    { type: 'record', value: 'name' },
+                    { type: 'record', value: 'size' },
+                    { type: 'record', value: 'controls' }
                 ];
-                this._liconfig.namedItemLists[name] = {columns, edit: true};
+                this._liconfig.namedItemLists[name] = { columns, edit: true };
 
                 this._tableConfigVue.config = this._liconfig.namedItemLists[name];
                 this._tableConfigVue.name = name;
@@ -771,7 +819,7 @@ wrap(ItemListWidget, 'render', function (render) {
                     this._liconfig.namedItemLists = {};
                 }
                 const foundView = this._liconfig.namedItemLists[name];
-                this._saveTableConfig({config: foundView, name, newView: true});
+                this._saveTableConfig({ config: foundView, name, newView: true });
             });
 
             this._tableViewSelectVue.$mount(this.parentView.$el.find('.g-table-view-select')[0]);
@@ -851,7 +899,7 @@ function sortColumn(evt) {
     this._lastSort.unshift(entry);
     this._setSort();
     if (!_.isEqual(this._lastSort, oldSort)) {
-        addToRoute({sort: this._lastSort.map((e) => `${e.type}:${e.value}:${e.dir}`).join(',')});
+        addToRoute({ sort: this._lastSort.map((e) => `${e.type}:${e.value}:${e.dir}`).join(',') });
     }
 }
 
@@ -876,7 +924,7 @@ function itemListCellFilter(evt) {
     evt.preventDefault();
     const cell = $(evt.target).closest('.li-item-list-cell-filter');
     addCellToFilter.call(this, cell);
-    addToRoute({filter: this._generalFilter});
+    addToRoute({ filter: this._generalFilter });
     this._setSort();
     return false;
 }
@@ -891,15 +939,15 @@ function itemListMetadataEdit(evt) {
     const column = columns[+ctrl.attr('column-idx')];
     let tempValue = ctrl.find('.g-widget-metadata-value-input').val();
     tempValue = tempValue.trim();
-    let valResult = validateMetadataValue(column, tempValue, self._lastValidationError || (tempValue === '' && !column.required));
+    let valResult = validateMetadataValue(column, tempValue, this._lastValidationError || (tempValue === '' && !column.required));
     if (tempValue === '' && !column.required) {
-        valResult = {value: tempValue};
+        valResult = { value: tempValue };
     }
     if (!valResult) {
-        self._lastValidationError = true;
+        this._lastValidationError = true;
         return false;
     }
-    self._lastValidationError = false;
+    this._lastValidationError = false;
     const item = this.collection.get(ctrl.closest('[g-item-cid]').attr('g-item-cid'));
     let value = item.get('meta') || {};
     let meta;
@@ -916,5 +964,21 @@ function itemListMetadataEdit(evt) {
     item._sendMetadata(item.get('meta'));
     return false;
 }
+
+/**
+ * This is a dictionary where the key is the unique application identified.
+ * Each dictionary contains
+ *  name: the display name
+ *  icon: an optional url to an icon to display
+ *  check: a method that takes (modelType, model, currentFolder) where
+ *      modelType is either 'item', 'folder', or 'resource' and model is a
+ *      bootstrap model or a resource dictionary of models.  The function
+ *      returns an object with {url: <url>, priority: <integer>, open:
+ *      <function>} where url is the url to open if possible, the open function
+ *      is a method to call to open the model.  Priority affects the order that
+ *      the open calls are listed in (lower is earlier).  Return undefined or
+ *      false if the application cannot open this model.
+ */
+ItemListWidget.registeredApplications = {};
 
 export default ItemListWidget;

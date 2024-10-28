@@ -631,14 +631,16 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ])
             else:
                 arr = current_arrays[store_path]
-                arr.resize(*tuple(new_dims.values()))
-                if arr.chunks[-1] != new_dims.get('s'):
-                    # rechunk if length of samples axis changes
-                    chunking = tuple([
-                        self._tileSize if a in ['x', 'y'] else
-                        new_dims.get('s') if a == 's' else 1
-                        for a in axes
-                    ])
+                new_shape = tuple(max(v, arr.shape[i]) for i, v in enumerate(new_dims.values()))
+                if new_shape != arr.shape:
+                    arr.resize(*new_shape)
+                    if arr.chunks[-1] != new_dims.get('s'):
+                        # rechunk if length of samples axis changes
+                        chunking = tuple([
+                            self._tileSize if a in ['x', 'y'] else
+                            new_dims.get('s') if a == 's' else 1
+                            for a in axes
+                        ])
 
             if mask is not None:
                 arr[placement_slices] = np.where(mask, tile, arr[placement_slices])

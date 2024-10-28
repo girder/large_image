@@ -68,7 +68,7 @@
                   }
                 });
               <div class="#{layoutMode == 'grid' ? 'inline-block' : 'table-cell'} align-middle">
-                <#{divtype} class="li-item-list-cell #{classes.join(' ')} flex items-left mx-4" g-item-cid="#{item.cid}" href="#{item._href ? item._href : `#item/${item.id}`}" title="#{colNames[colidx]}">
+                <#{divtype} class="li-item-list-cell #{classes.join(' ')} flex items-left mx-4" g-item-cid="#{item.cid}" href="#{item._href ? item._href : `#item/${item.id}`}" title="#{colNames[colidx]}" target="#{item._href && item._hrefTarget ? item._hrefTarget : undefined}">
                   if !skip && column.label
                     = column.label
                   if skip
@@ -84,12 +84,14 @@
                               <i class="ri-file-download-line"></i>
                             </a>
                           </div>
-                        if viewLinks
-                          <div class="group relative">
-                            <a class="hover:bg-zinc-200 px-2 py-1 rounded-full tracking-wider uppercase text-lg" href="#{item.downloadUrl({contentDisposition: 'inline'})}" title="View in browser" target="_blank" rel="noopener noreferrer">
-                              <i class="ri-external-link-line"></i>
-                            </a>
-                          </div>
+                        if availableApps && availableApps.items[item.id]
+                          - const apps = Object.entries(availableApps.items[item.id]).sort(([name1, app1], [name2, app2]) => { let diff = (app1.priority || 0) - (app2.priority || 0); return diff ? diff : (registeredApps[name1].name.toLowerCase() > registeredApps[name2].name.toLowerCase() ? 1 : -1); })
+                          for app in apps
+                            <div class="group relative">
+                              <a class="g-hui-open-link hover:bg-zinc-200 px-2 py-1 rounded-full tracking-wider uppercase text-lg" title="#{'Open in ' + registeredApps[app[0]].name}", href="#{app[1].url}" target="_blank">
+                                <i class="ri-external-link-line"></i>
+                              </a>
+                            </div>
                       </div>
                     else if column.value === 'size'
                       = formatSize(item.get('size'))
