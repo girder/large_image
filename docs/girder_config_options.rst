@@ -125,8 +125,7 @@ This is used to specify how items appear in item lists.  There are two settings,
           title: Slide Label
         -
           # The "record" type is from the default item record.  The value is
-          # one of "name", "description", "created", "updated", "size", or
-          # "controls".
+          # one of "name", "size", or "controls".
           type: record
           value: name
         -
@@ -140,10 +139,8 @@ This is used to specify how items appear in item lists.  There are two settings,
           # can be a nested key by using dots in its name.
           type: metadata
           value: Stain
-          # "format" can be "text", "number", "category", "datetime", "date",
-          # "time".  "datetime", "date", and "time" use the user's browser's
-          # locale to convert the date and/or time to their browser's preferred
-          # format.  Other values may be specified later.
+          # "format" can be "text", "number", "category".  Other values may be
+          # specified later.
           format: text
         -
           type: metadata

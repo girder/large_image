@@ -60,9 +60,7 @@ if annotations.length
                 if (column.type === 'record' && column.value === 'creator') {
                   value = creator;
                 } else if (column.type === 'record' && column.value === 'updatedId') {
-                  value = updater || creator;
-                } else if (column.type === 'record' && column.value === 'updated') {
-                  value = value || annotation.get('created')
+                  value = updater;
                 } else if (column.type === 'metadata') {
                   value = annotation.get('annotation').attributes || {};
                   column.value.split('.').forEach((part) => {
@@ -75,12 +73,8 @@ if annotations.length
                 if column.format === 'user'
                   a(href=`#user/${annotation.get(column.value) || annotation.get(column.value + 'Id')}`)
                     = value
-                else if column.format === 'datetime'
-                  = (new Date(value)).toLocaleString()
                 else if column.format === 'date'
-                  = (new Date(value)).toLocaleDateString()
-                else if column.format === 'time'
-                  = (new Date(value)).toLocaleTimeString()
+                  = (new Date(value)).toLocaleString()
                 else
                   = value
           td.g-annotation-actions
