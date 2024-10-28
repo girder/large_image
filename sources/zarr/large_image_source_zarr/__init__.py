@@ -872,21 +872,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         'inverted': False,
                         'label': f'Band {c + 1}',
                     }
-                    slicing = tuple(
-                        slice(None)
-                        if k != ('c' if 'c' in self._axes else 's')
-                        else c
-                        for k, v in self._axes.items()
-                    )
-                    channel_data = base_array[slicing]
-                    channel_min = np.min(channel_data)
-                    channel_max = np.max(channel_data)
-                    channel_metadata['window'] = {
-                        'end': channel_max,
-                        'max': channel_max,
-                        'min': channel_min,
-                        'start': channel_min,
-                    }
+                    # slicing = tuple(
+                    #     slice(None)
+                    #     if k != ('c' if 'c' in self._axes else 's')
+                    #     else c
+                    #     for k, v in self._axes.items()
+                    # )
+                    # channel_data = base_array[slicing]
+                    # channel_min = np.min(channel_data)
+                    # channel_max = np.max(channel_data)
+                    # channel_metadata['window'] = {
+                    #     'end': channel_max,
+                    #     'max': channel_max,
+                    #     'min': channel_min,
+                    #     'start': channel_min,
+                    # }
                     if len(self._channelNames) > c:
                         channel_metadata['label'] = self._channelNames[c]
                     if len(self._channelColors) > c:
