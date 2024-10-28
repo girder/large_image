@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.30.3
+
+### Improvements
+
+- Format dates in item lists ([#1706](../../pull/1706))
+
 ## 1.30.2
 
 ### Features
