@@ -6,6 +6,10 @@
 
 - Format dates in item lists ([#1707](../../pull/1707))
 
+### Changes
+
+- Openslide now requires the binary wheel on appropriate platforms ([#1709](../../pull/1709))
+
 ## 1.30.2
 
 ### Features
