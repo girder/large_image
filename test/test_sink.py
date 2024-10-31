@@ -600,10 +600,6 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
     ))
     expected_metadata = get_expected_metadata(axis_spec, frame_shape)
 
-    sink.frameAxes = list(axis_spec.keys())
-    sink.frameUnits = {
-        k: v['units'] for k, v in axis_spec.items()
-    }
     frame_values_shape = [
         *[len(v['values']) for v in axis_spec.values()],
         len(axis_spec),
@@ -633,7 +629,11 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
     index += 1
 
     if not use_add_tile_args:
+        sink.frameAxes = list(axis_spec.keys())
         sink.frameValues = frame_values
+    sink.frameUnits = {
+        k: v['units'] for k, v in axis_spec.items()
+    }
     compare_metadata(dict(sink.getMetadata()), expected_metadata)
 
     sink.write(output_file)
@@ -686,10 +686,6 @@ def testFrameValues(use_add_tile_args, tmp_path):
     )
     expected_metadata = get_expected_metadata(axis_spec, frame_shape)
 
-    sink.frameAxes = list(axis_spec.keys())
-    sink.frameUnits = {
-        k: v['units'] for k, v in axis_spec.items()
-    }
     frame_values_shape = [
         *[len(v['values']) for v in axis_spec.values()],
         len(axis_spec),
@@ -727,7 +723,11 @@ def testFrameValues(use_add_tile_args, tmp_path):
             index += 1
 
     if not use_add_tile_args:
+        sink.frameAxes = list(axis_spec.keys())
         sink.frameValues = frame_values
+    sink.frameUnits = {
+        k: v['units'] for k, v in axis_spec.items()
+    }
     compare_metadata(dict(sink.getMetadata()), expected_metadata)
 
     sink.write(output_file)
@@ -783,19 +783,24 @@ def testSubprocess(tmp_path):
     subprocess.run([sys.executable, '-c', """import large_image_source_zarr
 import numpy as np
 sink = large_image_source_zarr.open('%s')
-sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2)
+sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2, t_value='thursday', z_value=0.2)
 """ % path], capture_output=True, text=True, check=True)
-    sink.addTile(np.ones((1, 1, 1)), x=5000, y=4095, t=0, z=4)
+    sink.addTile(np.ones((1, 1, 1)), x=5000, y=4095, t=0, z=4, t_value='sunday', z_value=0.4)
 
-    assert sink.metadata['IndexRange']['IndexZ'] == 5
+    metadata = sink.getMetadata()
+    assert metadata['IndexRange']['IndexZ'] == 5
     assert sink.getRegion(
         region=dict(left=2047, top=2047, width=1, height=1),
         format='numpy',
         frame=17,
     )[0] == 1
+    assert metadata['ValueT']['values'][17] == 'thursday'
+    assert metadata['ValueZ']['values'][17] == 0.2
     assert sink.getRegion(
         region=dict(left=5000, top=4095, width=1, height=1),
         format='numpy',
         frame=24,
     )[0] == 1
+    assert metadata['ValueT']['values'][24] == 'sunday'
+    assert metadata['ValueZ']['values'][24] == 0.4
     assert sink.sizeX == 5001

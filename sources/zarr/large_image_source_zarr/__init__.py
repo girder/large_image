@@ -363,6 +363,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if axes_values.get(a) is not None
             ]
             self._frameUnits = {k: axes_units.get(k) for k in self.frameAxes if k in axes_units}
+            self._frameValues = None
             frame_values_shape = [baseArray.shape[self._axes[a]] for a in self.frameAxes]
             frame_values_shape.append(len(frame_values_shape))
             frame_values = np.empty(frame_values_shape, dtype=object)
@@ -387,7 +388,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                         if name:
                                             slicing[self._frameAxes.index(name)] = j
                             frame_values[tuple(slicing)] = value
-            self._frameValues = frame_values
+            if frame_values.size > 0:
+                self._frameValues = frame_values
 
     def _validateZarr(self):
         """
@@ -665,6 +667,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ``level`` is a reserved word and not permitted for an axis name.
         """
         self._checkEditable()
+        try:
+            # read any info written by other processes
+            self._validateZarr()
+        except:
+            pass
+        updateMetadata = False
         store_path = str(kwargs.pop('level', 0))
         placement = {
             'x': x,
@@ -681,6 +689,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._axes = {k: i for i, k in enumerate(axes)}
             new_dims = {
                 a: max(
+                    self._axisCounts.get(a, 0) if hasattr(self, '_axisCounts') else 0,
                     self._dims.get(store_path, {}).get(a, 0),
                     placement.get(a, 0) + tile.shape[i],
                 )
@@ -694,7 +703,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             if len(frame_values.keys()) > 0:
                 # update self.frameValues
-                self.frameAxes = [
+                updateMetadata = True
+                self._frameAxes = [
                     a for a in axes
                     if a in frame_values or
                     (self.frameAxes is not None and a in self.frameAxes)
@@ -702,9 +712,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 frames_shape = [new_dims[a] for a in self.frameAxes]
                 frames_shape.append(len(frames_shape))
                 if self.frameValues is None:
-                    self.frameValues = np.empty(frames_shape, dtype=object)
+                    self._frameValues = np.empty(frames_shape, dtype=object)
                 elif self.frameValues.shape != frames_shape:
-                    self.frameValues = np.pad(
+                    self._frameValues = np.pad(
                         self.frameValues,
                         [(0, s - self.frameValues.shape[i]) for i, s in enumerate(frames_shape)],
                     )
@@ -767,6 +777,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._levels = None
                 self.levels = int(max(1, math.ceil(math.log(max(
                     self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+        if updateMetadata:
+            self._writeInternalMetadata()
 
     def addAssociatedImage(self, image, imageKey=None):
         """
@@ -1002,6 +1014,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def frameAxes(self, axes):
         self._checkEditable()
         self._frameAxes = axes
+        self._writeInternalMetadata()
 
     @property
     def frameUnits(self):
@@ -1034,6 +1047,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             err = f'frameValues must have {len(self.frameAxes) + 1} dimensions.'
             raise ValueError(err)
         self._frameValues = a
+        self._writeInternalMetadata()
 
     def _generateDownsampledLevels(self, resample_method):
         self._checkEditable()
