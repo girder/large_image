@@ -5,6 +5,7 @@
 ### Improvements
 
 - Format dates in item lists ([#1707](../../pull/1707))
+- Guard dtype types ([#1710](../../pull/1710))
 
 ### Changes
 
