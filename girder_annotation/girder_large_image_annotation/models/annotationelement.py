@@ -20,6 +20,7 @@ import io
 import logging
 import math
 import pickle
+import threading
 import time
 
 import pymongo
@@ -80,6 +81,13 @@ class Annotationelement(Model):
                 ('element.group', SortDir.ASCENDING),
             ], {
                 'name': 'annotationGroupIdx',
+            }),
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('_id', SortDir.ASCENDING),
+            ], {
+                'name': 'annotationElementIdIdx',
             }),
             ([
                 ('created', SortDir.ASCENDING),
@@ -161,7 +169,14 @@ class Annotationelement(Model):
         annotation['annotation']['elements'] = list(self.yieldElements(
             annotation, region, annotation['_elementQuery']))
 
-    def yieldElements(self, annotation, region=None, info=None):  # noqa
+    def countElements(self, annotation):
+        query = {
+            'annotationId': annotation.get('_annotationId', annotation['_id']),
+            '_version': annotation['_version'],
+        }
+        return self.collection.count_documents(query)
+
+    def yieldElements(self, annotation, region=None, info=None, bbox=False):  # noqa
         """
         Given an annotation, fetch the elements from the database.
 
@@ -204,6 +219,7 @@ class Annotationelement(Model):
             maxDetails (as specified by the region dictionary), details (sum of
             details returned), limit (as specified by region), centroids (a
             boolean based on the region specification).
+        :param bbox: if True, always return bounding box information.
         :returns: a list of elements.  If centroids were requested, each entry
             is a list with str(id), x, y, size.  Otherwise, each entry is the
             element record.
@@ -256,6 +272,9 @@ class Annotationelement(Model):
             info['propskeys'] = propskeys
         elif region.get('bbox'):
             fields.pop('bbox.details')
+            fields['bbox'] = True
+        if bbox:
+            fields.pop('bbox.details', None)
             fields['bbox'] = True
         elementCursor = self.find(
             query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
@@ -330,6 +349,8 @@ class Annotationelement(Model):
                                 info['bbox'].get(lkey, entry['bbox'][lkey]), entry['bbox'][lkey])
                             info['bbox'][hkey] = max(
                                 info['bbox'].get(hkey, entry['bbox'][hkey]), entry['bbox'][hkey])
+                elif bbox and 'bbox' in entry:
+                    element['_bbox'] = entry['bbox']
                 yield element
                 details += entry.get('bbox', {}).get('details', 1)
             count += 1
@@ -570,7 +591,7 @@ class Annotationelement(Model):
                 entry['datafile']['userFileId'] = userFile['_id']
             logger.debug('Storing element as file (%r)', entry)
 
-    def updateElementChunk(self, elements, chunk, chunkSize, annotation, now):
+    def updateElementChunk(self, elements, chunk, chunkSize, annotation, now, insertLock):
         """
         Update the database for a chunk of elements.  See the updateElements
         method for details.
@@ -588,7 +609,8 @@ class Annotationelement(Model):
         if (len(entries) <= MAX_ELEMENT_CHECK and any(
                 self._entryIsLarge(entry) for entry in entries[:MAX_ELEMENT_CHECK])):
             self.saveElementAsFile(annotation, entries)
-        res = self.collection.insert_many(entries, ordered=False)
+        with insertLock:
+            res = self.collection.insert_many(entries, ordered=False)
         for pos, entry in enumerate(entries):
             if 'id' not in entry['element']:
                 entry['element']['id'] = str(res.inserted_ids[pos])
@@ -613,9 +635,11 @@ class Annotationelement(Model):
         now = datetime.datetime.now(datetime.timezone.utc)
         threads = large_image.config.cpu_count()
         chunkSize = int(max(100000 // threads, 10000))
+        insertLock = threading.Lock()
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
             for chunk in range(0, len(elements), chunkSize):
-                pool.submit(self.updateElementChunk, elements, chunk, chunkSize, annotation, now)
+                pool.submit(self.updateElementChunk, elements, chunk,
+                            chunkSize, annotation, now, insertLock)
         if time.time() - startTime > 10:
             logger.info('inserted %d elements in %4.2fs' % (
                 len(elements), time.time() - startTime))

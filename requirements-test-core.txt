@@ -11,7 +11,7 @@ sources/openslide
 sources/pil[all]
 sources/rasterio[all]
 sources/test
-sources/tiff
+sources/tiff[all]
 sources/tifffile
 sources/vips
 sources/zarr
@@ -23,8 +23,9 @@ sources/mapnik
 utilities/converter[stats]
 
 # Extras from main setup.py
-pylibmc>=1.5.1
 matplotlib
+pylibmc>=1.5.1
+redis
 simplejpeg
 
 # External dependencies

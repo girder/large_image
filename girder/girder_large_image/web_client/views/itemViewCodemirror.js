@@ -156,6 +156,7 @@ const Formats = {
 Formats['application/vnd.geo+json'] = Formats['application/json'];
 Formats['text/x-yaml'] = Formats['text/yaml'];
 Formats['application/x-yaml'] = Formats['text/yaml'];
+Formats['application/yaml'] = Formats['text/yaml'];
 
 function lintGirderIni(text, callback) {
     return restRequest({
@@ -213,6 +214,13 @@ var CodemirrorEditWidget = View.extend({
             value: this._contents,
             mode: Formats[this.mimeType].mode,
             lineNumbers: true,
+            indentWithTabs: false,
+            extraKeys: {
+                Tab: function (cm) {
+                    var spaces = Array(cm.getOption('tabSize') + 1).join(' ');
+                    cm.replaceSelection(spaces);
+                }
+            },
             gutters: ['CodeMirror-lint-markers'],
             lint: true,
             readOnly: this.accessLevel < AccessType.WRITE

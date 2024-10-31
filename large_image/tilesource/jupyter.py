@@ -17,6 +17,7 @@ likely lead to crashes. This is only for use in JupyterLab.
 import importlib.util
 import json
 import os
+import re
 import weakref
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
@@ -161,7 +162,7 @@ class Map:
         :param resource: a girder resource path of an item or file that exists
             on the girder client.
         """
-        self._layer = self._map = self._metadata = None
+        self._layer = self._map = self._metadata = self._frame_slider = None
         self._ts = ts
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
@@ -259,6 +260,7 @@ class Map:
         ipyleaflet layer, and the center of the tile source.
         """
         from ipyleaflet import Map, basemaps, projections
+        from ipywidgets import IntSlider, VBox
 
         try:
             default_zoom = metadata['levels'] - metadata['sourceLevels']
@@ -307,6 +309,19 @@ class Map:
             else:
                 center = (metadata['sizeY'] / 2, metadata['sizeX'] / 2)
 
+        children: List[Any] = []
+        frames = metadata.get('frames')
+        if frames is not None:
+            self._frame_slider = IntSlider(
+                value=0,
+                min=0,
+                max=len(frames) - 1,
+                description='Frame:',
+            )
+            if self._frame_slider:
+                self._frame_slider.observe(self.update_frame, names='value')
+                children.append(self._frame_slider)
+
         m = Map(
             crs=crs,
             basemap=basemaps.OpenStreetMap.Mapnik if self._geospatial else layer,
@@ -321,7 +336,9 @@ class Map:
         if self._geospatial:
             m.add_layer(layer)
         self._map = m
-        return m
+        children.append(m)
+
+        return VBox(children)
 
     @property
     def layer(self) -> Any:
@@ -376,6 +393,19 @@ class Map:
             return transf.transform(x, y)
         return x, self._metadata['sizeY'] - y
 
+    def update_frame(self, event, **kwargs):
+        frame = int(event.get('new'))
+        if self._layer:
+            if 'frame=' in self._layer.url:
+                self._layer.url = re.sub(r'frame=(\d+)', f'frame={frame}', self._layer.url)
+            else:
+                if '?' in self._layer.url:
+                    self._layer.url = self._layer.url.replace('?', f'?frame={frame}&')
+                else:
+                    self._layer.url += f'?frame={frame}'
+
+            self._layer.redraw()
+
 
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
     import tornado.httpserver
@@ -420,10 +450,11 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             x = int(self.get_argument('x'))
             y = int(self.get_argument('y'))
             z = int(self.get_argument('z'))
+            frame = int(self.get_argument('frame', default='0'))
             encoding = self.get_argument('encoding', 'PNG')
             try:
                 tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
-                    x, y, z, encoding=encoding)
+                    x, y, z, encoding=encoding, frame=frame)
             except TileSourceXYZRangeError as e:
                 self.clear()
                 self.set_status(404)

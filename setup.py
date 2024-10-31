@@ -71,12 +71,14 @@ extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) |
     f'large-image-source-multi[all]{limit_version}',
     f'large-image-source-pil[all]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version}',
+    f'large-image-source-tiff[all]{limit_version}',
 })
 # The common packages are ones that will install on Ubuntu, OSX, and Windows
 # from pypi with all needed dependencies.
 extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for key in {
     'memcached', 'redis', 'colormaps', 'performance',
-    'deepzoom', 'dicom', 'multi', 'nd2', 'test', 'tifffile', 'zarr',
+    'deepzoom', 'dicom', 'multi', 'nd2', 'openslide', 'test', 'tifffile',
+    'zarr',
 })) | {
     f'large-image-source-pil[all]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version}',
@@ -88,6 +90,7 @@ setup(
                      'fallback_version': '0.0.0'},
     description=description,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -100,6 +103,7 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
     ],
     install_requires=[
         'cachetools',

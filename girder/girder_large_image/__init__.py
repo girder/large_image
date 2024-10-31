@@ -19,8 +19,10 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+import os
 import re
 import threading
+import time
 import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
@@ -103,6 +105,20 @@ def _postUpload(event):
             job = Job().load(item['largeImage']['jobId'], force=True)
             if job and job['status'] == JobStatus.SUCCESS:
                 Job().save(job)
+    else:
+        if 's3FinalizeRequest' in fileObj and 'itemId' in fileObj:
+            logger.info(f'Checking if S3 upload of {fileObj["name"]} is a large image')
+
+            localPath = File().getLocalFilePath(fileObj)
+            for _ in range(300):
+                size = os.path.getsize(localPath)
+                if size == fileObj['size'] and len(
+                        open(localPath, 'rb').read(500)) == min(size, 500):
+                    break
+                logger.info(
+                    f'S3 upload not fully present ({size}/{fileObj["size"]} bytes reported)')
+                time.sleep(0.1)
+            checkForLargeImageFiles(girder.events.Event(event.name, fileObj))
 
 
 def _updateJob(event):
@@ -162,8 +178,10 @@ def _updateJob(event):
                      datetime.timedelta(seconds=30)))
 
 
-def checkForLargeImageFiles(event):
+def checkForLargeImageFiles(event):  # noqa
     file = event.info
+    if 'file.save' in event.name and 's3FinalizeRequest' in file:
+        return
     logger.info('Handling file %s (%s)', file['_id'], file['name'])
     possible = False
     mimeType = file.get('mimeType')
@@ -182,10 +200,51 @@ def checkForLargeImageFiles(event):
         return
     try:
         ImageItem().createImageItem(item, file, createJob=False)
+        return
     except Exception:
-        # We couldn't automatically set this as a large image
-        logger.info(
-            'Saved file %s cannot be automatically used as a largeImage' % str(file['_id']))
+        pass
+    # Check for files that are from folder/image style images.  This is custom
+    # per folder/image format
+    imageFolderRecords = {
+        'mrxs': {
+            'match': r'^Slidedat.ini$',
+            'up': 1,
+            'folder': r'^(.*)$',
+            'image': '\\1.mrxs',
+        },
+        'vsi': {
+            'match': r'^.*\.ets$',
+            'up': 2,
+            'folder': r'^_(\.*)_$',
+            'image': '\\1.vsi',
+        },
+    }
+    for check in imageFolderRecords.values():
+        if re.match(check['match'], file['name']):
+            try:
+                folderId = item['folderId']
+                folder = None
+                for _ in range(check['up']):
+                    folder = Folder().load(folderId, force=True)
+                    if not folder:
+                        break
+                    folderId = folder['parentId']
+                if not folder or not re.match(check['folder'], folder['name']):
+                    continue
+                imageName = re.sub(check['folder'], check['image'], folder['name'])
+                parentItem = Item().findOne({'folderId': folder['parentId'], 'name': imageName})
+                if not parentItem:
+                    continue
+                files = list(Item().childFiles(item=parentItem, limit=2))
+                if len(files) == 1:
+                    parentFile = files[0]
+                    ImageItem().createImageItem(parentItem, parentFile, createJob=False)
+                    return
+            except Exception:
+                pass
+    # We couldn't automatically set this as a large image
+    girder.logger.info(
+        'Saved file %s cannot be automatically used as a largeImage' % str(file['_id']))
 
 
 def removeThumbnails(event):
@@ -255,6 +314,8 @@ def handleFileSave(event):
             for mimeType, ext, std in [
                 ('text/yaml', '.yaml', True),
                 ('text/yaml', '.yml', True),
+                ('application/yaml', '.yaml', True),
+                ('application/yaml', '.yml', True),
                 ('application/vnd.geo+json', '.geojson', True),
             ]:
                 if ext not in mimetypes.types_map:
@@ -426,13 +487,66 @@ def adjustConfigForUser(config, user):
                     {'_id': {'$in': user['groups']}}, sort=[('name', SortDir.ASCENDING)]):
                 if isinstance(groups.get(group['name']), dict):
                     config = _mergeDictionaries(config, groups[group['name']])
+    # Do this after merging groups, because the group access-level values can
+    # override the base access-level options.  For instance, if the base has
+    # an admin option, and the group has a user option, then doing this before
+    # group application can end up with user options for an admin.
     if isinstance(config.get('access'), dict):
         accessList = config.pop('access')
         if user and isinstance(accessList.get('user'), dict):
             config = _mergeDictionaries(config, accessList['user'])
         if user and user.get('admin') and isinstance(accessList.get('admin'), dict):
             config = _mergeDictionaries(config, accessList['admin'])
+    if isinstance(config.get('users'), dict):
+        users = config.pop('users')
+        if user and user['login'] in users:
+            config = _mergeDictionaries(config, users[user['login']])
     return config
+
+
+def addSettingsToConfig(config, user, name=None):
+    """
+    Add the settings for showing thumbnails and images in item lists to a
+    config file if the itemList or itemListDialog options are not set.
+
+    :param config: the config dictionary to modify.
+    :param user: the current user.
+    :param name: the name of the config file.
+    """
+    if name and name != '.large_image_config.yaml':
+        return
+    columns = []
+
+    showThumbnails = Setting().get(constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS)
+    if showThumbnails:
+        columns.append({'type': 'image', 'value': 'thumbnail', 'title': 'Thumbnail'})
+
+    extraSetting = constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_PUBLIC
+    if user is not None:
+        if user['admin']:
+            extraSetting = constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA_ADMIN
+        else:
+            extraSetting = constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA
+
+    showExtra = None
+    try:
+        showExtra = json.loads(Setting().get(extraSetting))
+    except Exception:
+        pass
+    if (isinstance(showExtra, dict) and 'images' in showExtra and
+            isinstance(showExtra['images'], list)):
+        for value in showExtra['images']:
+            if value != '*':
+                columns.append({'type': 'image', 'value': value, 'title': value.title()})
+
+    columns.append({'type': 'record', 'value': 'name', 'title': 'Name'})
+    columns.append({'type': 'record', 'value': 'controls', 'title': 'Contols'})
+    columns.append({'type': 'record', 'value': 'size', 'title': 'Size'})
+
+    if 'itemList' not in config:
+        config['itemList'] = {'columns': columns}
+    if 'itemListDialog' not in config:
+        config['itemListDialog'] = {'columns': columns}
 
 
 def yamlConfigFile(folder, name, user):
@@ -458,12 +572,15 @@ def yamlConfigFile(folder, name, user):
                     if isinstance(config, list) and len(config) == 1:
                         config = config[0]
                     # combine and adjust config values based on current user
-                    if isinstance(config, dict) and 'access' in config or 'group' in config:
+                    if isinstance(config, dict) and (
+                            'access' in config or 'groups' in config or 'users' in config):
                         config = adjustConfigForUser(config, user)
                     if addConfig and isinstance(config, dict):
                         config = _mergeDictionaries(config, addConfig)
                     if not isinstance(config, dict) or config.get('__inherit__') is not True:
-                        return config
+                        addConfig = config
+                        last = True
+                        break
                     config.pop('__inherit__')
                     addConfig = config
         if last:
@@ -484,10 +601,13 @@ def yamlConfigFile(folder, name, user):
                 last = True
         else:
             folder = Folder().load(folder['parentId'], user=user, level=AccessType.READ)
+
+    addConfig = {} if addConfig is None else addConfig
+    addSettingsToConfig(addConfig, user, name)
     return addConfig
 
 
-def yamlConfigFileWrite(folder, name, user, yaml_config):
+def yamlConfigFileWrite(folder, name, user, yaml_config, user_context):
     """
     If the user has appropriate permissions, create or modify an item in the
     specified folder with the specified name, storing the config value as a
@@ -497,24 +617,32 @@ def yamlConfigFileWrite(folder, name, user, yaml_config):
     :param name: the name of the config file.
     :param user: the user that the response if adjusted for.
     :param yaml_config: a yaml config string.
+    :param user_context: whether these settings should only apply to the current user.
     """
-    # Check that we have valid yaml
-    yaml.safe_load(yaml_config)
+    yaml_parsed = yaml.safe_load(yaml_config)
     item = Item().createItem(name, user, folder, reuseExisting=True)
     existingFiles = list(Item().childFiles(item))
     if (len(existingFiles) == 1 and
-            existingFiles[0]['mimeType'] == 'text/yaml' and
+            existingFiles[0]['mimeType'] == 'application/yaml' and
             existingFiles[0]['name'] == name):
+        if user_context:
+            file = yaml.safe_load(File().open(existingFiles[0]).read())
+            file.setdefault('users', {})
+            file['users'].setdefault(user['login'], {})
+            file['users'][user['login']].update(yaml_parsed)
+            yaml_config = yaml.safe_dump(file)
         upload = Upload().createUploadToFile(
             existingFiles[0], user, size=len(yaml_config))
     else:
+        if user_context:
+            yaml_config = yaml.safe_dump({'users': {user['login']: yaml_parsed}})
         upload = Upload().createUpload(
             user, name, 'item', item, size=len(yaml_config),
-            mimeType='text/yaml', save=True)
+            mimeType='application/yaml', save=True)
     newfile = Upload().handleChunk(upload, yaml_config)
     with _configWriteLock:
         for entry in list(Item().childFiles(item)):
-            if entry['_id'] != newfile['_id'] and len(Item().childFiles(item)) > 1:
+            if entry['_id'] != newfile['_id'] and len(list(Item().childFiles(item))) > 1:
                 File().remove(entry)
 
 
@@ -634,6 +762,26 @@ def unbindGirderEventsByHandlerName(handlerName):
         events.unbind(eventName, handlerName)
 
 
+def patchMount():
+    try:
+        import girder.cli.mount
+
+        def _flatItemFile(self, item):
+            return next(File().collection.aggregate([
+                {'$match': {'itemId': item['_id']}},
+            ] + ([
+                {'$addFields': {'matchLI': {'$eq': ['$_id', item['largeImage']['fileId']]}}},
+            ] if 'largeImage' in item and 'expected' not in item['largeImage'] else []) + [
+                {'$addFields': {'matchName': {'$eq': ['$name', item['name']]}}},
+                {'$sort': {'matchLI': -1, 'matchName': -1, '_id': 1}},
+                {'$limit': 1},
+            ]), None)
+
+        girder.cli.mount.ServerFuse._flatItemFile = _flatItemFile
+    except Exception:
+        pass
+
+
 class LargeImagePlugin(GirderPlugin):
     DISPLAY_NAME = 'Large Image'
 
@@ -704,3 +852,5 @@ class LargeImagePlugin(GirderPlugin):
 
         search._allowedSearchMode.pop('li_metadata', None)
         search.addSearchMode('li_metadata', metadataSearchHandler)
+
+        patchMount()

@@ -20,28 +20,11 @@ import pathlib
 import struct
 import tempfile
 import threading
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import PIL.Image
-from osgeo import gdal, gdal_array, gdalconst, osr
-
-try:
-    gdal.UseExceptions()
-except Exception:
-    pass
-
-# isort: off
-
-# pyproj stopped supporting older pythons, so on those versions its database is
-# aging; as such, if on those older versions of python if it is imported before
-# gdal, there can be a database version conflict; importing after gdal avoids
-# this.
-import pyproj
-
-# isort: on
-
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
@@ -60,6 +43,42 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+gdal = None
+gdal_array = None
+gdalconst = None
+osr = None
+pyproj = None
+
+
+def _lazyImport():
+    """
+    Import the gdal module.  This is done when needed rather than in the
+    module initialization because it is slow.
+    """
+    global gdal, gdal_array, gdalconst, osr, pyproj
+
+    if gdal is None:
+        try:
+            from osgeo import gdal, gdal_array, gdalconst, osr
+
+            try:
+                gdal.UseExceptions()
+            except Exception:
+                pass
+
+            # isort: off
+
+            # pyproj stopped supporting older pythons, so on those versions its
+            # database is aging; as such, if on those older versions of python
+            # if it is imported before gdal, there can be a database version
+            # conflict; importing after gdal avoids this.
+            import pyproj
+
+            # isort: on
+        except ImportError:
+            msg = 'gdal module not found.'
+            raise TileSourceError(msg)
 
 
 class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
@@ -90,12 +109,14 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             specify unitsPerPixel.
         """
         super().__init__(path, **kwargs)
+        _lazyImport()
+
         self.addKnownExtensions()
         self._bounds = {}
         self._largeImagePath = self._getLargeImagePath()
         try:
             self.dataset = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
-        except RuntimeError:
+        except (RuntimeError, UnicodeDecodeError):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = 'File cannot be opened via GDAL'
@@ -122,6 +143,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             scale = self.getPixelSizeInMeters()
         except RuntimeError as exc:
             raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
+        if not self.sizeX or not self.sizeY:
+            msg = 'File cannot be opened via GDAL (no size)'
+            raise TileSourceError(msg)
         if (self.projection or self._getDriver() in {
             'PNG',
         }) and not scale and not is_netcdf:
@@ -299,6 +323,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         :returns: a proj4 projection object.  None if the specified projection
             cannot be created.
         """
+        _lazyImport()
+
         if isinstance(proj, bytes):
             proj = proj.decode()
         if not isinstance(proj, str):
@@ -436,7 +462,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if srs not in self._bounds:
             gt = self._getGeoTransform()
             nativeSrs = self.getProj4String()
-            if not nativeSrs:
+            if not nativeSrs or not gt:
                 self._bounds[srs] = None
                 return
             bounds = {
@@ -468,12 +494,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 keys = ('ll', 'ul', 'lr', 'ur')
                 for key in keys:
                     bounds[key]['y'] = max(min(bounds[key]['y'], yBound), -yBound)
-                while any(bounds[key]['x'] > 180 for key in keys):
+                dx = min(bounds[key]['x'] for key in keys)
+                if dx < -180 or dx >= 180:
+                    dx = ((dx + 180) % 360 - 180) - dx
                     for key in keys:
-                        bounds[key]['x'] -= 360
-                while any(bounds[key]['x'] < -180 for key in keys):
-                    for key in keys:
-                        bounds[key]['x'] += 360
+                        bounds[key]['x'] += dx
                 if any(bounds[key]['x'] >= 180 for key in keys):
                     bounds['ul']['x'] = bounds['ll']['x'] = -180
                     bounds['ur']['x'] = bounds['lr']['x'] = 180
@@ -524,7 +549,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                         # The statistics provide a min and max, so we don't
                         # fetch those separately
                         info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
-                    except RuntimeError:
+                    except (RuntimeError, TypeError):
                         self.logger.info('Failed to get statistics for band %d', i + 1)
                     info['nodata'] = band.GetNoDataValue()
                     info['scale'] = band.GetScale()
@@ -691,8 +716,12 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             w = int(max(1, round((x1 - x0) / factor)))
             h = int(max(1, round((y1 - y0) / factor)))
             with self._getDatasetLock:
-                tile = self.dataset.ReadAsArray(
-                    xoff=x0, yoff=y0, xsize=x1 - x0, ysize=y1 - y0, buf_xsize=w, buf_ysize=h)
+                try:
+                    tile = self.dataset.ReadAsArray(
+                        xoff=x0, yoff=y0, xsize=x1 - x0, ysize=y1 - y0, buf_xsize=w, buf_ysize=h)
+                except Exception:
+                    self.logger.exception('Failed to getTile')
+                    tile = np.zeros((1, 1))
         else:
             xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
             bounds = self.getBounds(self.projection)
@@ -722,7 +751,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     # around the outputBounds.
                     polynomialOrder=1,
                     xRes=res, yRes=res, outputBounds=[xmin, ymin, xmax, ymax])
-                tile = ds.ReadAsArray()
+                try:
+                    tile = ds.ReadAsArray()
+                except Exception:
+                    self.logger.exception('Failed to getTile')
+                    tile = np.zeros((1, 1))
         if len(tile.shape) == 3:
             tile = np.rollaxis(tile, 0, 3)
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
@@ -846,6 +879,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if not isinstance(format, (tuple, set, list)):
             format = (format, )
         # The tile iterator handles determining the output region
+        if 'resample' in kwargs:
+            kwargs = kwargs.copy()
+            kwargs.pop('resample')
         iterInfo = self.tileIterator(format=TILE_FORMAT_NUMPY, resample=None, **kwargs).info
         # Only use gdal.Warp of the original image if the region has not been
         # styled.
@@ -931,6 +967,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         :param path: The path to the file
         :returns: True if geospatial.
         """
+        _lazyImport()
+
         try:
             ds = gdal.Open(str(path), gdalconst.GA_ReadOnly)
         except Exception:
@@ -949,6 +987,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     @classmethod
     def addKnownExtensions(cls):
         if not hasattr(cls, '_addedExtensions'):
+            _lazyImport()
+
             cls._addedExtensions = True
             cls.extensions = cls.extensions.copy()
             cls.mimeTypes = cls.mimeTypes.copy()

@@ -35,7 +35,7 @@ from girder.models.user import User
 from girder.utility import JsonEncoder
 from girder.utility.progress import setResponseTimeLimit
 
-from .. import constants
+from .. import constants, utils
 from ..models.annotation import Annotation, AnnotationSchema
 from ..models.annotationelement import Annotationelement
 
@@ -67,6 +67,8 @@ class AnnotationResource(Resource):
         self.route('GET', ('item', ':id'), self.getItemAnnotations)
         self.route('POST', ('item', ':id'), self.createItemAnnotations)
         self.route('DELETE', ('item', ':id'), self.deleteItemAnnotations)
+        self.route('POST', ('item', ':id', 'plot', 'list'), self.getItemPlottableElements)
+        self.route('POST', ('item', ':id', 'plot', 'data'), self.getItemPlottableData)
         self.route('GET', ('folder', ':id'), self.returnFolderAnnotations)
         self.route('GET', ('folder', ':id', 'present'), self.existFolderAnnotations)
         self.route('GET', ('folder', ':id', 'create'), self.canCreateFolderAnnotations)
@@ -618,6 +620,82 @@ class AnnotationResource(Resource):
                 Annotation().remove(annot)
                 count += 1
         return count
+
+    @autoDescribeRoute(
+        Description('Get a list of plottable data related to an item and its annotations.')
+        .modelParam('id', model=Item, level=AccessType.READ)
+        .param('adjacentItems', 'Whether to include adjacent item data.',
+               required=False, default=False, enum=['false', 'true', '__all__'])
+        .jsonParam('annotations', 'A JSON list of annotation IDs that should '
+                   'be included.  An entry of \\__all__ will include all '
+                   'annotations.', paramType='formData', requireArray=True,
+                   required=False)
+        .param('sources', 'An optional comma separated list that can contain '
+               'folder, item, annotation, annotationelement, datafile.',
+               required=False)
+        .param('uuid', 'An optional uuid to allow cancelling a previous '
+               'request.  If specified and there are any outstanding requests '
+               'with the same uuid, they may be cancelled to save resources.',
+               required=False)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403),
+    )
+    @access.public(cookie=True, scope=TokenScope.DATA_READ)
+    def getItemPlottableElements(self, item, annotations, adjacentItems, sources=None, uuid=None):
+        user = self.getCurrentUser()
+        if adjacentItems != '__all__':
+            adjacentItems = str(adjacentItems).lower() == 'true'
+        sources = sources or None
+        data = utils.PlottableItemData(
+            user, item, annotations=annotations, adjacentItems=adjacentItems,
+            sources=sources, uuid=uuid)
+        return [col for col in data.columns if col.get('count')]
+
+    @autoDescribeRoute(
+        Description('Get plottable data related to an item and its annotations.')
+        .modelParam('id', model=Item, level=AccessType.READ)
+        .param('adjacentItems', 'Whether to include adjacent item data.',
+               required=False, default=False, enum=['false', 'true', '__all__'])
+        .param('keys', 'A comma separated list of data keys to retrieve (not json).',
+               required=True)
+        .param('requiredKeys', 'A comma separated list of data keys that must '
+               'be non null in all response rows (not json).', required=False)
+        .jsonParam('annotations', 'A JSON list of annotation IDs that should '
+                   'be included.  An entry of \\__all__ will include all '
+                   'annotations.', paramType='formData', requireArray=True,
+                   required=False)
+        .param('sources', 'An optional comma separated list that can contain '
+               'folder, item, annotation, annotationelement, datafile.',
+               required=False)
+        .jsonParam(
+            'compute', 'A dictionary with keys "columns": a list of columns '
+            'to include in the computation; if unspecified or an empty list, '
+            'no computation is done, "function": a string with the name of '
+            'the function, such as umap, "params": additional parameters to '
+            'pass to the function.  If none of the requiredKeys are '
+            'compute.(x|y|z), the computation will not be performed.  Only '
+            'rows which have all selected columns present will be included in '
+            'the computation.',
+            paramType='formData', requireObject=True, required=False)
+        .param('uuid', 'An optional uuid to allow cancelling a previous '
+               'request.  If specified and there are any outstanding requests '
+               'with the same uuid, they may be cancelled to save resources.',
+               required=False)
+        .errorResponse('ID was invalid.')
+        .errorResponse('Read access was denied for the item.', 403),
+    )
+    @access.public(cookie=True, scope=TokenScope.DATA_READ)
+    def getItemPlottableData(
+            self, item, keys, adjacentItems, annotations, requiredKeys,
+            sources=None, compute=None, uuid=None):
+        user = self.getCurrentUser()
+        if adjacentItems != '__all__':
+            adjacentItems = str(adjacentItems).lower() == 'true'
+        sources = sources or None
+        data = utils.PlottableItemData(
+            user, item, annotations=annotations, adjacentItems=adjacentItems,
+            sources=sources, compute=compute, uuid=uuid)
+        return data.data(keys, requiredKeys)
 
     def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
                              sortDir=False, count=False):

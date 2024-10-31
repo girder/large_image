@@ -66,7 +66,7 @@ def _createThumbnails(server, admin, spec, cancel=False):
         time.sleep(0.1)
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testSettings(server):
@@ -237,7 +237,38 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
     Setting().set(constants.PluginSettings.LARGE_IMAGE_MAX_THUMBNAIL_FILES, 0)
 
 
-@pytest.mark.singular()
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testFolderCreateImages(server, admin, user, fsAssetstore):
+    file = utilities.uploadExternalFile('sample_image.ptif', admin, fsAssetstore)
+    itemId = file['itemId']
+    item = Item().load(itemId, user=admin)
+    folderId = str(item['folderId'])
+    # Remove the large image from this item
+    ImageItem().delete(item)
+    # Ask to make all items in this folder large images
+    resp = server.request(
+        method='PUT', path=f'/large_image/folder/{folderId}/tiles', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['largeImagesCreated'] == 1
+    item = Item().load(itemId, user=admin)
+    # Check that this item became a large image again
+    assert 'largeImage' in item
+    # Hitting the endpoint again should skip the item
+    resp = server.request(
+        method='PUT', path=f'/large_image/folder/{folderId}/tiles', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['itemsSkipped'] == 1
+    # If the item's source isn't working, it should be recreated.
+    item['largeImage']['sourceName'] = 'unknown'
+    Item().updateItem(item)
+    resp = server.request(
+        method='PUT', path=f'/large_image/folder/{folderId}/tiles', user=admin)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['largeImagesRemovedAndRecreated'] == 1
+
+
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testDeleteIncompleteTile(server, admin, user, fsAssetstore, unavailableWorker):
@@ -408,7 +439,7 @@ def testHistogramCaching(server, admin, user, fsAssetstore):
     assert resp.json == 0
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testHistogramConcurrentCaching(server, admin, user, fsAssetstore):
@@ -448,10 +479,16 @@ def testYAMLConfigFile(server, admin, user, fsAssetstore):
     groupA = Group().createGroup('Group A', admin)
 
     resp = server.request(
+        path='/folder/%s/yaml_config/.large_image_config.yaml' % str(colFolderB['_id']),
+        method='GET')
+    assert utilities.respStatus(resp) == 200
+    assert resp.json.get('itemList') is not None
+
+    resp = server.request(
         path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']),
         method='GET')
     assert utilities.respStatus(resp) == 200
-    assert resp.json is None
+    assert resp.json.get('itemList') is None
 
     colFolderConfig = Folder().createFolder(
         collection, '.config', parentType='collection',
@@ -618,7 +655,7 @@ def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
     assert resp.json['keyE'] == 'value7'
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 def testConfigFileEndpoints(server, admin, fsAssetstore):

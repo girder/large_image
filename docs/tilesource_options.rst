@@ -6,27 +6,27 @@ Each tile source can have custom options that affect how tiles are generated fro
 Format
 ------
 
-Python tile functions can return tile data as images, numpy arrays, or PIL Image objects.  The ``format`` parameter is one of the ``TILE_FORMAT_*`` constants.
+Python tile functions can return tile data as images, numpy arrays, or PIL Image objects.  The ``format`` parameter is one of the ``TILE_FORMAT_*`` constants. Refer to `constants.py <format_options_>`_ to view the format options.
 
 Encoding
 --------
 
+The ``encoding`` parameter only affects output when ``format`` is ``TILE_FORMAT_IMAGE``.
+
 The ``encoding`` parameter can be one of ``JPEG``, ``PNG``, ``TIFF``, ``JFIF``, or ``TILED``.  When the tile is output as an image, this is the preferred format.  Note that ``JFIF`` is a specific variant of ``JPEG`` that will always use either the Y or YCbCr color space as well as constraining other options.  ``TILED`` will output a tiled tiff file; this is slower than ``TIFF`` but can support images of arbitrary size.
 
-Additional options are available based on the PIL.Image registered encoders.
-
-The ``encoding`` only affects output when ``format`` is ``TILE_FORMAT_IMAGE``.
+Additional encoding options are available based on the PIL.Image registered encoders. Refer to the `PIL documentation <pil_encoders_>`_ for supported formats.
 
 Associated with ``encoding``, some image formats have additional parameters.
 
 - ``JPEG`` and ``JFIF`` can specify ``jpegQuality``, a number from 0 to 100 where 0 is small and 100 is higher-quality, and ``jpegSubsampling``, where 0 is full chrominance data, 1 is half-resolution chrominance, and 2 is quarter-resolution chrominance.
 
-- ``TIFF`` can specify ``tiffCompression``, which is one of the ``libtiff_ctypes.COMPRESSION*`` options.
+- ``TIFF`` can specify ``tiffCompression``, which is one of the ``libtiff_ctypes.COMPRESSION*`` options found `here <libtiff_compression_>`_.
 
 Edges
 -----
 
-When a tile is requested at the right or bottom edge of the image, the tile could extend past the boundary of the image.  If the image is not an even multiple of the tile size, the ``edge`` parameter determines how the tile is generated.  A value of ``None`` or ``False`` will generate a standard sized tile where the area outside of the image space could have pixels of any color.  An ``edge`` value of ``'crop'`` or ``True`` will return a tile that is smaller than the standard size.  A value if the form of a hexadecimal encoded 8-bit-per-channel color (e.g., ``#rrggbb``) will ensure that the area outside of the image space is all that color.
+When a tile is requested at the right or bottom edge of the image, the tile could extend past the boundary of the image.  If the image is not an even multiple of the tile size, the ``edge`` parameter determines how the tile is generated.  A value of ``None`` (default) or ``False`` will generate a standard sized tile where the area outside of the image space could have pixels of any color.  An ``edge`` value of ``'crop'`` or ``True`` will return a tile that is smaller than the standard size.  An ``edge`` value in the form of a hexadecimal encoded 8-bit-per-channel color (e.g., ``#rrggbb``) will ensure that the area outside of the image space is all that color.
 
 Style
 -----
@@ -45,7 +45,7 @@ A band definition is an object which can contain the following keys:
 
 - ``min``: the value to map to the first palette value.  Defaults to 0.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported minimum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'min:0.02' would exclude at most the dimmest 2% of values by using an appropriate value for the minimum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported minimum would otherwise be used.  'full' is the same as specifying 0.
 
-- ``max``: the value to map to the last palette value.  Defaults to 255.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported maximum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'max:0.02' would exclude at most the brightest 2% of values by using an appropriate value for the maximum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported maximum would otherwise be used.  'full' uses a value based on the data type of the band.  This will be 1 for a float data type and 65535 for a uint16 datatype.
+- ``max``: the value to map to the last palette value.  Defaults to 255.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported maximum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'max:0.02' would exclude at most the brightest 2% of values by using an appropriate value for the maximum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported maximum would otherwise be used.  'full' uses a value based on the data type of the band.  This will be 1 for a float data type, 255 for a uint8 data type, and 65535 for a uint16 data type.
 
 - ``palette``: This is a single color string, a palette name, or a list of two or more colors. The values between min and max are interpolated using a piecewise linear algorithm or a nearest value algorithm (depending on the ``scheme``) to map to the specified palette values.  It can be specified in a variety of ways:
 
@@ -59,7 +59,7 @@ A band definition is an object which can contain the following keys:
 
 - ``nodata``: the value to use for missing data.  null or unset to not use a nodata value.
 
-- ``composite``: either 'lighten' or 'multiply'.  Defaults to 'lighten' for all except the alpha band.
+- ``composite``: either 'lighten' or 'multiply'.  Defaults to 'lighten' for all except the alpha band. Read more about blend modes and see examples `here <blend_modes_>`_.
 
 - ``clamp``: either True to clamp (also called clip or crop) values outside of the [min, max] to the ends of the palette or False to make outside values transparent.
 
@@ -67,7 +67,7 @@ A band definition is an object which can contain the following keys:
 
 - ``axis``: if specified, keep on the specified axis (channel) of the intermediate numpy array.  This is typically between 0 and 3 for the red, green, blue, and alpha channels.  Only the first such value is used, and this can be specified as a base key if ``bands`` is specified.
 
-- ``icc``: by default, sources that expose ICC color profiles will apply those profiles to the image data, converting the results to the sRGB profile.  To use the raw image data without ICC profile adjustments, specify an ``icc`` value of ``false``.  If the entire style is ``{"icc": false}``, the results will be the same as the default bands with only the adjustment being skipped.  Similarly, if the entire style is ``{"icc": true}``, this is the same as the default style with where the adjustment is applied.  Besides a boolean, this may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``true`` is the same as ``perceptual``.   Note that not all tile sources expose ICC color profile information, even if the base file format contains it.
+- ``icc``: by default, sources that expose ICC color profiles (PIL, OpenJPEG, OpenSlide, OMETiff, TIFF, TiffFile) will apply those profiles to the image data, converting the results to the sRGB profile.  To use the raw image data without ICC profile adjustments, specify an ``icc`` value of ``false``.  If the entire style is ``{"icc": false}``, the results will be the same as the default bands with only the adjustment being skipped.  Similarly, if the entire style is ``{"icc": true}``, this is the same as the default style with where the adjustment is applied.  Besides a boolean, this may also be a string with one of the intents defined by the PIL.ImageCms.Intents enum.  ``true`` is the same as ``perceptual``.   Note that not all tile sources expose ICC color profile information, even if the base file format contains it.
 
 - ``function``: if specified, call a function to modify the resulting image.  This can be specified as a base key and as a band key.  Style functions can be called at multiple stages in the styling pipeline:
 
@@ -153,3 +153,37 @@ This used a precomputed sixteen entry greyscale palette, computed as ``(value / 
     "#BABABA", "#C5C5C5", "#D0D0D0", "#DADADA",
     "#E4E4E4", "#EDEDED", "#F6F6F6", "#FFFFFF"
   ]}
+
+Composite several frames with framedelta
+________________________________________
+
+.. code-block::
+
+  style = {
+    "bands": [
+      {"framedelta": 0, "palette": "#0000FF"}
+      {"framedelta": 1, "palette": "#00FF00"}
+      {"framedelta": 2, "palette": "#FF0000"}
+    ],
+    "composite": "multiply"
+  }
+
+Fill missing data and apply categorical colormap
+________________________________________________
+
+.. code-block::
+
+  style = {
+    "nodata": 0,
+    "min": 0,
+    "max": 6,
+    "clamp": "true",
+    "dtype": "uint8",
+    "scheme": "discrete",
+    "palette": ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]
+  }
+
+.. _format_options: https://github.com/girder/large_image/blob/master/large_image/constants.py#L35
+.. _pil_encoders: https://pillow.readthedocs.io/en/latest/handbook/image-file-formats.html
+.. _libtiff_compression: https://github.com/pearu/pylibtiff/blob/master/libtiff/tiff_h_4_2_0.py#L19
+.. _blend_modes: https://developer.mozilla.org/en-US/docs/Web/CSS/blend-mode

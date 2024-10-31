@@ -273,6 +273,22 @@ var ConfigView = View.extend({
                 callback(ConfigView._liconfig);
             }
             return val;
+        }).fail(() => {
+            // fallback matching server values
+            const li = {
+                columns: [
+                    {type: 'record', value: 'name', title: 'Name'},
+                    {type: 'record', value: 'controls', title: 'Contols'},
+                    {type: 'record', value: 'size', title: 'Size'}]
+            };
+            const val = {itemList: li, itemListDialog: li};
+            ConfigView._lastliconfig = folderId;
+            ConfigView._liconfigSettingsRequest = null;
+            ConfigView._liconfig = val;
+            if (callback) {
+                callback(ConfigView._liconfig);
+            }
+            return val;
         });
         return ConfigView._liconfigSettingsRequest;
     },

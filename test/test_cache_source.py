@@ -6,7 +6,7 @@ from large_image.cache_util import cachesClear, cachesInfo
 from .datastore import datastore
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testCacheSourceStyle():
     cachesClear()
     imagePath = datastore.fetch('sample_image.ptif')
@@ -29,7 +29,7 @@ def testCacheSourceStyle():
     assert ts1.getTile(0, 0, 4) == tile1
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testCacheSourceStyleFirst():
     cachesClear()
     imagePath = datastore.fetch('sample_image.ptif')
@@ -47,7 +47,7 @@ def testCacheSourceStyleFirst():
     assert ts1.getTile(0, 0, 4) == tile1
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testCacheSourceBadStyle():
     cachesClear()
     imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
@@ -63,7 +63,7 @@ def testCacheSourceBadStyle():
     cachesClear()
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testCacheNoCache():
     cachesClear()
     assert cachesInfo()['tilesource']['used'] == 0

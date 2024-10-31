@@ -23,6 +23,7 @@
 #   IFormatReader.html for interface details.
 
 import atexit
+import builtins
 import logging
 import math
 import os
@@ -81,7 +82,7 @@ def _monitor_thread():
                     source._bioimage = None
                 except Exception:
                     pass
-        except AssertionError:
+        except Exception:
             pass
         finally:
             if javabridge.get_env():
@@ -105,7 +106,7 @@ def _reduceLogging():
             'org/slf4j/LoggerFactory', 'getLogger',
             '(Ljava/lang/String;)Lorg/slf4j/Logger;', rootLoggerName)
         logLevel = javabridge.get_static_field(
-            'ch/qos/logback/classic/Level', 'ERROR', 'Lch/qos/logback/classic/Level;')
+            'ch/qos/logback/classic/Level', 'OFF', 'Lch/qos/logback/classic/Level;')
         javabridge.call(rootLogger, 'setLevel', '(Lch/qos/logback/classic/Level;)V', logLevel)
     except Exception:
         pass
@@ -183,6 +184,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     extensions = {
         None: SourcePriority.FALLBACK,
         'czi': SourcePriority.PREFERRED,
+        'ets': SourcePriority.LOW,  # part of vsi
         'lif': SourcePriority.MEDIUM,
         'vsi': SourcePriority.PREFERRED,
     }
@@ -211,6 +213,17 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         largeImagePath = str(self._getLargeImagePath())
         config._ignoreSourceNames('bioformats', largeImagePath)
 
+        header = b''
+        if os.path.isfile(largeImagePath):
+            try:
+                header = builtins.open(largeImagePath, 'rb').read(5)
+            except Exception:
+                msg = 'File cannot be opened via Bioformats'
+                raise TileSourceError(msg)
+        # Never allow pdfs; they crash the JVM
+        if header[:5] == b'%PDF-':
+            msg = 'File cannot be opened via Bioformats'
+            raise TileSourceError(msg)
         if not _startJavabridge(self.logger):
             msg = 'File cannot be opened by bioformats reader because javabridge failed to start'
             raise TileSourceError(msg)
@@ -631,7 +644,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         height = min(height, sizeYAtScale - offsety)
 
         if scale >= 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
             format = TILE_FORMAT_NUMPY
         else:
@@ -665,6 +678,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             fillValue = 0
             if tile.dtype == np.uint16:
                 fillValue = 65535
+            elif tile.dtype == np.int16:
+                fillValue = 32767
             elif tile.dtype == np.uint8:
                 fillValue = 255
             elif tile.dtype.kind == 'f':

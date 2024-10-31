@@ -37,6 +37,7 @@ setup(
                      'fallback_version': '0.0.0'},
     description=description,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -49,16 +50,17 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
     ],
     install_requires=[
         f'large-image{limit_version}',
     ],
     extras_require={
         'all': [
-            'rawpy ; python_version < "3.12"',
+            'rawpy ; python_version < "3.13"',
             'pillow-heif',
-            'pillow-jxl-plugin',
-            'pillow-jpls ; python_version < "3.12"',
+            'pillow-jxl-plugin ; python_version < "3.13"',
+            'pillow-jpls',
         ],
         'girder': f'girder-large-image{limit_version}',
     },

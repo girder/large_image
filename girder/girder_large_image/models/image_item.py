@@ -412,7 +412,8 @@ class ImageItem(Item):
             if pickleCache:
                 data = File().open(existing).read()
                 return pickle.loads(data), 'application/octet-stream'
-            return File().download(existing, contentDisposition=contentDisposition)
+            return File().download(existing, contentDisposition=contentDisposition,
+                                   headers=kwargs.get('headers', True))
         if checkAndCreate == 'check':
             return False
         return self.getAndCacheImageOrDataRun(
@@ -565,7 +566,7 @@ class ImageItem(Item):
         imageKey = 'tileFrames'
         return self._getAndCacheImageOrData(
             item, 'tileFrames', checkAndCreate,
-            dict(kwargs, imageKey=imageKey), **kwargs)
+            dict(kwargs, imageKey=imageKey), headers=False, **kwargs)
 
     def getPixel(self, item, **kwargs):
         """
