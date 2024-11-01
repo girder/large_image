@@ -290,7 +290,7 @@ class TileSource(IPyLeafletMixin):
                     self, '_unstyledInstance', self).getRegion(
                         region=dict(left=0, top=0, width=1, height=1),
                         format=TILE_FORMAT_NUMPY))
-                self._dtype = sample.dtype
+                self._dtype = np.dtype(sample.dtype)
                 self._bandCount = len(
                     getattr(getattr(self, '_unstyledInstance', self), '_bandInfo', []))
                 if not self._bandCount:
@@ -1190,14 +1190,14 @@ class TileSource(IPyLeafletMixin):
 
         if self._dtype is None or (isinstance(self._dtype, str) and self._dtype == 'check'):
             if isinstance(tile, np.ndarray):
-                self._dtype = tile.dtype
+                self._dtype = np.dtype(tile.dtype)
                 self._bandCount = tile.shape[-1] if len(tile.shape) == 3 else 1
             elif isinstance(tile, PIL.Image.Image):
                 self._dtype = np.uint8 if ';16' not in tile.mode else np.uint16
                 self._bandCount = len(tile.mode)
             else:
                 _img = _imageToNumpy(tile)[0]
-                self._dtype = _img.dtype
+                self._dtype = np.dtype(_img.dtype)
                 self._bandCount = _img.shape[-1] if len(_img.shape) == 3 else 1
 
         mode = None
