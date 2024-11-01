@@ -647,6 +647,50 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         return tile, mask, placement, axes
 
+    def _updateFrameValues(self, frame_values, placement, axes, new_axes, new_dims):
+        self._frameAxes = [
+            a for a in axes
+            if a in frame_values or
+            (self.frameAxes is not None and a in self.frameAxes)
+        ]
+        frames_shape = [new_dims[a] for a in self.frameAxes]
+        frames_shape.append(len(frames_shape))
+        if self.frameValues is None:
+            self._frameValues = np.empty(frames_shape, dtype=object)
+        elif self.frameValues.shape != frames_shape:
+            if len(new_axes):
+                for i in new_axes.values():
+                    self._frameValues = np.expand_dims(self._frameValues, axis=i)
+            frame_padding = [
+                (0, s - self.frameValues.shape[i])
+                for i, s in enumerate(frames_shape)
+            ]
+            frame_padding[-1] = (0, 0)
+            self._frameValues = np.pad(self._frameValues, frame_padding)
+            for i in new_axes.values():
+                self._frameValues = np.insert(
+                    self._frameValues, i, 0, axis=len(frames_shape) - 1,
+                )
+        current_frame_slice = tuple(placement.get(a) for a in self.frameAxes)
+        for i, k in enumerate(self.frameAxes):
+            self.frameValues[(*current_frame_slice, i)] = frame_values.get(k)
+
+    def _resizeImage(self, arr, new_shape, new_axes, chunking):
+        if new_shape != arr.shape:
+            if len(new_axes):
+                for i in new_axes.values():
+                    arr = np.expand_dims(arr, axis=i)
+                arr = np.pad(
+                    arr,
+                    [(0, s - arr.shape[i]) for i, s in enumerate(new_shape)],
+                )
+                new_arr = zarr.empty(new_shape, chunks=chunking, dtype=arr.dtype)
+                new_arr[:] = arr[:]
+                arr = new_arr
+            else:
+                arr.resize(*new_shape)
+        return arr
+
     def addTile(self, tile, x=0, y=0, mask=None, axes=None, **kwargs):
         """
         Add a numpy or image tile to the image, expanding the image as needed
@@ -670,7 +714,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             # read any info written by other processes
             self._validateZarr()
-        except:
+        except TileSourceError:
             pass
         updateMetadata = False
         store_path = str(kwargs.pop('level', 0))
@@ -706,27 +750,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if len(frame_values.keys()) > 0:
                 # update self.frameValues
                 updateMetadata = True
-                self._frameAxes = [
-                    a for a in axes
-                    if a in frame_values or
-                    (self.frameAxes is not None and a in self.frameAxes)
-                ]
-                frames_shape = [new_dims[a] for a in self.frameAxes]
-                frames_shape.append(len(frames_shape))
-                if self.frameValues is None:
-                    self._frameValues = np.empty(frames_shape, dtype=object)
-                elif self.frameValues.shape != frames_shape:
-                    if len(new_axes):
-                        for i in new_axes.values():
-                            self._frameValues = np.expand_dims(self._frameValues, axis=i)
-                    frame_padding = [(0, s - self.frameValues.shape[i]) for i, s in enumerate(frames_shape)]
-                    frame_padding[-1] = (0, 0)
-                    self._frameValues = np.pad(self._frameValues, frame_padding)
-                    for k, i in new_axes.items():
-                        self._frameValues = np.insert(self._frameValues, i, 0, axis=len(frames_shape) - 1)
-                current_frame_slice = tuple(placement.get(a) for a in self.frameAxes)
-                for i, k in enumerate(self.frameAxes):
-                    self.frameValues[(*current_frame_slice, i)] = frame_values.get(k)
+                self._updateFrameValues(frame_values, placement, axes, new_axes, new_dims)
 
             current_arrays = dict(self._zarr.arrays())
             if store_path == '0':
@@ -748,26 +772,14 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     max(v, arr.shape[old_axes[k]] if k in old_axes else 0)
                     for k, v in new_dims.items()
                 )
-                if new_shape != arr.shape:
-                    if arr.chunks[-1] != new_dims.get('s') or len(new_axes):
-                        # rechunk if length of samples axis changed or any new axis added
-                        chunking = tuple([
-                            self._tileSize if a in ['x', 'y'] else
-                            new_dims.get('s') if a == 's' else 1
-                            for a in axes
-                        ])
-                    if len(new_axes):
-                        for i in new_axes.values():
-                            arr = np.expand_dims(arr, axis=i)
-                        arr = np.pad(
-                            arr,
-                            [(0, s - arr.shape[i]) for i, s in enumerate(new_shape)],
-                        )
-                        new_arr = zarr.empty(new_shape, chunks=chunking, dtype=arr.dtype)
-                        new_arr[:] = arr[:]
-                        arr = new_arr
-                    else:
-                        arr.resize(*new_shape)
+                if arr.chunks[-1] != new_dims.get('s') or len(new_axes):
+                    # rechunk if length of samples axis changed or any new axis added
+                    chunking = tuple([
+                        self._tileSize if a in ['x', 'y'] else
+                        new_dims.get('s') if a == 's' else 1
+                        for a in axes
+                    ])
+                arr = self._resizeImage(arr, new_shape, new_axes, chunking)
 
             if mask is not None:
                 arr[placement_slices] = np.where(mask, tile, arr[placement_slices])

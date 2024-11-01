@@ -821,13 +821,13 @@ def testAddAxes(tmp_path, axes_order):
             z=2, z_value=0.2,
             d=1, d_value=100,
             axes=axes_order + 'yxs',
-        )
+        ),
     ]
     for kwarg_group in kwarg_groups:
         sink.addTile(
             np.ones((4, 4, 4)),
             x=1020, y=1020,
-            **kwarg_group
+            **kwarg_group,
         )
 
     metadata = sink.getMetadata()
@@ -836,7 +836,6 @@ def testAddAxes(tmp_path, axes_order):
     d_values = metadata['ValueD']['values']
     t_stride = metadata['IndexStride']['IndexT']
     z_stride = metadata['IndexStride']['IndexZ']
-    d_stride = metadata['IndexStride']['IndexD']
     expected_filled_frames = [
         # first and last frame are known, middle frame depends on axis ordering
         0, z_stride + t_stride * 5, 41,
