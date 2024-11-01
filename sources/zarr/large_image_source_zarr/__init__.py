@@ -435,7 +435,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         #     self.tileWidth = self.tileHeight = baseArray.chunks[self._axes['x']]
         self.levels = int(max(1, math.ceil(math.log(max(
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
-        self._dtype = baseArray.dtype
+        self._dtype = np.dtype(baseArray.dtype)
         self._bandCount = 1
         if ('c' in self._axes and 's' not in self._axes and not self._channels and
                 baseArray.shape[self._axes.get('c')] in {1, 3, 4}):
@@ -796,7 +796,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             # If base data changed, update large_image attributes
             if store_path == '0':
-                self._dtype = tile.dtype
+                self._dtype = np.dtype(tile.dtype)
                 self._bandCount = new_dims.get(axes[-1])  # last axis is assumed to be bands
                 self.sizeX = new_dims.get('x')
                 self.sizeY = new_dims.get('y')

@@ -77,7 +77,8 @@ extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) |
 # from pypi with all needed dependencies.
 extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for key in {
     'memcached', 'redis', 'colormaps', 'performance',
-    'deepzoom', 'dicom', 'multi', 'nd2', 'test', 'tifffile', 'zarr',
+    'deepzoom', 'dicom', 'multi', 'nd2', 'openslide', 'test', 'tifffile',
+    'zarr',
 })) | {
     f'large-image-source-pil[all]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version}',
