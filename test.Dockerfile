@@ -36,7 +36,7 @@ RUN apt-get update && \
       libssl-dev \
       libxml2-dev \
       libxmlsec1-dev \
-      llvm \
+      # llvm \
       make \
       tk-dev \
       wget \

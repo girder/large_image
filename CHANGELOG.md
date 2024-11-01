@@ -5,11 +5,11 @@
 ### Improvements
 
 - Format dates in item lists ([#1707](../../pull/1707))
-- Guard dtype types ([#1710](../../pull/1710))
+- Guard dtype types ([#1711](../../pull/1711), [#1714](../../pull/1714))
 
 ### Changes
 
-- Openslide now requires the binary wheel on appropriate platforms ([#1709](../../pull/1709))
+- Openslide now requires the binary wheel on appropriate platforms ([#1709](../../pull/1709), [#1710](../../pull/1710))
 
 ## 1.30.2
 
