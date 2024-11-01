@@ -804,3 +804,61 @@ sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2, t_value='thursday', z
     assert metadata['ValueT']['values'][24] == 'sunday'
     assert metadata['ValueZ']['values'][24] == 0.4
     assert sink.sizeX == 5001
+
+
+@pytest.mark.parametrize('axes_order', ['tzd', 'tdz', 'dzt', 'dtz', 'ztd', 'zdt'])
+def testAddAxes(tmp_path, axes_order):
+    sink = large_image_source_zarr.new()
+    kwarg_groups = [
+        dict(t=0, t_value='sunday'),
+        dict(
+            t=5, t_value='friday',
+            z=1, z_value=0.1,
+            axes=axes_order.replace('d', '') + 'yxs',
+        ),
+        dict(
+            t=6, t_value='saturday',
+            z=2, z_value=0.2,
+            d=1, d_value=100,
+            axes=axes_order + 'yxs',
+        )
+    ]
+    for kwarg_group in kwarg_groups:
+        sink.addTile(
+            np.ones((4, 4, 4)),
+            x=1020, y=1020,
+            **kwarg_group
+        )
+
+    metadata = sink.getMetadata()
+    t_values = metadata['ValueT']['values']
+    z_values = metadata['ValueZ']['values']
+    d_values = metadata['ValueD']['values']
+    t_stride = metadata['IndexStride']['IndexT']
+    z_stride = metadata['IndexStride']['IndexZ']
+    d_stride = metadata['IndexStride']['IndexD']
+    expected_filled_frames = [
+        # first and last frame are known, middle frame depends on axis ordering
+        0, z_stride + t_stride * 5, 41,
+    ]
+    for frame in metadata.get('frames', []):
+        frame_index = frame.get('Frame')
+        sample = sink.getRegion(
+            region=dict(left=1020, top=1020, width=1, height=1),
+            format='numpy',
+            frame=frame_index,
+        )[0]
+        frame_values = dict(
+            t_value=t_values[frame_index],
+            z_value=z_values[frame_index],
+            d_value=d_values[frame_index],
+        )
+        kwarg_group = {}
+        if frame_index in expected_filled_frames:
+            kwarg_group = kwarg_groups[expected_filled_frames.index(frame_index)]
+            assert (sample == 1).all()
+        else:
+            assert (sample == 0).all()
+
+        for k, v in frame_values.items():
+            assert v == kwarg_group.get(k, 0)
