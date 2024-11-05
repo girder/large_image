@@ -7,6 +7,7 @@
 - Format dates in item lists ([#1707](../../pull/1707))
 - Guard dtype types ([#1711](../../pull/1711), [#1714](../../pull/1714), [#1716](../../pull/1716))
 - Better handle IndicaLabs tiff files ([#1717](../../pull/1717))
+- Better detect files with geotransform data that aren't geospatial ([#1718](../../pull/1718))
 
 ### Changes
 
