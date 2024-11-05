@@ -5,7 +5,8 @@
 ### Improvements
 
 - Format dates in item lists ([#1707](../../pull/1707))
-- Guard dtype types ([#1711](../../pull/1711), [#1714](../../pull/1714))
+- Guard dtype types ([#1711](../../pull/1711), [#1714](../../pull/1714), [#1716](../../pull/1716))
+- Better handle IndicaLabs tiff files ([#1717](../../pull/1717))
 
 ### Changes
 
