@@ -232,7 +232,8 @@ def _imageToPIL(
         #         image = image / ((2 ** maxl2) - 1)
         #     image = (image * 255).astype(numpy.uint8)
         elif image.dtype != np.uint8:
-            image = image.astype(np.uint8)
+            image = np.clip(np.nan_to_num(np.where(
+                image is None, np.nan, image), nan=0), 0, 255).astype(np.uint8)
         image = PIL.Image.fromarray(image, mode)
     elif not isinstance(image, PIL.Image.Image):
         image = PIL.Image.open(io.BytesIO(image))
