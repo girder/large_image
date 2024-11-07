@@ -11,7 +11,11 @@ $(function () {
             var GeojsViewer = girder.plugins.large_image.views.imageViewerWidget.geojs;
             girder.utilities.PluginUtils.wrap(GeojsViewer, 'initialize', function (initialize) {
                 this.once('g:beforeFirstRender', function () {
-                    window.geo.util.mockWebglRenderer();
+                    try {
+                        window.geo.util.mockWebglRenderer();
+                    } catch (err) {
+                        // if this is already mocked, do nothing.
+                    }
                     window.geo.webgl.webglRenderer._maxTextureSize = 256;
                 });
                 initialize.apply(this, _.rest(arguments));
@@ -207,7 +211,7 @@ $(function () {
         });
         it('test the metadata columns are not shown', function () {
             runs(function () {
-                expect($('.large_image_container').length).toBeGreaterThan(0);
+                expect($('.large_image_container').length).toBe(0);
                 expect($('.large_image_thumbnail').length).toBeGreaterThan(0);
                 expect($('.li-column-metadata').length).toBe(0);
             });

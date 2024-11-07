@@ -139,7 +139,13 @@ def source_compare(sourcePath, opts):  # noqa
     else:
         sys.stdout.write('%s\n' % sourcePath)
     sys.stdout.flush()
-    canread = large_image.canReadList(sourcePath)
+    sublist = {
+        k: v for k, v in large_image.tilesource.AvailableTileSources.items()
+        if (getattr(opts, 'skipsource', None) is None or k not in opts.skipsource) and
+           (getattr(opts, 'usesource', None) is None or k in opts.usesource)}
+    canread = large_image.canReadList(sourcePath, availableSources=sublist)
+    if opts.can_read and not len([cr for cr in canread if cr[1]]):
+        return
     large_image.cache_util.cachesClear()
     slen = max([len(source) for source, _ in canread] + [10])
     sys.stdout.write('Source' + ' ' * (slen - 6))
@@ -191,6 +197,8 @@ def source_compare(sourcePath, opts):  # noqa
         if len(projections) > 1:
             sys.stdout.write('Projection: %s\n' % (str(projection)[:72]))
         for source, couldread in canread:
+            if not couldread and opts.can_read:
+                continue
             if getattr(opts, 'skipsource', None) and source in opts.skipsource:
                 continue
             if getattr(opts, 'usesource', None) and source not in opts.usesource:
@@ -384,6 +392,10 @@ def source_compare(sourcePath, opts):  # noqa
 
             # get maxval for other histograms
             h = ts.histogram(onlyMinMax=True, output=dict(maxWidth=2048, maxHeight=2048), **kwargs)
+            if 'max' not in h:
+                sys.stdout.write(' fail\n')
+                sys.stdout.flush()
+                continue
             maxval = max(h['max'].tolist())
             maxval = 2 ** (int(math.log(maxval or 1) / math.log(2)) + 1) if maxval > 1 else 1
             # thumbnail histogram
@@ -488,6 +500,10 @@ def command():
         '--all', action='store_true',
         help='All sources to read all files.  Otherwise, some sources avoid '
         'some files based on name.')
+    parser.add_argument(
+        '--can-read', action='store_true',
+        help='If a source reports it cannot read a file, it will not be '
+        'included in the full report.')
     parser.add_argument(
         '--thumbs', '--thumbnails', type=str, required=False,
         help='Location to write thumbnails of results.  If this is not an '

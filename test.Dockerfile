@@ -13,8 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    OLD_PYTHON_VERSIONS="3.6.15" \
-    PYTHON_VERSIONS="3.9 3.8 3.7 3.10 3.11 3.12"
+    PYTHON_VERSIONS="3.11 3.8 3.9 3.10 3.12 3.13"
 
 # Consumers of this package aren't expecting an existing ubuntu user (there
 # wasn't one in the ubuntu:22.04 base)
@@ -37,7 +36,7 @@ RUN apt-get update && \
       libssl-dev \
       libxml2-dev \
       libxmlsec1-dev \
-      llvm \
+      # llvm \
       make \
       tk-dev \
       wget \
@@ -65,9 +64,6 @@ RUN apt-get update && \
       rdfind \
       # core girder \
       gcc \
-      libpython3-dev \
-      python3-pip \
-      python3-venv \
       cmake \
       iptables \
       dnsutils \
@@ -89,37 +85,21 @@ RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
     cd .. && \
     rm -rf ./ctags
 
-# Install an older openssl for Python 3.6
-RUN curl -O https://www.openssl.org/source/old/1.1.1/openssl-1.1.1t.tar.gz && \
-    tar -xf openssl-1.1.1t.tar.gz && \
-    cd openssl-1.1.1t/ && \
-    ./config shared -Wl,-rpath=/opt/openssl11/lib --prefix=/opt/openssl11 && \
-    make --silent -j `nproc` && \
-    make install --silent -j `nproc` &&\
-    cd .. && \
-    rm -r /opt/openssl11/share/doc && \
-    rm -r openssl-1.1.1*
-
 RUN pyenv update && \
     pyenv install --list && \
     echo $PYTHON_VERSIONS | xargs -P `nproc` -n 1 pyenv install && \
-    # Install older pythons that require help \
-    export CPPFLAGS=-I/opt/openssl11/include && \
-    export LDFLAGS="-L/opt/openssl11/lib -Wl,-rpath,/opt/openssl11/lib" && \
-    export CONFIGURE_OPTS="--with-openssl=/opt/openssl11" && \
-    echo $OLD_PYTHON_VERSIONS | xargs -P `nproc` -n 1 pyenv install && \
     # ensure newest pip and setuptools for all python versions \
-    echo $PYTHON_VERSIONS $OLD_PYTHON_VERSIONS | xargs -n 1 bash -c 'pyenv global "${0}" && pip install -U setuptools pip' && \
+    echo $PYTHON_VERSIONS | xargs -n 1 bash -c 'pyenv global "${0}" && pip install -U setuptools pip' && \
     pyenv global $(pyenv versions --bare) && \
     find $PYENV_ROOT/versions -type d '(' -name '__pycache__' -o -name 'test' -o -name 'tests' ')' -exec rm -rfv '{}' + >/dev/null && \
     find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
-    echo $PYTHON_VERSIONS $OLD_PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
+    echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/* && \
     # This makes duplicate python library files hardlinks of each other \
-    rdfind -minsize 524288 -makehardlinks true -makeresultsfile false /.pyenv
+    rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /.pyenv
 
-RUN for ver in $PYTHON_VERSIONS $OLD_PYTHON_VERSIONS; do \
+RUN for ver in $PYTHON_VERSIONS; do \
     pyenv local $ver && \
     python -m pip install --no-cache-dir -U pip && \
     python -m pip install --no-cache-dir tox wheel && \
@@ -128,14 +108,10 @@ RUN for ver in $PYTHON_VERSIONS $OLD_PYTHON_VERSIONS; do \
     pyenv rehash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/* && \
-    rdfind -minsize 524288 -makehardlinks true -makeresultsfile false /.pyenv
-
-# Note: to actually run tox on python 3.6, you have to do
-#  pip install 'tox<4.5' 'virtualenv<20.22'
-# or switch to the pyenv local 3.6 before running
+    rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /.pyenv
 
 # Use nvm to install node
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
 # Default node version
 RUN . ~/.bashrc && \

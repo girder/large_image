@@ -104,7 +104,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'image/jpeg': SourcePriority.LOW,
     }
 
-    def __init__(self, path, maxSize=None, **kwargs):
+    def __init__(self, path, maxSize=None, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -167,9 +167,16 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         pilImageMode = self._pilImage.mode.split(';')[0]
         self._factor = None
         if pilImageMode in ('I', 'F'):
-            imgdata = np.asarray(self._pilImage)
-            maxval = 256 ** math.ceil(math.log(np.max(imgdata) + 1, 256)) - 1
-            self._factor = 255.0 / maxval
+            try:
+                imgdata = np.asarray(self._pilImage)
+                if np.isnan(np.sum(imgdata)):
+                    imgdata = imgdata.copy()
+                    imgdata[np.isnan(imgdata)] = 0
+            except Exception:
+                msg = 'PIL cannot find loader for this file.'
+                raise TileSourceError(msg)
+            maxval = 256 ** math.ceil(math.log(float(np.max(imgdata)) + 1, 256)) - 1
+            self._factor = 255.0 / max(maxval, 1)
             self._pilImage = PIL.Image.fromarray(np.uint8(np.multiply(
                 imgdata, self._factor)))
         self.sizeX = self._pilImage.width
@@ -187,14 +194,22 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._frames = None
         self._frameCount = 1
         if hasattr(self._pilImage, 'seek'):
-            baseSize, baseMode = self._pilImage.size, self._pilImage.mode
-            self._frames = [
-                idx for idx, frame in enumerate(PIL.ImageSequence.Iterator(self._pilImage))
-                if frame.size == baseSize and frame.mode == baseMode]
-            self._pilImage.seek(0)
-            self._frameImage = self._pilImage
-            self._frameCount = len(self._frames)
-            self._tileLock = threading.RLock()
+            try:
+                baseSize, baseMode = self._pilImage.size, self._pilImage.mode
+                baseMode = {baseMode}
+                if 'P' in baseMode:
+                    baseMode |= {'RGB', 'RGBA'}
+                self._frames = [
+                    idx for idx, frame in enumerate(PIL.ImageSequence.Iterator(self._pilImage))
+                    if frame.size == baseSize and frame.mode in baseMode]
+                self._pilImage.seek(0)
+                self._frameImage = self._pilImage
+                self._frameCount = len(self._frames)
+                self._tileLock = threading.RLock()
+            except Exception:
+                self._frames = None
+                self._frameCount = 1
+                self._pilImage.seek(0)
 
     def _fromRawpy(self, largeImagePath):
         """

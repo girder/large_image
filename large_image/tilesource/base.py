@@ -290,7 +290,7 @@ class TileSource(IPyLeafletMixin):
                     self, '_unstyledInstance', self).getRegion(
                         region=dict(left=0, top=0, width=1, height=1),
                         format=TILE_FORMAT_NUMPY))
-                self._dtype = sample.dtype
+                self._dtype = np.dtype(sample.dtype)
                 self._bandCount = len(
                     getattr(getattr(self, '_unstyledInstance', self), '_bandInfo', []))
                 if not self._bandCount:
@@ -572,7 +572,8 @@ class TileSource(IPyLeafletMixin):
         for itile in self.tileIterator(format=TILE_FORMAT_NUMPY, **kwargs):
             if time.time() - lastlog > 10:
                 self.logger.info(
-                    'Calculating histogram min/max %d/%d',
+                    'Calculating histogram min/max for frame %d, tile %d/%d',
+                    kwargs.get('frame', 0),
                     itile['tile_position']['position'], itile['iterator_range']['position'])
                 lastlog = time.time()
             tile = itile['tile']
@@ -617,11 +618,11 @@ class TileSource(IPyLeafletMixin):
         if results is None or onlyMinMax:
             return results
         results['histogram'] = [{
-            'min': results['min'][idx],
-            'max': results['max'][idx],
-            'mean': results['mean'][idx],
-            'stdev': results['stdev'][idx],
-            'range': ((results['min'][idx], results['max'][idx] + 1)
+            'min': float(results['min'][idx]),
+            'max': float(results['max'][idx]),
+            'mean': float(results['mean'][idx]),
+            'stdev': float(results['stdev'][idx]),
+            'range': ((float(results['min'][idx]), float(results['max'][idx]) + 1)
                       if histRange is None or histRange == 'round' else histRange),
             'hist': None,
             'bin_edges': None,
@@ -647,7 +648,7 @@ class TileSource(IPyLeafletMixin):
                     tile = np.array(tile, dtype=np.uint16) * 257
                 else:
                     continue
-            for idx in range(len(results['min'])):
+            for idx in range(min(len(results['min']), tile.shape[-1])):
                 entry = results['histogram'][idx]
                 hist, bin_edges = np.histogram(
                     tile[:, :, idx], entry['bins'], entry['range'], density=False)
@@ -1189,14 +1190,14 @@ class TileSource(IPyLeafletMixin):
 
         if self._dtype is None or (isinstance(self._dtype, str) and self._dtype == 'check'):
             if isinstance(tile, np.ndarray):
-                self._dtype = tile.dtype
+                self._dtype = np.dtype(tile.dtype)
                 self._bandCount = tile.shape[-1] if len(tile.shape) == 3 else 1
             elif isinstance(tile, PIL.Image.Image):
                 self._dtype = np.uint8 if ';16' not in tile.mode else np.uint16
                 self._bandCount = len(tile.mode)
             else:
                 _img = _imageToNumpy(tile)[0]
-                self._dtype = _img.dtype
+                self._dtype = np.dtype(_img.dtype)
                 self._bandCount = _img.shape[-1] if len(_img.shape) == 3 else 1
 
         mode = None
@@ -1314,6 +1315,58 @@ class TileSource(IPyLeafletMixin):
     def metadata(self) -> JSONDict:
         return self.getMetadata()
 
+    def _getFrameValueInformation(self, frames: List[Dict]):
+        """
+        Given a `frames` list from a metadata response, return a dictionary describing
+        the value info for any frame axes. Keys in this dictionary follow the pattern "Value[AXIS]"
+        and each maps to a dictionary describing the axis, including a list of values, whether the
+        axis is uniform, the units, minimum value, maximum value, and data type.
+
+        :param frames: A list of dictionaries describing each frame in the image
+        :returns: A dictionary describing the values of frame axes
+        """
+        refvalues: Dict[str, Dict[str, List]] = {}
+        for frame in frames:
+            for key, value in frame.items():
+                if 'Value' in key:
+                    if key not in refvalues:
+                        refvalues[key] = {}
+                    value_index = str(frame.get(key.replace('Value', 'Index')))
+                    if value_index not in refvalues[key]:
+                        refvalues[key][value_index] = [value]
+                    else:
+                        refvalues[key][value_index].append(value)
+        frame_value_info = {}
+        for key, value_mapping in refvalues.items():
+            axis_name = key.replace('Value', '').lower()
+            units = None
+            if hasattr(self, 'frameUnits') and self.frameUnits is not None:
+                units = self.frameUnits.get(axis_name)
+            uniform = all(len(set(value_list)) <= 1 for value_list in value_mapping.values())
+            if uniform:
+                # for uniform values, only record values at each axis index
+                values = [
+                    value_list[0] for value_list in value_mapping.values() if len(value_list)
+                ]
+            else:
+                # for non-uniform axes, record values at every frame
+                values = [frame.get(key) for frame in frames]
+            try:
+                min_val = min(values)
+                max_val = max(values)
+            except TypeError:
+                min_val = None
+                max_val = None
+            frame_value_info[key] = dict(
+                values=values,
+                uniform=uniform,
+                units=units,
+                min=min_val,
+                max=max_val,
+                datatype=np.array(values).dtype.name,
+            )
+        return frame_value_info
+
     def _addMetadataFrameInformation(
             self, metadata: JSONDict, channels: Optional[List[str]] = None) -> None:
         """
@@ -1345,6 +1398,7 @@ class TileSource(IPyLeafletMixin):
                     metadata['frames'][idx].get(key) for key in refkeys)):
                 index += 1
             frame['Index'] = index
+        metadata.update(self._getFrameValueInformation(metadata['frames']))
         if any(val > 1 for val in maxref.values()):
             metadata['IndexRange'] = {key: value for key, value in maxref.items() if value > 1}
             metadata['IndexStride'] = {
@@ -1491,7 +1545,8 @@ class TileSource(IPyLeafletMixin):
         """
         return [True] * self.levels
 
-    def _getTileFromEmptyLevel(self, x: int, y: int, z: int, **kwargs) -> PIL.Image.Image:
+    def _getTileFromEmptyLevel(self, x: int, y: int, z: int, **kwargs) -> Tuple[
+            Union[PIL.Image.Image, np.ndarray], str]:
         """
         Given the x, y, z tile location in an unpopulated level, get tiles from
         higher resolution levels to make the lower-res tile.
@@ -1501,12 +1556,47 @@ class TileSource(IPyLeafletMixin):
         :param z: original level.
         :returns: tile in PIL format.
         """
+        lastlog = time.time()
         basez = z
         scale = 1
         dirlist = self._nonemptyLevelsList(kwargs.get('frame'))
         while dirlist[z] is None:
             scale *= 2
             z += 1
+        # if scale >= max(tileWidth, tileHeight), we can just get one tile per
+        # pixel at this point.  If dtype is not uint8 or the number of bands is
+        # greater than 4, also just use nearest neighbor.
+        if (scale >= max(self.tileWidth, self.tileHeight) or
+                (self.dtype and self.dtype != np.uint8) or
+                (self.bandCount and self.bandCount > 4)):
+            nptile = np.zeros((self.tileHeight, self.tileWidth, cast(int, self.bandCount)),
+                              dtype=self.dtype)
+            maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
+            maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
+            for newY in range(scale):
+                sty = (y * scale + newY) * self.tileHeight
+                dy = sty % scale
+                ty = (newY * self.tileHeight) // scale
+                if (newY and y * scale + newY >= maxY) or dy >= self.tileHeight:
+                    continue
+                for newX in range(scale):
+                    stx = (x * scale + newX) * self.tileWidth
+                    dx = stx % scale
+                    if (newX and x * scale + newX >= maxX) or dx >= self.tileWidth:
+                        continue
+                    tx = (newX * self.tileWidth) // scale
+                    if time.time() - lastlog > 10:
+                        self.logger.info(
+                            'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
+                            x * scale + newX, y * scale + newY, z)
+                        lastlog = time.time()
+                    subtile = getattr(self, '_unstyledInstance', self).getTile(
+                        x * scale + newX, y * scale + newY, z,
+                        pilImageAllowed=False, numpyAllowed='always',
+                        sparseFallback=True, edge=False, frame=kwargs.get('frame'))
+                    subtile = subtile[dx::scale, dy::scale]
+                    nptile[ty:ty + subtile.shape[0], tx:tx + subtile.shape[1]] = subtile
+            return nptile, TILE_FORMAT_NUMPY
         while z - basez > self._maxSkippedLevels:
             z -= self._maxSkippedLevels
             scale = int(scale / 2 ** self._maxSkippedLevels)
@@ -1514,20 +1604,27 @@ class TileSource(IPyLeafletMixin):
             min(self.sizeX, self.tileWidth * scale), min(self.sizeY, self.tileHeight * scale)))
         maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
         maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
-        for newX in range(scale):
-            for newY in range(scale):
+        for newY in range(scale):
+            for newX in range(scale):
                 if ((newX or newY) and ((x * scale + newX) >= maxX or
                                         (y * scale + newY) >= maxY)):
                     continue
-                subtile = self.getTile(
+                if time.time() - lastlog > 10:
+                    self.logger.info(
+                        'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
+                        x * scale + newX, y * scale + newY, z)
+                    lastlog = time.time()
+                subtile = getattr(self, '_unstyledInstance', self).getTile(
                     x * scale + newX, y * scale + newY, z,
                     pilImageAllowed=True, numpyAllowed=False,
                     sparseFallback=True, edge=False, frame=kwargs.get('frame'))
                 subtile = _imageToPIL(subtile)
+                mode = subtile.mode
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
-        return tile.resize((self.tileWidth, self.tileHeight),
-                           getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        return tile.resize(
+            (self.tileWidth, self.tileHeight),
+            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS).convert(mode), TILE_FORMAT_PIL
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
@@ -1773,7 +1870,8 @@ class TileSource(IPyLeafletMixin):
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
             dtype = cast(np.ndarray, image).dtype
-            if dtype == np.uint8 or resample is not None:
+            if dtype == np.uint8 or (resample is not None and (
+                    dtype != np.uint16 or cast(np.ndarray, image).shape[-1] != 1)):
                 image = _imageToPIL(cast(np.ndarray, image), mode).resize(
                     (outWidth, outHeight),
                     getattr(PIL.Image, 'Resampling', PIL.Image).NEAREST
@@ -1786,7 +1884,7 @@ class TileSource(IPyLeafletMixin):
             else:
                 cols = [int(idx * regionWidth / outWidth) for idx in range(outWidth)]
                 rows = [int(idx * regionHeight / outHeight) for idx in range(outHeight)]
-                image = np.take(np.take(image, rows, axis=0), cols, axis=1)
+                image = np.take(np.take(cast(np.ndarray, image), rows, axis=0), cols, axis=1)
         maxWidth = kwargs.get('output', {}).get('maxWidth')
         maxHeight = kwargs.get('output', {}).get('maxHeight')
         if kwargs.get('fill') and maxWidth and maxHeight:

@@ -31,7 +31,7 @@ def testAssociatedImagesFromOpenJPEG():
     assert source.getAssociatedImage('nosuchimage') is None
 
 
-@pytest.mark.singular()
+@pytest.mark.singular
 def testBelowLevelTilesFromOpenJPEG():
     from large_image.cache_util import cachesClear
 

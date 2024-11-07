@@ -13,7 +13,7 @@ girder-jobs>=3.0.3
 -e sources/pil[all]
 -e sources/rasterio[all]
 -e sources/test
--e sources/tiff
+-e sources/tiff[all]
 -e sources/tifffile
 -e sources/vips
 -e sources/zarr
@@ -26,11 +26,12 @@ girder-jobs>=3.0.3
 # Girder and worker dependencies are already installed above
 -e utilities/tasks[girder]
 -e girder/.
--e girder_annotation/.
+-e girder_annotation/.[compute]
 
 # Extras from main setup.py
-pylibmc>=1.5.1
 matplotlib
+pylibmc>=1.5.1
+redis
 simplejpeg
 
 # External dependencies

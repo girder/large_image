@@ -1,0 +1,10 @@
+---
+sources:
+  - sourceName: test
+    path: __none__
+    params:
+      sizeX: 2000
+      sizeY: 1250
+      fractal: true
+    sampleScale: 1.34
+    sampleOffset: 64

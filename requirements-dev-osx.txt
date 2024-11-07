@@ -1,0 +1,27 @@
+# Top level dependencies
+girder>=3.1.18
+girder-jobs>=3.0.3
+-e sources/deepzoom
+-e sources/dicom
+-e sources/dummy
+-e sources/multi[all]
+-e sources/nd2
+-e sources/pil[all]
+-e sources/rasterio[all]
+-e sources/test
+-e sources/tifffile
+-e girder/.
+-e girder_annotation/.
+-e sources/zarr
+
+# Extras from main setup.py
+matplotlib
+pylibmc>=1.5.1
+redis
+simplejpeg
+
+# External dependencies
+pip>=9
+tox
+twine
+virtualenv

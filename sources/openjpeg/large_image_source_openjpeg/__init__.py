@@ -25,7 +25,6 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from xml.etree import ElementTree
 
-import glymur
 import PIL.Image
 
 import large_image
@@ -40,6 +39,23 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+glymur = None
+
+
+def _lazyImport():
+    """
+    Import the glymur module.  This is done when needed rather than in the module
+    initialization because it is slow.
+    """
+    global glymur
+
+    if glymur is None:
+        try:
+            import glymur
+        except ImportError:
+            msg = 'glymur module not found.'
+            raise TileSourceError(msg)
 
 
 warnings.filterwarnings('ignore', category=UserWarning, module='glymur')
@@ -57,11 +73,13 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.MEDIUM,
         'jp2': SourcePriority.PREFERRED,
         'jpf': SourcePriority.PREFERRED,
+        'j2c': SourcePriority.PREFERRED,
         'j2k': SourcePriority.PREFERRED,
         'jpx': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
+        'image/j2c': SourcePriority.PREFERRED,
         'image/jp2': SourcePriority.PREFERRED,
         'image/jpx': SourcePriority.PREFERRED,
     }
@@ -88,6 +106,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
+        _lazyImport()
         self._largeImagePath = str(self._getLargeImagePath())
         self._pixelInfo = {}
         try:
@@ -97,7 +116,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     raise FileNotFoundError
                 msg = 'File cannot be opened via Glymur and OpenJPEG (no shape).'
                 raise TileSourceError(msg)
-        except (glymur.jp2box.InvalidJp2kError, struct.error):
+        except (glymur.jp2box.InvalidJp2kError, struct.error, IndexError):
             msg = 'File cannot be opened via Glymur and OpenJPEG.'
             raise TileSourceError(msg)
         except FileNotFoundError:
@@ -113,7 +132,11 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self.sizeY, self.sizeX = self._openjpeg.shape[:2]
         except IndexError as exc:
             raise TileSourceError('File cannot be opened via Glymur and OpenJPEG: %r' % exc)
-        self.levels = int(self._openjpeg.codestream.segment[2].num_res) + 1
+        try:
+            self.levels = int(self._openjpeg.codestream.segment[2].num_res) + 1
+        except Exception:
+            msg = 'File cannot be opened via Glymur and OpenJPEG.'
+            raise TileSourceError(msg)
         self._minlevel = 0
         self.tileWidth = self.tileHeight = 2 ** int(math.ceil(max(
             math.log(float(self.sizeX)) / math.log(2) - self.levels + 1,
@@ -256,7 +279,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
         scale = None
         if self._minlevel - z > self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = _imageToNumpy(tile)[0]
         else:
             if z < self._minlevel:

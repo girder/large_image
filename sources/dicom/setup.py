@@ -56,6 +56,7 @@ setup(
                      'fallback_version': '0.0.0'},
     description=description,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='Apache Software License 2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
@@ -68,10 +69,13 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'wsidicom>=0.9.0',
+        'wsidicom>=0.9.0,!=0.21.3',
+        'pydicom<3; python_version < "3.10"',
+        'pydicom; python_version >= "3.10"',
     ],
     extras_require={
         'girder': girder_extras,

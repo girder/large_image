@@ -10,7 +10,6 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from pathlib import Path
 
-import jsonschema
 import numpy as np
 import yaml
 
@@ -26,6 +25,26 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+jsonschema = None
+_validator = None
+
+
+def _lazyImport():
+    """
+    Import the jsonschema module.  This is done when needed rather than in the
+    module initialization because it is slow.
+    """
+    global jsonschema, _validator
+
+    if jsonschema is None:
+        try:
+            import jsonschema
+
+            _validator = jsonschema.Draft6Validator(MultiSourceSchema)
+        except ImportError:
+            msg = 'jsonschema module not found.'
+            raise TileSourceError(msg)
 
 
 SourceEntrySchema = {
@@ -269,6 +288,18 @@ SourceEntrySchema = {
             'type': 'array',
             'items': {'type': 'integer'},
         },
+        'sampleScale': {
+            'description':
+                'Each pixel sample values is divided by this scale after any '
+                'sampleOffset has been applied',
+            'type': 'number',
+        },
+        'sampleOffset': {
+            'description':
+                'This is added to each pixel sample value before any '
+                'sampleScale is applied',
+            'type': 'number',
+        },
         'style': {'type': 'object'},
         'params': {
             'description':
@@ -380,6 +411,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.FALLBACK,
         'application/json': SourcePriority.PREFERRED,
         'application/yaml': SourcePriority.PREFERRED,
+        'text/yaml': SourcePriority.PREFERRED,
     }
 
     _minTileSize = 64
@@ -387,9 +419,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     _defaultTileSize = 256
     _maxOpenHandles = 6
 
-    _validator = jsonschema.Draft6Validator(MultiSourceSchema)
-
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -398,11 +428,22 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         super().__init__(path, **kwargs)
 
+        _lazyImport()
+        self._validator = _validator
         self._largeImagePath = self._getLargeImagePath()
         self._lastOpenSourceLock = threading.RLock()
         # 'c' must be first as channels are special because they can have names
         self._axesList = ['c', 'z', 't', 'xy']
-        if not os.path.isfile(self._largeImagePath):
+        if isinstance(path, dict) and 'sources' in path:
+            self._info = path.copy()
+            self._basePath = '.'
+            self._largeImagePath = '.'
+            try:
+                self._validator.validate(self._info)
+            except jsonschema.ValidationError:
+                msg = 'File cannot be validated via multi-source reader.'
+                raise TileSourceError(msg)
+        elif not os.path.isfile(self._largeImagePath):
             try:
                 possibleYaml = self._largeImagePath.split('multi://', 1)[-1]
                 self._info = yaml.safe_load(possibleYaml)
@@ -665,9 +706,15 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             aKey = tuple(self._axisKey(source, frame.get(f'Index{axis.upper()}') or 0, axis)
                          for axis in self._axesList)
             channel = channels[cIdx] if cIdx < len(channels) else None
+            # We add the channel name to our channel list if the individual
+            # source lists the channel name or a set of channels OR the source
+            # appends channels to an existing set.
             if channel and channel not in self._channels and (
-                    'channel' in source or 'channels' in source):
+                    'channel' in source or 'channels' in source or
+                    len(self._channels) == aKey[0]):
                 self._channels.append(channel)
+            # Adjust the channel number if the source named the channel; do not
+            # do so in other cases
             if (channel and channel in self._channels and
                     'c' not in source and 'cValues' not in source):
                 aKey = tuple([self._channels.index(channel)] + list(aKey[1:]))
@@ -781,7 +828,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         self._bands = {}
                     self._bands.update(tsMeta['bands'])
                 lastSource = source
-            self._bandcount = 1 if self._info.get('singleBand') else (
+            self._bandCount = 1 if self._info.get('singleBand') else (
                 len(self._bands) if hasattr(self, '_bands') else (bandCount or None))
             bbox = self._sourceBoundingBox(source, tsMeta['sizeX'], tsMeta['sizeY'])
             computedWidth = max(computedWidth, int(math.ceil(bbox['right'])))
@@ -850,6 +897,21 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if params is None:
             params = source.get('params', {})
         ts = openFunc(source['path'], **params)
+        if (self._dtype and np.dtype(ts.dtype).kind == 'f' and
+                (self._dtype == 'check' or np.dtype(self._dtype).kind != 'f') and
+                'sampleScale' not in source and 'sampleOffset' not in source):
+            minval = maxval = 0
+            for f in range(ts.frames):
+                ftile = ts.getTile(x=0, y=0, z=0, frame=f, numpyAllowed='always')
+                minval = min(minval, np.amin(ftile))
+                maxval = max(maxval, np.amax(ftile))
+            if minval >= 0 and maxval <= 1:
+                source['sampleScale'] = None
+            elif minval >= 0:
+                source['sampleScale'] = 2 ** math.ceil(math.log2(maxval))
+            else:
+                source['sampleScale'] = 2 ** math.ceil(math.log2(max(-minval, maxval)) + 1)
+                source['sampleOffset'] = source['sampleScale'] / 2
         source['sourceName'] = ts.name
         with self._lastOpenSourceLock:
             self._lastOpenSource = {
@@ -964,7 +1026,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tileA = tile[:, :, -1].astype(float) / fullAlphaValue(tile.dtype)
             outA = tileA + baseA * (1 - tileA)
             base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] = (
-                np.where(tileA[..., np.newaxis], tile[:, :, :-1], 0) +
+                np.where(tileA[..., np.newaxis], tile[:, :, :-1] * tileA[..., np.newaxis], 0) +
                 base[y:y + tile.shape[0], x:x + tile.shape[1], :-1] * baseA[..., np.newaxis] *
                 (1 - tileA[..., np.newaxis])
             ) / np.where(outA[..., np.newaxis], outA[..., np.newaxis], 1)
@@ -977,8 +1039,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Determine where the target tile's corners are located on the source.
         Fetch that so that we have at least sqrt(2) more resolution, then use
-        scikit-image warp to transform it.  scikit-image does a better job than
-        scipy.ndimage.affine_transform.
+        scikit-image warp to transform it.  scikit-image does a better and
+        faster job than scipy.ndimage.affine_transform.
 
         :param ts: the source of the image to transform.
         :param transform: a 3x3 affine 2d matrix for transforming the source
@@ -1020,7 +1082,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # we only need every 1/srcscale pixel.
         srcscale = int(2 ** math.log2(max(1, srcscale)))
         # Pad to reduce edge effects at tile boundaries
-        border = int(math.ceil(2 * srcscale))
+        border = int(math.ceil(4 * srcscale))
         region = {
             'left': int(max(0, minx - border) // srcscale) * srcscale,
             'top': int(max(0, miny - border) // srcscale) * srcscale,
@@ -1067,28 +1129,35 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x, y = int(math.floor(x)), int(math.floor(y))
         # Recompute where the source corners will land
         destcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        destsize = (max(math.ceil(c[0]) for c in destcorners),
-                    max(math.ceil(c[1]) for c in destcorners))
+        destShape = [
+            max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
+            max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
+        ]
+        if max(0, -x) or max(0, -y):
+            transform[0][2] -= max(0, -x)
+            transform[1][2] -= max(0, -y)
+            destShape[0] -= max(0, -y)
+            destShape[1] -= max(0, -x)
+            x += max(0, -x)
+            y += max(0, -y)
+        destShape = [min(destShape[0], outh - y), min(destShape[1], outw - x)]
+        if destShape[0] <= 0 or destShape[1] <= 0:
+            return None, None, None
         # Add an alpha band if needed
         if srcImage.shape[2] in {1, 3}:
             _, srcImage = _makeSameChannelDepth(np.zeros((1, 1, srcImage.shape[2] + 1)), srcImage)
-        # Add enough space to warp the source image in place
-        srcImage = np.pad(srcImage, (
-            (0, max(0, destsize[1] - srcImage.shape[0])),
-            (0, max(0, destsize[0] - srcImage.shape[1])),
-            (0, 0)), mode='constant')
+        # skimage.transform.warp is faster and has less artifacts than
+        # scipy.ndimage.affine_transform.  It is faster than using cupy's
+        # version of scipy's affine_transform when the source and destination
+        # images are converted from numpy to cupy and back in this method.
         destImage = skimage.transform.warp(
+            # Although using np.float32 could reduce memory use, it doesn't
+            # provide any speed improvement
             srcImage.astype(float),
-            skimage.transform.AffineTransform(np.linalg.inv(
-                transform))).astype(srcImage.dtype)
-        # Trim to target size and location
-        destImage = destImage[max(0, -y):, max(0, -x):, :]
-        x += max(0, -x)
-        y += max(0, -y)
-        if x >= outw or y >= outh:
-            return None, None, None
-        destImage = destImage[:min(destImage.shape[0], outh - y),
-                              :min(destImage.shape[1], outw - x), :]
+            skimage.transform.AffineTransform(np.linalg.inv(transform)),
+            order=3,
+            output_shape=(destShape[0], destShape[1], srcImage.shape[2]),
+        ).astype(srcImage.dtype)
         return destImage, x, y
 
     def _addSourceToTile(self, tile, sourceEntry, corners, scale):
@@ -1165,9 +1234,20 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ts, transform, corners, scale, sourceEntry.get('frame', 0),
                 source.get('position', {}).get('crop'))
         if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
-            sourceTile = sourceTile.astype(
-                ts.dtype if not self._info.get('dtype') else
-                np.dtype(self._info['dtype']))
+            targetDtype = np.dtype(self._info.get('dtype', ts.dtype))
+            changeDtype = sourceTile.dtype != targetDtype
+            if source.get('sampleScale') or source.get('sampleOffset'):
+                sourceTile = sourceTile.astype(float)
+                if source.get('sampleOffset'):
+                    sourceTile[:, :, :-1] += source['sampleOffset']
+                if source.get('sampleScale') and source.get('sampleScale') != 1:
+                    sourceTile[:, :, :-1] /= source['sampleScale']
+            if sourceTile.dtype != targetDtype:
+                if changeDtype:
+                    sourceTile = (
+                        sourceTile.astype(float) * fullAlphaValue(targetDtype) /
+                        fullAlphaValue(sourceTile))
+                sourceTile = sourceTile.astype(targetDtype)
             tile = self._mergeTiles(tile, sourceTile, x, y)
         return tile
 

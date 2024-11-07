@@ -13,6 +13,6 @@ sources:
       tileHeight: 256
       sizeX: 10000
       sizeY: 7500
-      fractal: True
+      fractal: true
       frames: "c=4,i=5,j=3"
-      monochrome: False
+      monochrome: false

@@ -7,7 +7,6 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
 import numpy as np
-import zarr
 
 import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
@@ -16,6 +15,7 @@ from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 
 tifffile = None
+zarr = None
 
 try:
     __version__ = _importlib_version(__name__)
@@ -37,6 +37,7 @@ def _lazyImport():
     module initialization because it is slow.
     """
     global tifffile
+    global zarr
 
     if tifffile is None:
         try:
@@ -55,6 +56,8 @@ def _lazyImport():
         logging.getLogger('tifffile.tifffile').addHandler(checkForMissingDataHandler())
         logging.getLogger('tifffile').setLevel(logging.WARNING)
         logging.getLogger('tifffile').addHandler(checkForMissingDataHandler())
+    if zarr is None:
+        import zarr
 
 
 def et_findall(tag, text):
@@ -180,7 +183,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         ex = 'no maximum series'
         try:
             for idx, s in enumerate(self._tf.series):
-                samples = np.prod(s.shape)
+                samples = math.prod(s.shape)
                 if samples > maxsamples and 'X' in s.axes and 'Y' in s.axes:
                     maxseries = idx
                     maxsamples = samples
@@ -229,7 +232,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'sizeX': s.shape[s.axes.index('X')], 'sizeY': s.shape[s.axes.index('Y')]})
             self.sizeX = max(self.sizeX, s.shape[s.axes.index('X')])
             self.sizeY = max(self.sizeY, s.shape[s.axes.index('Y')])
-        self._framecount = len(self._series) * np.prod(tuple(
+        self._framecount = len(self._series) * math.prod(tuple(
             1 if base.axes[sidx] in 'YXS' else v for sidx, v in enumerate(base.shape)))
         self._basis = {}
         basis = 1
@@ -256,14 +259,17 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         for p in self._tf.pages:
             if (p not in pagesInSeries and getattr(p, 'keyframe', None) is not None and
                     p.hash not in hashes and not len(set(p.axes) - set('YXS'))):
-                id = 'image_%s' % p.index
-                entry = {'page': p.index}
-                entry['width'] = p.shape[p.axes.index('X')]
-                entry['height'] = p.shape[p.axes.index('Y')]
-                if (id not in self._associatedImages and
-                        max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
-                        max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
-                    self._associatedImages[id] = entry
+                try:
+                    id = 'image_%s' % p.index
+                    entry = {'page': p.index}
+                    entry['width'] = p.shape[p.axes.index('X')]
+                    entry['height'] = p.shape[p.axes.index('Y')]
+                    if (id not in self._associatedImages and
+                            max(entry['width'], entry['height']) <= self._maxAssociatedImageSize and
+                            max(entry['width'], entry['height']) >= self._minAssociatedImageSize):
+                        self._associatedImages[id] = entry
+                except Exception:
+                    pass
         for sidx, s in enumerate(self._tf.series):
             if sidx not in self._series and not len(set(s.axes) - set('YXS')):
                 id = 'series_%d' % sidx
@@ -283,6 +289,79 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if (ijm['Labels'] and len(ijm['Labels']) == self._framecount and
                     not getattr(self, '_channels', None)):
                 self._channels = ijm['Labels']
+        except Exception:
+            pass
+
+    def _handle_indica(self):
+        import xml.etree.ElementTree
+
+        import large_image.tilesource.utilities
+
+        try:
+            root = xml.etree.ElementTree.fromstring(self._tf.pages[0].description)
+            self._xml = large_image.tilesource.utilities.etreeToDict(root)
+            self._channels = [c['name'] for c in
+                              self._xml['indica']['image']['channels']['channel']]
+            if len(self._basis) == 1 and 'I' in self._basis:
+                self._basis['C'] = self._basis.pop('I')
+            self._associatedImages.clear()
+        except Exception:
+            pass
+
+    def _handle_ome(self):
+        """
+        For OME Tiff, if we didn't parse the mangification elsewhere, try to
+        parse it here.
+        """
+        import xml.etree.ElementTree
+
+        import large_image.tilesource.utilities
+
+        _omeUnitsToMeters = {
+            'Ym': 1e24,
+            'Zm': 1e21,
+            'Em': 1e18,
+            'Pm': 1e15,
+            'Tm': 1e12,
+            'Gm': 1e9,
+            'Mm': 1e6,
+            'km': 1e3,
+            'hm': 1e2,
+            'dam': 1e1,
+            'm': 1,
+            'dm': 1e-1,
+            'cm': 1e-2,
+            'mm': 1e-3,
+            '\u00b5m': 1e-6,
+            'nm': 1e-9,
+            'pm': 1e-12,
+            'fm': 1e-15,
+            'am': 1e-18,
+            'zm': 1e-21,
+            'ym': 1e-24,
+            '\u00c5': 1e-10,
+        }
+
+        try:
+            root = xml.etree.ElementTree.fromstring(self._tf.pages[0].description)
+            self._xml = large_image.tilesource.utilities.etreeToDict(root)
+        except Exception:
+            return
+        try:
+            try:
+                base = self._xml['OME']['Image'][0]['Pixels']
+            except Exception:
+                base = self._xml['OME']['Image']['Pixels']
+            if self._mm_x is None and 'PhysicalSizeX' in base:
+                self._mm_x = (
+                    float(base['PhysicalSizeX']) * 1e3 *
+                    _omeUnitsToMeters[base.get('PhysicalSizeXUnit', '\u00b5m')])
+            if self._mm_y is None and 'PhysicalSizeY' in base:
+                self._mm_y = (
+                    float(base['PhysicalSizeY']) * 1e3 *
+                    _omeUnitsToMeters[base.get('PhysicalSizeYUnit', '\u00b5m')])
+            self._mm_x = self._mm_x or self._mm_y
+            self._mm_y = self._mm_y or self._mm_x
         except Exception:
             pass
 
@@ -490,6 +569,17 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._nonempty_levels_list[frame] = nonempty
         return nonempty
 
+    def getPreferredLevel(self, level):
+        """
+        Given a desired level (0 is minimum resolution, self.levels - 1 is max
+        resolution), return the level that contains actual data that is no
+        lower resolution.
+
+        :param level: desired level
+        :returns level: a level with actual data that is no lower resolution.
+        """
+        return max(0, min(level, self.levels - 1))
+
     def _getZarrArray(self, series, sidx):
         with self._zarrlock:
             if sidx not in self._zarrcache:
@@ -533,7 +623,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             bza = za
         if step > 2 ** self._maxSkippedLevels:
-            tile = self._getTileFromEmptyLevel(x, y, z, **kwargs)
+            tile, _format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
         else:
             sel = []
@@ -549,6 +639,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     sel.append(slice(series.shape[aidx]))
                     baxis += 'S'
                 else:
+                    if axis not in self._basis and axis == 'I':
+                        axis = 'C'
                     sel.append((frame // self._basis[axis][0]) % self._basis[axis][2])
             tile = bza[tuple(sel)]
             # rotate

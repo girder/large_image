@@ -217,6 +217,12 @@ def _imageToPIL(
             image = np.floor_divide(image, 2 ** 24).astype(np.uint8)
         elif image.dtype == np.uint16:
             image = np.floor_divide(image, 256).astype(np.uint8)
+        elif image.dtype == np.int8:
+            image = (image.astype(float) + 128).astype(np.uint8)
+        elif image.dtype == np.int16:
+            image = np.floor_divide(image.astype(float) + 2 ** 15, 256).astype(np.uint8)
+        elif image.dtype == np.int32:
+            image = np.floor_divide(image.astype(float) + 2 ** 31, 2 ** 24).astype(np.uint8)
         # TODO: The scaling of float data needs to be identical across all
         # tiles of an image.  This means that we need a reference to the parent
         # tile source or some other way of regulating it.
@@ -226,7 +232,8 @@ def _imageToPIL(
         #         image = image / ((2 ** maxl2) - 1)
         #     image = (image * 255).astype(numpy.uint8)
         elif image.dtype != np.uint8:
-            image = image.astype(np.uint8)
+            image = np.clip(np.nan_to_num(np.where(
+                image is None, np.nan, image), nan=0), 0, 255).astype(np.uint8)
         image = PIL.Image.fromarray(image, mode)
     elif not isinstance(image, PIL.Image.Image):
         image = PIL.Image.open(io.BytesIO(image))
@@ -649,9 +656,9 @@ def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]
             if value in mpl.colors.get_named_colors_mapping():
                 palette = ['#0000', mpl.colors.to_hex(str(value))]
             else:
-                cmap = mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
-                    mpl, 'colormaps', None), 'get_cmap') else mpl.cm.get_cmap(  # type: ignore
-                        str(value))
+                cmap = (mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
+                    mpl, 'colormaps', None), 'get_cmap') else
+                    mpl.cm.get_cmap(str(value)))
                 palette = [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
         except (ImportError, ValueError, AttributeError):
             pass
@@ -747,7 +754,9 @@ def fullAlphaValue(arr: Union[np.ndarray, npt.DTypeLike]) -> int:
     :returns: the value for the alpha channel.
     """
     dtype = arr.dtype if isinstance(arr, np.ndarray) else arr
-    if dtype.kind == 'u':
+    if not hasattr(dtype, 'kind'):
+        dtype = np.dtype(dtype)
+    if cast(np.dtype, dtype).kind == 'u':
         return np.iinfo(dtype).max
     return 1
 
@@ -755,7 +764,7 @@ def fullAlphaValue(arr: Union[np.ndarray, npt.DTypeLike]) -> int:
 def _makeSameChannelDepth(arr1: np.ndarray, arr2: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given two numpy arrays that are either two or three dimensions, make the
-    third dimension the same for both of them.  Specifically, if they are two
+    third dimension the same for both of them.  Specifically, if there are two
     dimensions, first convert to three dimensions with a single final value.
     Otherwise, the dimensions are assumed to be channels of L, LA, RGB, RGBA,
     or <all colors>.  If L is needed to change to RGB, it is repeated (LLL).

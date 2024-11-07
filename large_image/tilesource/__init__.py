@@ -19,17 +19,23 @@ from .base import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
 AvailableTileSources: Dict[str, Type[FileTileSource]] = {}
 
 
-def isGeospatial(path: Union[str, PosixPath]) -> bool:
+def isGeospatial(
+        path: Union[str, PosixPath],
+        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None) -> bool:
     """
     Check if a path is likely to be a geospatial file.
 
     :param path: The path to the file
+    :param availableSources: an optional ordered dictionary of sources to use
+        for potentially checking the path.
     :returns: True if geospatial.
     """
-    if not len(AvailableTileSources):
-        loadTileSources()
-    for sourceName in sorted(AvailableTileSources):
-        source = AvailableTileSources[sourceName]
+    if availableSources is None:
+        if not len(AvailableTileSources):
+            loadTileSources()
+        availableSources = AvailableTileSources
+    for sourceName in sorted(availableSources):
+        source = availableSources[sourceName]
         if hasattr(source, 'isGeospatial'):
             result = None
             try:
@@ -85,7 +91,7 @@ def getSortedSourceList(
     baseName = os.path.basename(uriWithoutProtocol)
     extensions = [ext.lower() for ext in baseName.split('.')[1:]]
     properties = {
-        '_geospatial_source': isGeospatial(pathOrUri),
+        '_geospatial_source': isGeospatial(pathOrUri, availableSources),
     }
     isNew = str(pathOrUri).startswith(NEW_IMAGE_PATH_FLAG)
     ignored_names = config.getConfig('all_sources_ignored_names')
@@ -208,6 +214,7 @@ def canRead(*args, **kwargs) -> bool:
 
 def canReadList(
         pathOrUri: Union[str, PosixPath], mimeType: Optional[str] = None,
+        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None,
         *args, **kwargs) -> List[Tuple[str, bool]]:
     """
     Check if large_image can read a path or uri via each source.
@@ -218,16 +225,18 @@ def canReadList(
     :param pathOrUri: either a file path or a fixed source via
         large_image://<source>.
     :param mimeType: the mimetype of the file, if known.
+    :param availableSources: an ordered dictionary of sources to try.  If None,
+        use the primary list of sources.
     :returns: A list of tuples of (source name, canRead).
     """
-    if not len(AvailableTileSources):
+    if availableSources is None and not len(AvailableTileSources):
         loadTileSources()
     sourceList = getSortedSourceList(
-        AvailableTileSources, pathOrUri, mimeType, *args, **kwargs)
+        availableSources or AvailableTileSources, pathOrUri, mimeType, *args, **kwargs)
     result = []
     for entry in sorted(sourceList):
         sourceName = entry[-1]
-        result.append((sourceName, AvailableTileSources[sourceName].canRead(
+        result.append((sourceName, (availableSources or AvailableTileSources)[sourceName].canRead(
             pathOrUri, *args, **kwargs)))
     return result
 

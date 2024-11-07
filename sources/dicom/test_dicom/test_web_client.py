@@ -12,8 +12,8 @@ pytestmark = [
 ]
 
 
-@pytest.mark.girder()
-@pytest.mark.girder_client()
+@pytest.mark.girder
+@pytest.mark.girder_client
 @pytest.mark.plugin('large_image')
 @pytest.mark.plugin('dicomweb')
 def testDICOMWebClient(boundServer, fsAssetstore, db):

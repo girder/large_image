@@ -13,8 +13,6 @@
 import os
 import sys
 
-import sphinx_rtd_theme
-
 docs_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.abspath(os.path.join(docs_dir, '..', '..')))
 
@@ -53,7 +51,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build/**.ipynb', '**.ipynb_checkpoints']
+exclude_patterns = ['_build/**.ipynb', '**.ipynb_checkpoints', 'format_table.rst']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -62,7 +60,6 @@ exclude_patterns = ['_build/**.ipynb', '**.ipynb_checkpoints']
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 pygments_style = 'sphinx'
 
@@ -72,6 +69,9 @@ pygments_style = 'sphinx'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['static']
 html_css_files = ['custom.css']
+html_favicon = 'static/K.png'
+html_permalinks = True
+html_permalinks_icon = '&#128279'
 
 autoclass_content = 'both'
 

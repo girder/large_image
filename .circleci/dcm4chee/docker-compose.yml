@@ -1,11 +1,10 @@
+---
 version: "3"
-
 volumes:
   db_data: {}
   arc_data: {}
   ldap_data: {}
   ldap_config: {}
-
 services:
   ldap:
     image: dcm4che/slapd-dcm4chee:2.6.5-31.2

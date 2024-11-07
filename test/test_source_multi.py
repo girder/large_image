@@ -13,7 +13,7 @@ from . import utilities
 from .datastore import datastore
 
 
-@pytest.fixture()
+@pytest.fixture
 def multiSourceImagePath():
     """
     Make sure we have the components for the multi_source.yml test.
@@ -124,6 +124,22 @@ def testTilesFromMultiString():
 
     with pytest.raises(Exception):
         large_image_source_multi.open('invalid' + sourceString)
+
+
+def testTilesFromMultiDict():
+    sourceString = {'sources': [{
+        'sourceName': 'test', 'path': '__none__', 'params': {'sizeX': 10000, 'sizeY': 10000}}]}
+    source = large_image_source_multi.open(sourceString)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['tileWidth'] == 256
+    assert tileMetadata['tileHeight'] == 256
+    assert tileMetadata['sizeX'] == 10000
+    assert tileMetadata['sizeY'] == 10000
+    assert tileMetadata['levels'] == 7
+    utilities.checkTilesZXY(source, tileMetadata)
+
+    with pytest.raises(Exception):
+        large_image_source_multi.open({'invalid': True})
 
 
 def testTilesFromNonschemaMultiString():
@@ -316,3 +332,13 @@ def testTilesWithStyleAndDtype():
         format=large_image.constants.TILE_FORMAT_NUMPY)
     assert region1.shape == (75, 100, 1)
     assert region1.dtype == np.uint8
+
+
+def testTilesWithSampleScaling():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'multi_test_source_scaling.yml')
+    source = large_image_source_multi.open(imagePath)
+    tileMetadata = source.getMetadata()
+    assert tileMetadata['sizeX'] == 2000
+    assert tileMetadata['sizeY'] == 1250
+    utilities.checkTilesZXY(source, tileMetadata)

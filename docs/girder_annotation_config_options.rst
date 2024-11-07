@@ -1,6 +1,10 @@
 Girder Annotation Configuration Options
 =======================================
 
+The ``large_image`` annotation plugin adds models to the Girder database for supporting annotating large images.  These annotations can be rendered on images.
+Annotations can include polygons, points, image overlays, and other types (see :doc:`annotations`). Each annotation can have a label and metadata.
+Additional user interface libraries allow other libraries (like HistomicsUI) to let a user interactively add and modify annotations.
+
 General Plugin Settings
 -----------------------
 
@@ -28,7 +32,7 @@ This can be used to specify how annotations are listed on the item page.
       columns:
         -
           # The "record" type is from the default annotation record.  The value
-          # is one of "name", "creator", "created", "updatedId", "updated",
+          # is one of "name", "creator", "created", "updatedId", "updated".
           type: record
           value: name
         -
@@ -39,8 +43,9 @@ This can be used to specify how annotations are listed on the item page.
         -
           type: record
           value: created
-          # A format of date will use the browser's default date format
-          format: date
+          # A format of datetime, date, or time will use the browser's default
+          # date and/or time format
+          format: datetime
         -
           # The "metadata" type is taken from the annotations's
           # "annotation.attributes" contents.  It can be a nested key by using
