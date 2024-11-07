@@ -75,10 +75,10 @@ def _groupingPipeline(initialPipeline, cbase, grouping, sort=None):
         {'keys': ['meta.dicom.PatientID'], 'counts': {
         'meta.dicom.StudyInstanceUID': 'meta._count.studycount',
         'meta.dicom.SeriesInstanceUID': 'meta._count.seriescount'}}
-    :param sort: an optional lost of (key, direction) tuples
+    :param sort: an optional list of (key, direction) tuples
     """
     for gidx, gr in enumerate(grouping['keys']):
-        grsort = [(gr, 1)] + (sort or [])
+        grsort = [(gr, 1)] + (sort or []) + [('_id', 1)]
         initialPipeline.extend([{
             '$match': {gr: {'$exists': True}},
         }, {
@@ -130,6 +130,7 @@ def _itemFindRecursive(  # noqa
     from bson.objectid import ObjectId
 
     if folderId:
+        user = self.getCurrentUser()
         if recurse:
             pipeline = [
                 {'$match': {'_id': ObjectId(folderId)}},
@@ -141,6 +142,7 @@ def _itemFindRecursive(  # noqa
                     'as': '_folder',
                     'startWith': '$_id',
                 }},
+                {'$match': Folder().permissionClauses(user, AccessType.READ, '_folder.')},
                 {'$group': {'_id': '$_folder._id'}},
             ]
             children = [ObjectId(folderId)] + next(Folder().collection.aggregate(pipeline))['_id']
@@ -155,7 +157,6 @@ def _itemFindRecursive(  # noqa
             if name:
                 filters['name'] = name
             filters['folderId'] = {'$in': children}
-            user = self.getCurrentUser()
             if isinstance(sort, list):
                 sort.append(('parentId', 1))
 
@@ -163,14 +164,6 @@ def _itemFindRecursive(  # noqa
             # except it adds a grouping stage
             initialPipeline = [
                 {'$match': filters},
-                {'$lookup': {
-                    'from': 'folder',
-                    'localField': Item().resourceParent,
-                    'foreignField': '_id',
-                    'as': '__parent',
-                }},
-                {'$match': Item().permissionClauses(user, AccessType.READ, '__parent.')},
-                {'$project': {'__parent': False}},
             ]
             if group is not None:
                 if not isinstance(group, list):
@@ -220,8 +213,6 @@ def _itemFindRecursive(  # noqa
             result.count = count
             result.fromAggregate = True
             return result
-
-            return Item().findWithPermissions(filters, offset, limit, sort=sort, user=user)
     return origItemFind(folderId, text, name, limit, offset, sort, filters)
 
 
