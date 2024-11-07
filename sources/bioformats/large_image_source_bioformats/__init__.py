@@ -678,6 +678,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             fillValue = 0
             if tile.dtype == np.uint16:
                 fillValue = 65535
+            elif tile.dtype == np.int16:
+                fillValue = 32767
             elif tile.dtype == np.uint8:
                 fillValue = 255
             elif tile.dtype.kind == 'f':

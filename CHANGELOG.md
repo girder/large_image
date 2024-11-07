@@ -1,5 +1,33 @@
 # Change Log
 
+## 1.30.3
+
+### Improvements
+
+- Format dates in item lists ([#1707](../../pull/1707))
+- Guard dtype types ([#1711](../../pull/1711), [#1714](../../pull/1714), [#1716](../../pull/1716))
+- Better handle IndicaLabs tiff files ([#1717](../../pull/1717))
+
+### Changes
+
+- Openslide now requires the binary wheel on appropriate platforms ([#1709](../../pull/1709), [#1710](../../pull/1710))
+
+## 1.30.2
+
+### Features
+
+- Support setting axis actual values in the zarr sink.  Display these in the frame selector ([#1625](../../pull/1625))
+
+### Improvements
+
+- Speed up recursive item lists ([#1694](../../pull/1694))
+- Better handle images with signed pixel data ([#1695](../../pull/1695))
+- Reduce loading geojs when switching views in Girder ([#1699](../../pull/1699))
+
+### Bug Fixes
+
+- Don't compute channel window in zarr sinks ([#1705](../../pull/1705))
+
 ## 1.30.1
 
 ### Improvements
