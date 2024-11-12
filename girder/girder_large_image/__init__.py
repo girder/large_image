@@ -428,7 +428,12 @@ def metadataSearchHandler(  # noqa
                 if id in foundIds:
                     continue
                 foundIds.add(id)
-                entry = resultModelInst.load(id=id, user=user, level=level, exc=False)
+                try:
+                    entry = resultModelInst.load(id=id, user=user, level=level, exc=False)
+                except Exception:
+                    # We might have permission to view an annotation but not
+                    # the item
+                    continue
                 if entry is not None and offset:
                     offset -= 1
                     continue
