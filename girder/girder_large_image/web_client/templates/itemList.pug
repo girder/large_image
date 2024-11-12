@@ -34,9 +34,9 @@
             </div>
         </div>
       </div>
-    <div class="#{layoutMode == 'grid' ? '' : 'table-row-group'}">
+    <div class="#{layoutMode == 'grid' ? 'flex flex-wrap' : 'table-row-group'}">
       each item in items
-        <div class="#{layoutMode == 'grid' ? 'inline-block' : 'table-row'} g-item-list-entry border-b border-zinc-200 hover:bg-zinc-100 #{(highlightItem && item.id === selectedItemId ? 'g-selected' : '')}" public="#{(isParentPublic ? 'true' : 'false')}" style="#{layoutMode == 'grid' ? ('max-width: ' + layoutWidth + 'px') : ''}">
+        <div class="#{layoutMode == 'grid' ? 'inline-block flex items-center flex-col' : 'table-row'} g-item-list-entry border-b border-zinc-200 hover:bg-zinc-100 #{(highlightItem && item.id === selectedItemId ? 'g-selected' : '')}" public="#{(isParentPublic ? 'true' : 'false')}" style="#{layoutMode == 'grid' ? ('max-width: ' + layoutWidth + 'px') : ''}">
           if checkboxes
             <div class="#{layoutMode == 'grid' ? 'inline-block' : 'table-cell'} align-middle li-item-list-cell w-8">
               <label class="custom-checkbox -m-1">
