@@ -13,6 +13,10 @@
 
 - Openslide now requires the binary wheel on appropriate platforms ([#1709](../../pull/1709), [#1710](../../pull/1710))
 
+### Bug Fixes
+
+- Fix an issue searching for annotation metadata on items that a user doesn't have permissions to view ([#1723](../../pull/1723))
+
 ## 1.30.2
 
 ### Features
