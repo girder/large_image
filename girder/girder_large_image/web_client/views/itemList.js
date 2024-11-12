@@ -102,12 +102,14 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         if (!this._liconfig) {
             return undefined;
         }
-        const namedList = this._namedList || this._liconfig.defaultItemList;
-        this._namedList = namedList;
+        // If the named list is not valid, revert to the default list
+        if (!this._namedList || !this._liconfig.namedItemLists || !this._liconfig.namedItemLists[this._namedList]) {
+            this._namedList = this._liconfig.defaultItemList;
+        }
         if (this.$el.closest('.modal-dialog').length) {
             list = this._liconfig.itemListDialog;
-        } else if (namedList && this._liconfig.namedItemLists && this._liconfig.namedItemLists[namedList]) {
-            list = this._liconfig.namedItemLists[namedList];
+        } else if (this._namedList && this._liconfig.namedItemLists && this._liconfig.namedItemLists[this._namedList]) {
+            list = this._liconfig.namedItemLists[this._namedList];
         } else {
             list = this._liconfig.itemList;
         }
@@ -277,6 +279,11 @@ wrap(ItemListWidget, 'render', function (render) {
             return;
         }
         delete this._liconfig.namedItemLists[name];
+        // If we are deleting the current view, clear the namedList from the URL
+        if ((this._namedList || '') === name) {
+            addToRoute({ namedList: undefined });
+            this._namedList = undefined;
+        }
         itemListRender.apply(this);
         largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
     };
