@@ -8,6 +8,7 @@
 - Guard dtype types ([#1711](../../pull/1711), [#1714](../../pull/1714), [#1716](../../pull/1716))
 - Better handle IndicaLabs tiff files ([#1717](../../pull/1717))
 - Better detect files with geotransform data that aren't geospatial ([#1718](../../pull/1718))
+- Better scale float-valued tiles ([#1725](../../pull/1725))
 
 ### Changes
 
@@ -16,6 +17,7 @@
 ### Bug Fixes
 
 - Fix an issue searching for annotation metadata on items that a user doesn't have permissions to view ([#1723](../../pull/1723))
+- Fix a typo in a column header ([#1727](../../pull/1727))
 
 ## 1.30.2
 
