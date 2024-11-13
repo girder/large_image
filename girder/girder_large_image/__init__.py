@@ -541,7 +541,7 @@ def addSettingsToConfig(config, user, name=None):
                 columns.append({'type': 'image', 'value': value, 'title': value.title()})
 
     columns.append({'type': 'record', 'value': 'name', 'title': 'Name'})
-    columns.append({'type': 'record', 'value': 'controls', 'title': 'Contols'})
+    columns.append({'type': 'record', 'value': 'controls', 'title': 'Controls'})
     columns.append({'type': 'record', 'value': 'size', 'title': 'Size'})
 
     if 'itemList' not in config:
