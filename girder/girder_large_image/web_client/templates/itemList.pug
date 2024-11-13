@@ -78,7 +78,7 @@
                     <div class="flex items-center justify-left">
                       if downloadLinks
                         <div class="group relative">
-                          <a class="hover:bg-zinc-200 px-2 py-1 rounded-full tracking-wider uppercase text-lg" href="#{item.downloadUrl()}" title="Download File" >
+                          <a class="g-li-control hover:bg-zinc-200 px-2 py-1 rounded-full tracking-wider uppercase text-lg" href="#{item.downloadUrl()}" title="Download File" >
                             <i class="ri-file-download-line"></i>
                           </a>
                         </div>
@@ -86,7 +86,7 @@
                         - const apps = Object.entries(availableApps.items[item.id]).sort(([name1, app1], [name2, app2]) => { let diff = (app1.priority || 0) - (app2.priority || 0); return diff ? diff : (registeredApps[name1].name.toLowerCase() > registeredApps[name2].name.toLowerCase() ? 1 : -1); })
                         for app in apps
                           <div class="group relative">
-                            <a class="g-hui-open-link hover:bg-zinc-200 px-2 py-1 rounded-full tracking-wider uppercase text-lg" title="#{'Open in ' + registeredApps[app[0]].name}", href="#{app[1].url}" target="_blank">
+                            <a class="g-li-control g-hui-open-link hover:bg-zinc-200 px-2 py-1 rounded-full tracking-wider uppercase text-lg" title="#{'Open in ' + registeredApps[app[0]].name}", href="#{app[1].url}" target="_blank">
                               <i class="ri-external-link-line"></i>
                             </a>
                           </div>
