@@ -243,7 +243,7 @@ def checkForLargeImageFiles(event):  # noqa
             except Exception:
                 pass
     # We couldn't automatically set this as a large image
-    girder.logger.info(
+    logger.info(
         'Saved file %s cannot be automatically used as a largeImage' % str(file['_id']))
 
 
