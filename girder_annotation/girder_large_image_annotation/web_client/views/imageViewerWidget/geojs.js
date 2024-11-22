@@ -415,9 +415,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 restRequest({
                     url: `item/${overlayItemId}/tiles`
                 }).done((response) => {
-                    // Since overlay layers are created asynchronously, we need to ensure that an attempt
-                    // to draw the same overlays happening at roughly the same time does not create
-                    // extra layers
+                    // Since overlay layers are created asynchronously, we need
+                    // to ensure that an attempt to draw the same overlays
+                    // happening at roughly the same time does not create extra
+                    // layers
+                    if (!this.viewer) {
+                        return;
+                    }
                     const conflictingLayers = this.viewer.layers().filter(
                         (layer) => layer.id() === overlay.id);
                     if (conflictingLayers.length > 0) {

@@ -18,6 +18,7 @@
 
 - Fix an issue searching for annotation metadata on items that a user doesn't have permissions to view ([#1723](../../pull/1723))
 - Fix a typo in a column header ([#1727](../../pull/1727))
+- Guard against switching on and off overlay layers quickly ([#1729](../../pull/1729))
 
 ## 1.30.2
 
