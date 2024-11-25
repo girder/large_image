@@ -11,6 +11,7 @@
 - Better scale float-valued tiles ([#1725](../../pull/1725))
 - Tile iterators now report their length ([#1730](../../pull/1730))
 - When using griddata annotations as heatmaps, allow setting scaleWithZoom ([#1731](../../pull/1731))
+- Handle any sort of label as an extra property when importing geojson annotations ([#1732](../../pull/1732))
 
 ### Changes
 
