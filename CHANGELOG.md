@@ -9,6 +9,7 @@
 - Better handle IndicaLabs tiff files ([#1717](../../pull/1717))
 - Better detect files with geotransform data that aren't geospatial ([#1718](../../pull/1718))
 - Better scale float-valued tiles ([#1725](../../pull/1725))
+- Tile iterators now report their length ([#1730](../../pull/1730))
 
 ### Changes
 
