@@ -264,6 +264,10 @@ class GeoJSONAnnotation:
             'fillColor', 'radius', 'width', 'height', 'rotation',
             'normal',
         }}
+        if 'label' in element:
+            if not isinstance(element['label'], dict):
+                element['label'] = {'value': element['label']}
+            element['label']['value'] = str(element['label']['value'])
         if 'annotation' in geoelem.get('properties', {}):
             self._annotation.update(geoelem['properties']['annotation'])
             self._annotation['elements'] = self._elements
