@@ -68,6 +68,15 @@ class TileIterator:
             return self.info
         return {}
 
+    def __len__(self) -> Optional[int]:
+        if self.info is None:
+            return None
+        iterlen = ((cast(int, self.info['xmax']) - cast(int, self.info['xmin'])) *
+                   (cast(int, self.info['ymax']) - cast(int, self.info['ymin'])))
+        if self.info.get('tile_position') is not None:
+            return 1 if cast(int, self.info['tile_position']) < iterlen else 0
+        return iterlen
+
     def _tileIteratorInfo(self, **kwargs) -> Optional[Dict[str, Any]]:  # noqa
         """
         Get information necessary to construct a tile iterator.
