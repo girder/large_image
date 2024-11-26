@@ -1,17 +1,3 @@
-import $ from 'jquery';
-import _ from 'underscore';
-import Backbone from 'backbone';
-
-import {wrap} from '@girder/core/utilities/PluginUtils';
-import {getApiRoot} from '@girder/core/rest';
-import {AccessType} from '@girder/core/constants';
-import {formatSize, parseQueryString, splitRoute} from '@girder/core/misc';
-import router from '@girder/core/router';
-import HierarchyWidget from '@girder/core/views/widgets/HierarchyWidget';
-import ItemCollection from '@girder/core/collections/ItemCollection';
-import FolderListWidget from '@girder/core/views/widgets/FolderListWidget';
-import ItemListWidget from '@girder/core/views/widgets/ItemListWidget';
-
 import largeImageConfig from './configView';
 import {addToRoute} from '../routes';
 
@@ -19,6 +5,17 @@ import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
 
+const { $, _, Backbone } = girder;
+const { wrap } = girder.utilities.PluginUtils;
+const { getApiRoot } = girder.rest;
+const { getCurrentUser } = girder.auth;
+const { AccessType } = girder.constants;
+const { formatSize, parseQueryString, splitRoute } = girder.misc;
+const router = girder.router;
+const HierarchyWidget = girder.views.widgets.HierarchyWidget;
+const ItemCollection = girder.collections.ItemCollection
+const FolderListWidget = girder.views.widgets.FolderListWidget;
+const ItemListWidget = girder.views.widgets.ItemListWidget;
 ItemCollection.prototype.pageLimit = Math.max(250, ItemCollection.prototype.pageLimit);
 
 function onItemClick(item) {

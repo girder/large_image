@@ -1,5 +1,4 @@
 <script>
-import {restRequest} from '@girder/core/rest';
 import Vue from 'vue';
 
 import {makeDraggableSVG} from '../utils/drag';
@@ -67,7 +66,7 @@ export default {
         fetchHistogram() {
             if (!this.active) return undefined;
             if (this.framedelta !== undefined) {
-                restRequest({
+                girder.rest.restRequest({
                     type: 'GET',
                     url: 'item/' + this.itemId + '/tiles/histogram',
                     data: Object.assign(
