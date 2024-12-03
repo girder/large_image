@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.30.4
+
+### Bug Fixes
+
+- Fix a bug handling pure uint8 data introduced in #1725 ([#1734](../../pull/1734))
+
 ## 1.30.3
 
 ### Improvements

@@ -175,7 +175,7 @@ class LazyTileDict(dict):
         if self.resample in (False, None) or not self.requestedScale:
             return tileData, pilData
         pilResize = True
-        if (isinstance(tileData, np.ndarray) and tileData.dtype.kind != np.uint8 and
+        if (isinstance(tileData, np.ndarray) and tileData.dtype != np.uint8 and
                 TILE_FORMAT_NUMPY in self.format and self.resample in {True, 2, 3}):
             try:
                 import skimage.transform
