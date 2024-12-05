@@ -1,48 +1,45 @@
 <script>
-import Vue from 'vue';
-
-
-export default Vue.extend({
-    props: ['itemId', 'imageMetadata', 'frameUpdate', 'liConfig'],
+modules.export = {
+    name: 'FrameSelector',
+    props: ['currentFrame', 'itemId', 'imageMetadata', 'frameUpdate', 'liConfig'],
     data() {
         return {
-            loaded: false,
-            currentFrame: 0,
-            maxFrame: 0,
-            sliderModes: [],
             currentModeId: 0,
-            indices: [],
-            indexInfo: {},
-            style: {},
-            modesShown: {1: true},
-            histogramParamStyles: {}
+            maxFrame: 10,
         };
     },
-    computed: {
+    created() {
+        console.log(this.imageMetadata)
+        this.maxFrame = this.imageMetadata.frames.length - 1;
     },
     watch: {
-    },
-    mounted() {
-        console.log('here')
-        this.metadata = Object.assign({}, this.imageMetadata);
-        this.fillMetadata();
-        this.maxFrame = this.metadata.frames.length - 1;
-        this.populateIndices();
-        this.populateModes();
-        this.loaded = true;
+        currentFrame() {
+            this.frameUpdate(this.currentFrame)
+        }
     },
     methods: {
+        updateCurrentFrame(value) {
+            this.currentFrame = value;
+        }
     }
-});
+};
 </script>
 
 <template>
   <div
     class="image-frame-control-box"
   >
-    <div id="current_image_frame">
+    <div id="current_image_frame" class="invisible">
         {{ currentFrame }}
     </div>
+    <dual-input
+        v-if="currentModeId === 0"
+        :currentValue.sync="currentFrame"
+        :valueMax="maxFrame"
+        :maxMerge="false"
+        label="Frame"
+        @update="updateCurrentFrame"
+    />
   </div>
 </template>
 
