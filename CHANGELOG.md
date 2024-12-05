@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.30.5
+
+### Changes
+
+- Adjust how compositing is done on styled images by adjusting the expected full alpha value ([#1735](../../pull/1735))
+
 ## 1.30.4
 
 ### Bug Fixes

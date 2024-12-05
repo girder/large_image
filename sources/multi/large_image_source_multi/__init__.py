@@ -300,10 +300,12 @@ SourceEntrySchema = {
                 'sampleScale is applied',
             'type': 'number',
         },
-        'style': {'type': 'object'},
+        'style': {
+            'description': 'A style specification to pass to the base tile source',
+            'type': 'object',
+        },
         'params': {
-            'description':
-                'Additional parameters to pass to the base tile source',
+            'description': 'Additional parameters to pass to the base tile source',
             'type': 'object',
         },
     },
