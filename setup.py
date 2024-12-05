@@ -110,6 +110,7 @@ setup(
         'palettable',
         'Pillow',
         'numpy',
+        'ipyvue',
         'typing-extensions',
     ],
     extras_require=extraReqs,

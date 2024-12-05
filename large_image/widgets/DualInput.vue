@@ -1,29 +1,9 @@
 <script>
 module.exports = {
-    computed: {
-      value() {
-        return this.currentValue
-      },
-      merge() {
-        return this.maxMerge
-      }
-    },
+    props: ['label', 'currentValue', 'valueMax', 'sliderLabels', 'maxMerge'],
     watch: {
-        currentValue(v) {
-            console.log('got cv', v)
-            this.value = v;
-        },
-        value(v) {
-            console.log('value', v)
-            this.$emit('updateValue', v);
-        },
-        maxMerge(v) {
-            console.log('got mm', v)
-            this.merge = v;
-        },
-        merge(v) {
-            console.log('merge', v)
-            this.$emit('updateMaxMerge', v);
+        currentValue() {
+            this.$emit('update', this.currentValue)
         }
     }
 };
@@ -31,51 +11,50 @@ module.exports = {
 
 <template>
   <tr :class="sliderLabels && sliderLabels.length ? 'dual-controls tall' : 'dual-controls'">
-    <td><label for="numberControl">{{ label }}: {{ currentValue }} </label></td>
+    <td><label for="numberControl">{{ label }}:</label></td>
     <td>
       <input
-        v-model="value"
+        v-model="currentValue"
         type="number"
         name="numberControl"
         min="0"
         :max="valueMax"
-        :disabled="merge"
+        :disabled="maxMerge"
       >
     </td>
     <td class="slider-control-cell">
       <input
-        v-model="value"
+        v-model="currentValue"
         type="range"
         name="sliderControl"
         min="0"
         :max="valueMax"
-        :disabled="merge"
+        :disabled="maxMerge"
         style="width: 100%"
       >
       <div class="bubble-wrap">
         <output
-          v-if="sliderLabels && sliderLabels.length > value"
-          :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
+          v-if="sliderLabels && sliderLabels.length > currentValue"
+          :style="'left:'+currentValue/valueMax*100+'%; transform:translateX(-'+currentValue/valueMax*100+'%)'"
           class="bubble"
         >
-          {{ sliderLabels[value] }}
+          {{ sliderLabels[currentValue] }}
         </output>
         <span
-          v-if="sliderLabels && sliderLabels.length > value"
-          :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
+          v-if="sliderLabels && sliderLabels.length > currentValue"
+          :style="'left:'+currentValue/valueMax*100+'%; transform:translateX(-'+currentValue/valueMax*100+'%)'"
           class="bubble-after"
         />
-        {{ merge }}
       </div>
     </td>
     <td
-      v-show="merge !== undefined"
+      v-show="maxMerge !== undefined"
       class="max-merge-cell"
       :title="'Max Merge ' + label"
     >
       <input
         :id="'maxMerge'+label"
-        v-model="merge"
+        v-model="maxMerge"
         type="checkbox"
       >
       <label :for="'maxMerge'+label">Max Merge</label>
@@ -89,7 +68,7 @@ module.exports = {
     white-space: nowrap;
 }
 .dual-controls.tall {
-    height: 40px;
+    height: 50px;
     vertical-align: top;
 }
 .bubble-wrap {
