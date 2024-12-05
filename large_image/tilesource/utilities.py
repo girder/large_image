@@ -758,6 +758,12 @@ def fullAlphaValue(arr: Union[np.ndarray, npt.DTypeLike]) -> int:
         dtype = np.dtype(dtype)
     if cast(np.dtype, dtype).kind == 'u':
         return np.iinfo(dtype).max
+    if isinstance(arr, np.ndarray) and cast(np.dtype, dtype).kind == 'f':
+        amax = np.amax(arr)
+        if amax > 1 and amax < 256:
+            return 255
+        if amax > 1 and amax < 65536:
+            return 65535
     return 1
 
 
