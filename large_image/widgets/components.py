@@ -1,9 +1,9 @@
-import ipyvuetify
+import ipyvue
 import traitlets
 from pathlib import Path
 
 
-class DualInput(ipyvuetify.VuetifyTemplate):
+class DualInput(ipyvue.VueTemplate):
     template_file = __file__, 'DualInput.vue'
 
     label = traitlets.Unicode(default_value='Value').tag(sync=True)
@@ -12,20 +12,16 @@ class DualInput(ipyvuetify.VuetifyTemplate):
     sliderLabels = traitlets.List(default_value=[]).tag(sync=True)
     maxMerge = traitlets.Bool(default_value=False).tag(sync=True)
 
-    def vue_updateValue(self, data=None):
-        print(data, self.currentValue)
-
-    def vue_updateMaxMerge(self, data=None):
-        print(data, self.maxMerge)
-
-
-class FrameSelector(ipyvuetify.VuetifyTemplate):
+class FrameSelector(ipyvue.VueTemplate, traitlets.HasTraits):
     template_file = __file__, 'FrameSelector.vue'
+    components = traitlets.Dict({
+        'dual-input': DualInput().template.template,
+    }).tag(sync=True)
 
-    itemId = traitlets.Unicode(default_value=None).tag(sync=True)
-    imageMetadata = traitlets.Any(default_value=None).tag(sync=True)
-    frameUpdate = traitlets.Any(default_value=None).tag(sync=True)
-    liConfig = traitlets.Any(default_value=None).tag(sync=True)
+    imageMetadata = traitlets.Dict().tag(sync=True)
+    currentFrame = traitlets.Int(default_value=0).tag(sync=True)
+    updateFrameCallback = None
 
-    # https://stackoverflow.com/questions/70298569/ipyvuetify-cant-set-prop-to-static-text
-    # components = traitlets.Dict(default_value={'aa': AA}).tag(sync=True, **v.VuetifyTemplate.class_component_serialization)
+    def vue_frameUpdate(self, data=None):
+        if self.updateFrameCallback is not None:
+            self.updateFrameCallback(data)
