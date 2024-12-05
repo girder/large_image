@@ -2,6 +2,10 @@
 
 ## 1.30.5
 
+### Improvements
+
+- When using the multisource to composite multiple images with alpha channels, use nearest neighbor for upper tiles ([#1736](../../pull/1736))
+
 ### Changes
 
 - Adjust how compositing is done on styled images by adjusting the expected full alpha value ([#1735](../../pull/1735))
