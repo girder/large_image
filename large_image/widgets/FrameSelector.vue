@@ -1,5 +1,5 @@
 <script>
-modules.export = {
+module.exports = {
     name: 'FrameSelector',
     props: ['currentFrame', 'itemId', 'imageMetadata', 'frameUpdate', 'liConfig'],
     data() {
@@ -9,8 +9,9 @@ modules.export = {
         };
     },
     created() {
-        console.log(this.imageMetadata)
-        this.maxFrame = this.imageMetadata.frames.length - 1;
+        if (this.imageMetadata && this.imageMetadata.frames) {
+            this.maxFrame = this.imageMetadata.frames.length - 1;
+        }
     },
     watch: {
         currentFrame() {
@@ -32,13 +33,13 @@ modules.export = {
     <div id="current_image_frame" class="invisible">
         {{ currentFrame }}
     </div>
-    <dual-input
+    <DualInput
         v-if="currentModeId === 0"
         :currentValue.sync="currentFrame"
         :valueMax="maxFrame"
         :maxMerge="false"
         label="Frame"
-        @update="updateCurrentFrame"
+        @updateValue="updateCurrentFrame"
     />
   </div>
 </template>

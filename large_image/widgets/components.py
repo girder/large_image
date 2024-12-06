@@ -15,7 +15,7 @@ class DualInput(ipyvue.VueTemplate):
 class FrameSelector(ipyvue.VueTemplate, traitlets.HasTraits):
     template_file = __file__, 'FrameSelector.vue'
     components = traitlets.Dict({
-        'dual-input': DualInput().template.template,
+        'DualInput': DualInput().template.template,
     }).tag(sync=True)
 
     imageMetadata = traitlets.Dict().tag(sync=True)

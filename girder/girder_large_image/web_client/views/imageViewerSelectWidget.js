@@ -11,7 +11,10 @@ import * as viewers from './imageViewerWidget';
 
 import imageViewerSelectWidget from '../templates/imageViewerSelectWidget.pug';
 import '../stylesheets/imageViewerSelectWidget.styl';
-import FrameSelector from '../vue/components/FrameSelector.vue';
+
+import FrameSelector from '../widgets/FrameSelector.vue';
+import DualInput from '../widgets/DualInput.vue';
+import Vue from 'vue';
 
 wrap(ItemView, 'render', function (render) {
     // ItemView is a special case in which rendering is done asynchronously,
@@ -73,9 +76,12 @@ var ImageViewerSelectWidget = View.extend({
 
     _createVue(imageMetadata, frameUpdate) {
         const el = this.$('#vue-container').get(0);
-        const vm = new FrameSelector({
+        FrameSelector.components = { DualInput };
+        const component = Vue.extend(FrameSelector);
+        const vm = new component({
             el,
             propsData: {
+                currentFrame: 0,
                 itemId: this.itemId,
                 imageMetadata: imageMetadata,
                 frameUpdate: frameUpdate,
