@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from large_image.exceptions import TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
+from large_image.widgets.components import FrameSelector
 
 ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
 
@@ -312,15 +313,10 @@ class Map:
         children: List[Any] = []
         frames = metadata.get('frames')
         if frames is not None:
-            self._frame_slider = IntSlider(
-                value=0,
-                min=0,
-                max=len(frames) - 1,
-                description='Frame:',
-            )
-            if self._frame_slider:
-                self._frame_slider.observe(self.update_frame, names='value')
-                children.append(self._frame_slider)
+            frame_selector = FrameSelector()
+            frame_selector.imageMetadata = metadata
+            frame_selector.updateFrameCallback = self.update_frame
+            children.append(frame_selector)
 
         m = Map(
             crs=crs,
@@ -393,8 +389,8 @@ class Map:
             return transf.transform(x, y)
         return x, self._metadata['sizeY'] - y
 
-    def update_frame(self, event, **kwargs):
-        frame = int(event.get('new'))
+    def update_frame(self, frame, **kwargs):
+        # frame = int(event.get('new'))
         if self._layer:
             if 'frame=' in self._layer.url:
                 self._layer.url = re.sub(r'frame=(\d+)', f'frame={frame}', self._layer.url)
