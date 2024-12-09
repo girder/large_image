@@ -4,7 +4,7 @@ executors:
   toxandnode:
     working_directory: ~/project
     docker:
-      - image: girder/girder_test:py38-node16
+      - image: girder/tox-and-node
 commands:
   tox:
     description: "Run tox"
@@ -125,6 +125,12 @@ commands:
             nvm alias default << parameters.node >>
             NODE_DIR=$(dirname $(which node))
             echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
+      - run:
+          name: Install and build large_image plugin
+          command: |
+            npm ci
+            npm run build
+          working_directory: girder/girder_large_image/web_client
       - save_cache:
           name: Save nvm cache
           key: v1-nvm-cache-<< parameters.node >>
@@ -169,7 +175,7 @@ jobs:
       - checkout
       - allservices:
           version: "3.8"
-          node: v14
+          node: v16
       - tox:
           toxenv: test-py38
       - coverage
@@ -183,7 +189,7 @@ jobs:
       - checkout
       - allservices:
           version: "3.9"
-          node: v14
+          node: v16
       - tox:
           toxenv: test-py39
       - coverage
@@ -197,7 +203,7 @@ jobs:
       - checkout
       - allservices:
           version: "3.10"
-          node: v14
+          node: v16
       - tox:
           toxenv: test-py310
       - coverage
@@ -211,7 +217,7 @@ jobs:
       - checkout
       - allservices:
           version: "3.11"
-          node: v14
+          node: v16
       - tox:
           toxenv: test-py311
       - coverage
@@ -225,7 +231,7 @@ jobs:
       - checkout
       - allservices:
           version: "3.12"
-          node: v14
+          node: v16
       - tox:
           toxenv: test-py312
       - coverage
@@ -239,7 +245,7 @@ jobs:
       - checkout
       - allservices:
           version: "3.13"
-          node: v14
+          node: v16
       - tox:
           toxenv: test-py313
           environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
