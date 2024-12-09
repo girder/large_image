@@ -509,13 +509,15 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _computeMagnification(self):
         self._magnification = {}
-        metadata = self._metadata['metadata']
+        metadata = self._metadata.get('seriesMetadata', {}).copy()
+        metadata.update(self._metadata['metadata'])
         valuekeys = {
             'x': [('Scaling|Distance|Value #1', 1e3)],
             'y': [('Scaling|Distance|Value #2', 1e3)],
         }
         tuplekeys = [
             ('Physical pixel size', 1e-3),
+            ('0028,0030 Pixel Spacing', 1),
         ]
         magkeys = [
             'Information|Instrument|Objective|NominalMagnification #1',
@@ -528,11 +530,11 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if 'mm_x' not in self._magnification and 'mm_y' not in self._magnification:
             for key, units in tuplekeys:
                 if metadata.get(key):
-                    found = re.match(r'^\D*(\d+(|\.\d+))\D+(\d+(|\.\d+))\D*$', metadata[key])
+                    found = re.match(r'^[^0-9.]*(\d*\.?\d+)[^0-9.]+(\d*\.?\d+)\D*$', metadata[key])
                     if found:
                         try:
                             self._magnification['mm_x'], self._magnification['mm_y'] = (
-                                float(found.groups()[0]) * units, float(found.groups()[2]) * units)
+                                float(found.groups()[0]) * units, float(found.groups()[1]) * units)
                         except Exception:
                             pass
         for key in magkeys:

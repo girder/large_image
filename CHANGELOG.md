@@ -5,6 +5,7 @@
 ### Improvements
 
 - When using the multisource to composite multiple images with alpha channels, use nearest neighbor for upper tiles ([#1736](../../pull/1736))
+- Read magnification values from DICOM when reading them via bioformats ([#1741](../../pull/1741))
 
 ### Changes
 
