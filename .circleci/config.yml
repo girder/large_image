@@ -22,12 +22,6 @@ commands:
       #     name: Preinstall phantomjs to work around an npm permission issue
       #     command: npm install -g phantomjs-prebuilt --unsafe-perm
       - run:
-          name: Install and build large_image plugin
-          command: |
-            npm ci
-            npm run build
-          working_directory: girder/girder_large_image/web_client
-      - run:
           name: Run tests via tox
           # Piping through cat does less buffering of the output but can
           # consume the exit code
@@ -131,6 +125,12 @@ commands:
             nvm alias default << parameters.node >>
             NODE_DIR=$(dirname $(which node))
             echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
+      - run:
+          name: Install and build large_image plugin
+          command: |
+            npm ci
+            npm run build
+          working_directory: girder/girder_large_image/web_client
       - save_cache:
           name: Save nvm cache
           key: v1-nvm-cache-<< parameters.node >>
