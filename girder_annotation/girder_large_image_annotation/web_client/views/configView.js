@@ -77,16 +77,16 @@ var ConfigView = View.extend({
      *      fetched.  If the settings are already present, this is called
      *      without any delay.
      */
-    getSettings: function(callback) {
+    getSettings: function (callback) {
         return girder.plugins.large_image.views.ConfigView.getSettings(callback);
     },
 
     /**
      * Clear the settings so that getSettings will refetch them.
      */
-    clearSettings: function() {
+    clearSettings: function () {
         return girder.plugins.large_image.views.ConfigView.clearSettings();
-    },
+    }
 });
 
 export default ConfigView;

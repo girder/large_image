@@ -1,4 +1,3 @@
-
 import ConfigView from './configView';
 import HierarchyWidget from './hierarchyWidget';
 import './imageViewerSelectWidget';

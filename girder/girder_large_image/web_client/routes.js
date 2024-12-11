@@ -1,11 +1,11 @@
+import ConfigView from './views/configView';
+
 const $ = girder.$;
 const Backbone = girder.Backbone;
 const events = girder.events;
 const router = girder.router;
-const { exposePluginConfig } = girder.utilities.PluginUtils;
-const { parseQueryString, splitRoute } = girder.misc;
-
-import ConfigView from './views/configView';
+const {exposePluginConfig} = girder.utilities.PluginUtils;
+const {parseQueryString, splitRoute} = girder.misc;
 
 exposePluginConfig('large_image', 'plugins/large_image/config');
 

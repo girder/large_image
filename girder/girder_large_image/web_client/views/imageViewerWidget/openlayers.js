@@ -1,7 +1,7 @@
 import ImageViewerWidget from './base';
 
 const $ = girder.$;
-const { restRequest } = girder.rest;
+const {restRequest} = girder.rest;
 
 var OpenlayersImageViewerWidget = ImageViewerWidget.extend({
     initialize: function (settings) {

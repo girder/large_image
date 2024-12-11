@@ -7,7 +7,7 @@ const events = girder.events;
 const restRequest = girder.rest.restRequest;
 const BrowserWidget = girder.views.widgets.BrowserWidget;
 const PluginConfigBreadcrumbWidget = girder.views.widgets.PluginConfigBreadcrumbWidget;
-const { AccessType } = girder.constants;
+const {AccessType} = girder.constants;
 
 /**
  * Show the default quota settings for users and collections.

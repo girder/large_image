@@ -9,5 +9,5 @@ export {
     leaflet,
     openlayers,
     openseadragon,
-    slideatlas,
+    slideatlas
 };

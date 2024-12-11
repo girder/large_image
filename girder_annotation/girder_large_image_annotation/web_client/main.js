@@ -6,7 +6,7 @@ import './views/imageViewerSelectWidget';
 import * as largeImageAnnotation from './index';
 
 const SearchFieldWidget = girder.views.widgets.SearchFieldWidget;
-const { registerPluginNamespace } = girder.pluginUtils;
+const {registerPluginNamespace} = girder.pluginUtils;
 
 registerPluginNamespace('large_image_annotation', largeImageAnnotation);
 

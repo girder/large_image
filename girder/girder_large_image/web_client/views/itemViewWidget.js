@@ -2,7 +2,7 @@ import yaml from 'js-yaml';
 
 import itemViewWidgetTemplate from '../templates/itemView.pug';
 
-const { getApiRoot } = girder.rest;
+const {getApiRoot} = girder.rest;
 const View = girder.views.View;
 
 var ItemViewWidget = View.extend({
