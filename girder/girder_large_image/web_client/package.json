@@ -62,7 +62,11 @@
             "vue/require-prop-types": "off",
             "vue/multiline-html-element-content-newline": "off"
         },
-        "root": true
+        "ignorePatterns": ["dist/**"],
+        "root": true,
+        "globals": {
+            "girder": "readonly"
+        }
     },
     "eslintIgnore": [
         "**/node_modules/"
