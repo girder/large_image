@@ -57,6 +57,7 @@ commands:
         type: string
       node:
         type: string
+        default: v20
     steps:
       - switchpython:
           version: << parameters.version >>
@@ -175,7 +176,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.8"
-          node: v16
       - tox:
           toxenv: test-py38
       - coverage
@@ -189,7 +189,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.9"
-          node: v16
       - tox:
           toxenv: test-py39
       - coverage
@@ -203,7 +202,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.10"
-          node: v16
       - tox:
           toxenv: test-py310
       - coverage
@@ -217,7 +215,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.11"
-          node: v16
       - tox:
           toxenv: test-py311
       - coverage
@@ -231,7 +228,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.12"
-          node: v16
       - tox:
           toxenv: test-py312
       - coverage
@@ -245,7 +241,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.13"
-          node: v16
       - tox:
           toxenv: test-py313
           environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
