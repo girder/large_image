@@ -3,11 +3,11 @@ import '../stylesheets/fileList.styl';
 
 const $ = girder.$;
 const _ = girder._;
-const { restRequest } = girder.rest;
+const {restRequest} = girder.rest;
 const events = girder.events;
 const FileListWidget = girder.views.widgets.FileListWidget;
-const { wrap } = girder.utilities.PluginUtils;
-const { AccessType } = girder.constants;
+const {wrap} = girder.utilities.PluginUtils;
+const {AccessType} = girder.constants;
 
 wrap(FileListWidget, 'render', function (render) {
     render.call(this);

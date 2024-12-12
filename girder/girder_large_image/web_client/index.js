@@ -5,5 +5,5 @@ import * as vue from './vue';
 export {
     utils,
     views,
-    vue,
+    vue
 };

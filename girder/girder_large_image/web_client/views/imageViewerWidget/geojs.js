@@ -3,11 +3,11 @@ import Hammer from '@egjs/hammerjs';
 import * as d3 from 'd3';
 
 import ImageViewerWidget from './base';
-import { setFrameQuad } from '../../utils.js';
+import {setFrameQuad} from '../../utils.js';
 
 const $ = girder.$;
 const _ = girder._;
-const { restRequest } = girder.rest;
+const {restRequest} = girder.rest;
 
 window.hammerjs = Hammer;
 window.Hammer = Hammer;
@@ -37,8 +37,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
             return this;
         }).then(() => {
             this.trigger('g:beforeFirstRender', this);
-            this.render();
-        })
+            return this.render();
+        });
     },
 
     render: function () {

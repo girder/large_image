@@ -3,5 +3,5 @@ import ElementCollection from './ElementCollection';
 
 export {
     AnnotationCollection,
-    ElementCollection,
+    ElementCollection
 };

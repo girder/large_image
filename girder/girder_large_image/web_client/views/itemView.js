@@ -3,9 +3,9 @@ import ItemViewWidget from './itemViewWidget';
 import '../stylesheets/itemView.styl';
 
 const $ = girder.$;
-const { AccessType } = girder.constants;
-const { restRequest } = girder.rest;
-const { wrap } = girder.utilities.PluginUtils;
+const {AccessType} = girder.constants;
+const {restRequest} = girder.rest;
+const {wrap} = girder.utilities.PluginUtils;
 const ItemView = girder.views.body.ItemView;
 
 wrap(ItemView, 'render', function (render) {

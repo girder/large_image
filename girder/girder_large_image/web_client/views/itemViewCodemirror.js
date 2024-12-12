@@ -20,12 +20,12 @@ import itemViewCodemirror from '../templates/itemViewCodemirror.pug';
 import '../stylesheets/itemViewCodemirror.styl';
 
 const $ = girder.$;
-const { getCurrentUser } = girder.auth;
-const { AccessType } = girder.constants;
-const { confirm } = girder.dialog;
+const {getCurrentUser} = girder.auth;
+const {AccessType} = girder.constants;
+const {confirm} = girder.dialog;
 const events = girder.events;
-const { restRequest } = girder.rest;
-const { wrap } = girder.utilities.PluginUtils;
+const {restRequest} = girder.rest;
+const {wrap} = girder.utilities.PluginUtils;
 const ItemView = girder.views.body.ItemView;
 const View = girder.views.View;
 

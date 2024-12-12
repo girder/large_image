@@ -38,7 +38,11 @@
             "promise/no-return-wrap": "error",
             "no-import-assign": "off"
         },
-        "root": true
+        "ignorePatterns": ["dist/**"],
+        "root": true,
+        "globals": {
+            "girder": "readonly"
+        }
     },
     "eslintIgnore": [
         "**/node_modules/"

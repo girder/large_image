@@ -157,4 +157,4 @@ function setFrameQuad(tileinfo, layer, options) {
     layer.setFrameQuad.status = status;
 }
 
-export { setFrameQuad };
+export {setFrameQuad};

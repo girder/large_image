@@ -39,8 +39,8 @@ from .. import constants, utils
 from ..models.annotation import Annotation, AnnotationSchema
 from ..models.annotationelement import Annotationelement
 
-
 logger = logging.getLogger(__name__)
+
 
 class AnnotationResource(Resource):
 

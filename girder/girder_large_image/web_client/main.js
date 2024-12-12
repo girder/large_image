@@ -10,7 +10,7 @@ import './views/imageViewerSelectWidget';
 // expose symbols under girder.plugins
 import * as largeImage from './index';
 
-const { registerPluginNamespace } = girder.pluginUtils;
+const {registerPluginNamespace} = girder.pluginUtils;
 const SearchFieldWidget = girder.views.widgets.SearchFieldWidget;
 
 registerPluginNamespace('large_image', largeImage);

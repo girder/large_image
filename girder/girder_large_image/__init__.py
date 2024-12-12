@@ -18,7 +18,6 @@ import datetime
 import hashlib
 import json
 import logging
-from pathlib import Path
 import os
 import re
 import threading
@@ -26,6 +25,7 @@ import time
 import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
+from pathlib import Path
 
 import yaml
 from girder_jobs.constants import JobStatus
@@ -243,7 +243,7 @@ def checkForLargeImageFiles(event):  # noqa
             except Exception:
                 pass
     # We couldn't automatically set this as a large image
-    girder.logger.info(
+    logger.info(
         'Saved file %s cannot be automatically used as a largeImage' % str(file['_id']))
 
 

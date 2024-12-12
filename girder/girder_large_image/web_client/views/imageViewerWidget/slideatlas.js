@@ -2,7 +2,7 @@ import ImageViewerWidget from './base';
 
 const $ = girder.$;
 const Backbone = girder.Backbone;
-const { parseQueryString, splitRoute } = girder.misc;
+const {parseQueryString, splitRoute} = girder.misc;
 
 // var baseSAUrl = 'https://unpkg.com/slideatlas-viewer@4.4.1/dist/';
 var baseSAUrl = 'https://cdn.jsdelivr.net/npm/slideatlas-viewer@4/dist/';

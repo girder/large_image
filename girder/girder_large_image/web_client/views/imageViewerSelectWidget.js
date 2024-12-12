@@ -7,7 +7,7 @@ import FrameSelector from '../vue/components/FrameSelector.vue';
 
 const $ = girder.$;
 const _ = girder._;
-const { wrap } = girder.utilities.PluginUtils;
+const {wrap} = girder.utilities.PluginUtils;
 const eventStream = girder.utilities.EventStream;
 const ItemView = girder.views.body.ItemView;
 const View = girder.views.View;

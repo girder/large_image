@@ -17,7 +17,7 @@ def prerelease_local_scheme(version):
     """
     from setuptools_scm.version import get_local_node_and_date
 
-    if os.getenv('CIRCLE_BRANCH') in ('master', ):
+    if os.getenv('CIRCLE_BRANCH') in ('master',):
         return ''
     else:
         return get_local_node_and_date(version)
@@ -27,14 +27,19 @@ try:
     from setuptools_scm import get_version
 
     version = get_version(root='../..', local_scheme=prerelease_local_scheme)
-    limit_version = f'>={version}' if '+' not in version and not os.getenv('TOX_ENV_NAME') else ''
+    limit_version = (
+        f'>={version}' if '+' not in version and not os.getenv('TOX_ENV_NAME') else ''
+    )
 except (ImportError, LookupError):
     limit_version = ''
 
 setup(
     name='large-image-source-zarr',
-    use_scm_version={'root': '../..', 'local_scheme': prerelease_local_scheme,
-                     'fallback_version': '0.0.0'},
+    use_scm_version={
+        'root': '../..',
+        'local_scheme': prerelease_local_scheme,
+        'fallback_version': '0.0.0',
+    },
     description=description,
     long_description=long_description,
     long_description_content_type='text/x-rst',
@@ -54,7 +59,9 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'zarr',
+        # Pin zarr < 3.0 due to refactoring of stores:
+        # https://github.com/zarr-developers/zarr-python/issues/1274
+        'zarr<3',
         # numcodecs and imagecodecs had been required by zarr, but now needs to be asked for
         'imagecodecs',
         'numcodecs',

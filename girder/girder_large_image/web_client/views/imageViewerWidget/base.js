@@ -1,6 +1,6 @@
 const $ = girder.$;
 const View = girder.views.View;
-const { getApiRoot, restRequest } = girder.rest;
+const {getApiRoot, restRequest} = girder.rest;
 
 var ImageViewerWidget = View.extend({
     initialize: function (settings) {
