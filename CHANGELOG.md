@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.30.6
+
+### Improvements
+
+- Harden the geojson annotation parser ([#1743](../../pull/1743))
+
 ## 1.30.5
 
 ### Improvements
