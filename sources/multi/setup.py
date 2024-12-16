@@ -66,7 +66,7 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     entry_points={
         'large_image.source': [
             'multi = large_image_source_multi:MultiFileTileSource',
