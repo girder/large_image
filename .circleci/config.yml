@@ -16,9 +16,6 @@ commands:
         default: ""
     steps:
       - run:
-          name: Upgrade pip
-          command: pip install -U pip
-      - run:
           name: Upgrade virtualenv and tox
           command: pip install -U virtualenv tox
       # - run:
@@ -60,6 +57,7 @@ commands:
         type: string
       node:
         type: string
+        default: v20
     steps:
       - switchpython:
           version: << parameters.version >>
@@ -128,6 +126,12 @@ commands:
             nvm alias default << parameters.node >>
             NODE_DIR=$(dirname $(which node))
             echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
+      - run:
+          name: Install and build large_image plugin
+          command: |
+            npm ci
+            npm run build
+          working_directory: girder/girder_large_image/web_client
       - save_cache:
           name: Save nvm cache
           key: v1-nvm-cache-<< parameters.node >>
@@ -172,7 +176,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.8"
-          node: v14
       - tox:
           toxenv: test-py38
       - coverage
@@ -186,7 +189,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.9"
-          node: v14
       - tox:
           toxenv: test-py39
       - coverage
@@ -200,7 +202,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.10"
-          node: v14
       - tox:
           toxenv: test-py310
       - coverage
@@ -214,7 +215,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.11"
-          node: v14
       - tox:
           toxenv: test-py311
       - coverage
@@ -228,7 +228,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.12"
-          node: v14
       - tox:
           toxenv: test-py312
       - coverage
@@ -242,7 +241,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.13"
-          node: v14
       - tox:
           toxenv: test-py313
           environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
