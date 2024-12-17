@@ -5,6 +5,7 @@
 ### Improvements
 
 - Harden the geojson annotation parser ([#1743](../../pull/1743))
+- Add more color palettes ([#1746](../../pull/1746))
 
 ## 1.30.5
 

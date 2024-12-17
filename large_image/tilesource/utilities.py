@@ -618,7 +618,40 @@ def _arrayToPalette(palette: List[Union[str, float, Tuple[float, ...]]]) -> np.n
     return np.array(arr)
 
 
-def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]]]) -> np.ndarray:
+def _mpl_lsc_to_palette(cmap: Any) -> List[str]:
+    """
+    Convert a matplotlib colormap to a palette of hexcolors.
+
+    :param cmap: a matplotlib LinearSegmentedColormap or ListedColormap.
+    :return: a list with hexadecimal color numbers.
+    """
+    import matplotlib as mpl
+
+    try:
+        if isinstance(cmap, mpl.colors.LinearSegmentedColormap):
+            ri = cast(Any, cmap)._segmentdata['red']
+            gi = cast(Any, cmap)._segmentdata['green']
+            bi = cast(Any, cmap)._segmentdata['blue']
+            ai = cast(Any, cmap)._segmentdata.get('alpha', None)
+            pal: List[str] = []
+            for idx in range(len(ri)):
+                r = int(round(float(ri[idx][-1]) * 255))
+                g = int(round(float(gi[idx][-1]) * 255))
+                b = int(round(float(bi[idx][-1]) * 255))
+                if ai is not None:
+                    a = int(round(float(ai[idx][-1]) * 255))
+                    entry = f'#{r:02X}{g:02X}{b:02X}{a:02X}'
+                else:
+                    entry = f'#{r:02X}{g:02X}{b:02X}'
+                if not len(pal) or pal[-1] != entry:
+                    pal.append(entry)
+            return pal
+    except Exception:
+        pass
+    return [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
+
+
+def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]]]) -> np.ndarray:  # noqa
     """
     Given a list or a name, return a list of colors in the form of a numpy
     array of RGBA.  If a list, each entry is a color name resolvable by either
@@ -659,9 +692,21 @@ def getPaletteColors(value: Union[str, List[Union[str, float, Tuple[float, ...]]
                 cmap = (mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
                     mpl, 'colormaps', None), 'get_cmap') else
                     mpl.cm.get_cmap(str(value)))
-                palette = [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
+                palette = _mpl_lsc_to_palette(cmap)  # type: ignore
         except (ImportError, ValueError, AttributeError):
             pass
+    if palette is None:
+        if str(value).startswith('tol.'):
+            key = value[4:]
+            try:
+                import tol_colors
+
+                if key in tol_colors.colorsets:
+                    palette = list(tol_colors.colorsets[key])
+                elif key in tol_colors.TOLcmaps().namelist:
+                    palette = _mpl_lsc_to_palette(tol_colors.tol_cmap(key))  # type: ignore
+            except ImportError:
+                pass
     if palette is None:
         raise ValueError('cannot be used as a color palette.: %r.' % value)
     return _arrayToPalette(palette)
@@ -732,6 +777,13 @@ def getAvailableNamedPalettes(includeColors: bool = True, reduced: bool = False)
         for key in mplcm:
             if isValidPalette(key):
                 palettes.add(key)
+    except ImportError:
+        pass
+    try:
+        import tol_colors
+
+        palettes |= {f'tol.{key}' for key in tol_colors.colorsets}
+        palettes |= {f'tol.{key}' for key in tol_colors.TOLcmaps().namelist}
     except ImportError:
         pass
     if reduced:
