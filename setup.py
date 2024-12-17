@@ -38,7 +38,7 @@ extraReqs = {
     'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
     'redis': ['redis>=4.5.5'],
     'converter': [f'large-image-converter{limit_version}'],
-    'colormaps': ['matplotlib'],
+    'colormaps': ['matplotlib', 'tol_colors'],
     'tiledoutput': ['pyvips'],
     'performance': [
         'psutil>=4.2.0',
