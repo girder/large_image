@@ -111,6 +111,7 @@ setup(
         'Pillow',
         'numpy',
         'ipyvue',
+        'aiohttp',
         'typing-extensions',
     ],
     extras_require=extraReqs,
