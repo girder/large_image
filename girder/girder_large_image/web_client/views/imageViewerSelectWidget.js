@@ -14,6 +14,12 @@ import '../stylesheets/imageViewerSelectWidget.styl';
 
 import FrameSelector from '../widgets/FrameSelector.vue';
 import DualInput from '../widgets/DualInput.vue';
+import CompositeLayers from '../widgets/CompositeLayers.vue';
+import HistogramEditor from '../widgets/HistogramEditor.vue'
+import colors from '../widgets/colors.json'
+
+import PresetsMenu from '../vue/components/PresetsMenu.vue';
+import {restRequest} from '@girder/core/rest';
 import Vue from 'vue';
 
 wrap(ItemView, 'render', function (render) {
@@ -76,7 +82,19 @@ var ImageViewerSelectWidget = View.extend({
 
     _createVue(imageMetadata, frameUpdate) {
         const el = this.$('#vue-container').get(0);
-        FrameSelector.components = { DualInput };
+        const getFrameHistogram = (params) => {
+            restRequest({
+                type: 'GET',
+                url: 'item/' + this.itemId + '/tiles/histogram',
+                data: params
+            }).then((response) => {
+                const frameHistograms = this.vueApp._props.frameHistograms || {}
+                frameHistograms[params.frame] = response
+                this.vueApp._props.frameHistograms = Object.assign({}, frameHistograms)
+            })
+        }
+        CompositeLayers.components = { HistogramEditor }
+        FrameSelector.components = { DualInput, CompositeLayers, HistogramEditor, PresetsMenu };
         const component = Vue.extend(FrameSelector);
         const vm = new component({
             el,
@@ -84,9 +102,12 @@ var ImageViewerSelectWidget = View.extend({
                 currentFrame: 0,
                 itemId: this.itemId,
                 imageMetadata: imageMetadata,
-                frameUpdate: frameUpdate,
-                liConfig: this._liConfig
-            }
+                frameUpdate,
+                liConfig: this._liConfig,
+                frameHistograms: undefined,
+                getFrameHistogram,
+                colors,
+            },
         });
         this.vueApp = vm;
     },

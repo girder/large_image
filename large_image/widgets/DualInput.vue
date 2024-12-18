@@ -60,7 +60,7 @@ module.exports = {
           v-if="sliderLabels && sliderLabels.length > value"
           :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
           class="bubble-after"
-        />
+        ></span>
       </div>
     </td>
     <td
@@ -80,12 +80,12 @@ module.exports = {
 
 <style scoped>
 .dual-controls > * > * {
-    margin-right: 15px;
-    white-space: nowrap;
+  margin-right: 15px;
+  white-space: nowrap;
 }
 .dual-controls.tall {
-    height: 50px;
-    vertical-align: top;
+  height: 50px;
+  vertical-align: top;
 }
 .bubble-wrap {
   position: relative;
@@ -110,6 +110,9 @@ module.exports = {
   background: rgb(120, 120, 120);
   top: -1px;
   left: 50%;
+}
+.slider-control-cell {
+  vertical-align: middle;
 }
 .slider-control-cell, .slider-control-cell > input {
   width: 100%;
