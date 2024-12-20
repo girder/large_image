@@ -9,19 +9,10 @@ parent = Path(__file__).parent
 colors_file = parent / 'colors.json'
 with open(colors_file) as f:
     colors_data = json.load(f)
-dual_input_template_file = parent / 'DualInput.vue'
-with open(dual_input_template_file) as f:
-    dual_input_template = f.read()
-composite_layers_template_file = parent / 'CompositeLayers.vue'
-with open(composite_layers_template_file) as f:
-    composite_layers_template = f.read()
-histogram_editor_template_file = parent / 'HistogramEditor.vue'
-with open(histogram_editor_template_file) as f:
-    histogram_editor_template = f.read()
 
-ipyvue.register_component_from_file(None, 'dual-input', dual_input_template_file)
-ipyvue.register_component_from_file(None, 'composite-layers', composite_layers_template_file)
-ipyvue.register_component_from_file(None, 'histogram-editor', histogram_editor_template_file)
+ipyvue.register_component_from_file(None, 'dual-input', parent / 'DualInput.vue')
+ipyvue.register_component_from_file(None, 'composite-layers', parent / 'CompositeLayers.vue')
+ipyvue.register_component_from_file(None, 'histogram-editor', parent / 'HistogramEditor.vue')
 
 
 class FrameSelector(ipyvue.VueTemplate):  # type: ignore
