@@ -27,8 +27,6 @@ class FrameSelector(ipyvue.VueTemplate):  # type: ignore
     updateFrameCallback: Union[Callable, None] = None
     getFrameHistogram: Union[Callable, None] = None
 
-    debug = traitlets.Unicode().tag(sync=True)
-
     def vue_frameUpdate(self, data=None):
         frame = int(data.get('frame', 0))
         style = data.get('style', {})
