@@ -12,7 +12,7 @@ module.exports = {
         'layerMap',
         'active',
         'colors',
-        'styleUpdate',
+        'styleUpdate'
     ],
     data() {
         return {
@@ -50,8 +50,8 @@ module.exports = {
             }
         },
         histogramParams() {
-            this.getFrameHistogram(this.histogramParams)
-        },
+            this.getFrameHistogram(this.histogramParams);
+        }
     },
     mounted() {
         this.initializeLayerInfo();
@@ -79,7 +79,6 @@ module.exports = {
         if (this.active) {
             document.addEventListener('keydown', this.keyHandler);
         }
-
     },
     methods: {
         keyHandler(e) {
@@ -131,19 +130,19 @@ module.exports = {
             this.layers.forEach((layerName) => {
                 if (!this.compositeLayerInfo[layerName].palette) {
                     let chosenColor;
-                    const unusedColors = OTHER_COLORS.filter(
+                    const unusedColors = this.colors.other.filter(
                         (color) => !usedColors.includes(color)
                     );
                     if (unusedColors.length > 0) {
                         chosenColor = unusedColors[0];
                     } else {
-                        chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
+                        chosenColor = this.colors.other[Math.floor(Math.random() * this.colors.other.length)];
                     }
                     this.compositeLayerInfo[layerName].palette = chosenColor;
                     usedColors.push(chosenColor);
                 }
             });
-            this.getFrameHistogram(this.histogramParams)
+            this.getFrameHistogram(this.histogramParams);
         },
         initializeStateFromStyle() {
             this.enabledLayers = [];
@@ -238,11 +237,10 @@ module.exports = {
             return Object.values(this.compositeLayerInfo).every(({autoRange}) => autoRange !== undefined);
         },
         updateLayerColor(layer, event) {
-            this.compositeLayerInfo[layer].palette =  event.target.value;
+            this.compositeLayerInfo[layer].palette = event.target.value;
             this.updateStyle();
         },
         updateLayerMin(layer, newVal) {
-            console.log('update min', newVal)
             const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
             this.compositeLayerInfo[layer].min = newMinVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo); // for reactivity
@@ -342,7 +340,12 @@ module.exports = {
             <th>
               <div class="auto-range-col">
                 <div class="auto-range-label">
-                  <span class="small-text" style="text-align: left">Auto Range</span>
+                  <span
+                    class="small-text"
+                    style="text-align: left"
+                  >
+                    Auto Range
+                  </span>
                   <label class="switch">
                     <span
                       :class="allAutoRange() ? 'onoff-slider checked' : 'onoff-slider'"
@@ -395,13 +398,13 @@ module.exports = {
               {{ layerName }}
             </td>
             <td class="color-col">
-                <input
-                    id="color_picker"
-                    class="picker"
-                    type="color"
-                    :value="palette"
-                    @input="(swatch) => {updateLayerColor(layerName, swatch)}"
-                />
+              <input
+                id="color_picker"
+                class="picker"
+                type="color"
+                :value="palette"
+                @input="(swatch) => {updateLayerColor(layerName, swatch)}"
+              />
             </td>
             <td class="auto-range-col">
               <div class="auto-range-label">

@@ -4,24 +4,24 @@ module.exports = {
     props: ['label', 'currentValue', 'valueMax', 'sliderLabels', 'maxMerge'],
     emits: ['updateValue', 'updateMaxMerge'],
     data() {
-      return {
-        value: this.currentValue,
-        merge: this.maxMerge,
-      };
+        return {
+            value: this.currentValue,
+            merge: this.maxMerge
+        };
     },
     watch: {
-      currentValue(v) {
-        this.value = v;
-      },
-      value(v) {
-        this.$emit('updateValue', v);
-      },
-      maxMerge(v) {
-        this.merge = v;
-      },
-      merge(v) {
-        this.$emit('updateMaxMerge', v);
-      }
+        currentValue(v) {
+            this.value = v;
+        },
+        value(v) {
+            this.$emit('updateValue', v);
+        },
+        maxMerge(v) {
+            this.merge = v;
+        },
+        merge(v) {
+            this.$emit('updateMaxMerge', v);
+        }
     }
 };
 </script>

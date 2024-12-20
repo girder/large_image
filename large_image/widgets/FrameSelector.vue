@@ -10,7 +10,7 @@ module.exports = {
         'liConfig',
         'colors',
         'getFrameHistogram',
-        'frameHistograms',
+        'frameHistograms'
     ],
     data() {
         return {
@@ -68,7 +68,7 @@ module.exports = {
         currentModeId() {
             this.modesShown[this.currentModeId] = true;
             this.update();
-        },
+        }
     },
     mounted() {
         this.metadata = Object.assign({}, this.imageMetadata);
@@ -308,7 +308,7 @@ module.exports = {
                 }
             }
         }
-    },
+    }
 };
 </script>
 
@@ -318,11 +318,17 @@ module.exports = {
     class="image-frame-control-box"
   >
     <div>{{ debug }}</div>
-    <div id="current_image_frame" class="invisible">
-        {{ currentFrame }}
+    <div
+      id="current_image_frame"
+      class="invisible"
+    >
+      {{ currentFrame }}
     </div>
-    <div id="current_image_style" class="invisible">
-        {{ currentStyle }}
+    <div
+      id="current_image_style"
+      class="invisible"
+    >
+      {{ currentStyle }}
     </div>
     <div>
       <label for="mode">Image control mode: </label>
@@ -383,14 +389,14 @@ module.exports = {
         :current-frame="currentFrame"
         :current-style="style[2]"
         :histogram-param-style="histogramParamStyles[2]"
-        :frameHistograms="frameHistograms"
-        :getFrameHistogram="getFrameHistogram"
+        :frame-histograms="frameHistograms"
+        :get-frame-histogram="getFrameHistogram"
         :layers="metadata.channels"
         :layer-map="metadata.channelmap"
         :active="currentModeId === 2"
         :class="currentModeId === 2 ? '' : 'invisible'"
         :colors="colors"
-        :styleUpdate="(style) => updateStyle(2, style)"
+        :style-update="(style) => updateStyle(2, style)"
       />
       <composite-layers
         v-if="metadata.bands && modesShown[3]"
@@ -399,14 +405,14 @@ module.exports = {
         :current-frame="currentFrame"
         :current-style="style[3]"
         :histogram-param-style="histogramParamStyles[3]"
-        :frameHistograms="frameHistograms"
-        :getFrameHistogram="getFrameHistogram"
+        :frame-histograms="frameHistograms"
+        :get-frame-histogram="getFrameHistogram"
         :layers="metadata.bands"
         :layer-map="undefined"
         :active="currentModeId === 3"
         :class="currentModeId === 3 ? '' : 'invisible'"
         :colors="colors"
-        :styleUpdate="(style) => updateStyle(3, style)"
+        :style-update="(style) => updateStyle(3, style)"
       />
     </div>
   </div>

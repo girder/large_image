@@ -14,17 +14,17 @@ Please note that this webserver will not work with Classic Notebook and will
 likely lead to crashes. This is only for use in JupyterLab.
 
 """
-import aiohttp
-import asyncio
 import ast
+import asyncio
 import importlib.util
 import json
 import os
-import re
-import numpy as np
-from urllib.parse import urlencode, urlparse, parse_qs, quote
 import weakref
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from urllib.parse import parse_qs, quote, urlencode, urlparse
+
+import aiohttp
+import numpy as np
 
 from large_image.exceptions import TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
@@ -266,7 +266,7 @@ class Map:
         ipyleaflet layer, and the center of the tile source.
         """
         from ipyleaflet import Map, basemaps, projections
-        from ipywidgets import IntSlider, VBox
+        from ipywidgets import VBox
 
         try:
             default_zoom = metadata['levels'] - metadata['sourceLevels']
@@ -400,19 +400,21 @@ class Map:
     def update_frame(self, frame, style, **kwargs):
         if self._layer:
             parsed_url = urlparse(self._layer.url)
-            scheme, netloc, path, query = parsed_url.scheme, parsed_url.netloc, parsed_url.path, parsed_url.query
+            scheme = parsed_url.scheme
+            netloc = parsed_url.netloc
+            path = parsed_url.path
+            query = parsed_url.query
             query = {k: v[0] for k, v in parse_qs(query).items()}
             query.update(dict(
                 frame=frame,
-                style=json.dumps(style)
+                style=json.dumps(style),
             ))
             query_string = urlencode(query, quote_via=quote, safe='{}')
             self._layer.url = f'{scheme}://{netloc}{path}?{query_string}'
             self._layer.redraw()
 
-
     def get_frame_histogram(self, params):
-        frame = params.get("frame")
+        frame = params.get('frame')
         frame_histograms = self.frame_selector.frameHistograms or {}
         frame_histograms = frame_histograms.copy()
         parsed_url = urlparse(self._layer.url)
@@ -432,7 +434,8 @@ class Map:
 
 # used for encoding histogram data
 class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types from https://stackoverflow.com/a/49677241 """
+    """Special json encoder for numpy types from https://stackoverflow.com/a/49677241"""
+
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -483,7 +486,7 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
         """REST endpoint to get image metadata."""
 
         def get(self) -> None:
-            kwargs = { k: ast.literal_eval(self.get_argument(k)) for k in self.request.arguments }
+            kwargs = {k: ast.literal_eval(self.get_argument(k)) for k in self.request.arguments}
             histogram = manager.tile_source.histogram(**kwargs).get('histogram', [{}])
             self.write(json.dumps(histogram, cls=NumpyEncoder))
             self.set_header('Content-Type', 'application/json')
